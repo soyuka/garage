@@ -1,0 +1,13 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Dto;
+
+use ApiPlatform\Metadata\ApiProperty;
+
+final class MakesInput
+{
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC', 'description' => 'TecDoc vehicle type: PC (passenger car) or CV (commercial vehicle)'])]
+    public string $carType = 'PC';
+}

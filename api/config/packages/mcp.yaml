@@ -1,0 +1,18 @@
+mcp:
+    app: 'mon-parc-auto'
+    version: '0.1.0'
+    description: 'French vehicle data by registration plate (plaque d''immatriculation) and TecDoc parts catalog: part categories, article references, fluid capacities and oil specifications.'
+    instructions: >-
+        Start with lookup_plate to resolve a French registration plate into vehicle
+        information including its TecDoc carId (kType) and carType (PC or CV). Then use
+        list_part_categories, list_articles and get_fill_volumes with that carId.
+        Alternatively browse by brand with list_makes, list_models and list_cars.
+    client_transports:
+        stdio: false
+        http: true
+    http:
+        path: '/mcp'
+        session:
+            store: 'file'
+            directory: '%kernel.cache_dir%/mcp-sessions'
+            ttl: 3600

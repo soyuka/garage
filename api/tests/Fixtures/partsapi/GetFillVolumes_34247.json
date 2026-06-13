@@ -1,0 +1,177 @@
+[
+    {
+        "fillInfo": null,
+        "fillTitle": "Моторное масло с фильтром",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "5,50"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Моторное масло с фильтром",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "5,50"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация моторного масла",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "ACEA E3|ACEA E4|ACEA E5"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло коробки переключения передач",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "2,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло коробки переключения передач",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "2,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация масла ступенчатой коробки передач",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "API GL4"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация масла ступенчатой коробки передач",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "ZF TE-ML 02D"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло дифференциала заднего моста",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "1,80"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло дифференциала заднего моста",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "1,80"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация масла заднего моста",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "API GL5"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло вспомогания системы рулевого управления",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "1,40"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло вспомогания системы рулевого управления",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "1,40"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация масла гидроусилителя руля",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "ATF Dexron II D"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Охлаждающая жидкость",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "9,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Охлаждающая жидкость",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "9,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация охлаждающей жидкости",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "Антифриз на этиленгликолевой основе"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Тормозная жидкость при замене",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "1,11"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Тормозная жидкость при замене",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "1,11"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация тормозной жидкости",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "DOT 4"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Хладагент для кондиционера",
+        "fillType": null,
+        "fillUnit": "гр.",
+        "fillVolume": "1200"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Хладагент для кондиционера",
+        "fillType": null,
+        "fillUnit": "gramme",
+        "fillVolume": "1200"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Хладагент для кондиционера",
+        "fillType": null,
+        "fillUnit": "гр.",
+        "fillVolume": "720"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Хладагент для кондиционера",
+        "fillType": null,
+        "fillUnit": "gramme",
+        "fillVolume": "720"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация хладагента",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "R134a"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация масла кондиционерa",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "Denso ND - OIL 6"
+    }
+]

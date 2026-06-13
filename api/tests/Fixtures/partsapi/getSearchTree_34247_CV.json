@@ -1,0 +1,422 @@
+[
+    {
+        "STR_ID": 200056,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Axle Drive",
+        "STR_PATH": "Axle Drive"
+    },
+    {
+        "STR_ID": 200973,
+        "STR_ID_PARENT": 200056,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Propshaft",
+        "STR_PATH": "Axle Drive > Propshaft"
+    },
+    {
+        "STR_ID": 202415,
+        "STR_ID_PARENT": 200973,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Bearing\/Mounting",
+        "STR_PATH": "Axle Drive > Propshaft > Bearing\/Mounting"
+    },
+    {
+        "STR_ID": 200974,
+        "STR_ID_PARENT": 200973,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Propshaft",
+        "STR_PATH": "Axle Drive > Propshaft > Propshaft"
+    },
+    {
+        "STR_ID": 200064,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Electrics",
+        "STR_PATH": "Electrics"
+    },
+    {
+        "STR_ID": 200598,
+        "STR_ID_PARENT": 200064,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Lights",
+        "STR_PATH": "Electrics > Lights"
+    },
+    {
+        "STR_ID": 200633,
+        "STR_ID_PARENT": 200598,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Switches\/Relay\/Control Units",
+        "STR_PATH": "Electrics > Lights > Switches\/Relay\/Control Units"
+    },
+    {
+        "STR_ID": 201213,
+        "STR_ID_PARENT": 200064,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Relay",
+        "STR_PATH": "Electrics > Relay"
+    },
+    {
+        "STR_ID": 202751,
+        "STR_ID_PARENT": 200064,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Sensors",
+        "STR_PATH": "Electrics > Sensors"
+    },
+    {
+        "STR_ID": 200026,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Engine",
+        "STR_PATH": "Engine"
+    },
+    {
+        "STR_ID": 200030,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Air Supply",
+        "STR_PATH": "Engine > Air Supply"
+    },
+    {
+        "STR_ID": 200120,
+        "STR_ID_PARENT": 200030,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Air Filter\/ Housing",
+        "STR_PATH": "Engine > Air Supply > Air Filter\/ Housing"
+    },
+    {
+        "STR_ID": 200032,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Crank Drive",
+        "STR_PATH": "Engine > Crank Drive"
+    },
+    {
+        "STR_ID": 200041,
+        "STR_ID_PARENT": 200032,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Crankshaft\/ Parts",
+        "STR_PATH": "Engine > Crank Drive > Crankshaft\/ Parts"
+    },
+    {
+        "STR_ID": 200044,
+        "STR_ID_PARENT": 200032,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Piston Assembly\/ Parts",
+        "STR_PATH": "Engine > Crank Drive > Piston Assembly\/ Parts"
+    },
+    {
+        "STR_ID": 200135,
+        "STR_ID_PARENT": 200032,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Radial Shaft Seal\/Set",
+        "STR_PATH": "Engine > Crank Drive > Radial Shaft Seal\/Set"
+    },
+    {
+        "STR_ID": 200039,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Cylinder Head",
+        "STR_PATH": "Engine > Cylinder Head"
+    },
+    {
+        "STR_ID": 200128,
+        "STR_ID_PARENT": 200039,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Cylinder Head Cover\/Parts",
+        "STR_PATH": "Engine > Cylinder Head > Cylinder Head Cover\/Parts"
+    },
+    {
+        "STR_ID": 200127,
+        "STR_ID_PARENT": 200039,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Cylinder Head Gasket",
+        "STR_PATH": "Engine > Cylinder Head > Cylinder Head Gasket"
+    },
+    {
+        "STR_ID": 200129,
+        "STR_ID_PARENT": 200039,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Intake-\/Exhaust Manifold Gasket\/-seal ring",
+        "STR_PATH": "Engine > Cylinder Head > Intake-\/Exhaust Manifold Gasket\/-seal ring"
+    },
+    {
+        "STR_ID": 204375,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Cylinders\/Pistons",
+        "STR_PATH": "Engine > Cylinders\/Pistons"
+    },
+    {
+        "STR_ID": 200031,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Engine Timing",
+        "STR_PATH": "Engine > Engine Timing"
+    },
+    {
+        "STR_ID": 200038,
+        "STR_ID_PARENT": 200031,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Timing Case\/Gasket",
+        "STR_PATH": "Engine > Engine Timing > Timing Case\/Gasket"
+    },
+    {
+        "STR_ID": 200028,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Gasket Sets",
+        "STR_PATH": "Engine > Gasket Sets"
+    },
+    {
+        "STR_ID": 200205,
+        "STR_ID_PARENT": 200028,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Oil Sump Gasket Set",
+        "STR_PATH": "Engine > Gasket Sets > Oil Sump Gasket Set"
+    },
+    {
+        "STR_ID": 200027,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Gaskets",
+        "STR_PATH": "Engine > Gaskets"
+    },
+    {
+        "STR_ID": 200182,
+        "STR_ID_PARENT": 200027,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Cylinder Head Cover Gasket",
+        "STR_PATH": "Engine > Gaskets > Cylinder Head Cover Gasket"
+    },
+    {
+        "STR_ID": 200181,
+        "STR_ID_PARENT": 200027,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Cylinder Head Gasket",
+        "STR_PATH": "Engine > Gaskets > Cylinder Head Gasket"
+    },
+    {
+        "STR_ID": 200185,
+        "STR_ID_PARENT": 200027,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Exhaust Manifold Gasket\/seal ring",
+        "STR_PATH": "Engine > Gaskets > Exhaust Manifold Gasket\/seal ring"
+    },
+    {
+        "STR_ID": 201026,
+        "STR_ID_PARENT": 200027,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Oil Circuit Seals",
+        "STR_PATH": "Engine > Gaskets > Oil Circuit Seals"
+    },
+    {
+        "STR_ID": 200192,
+        "STR_ID_PARENT": 200027,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Timing Case Gasket",
+        "STR_PATH": "Engine > Gaskets > Timing Case Gasket"
+    },
+    {
+        "STR_ID": 200033,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Lubrication",
+        "STR_PATH": "Engine > Lubrication"
+    },
+    {
+        "STR_ID": 200046,
+        "STR_ID_PARENT": 200033,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Oil Sump\/Parts",
+        "STR_PATH": "Engine > Lubrication > Oil Sump\/Parts"
+    },
+    {
+        "STR_ID": 200029,
+        "STR_ID_PARENT": 200026,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Seal Rings",
+        "STR_PATH": "Engine > Seal Rings"
+    },
+    {
+        "STR_ID": 200052,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Engine Cooling System",
+        "STR_PATH": "Engine Cooling System"
+    },
+    {
+        "STR_ID": 200086,
+        "STR_ID_PARENT": 200052,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Thermostat\/Seal",
+        "STR_PATH": "Engine Cooling System > Thermostat\/Seal"
+    },
+    {
+        "STR_ID": 200067,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Equipment\/Accessories",
+        "STR_PATH": "Equipment\/Accessories"
+    },
+    {
+        "STR_ID": 200797,
+        "STR_ID_PARENT": 200067,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Interior Equipment",
+        "STR_PATH": "Equipment\/Accessories > Interior Equipment"
+    },
+    {
+        "STR_ID": 202703,
+        "STR_ID_PARENT": 200797,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Hand\/Foot Lever System",
+        "STR_PATH": "Equipment\/Accessories > Interior Equipment > Hand\/Foot Lever System"
+    },
+    {
+        "STR_ID": 200051,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Exhaust System",
+        "STR_PATH": "Exhaust System"
+    },
+    {
+        "STR_ID": 200154,
+        "STR_ID_PARENT": 200051,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Soot\/Particulate Filter",
+        "STR_PATH": "Exhaust System > Soot\/Particulate Filter"
+    },
+    {
+        "STR_ID": 200047,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Filters",
+        "STR_PATH": "Filters"
+    },
+    {
+        "STR_ID": 200158,
+        "STR_ID_PARENT": 200047,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Air Filter",
+        "STR_PATH": "Filters > Air Filter"
+    },
+    {
+        "STR_ID": 200167,
+        "STR_ID_PARENT": 200047,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Soot\/Particulate Filter",
+        "STR_PATH": "Filters > Soot\/Particulate Filter"
+    },
+    {
+        "STR_ID": 200050,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Fuel Mixture Formation",
+        "STR_PATH": "Fuel Mixture Formation"
+    },
+    {
+        "STR_ID": 202831,
+        "STR_ID_PARENT": 200050,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Mixture Formation",
+        "STR_PATH": "Fuel Mixture Formation > Mixture Formation"
+    },
+    {
+        "STR_ID": 202847,
+        "STR_ID_PARENT": 202831,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Sensor\/Probe",
+        "STR_PATH": "Fuel Mixture Formation > Mixture Formation > Sensor\/Probe"
+    },
+    {
+        "STR_ID": 200049,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Fuel Supply System",
+        "STR_PATH": "Fuel Supply System"
+    },
+    {
+        "STR_ID": 200073,
+        "STR_ID_PARENT": 200049,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Fuel Pump",
+        "STR_PATH": "Fuel Supply System > Fuel Pump"
+    },
+    {
+        "STR_ID": 200375,
+        "STR_ID_PARENT": 200073,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Fuel Pump\/Accessories",
+        "STR_PATH": "Fuel Supply System > Fuel Pump > Fuel Pump\/Accessories"
+    },
+    {
+        "STR_ID": 200060,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Suspension\/Damping",
+        "STR_PATH": "Suspension\/Damping"
+    },
+    {
+        "STR_ID": 200424,
+        "STR_ID_PARENT": 200060,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Leaf Spring Suspension",
+        "STR_PATH": "Suspension\/Damping > Leaf Spring Suspension"
+    },
+    {
+        "STR_ID": 200882,
+        "STR_ID_PARENT": 200424,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Spring Mounting\/ Parts",
+        "STR_PATH": "Suspension\/Damping > Leaf Spring Suspension > Spring Mounting\/ Parts"
+    },
+    {
+        "STR_ID": 200443,
+        "STR_ID_PARENT": 200060,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Shock Absorber",
+        "STR_PATH": "Suspension\/Damping > Shock Absorber"
+    },
+    {
+        "STR_ID": 200054,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Transmission",
+        "STR_PATH": "Transmission"
+    },
+    {
+        "STR_ID": 200095,
+        "STR_ID_PARENT": 200054,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Manual Transmission\/ Parts",
+        "STR_PATH": "Transmission > Manual Transmission\/ Parts"
+    },
+    {
+        "STR_ID": 706663,
+        "STR_ID_PARENT": 200095,
+        "STR_LEVEL": 3,
+        "STR_NODE_NAME": "Transmission Housing\/Parts",
+        "STR_PATH": "Transmission > Manual Transmission\/ Parts > Transmission Housing\/Parts"
+    },
+    {
+        "STR_ID": 200061,
+        "STR_ID_PARENT": null,
+        "STR_LEVEL": 1,
+        "STR_NODE_NAME": "Wheel Suspension",
+        "STR_PATH": "Wheel Suspension"
+    },
+    {
+        "STR_ID": 200888,
+        "STR_ID_PARENT": 200061,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Wheel Bearing\/Set",
+        "STR_PATH": "Wheel Suspension > Wheel Bearing\/Set"
+    },
+    {
+        "STR_ID": 200886,
+        "STR_ID_PARENT": 200061,
+        "STR_LEVEL": 2,
+        "STR_NODE_NAME": "Wheel Hub\/ Parts",
+        "STR_PATH": "Wheel Suspension > Wheel Hub\/ Parts"
+    }
+]

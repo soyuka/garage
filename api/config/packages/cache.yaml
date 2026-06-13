@@ -1,0 +1,16 @@
+framework:
+    cache:
+        # Both upstream caches live in PostgreSQL via the DBAL adapter, backed by the
+        # default Doctrine connection. The Symfony↔Doctrine schema listener makes
+        # doctrine:migrations:diff emit the cache_items table from these pools.
+        default_doctrine_dbal_provider: doctrine.dbal.default_connection
+
+        pools:
+            # Paid upstream HTTP responses — they are immutable facts about a vehicle
+            # or a TecDoc catalog entry, so they never expire (default_lifetime: 0).
+            cache.siv:
+                adapter: cache.adapter.doctrine_dbal
+                default_lifetime: 0
+            cache.partsapi:
+                adapter: cache.adapter.doctrine_dbal
+                default_lifetime: 0
