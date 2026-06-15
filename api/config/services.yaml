@@ -37,6 +37,14 @@ services:
             $sivCache: '@cache.siv'
             $partsApiCache: '@cache.partsapi'
 
+    # Validates Casdoor JWTs for the /mcp firewall (dev/prod). Audience is intentionally
+    # unpinned — see the class docblock. JWKS discovered from CASDOOR_ISSUER, cached in cache.app.
+    App\Security\CasdoorTokenHandler:
+        arguments:
+            $discoveryCache: '@cache.app'
+            $oidcConfigurationCacheKey: 'casdoor_oidc_config'
+            $issuers: ['%env(CASDOOR_ISSUER)%']
+
 when@test:
     services:
         App\Tests\Mock\FixtureHttpClient:

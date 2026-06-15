@@ -69,35 +69,29 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
-  # Zitadel — OIDC authorization server protecting /mcp (and any future /api firewall).
-  # Reuses the Postgres container (separate `zitadel` database, auto-created on init).
-  # Dev defaults are insecure: in production externalize ZITADEL_MASTERKEY, enable TLS
-  # (ZITADEL_EXTERNALSECURE=true) and set ZITADEL_EXTERNALDOMAIN to the real host.
-  zitadel:
+  # Casdoor — OIDC authorization server protecting /mcp (and any future /api firewall).
+  # Chosen over Zitadel because stock Goose (rmcp) self-registers via anonymous RFC 7591
+  # Dynamic Client Registration, which Casdoor supports and Zitadel does not. Reuses the
+  # Postgres container (separate `casdoor` database, auto-created on first boot). Config lives
+  # in docker/casdoor/app.conf — `origin` there MUST match the public URL so discovery
+  # advertises the right authorization_endpoint (the production image serves the SPA on :8000,
+  # unlike casdoor-all-in-one which splits it onto :7001 and breaks the browser redirect).
+  #
+  # One-time setup after first boot (see docs/AUTH.md): log in as the seeded admin
+  # (built-in/admin / 123) and set Organization "built-in" → dcrPolicy = "open" to allow
+  # Goose's anonymous client registration. Dev defaults are insecure; externalize for prod.
+  casdoor:
     restart: unless-stopped
-    image: ghcr.io/zitadel/zitadel:latest
-    command: 'start-from-init --masterkey "${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}" --tlsMode disabled'
+    image: casbin/casdoor:latest
     environment:
-      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-false}
-      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_EXTERNALDOMAIN:-localhost}
-      ZITADEL_EXTERNALPORT: ${ZITADEL_EXTERNALPORT:-8080}
-      ZITADEL_DATABASE_POSTGRES_HOST: database
-      ZITADEL_DATABASE_POSTGRES_PORT: 5432
-      ZITADEL_DATABASE_POSTGRES_DATABASE: ${ZITADEL_DB:-zitadel}
-      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ${POSTGRES_USER:-app}
-      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
-      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${POSTGRES_USER:-app}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
-      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
-      # Seeds the initial admin so the console at :8080/ui/console is reachable after first boot.
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USERNAME:-admin}
-      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:-Password1!}
+      RUNNING_IN_DOCKER: "true"
+    volumes:
+      - ./docker/casdoor/app.conf:/conf/app.conf:ro
     depends_on:
       database:
         condition: service_healthy
     ports:
-      - "${ZITADEL_EXTERNALPORT:-8080}:8080"
+      - "${CASDOOR_PORT:-8000}:8000"
 
 volumes:
   caddy_data:
