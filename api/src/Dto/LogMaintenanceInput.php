@@ -1,0 +1,63 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Dto;
+
+use ApiPlatform\Metadata\ApiProperty;
+use App\Maintenance\MaintenanceType;
+use App\Maintenance\UsageUnit;
+
+final class LogMaintenanceInput
+{
+    #[ApiProperty(description: 'Vehicle make, e.g. "TORO", "IVECO". Case-insensitive; the shared vehicle row is created if absent.')]
+    public string $make;
+
+    #[ApiProperty(description: 'Vehicle model, e.g. "246-H", "DAILY". Case-insensitive.')]
+    public string $model;
+
+    #[ApiProperty(description: 'Model year, when known.')]
+    public ?int $year = null;
+
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['car', 'moto', 'cv', 'groundscare'], 'description' => 'Vehicle segment. Defaults to "car".'])]
+    public string $vehicleType = 'car';
+
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['oil_change', 'oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter', 'spark_plug', 'tires', 'brakes', 'coolant', 'battery', 'inspection', 'repair', 'other'], 'description' => 'What was done. Use "other" with a free-text label for anything not listed.'])]
+    public string $type;
+
+    #[ApiProperty(description: 'Free-text description of the work. Required in spirit when type is "other" (e.g. "blade sharpening"); optional otherwise.')]
+    public ?string $label = null;
+
+    #[ApiProperty(description: 'Date the work was performed, ISO 8601 (e.g. "2026-06-15").')]
+    public string $performedAt;
+
+    #[ApiProperty(description: 'Odometer / hour-meter reading at the time of service, when known.')]
+    public ?int $usageValue = null;
+
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['km', 'mi', 'hours'], 'description' => 'Unit of usageValue. Use "hours" for groundscare/engine-hour machinery (e.g. TORO mowers).'])]
+    public ?string $usageUnit = null;
+
+    #[ApiProperty(description: 'Free-text notes about the service.')]
+    public ?string $notes = null;
+
+    #[ApiProperty(description: 'Cost of the work as a decimal string, e.g. "89.90". Pair with currency.')]
+    public ?string $cost = null;
+
+    #[ApiProperty(description: 'ISO 4217 currency code for cost, e.g. "EUR".')]
+    public ?string $currency = null;
+
+    #[ApiProperty(description: 'Who did the work: "self" or the name of the garage that performed it.')]
+    public ?string $performedBy = null;
+
+    /**
+     * @var list<array{ref: string, label?: string}>
+     */
+    #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'label' => ['type' => 'string']], 'required' => ['ref']], 'description' => 'Parts consumed, each with a part number "ref" and optional "label".'])]
+    public array $partsUsed = [];
+
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['user', 'llm', 'web'], 'description' => 'Where the record came from. Defaults to "user" (the owner did/knows it — ground truth).'])]
+    public string $source = 'user';
+
+    #[ApiProperty(description: 'Who/what added the record (optional attribution).')]
+    public ?string $addedBy = null;
+}

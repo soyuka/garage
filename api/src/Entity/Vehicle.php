@@ -29,6 +29,10 @@ class Vehicle
     #[ORM\OneToMany(targetEntity: VehicleFact::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
     private Collection $facts;
 
+    /** @var Collection<int, MaintenanceRecord> */
+    #[ORM\OneToMany(targetEntity: MaintenanceRecord::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
+    private Collection $maintenanceRecords;
+
     public function __construct(
         #[ORM\Column]
         private string $make,
@@ -54,6 +58,7 @@ class Vehicle
         private ?string $owner = null,
     ) {
         $this->facts = new ArrayCollection();
+        $this->maintenanceRecords = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -145,5 +150,20 @@ class Vehicle
         }
 
         return null;
+    }
+
+    /**
+     * @return Collection<int, MaintenanceRecord>
+     */
+    public function getMaintenanceRecords(): Collection
+    {
+        return $this->maintenanceRecords;
+    }
+
+    public function addMaintenanceRecord(MaintenanceRecord $record): void
+    {
+        if (!$this->maintenanceRecords->contains($record)) {
+            $this->maintenanceRecords->add($record);
+        }
     }
 }
