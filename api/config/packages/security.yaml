@@ -1,0 +1,66 @@
+security:
+    providers:
+        # Provisions users from validated Zitadel access-token claims (find-or-create on `sub`).
+        zitadel:
+            id: App\Security\ZitadelUserProvider
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        # RFC 9728 metadata must stay public: a client holding a stale token has to read it
+        # to discover the authorization server before it can refresh.
+        oauth_metadata:
+            pattern: ^/\.well-known/oauth-protected-resource$
+            security: false
+
+        # The MCP endpoint is OAuth-protected. The access_token handler is added per
+        # environment below so the test env can swap the cryptographic handler for a stub
+        # (declaring it here too would trip the "multiple token handlers" config check).
+        mcp:
+            pattern: ^/mcp
+            stateless: true
+            provider: zitadel
+
+        # Everything else (the public /api reference data) stays open. To protect it, add an
+        # `api` firewall mirroring `mcp` plus an access_control rule on ^/api.
+        main:
+            security: false
+
+    access_control:
+        # Force a 401 (entry point) for unauthenticated /mcp calls; without this the missing
+        # token would simply fall through as anonymous and the tools would run unprotected.
+        - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
+
+# Tokens are validated locally against Zitadel's JWKS via the OIDC discovery document.
+# Zitadel must be configured to issue JWT access tokens; for opaque tokens swap this for the
+# `oauth2` introspection handler.
+when@dev: &oidc_firewall
+    security:
+        firewalls:
+            mcp:
+                access_token:
+                    token_handler:
+                        oidc:
+                            discovery:
+                                base_uri: '%env(ZITADEL_ISSUER)%/'
+                                cache:
+                                    id: cache.app
+                            audience: '%env(ZITADEL_AUDIENCE)%'
+                            issuers:
+                                - '%env(ZITADEL_ISSUER)%'
+                            algorithms:
+                                - RS256
+
+when@prod: *oidc_firewall
+
+when@test:
+    security:
+        firewalls:
+            mcp:
+                access_token:
+                    # A real Zitadel-signed JWT cannot be minted offline, so tests decode
+                    # opaque test tokens instead. The firewall and ZitadelUserProvider still
+                    # run for real.
+                    token_handler: App\Tests\Security\FakeOidcTokenHandler

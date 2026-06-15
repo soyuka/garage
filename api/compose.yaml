@@ -65,6 +65,36 @@ services:
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
 
+  # Zitadel — OIDC authorization server protecting /mcp (and any future /api firewall).
+  # Reuses the Postgres container (separate `zitadel` database, auto-created on init).
+  # Dev defaults are insecure: in production externalize ZITADEL_MASTERKEY, enable TLS
+  # (ZITADEL_EXTERNALSECURE=true) and set ZITADEL_EXTERNALDOMAIN to the real host.
+  zitadel:
+    restart: unless-stopped
+    image: ghcr.io/zitadel/zitadel:latest
+    command: 'start-from-init --masterkey "${ZITADEL_MASTERKEY:-MasterkeyNeedsToHave32Characters}" --tlsMode disabled'
+    environment:
+      ZITADEL_EXTERNALSECURE: ${ZITADEL_EXTERNALSECURE:-false}
+      ZITADEL_EXTERNALDOMAIN: ${ZITADEL_EXTERNALDOMAIN:-localhost}
+      ZITADEL_EXTERNALPORT: ${ZITADEL_EXTERNALPORT:-8080}
+      ZITADEL_DATABASE_POSTGRES_HOST: database
+      ZITADEL_DATABASE_POSTGRES_PORT: 5432
+      ZITADEL_DATABASE_POSTGRES_DATABASE: ${ZITADEL_DB:-zitadel}
+      ZITADEL_DATABASE_POSTGRES_USER_USERNAME: ${POSTGRES_USER:-app}
+      ZITADEL_DATABASE_POSTGRES_USER_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      ZITADEL_DATABASE_POSTGRES_USER_SSL_MODE: disable
+      ZITADEL_DATABASE_POSTGRES_ADMIN_USERNAME: ${POSTGRES_USER:-app}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      ZITADEL_DATABASE_POSTGRES_ADMIN_SSL_MODE: disable
+      # Seeds the initial admin so the console at :8080/ui/console is reachable after first boot.
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_USERNAME: ${ZITADEL_ADMIN_USERNAME:-admin}
+      ZITADEL_FIRSTINSTANCE_ORG_HUMAN_PASSWORD: ${ZITADEL_ADMIN_PASSWORD:-Password1!}
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "${ZITADEL_EXTERNALPORT:-8080}:8080"
+
 volumes:
   caddy_data:
   caddy_config:

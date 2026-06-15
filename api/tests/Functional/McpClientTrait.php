@@ -17,10 +17,25 @@ trait McpClientTrait
         'Accept' => 'application/json, text/event-stream',
     ];
 
+    /**
+     * The /mcp firewall requires a bearer token; in tests it is decoded by
+     * {@see \App\Tests\Security\FakeOidcTokenHandler} rather than verified against Zitadel.
+     *
+     * @param array<string, string> $extra
+     *
+     * @return array<string, string>
+     */
+    private function mcpHeaders(array $extra = []): array
+    {
+        return self::MCP_HEADERS + [
+            'Authorization' => 'Bearer '.FakeOidcToken::for('mcp-test-user', 'mcp@example.com'),
+        ] + $extra;
+    }
+
     private function initialize(Client $client): string
     {
         $response = $client->request('POST', '/mcp', [
-            'headers' => self::MCP_HEADERS,
+            'headers' => $this->mcpHeaders(),
             'json' => [
                 'jsonrpc' => '2.0',
                 'id' => 1,
@@ -38,7 +53,7 @@ trait McpClientTrait
         $this->assertNotSame('', $sessionId, 'initialize must return an Mcp-Session-Id header');
 
         $client->request('POST', '/mcp', [
-            'headers' => self::MCP_HEADERS + ['Mcp-Session-Id' => $sessionId],
+            'headers' => $this->mcpHeaders(['Mcp-Session-Id' => $sessionId]),
             'json' => ['jsonrpc' => '2.0', 'method' => 'notifications/initialized'],
         ]);
 
@@ -53,7 +68,7 @@ trait McpClientTrait
     private function call(Client $client, string $sessionId, string $method, array $params, int $id): array
     {
         $response = $client->request('POST', '/mcp', [
-            'headers' => self::MCP_HEADERS + ['Mcp-Session-Id' => $sessionId],
+            'headers' => $this->mcpHeaders(['Mcp-Session-Id' => $sessionId]),
             'json' => ['jsonrpc' => '2.0', 'id' => $id, 'method' => $method, 'params' => $params ?: new \stdClass()],
         ]);
 
@@ -74,7 +89,7 @@ trait McpClientTrait
     private function callExpectingError(Client $client, string $sessionId, string $method, array $params, int $id): array
     {
         $response = $client->request('POST', '/mcp', [
-            'headers' => self::MCP_HEADERS + ['Mcp-Session-Id' => $sessionId],
+            'headers' => $this->mcpHeaders(['Mcp-Session-Id' => $sessionId]),
             'json' => ['jsonrpc' => '2.0', 'id' => $id, 'method' => $method, 'params' => $params],
         ]);
 

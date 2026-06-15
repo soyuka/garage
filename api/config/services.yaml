@@ -43,3 +43,6 @@ when@test:
             decorates: http_client
             arguments:
                 $fixturesDir: '%kernel.project_dir%/tests/Fixtures'
+
+        # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler.
+        App\Tests\Security\FakeOidcTokenHandler: ~
