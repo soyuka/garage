@@ -3,8 +3,12 @@ services:
   php:
     restart: unless-stopped
     environment:
+      # Dev: set SERVER_NAME=http://localhost (in .env) to serve plain HTTP on :80 with no
+      # TLS/redirect, so MCP clients without a trusted cert (Goose Flatpak's reqwest) reach
+      # /mcp. The OAuth metadata + WWW-Authenticate challenge derive scheme/host from the
+      # request, so http://localhost/mcp self-configures. DEFAULT_URI follows from .env.
       SERVER_NAME: ${SERVER_NAME:-localhost}, php:80
-      DEFAULT_URI: https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}
+      DEFAULT_URI: ${DEFAULT_URI:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       # Run "composer require symfony/orm-pack" to install and configure Doctrine ORM

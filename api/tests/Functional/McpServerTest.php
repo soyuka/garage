@@ -21,6 +21,33 @@ final class McpServerTest extends AppTestCase
         }
     }
 
+    /**
+     * Server-wide invariant for Claude connector-directory submission: every tool must carry a
+     * human-readable title and a readOnlyHint. Guards future tools too — adding one without
+     * annotations breaks this. Behaviour-specific hints (destructive/openWorld) checked inline.
+     */
+    public function testEveryToolCarriesTitleAndReadOnlyHint(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $tools = [];
+        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+            $tools[$tool['name']] = $tool;
+        }
+
+        foreach ($tools as $name => $tool) {
+            $this->assertNotEmpty($tool['title'] ?? null, "{$name} must carry a title");
+            $this->assertArrayHasKey('readOnlyHint', $tool['annotations'] ?? [], "{$name} must declare readOnlyHint");
+        }
+
+        // lookup_plate queries an external registry (SIV) → open world.
+        $this->assertTrue($tools['lookup_plate']['annotations']['openWorldHint'] ?? null);
+        // add_vehicle_fact writes but is additive and never overwrites verified facts.
+        $this->assertFalse($tools['add_vehicle_fact']['annotations']['readOnlyHint'] ?? null);
+        $this->assertFalse($tools['add_vehicle_fact']['annotations']['destructiveHint'] ?? null);
+    }
+
     public function testLookupPlateTool(): void
     {
         $client = static::createClient();

@@ -24,16 +24,23 @@ use App\State\GetVehicleFactsProcessor;
         // The processors return a CallToolResult directly — short-circuiting the structured
         // content processor — so they still populate structuredContent at runtime.
         'get_vehicle_facts' => new McpTool(
+            title: 'Vehicle Facts',
             description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Known vehicles return their stored facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result telling you to gather the data and call add_vehicle_fact — it is NOT an error.',
             input: GetVehicleFactsInput::class,
             structuredContent: false,
             processor: GetVehicleFactsProcessor::class,
+            // readOnlyHint despite the carId write-through: that is transparent catalog caching,
+            // not user-intent mutation — hosts should not gate a lookup behind a confirmation.
+            annotations: ['readOnlyHint' => true],
         ),
         'add_vehicle_fact' => new McpTool(
+            title: 'Add Vehicle Fact',
             description: 'Store a maintenance fact about a vehicle (creating it if unknown). Use this to fill catalog misses with general knowledge or a web source; facts are stored unverified. A verified manufacturer/TecDoc fact is authoritative and will never be overwritten — such an attempt returns a refused result naming the existing fact.',
             input: AddVehicleFactInput::class,
             structuredContent: false,
             processor: AddVehicleFactProcessor::class,
+            // Additive: never overwrites a verified fact (returns refused), so not destructive.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false],
         ),
     ],
 )]

@@ -40,9 +40,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     mcp: [
         'list_part_categories' => new McpToolCollection(
+            title: 'List Part Categories',
             description: 'List the part categories (TecDoc product group tree) applicable to a vehicle. Use the carId (kType) and carType from lookup_plate or list_cars. By default only leaf categories are returned — pass their id to list_articles.',
             input: PartCategoriesInput::class,
             processor: PartCategoriesProcessor::class,
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]

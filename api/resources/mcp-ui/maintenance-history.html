@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en" data-mcp-app="maintenance-history">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maintenance history</title>
+  <style>
+    :root {
+      --bg: #0f1115; --card: #181b22; --line: #262b36; --fg: #e7e9ee;
+      --muted: #9aa3b2; --accent: #4f9cf9; --ok: #36b37e; --warn: #f5a623; --danger: #e5484d;
+      font-size: 14px;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f6f7f9; --card:#fff; --line:#e6e8ec; --fg:#1a1d23; --muted:#5b6472; --accent:#2563eb; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+    header.veh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+      padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
+    header.veh h1 { font-size: 1.15rem; margin: 0; }
+    header.veh .sub { color: var(--muted); font-size: .85rem; }
+    .timeline { position: relative; margin: 8px 0 0; padding: 0; list-style: none; }
+    .timeline::before { content: ""; position: absolute; left: 19px; top: 6px; bottom: 6px;
+      width: 2px; background: var(--line); }
+    .rec { position: relative; padding: 12px 0 12px 52px; }
+    .rec .dot { position: absolute; left: 8px; top: 14px; width: 24px; height: 24px;
+      border-radius: 50%; background: var(--card); border: 2px solid var(--line);
+      display: grid; place-items: center; font-size: 13px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+    .card .top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+    .card .ttl { font-weight: 600; }
+    .card .date { color: var(--muted); font-size: .85rem; white-space: nowrap; }
+    .meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 6px; color: var(--muted); font-size: .85rem; }
+    .meta b { color: var(--fg); font-weight: 600; }
+    .cost { color: var(--fg); font-weight: 600; }
+    .notes { margin-top: 8px; font-size: .9rem; }
+    .parts { margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { font-size: .78rem; background: var(--bg); border: 1px solid var(--line);
+      border-radius: 6px; padding: 2px 8px; }
+    .prov { margin-top: 8px; font-size: .72rem; color: var(--muted); }
+    .badge { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: .72rem;
+      border: 1px solid var(--line); }
+    .badge.user { color: var(--ok); border-color: var(--ok); }
+    .empty, .loading { text-align: center; color: var(--muted); padding: 40px 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="veh" id="veh" hidden><h1 id="vehName"></h1><span class="sub" id="vehSub"></span></header>
+    <ul class="timeline" id="timeline"></ul>
+    <div class="loading" id="status">Loading maintenance history…</div>
+  </div>
+
+  <script>
+    // Service-event type → glyph. Mirrors App\Maintenance\MaintenanceType.
+    var ICONS = {
+      oil_change: "🛢️", oil_filter: "🧽", air_filter: "💨", fuel_filter: "⛽",
+      cabin_filter: "🌬️", spark_plug: "⚡", tires: "🛞", brakes: "🛑",
+      coolant: "❄️", battery: "🔋", inspection: "🔎", repair: "🔧", other: "📝"
+    };
+    var TYPE_LABEL = {
+      oil_change: "Oil change", oil_filter: "Oil filter", air_filter: "Air filter",
+      fuel_filter: "Fuel filter", cabin_filter: "Cabin filter", spark_plug: "Spark plug",
+      tires: "Tyres", brakes: "Brakes", coolant: "Coolant", battery: "Battery",
+      inspection: "Inspection", repair: "Repair", other: "Other"
+    };
+
+    function esc(s) {
+      return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    function fmtDate(iso) {
+      if (!iso) return "";
+      var d = new Date(iso);
+      if (isNaN(d)) return esc(iso);
+      return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    }
+
+    function recordCard(r) {
+      var icon = ICONS[r.type] || ICONS.other;
+      var title = r.label || TYPE_LABEL[r.type] || r.type;
+      var meta = [];
+      if (r.usage && r.usage.value != null) {
+        meta.push("<span><b>" + r.usage.value.toLocaleString() + "</b> " + esc(r.usage.unit || "") + "</span>");
+      }
+      if (r.performedBy) meta.push("<span>by <b>" + esc(r.performedBy) + "</b></span>");
+      if (r.cost && r.cost.amount != null) {
+        meta.push('<span class="cost">' + esc(r.cost.amount) + " " + esc(r.cost.currency || "") + "</span>");
+      }
+      var parts = (r.partsUsed || []).map(function (p) {
+        return '<span class="chip">' + esc(p.label || p.ref) + (p.label && p.ref ? " · " + esc(p.ref) : "") + "</span>";
+      }).join("");
+      var prov = r.source ? '<span class="badge ' + esc(r.source) + '">' + esc(r.source) + "</span>" : "";
+
+      return '<li class="rec">'
+        + '<span class="dot">' + icon + "</span>"
+        + '<div class="card">'
+        + '<div class="top"><span class="ttl">' + esc(title) + '</span><span class="date">' + fmtDate(r.performedAt) + "</span></div>"
+        + (meta.length ? '<div class="meta">' + meta.join("") + "</div>" : "")
+        + (r.notes ? '<div class="notes">' + esc(r.notes) + "</div>" : "")
+        + (parts ? '<div class="parts">' + parts + "</div>" : "")
+        + (prov ? '<div class="prov">' + prov + "</div>" : "")
+        + "</div></li>";
+    }
+
+    // Accepts the get_maintenance_history envelope: { status, vehicle, records }.
+    function render(data) {
+      data = data || {};
+      var status = document.getElementById("status");
+      var timeline = document.getElementById("timeline");
+      var v = data.vehicle || {};
+      if (v.make || v.model) {
+        document.getElementById("vehName").textContent = [v.make, v.model, v.year].filter(Boolean).join(" ");
+        document.getElementById("vehSub").textContent = v.vehicleType || "";
+        document.getElementById("veh").hidden = false;
+      }
+      var records = data.records || [];
+      if (!records.length) {
+        timeline.innerHTML = "";
+        status.className = "empty";
+        status.textContent = data.status === "no_records"
+          ? "No maintenance recorded yet for this vehicle."
+          : "No records to show.";
+        return;
+      }
+      status.hidden = true;
+      timeline.innerHTML = records.map(recordCard).join("");
+    }
+
+    // --- MCP Apps bridge (io.modelcontextprotocol/ui) ---
+    // JSON-RPC 2.0 over postMessage to the host (window.parent), per the ext-apps spec
+    // (2026-01-26) and Goose's host implementation. The tool result is NOT in the
+    // ui/initialize response — it arrives as a `ui/notifications/tool-result` notification
+    // carrying our get_maintenance_history envelope under params.structuredContent.
+    function McpAppClient() {
+      this.pending = new Map();
+      this.nextId = 0;
+      window.addEventListener("message", this.onMessage.bind(this));
+    }
+
+    McpAppClient.prototype.request = function (method, params) {
+      var self = this;
+      return new Promise(function (resolve, reject) {
+        var id = ++self.nextId;
+        self.pending.set(id, { resolve: resolve, reject: reject });
+        window.parent.postMessage({ jsonrpc: "2.0", id: id, method: method, params: params || {} }, "*");
+        setTimeout(function () {
+          if (self.pending.has(id)) { self.pending.delete(id); reject(new Error("timeout: " + method)); }
+        }, 30000);
+      });
+    };
+
+    McpAppClient.prototype.notify = function (method, params) {
+      window.parent.postMessage({ jsonrpc: "2.0", method: method, params: params || {} }, "*");
+    };
+
+    McpAppClient.prototype.reportSize = function () {
+      this.notify("ui/notifications/size-changed", { height: document.body.scrollHeight });
+    };
+
+    McpAppClient.prototype.onMessage = function (event) {
+      var data = event.data;
+      if (!data || typeof data !== "object") return;
+
+      // JSON-RPC response to one of our requests.
+      if ("id" in data && this.pending.has(data.id)) {
+        var p = this.pending.get(data.id);
+        this.pending.delete(data.id);
+        data.error ? p.reject(new Error(data.error.message || "error")) : p.resolve(data.result);
+        return;
+      }
+
+      // Host → app notifications.
+      switch (data.method) {
+        case "ui/notifications/tool-result":
+          render((data.params || {}).structuredContent || {});
+          this.reportSize();
+          break;
+        case "ui/notifications/host-context-changed":
+          // Theme also flows through prefers-color-scheme (the host patches matchMedia);
+          // mirror it onto color-scheme for hosts that don't.
+          var theme = (data.params || {}).theme;
+          if (theme === "light" || theme === "dark") { document.documentElement.style.colorScheme = theme; }
+          break;
+      }
+    };
+
+    function boot() {
+      // Standalone preview (opened directly in a browser, not inside an MCP host).
+      if (window.__MOCK__) { render(window.__MOCK__); return; }
+
+      var app = new McpAppClient();
+      app.request("ui/initialize", {})
+        .then(function (result) {
+          var theme = result && result.hostContext && result.hostContext.theme;
+          if (theme === "light" || theme === "dark") { document.documentElement.style.colorScheme = theme; }
+        })
+        .catch(function () { /* non-MCP host: stay on the loading state until data arrives */ })
+        .finally(function () {
+          app.notify("ui/notifications/initialized", {});
+          app.reportSize();
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", boot);
+  </script>
+</body>
+</html>

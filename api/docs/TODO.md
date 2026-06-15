@@ -162,8 +162,46 @@ into persistent structured data. No need to license agroparts/Kramp for the long
 
 ## MCP / platform
 
-- [ ] MCP Apps extension (`io.modelcontextprotocol/ui`) — modelcontextprotocol/php-sdk PR #281;
-      needs mcp/sdk >= version carrying the extension (currently pinned by mcp-bundle 0.9 → sdk 0.5)
+- [x] mcp/sdk bumped to **0.6.0** (2026-06-15) — carries the MCP Apps extension primitives:
+      `Mcp\Schema\Extension\Apps\McpApps` (EXTENSION_ID `io.modelcontextprotocol/ui`, URI_SCHEME
+      `ui`), `UiToolMeta` (`{resourceUri?, visibility?}` = the `_meta.ui` descriptor),
+      `Builder::enableExtension()`. Neither mcp-bundle 0.9 nor api-platform/mcp 4.3 support sdk 0.6
+      on any released/dev branch (both pin/call removed 0.5 symbols: `Schema\Resource`→
+      `ResourceDefinition`, `ArrayLoader`→`ReflectedElementLoader`, registry `$isManual`/`clear()`/
+      `getDiscoveryState()` dropped). Installed via **path-repo symlinks to local forks**:
+      `symfony/mcp-bundle` ← `~/forks/mcp/ai/src/mcp-bundle` (branch `bump-mcp-sdk-0.6`, requires
+      `mcp/sdk ^0.6`); `api-platform/mcp` ← `~/forks/core/src/Mcp` (branch `fix/mcp-sdk-0.6-compat`).
+      Suite green on 0.6 (50 tests / 303 assertions).
+      DEPLOY CAVEAT: path symlinks point at `~/forks` → absent in Docker. Before any container
+      deploy, either merge the fork PRs upstream + use tags, or commit composer patches, or bake the
+      forks into the image.
+- [x] MCP Apps extension (`io.modelcontextprotocol/ui`) WIRING — SHIPPED 2026-06-15, pinned by
+      tests/Functional/McpAppsUiTest.php (initialize advertises the extension; tool links + serves
+      the app). All app-side, no fork changes (forks stay pure 0.6-compat):
+      (1) `App\Mcp\EnableMcpAppsExtensionPass` (registered in `Kernel::build`) adds
+      `enableExtension(new McpApps())` to the `mcp.server.builder` definition → `initialize` announces
+      `capabilities.extensions["io.modelcontextprotocol/ui"]`.
+      (2) `get_maintenance_history` McpTool sets `meta: ['ui' => ['resourceUri' => …]]` — `Tool::
+      jsonSerialize()` emits it under `_meta`, so the host reads `_meta.ui.resourceUri`. NO core change.
+      (3) `App\Mcp\UiResourceLoader` (a `mcp.loader`) registers the `ui://mon-parc-auto/
+      maintenance-history` ResourceDefinition (mimeType `text/html;profile=mcp-app`, descriptor
+      `_meta.ui` = `McpApps::resourceMarker()` stdClass — done via a loader, not `#[McpResource]`,
+      because PHP attribute args can't hold a `\stdClass`). Handler serves the HTML.
+      (4) UI bundle: `resources/mcp-ui/maintenance-history.html` — self-contained service-timeline
+      cards (type icon, date, usage, cost, performedBy, parts chips, provenance badge), vanilla JS,
+      no external loads (CSP-friendly). Resource-content `_meta.ui` carries `prefersBorder` via
+      `UiResourceContentMeta` (CSP omitted = same-origin default, which suits the no-external app).
+      App-bridge implements the REAL ext-apps protocol (spec 2026-01-26, verified against the local
+      goose fork at ../goose): JSON-RPC over postMessage to the host — `ui/initialize` (→ hostContext
+      theme), `ui/notifications/initialized`, `ui/notifications/size-changed`, and renders on the
+      `ui/notifications/tool-result` notification (reads `params.structuredContent` = our
+      get_maintenance_history envelope). Theme also rides `prefers-color-scheme` (Goose's outer-proxy
+      patches matchMedia). `window.__MOCK__` = standalone-preview fallback. Verified in headless
+      Chrome by simulating the host handshake + tool-result push (cards rendered).
+      TEST TARGET: Goose (../goose) supports `io.modelcontextprotocol/ui` — connect via the OAuth
+      flow (RFC 9728 metadata already wired) and prompt for a vehicle's maintenance history.
+      REMAINING POLISH (deferred): live end-to-end run inside Goose Desktop against the OAuth-
+      protected `/mcp`; `ui/message` (push a chat summary) + `tools/call` refresh are unused so far.
 - [ ] Auth on `/mcp` + API (currently open — prototype only, do NOT expose publicly with tokens set)
 - [ ] Rate limiting / per-client quotas before any public exposure
 - [ ] MCP resources (e.g. `resource://mon-parc-auto/coverage` notes for LLMs)

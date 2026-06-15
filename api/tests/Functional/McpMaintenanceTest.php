@@ -186,4 +186,30 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertFalse($history['result']['isError'] ?? false);
         $this->assertSame('NOSUCH', $content['vehicle']['make']);
     }
+
+    /**
+     * Claude connector-directory submission requires every tool to carry a title plus the
+     * applicable readOnlyHint/destructiveHint annotation; the hints are also a portable MCP
+     * signal every host (ChatGPT Apps, Claude) uses to gate confirmation prompts.
+     */
+    public function testMaintenanceToolsExposeTitleAndBehaviourHints(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $tools = [];
+        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+            $tools[$tool['name']] = $tool;
+        }
+
+        $read = $tools['get_maintenance_history'];
+        $this->assertNotEmpty($read['title'] ?? null, 'read tool must carry a title');
+        $this->assertTrue($read['annotations']['readOnlyHint'] ?? null, 'history is read-only');
+
+        $write = $tools['log_maintenance'];
+        $this->assertNotEmpty($write['title'] ?? null, 'write tool must carry a title');
+        $this->assertFalse($write['annotations']['readOnlyHint'] ?? null, 'logging modifies state');
+        // Append-only log: additive, never overwrites/deletes — so destructiveHint must be false.
+        $this->assertFalse($write['annotations']['destructiveHint'] ?? null, 'append-only log is not destructive');
+    }
 }

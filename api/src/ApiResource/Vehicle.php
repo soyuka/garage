@@ -22,9 +22,12 @@ use App\State\VehicleProvider;
     ],
     mcp: [
         'lookup_plate' => new McpTool(
+            title: 'Plate Lookup',
             description: 'Look up a French vehicle by its registration plate (plaque d\'immatriculation). Returns identity, technical data and the TecDoc identifiers (carId/kType, carType) needed by the parts and fluids tools.',
             input: PlateInput::class,
             processor: VehicleLookupProcessor::class,
+            // Hits the external SIV registry → open world; read-only from the caller's view.
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]

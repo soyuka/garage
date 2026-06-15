@@ -28,9 +28,11 @@ use App\State\FillVolumesProcessor;
     ],
     mcp: [
         'get_fill_volumes' => new McpToolCollection(
+            title: 'Fluid Capacities',
             description: 'Get fluid capacities and specifications (engine oil + ACEA/API spec, gearbox oil, brake fluid DOT grade, coolant, A/C refrigerant…) for a vehicle. Use the carId (kType) from lookup_plate or list_cars.',
             input: FillVolumesInput::class,
             processor: FillVolumesProcessor::class,
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]

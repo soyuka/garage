@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "53ed16197ab27843312e802c337705bd",
+    "content-hash": "c6e53c6528d626f254f7517f9f46963d",
     "packages": [
         {
             "name": "api-platform/doctrine-common",
@@ -417,16 +417,16 @@
         },
         {
             "name": "api-platform/json-schema",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/json-schema.git",
-                "reference": "6a0a2ddc4914bb1fdb1b71777c49aef388f6ea31"
+                "reference": "2136965a30643056d09b10ae5e9fab1f7232a028"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/json-schema/zipball/6a0a2ddc4914bb1fdb1b71777c49aef388f6ea31",
-                "reference": "6a0a2ddc4914bb1fdb1b71777c49aef388f6ea31",
+                "url": "https://api.github.com/repos/api-platform/json-schema/zipball/2136965a30643056d09b10ae5e9fab1f7232a028",
+                "reference": "2136965a30643056d09b10ae5e9fab1f7232a028",
                 "shasum": ""
             },
             "require": {
@@ -492,9 +492,9 @@
                 "swagger"
             ],
             "support": {
-                "source": "https://github.com/api-platform/json-schema/tree/v4.3.10"
+                "source": "https://github.com/api-platform/json-schema/tree/v4.3.13"
             },
-            "time": "2026-06-03T14:46:27+00:00"
+            "time": "2026-06-13T05:06:55+00:00"
         },
         {
             "name": "api-platform/jsonld",
@@ -578,17 +578,11 @@
         },
         {
             "name": "api-platform/mcp",
-            "version": "v4.3.11",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/api-platform/mcp.git",
-                "reference": "0a351f21438b5c7fd16a05fdcd67bdd44e1aa20b"
-            },
+            "version": "dev-fix/mcp-sdk-0.6-compat",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/mcp/zipball/0a351f21438b5c7fd16a05fdcd67bdd44e1aa20b",
-                "reference": "0a351f21438b5c7fd16a05fdcd67bdd44e1aa20b",
-                "shasum": ""
+                "type": "path",
+                "url": "~/forks/core/src/Mcp",
+                "reference": "21b6f56f94c5b1b8d6cd9b671ae851e453e3463c"
             },
             "require": {
                 "api-platform/json-schema": "^4.3",
@@ -603,15 +597,15 @@
             },
             "type": "library",
             "extra": {
-                "thanks": {
-                    "url": "https://github.com/api-platform/api-platform",
-                    "name": "api-platform/api-platform"
+                "branch-alias": {
+                    "dev-main": "4.4.x-dev"
                 },
                 "symfony": {
                     "require": "^6.4 || ^7.0 || ^8.0"
                 },
-                "branch-alias": {
-                    "dev-main": "4.4.x-dev"
+                "thanks": {
+                    "name": "api-platform/api-platform",
+                    "url": "https://github.com/api-platform/api-platform"
                 }
             },
             "autoload": {
@@ -619,7 +613,6 @@
                     "ApiPlatform\\Mcp\\": ""
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -642,29 +635,28 @@
             "description": "Model Context Protocol (MCP) integration for API Platform",
             "homepage": "https://api-platform.com",
             "keywords": [
+                "API",
+                "MCP",
                 "Model Context Protocol",
-                "api",
-                "mcp",
-                "rest"
+                "REST"
             ],
-            "support": {
-                "issues": "https://github.com/api-platform/mcp/issues",
-                "source": "https://github.com/api-platform/mcp/tree/v4.3.11"
-            },
-            "time": "2026-06-10T14:43:58+00:00"
+            "transport-options": {
+                "symlink": false,
+                "relative": false
+            }
         },
         {
             "name": "api-platform/metadata",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/metadata.git",
-                "reference": "b835ce534861f9e7b2a316fa582f28afe4ad5fe6"
+                "reference": "86efa5375e994f4e46f3e4336dc4dc5ecc9456a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/metadata/zipball/b835ce534861f9e7b2a316fa582f28afe4ad5fe6",
-                "reference": "b835ce534861f9e7b2a316fa582f28afe4ad5fe6",
+                "url": "https://api.github.com/repos/api-platform/metadata/zipball/86efa5375e994f4e46f3e4336dc4dc5ecc9456a8",
+                "reference": "86efa5375e994f4e46f3e4336dc4dc5ecc9456a8",
                 "shasum": ""
             },
             "require": {
@@ -747,9 +739,9 @@
                 "swagger"
             ],
             "support": {
-                "source": "https://github.com/api-platform/metadata/tree/v4.3.10"
+                "source": "https://github.com/api-platform/metadata/tree/v4.3.13"
             },
-            "time": "2026-06-05T09:05:29+00:00"
+            "time": "2026-06-13T05:03:21+00:00"
         },
         {
             "name": "api-platform/openapi",
@@ -2582,16 +2574,16 @@
         },
         {
             "name": "mcp/sdk",
-            "version": "v0.5.0",
+            "version": "v0.6.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/modelcontextprotocol/php-sdk.git",
-                "reference": "fb2c8c2ee4ab2791239c5f534bb07bfb7589d4e8"
+                "reference": "433c84b58af346dd32f15f9909679e96a46ebe23"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/modelcontextprotocol/php-sdk/zipball/fb2c8c2ee4ab2791239c5f534bb07bfb7589d4e8",
-                "reference": "fb2c8c2ee4ab2791239c5f534bb07bfb7589d4e8",
+                "url": "https://api.github.com/repos/modelcontextprotocol/php-sdk/zipball/433c84b58af346dd32f15f9909679e96a46ebe23",
+                "reference": "433c84b58af346dd32f15f9909679e96a46ebe23",
                 "shasum": ""
             },
             "require": {
@@ -2660,9 +2652,9 @@
             "description": "Model Context Protocol SDK for Client and Server applications in PHP",
             "support": {
                 "issues": "https://github.com/modelcontextprotocol/php-sdk/issues",
-                "source": "https://github.com/modelcontextprotocol/php-sdk/tree/v0.5.0"
+                "source": "https://github.com/modelcontextprotocol/php-sdk/tree/v0.6.0"
             },
-            "time": "2026-04-26T13:37:40+00:00"
+            "time": "2026-06-02T15:47:04+00:00"
         },
         {
             "name": "nelmio/cors-bundle",
@@ -5795,20 +5787,14 @@
         },
         {
             "name": "symfony/mcp-bundle",
-            "version": "v0.9.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/symfony/mcp-bundle.git",
-                "reference": "654f639e94f4d7694771e6628380a9ff04c9d9c1"
-            },
+            "version": "dev-main",
             "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/symfony/mcp-bundle/zipball/654f639e94f4d7694771e6628380a9ff04c9d9c1",
-                "reference": "654f639e94f4d7694771e6628380a9ff04c9d9c1",
-                "shasum": ""
+                "type": "path",
+                "url": "~/forks/mcp/ai/src/mcp-bundle",
+                "reference": "c6be89061537a44a58d12ff4fc8061c3cc66021c"
             },
             "require": {
-                "mcp/sdk": "^0.5",
+                "mcp/sdk": "^0.6",
                 "php-http/discovery": "^1.20",
                 "symfony/config": "^7.3|^8.0",
                 "symfony/console": "^7.3|^8.0",
@@ -5831,8 +5817,8 @@
             "type": "symfony-bundle",
             "extra": {
                 "thanks": {
-                    "url": "https://github.com/symfony/ai",
-                    "name": "symfony/ai"
+                    "name": "symfony/ai",
+                    "url": "https://github.com/symfony/ai"
                 }
             },
             "autoload": {
@@ -5840,7 +5826,11 @@
                     "Symfony\\AI\\McpBundle\\": "src/"
                 }
             },
-            "notification-url": "https://packagist.org/downloads/",
+            "autoload-dev": {
+                "psr-4": {
+                    "Symfony\\AI\\PHPStan\\": "../../.phpstan"
+                }
+            },
             "license": [
                 "MIT"
             ],
@@ -5855,28 +5845,10 @@
                 }
             ],
             "description": "Symfony integration bundle for Model Context Protocol (via official mcp/sdk)",
-            "support": {
-                "source": "https://github.com/symfony/mcp-bundle/tree/v0.9.0"
-            },
-            "funding": [
-                {
-                    "url": "https://symfony.com/sponsor",
-                    "type": "custom"
-                },
-                {
-                    "url": "https://github.com/fabpot",
-                    "type": "github"
-                },
-                {
-                    "url": "https://github.com/nicolas-grekas",
-                    "type": "github"
-                },
-                {
-                    "url": "https://tidelift.com/funding/github/packagist/symfony/symfony",
-                    "type": "tidelift"
-                }
-            ],
-            "time": "2026-05-15T23:41:17+00:00"
+            "transport-options": {
+                "symlink": false,
+                "relative": false
+            }
         },
         {
             "name": "symfony/object-mapper",
@@ -6026,16 +5998,16 @@
         },
         {
             "name": "symfony/polyfill-deepclone",
-            "version": "v1.39.0",
+            "version": "v1.40.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/polyfill-deepclone.git",
-                "reference": "1b034bc050d84cc9c187de373f744912e1e35f1f"
+                "reference": "dca4ccba5f360070b574414dce4c1e7a559844fa"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/1b034bc050d84cc9c187de373f744912e1e35f1f",
-                "reference": "1b034bc050d84cc9c187de373f744912e1e35f1f",
+                "url": "https://api.github.com/repos/symfony/polyfill-deepclone/zipball/dca4ccba5f360070b574414dce4c1e7a559844fa",
+                "reference": "dca4ccba5f360070b574414dce4c1e7a559844fa",
                 "shasum": ""
             },
             "require": {
@@ -6089,7 +6061,7 @@
                 "shim"
             ],
             "support": {
-                "source": "https://github.com/symfony/polyfill-deepclone/tree/v1.39.0"
+                "source": "https://github.com/symfony/polyfill-deepclone/tree/v1.40.0"
             },
             "funding": [
                 {
@@ -6109,7 +6081,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-06-10T20:07:50+00:00"
+            "time": "2026-06-12T07:27:17+00:00"
         },
         {
             "name": "symfony/polyfill-intl-grapheme",
@@ -10985,9 +10957,25 @@
             "time": "2025-12-08T11:19:18+00:00"
         }
     ],
-    "aliases": [],
+    "aliases": [
+        {
+            "package": "api-platform/mcp",
+            "version": "dev-fix/mcp-sdk-0.6-compat",
+            "alias": "4.3.99",
+            "alias_normalized": "4.3.99.0"
+        },
+        {
+            "package": "symfony/mcp-bundle",
+            "version": "dev-main",
+            "alias": "0.9.99",
+            "alias_normalized": "0.9.99.0"
+        }
+    ],
     "minimum-stability": "stable",
-    "stability-flags": {},
+    "stability-flags": {
+        "api-platform/mcp": 20,
+        "symfony/mcp-bundle": 20
+    },
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {

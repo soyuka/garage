@@ -38,9 +38,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     mcp: [
         'list_articles' => new McpToolCollection(
+            title: 'List Articles',
             description: 'List aftermarket article references (brand + part number) applicable to a vehicle in one part category. Use carId/carType from lookup_plate and categoryId from list_part_categories.',
             input: ArticlesInput::class,
             processor: ArticlesProcessor::class,
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]

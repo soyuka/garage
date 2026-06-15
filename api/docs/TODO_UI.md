@@ -1,6 +1,10 @@
 # TODO — UI (MCP Apps)
 
-Deferred. Build the garage + maintenance **backend first** (entities, tools), then UI.
+STATUS 2026-06-15: backend done; **first UI SHIPPED** — the maintenance-history card app
+(idea #1 below) is wired and rendering. See TODO.md "## MCP / platform" for the full wiring
+record (enableExtension pass, tool `_meta.ui.resourceUri`, `ui://` loader, the HTML bundle at
+`resources/mcp-ui/maintenance-history.html`) + tests/Functional/McpAppsUiTest.php. The ideas
+below #1 remain for later.
 Captures the 2026-06-15 chat about UIs so we don't re-derive it.
 
 ## Context
@@ -11,8 +15,11 @@ in a **sandboxed iframe** inline in the conversation. iframe ↔ host talk over 
 JSON-RPC (app-bridge): the UI can call our existing tools back. Capability negotiated in
 `initialize` via the extension id.
 
-Dependency: needs `mcp/sdk` >= the version carrying the extension (today pinned by
-mcp-bundle 0.9 → sdk 0.5). Confirm bump before starting UI work. See TODO.md "## MCP / platform".
+Dependency: RESOLVED 2026-06-15 — `mcp/sdk` bumped to **0.6.0** (carries `McpApps` /
+`UiToolMeta` / `Builder::enableExtension()`), installed via path-repo symlinks to local forks
+of mcp-bundle + api-platform/mcp. See TODO.md "## MCP / platform" for the full bump record +
+the remaining extension WIRING gaps (bundle `enableExtension`, tool `_meta.ui.resourceUri`,
+`ui://` resource registration) that still gate actual rendering.
 
 ## Decisions made
 

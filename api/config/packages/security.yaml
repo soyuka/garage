@@ -28,15 +28,26 @@ security:
         main:
             security: false
 
-    access_control:
-        # Force a 401 (entry point) for unauthenticated /mcp calls; without this the missing
-        # token would simply fall through as anonymous and the tools would run unprotected.
-        - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
+# NOTE: the access_control rule that forces a 401 on unauthenticated /mcp lives in the
+# per-env blocks below (prod/test) — NOT here — so dev can run /mcp unauthenticated while we
+# test the MCP Apps UI against stock Goose. RESTORE: move this rule back to the base block and
+# re-add the oidc access_token to when@dev once a Goose-compatible IdP is wired up.
+#    access_control:
+#        - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
+
+# TEMP: dev runs /mcp with NO auth (firewall anonymous, no access_control rule). The mcp
+# firewall keeps its base pattern/stateless/provider but gets no access_token handler, so
+# requests fall through as anonymous and the tools run open. Local testing only.
+when@dev:
+    security:
+        firewalls:
+            mcp:
+                security: false
 
 # Tokens are validated locally against Zitadel's JWKS via the OIDC discovery document.
 # Zitadel must be configured to issue JWT access tokens; for opaque tokens swap this for the
 # `oauth2` introspection handler.
-when@dev: &oidc_firewall
+when@prod:
     security:
         firewalls:
             mcp:
@@ -52,8 +63,8 @@ when@dev: &oidc_firewall
                                 - '%env(ZITADEL_ISSUER)%'
                             algorithms:
                                 - RS256
-
-when@prod: *oidc_firewall
+        access_control:
+            - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
 
 when@test:
     security:
@@ -64,3 +75,5 @@ when@test:
                     # opaque test tokens instead. The firewall and ZitadelUserProvider still
                     # run for real.
                     token_handler: App\Tests\Security\FakeOidcTokenHandler
+        access_control:
+            - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }

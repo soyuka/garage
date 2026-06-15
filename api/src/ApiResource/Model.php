@@ -36,9 +36,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     mcp: [
         'list_models' => new McpToolCollection(
+            title: 'List Models',
             description: 'List the model lines of a manufacturer (use list_makes first to get the makeId). Currently answers an error until the getModels API token is configured.',
             input: ModelsInput::class,
             processor: ModelsProcessor::class,
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]

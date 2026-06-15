@@ -33,9 +33,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     mcp: [
         'list_makes' => new McpToolCollection(
+            title: 'List Manufacturers',
             description: 'List vehicle manufacturers (brands) known to the TecDoc catalog. Entry point for browsing by brand/model instead of by plate.',
             input: MakesInput::class,
             processor: MakesProcessor::class,
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]

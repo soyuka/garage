@@ -41,9 +41,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     ],
     mcp: [
         'list_cars' => new McpToolCollection(
+            title: 'List Vehicle Variants',
             description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts and fluids tools. Currently answers an error until the getCars API token is configured.',
             input: CarsInput::class,
             processor: CarsProcessor::class,
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
     ],
 )]
