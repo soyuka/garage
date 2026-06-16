@@ -4,17 +4,25 @@ declare(strict_types=1);
 
 namespace App\Maintenance;
 
+use ApiPlatform\Metadata\IriConverterInterface;
+use App\ApiResource\GarageMaintenanceRecord;
 use App\Entity\MaintenanceRecord;
 
 /**
  * Flattens a MaintenanceRecord into the array the MCP tools surface — mirrors
  * App\Garage\FactView. Money is reassembled from integer cents into a {amount, currency}
- * decimal string so the LLM never sees raw cents; usage into {value, unit}.
+ * decimal string so the LLM never sees raw cents; usage into {value, unit}. The `@id` is the
+ * dereferenceable GarageMaintenanceRecord IRI.
  */
 final class RecordView
 {
+    public function __construct(private readonly IriConverterInterface $iriConverter)
+    {
+    }
+
     /**
      * @return array{
+     *     @id: string,
      *     type: string,
      *     label: string|null,
      *     performedAt: string,
@@ -27,12 +35,13 @@ final class RecordView
      *     addedAt: string
      * }
      */
-    public static function toArray(MaintenanceRecord $record): array
+    public function toArray(MaintenanceRecord $record): array
     {
         $usageValue = $record->getUsageValue();
         $costCents = $record->getCostCents();
 
         return [
+            '@id' => $this->iriConverter->getIriFromResource(GarageMaintenanceRecord::fromEntity($record)),
             'type' => $record->getType()->value,
             'label' => $record->getLabel(),
             'performedAt' => $record->getPerformedAt()->format('Y-m-d'),

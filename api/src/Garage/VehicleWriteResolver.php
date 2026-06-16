@@ -7,6 +7,7 @@ namespace App\Garage;
 use App\Entity\Vehicle;
 use App\Repository\VehicleRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * The single dedup brain for every garage write. Decides which vehicle a fact or maintenance
@@ -31,7 +32,7 @@ final class VehicleWriteResolver
     }
 
     public function resolveForWrite(
-        ?int $vehicleId,
+        ?Ulid $vehicleId,
         ?string $make,
         ?string $model,
         ?int $year,

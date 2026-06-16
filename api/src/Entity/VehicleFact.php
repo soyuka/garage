@@ -6,6 +6,7 @@ namespace App\Entity;
 
 use App\Repository\VehicleFactRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * A typed fact about a vehicle (oil_type, oil_capacity, spark_plug_ref…) with full
@@ -17,9 +18,8 @@ use Doctrine\ORM\Mapping as ORM;
 class VehicleFact
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'ulid', unique: true)]
+    private Ulid $id;
 
     public function __construct(
         #[ORM\ManyToOne(targetEntity: Vehicle::class, inversedBy: 'facts')]
@@ -43,6 +43,7 @@ class VehicleFact
         #[ORM\Column(nullable: true)]
         private ?string $url = null,
     ) {
+        $this->id = new Ulid();
         $vehicle->addFact($this);
     }
 
@@ -69,7 +70,7 @@ class VehicleFact
         $this->addedAt = $addedAt;
     }
 
-    public function getId(): ?int
+    public function getId(): Ulid
     {
         return $this->id;
     }

@@ -8,13 +8,13 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class AddVehicleFactInput
 {
-    #[ApiProperty(description: 'Target an existing vehicle by its id (from list_vehicles) — the way to resolve an ambiguous_match: the fact is written straight onto that row. When set, make/model are ignored.')]
-    public ?int $vehicleId = null;
+    #[ApiProperty(description: 'Target an existing vehicle by its @id (the IRI from list_vehicles, e.g. "/garage/vehicles/01J…") — the way to resolve an ambiguous_match: the fact is written straight onto that row. When set, make/model are ignored.')]
+    public ?string $vehicle = null;
 
-    #[ApiProperty(description: 'Vehicle make, e.g. "TORO". Case-insensitive. Required unless vehicleId is given.')]
+    #[ApiProperty(description: 'Vehicle make, e.g. "TORO". Case-insensitive. Required unless vehicle is given.')]
     public ?string $make = null;
 
-    #[ApiProperty(description: 'Vehicle model, e.g. "246-H". Case-insensitive. Required unless vehicleId is given.')]
+    #[ApiProperty(description: 'Vehicle model, e.g. "246-H". Case-insensitive. Required unless vehicle is given.')]
     public ?string $model = null;
 
     #[ApiProperty(description: 'Model year, when known.')]

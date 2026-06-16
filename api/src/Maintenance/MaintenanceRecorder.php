@@ -10,6 +10,7 @@ use App\Garage\VehicleWriteResolver;
 use App\Repository\MaintenanceRecordRepository;
 use App\Repository\VehicleRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * Writes and reads the append-only maintenance log. Resolves the shared vehicle through the
@@ -31,7 +32,7 @@ final class MaintenanceRecorder
      * @param list<array{ref: string, label?: string}> $partsUsed
      */
     public function log(
-        ?int $vehicleId,
+        ?Ulid $vehicleId,
         ?string $make,
         ?string $model,
         ?int $year,

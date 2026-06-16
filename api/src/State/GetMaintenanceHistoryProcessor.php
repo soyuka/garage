@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\GarageVehicle;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Garage\ToolResult;
 use App\Garage\VehicleType;
@@ -23,8 +25,11 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class GetMaintenanceHistoryProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly MaintenanceRecorder $recorder)
-    {
+    public function __construct(
+        private readonly MaintenanceRecorder $recorder,
+        private readonly RecordView $recordView,
+        private readonly IriConverterInterface $iriConverter,
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
@@ -52,10 +57,14 @@ final class GetMaintenanceHistoryProcessor implements ProcessorInterface
             ]);
         }
 
+        if ([] !== $records) {
+            $identity = ['@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($records[0]->getVehicle()))] + $identity;
+        }
+
         return ToolResult::of([
             'status' => 'ok',
             'vehicle' => $identity,
-            'records' => array_map(RecordView::toArray(...), $records),
+            'records' => array_map($this->recordView->toArray(...), $records),
         ]);
     }
 }

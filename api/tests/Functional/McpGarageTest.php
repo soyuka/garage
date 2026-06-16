@@ -454,7 +454,7 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('GROUNDSCARE-OIL', $this->factByKey($facts, 'oil_type')['value']);
     }
 
-    public function testListVehiclesSurfacesVehicleId(): void
+    public function testListVehiclesSurfacesDereferenceableVehicleIri(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -476,8 +476,44 @@ final class McpGarageTest extends AppTestCase
             'arguments' => [],
         ], 4)['result']['structuredContent'];
 
-        $this->assertArrayHasKey('id', $list['vehicles'][0], 'list_vehicles must surface the id so the agent can address a vehicle.');
-        $this->assertIsInt($list['vehicles'][0]['id']);
+        $iri = $list['vehicles'][0]['@id'] ?? null;
+        $this->assertNotNull($iri, 'list_vehicles must surface a dereferenceable @id, not a leaked DB integer.');
+        $this->assertMatchesRegularExpression('~^/garage/vehicles/[0-9A-HJKMNP-TV-Z]{26}$~', $iri);
+
+        // The @id must be a real, dereferenceable link — follow it to a 200 with matching identity.
+        $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare']);
+    }
+
+    public function testVehicleFactExposesDereferenceableIri(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $facts = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_vehicle_facts',
+            'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
+        ], 4)['result']['structuredContent']['facts'];
+
+        $iri = $facts[0]['@id'] ?? null;
+        $this->assertMatchesRegularExpression('~^/garage/vehicle-facts/[0-9A-HJKMNP-TV-Z]{26}$~', (string) $iri);
+
+        $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['key' => 'oil_type', 'value' => 'SAE 5W-30']);
     }
 
     public function testAmbiguousMakeSurfacesExistingVehicleAsCandidateInsteadOfCreating(): void
@@ -516,7 +552,7 @@ final class McpGarageTest extends AppTestCase
         $this->assertCount(1, $add['candidates']);
         $this->assertSame('TORO', $add['candidates'][0]['make']);
         $this->assertSame('246-H', $add['candidates'][0]['model']);
-        $this->assertIsInt($add['candidates'][0]['id']);
+        $this->assertMatchesRegularExpression('~^/garage/vehicles/[0-9A-HJKMNP-TV-Z]{26}$~', $add['candidates'][0]['@id']);
 
         // The store must be untouched — still a single vehicle, still its one fact.
         $list = $this->call($client, $sessionId, 'tools/call', [
@@ -527,7 +563,7 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame(1, $list['vehicles'][0]['factCount']);
     }
 
-    public function testWritingByVehicleIdFoldsFactsOntoTheExistingRow(): void
+    public function testWritingByVehicleIriFoldsFactsOntoTheExistingRow(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -544,16 +580,16 @@ final class McpGarageTest extends AppTestCase
             ],
         ], 3);
 
-        $id = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['id'];
+        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
 
-        // Resolve the ambiguity by addressing the existing row directly.
+        // Resolve the ambiguity by addressing the existing row directly via its @id.
         $add = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'add_vehicle_fact',
             'arguments' => [
-                'vehicleId' => $id,
+                'vehicle' => $iri,
                 'key' => 'engine',
                 'value' => 'Briggs & Stratton 303777',
                 'source' => 'user',

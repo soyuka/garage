@@ -36,6 +36,7 @@ final class ListDueMaintenanceProcessor implements ProcessorInterface
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly DueMaintenanceCalculator $calculator,
+        private readonly DueMaintenanceView $dueView,
     ) {
     }
 
@@ -62,7 +63,7 @@ final class ListDueMaintenanceProcessor implements ProcessorInterface
 
             if ([] !== $forecast->unknownBaseline) {
                 $gaps[] = [
-                    'vehicle' => DueMaintenanceView::identity($vehicle),
+                    'vehicle' => $this->dueView->identity($vehicle),
                     'unknownBaseline' => array_map(static fn ($type): string => $type->value, $forecast->unknownBaseline),
                 ];
             }
@@ -76,7 +77,7 @@ final class ListDueMaintenanceProcessor implements ProcessorInterface
         }
 
         $due = array_map(
-            static fn (array $pair): array => DueMaintenanceView::dueItem($pair['vehicle'], $pair['due']),
+            fn (array $pair): array => $this->dueView->dueItem($pair['vehicle'], $pair['due']),
             $pairs,
         );
 

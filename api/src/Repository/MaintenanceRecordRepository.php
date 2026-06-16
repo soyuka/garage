@@ -30,7 +30,9 @@ final class MaintenanceRecordRepository extends ServiceEntityRepository
     {
         $qb = $this->createQueryBuilder('r')
             ->andWhere('r.vehicle = :vehicle')
-            ->setParameter('vehicle', $vehicle)
+            // Bind the ULID explicitly: passing the entity lets Doctrine stringify the id to
+            // base32, which a uuid column rejects. The 'ulid' type emits the RFC 4122 form.
+            ->setParameter('vehicle', $vehicle->getId(), 'ulid')
             ->orderBy('r.performedAt', 'DESC')
             ->addOrderBy('r.id', 'DESC');
 

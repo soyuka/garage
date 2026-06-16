@@ -8,6 +8,7 @@ use App\Maintenance\MaintenanceType;
 use App\Maintenance\UsageUnit;
 use App\Repository\MaintenanceRecordRepository;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * A dated service event performed on a vehicle (oil change, filter swap, tyres…).
@@ -25,9 +26,8 @@ use Doctrine\ORM\Mapping as ORM;
 class MaintenanceRecord
 {
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'ulid', unique: true)]
+    private Ulid $id;
 
     public function __construct(
         #[ORM\ManyToOne(targetEntity: Vehicle::class, inversedBy: 'maintenanceRecords')]
@@ -64,10 +64,11 @@ class MaintenanceRecord
         #[ORM\Column(nullable: true)]
         private ?string $owner = null,
     ) {
+        $this->id = new Ulid();
         $vehicle->addMaintenanceRecord($this);
     }
 
-    public function getId(): ?int
+    public function getId(): Ulid
     {
         return $this->id;
     }

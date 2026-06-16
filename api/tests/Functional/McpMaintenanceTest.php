@@ -52,7 +52,7 @@ final class McpMaintenanceTest extends AppTestCase
 
         $this->assertSame('ambiguous_match', $log['status']);
         $this->assertSame('TORO', $log['candidates'][0]['make']);
-        $this->assertIsInt($log['candidates'][0]['id']);
+        $this->assertMatchesRegularExpression('~^/garage/vehicles/[0-9A-HJKMNP-TV-Z]{26}$~', $log['candidates'][0]['@id']);
 
         $list = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
@@ -61,7 +61,7 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame(1, $list['count'], 'An ambiguous log must not create a second row.');
     }
 
-    public function testLoggingByVehicleIdAppendsToTheExistingRow(): void
+    public function testLoggingByVehicleIriAppendsToTheExistingRow(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -78,15 +78,15 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $id = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['id'];
+        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
 
         $log = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
-                'vehicleId' => $id,
+                'vehicle' => $iri,
                 'type' => 'oil_change',
                 'performedAt' => '2026-05-01',
             ],
@@ -97,13 +97,42 @@ final class McpMaintenanceTest extends AppTestCase
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
         ], 6)['result']['structuredContent'];
-        $this->assertCount(1, $history['records'], 'Logging by id must append to the existing row.');
+        $this->assertCount(1, $history['records'], 'Logging by @id must append to the existing row.');
 
         $list = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
         ], 7)['result']['structuredContent'];
         $this->assertSame(1, $list['count']);
+    }
+
+    public function testMaintenanceRecordExposesDereferenceableIri(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'type' => 'oil_change',
+                'performedAt' => '2026-05-01',
+            ],
+        ], 3);
+
+        $records = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
+        ], 4)['result']['structuredContent']['records'];
+
+        $iri = $records[0]['@id'] ?? null;
+        $this->assertMatchesRegularExpression('~^/garage/maintenance-records/[0-9A-HJKMNP-TV-Z]{26}$~', (string) $iri);
+
+        $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['type' => 'oil_change', 'performedAt' => '2026-05-01']);
     }
 
     public function testLoggingWithConfirmNewCreatesDistinctRowDespiteCandidate(): void

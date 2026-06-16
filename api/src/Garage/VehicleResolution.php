@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Garage;
 
 use App\Entity\Vehicle;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * Outcome of resolving which vehicle a write should land on, without spawning a duplicate:
@@ -25,7 +26,7 @@ final readonly class VehicleResolution
         public string $status,
         public ?Vehicle $vehicle = null,
         public array $candidates = [],
-        public ?int $vehicleId = null,
+        public ?string $vehicleId = null,
     ) {
     }
 
@@ -42,8 +43,8 @@ final readonly class VehicleResolution
         return new self('ambiguous', candidates: $candidates);
     }
 
-    public static function notFound(int $vehicleId): self
+    public static function notFound(Ulid $vehicleId): self
     {
-        return new self('not_found', vehicleId: $vehicleId);
+        return new self('not_found', vehicleId: (string) $vehicleId);
     }
 }

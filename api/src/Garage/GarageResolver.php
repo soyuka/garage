@@ -9,6 +9,7 @@ use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use App\Repository\VehicleRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * The read resolver for the self-strengthening store.
@@ -54,7 +55,7 @@ final class GarageResolver
      * rule that stops the DB rotting.
      */
     public function addFact(
-        ?int $vehicleId,
+        ?Ulid $vehicleId,
         ?string $make,
         ?string $model,
         ?int $year,

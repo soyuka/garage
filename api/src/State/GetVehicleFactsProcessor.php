@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\GarageVehicle;
 use App\Dto\GetVehicleFactsInput;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
@@ -22,8 +24,11 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class GetVehicleFactsProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly GarageResolver $resolver)
-    {
+    public function __construct(
+        private readonly GarageResolver $resolver,
+        private readonly FactView $factView,
+        private readonly IriConverterInterface $iriConverter,
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
@@ -55,12 +60,12 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
             if ([] !== $data->keys && !\in_array($fact->getKey(), $data->keys, true)) {
                 continue;
             }
-            $facts[] = FactView::toArray($fact);
+            $facts[] = $this->factView->toArray($fact);
         }
 
         return ToolResult::of([
             'status' => 'ok',
-            'vehicle' => $identity,
+            'vehicle' => ['@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle))] + $identity,
             'facts' => $facts,
         ]);
     }

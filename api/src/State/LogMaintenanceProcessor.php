@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use ApiPlatform\Metadata\Exception\ItemNotFoundException;
+use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\LogMaintenanceInput;
@@ -26,21 +28,42 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class LogMaintenanceProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly MaintenanceRecorder $recorder)
-    {
+    public function __construct(
+        private readonly MaintenanceRecorder $recorder,
+        private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleSummaryView $summaryView,
+        private readonly RecordView $recordView,
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        if (null === $data->vehicleId && (null === $data->make || null === $data->model)) {
+        if (null === $data->vehicle && (null === $data->make || null === $data->model)) {
             return ToolResult::of([
                 'status' => 'invalid_input',
-                'reason' => 'Provide make and model, or a vehicleId from list_vehicles.',
+                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
             ]);
         }
 
+        $vehicleId = null;
+        if (null !== $data->vehicle) {
+            try {
+                $vehicleId = $this->iriConverter->getResourceFromIri($data->vehicle)->id;
+            } catch (ItemNotFoundException) {
+                return ToolResult::of([
+                    'status' => 'not_found',
+                    'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle),
+                ]);
+            } catch (\Throwable) {
+                return ToolResult::of([
+                    'status' => 'invalid_input',
+                    'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $data->vehicle),
+                ]);
+            }
+        }
+
         $outcome = $this->recorder->log(
-            vehicleId: $data->vehicleId,
+            vehicleId: $vehicleId,
             make: $data->make,
             model: $data->model,
             year: $data->year,
@@ -66,16 +89,16 @@ final class LogMaintenanceProcessor implements ProcessorInterface
         return match ($outcome->status) {
             'ambiguous' => ToolResult::of([
                 'status' => 'ambiguous_match',
-                'reason' => 'One or more stored vehicles may be the same one. Re-call log_maintenance with vehicleId set to the matching candidate, or pass confirmNew:true to log against a new vehicle.',
-                'candidates' => array_map(VehicleSummaryView::toArray(...), $outcome->candidates),
+                'reason' => 'One or more stored vehicles may be the same one. Re-call log_maintenance with vehicle set to the matching candidate\'s @id, or pass confirmNew:true to log against a new vehicle.',
+                'candidates' => array_map($this->summaryView->toArray(...), $outcome->candidates),
             ]),
             'not_found' => ToolResult::of([
                 'status' => 'not_found',
-                'reason' => sprintf('No vehicle with id %d in the garage.', $outcome->vehicleId),
+                'reason' => sprintf('No vehicle %s in the garage.', $outcome->vehicleId),
             ]),
             default => ToolResult::of([
                 'status' => 'ok',
-                'record' => RecordView::toArray($outcome->record),
+                'record' => $this->recordView->toArray($outcome->record),
             ]),
         };
     }

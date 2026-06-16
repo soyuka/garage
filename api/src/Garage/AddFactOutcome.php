@@ -26,7 +26,7 @@ final readonly class AddFactOutcome
         public string $status,
         public ?VehicleFact $fact = null,
         public array $candidates = [],
-        public ?int $vehicleId = null,
+        public ?string $vehicleId = null,
     ) {
     }
 
@@ -48,7 +48,7 @@ final readonly class AddFactOutcome
         return new self('ambiguous', candidates: $candidates);
     }
 
-    public static function notFound(int $vehicleId): self
+    public static function notFound(?string $vehicleId): self
     {
         return new self('not_found', vehicleId: $vehicleId);
     }

@@ -22,8 +22,10 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class ListVehiclesProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly VehicleRepository $vehicles)
-    {
+    public function __construct(
+        private readonly VehicleRepository $vehicles,
+        private readonly VehicleSummaryView $summaryView,
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
@@ -34,7 +36,7 @@ final class ListVehiclesProcessor implements ProcessorInterface
             null !== $data->vehicleType ? VehicleType::from($data->vehicleType) : null,
         );
 
-        $summaries = array_map(VehicleSummaryView::toArray(...), $vehicles);
+        $summaries = array_map($this->summaryView->toArray(...), $vehicles);
 
         return ToolResult::of([
             'status' => 'ok',

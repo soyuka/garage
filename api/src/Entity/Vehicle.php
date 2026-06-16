@@ -9,6 +9,7 @@ use App\Repository\VehicleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * A vehicle held in the garage (the self-strengthening store), distinct from the
@@ -20,10 +21,11 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: VehicleRepository::class)]
 class Vehicle
 {
+    // App-assigned ULID public identifier — the dereferenceable IRI key (/garage/vehicles/{id}),
+    // so the auto-increment DB row id is never exposed. Time-ordered, so it stays index-friendly.
     #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ORM\Column(type: 'ulid', unique: true)]
+    private Ulid $id;
 
     /** @var Collection<int, VehicleFact> */
     #[ORM\OneToMany(targetEntity: VehicleFact::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
@@ -57,11 +59,12 @@ class Vehicle
         #[ORM\Column(nullable: true)]
         private ?string $owner = null,
     ) {
+        $this->id = new Ulid();
         $this->facts = new ArrayCollection();
         $this->maintenanceRecords = new ArrayCollection();
     }
 
-    public function getId(): ?int
+    public function getId(): Ulid
     {
         return $this->id;
     }
