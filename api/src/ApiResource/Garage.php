@@ -8,8 +8,10 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\McpTool;
 use App\Dto\AddVehicleFactInput;
 use App\Dto\GetVehicleFactsInput;
+use App\Dto\ListVehiclesInput;
 use App\State\AddVehicleFactProcessor;
 use App\State\GetVehicleFactsProcessor;
+use App\State\ListVehiclesProcessor;
 
 /**
  * The garage: a self-strengthening vehicle store exposed as MCP tools (no HTTP operations
@@ -19,6 +21,14 @@ use App\State\GetVehicleFactsProcessor;
  */
 #[ApiResource(
     mcp: [
+        'list_vehicles' => new McpTool(
+            title: 'List Vehicles',
+            description: 'List the vehicles held in the garage — each as an identity summary (make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType — pass make+model to check whether a specific vehicle is already stored (this is the reliable presence check: it does not require guessing the vehicleType, unlike get_vehicle_facts). An empty result returns count 0, not an error.',
+            input: ListVehiclesInput::class,
+            structuredContent: false,
+            processor: ListVehiclesProcessor::class,
+            annotations: ['readOnlyHint' => true],
+        ),
         // structuredContent: false suppresses the auto-generated JSON-LD output schema
         // (which would be built from the empty Garage class and wrongly advertise @id/@type).
         // The processors return a CallToolResult directly — short-circuiting the structured

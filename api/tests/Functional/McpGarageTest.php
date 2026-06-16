@@ -17,6 +17,141 @@ final class McpGarageTest extends AppTestCase
 
         $this->assertContains('get_vehicle_facts', $tools);
         $this->assertContains('add_vehicle_fact', $tools);
+        $this->assertContains('list_vehicles', $tools);
+    }
+
+    public function testListVehiclesReturnsStoredVehiclesWithFactCount(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Seed two distinct vehicles in the shared garage.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-40',
+                'source' => 'llm',
+            ],
+        ], 4);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 5);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame(2, $content['count']);
+
+        $makes = array_column($content['vehicles'], 'make');
+        $this->assertContains('TORO', $makes);
+        $this->assertContains('IVECO', $makes);
+
+        $toro = $this->vehicleByMake($content['vehicles'], 'TORO');
+        $this->assertSame('246-H', $toro['model']);
+        $this->assertSame('groundscare', $toro['vehicleType']);
+        $this->assertSame(1, $toro['factCount']);
+    }
+
+    public function testListVehiclesFiltersByVehicleType(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-40',
+                'source' => 'llm',
+            ],
+        ], 4);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => ['vehicleType' => 'cv'],
+        ], 5);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame(1, $content['count']);
+        $this->assertSame('IVECO', $content['vehicles'][0]['make']);
+    }
+
+    public function testListVehiclesFiltersByModelForPresenceCheckRegardlessOfType(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Stored as groundscare. The presence check must find it without the caller
+        // having to guess the vehicleType (the get_vehicle_facts fragility this avoids).
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => ['make' => 'toro', 'model' => '246-h'],
+        ], 4);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame(1, $content['count']);
+        $this->assertSame('246-H', $content['vehicles'][0]['model']);
+        $this->assertSame('groundscare', $content['vehicles'][0]['vehicleType']);
+    }
+
+    public function testListVehiclesReturnsEmptyOnFreshGarage(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 3);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame(0, $content['count']);
+        $this->assertSame([], $content['vehicles']);
     }
 
     public function testTotalMissReturnsNotInCatalogResult(): void
@@ -333,5 +468,21 @@ final class McpGarageTest extends AppTestCase
         }
 
         $this->fail(sprintf('No fact with key "%s" in %s', $key, json_encode($facts)));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $vehicles
+     *
+     * @return array<string, mixed>
+     */
+    private function vehicleByMake(array $vehicles, string $make): array
+    {
+        foreach ($vehicles as $vehicle) {
+            if ($make === $vehicle['make']) {
+                return $vehicle;
+            }
+        }
+
+        $this->fail(sprintf('No vehicle with make "%s" in %s', $make, json_encode($vehicles)));
     }
 }

@@ -43,4 +43,32 @@ final class VehicleRepository extends ServiceEntityRepository
 
         return $qb->getQuery()->getOneOrNullResult();
     }
+
+    /**
+     * List the shared garage (owner IS NULL — the phase 1 tenancy seam), newest first,
+     * narrowed by an optional case-insensitive make and/or vehicleType. Per-user listings
+     * arrive with the owner backfill (TODO.md "## Garage"), reusing this query.
+     *
+     * @return list<Vehicle>
+     */
+    public function findShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null): array
+    {
+        $qb = $this->createQueryBuilder('v')
+            ->andWhere('v.owner IS NULL')
+            ->orderBy('v.addedAt', 'DESC');
+
+        if (null !== $make) {
+            $qb->andWhere('LOWER(v.make) = LOWER(:make)')->setParameter('make', $make);
+        }
+
+        if (null !== $model) {
+            $qb->andWhere('LOWER(v.model) = LOWER(:model)')->setParameter('model', $model);
+        }
+
+        if (null !== $vehicleType) {
+            $qb->andWhere('v.vehicleType = :vehicleType')->setParameter('vehicleType', $vehicleType);
+        }
+
+        return $qb->getQuery()->getResult();
+    }
 }
