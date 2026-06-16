@@ -11,7 +11,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * RFC 9728 protected-resource metadata. MCP clients fetch this (pointed to by the
- * WWW-Authenticate challenge on a 401) to discover which authorization server — Zitadel —
+ * WWW-Authenticate challenge on a 401) to discover which authorization server — Casdoor —
  * protects /mcp, then run the OAuth flow against it.
  *
  * Must stay publicly reachable: a client holding an expired token has to read this before
@@ -20,7 +20,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final readonly class ProtectedResourceMetadataController
 {
     public function __construct(
-        #[Autowire(env: 'ZITADEL_ISSUER')]
+        #[Autowire(env: 'CASDOOR_ISSUER')]
         private string $issuer,
     ) {
     }

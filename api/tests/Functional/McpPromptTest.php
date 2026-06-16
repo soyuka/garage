@@ -34,10 +34,26 @@ final class McpPromptTest extends AppTestCase
 
         $names = array_column($this->call($client, $sessionId, 'prompts/list', [], 2)['result']['prompts'], 'name');
 
+        $this->assertContains('list_vehicles', $names);
         $this->assertContains('whats_due', $names);
         $this->assertContains('next_to_maintain', $names);
         $this->assertContains('identify_plate', $names);
         $this->assertContains('log_service', $names);
+    }
+
+    public function testListVehiclesPromptSeedsTheListTool(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'prompts/get', [
+            'name' => 'list_vehicles',
+            'arguments' => ['make' => 'IVECO'],
+        ], 3);
+
+        $text = $result['result']['messages'][0]['content']['text'];
+        $this->assertStringContainsString('list_vehicles', $text);
+        $this->assertStringContainsString('IVECO', $text);
     }
 
     public function testWhatsDuePromptSeedsTheForecastTool(): void

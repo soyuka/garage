@@ -42,7 +42,16 @@ services:
         target: 443
         published: ${HTTP3_PORT:-443}
         protocol: udp
+    # CasdoorTokenHandler fetches the OIDC discovery doc + JWKS server-side to verify token
+    # signatures. The issuer (CASDOOR_ISSUER) is also the token `iss`, so it must be ONE URL
+    # that resolves identically here and on the host (Goose/browser). We use the bare service
+    # name `casdoor`: this container resolves it via the compose network DNS, and the host
+    # resolves it to loopback via an /etc/hosts entry (`127.0.0.1 casdoor`) reaching the
+    # published :8000. (`casdoor.localhost` does NOT work: glibc hard-codes the .localhost TLD
+    # to loopback inside the container, shadowing any extra_hosts mapping.)
     depends_on:
+      casdoor:
+        condition: service_started
       database:
         condition: service_healthy
 

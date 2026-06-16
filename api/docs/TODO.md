@@ -68,9 +68,11 @@ Everything in the "Now" column below exists and is pinned by tests/Functional/Mc
 
 ### Phasing (decided 2026-06-12): build the loop now, defer multi-tenancy
 
-`/mcp` is currently open (no auth) → no real "user" yet. Build the value (write-back loop
-+ provenance + miss-contract) on a SINGLE SHARED garage now; add per-user isolation +
-promotion WITH auth, later. Seams that make later cheap (build these now):
+`/mcp` is now Casdoor-OIDC protected (auth SHIPPED 2026-06-15, see "## MCP / platform"), but
+multi-tenancy is still deferred: `owner` is nullable/null → SINGLE SHARED garage. Build the
+value (write-back loop + provenance + miss-contract) on the shared garage now; add per-user
+isolation + promotion (set `owner` = the authenticated `sub`) later. Seams that make later
+cheap (build these now):
 - Provenance fields from day 1 (`source`/`verified`/`addedAt`/`url`) — needed for trust
   now anyway; `verified` doubles as the future promotion marker.
 - Nullable `owner`/`addedBy` column now (`null` = shared/global). Per-user later = backfill
@@ -202,7 +204,29 @@ into persistent structured data. No need to license agroparts/Kramp for the long
       flow (RFC 9728 metadata already wired) and prompt for a vehicle's maintenance history.
       REMAINING POLISH (deferred): live end-to-end run inside Goose Desktop against the OAuth-
       protected `/mcp`; `ui/message` (push a chat summary) + `tools/call` refresh are unused so far.
-- [ ] Auth on `/mcp` + API (currently open — prototype only, do NOT expose publicly with tokens set)
+- [x] Auth on `/mcp` — **Casdoor OIDC, SHIPPED 2026-06-15** (replaced Zitadel). Stock Goose
+      (rmcp) needs anonymous RFC 7591 Dynamic Client Registration; Zitadel has no DCR, Casdoor
+      does. `CasdoorTokenHandler` (src/Security/) validates JWTs locally (JWKS + RS/ES sig +
+      iat/nbf/exp + iss) but DROPS the audience check — Casdoor sets `aud`=client_id (dynamic
+      per DCR) and ignores RFC 8707, so no stable audience to pin. AuthZ boundary = issuer +
+      signature + ZitadelUserProvider find-or-create on `sub`. dev+prod use it; test keeps the
+      fake handler. Verified live end-to-end (DCR 201, JWT passes firewall, bad/missing → 401,
+      compose casdoor boots on Postgres with discovery on :8000). See docs/AUTH.md.
+      Casdoor `sub` = user's immutable UUID; one Casdoor user links many social providers
+      (google/github fields) → same sub regardless of login method. Setup: org `dcrPolicy=open`
+      (disabled by default) — manual step, see AUTH.md.
+      FOLLOW-UPS:
+        - [ ] Rename `ZitadelUserProvider` → Casdoor; its Zitadel roles claim
+              (`urn:zitadel:iam:org:project:roles`) is inert against Casdoor → everyone gets
+              ROLE_USER. Remap via Casdoor groups/roles → a claim the provider reads.
+        - [ ] Configure Casdoor social-account linking by VERIFIED email so one human = one
+              Casdoor user (prevents split identity: Google-signup UUID ≠ GitHub-signup UUID).
+        - [ ] Wire per-user cars: set `Vehicle.owner` (+ MaintenanceRecord.owner) = `sub` when
+              leaving the phase-1 shared garage. Key on sub (immutable), NOT email (mutable).
+        - [ ] MCP `400 "valid session id REQUIRED"` on initialize — pre-existing mcp-bundle
+              handshake quirk (not auth); reproduces with a valid token too. Likely hits Goose.
+- [ ] Live end-to-end run inside Goose Desktop: point Goose at `http://localhost/mcp`, let it
+      DCR against Casdoor, complete the browser login, prompt for a vehicle's maintenance history
 - [ ] Rate limiting / per-client quotas before any public exposure
 - [ ] MCP resources (e.g. `resource://mon-parc-auto/coverage` notes for LLMs)
 
@@ -291,8 +315,16 @@ OE part-number lookups, no login:
 - **Jack's Small Engines** — jackssmallengines.com (exploded views by model)
 - **eReplacementParts** — ereplacementparts.com
 - **RepairClinic** — repairclinic.com
+- **agro-specs.com** — lawn/garden tractors, farm tractors etc. SPEC layer (NOT parts):
+  engine make/model + displacement/bore/stroke/hp, transmission, dims/weight, electrical,
+  PTO, production years. Complements the part-# sites above (which lack specs). URL shape:
+  `agro-specs.com/lawn-tractors/<id>-<make>-<model>.html` (also farm-tractors/ etc.).
+  TODO: build a scraper → parse spec table → feed `add_vehicle_fact` (source=`web:<url>`,
+  verified=false). Verified shape on Wheel Horse 246-H (2026-06-16): clean key/value spec
+  table, easy to parse. Still NOT a manufacturer-verified source → unverified garage facts.
 
-CAVEAT: these give **part numbers + diagrams**, NOT fluid specs. "TORO 246-H spark plug?"
+CAVEAT: the part-# sites (Toro/PartsTree/Jack's/eReplacement/RepairClinic) give **part
+numbers + diagrams**, NOT fluid specs. "TORO 246-H spark plug?"
 → ✅ OE plug part #. "TORO 246-H oil type/amount?" → ❌ comes from the *engine* maker
 (Tecumseh/B&S/LCT) manual → LLM territory, store as unverified garage fact.
 Future: a scraper feeding `add_vehicle_fact` would auto-fill the part-number facts.

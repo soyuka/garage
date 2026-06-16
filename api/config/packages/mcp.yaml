@@ -1,12 +1,27 @@
 mcp:
     app: 'mon-parc-auto'
     version: '0.1.0'
-    description: 'French vehicle data by registration plate (plaque d''immatriculation) and TecDoc parts catalog: part categories, article references, fluid capacities and oil specifications.'
+    description: 'French vehicle parts catalog and a personal vehicle garage. Look up parts, articles and fluid specs from TecDoc by registration plate (plaque d''immatriculation) or brand; and save, track and forecast maintenance for any vehicle you own.'
     instructions: >-
-        Start with lookup_plate to resolve a French registration plate into vehicle
-        information including its TecDoc carId (kType) and carType (PC or CV). Then use
-        list_part_categories, list_articles and get_fill_volumes with that carId.
-        Alternatively browse by brand with list_makes, list_models and list_cars.
+        This server has two sides: a read-only TecDoc catalog, and a writable personal garage.
+
+        CATALOG (read): start with lookup_plate to resolve a French registration plate into
+        vehicle information including its TecDoc carId (kType) and carType (PC or CV). Then use
+        list_part_categories, list_articles and get_fill_volumes with that carId. Alternatively
+        browse by brand with list_makes, list_models and list_cars.
+
+        GARAGE (read + write): the user keeps their own vehicles here. To save a fact about a
+        vehicle (oil type, capacity, part reference, spark plug...) use add_vehicle_fact; to
+        record a dated service event use log_maintenance. BOTH create the vehicle on first write,
+        so you never need a separate "create vehicle" step. Inspect with list_vehicles,
+        get_vehicle_facts, get_maintenance_history and forecast upcoming services with
+        list_due_maintenance.
+
+        IMPORTANT: the garage accepts ANY vehicle, including ones absent from TecDoc — lawn
+        tractors, motorcycles, generators, imports without a French plate. A catalog miss
+        (not_in_catalog) is a normal outcome, not an error: fall back to add_vehicle_fact with
+        the spec sourced from documentation or web lookup. Never refuse to save a vehicle just
+        because it is not in the parts catalog.
     client_transports:
         stdio: false
         http: true

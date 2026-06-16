@@ -24,6 +24,20 @@ final class GarageActionPromptLoader implements LoaderInterface
     {
         $registry->registerPrompt(
             new Prompt(
+                name: 'list_vehicles',
+                title: 'List my vehicles',
+                description: 'Show the vehicles held in the garage, optionally filtered by make/model/type.',
+                arguments: [
+                    new PromptArgument('make', 'Restrict to a make, e.g. "IVECO". Omit for the whole garage.', required: false),
+                    new PromptArgument('model', 'Restrict to a model, e.g. "DAILY". Omit for all models.', required: false),
+                    new PromptArgument('vehicleType', 'Segment: car | moto | cv | groundscare. Omit for all segments.', required: false),
+                ],
+            ),
+            self::listVehicles(...),
+        );
+
+        $registry->registerPrompt(
+            new Prompt(
                 name: 'whats_due',
                 title: 'What is due?',
                 description: 'Show the services that are overdue or coming up across the garage.',
@@ -70,6 +84,29 @@ final class GarageActionPromptLoader implements LoaderInterface
             ),
             self::logService(...),
         );
+    }
+
+    /**
+     * @return list<PromptMessage>
+     */
+    private static function listVehicles(?string $make = null, ?string $model = null, ?string $vehicleType = null): array
+    {
+        $args = [];
+        if (null !== $make && '' !== $make) {
+            $args[] = sprintf('make="%s"', $make);
+        }
+        if (null !== $model && '' !== $model) {
+            $args[] = sprintf('model="%s"', $model);
+        }
+        if (null !== $vehicleType && '' !== $vehicleType) {
+            $args[] = sprintf('vehicleType="%s"', $vehicleType);
+        }
+        $argLine = [] === $args ? 'no arguments (the whole garage)' : implode(', ', $args);
+
+        return self::user(<<<PROMPT
+            Show me the vehicles in my garage. Call list_vehicles with {$argLine}.
+            List each vehicle with its make, model, year and type, and how many facts are stored for it (factCount). If the result is empty, say the garage has no matching vehicles yet and offer to add one with identify_plate or fill_vehicle_info.
+            PROMPT);
     }
 
     /**
