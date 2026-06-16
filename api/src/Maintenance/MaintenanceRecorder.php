@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace App\Maintenance;
 
 use App\Entity\MaintenanceRecord;
-use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\Garage\VehicleWriteResolver;
 use App\Repository\MaintenanceRecordRepository;
 use App\Repository\VehicleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
- * Writes and reads the append-only maintenance log. Mirrors App\Garage\GarageResolver:
- * resolves the shared vehicle (creating it if absent, same find-or-create as addFact) and
- * reads its history. Unlike facts, records are never updated in place — each log() is a new
- * row, so a vehicle accumulates a full service history.
+ * Writes and reads the append-only maintenance log. Resolves the shared vehicle through the
+ * same {@see VehicleWriteResolver} as add_vehicle_fact — so logging a service can never spawn a
+ * duplicate the fact path would have caught. Unlike facts, records are never updated in place:
+ * each log() is a new row, so a vehicle accumulates a full service history.
  */
 final class MaintenanceRecorder
 {
@@ -23,6 +23,7 @@ final class MaintenanceRecorder
         private readonly VehicleRepository $vehicles,
         private readonly MaintenanceRecordRepository $records,
         private readonly EntityManagerInterface $entityManager,
+        private readonly VehicleWriteResolver $writeResolver,
     ) {
     }
 
@@ -30,10 +31,15 @@ final class MaintenanceRecorder
      * @param list<array{ref: string, label?: string}> $partsUsed
      */
     public function log(
-        string $make,
-        string $model,
+        ?int $vehicleId,
+        ?string $make,
+        ?string $model,
         ?int $year,
         VehicleType $vehicleType,
+        ?int $carId,
+        ?string $plate,
+        ?string $vin,
+        bool $confirmNew,
         MaintenanceType $type,
         \DateTimeImmutable $performedAt,
         string $source,
@@ -46,12 +52,19 @@ final class MaintenanceRecorder
         ?string $performedBy = null,
         array $partsUsed = [],
         ?string $addedBy = null,
-    ): MaintenanceRecord {
-        $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
-        if (null === $vehicle) {
-            $vehicle = new Vehicle($make, $model, $vehicleType, $source, year: $year);
-            $this->entityManager->persist($vehicle);
+    ): MaintenanceLogOutcome {
+        $resolution = $this->writeResolver->resolveForWrite(
+            $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, $source,
+        );
+
+        if ('ambiguous' === $resolution->status) {
+            return MaintenanceLogOutcome::ambiguous($resolution->candidates);
         }
+        if ('not_found' === $resolution->status) {
+            return MaintenanceLogOutcome::notFound($resolution->vehicleId);
+        }
+
+        $vehicle = $resolution->vehicle;
 
         $record = new MaintenanceRecord(
             vehicle: $vehicle,
@@ -71,7 +84,7 @@ final class MaintenanceRecorder
         $this->entityManager->persist($record);
         $this->entityManager->flush();
 
-        return $record;
+        return MaintenanceLogOutcome::recorded($record);
     }
 
     /**

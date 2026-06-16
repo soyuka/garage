@@ -10,6 +10,7 @@ use App\Dto\AddVehicleFactInput;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
+use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
 use Mcp\Schema\Result\CallToolResult;
 
@@ -29,11 +30,23 @@ final class AddVehicleFactProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
+        if (null === $data->vehicleId && (null === $data->make || null === $data->model)) {
+            return ToolResult::of([
+                'status' => 'invalid_input',
+                'reason' => 'Provide make and model, or a vehicleId from list_vehicles.',
+            ]);
+        }
+
         $outcome = $this->resolver->addFact(
+            vehicleId: $data->vehicleId,
             make: $data->make,
             model: $data->model,
             year: $data->year,
             vehicleType: VehicleType::from($data->vehicleType),
+            carId: $data->carId,
+            plate: $data->plate,
+            vin: $data->vin,
+            confirmNew: $data->confirmNew,
             key: $data->key,
             value: $data->value,
             unit: $data->unit,
@@ -42,8 +55,8 @@ final class AddVehicleFactProcessor implements ProcessorInterface
             addedBy: $data->addedBy,
         );
 
-        if ($outcome->refused) {
-            return ToolResult::of([
+        return match ($outcome->status) {
+            'refused' => ToolResult::of([
                 'status' => 'refused',
                 'reason' => sprintf(
                     'A verified %s fact already exists for "%s"; it is authoritative and is not overwritten by %s input.',
@@ -52,12 +65,20 @@ final class AddVehicleFactProcessor implements ProcessorInterface
                     $data->source,
                 ),
                 'existing' => FactView::toArray($outcome->fact),
-            ]);
-        }
-
-        return ToolResult::of([
-            'status' => 'ok',
-            'fact' => FactView::toArray($outcome->fact),
-        ]);
+            ]),
+            'ambiguous' => ToolResult::of([
+                'status' => 'ambiguous_match',
+                'reason' => 'One or more stored vehicles may be the same one. Re-call add_vehicle_fact with vehicleId set to the matching candidate to update it, or pass confirmNew:true to store this as a new vehicle.',
+                'candidates' => array_map(VehicleSummaryView::toArray(...), $outcome->candidates),
+            ]),
+            'not_found' => ToolResult::of([
+                'status' => 'not_found',
+                'reason' => sprintf('No vehicle with id %d in the garage.', $outcome->vehicleId),
+            ]),
+            default => ToolResult::of([
+                'status' => 'ok',
+                'fact' => FactView::toArray($outcome->fact),
+            ]),
+        };
     }
 }

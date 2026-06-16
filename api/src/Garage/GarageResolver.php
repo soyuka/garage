@@ -23,6 +23,7 @@ final class GarageResolver
         private readonly EntityManagerInterface $entityManager,
         private readonly PartsCatalog $catalog,
         private readonly FillVolumeFactMapper $fillVolumeFactMapper,
+        private readonly VehicleWriteResolver $writeResolver,
     ) {
     }
 
@@ -46,15 +47,22 @@ final class GarageResolver
     }
 
     /**
-     * Create the shared vehicle row if absent and write the fact. Returns a refusal (leaving
-     * the store untouched) when an existing verified authoritative fact would be overwritten
-     * by an llm/user value — the precedence rule that stops the DB rotting.
+     * Write a fact onto the vehicle chosen by the shared {@see VehicleWriteResolver} (matched,
+     * addressed by id, or freshly created). Surfaces the resolver's ambiguous/not_found verdicts
+     * as outcomes rather than writing. Returns a refusal (store untouched) when an existing
+     * verified authoritative fact would be overwritten by an llm/user value — the precedence
+     * rule that stops the DB rotting.
      */
     public function addFact(
-        string $make,
-        string $model,
+        ?int $vehicleId,
+        ?string $make,
+        ?string $model,
         ?int $year,
         VehicleType $vehicleType,
+        ?int $carId,
+        ?string $plate,
+        ?string $vin,
+        bool $confirmNew,
         string $key,
         string $value,
         ?string $unit,
@@ -62,12 +70,26 @@ final class GarageResolver
         ?string $url,
         ?string $addedBy,
     ): AddFactOutcome {
-        $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
-        if (null === $vehicle) {
-            $vehicle = new Vehicle($make, $model, $vehicleType, $source, year: $year);
-            $this->entityManager->persist($vehicle);
-        }
+        $resolution = $this->writeResolver->resolveForWrite(
+            $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, $source,
+        );
 
+        return match ($resolution->status) {
+            'ambiguous' => AddFactOutcome::ambiguous($resolution->candidates),
+            'not_found' => AddFactOutcome::notFound($resolution->vehicleId),
+            default => $this->writeFact($resolution->vehicle, $key, $value, $unit, $source, $url, $addedBy),
+        };
+    }
+
+    private function writeFact(
+        Vehicle $vehicle,
+        string $key,
+        string $value,
+        ?string $unit,
+        string $source,
+        ?string $url,
+        ?string $addedBy,
+    ): AddFactOutcome {
         $existing = $vehicle->factByKey($key);
         if (null !== $existing && $existing->isVerified() && !$this->isAuthoritative($source)) {
             return AddFactOutcome::refused($existing);

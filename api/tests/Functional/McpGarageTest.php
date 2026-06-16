@@ -454,6 +454,194 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('GROUNDSCARE-OIL', $this->factByKey($facts, 'oil_type')['value']);
     }
 
+    public function testListVehiclesSurfacesVehicleId(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertArrayHasKey('id', $list['vehicles'][0], 'list_vehicles must surface the id so the agent can address a vehicle.');
+        $this->assertIsInt($list['vehicles'][0]['id']);
+    }
+
+    public function testAmbiguousMakeSurfacesExistingVehicleAsCandidateInsteadOfCreating(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Stored as TORO 246-H. Toro acquired Wheel Horse — the 246-H is the same machine.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        // Adding under the other brand string must NOT silently create a second row:
+        // same vehicleType + same model is a candidate the agent must confront.
+        $add = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'Wheel Horse',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'engine',
+                'value' => 'Briggs & Stratton 303777',
+                'source' => 'user',
+            ],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertSame('ambiguous_match', $add['status']);
+        $this->assertCount(1, $add['candidates']);
+        $this->assertSame('TORO', $add['candidates'][0]['make']);
+        $this->assertSame('246-H', $add['candidates'][0]['model']);
+        $this->assertIsInt($add['candidates'][0]['id']);
+
+        // The store must be untouched — still a single vehicle, still its one fact.
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame(1, $list['count'], 'An ambiguous add must not create a second row.');
+        $this->assertSame(1, $list['vehicles'][0]['factCount']);
+    }
+
+    public function testWritingByVehicleIdFoldsFactsOntoTheExistingRow(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $id = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 4)['result']['structuredContent']['vehicles'][0]['id'];
+
+        // Resolve the ambiguity by addressing the existing row directly.
+        $add = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'vehicleId' => $id,
+                'key' => 'engine',
+                'value' => 'Briggs & Stratton 303777',
+                'source' => 'user',
+            ],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame('ok', $add['status']);
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 6)['result']['structuredContent'];
+        $this->assertSame(1, $list['count'], 'Writing by id must fold onto the existing row, not create.');
+        $this->assertSame(2, $list['vehicles'][0]['factCount']);
+    }
+
+    public function testConfirmNewCreatesDistinctRowDespiteCandidate(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        // The agent decided it is genuinely a different machine: confirmNew overrides.
+        $add = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'Wheel Horse',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'confirmNew' => true,
+                'key' => 'engine',
+                'value' => 'Briggs & Stratton 303777',
+                'source' => 'user',
+            ],
+        ], 4)['result']['structuredContent'];
+        $this->assertSame('ok', $add['status']);
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame(2, $list['count'], 'confirmNew must create the distinct row.');
+    }
+
+    public function testWritingByCarIdSurfacesExistingCatalogVehicleAsCandidate(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Seed a catalog vehicle carrying its kType via the write-through path.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_vehicle_facts',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'carId' => 34247,
+            ],
+        ], 3);
+
+        // A second add for the same carId under a different model label must be caught.
+        $add = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY III Van',
+                'vehicleType' => 'cv',
+                'carId' => 34247,
+                'key' => 'engine_code',
+                'value' => 'F1AE0481B',
+                'source' => 'web',
+            ],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertSame('ambiguous_match', $add['status']);
+        $this->assertSame(34247, $add['candidates'][0]['kType']);
+    }
+
     /**
      * @param list<array<string, mixed>> $facts
      *

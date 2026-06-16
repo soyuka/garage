@@ -17,6 +17,13 @@ mcp:
         get_vehicle_facts, get_maintenance_history and forecast upcoming services with
         list_due_maintenance.
 
+        AVOID DUPLICATES: before writing, call list_vehicles to see what already exists — the same
+        machine is often known under another label (e.g. a TORO and a Wheel Horse 246-H are one
+        mower). If add_vehicle_fact or log_maintenance returns status "ambiguous_match", do NOT
+        retry blindly: inspect the candidates, then re-call with vehicleId set to the matching one
+        to update it, or confirmNew:true only if it is genuinely a different vehicle. Pass
+        carId/plate/vin whenever known so the same vehicle is recognised next time.
+
         IMPORTANT: the garage accepts ANY vehicle, including ones absent from TecDoc — lawn
         tractors, motorcycles, generators, imports without a French plate. A catalog miss
         (not_in_catalog) is a normal outcome, not an error: fall back to add_vehicle_fact with

@@ -45,6 +45,45 @@ final class VehicleRepository extends ServiceEntityRepository
     }
 
     /**
+     * Surface stored vehicles that may be the same one as an incoming write but did NOT match
+     * on exact identity — the input for the agent's reconcile-or-create decision. Within the
+     * same segment (vehicleType), a candidate is anything sharing the model label (catches a
+     * rebadged machine: TORO vs Wheel Horse 246-H) or a strong stable id (kType/plate/vin,
+     * catches the same TecDoc vehicle stored under two model strings). Deliberately broad: the
+     * agent judges, these ids only rank what it confronts. Phase 1 looks at the shared garage.
+     *
+     * @return list<Vehicle>
+     */
+    public function findCandidates(string $make, string $model, VehicleType $vehicleType, ?int $carId, ?string $plate, ?string $vin): array
+    {
+        $qb = $this->createQueryBuilder('v')
+            ->andWhere('v.owner IS NULL')
+            ->andWhere('v.vehicleType = :vehicleType')
+            ->setParameter('vehicleType', $vehicleType)
+            ->orderBy('v.addedAt', 'DESC');
+
+        $match = $qb->expr()->orX('LOWER(v.model) = LOWER(:model)');
+        $qb->setParameter('model', $model);
+
+        if (null !== $carId) {
+            $match->add('v.kType = :carId');
+            $qb->setParameter('carId', $carId);
+        }
+        if (null !== $plate) {
+            $match->add('LOWER(v.plate) = LOWER(:plate)');
+            $qb->setParameter('plate', $plate);
+        }
+        if (null !== $vin) {
+            $match->add('LOWER(v.vin) = LOWER(:vin)');
+            $qb->setParameter('vin', $vin);
+        }
+
+        $qb->andWhere($match);
+
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
      * List the shared garage (owner IS NULL — the phase 1 tenancy seam), newest first,
      * narrowed by an optional case-insensitive make and/or vehicleType. Per-user listings
      * arrive with the owner backfill (TODO.md "## Garage"), reusing this query.

@@ -14,11 +14,12 @@ use App\Entity\Vehicle;
 final class VehicleSummaryView
 {
     /**
-     * @return array{make: string, model: string, year: int|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, factCount: int, addedAt: string}
+     * @return array{id: int|null, make: string, model: string, year: int|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, factCount: int, addedAt: string}
      */
     public static function toArray(Vehicle $vehicle): array
     {
         return [
+            'id' => $vehicle->getId(),
             'make' => $vehicle->getMake(),
             'model' => $vehicle->getModel(),
             'year' => $vehicle->getYear(),

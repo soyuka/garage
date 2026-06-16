@@ -23,7 +23,7 @@ use App\State\ListVehiclesProcessor;
     mcp: [
         'list_vehicles' => new McpTool(
             title: 'List Vehicles',
-            description: 'List the vehicles held in the garage — each as an identity summary (make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType — pass make+model to check whether a specific vehicle is already stored (this is the reliable presence check: it does not require guessing the vehicleType, unlike get_vehicle_facts). An empty result returns count 0, not an error.',
+            description: 'List the vehicles held in the garage — each as an identity summary (id, make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. ALWAYS call this before writing, to see what already exists and reuse a vehicle\'s id rather than risk a duplicate. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType. An empty result returns count 0, not an error.',
             input: ListVehiclesInput::class,
             structuredContent: false,
             processor: ListVehiclesProcessor::class,
@@ -45,7 +45,7 @@ use App\State\ListVehiclesProcessor;
         ),
         'add_vehicle_fact' => new McpTool(
             title: 'Add Vehicle Fact',
-            description: 'Store a maintenance fact about a vehicle (creating it if unknown). Use this to fill catalog misses with general knowledge or a web source; facts are stored unverified. A verified manufacturer/TecDoc fact is authoritative and will never be overwritten — such an attempt returns a refused result naming the existing fact.',
+            description: 'Store a maintenance fact about a vehicle. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its vehicleId. To avoid duplicates, if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating: re-call with vehicleId to update the right one, or confirmNew:true if it is genuinely a different vehicle. Pass carId/plate/vin when known — they are stored and used to recognise the same vehicle later. Facts are stored unverified; a verified manufacturer/TecDoc fact is authoritative and is never overwritten (returns "refused").',
             input: AddVehicleFactInput::class,
             structuredContent: false,
             processor: AddVehicleFactProcessor::class,

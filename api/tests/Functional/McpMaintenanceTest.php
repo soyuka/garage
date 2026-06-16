@@ -20,6 +20,129 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertContains('list_due_maintenance', $tools);
     }
 
+    public function testLoggingUnderAnAmbiguousMakeSurfacesCandidateInsteadOfCreating(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // A TORO 246-H already exists in the garage.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        // Logging a service under the other brand string must surface the candidate, not dup.
+        $log = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'Wheel Horse',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'type' => 'oil_change',
+                'performedAt' => '2026-05-01',
+            ],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertSame('ambiguous_match', $log['status']);
+        $this->assertSame('TORO', $log['candidates'][0]['make']);
+        $this->assertIsInt($log['candidates'][0]['id']);
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame(1, $list['count'], 'An ambiguous log must not create a second row.');
+    }
+
+    public function testLoggingByVehicleIdAppendsToTheExistingRow(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $id = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 4)['result']['structuredContent']['vehicles'][0]['id'];
+
+        $log = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'vehicleId' => $id,
+                'type' => 'oil_change',
+                'performedAt' => '2026-05-01',
+            ],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame('ok', $log['status']);
+
+        $history = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
+        ], 6)['result']['structuredContent'];
+        $this->assertCount(1, $history['records'], 'Logging by id must append to the existing row.');
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 7)['result']['structuredContent'];
+        $this->assertSame(1, $list['count']);
+    }
+
+    public function testLoggingWithConfirmNewCreatesDistinctRowDespiteCandidate(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $log = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'Wheel Horse',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'confirmNew' => true,
+                'type' => 'oil_change',
+                'performedAt' => '2026-05-01',
+            ],
+        ], 4)['result']['structuredContent'];
+        $this->assertSame('ok', $log['status']);
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame(2, $list['count'], 'confirmNew must create the distinct row.');
+    }
+
     public function testListDueMaintenanceFlagsAnOverdueServiceAndSurfacesGaps(): void
     {
         $client = static::createClient();
