@@ -36,6 +36,35 @@ final class PartsResourceTest extends AppTestCase
         $this->assertSame(60, $response->toArray()['totalItems']);
     }
 
+    public function testPartCategoriesFilteredBySearchOnPath(): void
+    {
+        $client = static::createClient();
+        $response = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=filter');
+
+        $this->assertResponseIsSuccessful();
+        $data = $response->toArray();
+
+        // search narrows the 34 leaves down to filter-path nodes only
+        $this->assertGreaterThan(0, $data['totalItems']);
+        $this->assertLessThan(34, $data['totalItems']);
+
+        $paths = array_column($data['member'], 'path');
+        $this->assertContains('Filters > Air Filter', $paths);
+        // path is the match field (superset of name): every result carries the term
+        foreach ($paths as $path) {
+            $this->assertStringContainsStringIgnoringCase('filter', $path);
+        }
+    }
+
+    public function testPartCategoriesSearchIsCaseInsensitive(): void
+    {
+        $client = static::createClient();
+        $lower = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=filter')->toArray();
+        $upper = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=FILTER')->toArray();
+
+        $this->assertSame($lower['totalItems'], $upper['totalItems']);
+    }
+
     public function testArticlesForCategory(): void
     {
         $client = static::createClient();

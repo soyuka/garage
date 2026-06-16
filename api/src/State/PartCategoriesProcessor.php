@@ -9,11 +9,15 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PartCategory;
 use App\Catalog\PartsCatalog;
 use App\Dto\PartCategoriesInput;
+use App\Mcp\CappedResult;
+use Mcp\Schema\Result\CallToolResult;
 
 /**
- * MCP `list_part_categories` tool.
+ * MCP `list_part_categories` tool. The TecDoc tree runs to ~500 nodes per vehicle, so the
+ * result is capped and returned as a plain (envelope-free) structured payload — pass `search`
+ * to narrow before hitting the cap.
  *
- * @implements ProcessorInterface<PartCategoriesInput, list<PartCategory>>
+ * @implements ProcessorInterface<PartCategoriesInput, CallToolResult>
  */
 final class PartCategoriesProcessor implements ProcessorInterface
 {
@@ -21,11 +25,15 @@ final class PartCategoriesProcessor implements ProcessorInterface
     {
     }
 
-    /**
-     * @return list<PartCategory>
-     */
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): array
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        return $this->catalog->partCategories($data->carId, CarTypeResolver::fromString($data->carType), $data->leafOnly);
+        $categories = $this->catalog->partCategories($data->carId, CarTypeResolver::fromString($data->carType), $data->leafOnly, $data->search);
+
+        return CappedResult::of(
+            array_map(static fn (PartCategory $category): array => (array) $category, $categories),
+            'categories',
+            'Narrow with search=<term> (e.g. "filter", "oil", "brake").',
+            $data->offset,
+        );
     }
 }

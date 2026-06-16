@@ -27,11 +27,16 @@ final class PartsCatalog
     /**
      * @return list<Make>
      */
-    public function makes(CarType $carType): array
+    public function makes(CarType $carType, ?string $search = null): array
     {
         $rows = $this->client->fetch('getMakes', ['carType' => $carType->value]);
+        $makes = array_map(Make::fromPartsApi(...), $rows);
 
-        return array_map(Make::fromPartsApi(...), $rows);
+        if (null === $search || '' === $search) {
+            return $makes;
+        }
+
+        return array_values(array_filter($makes, static fn (Make $make): bool => false !== mb_stripos($make->name, $search)));
     }
 
     /**
@@ -61,11 +66,11 @@ final class PartsCatalog
     /**
      * @return list<PartCategory>
      */
-    public function partCategories(int $carId, CarType $carType, bool $leafOnly = true): array
+    public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array
     {
         $nodes = $this->client->fetch('getSearchTree', ['carId' => $carId, 'carType' => $carType->value, 'lang' => self::LANG_EN]);
 
-        return PartCategory::fromPartsApiTree($nodes, $leafOnly);
+        return PartCategory::fromPartsApiTree($nodes, $leafOnly, $search);
     }
 
     /**

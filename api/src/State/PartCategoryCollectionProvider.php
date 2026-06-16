@@ -29,6 +29,7 @@ final class PartCategoryCollectionProvider implements ProviderInterface
             (int) $uriVariables['carId'],
             CarTypeResolver::fromString($context['filters']['carType'] ?? null),
             $leafOnly,
+            $context['filters']['search'] ?? null,
         );
     }
 }

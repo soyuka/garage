@@ -39,8 +39,11 @@ use Symfony\Component\Validator\Constraints as Assert;
     mcp: [
         'list_articles' => new McpToolCollection(
             title: 'List Articles',
-            description: 'List aftermarket article references (brand + part number) applicable to a vehicle in one part category. Use carId/carType from lookup_plate and categoryId from list_part_categories.',
+            description: 'List aftermarket article references (brand + part number) applicable to a vehicle, grouped by part category. Use carId/carType from lookup_plate and pass one or more categoryIds from list_part_categories — batch related categories (e.g. all filters) in a single call.',
             input: ArticlesInput::class,
+            // returns a grouped {status, groups} CallToolResult, not a flat Article collection —
+            // suppress the auto-generated JSON-LD collection output schema (it would mislead hosts).
+            structuredContent: false,
             processor: ArticlesProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),

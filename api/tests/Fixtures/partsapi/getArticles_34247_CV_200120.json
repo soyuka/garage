@@ -1,0 +1,98 @@
+[
+  {
+    "ART_ARTICLE_NR": "AF-000",
+    "ART_ID": 7000000,
+    "ART_SUP_BRAND": "BRAND0",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6000
+  },
+  {
+    "ART_ARTICLE_NR": "AF-001",
+    "ART_ID": 7000001,
+    "ART_SUP_BRAND": "BRAND1",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6001
+  },
+  {
+    "ART_ARTICLE_NR": "AF-002",
+    "ART_ID": 7000002,
+    "ART_SUP_BRAND": "BRAND2",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6002
+  },
+  {
+    "ART_ARTICLE_NR": "AF-003",
+    "ART_ID": 7000003,
+    "ART_SUP_BRAND": "BRAND3",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6003
+  },
+  {
+    "ART_ARTICLE_NR": "AF-004",
+    "ART_ID": 7000004,
+    "ART_SUP_BRAND": "BRAND4",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6004
+  },
+  {
+    "ART_ARTICLE_NR": "AF-005",
+    "ART_ID": 7000005,
+    "ART_SUP_BRAND": "BRAND5",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6005
+  },
+  {
+    "ART_ARTICLE_NR": "AF-006",
+    "ART_ID": 7000006,
+    "ART_SUP_BRAND": "BRAND6",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6006
+  },
+  {
+    "ART_ARTICLE_NR": "AF-007",
+    "ART_ID": 7000007,
+    "ART_SUP_BRAND": "BRAND7",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6007
+  },
+  {
+    "ART_ARTICLE_NR": "AF-008",
+    "ART_ID": 7000008,
+    "ART_SUP_BRAND": "BRAND8",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6008
+  },
+  {
+    "ART_ARTICLE_NR": "AF-009",
+    "ART_ID": 7000009,
+    "ART_SUP_BRAND": "BRAND9",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6009
+  },
+  {
+    "ART_ARTICLE_NR": "AF-010",
+    "ART_ID": 7000010,
+    "ART_SUP_BRAND": "BRAND10",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6010
+  },
+  {
+    "ART_ARTICLE_NR": "AF-011",
+    "ART_ID": 7000011,
+    "ART_SUP_BRAND": "BRAND11",
+    "PRODUCT GROUP": "Air Filter",
+    "PT_ID": 8,
+    "SUP_ID": 6011
+  }
+]

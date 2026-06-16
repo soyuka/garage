@@ -35,14 +35,21 @@ use Symfony\Component\Validator\Constraints as Assert;
                     description: 'Return only leaf nodes (the ones carrying articles). Default true.',
                     schema: ['type' => 'boolean', 'default' => true],
                 ),
+                'search' => new QueryParameter(
+                    description: 'Case-insensitive substring filter on the category path, e.g. "filter", "oil", "brake".',
+                    schema: ['type' => 'string'],
+                ),
             ],
         ),
     ],
     mcp: [
         'list_part_categories' => new McpToolCollection(
             title: 'List Part Categories',
-            description: 'List the part categories (TecDoc product group tree) applicable to a vehicle. Use the carId (kType) and carType from lookup_plate or list_cars. By default only leaf categories are returned — pass their id to list_articles.',
+            description: 'List the part categories (TecDoc product group tree) applicable to a vehicle. Use the carId (kType) and carType from lookup_plate or list_cars. By default only leaf categories are returned — pass their id to list_articles. The tree is large (~500 nodes): results are capped, so pass search=<term> (e.g. "filter", "oil") to find what you need.',
             input: PartCategoriesInput::class,
+            // returns a capped {totalItems, items, …} CallToolResult, not a Hydra collection —
+            // suppress the auto JSON-LD output schema.
+            structuredContent: false,
             processor: PartCategoriesProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),
@@ -68,8 +75,10 @@ final class PartCategory
      *
      * @return list<self>
      */
-    public static function fromPartsApiTree(array $nodes, bool $leafOnly): array
+    public static function fromPartsApiTree(array $nodes, bool $leafOnly, ?string $search = null): array
     {
+        // parent map MUST be built from the full set so leaf detection stays correct
+        // regardless of the search/leafOnly filtering applied below
         $parents = [];
         foreach ($nodes as $node) {
             if (null !== ($node['STR_ID_PARENT'] ?? null)) {
@@ -77,10 +86,17 @@ final class PartCategory
             }
         }
 
+        $needle = (null !== $search && '' !== $search) ? $search : null;
+
         $categories = [];
         foreach ($nodes as $node) {
             $leaf = !isset($parents[(int) $node['STR_ID']]);
             if ($leafOnly && !$leaf) {
+                continue;
+            }
+
+            // path is the match field — superset of the node name (name is the path tail)
+            if (null !== $needle && false === mb_stripos((string) ($node['STR_PATH'] ?? ''), $needle)) {
                 continue;
             }
 

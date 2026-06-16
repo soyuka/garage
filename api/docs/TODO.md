@@ -206,6 +206,48 @@ into persistent structured data. No need to license agroparts/Kramp for the long
 - [ ] Rate limiting / per-client quotas before any public exposure
 - [ ] MCP resources (e.g. `resource://mon-parc-auto/coverage` notes for LLMs)
 
+## MCP ergonomics (from XB-301-ZB session 2026-06-16)
+
+Triggered by a real Mazda6 session: `list_part_categories` returned 97k chars →
+exceeded the tool-result token cap → dumped to file → model forced to `grep`.
+`list_articles` called 4× (one per filter category). ~7 calls to answer "what oil/filter
+at 250000 km". A/B/C being implemented now; D/E/intent deferred below.
+
+- [x] **D — item-count cap at the data root — SHIPPED 2026-06-16.** Root cause measured: the
+      97k dump was 497 part categories × 219 chars (NOT primarily the structuredContent
+      duplication — that is secondary). `list_makes` (~536 makes) was the same trap waiting.
+      Fix: `App\Mcp\CappedResult::of()` caps catalog list tools at `DEFAULT_LIMIT = 10`,
+      MCP-side only (REST keeps full lists + its own pagination), returning a plain
+      `{status, totalItems, offset, returned, truncated, items, nextOffset?, hint?}` payload.
+      The page size is FIXED server-side and NOT caller-overridable (a caller `limit` would
+      let the LLM pass a huge value and defeat the cap); callers page with `offset` instead
+      (returns `nextOffset` while more remain). Applied to `list_part_categories` and
+      `list_makes`; `list_articles`/`get_service_parts` cap articles per category via
+      `App\Mcp\ArticleGroup::of()` (keeps `totalArticles`/`truncated`). Pinned by
+      tests/Functional/McpCatalogTest.php. Pairs with A (search) to narrow before the cap.
+- [ ] **D-follow-up — mandatory filters (decision pending).** Could make `search` REQUIRED on
+      `list_part_categories`/`list_makes` so the LLM cannot list blind. NOT done: the cap +
+      offset pagination + hint already prevent the explosion gracefully while preserving
+      discovery (the model can still page the whole set to learn the vocabulary). Revisit only
+      if blind listing proves a problem in practice. `carId` is already mandatory (typed, no
+      default → validation error when absent).
+- [~] **E — compact MCP projection / skip JSON-LD envelope — PARTIALLY DONE.** The capped
+      tools (`list_part_categories`, `list_makes`) and the grouped/intent tools
+      (`list_articles`, `get_service_parts`) now return plain projected arrays via
+      `structuredContent: false` — no `@context`/`@id`/`@type` per item. STILL OPEN:
+      (1) the remaining default-Hydra MCP tools (e.g. `get_fill_volumes`, `lookup_plate`)
+      still serialize the JSON-LD envelope; (2) the DUPLICATION — `StructuredContentProcessor`
+      (and our `CappedResult`/`ToolResult`) ship the payload twice: the full JSON string in
+      `content[0]` (TextContent) AND the same data in `structuredContent`. With the cap this is
+      now ~10 items × 2 (negligible), but for the non-capped tools it is a real 2× cost. Fix:
+      when `structuredContent` is set, make `TextContent` a short summary, not the full
+      re-encode (spec-clean; touches the fork `StructuredContentProcessor`).
+      INTENT NOTE: same lever as the `structuredContent: false` workaround (Garage phase-1
+      GOTCHA). Decide the general policy: which tools emit Hydra vs. plain structured arrays.
+      TOON encoder was considered for the text half but rejected for now — `structuredContent`
+      must stay JSON (MCP schema), so TOON would only help text-reading hosts and only the text
+      half; revisit after the duplication + remaining-envelope fixes land.
+
 ## Agri / groundscare segment (future product line)
 
 Wanted: extend beyond automotive to agricultural + groundscare machinery (tractors,

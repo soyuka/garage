@@ -6,14 +6,18 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\ApiResource\Article;
 use App\Catalog\PartsCatalog;
 use App\Dto\ArticlesInput;
+use App\Garage\ToolResult;
+use App\Mcp\ArticleGroup;
+use Mcp\Schema\Result\CallToolResult;
 
 /**
- * MCP `list_articles` tool.
+ * MCP `list_articles` tool: resolves several part categories in one call and returns
+ * the articles grouped per category, so the host never has to fan out one call per
+ * filter/category. Categories with no upstream articles are kept as empty groups.
  *
- * @implements ProcessorInterface<ArticlesInput, list<Article>>
+ * @implements ProcessorInterface<ArticlesInput, CallToolResult>
  */
 final class ArticlesProcessor implements ProcessorInterface
 {
@@ -21,11 +25,19 @@ final class ArticlesProcessor implements ProcessorInterface
     {
     }
 
-    /**
-     * @return list<Article>
-     */
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): array
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        return $this->catalog->articles($data->carId, $data->categoryId, CarTypeResolver::fromString($data->carType));
+        $carType = CarTypeResolver::fromString($data->carType);
+
+        $groups = [];
+        foreach ($data->categoryIds as $categoryId) {
+            $categoryId = (int) $categoryId;
+            $groups[] = ArticleGroup::of($categoryId, $this->catalog->articles($data->carId, $categoryId, $carType));
+        }
+
+        return ToolResult::of([
+            'status' => 'ok',
+            'groups' => $groups,
+        ]);
     }
 }
