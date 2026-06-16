@@ -17,6 +17,93 @@ final class McpMaintenanceTest extends AppTestCase
 
         $this->assertContains('log_maintenance', $tools);
         $this->assertContains('get_maintenance_history', $tools);
+        $this->assertContains('list_due_maintenance', $tools);
+    }
+
+    public function testListDueMaintenanceFlagsAnOverdueServiceAndSurfacesGaps(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // An oil change far in the past — overdue regardless of the wall clock.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'type' => 'oil_change',
+                'performedAt' => '2018-01-01',
+            ],
+        ], 3);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_due_maintenance',
+            'arguments' => [],
+        ], 4);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertGreaterThanOrEqual(1, $content['count']);
+
+        $oil = $this->dueItem($content['due'], 'IVECO', 'oil_change');
+        $this->assertTrue($oil['overdue']);
+        $this->assertLessThan(0, $oil['daysUntilDue']);
+        $this->assertSame('DAILY', $oil['vehicle']['model']);
+        // Usage axis is advisory: the interval is surfaced so the host can ask for a live reading.
+        $this->assertSame(10000, $oil['usageInterval']['value']);
+        $this->assertSame('km', $oil['usageInterval']['unit']);
+
+        // The gap half: recurring services never logged for this vehicle are surfaced, not hidden.
+        $gap = $this->gapFor($content['gaps'], 'IVECO', 'DAILY');
+        $this->assertContains('air_filter', $gap['unknownBaseline']);
+        $this->assertNotContains('oil_change', $gap['unknownBaseline']);
+
+        $this->assertNotEmpty($content['notes'], 'the result must spell out the time-vs-usage and missing-history caveats');
+    }
+
+    public function testListDueMaintenanceWithinHorizonExcludesFarFutureServices(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Done today-ish → next oil change ~12 months out, well beyond a 30-day horizon.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'PEUGEOT',
+                'model' => '308',
+                'type' => 'oil_change',
+                'performedAt' => (new \DateTimeImmutable())->format('Y-m-d'),
+            ],
+        ], 3);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_due_maintenance',
+            'arguments' => ['withinDays' => 30],
+        ], 4);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame([], array_filter(
+            $content['due'],
+            static fn (array $d): bool => 'PEUGEOT' === $d['vehicle']['make'],
+        ), 'a service due ~12 months out must not appear within a 30-day horizon');
+    }
+
+    public function testListDueMaintenanceOnEmptyGarageIsOkWithCountZero(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_due_maintenance',
+            'arguments' => [],
+        ], 3);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame(0, $content['count']);
     }
 
     public function testLogMaintenanceThenHistoryReturnsTheRecord(): void
@@ -185,6 +272,38 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame('no_records', $content['status']);
         $this->assertFalse($history['result']['isError'] ?? false);
         $this->assertSame('NOSUCH', $content['vehicle']['make']);
+    }
+
+    /**
+     * @param list<array<string, mixed>> $due
+     *
+     * @return array<string, mixed>
+     */
+    private function dueItem(array $due, string $make, string $type): array
+    {
+        foreach ($due as $item) {
+            if ($make === $item['vehicle']['make'] && $type === $item['type']) {
+                return $item;
+            }
+        }
+
+        $this->fail(sprintf('No due %s for %s in %s', $type, $make, json_encode($due)));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $gaps
+     *
+     * @return array<string, mixed>
+     */
+    private function gapFor(array $gaps, string $make, string $model): array
+    {
+        foreach ($gaps as $gap) {
+            if ($make === $gap['vehicle']['make'] && $model === $gap['vehicle']['model']) {
+                return $gap;
+            }
+        }
+
+        $this->fail(sprintf('No gaps for %s %s in %s', $make, $model, json_encode($gaps)));
     }
 
     /**
