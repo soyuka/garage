@@ -24,9 +24,19 @@ final class UiResourceLoader implements LoaderInterface
 {
     public const MAINTENANCE_HISTORY_URI = 'ui://mon-parc-auto/maintenance-history';
 
+    /**
+     * Shared design tokens inlined into every fragment, in cascade order. Fonts are excluded so
+     * the fragment stays fetch-free (Inter degrades to the system-ui fallback in --mpa-font) —
+     * fragments render inside the host's iframe, not our origin, so a same-origin <link> would
+     * resolve against the host. Inlining keeps the single source of truth on disk yet portable.
+     */
+    private const TOKEN_FILES = ['colors.css', 'typography.css', 'spacing.css', 'effects.css'];
+
     public function __construct(
         #[Autowire('%kernel.project_dir%/resources/mcp-ui')]
         private readonly string $appDir,
+        #[Autowire('%kernel.project_dir%/public/design/tokens')]
+        private readonly string $tokenDir,
     ) {
     }
 
@@ -44,11 +54,33 @@ final class UiResourceLoader implements LoaderInterface
             fn (): TextResourceContents => new TextResourceContents(
                 self::MAINTENANCE_HISTORY_URI,
                 McpApps::MIME_TYPE,
-                file_get_contents($this->appDir.'/maintenance-history.html'),
+                $this->renderApp('maintenance-history.html'),
                 // Resource-content _meta.ui: same-origin CSP is the host default (the app loads
                 // nothing external), so only the display hint is set.
                 ['ui' => (new UiResourceContentMeta(prefersBorder: true))->jsonSerialize()],
             ),
         );
+    }
+
+    /**
+     * Loads a fragment and inlines the shared --mpa-* tokens into its <head>, so the fragment
+     * consumes the design system without duplicating it and without an external fetch.
+     */
+    private function renderApp(string $file): string
+    {
+        $html = file_get_contents($this->appDir.'/'.$file);
+        $tokens = $this->tokenStyle();
+
+        return str_replace('</head>', $tokens.'</head>', $html);
+    }
+
+    private function tokenStyle(): string
+    {
+        $css = '';
+        foreach (self::TOKEN_FILES as $token) {
+            $css .= file_get_contents($this->tokenDir.'/'.$token)."\n";
+        }
+
+        return "<style>\n".$css."</style>\n";
     }
 }

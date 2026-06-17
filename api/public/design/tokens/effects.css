@@ -1,0 +1,23 @@
+/* EFFECTS — radii, shadows, motion.
+   Soft, downward, low-opacity shadows give "lift" without heavy borders.
+   Hover = a 2px lift + a deeper shadow over 200ms. */
+:root {
+  /* ---- corner radii ---- */
+  --mpa-radius-sm: 8px;    /* buttons, inputs, pills, badges */
+  --mpa-radius-md: 10px;   /* small tiles, list rows */
+  --mpa-radius-lg: 12px;   /* composer dock */
+  --mpa-radius-xl: 14px;   /* small cards (spec cards) */
+  --mpa-radius-2xl: 16px;  /* large cards (KPI strip, health, chart) */
+  --mpa-radius-pill: 999px;/* status dots, avatars, toggles */
+
+  /* ---- shadows (soft, downward, tight) ---- */
+  --mpa-shadow-card: 0 10px 30px -18px rgba(0, 0, 0, 0.80);
+  --mpa-shadow-card-sm: 0 8px 22px -16px rgba(0, 0, 0, 0.80);
+  --mpa-shadow-hover: 0 18px 40px -20px rgba(0, 0, 0, 0.90);
+  --mpa-shadow-dock: 0 8px 24px -16px rgba(0, 0, 0, 0.90);
+
+  /* ---- motion ---- */
+  --mpa-transition: 200ms ease;
+  --mpa-transition-fast: 150ms ease;
+  --mpa-hover-lift: translateY(-2px);
+}

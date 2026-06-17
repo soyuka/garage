@@ -1,0 +1,8 @@
+/* mon-parc-auto · token-only bundle (NO webfont @import).
+   For same-origin embedding in mcp-ui HTML fragments, whose CSP loads nothing external —
+   so this stays fetch-free and Inter degrades to the system-ui fallback in --mpa-font.
+   The app shell links styles.css instead (which also pulls the Inter webfont). */
+@import "tokens/colors.css";
+@import "tokens/typography.css";
+@import "tokens/spacing.css";
+@import "tokens/effects.css";

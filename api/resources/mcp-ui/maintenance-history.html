@@ -6,16 +6,22 @@
   <title>Maintenance history</title>
   <style>
     :root {
-      --bg: #0f1115; --card: #181b22; --line: #262b36; --fg: #e7e9ee;
-      --muted: #9aa3b2; --accent: #4f9cf9; --ok: #36b37e; --warn: #f5a623; --danger: #e5484d;
+      /* Local aliases → shared --mpa-* tokens, inlined same-origin by UiResourceLoader.
+         Dark-only: no prefers-color-scheme override (DESIGN.md — no light theme in v1). */
+      --bg: var(--mpa-bg);
+      --card: var(--mpa-card-top);
+      --line: var(--mpa-border);
+      --fg: var(--mpa-text);
+      --muted: var(--mpa-muted);
+      --accent: var(--mpa-accent);
+      --ok: var(--mpa-ok);
+      --warn: var(--mpa-warn);
+      --danger: var(--mpa-alarm);
       font-size: 14px;
-    }
-    @media (prefers-color-scheme: light) {
-      :root { --bg:#f6f7f9; --card:#fff; --line:#e6e8ec; --fg:#1a1d23; --muted:#5b6472; --accent:#2563eb; }
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--fg);
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      font-family: var(--mpa-font); }
     .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
     header.veh { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
       padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 8px; }
