@@ -20,8 +20,9 @@ export function App() {
 
   const selected = state.vehicles.find((v) => v.id === state.selectedId) ?? state.vehicles[0];
 
-  // Load the real parc once: GET /garage/vehicles replaces the mock sidebar list.
-  useEffect(() => {
+  // GET /garage/vehicles → replace the sidebar parc list. Called once on mount and again whenever a
+  // vehicle domain event fans out (create/merge), so a write in this tab or another grows the list live.
+  const loadVehicles = useCallback(() => {
     fetch(`${API}/garage/vehicles`, { headers: { Accept: 'application/ld+json' } })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: { member?: VehicleSummary[]; 'hydra:member'?: VehicleSummary[] }) => {
@@ -29,9 +30,11 @@ export function App() {
         dispatch({ kind: 'action', action: { type: 'setVehicles', vehicles } });
       })
       .catch(() => {
-        /* keep mock data if the API is unreachable */
+        /* keep current data if the API is unreachable */
       });
   }, []);
+
+  useEffect(loadVehicles, [loadVehicles]);
 
   const send = useCallback(
     async (instruction: string) => {
@@ -51,19 +54,27 @@ export function App() {
     [sessionId, state.selectedId],
   );
 
-  const onFrame = useCallback((frame: MercureFrame) => {
-    if ('type' in frame) {
-      // Render intent on the session topic — apply it to the dashboard.
-      dispatch({ kind: 'action', action: frame });
-      return;
-    }
-    // Domain event on a public vehicle topic — a write fanned out (this tab or another).
-    dispatch({ kind: 'live', message: `${frame.kind}/${frame.event} · ${frame.vehicle.slice(0, 8)}…` });
-    dispatch({
-      kind: 'action',
-      action: { type: 'toast', tone: 'info', message: `Mise à jour live : ${frame.kind} ${frame.event}` },
-    });
-  }, []);
+  const onFrame = useCallback(
+    (frame: MercureFrame) => {
+      if ('type' in frame) {
+        // Render intent on the session topic — apply it to the dashboard.
+        dispatch({ kind: 'action', action: frame });
+        return;
+      }
+      // Domain event on a public vehicle topic — a write fanned out (this tab or another).
+      dispatch({ kind: 'live', message: `${frame.kind}/${frame.event} · ${frame.vehicle.slice(0, 8)}…` });
+      dispatch({
+        kind: 'action',
+        action: { type: 'toast', tone: 'info', message: `Mise à jour live : ${frame.kind} ${frame.event}` },
+      });
+      // A vehicle write changes the parc list itself — refetch so the sidebar grows/dedups live.
+      // maintenance/fact events touch only a vehicle's panels, not the list, so they need no refetch.
+      if (frame.kind === 'vehicle') {
+        loadVehicles();
+      }
+    },
+    [loadVehicles],
+  );
 
   // selectedId is a vehicle IRI path (e.g. /garage/vehicles/01J…) once the real parc loads.
   const itemTopic = state.selectedId.startsWith('/') ? `${API}${state.selectedId}` : undefined;
@@ -81,7 +92,15 @@ export function App() {
         <Sidebar vehicles={state.vehicles} selectedId={state.selectedId} onSelect={onSelect} />
         <main className="canvas">
           <div className="scroll">
-            <VehicleDetail vehicle={selected} />
+            {selected ? (
+              <VehicleDetail vehicle={selected} />
+            ) : (
+              <div className="empty-parc">
+                <div className="breadcrumb">Atelier / Véhicules</div>
+                <h1>Aucun véhicule</h1>
+                <p>Ajoutez un véhicule au parc pour commencer.</p>
+              </div>
+            )}
           </div>
           <Composer suggestions={state.suggestions} busy={busy} onSend={send} />
         </main>
