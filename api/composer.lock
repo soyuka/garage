@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "86ac92c7152bac272847c2573a8ccb73",
+    "content-hash": "f8d849a1e149d0840accb86a13d95236",
     "packages": [
         {
             "name": "api-platform/doctrine-common",
@@ -3063,6 +3063,58 @@
             "time": "2021-05-22T15:57:08+00:00"
         },
         {
+            "name": "oskarstark/enum-helper",
+            "version": "1.8.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/OskarStark/enum-helper.git",
+                "reference": "14e185f1cc259d7cd3f61eea17f9b174a886a6da"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/OskarStark/enum-helper/zipball/14e185f1cc259d7cd3f61eea17f9b174a886a6da",
+                "reference": "14e185f1cc259d7cd3f61eea17f9b174a886a6da",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.1"
+            },
+            "conflict": {
+                "phpunit/phpunit": "<10"
+            },
+            "require-dev": {
+                "ergebnis/php-cs-fixer-config": "^6.58",
+                "phpstan/phpstan": "^2.1",
+                "phpunit/phpunit": "^10.5",
+                "rector/rector": "^2.3"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "OskarStark\\Enum\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Oskar Stark",
+                    "email": "oskarstark@googlemail.com"
+                }
+            ],
+            "description": "This library provides helpers for several enum operations",
+            "keywords": [
+                "enum"
+            ],
+            "support": {
+                "issues": "https://github.com/OskarStark/enum-helper/issues",
+                "source": "https://github.com/OskarStark/enum-helper/tree/1.8.4"
+            },
+            "time": "2026-02-05T08:59:09+00:00"
+        },
+        {
             "name": "php-http/discovery",
             "version": "1.20.0",
             "source": {
@@ -4052,6 +4104,342 @@
                 }
             ],
             "time": "2026-03-23T22:56:56+00:00"
+        },
+        {
+            "name": "symfony/ai-agent",
+            "version": "dev-bump-mcp-sdk-0.6",
+            "dist": {
+                "type": "path",
+                "url": "~/forks/mcp/ai/src/agent",
+                "reference": "0a5c16644775000dcbfbd04b3733ed6a0b93f1b3"
+            },
+            "require": {
+                "ext-fileinfo": "*",
+                "php": ">=8.2",
+                "phpdocumentor/reflection-docblock": "^5.4|^6.0",
+                "phpstan/phpdoc-parser": "^2.1",
+                "psr/log": "^3.0",
+                "symfony/ai-platform": "^0.9",
+                "symfony/clock": "^7.3|^8.0",
+                "symfony/http-client": "^7.3|^8.0",
+                "symfony/polyfill-php85": "^1.33",
+                "symfony/property-access": "^7.3|^8.0",
+                "symfony/property-info": "^7.3|^8.0",
+                "symfony/serializer": "^7.3|^8.0",
+                "symfony/type-info": "^7.3|^8.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53",
+                "symfony/ai-store": "^0.9",
+                "symfony/event-dispatcher": "^7.3|^8.0",
+                "symfony/translation": "^7.3|^8.0",
+                "symfony/translation-contracts": "^3.6",
+                "symfony/validator": "^7.3|^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "name": "symfony/ai",
+                    "url": "https://github.com/symfony/ai"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\Agent\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Symfony\\AI\\Agent\\Tests\\": "tests/",
+                    "Symfony\\AI\\Fixtures\\": "../../fixtures",
+                    "Symfony\\AI\\PHPStan\\": "../../.phpstan/",
+                    "Symfony\\AI\\Platform\\Tests\\": "../platform/tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Christopher Hertel",
+                    "email": "mail@christopher-hertel.de"
+                },
+                {
+                    "name": "Oskar Stark",
+                    "email": "oskarstark@googlemail.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "PHP library for building agentic applications.",
+            "keywords": [
+                "agent",
+                "ai",
+                "llm"
+            ],
+            "transport-options": {
+                "symlink": false,
+                "relative": false
+            }
+        },
+        {
+            "name": "symfony/ai-bundle",
+            "version": "dev-bump-mcp-sdk-0.6",
+            "dist": {
+                "type": "path",
+                "url": "~/forks/mcp/ai/src/ai-bundle",
+                "reference": "808c114973edff62f565babdb1fa3fa57121769d"
+            },
+            "require": {
+                "php": ">=8.2",
+                "symfony/ai-platform": "^0.9",
+                "symfony/clock": "^7.3|^8.0",
+                "symfony/config": "^7.3|^8.0",
+                "symfony/console": "^7.3|^8.0",
+                "symfony/dependency-injection": "^7.3|^8.0",
+                "symfony/framework-bundle": "^7.3|^8.0",
+                "symfony/service-contracts": "^2.5|^3",
+                "symfony/string": "^7.3|^8.0"
+            },
+            "require-dev": {
+                "google/auth": "^1.47",
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53",
+                "symfony/ai-agent": "^0.9",
+                "symfony/ai-ai-ml-api-platform": "^0.9",
+                "symfony/ai-albert-platform": "^0.9",
+                "symfony/ai-amazee-ai-platform": "^0.9",
+                "symfony/ai-anthropic-platform": "^0.9",
+                "symfony/ai-azure-platform": "^0.9",
+                "symfony/ai-azure-search-store": "^0.9",
+                "symfony/ai-bedrock-platform": "^0.9",
+                "symfony/ai-cache-message-store": "^0.9",
+                "symfony/ai-cache-platform": "^0.9",
+                "symfony/ai-cache-store": "^0.9",
+                "symfony/ai-cartesia-platform": "^0.9",
+                "symfony/ai-cerebras-platform": "^0.9",
+                "symfony/ai-chat": "^0.9",
+                "symfony/ai-chroma-db-store": "^0.9",
+                "symfony/ai-click-house-store": "^0.9",
+                "symfony/ai-cloudflare-message-store": "^0.9",
+                "symfony/ai-cloudflare-store": "^0.9",
+                "symfony/ai-cohere-platform": "^0.9",
+                "symfony/ai-decart-platform": "^0.9",
+                "symfony/ai-deep-seek-platform": "^0.9",
+                "symfony/ai-docker-model-runner-platform": "^0.9",
+                "symfony/ai-doctrine-message-store": "^0.9",
+                "symfony/ai-elasticsearch-store": "^0.9",
+                "symfony/ai-eleven-labs-platform": "^0.9",
+                "symfony/ai-failover-platform": "^0.9",
+                "symfony/ai-gemini-platform": "^0.9",
+                "symfony/ai-generic-platform": "^0.9",
+                "symfony/ai-hugging-face-platform": "^0.9",
+                "symfony/ai-lm-studio-platform": "^0.9",
+                "symfony/ai-manticore-search-store": "^0.9",
+                "symfony/ai-maria-db-store": "^0.9",
+                "symfony/ai-meilisearch-message-store": "^0.9",
+                "symfony/ai-meilisearch-store": "^0.9",
+                "symfony/ai-meta-platform": "^0.9",
+                "symfony/ai-milvus-store": "^0.9",
+                "symfony/ai-mistral-platform": "^0.9",
+                "symfony/ai-mongo-db-message-store": "^0.9",
+                "symfony/ai-mongo-db-store": "^0.9",
+                "symfony/ai-neo4j-store": "^0.9",
+                "symfony/ai-ollama-platform": "^0.9",
+                "symfony/ai-open-ai-platform": "^0.9",
+                "symfony/ai-open-responses-platform": "^0.9",
+                "symfony/ai-open-router-platform": "^0.9",
+                "symfony/ai-open-search-store": "^0.9",
+                "symfony/ai-ovh-platform": "^0.9",
+                "symfony/ai-perplexity-platform": "^0.9",
+                "symfony/ai-pinecone-store": "^0.9",
+                "symfony/ai-pogocache-message-store": "^0.9",
+                "symfony/ai-postgres-store": "^0.9",
+                "symfony/ai-qdrant-store": "^0.9",
+                "symfony/ai-redis-message-store": "^0.9",
+                "symfony/ai-redis-store": "^0.9",
+                "symfony/ai-replicate-platform": "^0.9",
+                "symfony/ai-s3vectors-store": "^0.9",
+                "symfony/ai-scaleway-platform": "^0.9",
+                "symfony/ai-session-message-store": "^0.9",
+                "symfony/ai-sqlite-store": "^0.9",
+                "symfony/ai-store": "^0.9",
+                "symfony/ai-supabase-store": "^0.9",
+                "symfony/ai-surreal-db-message-store": "^0.9",
+                "symfony/ai-surreal-db-store": "^0.9",
+                "symfony/ai-transformers-php-platform": "^0.9",
+                "symfony/ai-typesense-store": "^0.9",
+                "symfony/ai-vektor-store": "^0.9",
+                "symfony/ai-vertex-ai-platform": "^0.9",
+                "symfony/ai-voyage-platform": "^0.9",
+                "symfony/ai-weaviate-store": "^0.9",
+                "symfony/expression-language": "^7.3|^8.0",
+                "symfony/security-core": "^7.3|^8.0",
+                "symfony/translation": "^7.3|^8.0",
+                "symfony/validator": "^7.3|^8.0"
+            },
+            "type": "symfony-bundle",
+            "extra": {
+                "thanks": {
+                    "name": "symfony/ai",
+                    "url": "https://github.com/symfony/ai"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\AiBundle\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Symfony\\AI\\AiBundle\\Tests\\": "tests/",
+                    "Symfony\\AI\\PHPStan\\": "../../.phpstan/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Christopher Hertel",
+                    "email": "mail@christopher-hertel.de"
+                },
+                {
+                    "name": "Oskar Stark",
+                    "email": "oskarstark@googlemail.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "Integration bundle for Symfony AI components",
+            "transport-options": {
+                "symlink": false,
+                "relative": false
+            }
+        },
+        {
+            "name": "symfony/ai-platform",
+            "version": "dev-bump-mcp-sdk-0.6",
+            "dist": {
+                "type": "path",
+                "url": "~/forks/mcp/ai/src/platform",
+                "reference": "6f60f041a498a0ef18970a299a521df79aa7a1f4"
+            },
+            "require": {
+                "ext-fileinfo": "*",
+                "oskarstark/enum-helper": "^1.5",
+                "php": ">=8.2",
+                "phpdocumentor/reflection-docblock": "^5.4|^6.0",
+                "phpstan/phpdoc-parser": "^2.1",
+                "psr/log": "^3.0",
+                "symfony/clock": "^7.3|^8.0",
+                "symfony/event-dispatcher": "^7.3|^8.0",
+                "symfony/property-access": "^7.3|^8.0",
+                "symfony/property-info": "^7.3|^8.0",
+                "symfony/serializer": "^7.3|^8.0",
+                "symfony/type-info": "^7.3|^8.0",
+                "symfony/uid": "^7.3|^8.0"
+            },
+            "require-dev": {
+                "phpstan/phpstan": "^2.1",
+                "phpstan/phpstan-phpunit": "^2.0",
+                "phpstan/phpstan-strict-rules": "^2.0",
+                "phpunit/phpunit": "^11.5.53",
+                "symfony/cache": "^7.3|^8.0",
+                "symfony/console": "^7.3|^8.0",
+                "symfony/dotenv": "^7.3|^8.0",
+                "symfony/expression-language": "^7.3|^8.0",
+                "symfony/finder": "^7.3|^8.0",
+                "symfony/http-client": "^7.3|^8.0",
+                "symfony/http-client-contracts": "^3.5",
+                "symfony/intl": "^7.3|^8.0",
+                "symfony/process": "^7.3|^8.0",
+                "symfony/validator": "^7.3|^8.0",
+                "symfony/var-dumper": "^7.3|^8.0",
+                "symfony/yaml": "^7.3|^8.0"
+            },
+            "type": "library",
+            "extra": {
+                "thanks": {
+                    "name": "symfony/ai",
+                    "url": "https://github.com/symfony/ai"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Symfony\\AI\\Platform\\": "src/"
+                }
+            },
+            "autoload-dev": {
+                "psr-4": {
+                    "Symfony\\AI\\Agent\\Tests\\": "../agent/tests/",
+                    "Symfony\\AI\\Fixtures\\": "../../fixtures",
+                    "Symfony\\AI\\PHPStan\\": "../../.phpstan/",
+                    "Symfony\\AI\\Platform\\Tests\\": "tests/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Christopher Hertel",
+                    "email": "mail@christopher-hertel.de"
+                },
+                {
+                    "name": "Oskar Stark",
+                    "email": "oskarstark@googlemail.com"
+                },
+                {
+                    "name": "Symfony Community",
+                    "homepage": "https://symfony.com/contributors"
+                }
+            ],
+            "description": "PHP library for interacting with AI platform provider.",
+            "keywords": [
+                "ai",
+                "aimlapi",
+                "albert",
+                "amazeeai",
+                "anthropic",
+                "azure",
+                "bedrock",
+                "cerebras",
+                "dockermodelrunner",
+                "elevenlabs",
+                "gemini",
+                "huggingface",
+                "inference",
+                "litellm",
+                "llama",
+                "lmstudio",
+                "meta",
+                "mistral",
+                "nova",
+                "ollama",
+                "openai",
+                "openrouter",
+                "ovh",
+                "perplexity",
+                "replicate",
+                "speech",
+                "transformers",
+                "vertexai",
+                "voyage"
+            ],
+            "transport-options": {
+                "symlink": false,
+                "relative": false
+            }
         },
         {
             "name": "symfony/asset",
@@ -11204,6 +11592,24 @@
             "alias_normalized": "4.3.99.0"
         },
         {
+            "package": "symfony/ai-agent",
+            "version": "dev-bump-mcp-sdk-0.6",
+            "alias": "0.9.99",
+            "alias_normalized": "0.9.99.0"
+        },
+        {
+            "package": "symfony/ai-bundle",
+            "version": "dev-bump-mcp-sdk-0.6",
+            "alias": "0.9.99",
+            "alias_normalized": "0.9.99.0"
+        },
+        {
+            "package": "symfony/ai-platform",
+            "version": "dev-bump-mcp-sdk-0.6",
+            "alias": "0.9.99",
+            "alias_normalized": "0.9.99.0"
+        },
+        {
             "package": "symfony/mcp-bundle",
             "version": "dev-main",
             "alias": "0.9.99",
@@ -11213,6 +11619,9 @@
     "minimum-stability": "stable",
     "stability-flags": {
         "api-platform/mcp": 20,
+        "symfony/ai-agent": 20,
+        "symfony/ai-bundle": 20,
+        "symfony/ai-platform": 20,
         "symfony/mcp-bundle": 20
     },
     "prefer-stable": true,

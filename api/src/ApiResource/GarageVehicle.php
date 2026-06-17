@@ -7,7 +7,9 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
 use App\Entity\Vehicle;
+use App\State\GarageVehicleCollectionProvider;
 use App\State\GarageVehicleProvider;
 use Symfony\Component\Uid\Ulid;
 
@@ -19,6 +21,7 @@ use Symfony\Component\Uid\Ulid;
  */
 #[ApiResource(
     operations: [
+        new GetCollection(uriTemplate: '/garage/vehicles', provider: GarageVehicleCollectionProvider::class),
         new Get(uriTemplate: '/garage/vehicles/{id}', provider: GarageVehicleProvider::class),
     ],
 )]

@@ -1,21 +1,23 @@
-import type { UIAction } from './types';
-
 const API = import.meta.env.VITE_API_BASE ?? '';
 
+export interface TurnContext {
+  sessionId: string;
+  selectedId?: string;
+}
+
 /**
- * One agent turn: POST the user's instruction, get back a UI-action list. No chat transcript —
- * the response is purely actions the reducer applies to the dashboard. Today the endpoint is a
- * stub (ui.md step 3); step 4 makes it the real Symfony AI agent over MCP.
+ * One agent turn: POST the instruction + the session id. There is no action list in the response —
+ * the real Symfony AI agent streams its UI intents over the per-session Mercure topic as the loop
+ * produces them (and domain writes fan out on the public vehicle topics). The endpoint acks 202;
+ * we only surface transport failures here.
  */
-export async function postTurn(instruction: string): Promise<UIAction[]> {
+export async function postTurn(instruction: string, ctx: TurnContext): Promise<void> {
   const res = await fetch(`${API}/agent/turn`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instruction }),
+    body: JSON.stringify({ instruction, sessionId: ctx.sessionId, selectedId: ctx.selectedId }),
   });
   if (!res.ok) {
     throw new Error(`agent turn failed: ${res.status}`);
   }
-  const data: { actions?: UIAction[] } = await res.json();
-  return data.actions ?? [];
 }

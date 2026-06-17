@@ -31,6 +31,25 @@ export interface SuggestionChip {
   label: string;
 }
 
+/**
+ * The raw garage vehicle as the API serves it (GET /garage/vehicles) — the same projection the MCP
+ * list_vehicles tool returns. `@id` is the dereferenceable IRI the agent uses as the vehicle handle
+ * (select_vehicle, log_maintenance), so it doubles as our VehicleId.
+ */
+export interface VehicleSummary {
+  '@id': string;
+  make: string;
+  model: string;
+  year?: number | null;
+  vehicleType: string;
+  source: string;
+  kType?: number | null;
+  plate?: string | null;
+  vin?: string | null;
+  factCount: number;
+  addedAt: string;
+}
+
 export interface Toast {
   id: number;
   tone: Tone;
@@ -50,7 +69,10 @@ export interface DashboardState {
  * actions and the reducer maps them to state. Starts small, converges toward AG-UI.
  */
 export type UIAction =
+  | { type: 'setVehicles'; vehicles: VehicleSummary[] }
   | { type: 'selectVehicle'; id: VehicleId }
   | { type: 'renderSuggestions'; chips: SuggestionChip[] }
   | { type: 'patchPanel'; panel: 'nextService'; data: NextService }
+  | { type: 'patchPanel'; panel: 'health'; data: { value: number; label?: string } }
+  | { type: 'patchPanel'; panel: 'cost'; data: { total: string; period: string; delta: string } }
   | { type: 'toast'; tone: Tone; message: string };

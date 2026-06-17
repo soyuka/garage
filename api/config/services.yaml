@@ -32,6 +32,21 @@ services:
             $cache: '@cache.partsapi'
             $callLimit: '%env(int:PARTSAPI_CALL_LIMIT)%'
 
+    # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server,
+    # not autowireable by FQCN), so the agent reuses the garage tools without HTTP/OAuth.
+    App\Mcp\Agent\McpToolbox:
+        arguments:
+            $server: '@mcp.server'
+
+    # Merge the garage MCP tools into the garage agent's #[AsTool] toolbox (render intents). The
+    # bundle wires one toolbox per agent; this decorator is that one toolbox (fault tolerance is
+    # disabled on the agent so no other decorator competes).
+    App\Agent\Toolbox\CompositeToolbox:
+        decorates: ai.toolbox.garage
+        arguments:
+            $renderToolbox: '@.inner'
+            $mcpToolbox: '@App\Mcp\Agent\McpToolbox'
+
     App\Command\ImportLegacyCacheCommand:
         arguments:
             $sivCache: '@cache.siv'
@@ -54,3 +69,8 @@ when@test:
 
         # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler.
         App\Tests\Security\FakeOidcTokenHandler: ~
+
+        # Capture Mercure publishes (no HTTP) so tests can assert streamed intents/events.
+        App\Tests\Mock\RecordingHub:
+            decorates: mercure.hub.default
+            public: true
