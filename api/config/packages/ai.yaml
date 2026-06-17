@@ -6,7 +6,11 @@ ai:
     agent:
         garage:
             platform: 'ai.platform.anthropic'
-            model: 'claude-sonnet-4-5'
+            # max_tokens rides the model string as a query param: AbstractModelCatalog::parseModelName
+            # parses "?max_tokens=1024" into the model options, which Provider::invoke merges into the
+            # request body. The agent config has no dedicated options/max_tokens node. 1024 fits this
+            # workload (small UI-intent JSON tool calls + short French toasts, never prose).
+            model: 'claude-haiku-4-5?max_tokens=1024'
             # Render-intent #[AsTool] tools (select_vehicle/suggest/toast/patch_panel) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
             # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is off so
