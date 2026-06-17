@@ -124,14 +124,32 @@ Agent and user share one state.
    `{kind,event,vehicle,iri}`. **Verified**: ORM persist → hub 200 → SSE subscriber
    received the `vehicle/created` event. _TODO later: move publish to Messenger so the
    request doesn't wait on the hub._
-3. **Vertical slice, no LLM.** React shell (the wireframed screen) using design
-   primitives; bottom input POSTs a *hardcoded* UI-action list; render it. Proves the
-   headless-UI loop end to end. Subscribe the shell to the Mercure topics from step 2.
-4. **Wire Symfony AI agent.** input → agent → MCP tools → emit domain writes +
-   UI-intents over the per-session Mercure topic.
+3. **[DONE] Vertical slice, no LLM.** New `dashboard/` Vite+React+TS app (separate from
+   admin/), using the design TSX primitives + `--mpa-*` tokens. Wireframe shell built
+   (top bar, sidebar parc, KPI strip, HealthRing, cost panel, copilote chips, composer).
+   Typed `UIAction` vocabulary + reducer (`selectVehicle`/`renderSuggestions`/`patchPanel`/
+   `toast`). Bottom input POSTs to `POST /agent/turn` (Symfony stub `AgentTurnController`,
+   no LLM, returns a fixed action list); actions apply to state — **verified**: clicking a
+   chip swapped the suggestions live. `useMercure` subscribes to the step-2 topics
+   (`{API}/garage/vehicles` + selected item); **verified**: a domain write surfaced as a
+   live event in the dashboard. Hub reached via Vite proxy (the Caddy hub has no CORS for
+   the dev origin); topics stay absolute to match the publisher. _Read API for the parc
+   list is still mock data — that lands in step 4._
+4. **Wire Symfony AI agent.** Replace the `AgentTurnController` stub body with the agent:
+   input → agent → MCP tools → emit domain writes + UI-intents over the per-session
+   Mercure topic. Response shape ({actions: UIAction[]}) is the stable contract. Also add
+   a real GarageVehicle collection read so the sidebar/detail leave mock data.
 5. **Add `web_search` sub-agent** as a tool. Then generative suggestion chips.
 
-**Next: step 3** (React shell + headless UI-action loop, subscribing to step-2 topics).
+**Next: step 4** (Symfony AI agent behind /agent/turn + real read API for the parc list).
+
+## Dev run
+
+- API: `cd api && docker compose up` (FrankenPHP on http://localhost, Mercure hub at
+  `/.well-known/mercure`, anonymous subscribe enabled in dev).
+- Dashboard: `cd dashboard && npm run dev` → http://localhost:5173 (Vite proxies the hub).
+  Env in `dashboard/.env`: `VITE_API_BASE` (agent + topic host, = API DEFAULT_URI),
+  `VITE_MERCURE_URL` (relative, proxied).
 
 ## Open questions / to decide later
 

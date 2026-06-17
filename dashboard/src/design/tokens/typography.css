@@ -1,0 +1,29 @@
+/* TYPOGRAPHY — Inter throughout, no second family.
+   Numbers use tabular-nums so columns of mileage / km / scores align.
+   Hierarchy is carried by SIZE + WEIGHT, not by uppercase tracking (kept to a minimum). */
+:root {
+  --mpa-font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mpa-numeric: tabular-nums;
+
+  /* ---- type scale ---- */
+  --mpa-text-display: 38px;    /* page / vehicle title — weight 600 */
+  --mpa-text-metric: 44px;     /* KPI value — weight 500 */
+  --mpa-text-ring: 40px;       /* health-ring score — weight 600 */
+  --mpa-text-stat: 24px;       /* secondary stat (cost total) — weight 600 */
+  --mpa-text-h2: 17px;         /* section title — weight 600 */
+  --mpa-text-card-title: 15px; /* card title — weight 600 */
+  --mpa-text-body: 14px;       /* body, inputs — weight 400/500 */
+  --mpa-text-label: 13px;      /* labels, secondary rows */
+  --mpa-text-small: 12px;      /* captions, sub-rows */
+  --mpa-text-tiny: 11px;       /* status pills, axis labels */
+
+  /* ---- weights ---- */
+  --mpa-weight-regular: 400;
+  --mpa-weight-medium: 500;
+  --mpa-weight-semibold: 600;
+  --mpa-weight-bold: 700;
+
+  /* ---- tracking ---- */
+  --mpa-track-tight: -0.02em;  /* large numerals + display */
+  --mpa-track-snug: -0.01em;
+}

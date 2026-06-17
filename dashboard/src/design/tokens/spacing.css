@@ -1,0 +1,19 @@
+/* SPACING — 4px base grid. Cards breathe: generous internal padding,
+   tight, even gutters between them. */
+:root {
+  --mpa-space-1: 4px;
+  --mpa-space-2: 8px;
+  --mpa-space-3: 12px;
+  --mpa-space-4: 16px;
+  --mpa-space-5: 18px;
+  --mpa-space-6: 24px;
+  --mpa-space-7: 32px;
+  --mpa-space-8: 40px;
+
+  /* ---- semantic ---- */
+  --mpa-gap-grid: 14px;        /* gutter between cards in a grid */
+  --mpa-gap-section: 26px;     /* vertical rhythm between canvas sections */
+  --mpa-pad-card: 18px;        /* small card padding (spec cards) */
+  --mpa-pad-card-lg: 24px;     /* large card padding (KPI / health / chart) */
+  --mpa-pad-canvas: 32px 40px; /* main canvas padding */
+}

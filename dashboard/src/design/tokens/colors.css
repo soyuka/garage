@@ -1,0 +1,57 @@
+/* COLORS — dark-first SaaS palette.
+   Depth comes from tonal surface steps + hairline white-alpha borders + soft shadows,
+   never from heavy outlines. Color is reserved for meaning (signals) and the single
+   cyan accent. */
+:root {
+  /* ---- canvas + surfaces (low → high) ---- */
+  --mpa-bg: #0A0F17;          /* app canvas */
+  --mpa-surface: #0C121C;     /* chrome: top bar, sidebar, composer dock */
+  --mpa-card-top: #161F2E;    /* card gradient start */
+  --mpa-card-bottom: #111827; /* card gradient end */
+  --mpa-card: linear-gradient(180deg, #161F2E, #111827); /* the elevated card fill */
+  --mpa-inset: #0A0F17;       /* inputs, wells (recessed) */
+
+  /* ---- hairline borders (white over dark) ---- */
+  --mpa-border-soft: rgba(255, 255, 255, 0.06);
+  --mpa-border: rgba(255, 255, 255, 0.07);
+  --mpa-border-strong: rgba(255, 255, 255, 0.10);
+
+  /* ---- text ramp (high → low presence) ---- */
+  --mpa-text-strong: #FFFFFF;  /* active titles */
+  --mpa-text: #EEF2F8;         /* primary text + values */
+  --mpa-text-2: #C7D0DC;       /* strong secondary (data values in cards) */
+  --mpa-text-3: #A7B1C0;       /* secondary */
+  --mpa-muted: #8B95A5;        /* labels, captions */
+  --mpa-faint: #6B7686;        /* tertiary, breadcrumbs */
+  --mpa-placeholder: #4E5969;  /* placeholder, disabled */
+
+  /* ---- brand accent (the single interactive color) ---- */
+  --mpa-accent: #22D3EE;       /* cyan — buttons, links, focus, send */
+  --mpa-accent-hover: #3DDDF0;
+  --mpa-accent-deep: #0E8A9E;
+  --mpa-on-accent: #04141A;    /* ink on a cyan fill */
+
+  /* ---- signal colors (meaning-locked) ---- */
+  --mpa-ok: #34D399;           /* healthy / up to date */
+  --mpa-ok-text: #5FE6B4;      /* ok text on a tint */
+  --mpa-warn: #FBBF24;         /* attention soon */
+  --mpa-alarm: #F43F5E;        /* action now / overdue */
+
+  /* ---- signal + accent tints (pill backgrounds) ---- */
+  --mpa-accent-tint: rgba(34, 211, 238, 0.12);
+  --mpa-ok-tint: rgba(52, 211, 153, 0.12);
+  --mpa-warn-tint: rgba(251, 191, 36, 0.12);
+  --mpa-alarm-tint: rgba(244, 63, 94, 0.12);
+
+  /* ---- semantic aliases ---- */
+  --surface-app: var(--mpa-bg);
+  --surface-chrome: var(--mpa-surface);
+  --surface-card: var(--mpa-card);
+  --surface-inset: var(--mpa-inset);
+  --text-primary: var(--mpa-text);
+  --text-secondary: var(--mpa-text-3);
+  --text-label: var(--mpa-muted);
+  --text-placeholder: var(--mpa-placeholder);
+  --border-hairline: var(--mpa-border);
+  --accent: var(--mpa-accent);
+}
