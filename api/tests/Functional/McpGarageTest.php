@@ -486,7 +486,7 @@ final class McpGarageTest extends AppTestCase
         $this->assertJsonContains(['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare']);
     }
 
-    public function testVehicleFactExposesDereferenceableIri(): void
+    public function testVehicleFactIsInlinedWithProvenanceAndHasNoOwnIri(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -508,12 +508,15 @@ final class McpGarageTest extends AppTestCase
             'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
         ], 4)['result']['structuredContent']['facts'];
 
-        $iri = $facts[0]['@id'] ?? null;
-        $this->assertMatchesRegularExpression('~^/garage/vehicle-facts/[0-9A-HJKMNP-TV-Z]{26}$~', (string) $iri);
-
-        $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['key' => 'oil_type', 'value' => 'SAE 5W-30']);
+        // Facts are embedded on their vehicle: the value + full provenance travel inline, and a
+        // fact has no own dereferenceable IRI (no @id, no /garage/vehicle-facts endpoint).
+        $oilType = $this->factByKey($facts, 'oil_type');
+        $this->assertNotNull($oilType);
+        $this->assertSame('SAE 5W-30', $oilType['value']);
+        $this->assertSame('llm', $oilType['source']);
+        $this->assertFalse($oilType['verified']);
+        $this->assertArrayNotHasKey('@id', $oilType);
+        $this->assertArrayNotHasKey('id', $oilType);
     }
 
     public function testAmbiguousMakeSurfacesExistingVehicleAsCandidateInsteadOfCreating(): void

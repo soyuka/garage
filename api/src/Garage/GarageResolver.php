@@ -168,17 +168,16 @@ final class GarageResolver
 
         $verified = $this->isAuthoritative($source);
 
-        // One fact per (vehicle, key): update in place rather than inserting a duplicate that
-        // factByKey() would shadow with a stale value (UNIQUE(vehicle_id, fact_key)).
+        // One fact per (vehicle, key): update the embedded fact in place rather than stacking a
+        // duplicate the keyed map would shadow with a stale value.
         if (null !== $existing) {
             $existing->update($value, $source, $verified, $unit, $addedBy, $url);
             $this->entityManager->flush();
 
-            return AddFactOutcome::written($existing);
+            return AddFactOutcome::written($existing, $vehicle);
         }
 
         $fact = new VehicleFact(
-            vehicle: $vehicle,
             key: $key,
             value: $value,
             source: $source,
@@ -187,10 +186,10 @@ final class GarageResolver
             addedBy: $addedBy,
             url: $url,
         );
-        $this->entityManager->persist($fact);
+        $vehicle->addFact($fact);
         $this->entityManager->flush();
 
-        return AddFactOutcome::written($fact);
+        return AddFactOutcome::written($fact, $vehicle);
     }
 
     private function writeThroughFillVolumes(string $make, string $model, ?int $year, VehicleType $vehicleType, int $carId): ?Vehicle
@@ -204,8 +203,7 @@ final class GarageResolver
         $this->entityManager->persist($vehicle);
 
         foreach ($facts as $fact) {
-            $this->entityManager->persist(new VehicleFact(
-                vehicle: $vehicle,
+            $vehicle->addFact(new VehicleFact(
                 key: $fact['key'],
                 value: $fact['value'],
                 source: 'partsapi',

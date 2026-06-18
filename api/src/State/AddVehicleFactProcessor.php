@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\AddVehicleFactInput;
+use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
@@ -103,13 +104,13 @@ final class AddVehicleFactProcessor implements ProcessorInterface
                 'status' => 'not_found',
                 'reason' => sprintf('No vehicle %s in the garage.', $outcome->vehicleId),
             ]),
-            default => $this->publishedFact($outcome->fact),
+            default => $this->publishedFact($outcome->vehicle, $outcome->fact),
         };
     }
 
-    private function publishedFact(VehicleFact $fact): CallToolResult
+    private function publishedFact(Vehicle $vehicle, VehicleFact $fact): CallToolResult
     {
-        $this->publisher->publishVehicle($fact->getVehicle());
+        $this->publisher->publishVehicle($vehicle);
 
         return ToolResult::of([
             'status' => 'ok',

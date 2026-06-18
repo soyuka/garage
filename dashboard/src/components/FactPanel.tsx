@@ -37,7 +37,7 @@ export function FactPanel({
       ) : (
         <div className="facts">
           {facts.map((f) => (
-            <FactRow key={f.id} fact={f} />
+            <FactRow key={f.key} fact={f} />
           ))}
           {missing.map((k) => (
             <div key={k} className="fact-row fact-row-missing">

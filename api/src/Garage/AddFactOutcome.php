@@ -27,12 +27,15 @@ final readonly class AddFactOutcome
         public ?VehicleFact $fact = null,
         public array $candidates = [],
         public ?string $vehicleId = null,
+        // The owning vehicle of a written fact — facts are embedded and carry no back-reference,
+        // so the publish path (Mercure) is handed the vehicle here rather than fact->getVehicle().
+        public ?Vehicle $vehicle = null,
     ) {
     }
 
-    public static function written(VehicleFact $fact): self
+    public static function written(VehicleFact $fact, Vehicle $vehicle): self
     {
-        return new self('written', fact: $fact);
+        return new self('written', fact: $fact, vehicle: $vehicle);
     }
 
     public static function refused(VehicleFact $existing): self

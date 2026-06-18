@@ -51,9 +51,9 @@ export interface Vehicle {
   cost: { total: string; period: string; delta: string };
 }
 
-/** A stored spec about a vehicle, with provenance — read-only on the card. */
+/** A stored spec about a vehicle, with provenance — read-only on the card. Keyed by `key`
+ * (one fact per key per vehicle); it has no own identity since facts are embedded server-side. */
 export interface VehicleFact {
-  id: string;
   key: string;
   value: string;
   unit?: string | null;

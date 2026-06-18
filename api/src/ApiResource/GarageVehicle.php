@@ -66,7 +66,7 @@ final class GarageVehicle
      * The vehicle's stored facts with provenance (key/value/unit/source/verified). Populated on the
      * item GET only; the collection leaves it empty so the parc listing stays light.
      *
-     * @var list<array{id: string, key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
+     * @var list<array{key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
      */
     #[ApiProperty(writable: false)]
     public array $facts = [];

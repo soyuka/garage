@@ -28,12 +28,13 @@ final class GarageVehicleView
      * The vehicle's facts with provenance — the shape the item GET inlines (keyed `id`/`key`, not
      * the MCP FactView's `@id`).
      *
-     * @return list<array{id: string, key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
+     * @return list<array{key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
      */
     public function factsOf(Vehicle $vehicle): array
     {
+        // Facts are a key-indexed embedded map; array_values drops the keys so it serializes as a
+        // JSON array (the dashboard reads `facts` as a list and keys each row by `key`).
         return array_map(static fn (VehicleFact $f): array => [
-            'id' => (string) $f->getId(),
             'key' => $f->getKey(),
             'value' => $f->getValue(),
             'unit' => $f->getUnit(),
@@ -41,7 +42,7 @@ final class GarageVehicleView
             'verified' => $f->isVerified(),
             'addedAt' => $f->getAddedAt()->format(\DateTimeInterface::ATOM),
             'url' => $f->getUrl(),
-        ], $vehicle->getFacts()->toArray());
+        ], array_values($vehicle->getFacts()->toArray()));
     }
 
     /**

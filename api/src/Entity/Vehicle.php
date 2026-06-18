@@ -28,8 +28,10 @@ class Vehicle
     #[ODM\Id(strategy: 'NONE', type: 'string')]
     private string $id;
 
-    /** @var Collection<int, VehicleFact> */
-    #[ODM\ReferenceMany(targetDocument: VehicleFact::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
+    // Facts embedded as a `{key: {...}}` map (the 'set' strategy keys the BSON object by the
+    // collection's PHP keys), so one-fact-per-key is structural and factByKey() is an O(1) lookup.
+    /** @var Collection<string, VehicleFact> */
+    #[ODM\EmbedMany(targetDocument: VehicleFact::class, strategy: 'set')]
     private Collection $facts;
 
     /** @var Collection<int, MaintenanceRecord> */
@@ -209,20 +211,13 @@ class Vehicle
 
     public function addFact(VehicleFact $fact): void
     {
-        if (!$this->facts->contains($fact)) {
-            $this->facts->add($fact);
-        }
+        // Keyed by fact key — the map slot IS the dedup, and re-adding the same key replaces it.
+        $this->facts->set($fact->getKey(), $fact);
     }
 
     public function factByKey(string $key): ?VehicleFact
     {
-        foreach ($this->facts as $fact) {
-            if ($fact->getKey() === $key) {
-                return $fact;
-            }
-        }
-
-        return null;
+        return $this->facts->get($key);
     }
 
     /**

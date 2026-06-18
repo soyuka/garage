@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
-use Doctrine\ODM\MongoDB\DocumentManager;
+use MongoDB\Client;
 use Psr\Cache\CacheItemPoolInterface;
 
 abstract class AppTestCase extends ApiTestCase
@@ -13,22 +13,22 @@ abstract class AppTestCase extends ApiTestCase
     protected static ?bool $alwaysBootKernel = true;
 
     /**
-     * The garage lives in MongoDB, which has no DAMA-style transactional rollback. Purge every
-     * mapped collection before each test so writes from one test never leak into the next — the
-     * Mongo counterpart of the rolled-back DBAL transaction the cache pools get for free.
+     * The garage lives in MongoDB, which has no DAMA-style transactional rollback. Drop the test
+     * database before each test so writes from one test never leak into the next — the Mongo
+     * counterpart of the rolled-back DBAL transaction the cache pools get for free.
+     *
+     * Done through a standalone driver client, NOT the app's DocumentManager: booting the kernel
+     * here (static::getContainer()) before the test's own createClient() corrupts the BrowserKit
+     * kernel lifecycle and writes are lost. A raw client keeps isolation fully decoupled from the
+     * kernel under test.
      */
     protected function setUp(): void
     {
         parent::setUp();
 
-        $dm = static::getContainer()->get(DocumentManager::class);
-        foreach ($dm->getMetadataFactory()->getAllMetadata() as $metadata) {
-            if ($metadata->isMappedSuperclass || $metadata->isEmbeddedDocument) {
-                continue;
-            }
-            $dm->getDocumentCollection($metadata->getName())->deleteMany([]);
-        }
-        $dm->clear();
+        $url = $_ENV['MONGODB_URL'] ?? $_SERVER['MONGODB_URL'];
+        $db = $_ENV['MONGODB_DB'] ?? $_SERVER['MONGODB_DB'];
+        (new Client($url))->dropDatabase($db);
     }
 
     /**

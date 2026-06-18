@@ -160,7 +160,7 @@ export function VehicleDetail({
           ) : (
             <div className="facts">
               {facts.map((f) => (
-                <FactRow key={f.id} fact={f} />
+                <FactRow key={f.key} fact={f} />
               ))}
             </div>
           )

@@ -4,25 +4,22 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Repository\VehicleFactRepository;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
-use Symfony\Component\Uid\Ulid;
 
 /**
- * A typed fact about a vehicle (oil_type, oil_capacity, spark_plug_ref…) with full
- * provenance. `verified` is what stops a hallucinated capacity becoming a confident lie,
- * and doubles as the future promotion marker (see docs/TODO.md "## Garage").
+ * A typed fact about a vehicle (oil_type, oil_capacity, spark_plug_ref…) with full provenance,
+ * embedded on its {@see Vehicle} keyed by `key` (the EmbedMany 'set' strategy stores the facts
+ * as a `{key: {...}}` map, so one-per-key is structural — no unique index, no join). `verified`
+ * is what stops a hallucinated capacity becoming a confident lie, and doubles as the future
+ * promotion marker (see docs/TODO.md "## Garage").
+ *
+ * No own identity: a fact is addressed through its vehicle (inlined on the item GET and the MCP
+ * get_vehicle_facts result), never dereferenced on its own.
  */
-#[ODM\Document(collection: 'vehicle_facts', repositoryClass: VehicleFactRepository::class)]
-#[ODM\UniqueIndex(keys: ['vehicle' => 'asc', 'key' => 'asc'], name: 'uniq_vehicle_fact_key')]
+#[ODM\EmbeddedDocument]
 class VehicleFact
 {
-    #[ODM\Id(strategy: 'NONE', type: 'string')]
-    private string $id;
-
     public function __construct(
-        #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'facts')]
-        private Vehicle $vehicle,
         #[ODM\Field(type: 'string')]
         private string $key,
         #[ODM\Field(type: 'string')]
@@ -40,14 +37,11 @@ class VehicleFact
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $url = null,
     ) {
-        $this->id = (string) new Ulid();
-        $vehicle->addFact($this);
     }
 
     /**
-     * Overwrite the mutable fields of an existing fact, keeping identity (vehicle + key) and
-     * primary key stable. Used by the resolver to update a fact in place instead of inserting
-     * a duplicate row for the same key (UNIQUE(vehicle, key)).
+     * Overwrite the mutable fields, keeping the identity (the `key` it is mapped under). Used by
+     * the resolver to update a fact in place instead of stacking a duplicate for the same key.
      */
     public function update(
         string $value,
@@ -65,16 +59,6 @@ class VehicleFact
         $this->addedBy = $addedBy;
         $this->url = $url;
         $this->addedAt = $addedAt;
-    }
-
-    public function getId(): Ulid
-    {
-        return Ulid::fromString($this->id);
-    }
-
-    public function getVehicle(): Vehicle
-    {
-        return $this->vehicle;
     }
 
     public function getKey(): string
