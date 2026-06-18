@@ -7,10 +7,11 @@ ai:
         garage:
             platform: 'ai.platform.anthropic'
             # max_tokens rides the model string as a query param: AbstractModelCatalog::parseModelName
-            # parses "?max_tokens=1024" into the model options, which Provider::invoke merges into the
-            # request body. The agent config has no dedicated options/max_tokens node. 1024 fits this
-            # workload (small UI-intent JSON tool calls + short French toasts, never prose).
-            model: 'claude-haiku-4-5?max_tokens=1024'
+            # parses "?max_tokens=2048" into the model options, which Provider::invoke merges into the
+            # request body. The agent config has no dedicated options/max_tokens node. 2048 leaves headroom
+            # for a native web_search loop (server tool result + cited answer) on top of the usual small
+            # UI-intent JSON tool calls and short French toasts.
+            model: 'claude-haiku-4-5?max_tokens=2048'
             # Render-intent #[AsTool] tools (select_vehicle/toast/show_fact/propose_actions) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
             # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is off so
@@ -50,6 +51,15 @@ ai:
                     - CATALOG (TecDoc): get_fill_volumes returns fluid capacities/specs;
                       list_part_categories then list_articles return aftermarket part references
                       (brand + part number) for a carId. lookup_plate / list_cars yield the carId.
+                    - WEB SEARCH (web_search): when the stored facts AND the catalog do not answer a
+                      maintenance spec or schedule — e.g. the manufacturer's recommended interval, the
+                      service due at a milestone like 250 000 km, a fluid spec absent from get_fill_volumes
+                      — search the web for the manufacturer's published figure. Prefer the maker's own
+                      documentation. Then PERSIST what you found: call add_vehicle_fact with source:"web"
+                      and url set to the page you cited, so the fact becomes a durable, cited garage fact
+                      (next time it is local). Web facts stay unverified (source:"web" is not the same as
+                      a verified manufacturer/TecDoc fact); never mark them verified. Do not web-search
+                      what the garage or catalog already answers.
 
                     SERVICE RECIPE — when the user asks about a service (vidange/oil change,
                     entretien, "pièces pour…", maintenance at N km/hours), run every step:

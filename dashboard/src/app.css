@@ -200,6 +200,8 @@ body {
 .fact-key { color: var(--mpa-text-2); font-size: var(--mpa-text-label); }
 .fact-value { font-weight: 500; font-variant-numeric: tabular-nums; }
 .fact-value .fact-unit { color: var(--mpa-muted); font-weight: 400; }
+.fact-source-link { text-decoration: none; }
+.fact-source-link:hover { text-decoration: underline; }
 
 /* Données card disclosure (collapsed by default) */
 .panel-disclosure {

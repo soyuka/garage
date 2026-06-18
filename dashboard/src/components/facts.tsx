@@ -16,6 +16,14 @@ export function factLabel(key: string): string {
 }
 
 export function FactRow({ fact }: { fact: VehicleFact }) {
+  const badge = fact.verified ? (
+    <Badge variant="verified" check>
+      {fact.source}
+    </Badge>
+  ) : (
+    <Badge>{fact.source}</Badge>
+  );
+
   return (
     <div className="fact-row">
       <span className="fact-key">{factLabel(fact.key)}</span>
@@ -23,12 +31,13 @@ export function FactRow({ fact }: { fact: VehicleFact }) {
         {fact.value}
         {fact.unit ? <span className="fact-unit"> {fact.unit}</span> : null}
       </span>
-      {fact.verified ? (
-        <Badge variant="verified" check>
-          {fact.source}
-        </Badge>
+      {fact.url ? (
+        // A web-sourced fact links to the page it was cited from.
+        <a className="fact-source-link" href={fact.url} target="_blank" rel="noreferrer" title={fact.url}>
+          {badge}
+        </a>
       ) : (
-        <Badge>{fact.source}</Badge>
+        badge
       )}
     </div>
   );
