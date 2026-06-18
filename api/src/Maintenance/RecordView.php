@@ -42,7 +42,7 @@ final class RecordView
 
         return [
             '@id' => $this->iriConverter->getIriFromResource(GarageMaintenanceRecord::fromEntity($record)),
-            'type' => $record->getType()->value,
+            'type' => $record->getType(),
             'label' => $record->getLabel(),
             'performedAt' => $record->getPerformedAt()->format('Y-m-d'),
             'usage' => null !== $usageValue

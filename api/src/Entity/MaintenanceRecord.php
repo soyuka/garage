@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
-use App\Maintenance\MaintenanceType;
 use App\Maintenance\UsageUnit;
 use App\Repository\MaintenanceRecordRepository;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
@@ -34,8 +33,10 @@ class MaintenanceRecord
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'maintenanceRecords')]
         private Vehicle $vehicle,
-        #[ODM\Field(type: 'string', enumType: MaintenanceType::class)]
-        private MaintenanceType $type,
+        // Free-form service label (snake_case); see PlannedMaintenance::$type. Not a closed enum so
+        // the long tail (timing_belt, gearbox_oil, blade_sharpening…) is recorded verbatim, not "other".
+        #[ODM\Field(type: 'string')]
+        private string $type,
         #[ODM\Field(type: 'date_immutable')]
         private \DateTimeImmutable $performedAt,
         #[ODM\Field(type: 'string')]
@@ -79,7 +80,7 @@ class MaintenanceRecord
         return $this->vehicle;
     }
 
-    public function getType(): MaintenanceType
+    public function getType(): string
     {
         return $this->type;
     }

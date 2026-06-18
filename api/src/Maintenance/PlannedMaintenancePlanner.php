@@ -43,7 +43,7 @@ final class PlannedMaintenancePlanner
         ?string $plate,
         ?string $vin,
         bool $confirmNew,
-        MaintenanceType $type,
+        string $type,
         string $source,
         ?string $label = null,
         ?int $targetUsageValue = null,
@@ -102,7 +102,7 @@ final class PlannedMaintenancePlanner
      * Close every open task of a type on a vehicle as Done — called when that service is logged, so
      * performing the work clears it off the checklist. Returns how many were closed.
      */
-    public function closeMatching(Vehicle $vehicle, MaintenanceType $type, \DateTimeImmutable $at): int
+    public function closeMatching(Vehicle $vehicle, string $type, \DateTimeImmutable $at): int
     {
         $open = $this->tasks->openOfType($vehicle, $type);
         foreach ($open as $task) {

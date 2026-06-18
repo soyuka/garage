@@ -37,7 +37,7 @@ final class PlannedTaskView
 
         return [
             '@id' => $this->iriConverter->getIriFromResource(PlannedTask::fromEntity($task)),
-            'type' => $task->getType()->value,
+            'type' => $task->getType(),
             'label' => $task->getLabel(),
             'target' => null !== $targetValue
                 ? ['value' => $targetValue, 'unit' => $task->getTargetUsageUnit()?->value]

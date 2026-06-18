@@ -13,7 +13,6 @@ use App\Dto\GetMaintenanceHistoryInput;
 use App\Garage\ToolResult;
 use App\Garage\VehicleType;
 use App\Maintenance\MaintenanceRecorder;
-use App\Maintenance\MaintenanceType;
 use App\Maintenance\RecordView;
 use Mcp\Schema\Result\CallToolResult;
 
@@ -73,7 +72,7 @@ final class GetMaintenanceHistoryProcessor implements ProcessorInterface
             model: $data->model,
             year: $data->year,
             vehicleType: VehicleType::from($data->vehicleType),
-            type: null !== $data->type ? MaintenanceType::from($data->type) : null,
+            type: $data->type,
             limit: $data->limit,
         );
 

@@ -28,7 +28,7 @@ final readonly class DueMaintenanceCalculator
         /** @var array<string, MaintenanceRecord> $latestByType */
         $latestByType = [];
         foreach ($vehicle->getMaintenanceRecords() as $record) {
-            $key = $record->getType()->value;
+            $key = $record->getType();
             if (!isset($latestByType[$key]) || $record->getPerformedAt() > $latestByType[$key]->getPerformedAt()) {
                 $latestByType[$key] = $record;
             }

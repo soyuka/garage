@@ -36,7 +36,7 @@ final class PlanMaintenanceInput
     #[ApiProperty(description: 'Set true to plan against a NEW vehicle even though candidates were surfaced. Defaults to false.')]
     public bool $confirmNew = false;
 
-    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['oil_change', 'oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter', 'spark_plug', 'tires', 'brakes', 'coolant', 'battery', 'inspection', 'repair', 'other'], 'description' => 'The service to do. Use "other" with a free-text label for anything not listed. Re-planning the same type on the same vehicle UPDATES the existing open task.'])]
+    #[ApiProperty(schema: ['type' => 'string', 'description' => 'The service, as a snake_case label. Common: oil_change, oil_filter, air_filter, fuel_filter, cabin_filter, spark_plug, brakes, coolant, tires, battery, inspection, timing_belt, gearbox_oil. Use any descriptive value for anything else — never collapse to "other". Re-planning the same type on the same vehicle UPDATES the existing open task.'])]
     public string $type;
 
     #[ApiProperty(description: 'Free-text description, e.g. "courroie de distribution". Distinguishes two "other" tasks on the same vehicle.')]

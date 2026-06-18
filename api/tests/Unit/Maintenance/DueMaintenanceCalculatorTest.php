@@ -118,6 +118,6 @@ final class DueMaintenanceCalculatorTest extends TestCase
 
     private function record(Vehicle $vehicle, MaintenanceType $type, string $performedAt): void
     {
-        new MaintenanceRecord($vehicle, $type, new \DateTimeImmutable($performedAt), 'llm');
+        new MaintenanceRecord($vehicle, $type->value, new \DateTimeImmutable($performedAt), 'llm');
     }
 }

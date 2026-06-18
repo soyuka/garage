@@ -14,7 +14,6 @@ use App\Garage\ToolResult;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
 use App\Maintenance\MaintenanceRecorder;
-use App\Maintenance\MaintenanceType;
 use App\Maintenance\RecordView;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
@@ -75,7 +74,7 @@ final class LogMaintenanceProcessor implements ProcessorInterface
             plate: $data->plate,
             vin: $data->vin,
             confirmNew: $data->confirmNew,
-            type: MaintenanceType::from($data->type),
+            type: $data->type,
             performedAt: new \DateTimeImmutable($data->performedAt),
             source: $data->source,
             label: $data->label,

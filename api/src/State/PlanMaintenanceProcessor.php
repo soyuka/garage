@@ -14,7 +14,6 @@ use App\Garage\ToolResult;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
-use App\Maintenance\MaintenanceType;
 use App\Maintenance\PlannedMaintenancePlanner;
 use App\Maintenance\PlannedTaskView;
 use App\Mercure\DomainPublisher;
@@ -82,7 +81,7 @@ final class PlanMaintenanceProcessor implements ProcessorInterface
             plate: $data->plate,
             vin: $data->vin,
             confirmNew: $data->confirmNew,
-            type: MaintenanceType::from($data->type),
+            type: $data->type,
             source: $data->source,
             label: $data->label,
             targetUsageValue: $data->targetUsageValue,

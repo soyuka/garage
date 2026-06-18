@@ -69,7 +69,7 @@ final class PlannedTask
     {
         $resource = new self();
         $resource->id = $task->getId();
-        $resource->type = $task->getType()->value;
+        $resource->type = $task->getType();
         $resource->label = $task->getLabel();
         $resource->target = null !== $task->getTargetUsageValue()
             ? ['value' => $task->getTargetUsageValue(), 'unit' => $task->getTargetUsageUnit()?->value]

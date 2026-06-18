@@ -6,7 +6,6 @@ namespace App\Repository;
 
 use App\Entity\MaintenanceRecord;
 use App\Entity\Vehicle;
-use App\Maintenance\MaintenanceType;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 
@@ -26,7 +25,7 @@ final class MaintenanceRecordRepository extends ServiceDocumentRepository
      *
      * @return list<MaintenanceRecord>
      */
-    public function history(Vehicle $vehicle, ?MaintenanceType $type = null, ?int $limit = null): array
+    public function history(Vehicle $vehicle, ?string $type = null, ?int $limit = null): array
     {
         $qb = $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
@@ -34,7 +33,7 @@ final class MaintenanceRecordRepository extends ServiceDocumentRepository
             ->sort('id', 'desc');
 
         if (null !== $type) {
-            $qb->field('type')->equals($type->value);
+            $qb->field('type')->equals($type);
         }
 
         if (null !== $limit) {

@@ -54,6 +54,30 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $this->assertCount(1, $body['member'] ?? $body['hydra:member'] ?? []);
     }
 
+    public function testPlanAcceptsAFreeFormTypeNotInTheKnownSet(): void
+    {
+        // The agent should label a service for what it is (timing belt, gearbox oil…) instead of
+        // collapsing it to "other". The type is a free string, classified later; only forecasting
+        // and icons key off the known MaintenanceType values.
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $plan = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => [
+                'make' => 'MAZDA',
+                'model' => 'MAZDA6',
+                'confirmNew' => true,
+                'type' => 'timing_belt',
+                'targetUsageValue' => 250000,
+                'targetUsageUnit' => 'km',
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame('ok', $plan['status']);
+        $this->assertSame('timing_belt', $plan['task']['type']);
+    }
+
     public function testReRunningTheSameServiceUpsertsRatherThanDuplicating(): void
     {
         $client = static::createClient();

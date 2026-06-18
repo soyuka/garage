@@ -42,7 +42,7 @@ final class GarageMaintenanceRecord
     {
         $resource = new self();
         $resource->id = $record->getId();
-        $resource->type = $record->getType()->value;
+        $resource->type = $record->getType();
         $resource->label = $record->getLabel();
         $resource->performedAt = $record->getPerformedAt()->format('Y-m-d');
         $resource->usageValue = $record->getUsageValue();

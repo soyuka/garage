@@ -37,7 +37,7 @@ final class LogMaintenanceInput
     #[ApiProperty(description: 'Set true to log against a NEW vehicle even though candidates were surfaced — i.e. you have judged it is genuinely a different vehicle. Defaults to false.')]
     public bool $confirmNew = false;
 
-    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['oil_change', 'oil_filter', 'air_filter', 'fuel_filter', 'cabin_filter', 'spark_plug', 'tires', 'brakes', 'coolant', 'battery', 'inspection', 'repair', 'other'], 'description' => 'What was done. Use "other" with a free-text label for anything not listed.'])]
+    #[ApiProperty(schema: ['type' => 'string', 'description' => 'What was done, as a snake_case label. Common: oil_change, oil_filter, air_filter, fuel_filter, cabin_filter, spark_plug, brakes, coolant, tires, battery, inspection, timing_belt, gearbox_oil. Use any descriptive value for anything else — never collapse to "other".'])]
     public string $type;
 
     #[ApiProperty(description: 'Free-text description of the work. Required in spirit when type is "other" (e.g. "blade sharpening"); optional otherwise.')]

@@ -42,7 +42,7 @@ final class MaintenanceRecorder
         ?string $plate,
         ?string $vin,
         bool $confirmNew,
-        MaintenanceType $type,
+        string $type,
         \DateTimeImmutable $performedAt,
         string $source,
         ?string $label = null,
@@ -116,7 +116,7 @@ final class MaintenanceRecorder
         ?string $model,
         ?int $year,
         VehicleType $vehicleType,
-        ?MaintenanceType $type = null,
+        ?string $type = null,
         ?int $limit = null,
     ): ?array {
         $vehicle = null !== $vehicleId

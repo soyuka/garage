@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Garage\UsageUnit;
-use App\Maintenance\MaintenanceType;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Repository\PlannedMaintenanceRepository;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
@@ -37,8 +36,12 @@ class PlannedMaintenance
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'plannedTasks')]
         private Vehicle $vehicle,
-        #[ODM\Field(type: 'string', enumType: MaintenanceType::class)]
-        private MaintenanceType $type,
+        // Free-form service label (snake_case), e.g. oil_change, timing_belt, gearbox_oil. NOT a
+        // closed enum: the agent names a service for what it is instead of collapsing the long tail to
+        // "other". Forecasting/icons key off the known MaintenanceType values (MaintenanceType::tryFrom);
+        // an unknown type simply gets no interval — classified later, never rejected.
+        #[ODM\Field(type: 'string')]
+        private string $type,
         #[ODM\Field(type: 'string')]
         private string $source,
         #[ODM\Field(type: 'date_immutable')]
@@ -77,7 +80,7 @@ class PlannedMaintenance
         return $this->vehicle;
     }
 
-    public function getType(): MaintenanceType
+    public function getType(): string
     {
         return $this->type;
     }
