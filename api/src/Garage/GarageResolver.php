@@ -23,7 +23,7 @@ use Symfony\Component\Uid\Ulid;
  * Phase 1 read order: shared garage → upstream (write-through) → miss. The "user garage"
  * and promotion layers are deferred (no auth yet — see docs/TODO.md "## Garage").
  */
-final class GarageResolver
+class GarageResolver
 {
     // The synthetic KNOWN item the catalog write-through hangs its fill-volume specs on: an open,
     // untargeted maintenance item (off the checklist) whose attributes feed the facts projection.

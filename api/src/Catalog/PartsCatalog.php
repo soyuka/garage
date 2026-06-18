@@ -14,14 +14,16 @@ use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
 
 /**
- * TecDoc catalog reads over partsapi.ru. lang=4 = English group/article names.
+ * TecDoc catalog reads over partsapi.ru. $lang is the partsapi language id for group/article
+ * names (6 = Français, 4 = English GB — see docs/PARTSAPI.md); it is part of the cache key,
+ * so switching languages re-fetches each method once.
  */
 final class PartsCatalog
 {
-    private const LANG_EN = 4;
-
-    public function __construct(private readonly PartsApiClient $client)
-    {
+    public function __construct(
+        private readonly PartsApiClient $client,
+        private readonly int $lang = 6,
+    ) {
     }
 
     /**
@@ -46,7 +48,7 @@ final class PartsCatalog
      */
     public function models(int $makeId, CarType $carType): array
     {
-        $rows = $this->client->fetch('getModels', ['manuId' => $makeId, 'carType' => $carType->value, 'lang' => self::LANG_EN]);
+        $rows = $this->client->fetch('getModels', ['manuId' => $makeId, 'carType' => $carType->value, 'lang' => $this->lang]);
 
         return array_map(Model::fromPartsApi(...), $rows);
     }
@@ -58,7 +60,7 @@ final class PartsCatalog
      */
     public function cars(int $makeId, int $modelId, CarType $carType): array
     {
-        $rows = $this->client->fetch('getCars', ['manuId' => $makeId, 'modelId' => $modelId, 'carType' => $carType->value, 'lang' => self::LANG_EN]);
+        $rows = $this->client->fetch('getCars', ['manuId' => $makeId, 'modelId' => $modelId, 'carType' => $carType->value, 'lang' => $this->lang]);
 
         return array_map(Car::fromPartsApi(...), $rows);
     }
@@ -68,7 +70,7 @@ final class PartsCatalog
      */
     public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array
     {
-        $nodes = $this->client->fetch('getSearchTree', ['carId' => $carId, 'carType' => $carType->value, 'lang' => self::LANG_EN]);
+        $nodes = $this->client->fetch('getSearchTree', ['carId' => $carId, 'carType' => $carType->value, 'lang' => $this->lang]);
 
         return PartCategory::fromPartsApiTree($nodes, $leafOnly, $search);
     }
@@ -78,7 +80,7 @@ final class PartsCatalog
      */
     public function articles(int $carId, int $categoryId, CarType $carType): array
     {
-        $rows = $this->client->fetch('getArticles', ['carId' => $carId, 'carType' => $carType->value, 'strId' => $categoryId, 'lang' => self::LANG_EN]);
+        $rows = $this->client->fetch('getArticles', ['carId' => $carId, 'carType' => $carType->value, 'strId' => $categoryId, 'lang' => $this->lang]);
 
         return array_map(Article::fromPartsApi(...), $rows);
     }

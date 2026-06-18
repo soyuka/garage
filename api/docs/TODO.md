@@ -249,6 +249,25 @@ at 250000 km". A/B/C being implemented now; D/E/intent deferred below.
       `list_makes`; `list_articles`/`get_service_parts` cap articles per category via
       `App\Mcp\ArticleGroup::of()` (keeps `totalArticles`/`truncated`). Pinned by
       tests/Functional/McpCatalogTest.php. Pairs with A (search) to narrow before the cap.
+- [x] **F — article cap hid premium brands; now ranked by brand tier — SHIPPED 2026-06-18.**
+      Root cause (XB301ZB): `ArticleGroup::of()` `array_slice`d the raw partsapi order, which is
+      **strictly alphabetical by brand**, so cap=10 surfaced only leading-A/digit no-names. VERIFIED
+      from the cached Mazda6 run (carId 19107): Oil Filter = **220 articles / 126 brands**; the
+      recognizable refs were buried — BOSCH pos 29, MAHLE 106, **MANN-FILTER W 712/73 pos 109**,
+      **PURFLUX LS357 pos 164**. (ALCO SP-1296, one of the shown, is a cross-ref of W712/73 —
+      correct part, unfamiliar label → poor auto-doc hits → looked like "wrong API". API was right.)
+      Fix: `App\Catalog\BrandTier` (curated, ORDERED tier-1/tier-2 lists, normalized brand key,
+      `rank()`/`classify()`); `ArticleGroup::of()` now groups by brand, ranks by tier+priority,
+      keeps the top `MAX_BRANDS=6` brands **each with ALL its fitting refs** (PURFLUX → LS357+LS1176),
+      and reports `totalArticles`/`totalBrands`/`truncated`. Fallback is automatic (all-tier-3 →
+      top-6 alphabetical). MCP/agent path only; REST collection stays full+paginated. FREE — runs on
+      the already-cached raw response. Pinned by `tests/Unit/Catalog/BrandTierTest.php`,
+      `tests/Unit/Mcp/ArticleGroupTest.php` (against the real 220-article fixture
+      `tests/Fixtures/partsapi/getArticles_19107_PC_100259.json`), `McpCatalogTest`.
+      OPEN: variant disambiguation within a brand (which of MAHLE OC1182/OC1641) needs
+      `getArticleCriteria`/`getArticleCrosses` (Phase-2 token) — for now show all fitting variants.
+      Tier lists are hand-curated OE/aftermarket knowledge (getArticles has no quality signal);
+      extend `BrandTier::TIER1/TIER2` as needed.
 - [ ] **D-follow-up — mandatory filters (decision pending).** Could make `search` REQUIRED on
       `list_part_categories`/`list_makes` so the LLM cannot list blind. NOT done: the cap +
       offset pagination + hint already prevent the explosion gracefully while preserving

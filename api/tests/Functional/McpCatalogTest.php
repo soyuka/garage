@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Mcp\ArticleGroup;
+
 final class McpCatalogTest extends AppTestCase
 {
     use McpClientTrait;
@@ -118,12 +120,12 @@ final class McpCatalogTest extends AppTestCase
         }
     }
 
-    public function testListArticlesCapsArticlesPerCategory(): void
+    public function testListArticlesCapsBrandsPerCategory(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        // category 200120 has 12 upstream articles — the per-category cap is 10
+        // category 200120 has 12 upstream articles across 12 brands — the per-category cap is MAX_BRANDS
         $result = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_articles',
             'arguments' => ['carId' => 34247, 'carType' => 'CV', 'categoryIds' => [200120]],
@@ -133,7 +135,8 @@ final class McpCatalogTest extends AppTestCase
         $group = array_column($content['groups'], null, 'categoryId')[200120];
 
         $this->assertSame(12, $group['totalArticles']);
-        $this->assertCount(10, $group['articles']);
+        $this->assertSame(12, $group['totalBrands']);
+        $this->assertCount(ArticleGroup::MAX_BRANDS, $group['brands']);
         $this->assertTrue($group['truncated']);
     }
 
@@ -157,15 +160,17 @@ final class McpCatalogTest extends AppTestCase
 
         $byCat = array_column($content['groups'], null, 'categoryId');
 
-        // populated category keeps its articles
+        // populated category keeps its articles, grouped by brand (ELOFIC carries all 3 refs)
         $this->assertArrayHasKey(200158, $byCat);
-        $this->assertCount(4, $byCat[200158]['articles']);
-        $this->assertSame('EK-1522', $byCat[200158]['articles'][0]['number']);
-        $this->assertSame('ELOFIC', $byCat[200158]['articles'][0]['brand']);
+        $this->assertSame(4, $byCat[200158]['totalArticles']);
+        $this->assertSame(2, $byCat[200158]['totalBrands']);
+        $byBrand = array_column($byCat[200158]['brands'], null, 'brand');
+        $this->assertArrayHasKey('ELOFIC', $byBrand);
+        $this->assertSame('EK-1522', $byBrand['ELOFIC']['articles'][0]['number']);
 
         // empty category is surfaced explicitly, not silently dropped (grouped-shape value)
         $this->assertArrayHasKey(999999, $byCat);
-        $this->assertSame([], $byCat[999999]['articles']);
+        $this->assertSame([], $byCat[999999]['brands']);
     }
 
     public function testGetServicePartsBundlesEngineOilFluidForOilChange(): void
@@ -204,7 +209,8 @@ final class McpCatalogTest extends AppTestCase
         $byCat = array_column($content['categories'], null, 'categoryId');
         $this->assertArrayHasKey(200158, $byCat);
         $this->assertSame('Filters > Air Filter', $byCat[200158]['path']);
-        $this->assertCount(4, $byCat[200158]['articles']);
+        $this->assertSame(4, $byCat[200158]['totalArticles']);
+        $this->assertCount(2, $byCat[200158]['brands']);
 
         // filters carry no fluid spec
         $this->assertSame([], $content['fluids']);

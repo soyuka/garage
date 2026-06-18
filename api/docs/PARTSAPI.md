@@ -4,9 +4,21 @@ Base: `GET https://api.partsapi.ru/?method=<METHOD>&key=<KEY>&<params>`.
 **One key per method** (`PARTSAPI_KEY_<method>` in `.env.local`). ~50 calls/method demo budget.
 Verified behavior, error envelopes, codes: see `../../prototype_1/PARTSAPI.md` (source of truth).
 
-Quick facts (verified): `carType` ∈ {`PC`,`CV`} (strings); `lang=4` = EN; `carId` = TecDoc kType
+Quick facts (verified): `carType` ∈ {`PC`,`CV`} (strings); `carId` = TecDoc kType
 = SIV `tecdoc_car_id`. Error envelopes: `{code:9000,status:401}` missing params,
 `{error_code:5002,status:401}` bad/disabled key for THAT method, `{error_code:5005,status:500}` bad param type.
+
+**Language** (`PARTSAPI_LANG`, default `6` = Français; `4` = English GB): the `lang` param sets the
+group/article/path text language. It is injected into `App\Catalog\PartsCatalog` and is part of the
+partsapi cache key, so switching languages re-fetches each method once (the imported lang=4 prototype
+cache is not reused at lang=6). `App\Catalog\ServiceKind` search terms carry both FR + EN strings so
+category matching works in either language. NOTE: the exact French TecDoc group names still need
+confirming against a live `getSearchTree(lang=6)` — the EN terms are the working fallback until then.
+
+**Brand ranking**: `getArticles` returns articles fitment-correct but **alphabetical by brand** (a
+popular car's oil filter = 220 articles / 126 brands). `App\Mcp\ArticleGroup` groups by brand and
+ranks via `App\Catalog\BrandTier` (curated OE/aftermarket tiers) so MANN/MAHLE/BOSCH/PURFLUX surface
+instead of the alphabetically-first no-names. MCP/agent path only; REST stays full + paginated.
 
 ## Tokens we have
 

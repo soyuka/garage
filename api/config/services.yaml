@@ -32,6 +32,11 @@ services:
             $cache: '@cache.partsapi'
             $callLimit: '%env(int:PARTSAPI_CALL_LIMIT)%'
 
+    App\Catalog\PartsCatalog:
+        arguments:
+            # partsapi language id for group/article names (6 = Français, 4 = English GB)
+            $lang: '%env(int:PARTSAPI_LANG)%'
+
     # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server,
     # not autowireable by FQCN), so the agent reuses the garage tools without HTTP/OAuth.
     App\Mcp\Agent\McpToolbox:

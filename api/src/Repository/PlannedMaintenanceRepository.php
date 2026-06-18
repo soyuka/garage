@@ -13,7 +13,7 @@ use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 /**
  * @extends ServiceDocumentRepository<PlannedMaintenance>
  */
-final class PlannedMaintenanceRepository extends ServiceDocumentRepository
+class PlannedMaintenanceRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

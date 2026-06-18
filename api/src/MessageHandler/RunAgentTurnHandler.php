@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Agent\TurnContextBuilder;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\WebSearchBudget;
 use App\Message\RunAgentTurn;
@@ -26,6 +27,7 @@ final readonly class RunAgentTurnHandler
         private AgentInterface $garage,
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
+        private TurnContextBuilder $contextBuilder,
     ) {
     }
 
@@ -38,31 +40,11 @@ final readonly class RunAgentTurnHandler
         $this->renderTools->signalTurnPhase('start');
 
         try {
-            $this->garage->call(new MessageBag(Message::ofUser($this->turnContext($message))));
+            $this->garage->call(new MessageBag(Message::ofUser($this->contextBuilder->build($message))));
         } finally {
             // Always settle the dashboard's progress heartbeat — even if the loop threw and Messenger
             // is about to retry — or the UI would stay stuck in the busy state.
             $this->renderTools->signalTurnPhase('end');
         }
-    }
-
-    /**
-     * The per-turn context handed to the LLM: the instruction plus a compact snapshot of what the
-     * dashboard is currently showing (selected vehicle id/summary). The durable contract (tool
-     * catalog, dedup rules, UI-intent vocabulary) lives in the agent's configured system prompt.
-     */
-    private function turnContext(RunAgentTurn $message): string
-    {
-        $context = "Instruction de l'utilisateur : ".$message->instruction;
-
-        if ('' !== $message->selectedId) {
-            $context .= "\n\nVéhicule actuellement sélectionné dans le tableau de bord : ".$message->selectedId;
-        }
-
-        if ('' !== $message->summary) {
-            $context .= "\nRésumé : ".$message->summary;
-        }
-
-        return $context;
     }
 }

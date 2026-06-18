@@ -23,8 +23,8 @@ final class PartsResourceTest extends AppTestCase
             $this->assertTrue($node['leaf']);
         }
 
-        // Cache key signature must stay stable with prototype_1's paid cache
-        $this->assertTrue(self::partsApiCache()->getItem('getSearchTree.e91576af1bcf40f64c680fea07f67d194b90d932')->isHit());
+        // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
+        $this->assertTrue(self::partsApiCache()->getItem('getSearchTree.97ff21a115d6a2e60b1f29051da1bf103af7b480')->isHit());
     }
 
     public function testPartCategoriesFullTree(): void
@@ -77,8 +77,8 @@ final class PartsResourceTest extends AppTestCase
                 ['number' => 'EK-1522', 'brand' => 'ELOFIC', 'productGroup' => 'Air Filter'],
             ],
         ]);
-        // Cache key signature must stay stable with prototype_1's paid cache
-        $this->assertTrue(self::partsApiCache()->getItem('getArticles.554363ac507ba91fac1bc43ca6cedf5c36aaefd6')->isHit());
+        // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
+        $this->assertTrue(self::partsApiCache()->getItem('getArticles.3d7aa63567129c07408d60598fd5bcab162d4379')->isHit());
     }
 
     public function testFillVolumesMappedToFrenchLabelsAndSiUnits(): void

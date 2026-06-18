@@ -17,17 +17,21 @@ enum ServiceKind: string
     case SparkPlugs = 'spark_plugs';
 
     /**
-     * Case-insensitive path search terms fed to list_part_categories.
+     * Case-insensitive path search terms fed to list_part_categories. Both the French and the
+     * English TecDoc group names are listed: the active partsapi language (PARTSAPI_LANG, default
+     * 6 = Français) decides which one matches the STR_PATH, so the search works in either language
+     * and stays resilient if the language is changed. The exact French strings still need
+     * confirming against a live getSearchTree(lang=6) — see docs/TODO.md.
      *
      * @return list<string>
      */
     public function categorySearches(): array
     {
         return match ($this) {
-            self::OilChange => ['oil filter'],
-            self::Filters => ['filter'],
-            self::Brakes => ['brake'],
-            self::SparkPlugs => ['spark plug'],
+            self::OilChange => ['filtre à huile', 'oil filter'],
+            self::Filters => ['filtre', 'filter'],
+            self::Brakes => ['frein', 'brake'],
+            self::SparkPlugs => ['bougie', 'spark plug'],
         };
     }
 

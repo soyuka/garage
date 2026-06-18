@@ -15,7 +15,10 @@ services:
       # domain model, which now lives in MongoDB via Doctrine ODM (MONGODB_URL below).
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=${POSTGRES_CHARSET:-utf8}
       # Domain store: the garage (vehicles, facts, maintenance records, planned tasks, users).
-      MONGODB_URL: ${MONGODB_URL:-mongodb://mongodb:27017}
+      # Built from components (like DATABASE_URL) so the host `mongodb` is always the compose
+      # service name. Interpolating ${MONGODB_URL} would inherit .env's host-run value
+      # (127.0.0.1) and break in-container connectivity.
+      MONGODB_URL: mongodb://${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-27017}
       MONGODB_DB: ${MONGODB_DB:-app}
       # Run "composer require symfony/mercure-bundle" to install and configure the Mercure integration
       MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
