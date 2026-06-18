@@ -26,6 +26,7 @@ RUN <<-EOF
 		@composer \
 		apcu \
 		intl \
+		mongodb \
 		opcache \
 		pdo_pgsql \
 		zip
@@ -38,6 +39,9 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
 
 ###> recipes ###
+###> doctrine/mongodb-odm-bundle ###
+# the mongodb extension is installed alongside the other extensions in frankenphp_base above.
+###< doctrine/mongodb-odm-bundle ###
 ###> doctrine/doctrine-bundle ###
 # pdo_pgsql is installed alongside the other extensions in frankenphp_base above.
 ###< doctrine/doctrine-bundle ###

@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\VehicleFact;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 
 /**
- * @extends ServiceEntityRepository<VehicleFact>
+ * @extends ServiceDocumentRepository<VehicleFact>
  */
-final class VehicleFactRepository extends ServiceEntityRepository
+final class VehicleFactRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

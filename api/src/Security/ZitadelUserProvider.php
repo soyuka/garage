@@ -6,7 +6,7 @@ namespace App\Security;
 
 use App\Entity\User;
 use App\Repository\UserRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\User\AttributesBasedUserProviderInterface;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -29,7 +29,7 @@ final class ZitadelUserProvider implements AttributesBasedUserProviderInterface
 
     public function __construct(
         private readonly UserRepository $users,
-        private readonly EntityManagerInterface $em,
+        private readonly DocumentManager $em,
     ) {
     }
 

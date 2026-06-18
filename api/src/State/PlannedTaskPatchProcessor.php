@@ -10,7 +10,7 @@ use App\ApiResource\PlannedTask;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Mercure\DomainPublisher;
 use App\Repository\PlannedMaintenanceRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -26,7 +26,7 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly PlannedMaintenanceRepository $tasks,
-        private readonly EntityManagerInterface $em,
+        private readonly DocumentManager $em,
         private readonly DomainPublisher $publisher,
     ) {
     }

@@ -7,13 +7,13 @@ namespace App\Repository;
 use App\Entity\MaintenanceRecord;
 use App\Entity\Vehicle;
 use App\Maintenance\MaintenanceType;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 
 /**
- * @extends ServiceEntityRepository<MaintenanceRecord>
+ * @extends ServiceDocumentRepository<MaintenanceRecord>
  */
-final class MaintenanceRecordRepository extends ServiceEntityRepository
+final class MaintenanceRecordRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -22,28 +22,25 @@ final class MaintenanceRecordRepository extends ServiceEntityRepository
 
     /**
      * Service history for a vehicle, newest event first (tie-break on id so same-day events
-     * keep insertion order). Optionally narrowed to a single type.
+     * keep insertion order — the ULID _id is time-ordered). Optionally narrowed to a single type.
      *
      * @return list<MaintenanceRecord>
      */
     public function history(Vehicle $vehicle, ?MaintenanceType $type = null, ?int $limit = null): array
     {
-        $qb = $this->createQueryBuilder('r')
-            ->andWhere('r.vehicle = :vehicle')
-            // Bind the ULID explicitly: passing the entity lets Doctrine stringify the id to
-            // base32, which a uuid column rejects. The 'ulid' type emits the RFC 4122 form.
-            ->setParameter('vehicle', $vehicle->getId(), 'ulid')
-            ->orderBy('r.performedAt', 'DESC')
-            ->addOrderBy('r.id', 'DESC');
+        $qb = $this->createQueryBuilder()
+            ->field('vehicle')->references($vehicle)
+            ->sort('performedAt', 'desc')
+            ->sort('id', 'desc');
 
         if (null !== $type) {
-            $qb->andWhere('r.type = :type')->setParameter('type', $type);
+            $qb->field('type')->equals($type->value);
         }
 
         if (null !== $limit) {
-            $qb->setMaxResults($limit);
+            $qb->limit($limit);
         }
 
-        return $qb->getQuery()->getResult();
+        return array_values($qb->getQuery()->execute()->toArray());
     }
 }

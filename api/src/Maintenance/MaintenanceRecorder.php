@@ -9,7 +9,7 @@ use App\Garage\VehicleType;
 use App\Garage\VehicleWriteResolver;
 use App\Repository\MaintenanceRecordRepository;
 use App\Repository\VehicleRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -23,7 +23,7 @@ final class MaintenanceRecorder
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly MaintenanceRecordRepository $records,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly DocumentManager $entityManager,
         private readonly VehicleWriteResolver $writeResolver,
         private readonly PlannedMaintenancePlanner $planner,
     ) {

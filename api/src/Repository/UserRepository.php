@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Entity\User;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 
 /**
- * @extends ServiceEntityRepository<User>
+ * @extends ServiceDocumentRepository<User>
  */
-class UserRepository extends ServiceEntityRepository
+class UserRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

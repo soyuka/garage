@@ -10,7 +10,7 @@ use App\ApiResource\GarageVehicle;
 use App\Garage\UsageUnit;
 use App\Mercure\DomainPublisher;
 use App\Repository\VehicleRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -27,7 +27,7 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly VehicleRepository $vehicles,
-        private readonly EntityManagerInterface $em,
+        private readonly DocumentManager $em,
         private readonly DomainPublisher $publisher,
     ) {
     }

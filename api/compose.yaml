@@ -11,8 +11,12 @@ services:
       DEFAULT_URI: ${DEFAULT_URI:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      # Run "composer require symfony/orm-pack" to install and configure Doctrine ORM
+      # Postgres backs the DBAL HTTP caches (cache.siv, cache.partsapi) and Casdoor — NOT the
+      # domain model, which now lives in MongoDB via Doctrine ODM (MONGODB_URL below).
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=${POSTGRES_CHARSET:-utf8}
+      # Domain store: the garage (vehicles, facts, maintenance records, planned tasks, users).
+      MONGODB_URL: ${MONGODB_URL:-mongodb://mongodb:27017}
+      MONGODB_DB: ${MONGODB_DB:-app}
       # Run "composer require symfony/mercure-bundle" to install and configure the Mercure integration
       MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}/.well-known/mercure}
@@ -54,6 +58,8 @@ services:
         condition: service_started
       database:
         condition: service_healthy
+      mongodb:
+        condition: service_healthy
 
 # Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service
 ###> symfony/mercure-bundle ###
@@ -77,6 +83,22 @@ services:
       # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
       # - ./docker/db/data:/var/lib/postgresql/data:rw
 ###< doctrine/doctrine-bundle ###
+
+###> doctrine/mongodb-odm-bundle ###
+  # MongoDB — the domain store (Doctrine ODM). Holds the garage: vehicles, facts, maintenance
+  # records, planned tasks and users. The HTTP upstream caches and Casdoor stay on Postgres.
+  mongodb:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-app}
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - mongodb_data:/data/db
+###< doctrine/mongodb-odm-bundle ###
 
   # Casdoor — OIDC authorization server protecting /mcp (and any future /api firewall).
   # Chosen over Zitadel because stock Goose (rmcp) self-registers via anonymous RFC 7591
@@ -111,3 +133,7 @@ volumes:
 ###> doctrine/doctrine-bundle ###
   database_data:
 ###< doctrine/doctrine-bundle ###
+
+###> doctrine/mongodb-odm-bundle ###
+  mongodb_data:
+###< doctrine/mongodb-odm-bundle ###

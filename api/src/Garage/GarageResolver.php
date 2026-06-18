@@ -8,7 +8,7 @@ use App\Catalog\PartsCatalog;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use App\Repository\VehicleRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -21,7 +21,7 @@ final class GarageResolver
 {
     public function __construct(
         private readonly VehicleRepository $vehicles,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly DocumentManager $entityManager,
         private readonly PartsCatalog $catalog,
         private readonly FillVolumeFactMapper $fillVolumeFactMapper,
         private readonly VehicleWriteResolver $writeResolver,

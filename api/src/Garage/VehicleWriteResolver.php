@@ -6,7 +6,7 @@ namespace App\Garage;
 
 use App\Entity\Vehicle;
 use App\Repository\VehicleRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -28,7 +28,7 @@ final class VehicleWriteResolver
 {
     public function __construct(
         private readonly VehicleRepository $vehicles,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly DocumentManager $entityManager,
     ) {
     }
 

@@ -8,7 +8,7 @@ use App\Garage\UsageUnit;
 use App\Maintenance\MaintenanceType;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Repository\PlannedMaintenanceRepository;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -17,7 +17,7 @@ use Symfony\Component\Uid\Ulid;
  * is pegged to (a usage reading like "à 250 000 km", or a date).
  *
  * Three siblings on a Vehicle, deliberately distinct:
- *  - VehicleFact     = a spec (oil_capacity), one row per key;
+ *  - VehicleFact     = a spec (oil_capacity), one document per key;
  *  - MaintenanceRecord = an event that HAPPENED, append-only history;
  *  - PlannedMaintenance = an open intent that resolves to a record once performed.
  *
@@ -27,51 +27,49 @@ use Symfony\Component\Uid\Ulid;
  *
  * @see \App\Maintenance\PlannedMaintenancePlanner
  */
-#[ORM\Entity(repositoryClass: PlannedMaintenanceRepository::class)]
-#[ORM\Index(name: 'idx_planned_vehicle_status', columns: ['vehicle_id', 'status'])]
+#[ODM\Document(collection: 'planned_maintenance', repositoryClass: PlannedMaintenanceRepository::class)]
+#[ODM\Index(keys: ['vehicle' => 'asc', 'status' => 'asc'], name: 'idx_planned_vehicle_status')]
 class PlannedMaintenance
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'ulid', unique: true)]
-    private Ulid $id;
+    #[ODM\Id(strategy: 'NONE', type: 'string')]
+    private string $id;
 
     public function __construct(
-        #[ORM\ManyToOne(targetEntity: Vehicle::class, inversedBy: 'plannedTasks')]
-        #[ORM\JoinColumn(nullable: false)]
+        #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'plannedTasks')]
         private Vehicle $vehicle,
-        #[ORM\Column(enumType: MaintenanceType::class)]
+        #[ODM\Field(type: 'string', enumType: MaintenanceType::class)]
         private MaintenanceType $type,
-        #[ORM\Column]
+        #[ODM\Field(type: 'string')]
         private string $source,
-        #[ORM\Column(type: 'datetime_immutable')]
+        #[ODM\Field(type: 'date_immutable')]
         private \DateTimeImmutable $createdAt = new \DateTimeImmutable(),
-        #[ORM\Column(enumType: PlannedMaintenanceStatus::class)]
+        #[ODM\Field(type: 'string', enumType: PlannedMaintenanceStatus::class)]
         private PlannedMaintenanceStatus $status = PlannedMaintenanceStatus::Open,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $label = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'int', nullable: true)]
         private ?int $targetUsageValue = null,
-        #[ORM\Column(enumType: UsageUnit::class, nullable: true)]
+        #[ODM\Field(type: 'string', enumType: UsageUnit::class, nullable: true)]
         private ?UsageUnit $targetUsageUnit = null,
-        #[ORM\Column(type: 'date_immutable', nullable: true)]
+        #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $dueDate = null,
         /** @var list<array{ref: string, label?: string, brand?: string, qty?: int}> */
-        #[ORM\Column(type: 'json')]
+        #[ODM\Field(type: 'collection')]
         private array $parts = [],
-        #[ORM\Column(type: 'datetime_immutable', nullable: true)]
+        #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $completedAt = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $addedBy = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $owner = null,
     ) {
-        $this->id = new Ulid();
+        $this->id = (string) new Ulid();
         $vehicle->addPlannedTask($this);
     }
 
     public function getId(): Ulid
     {
-        return $this->id;
+        return Ulid::fromString($this->id);
     }
 
     public function getVehicle(): Vehicle

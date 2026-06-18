@@ -11,7 +11,7 @@ use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
 use App\Garage\VehicleWriteResolver;
 use App\Repository\PlannedMaintenanceRepository;
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -26,7 +26,7 @@ final class PlannedMaintenancePlanner
     public function __construct(
         private readonly VehicleWriteResolver $writeResolver,
         private readonly PlannedMaintenanceRepository $tasks,
-        private readonly EntityManagerInterface $entityManager,
+        private readonly DocumentManager $entityManager,
     ) {
     }
 

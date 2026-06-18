@@ -9,7 +9,7 @@ use App\Garage\VehicleType;
 use App\Repository\VehicleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -17,58 +17,58 @@ use Symfony\Component\Uid\Ulid;
  * SIV-sourced API representation App\ApiResource\Vehicle.
  *
  * Phase 1 is a single shared garage: `owner` is the multi-tenancy seam — null means
- * shared/global. Per-user isolation later is a backfill + non-null migration, not a rewrite.
+ * shared/global. Per-user isolation later is a backfill + non-null query change, not a rewrite.
  */
-#[ORM\Entity(repositoryClass: VehicleRepository::class)]
+#[ODM\Document(collection: 'vehicles', repositoryClass: VehicleRepository::class)]
 class Vehicle
 {
     // App-assigned ULID public identifier — the dereferenceable IRI key (/garage/vehicles/{id}),
-    // so the auto-increment DB row id is never exposed. Time-ordered, so it stays index-friendly.
-    #[ORM\Id]
-    #[ORM\Column(type: 'ulid', unique: true)]
-    private Ulid $id;
+    // so no internal handle is ever exposed. Stored as its base32 string (the Mongo _id);
+    // getId() rehydrates the Ulid. Time-ordered, so it stays index-friendly.
+    #[ODM\Id(strategy: 'NONE', type: 'string')]
+    private string $id;
 
     /** @var Collection<int, VehicleFact> */
-    #[ORM\OneToMany(targetEntity: VehicleFact::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
+    #[ODM\ReferenceMany(targetDocument: VehicleFact::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
     private Collection $facts;
 
     /** @var Collection<int, MaintenanceRecord> */
-    #[ORM\OneToMany(targetEntity: MaintenanceRecord::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
+    #[ODM\ReferenceMany(targetDocument: MaintenanceRecord::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
     private Collection $maintenanceRecords;
 
     /** @var Collection<int, PlannedMaintenance> */
-    #[ORM\OneToMany(targetEntity: PlannedMaintenance::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
+    #[ODM\ReferenceMany(targetDocument: PlannedMaintenance::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
     private Collection $plannedTasks;
 
     public function __construct(
-        #[ORM\Column]
+        #[ODM\Field(type: 'string')]
         private string $make,
-        #[ORM\Column]
+        #[ODM\Field(type: 'string')]
         private string $model,
-        #[ORM\Column(enumType: VehicleType::class)]
+        #[ODM\Field(type: 'string', enumType: VehicleType::class)]
         private VehicleType $vehicleType,
-        #[ORM\Column]
+        #[ODM\Field(type: 'string')]
         private string $source,
-        #[ORM\Column(type: 'datetime_immutable')]
+        #[ODM\Field(type: 'date_immutable')]
         private \DateTimeImmutable $addedAt = new \DateTimeImmutable(),
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'int', nullable: true)]
         private ?int $year = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $modification = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'int', nullable: true)]
         private ?int $kType = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $vin = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $plate = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $owner = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'int', nullable: true)]
         private ?int $usageValue = null,
-        #[ORM\Column(nullable: true, enumType: UsageUnit::class)]
+        #[ODM\Field(type: 'string', nullable: true, enumType: UsageUnit::class)]
         private ?UsageUnit $usageUnit = null,
     ) {
-        $this->id = new Ulid();
+        $this->id = (string) new Ulid();
         $this->facts = new ArrayCollection();
         $this->maintenanceRecords = new ArrayCollection();
         $this->plannedTasks = new ArrayCollection();
@@ -76,7 +76,7 @@ class Vehicle
 
     public function getId(): Ulid
     {
-        return $this->id;
+        return Ulid::fromString($this->id);
     }
 
     public function getMake(): string

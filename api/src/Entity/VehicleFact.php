@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\VehicleFactRepository;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -13,44 +13,41 @@ use Symfony\Component\Uid\Ulid;
  * provenance. `verified` is what stops a hallucinated capacity becoming a confident lie,
  * and doubles as the future promotion marker (see docs/TODO.md "## Garage").
  */
-#[ORM\Entity(repositoryClass: VehicleFactRepository::class)]
-#[ORM\UniqueConstraint(name: 'uniq_vehicle_fact_key', columns: ['vehicle_id', 'fact_key'])]
+#[ODM\Document(collection: 'vehicle_facts', repositoryClass: VehicleFactRepository::class)]
+#[ODM\UniqueIndex(keys: ['vehicle' => 'asc', 'key' => 'asc'], name: 'uniq_vehicle_fact_key')]
 class VehicleFact
 {
-    #[ORM\Id]
-    #[ORM\Column(type: 'ulid', unique: true)]
-    private Ulid $id;
+    #[ODM\Id(strategy: 'NONE', type: 'string')]
+    private string $id;
 
     public function __construct(
-        #[ORM\ManyToOne(targetEntity: Vehicle::class, inversedBy: 'facts')]
-        #[ORM\JoinColumn(nullable: false)]
+        #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'facts')]
         private Vehicle $vehicle,
-        // `key` is reserved in PostgreSQL — map to a safe column name.
-        #[ORM\Column(name: 'fact_key')]
+        #[ODM\Field(type: 'string')]
         private string $key,
-        #[ORM\Column(type: 'text')]
+        #[ODM\Field(type: 'string')]
         private string $value,
-        #[ORM\Column]
+        #[ODM\Field(type: 'string')]
         private string $source,
-        #[ORM\Column]
+        #[ODM\Field(type: 'bool')]
         private bool $verified,
-        #[ORM\Column(type: 'datetime_immutable')]
+        #[ODM\Field(type: 'date_immutable')]
         private \DateTimeImmutable $addedAt = new \DateTimeImmutable(),
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $unit = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $addedBy = null,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $url = null,
     ) {
-        $this->id = new Ulid();
+        $this->id = (string) new Ulid();
         $vehicle->addFact($this);
     }
 
     /**
      * Overwrite the mutable fields of an existing fact, keeping identity (vehicle + key) and
      * primary key stable. Used by the resolver to update a fact in place instead of inserting
-     * a duplicate row for the same key (UNIQUE(vehicle_id, fact_key)).
+     * a duplicate row for the same key (UNIQUE(vehicle, key)).
      */
     public function update(
         string $value,
@@ -72,7 +69,7 @@ class VehicleFact
 
     public function getId(): Ulid
     {
-        return $this->id;
+        return Ulid::fromString($this->id);
     }
 
     public function getVehicle(): Vehicle

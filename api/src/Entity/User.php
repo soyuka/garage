@@ -5,36 +5,34 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Repository\UserRepository;
-use Doctrine\ORM\Mapping as ORM;
+use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
- * An application user provisioned from a Zitadel access token. `externalId` is the OIDC
- * `sub` claim — the stable identity seam — so re-authenticating the same Zitadel account
- * always resolves to the same row. Profile fields (email, roles) are refreshed from the
+ * An application user provisioned from a Casdoor access token. `externalId` is the OIDC
+ * `sub` claim — the stable identity seam — so re-authenticating the same account always
+ * resolves to the same document. Profile fields (email, roles) are refreshed from the
  * token on every request via {@see \App\Security\ZitadelUserProvider}.
  */
-#[ORM\Entity(repositoryClass: UserRepository::class)]
-#[ORM\Table(name: '"user"')]
+#[ODM\Document(collection: 'users', repositoryClass: UserRepository::class)]
 class User implements UserInterface
 {
-    #[ORM\Id]
-    #[ORM\GeneratedValue]
-    #[ORM\Column]
-    private ?int $id = null;
+    #[ODM\Id]
+    private ?string $id = null;
 
     public function __construct(
-        #[ORM\Column(unique: true)]
+        #[ODM\Field(type: 'string')]
+        #[ODM\UniqueIndex]
         private string $externalId,
-        #[ORM\Column(nullable: true)]
+        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $email = null,
         /** @var list<string> */
-        #[ORM\Column(type: 'json')]
+        #[ODM\Field(type: 'collection')]
         private array $roles = ['ROLE_USER'],
     ) {
     }
 
-    public function getId(): ?int
+    public function getId(): ?string
     {
         return $this->id;
     }

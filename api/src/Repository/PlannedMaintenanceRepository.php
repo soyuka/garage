@@ -8,13 +8,13 @@ use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Maintenance\MaintenanceType;
 use App\Maintenance\PlannedMaintenanceStatus;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
+use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 
 /**
- * @extends ServiceEntityRepository<PlannedMaintenance>
+ * @extends ServiceDocumentRepository<PlannedMaintenance>
  */
-final class PlannedMaintenanceRepository extends ServiceEntityRepository
+final class PlannedMaintenanceRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry)
     {
@@ -28,16 +28,14 @@ final class PlannedMaintenanceRepository extends ServiceEntityRepository
      */
     public function openForVehicle(Vehicle $vehicle): array
     {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.vehicle = :vehicle')
-            // Bind the ULID explicitly — same reason as MaintenanceRecordRepository::history().
-            ->setParameter('vehicle', $vehicle->getId(), 'ulid')
-            ->andWhere('p.status = :open')
-            ->setParameter('open', PlannedMaintenanceStatus::Open)
-            ->orderBy('p.createdAt', 'ASC')
-            ->addOrderBy('p.id', 'ASC')
+        return array_values($this->createQueryBuilder()
+            ->field('vehicle')->references($vehicle)
+            ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
+            ->sort('createdAt', 'asc')
+            ->sort('id', 'asc')
             ->getQuery()
-            ->getResult();
+            ->execute()
+            ->toArray());
     }
 
     /**
@@ -47,22 +45,14 @@ final class PlannedMaintenanceRepository extends ServiceEntityRepository
      */
     public function findOpen(Vehicle $vehicle, MaintenanceType $type, ?string $label): ?PlannedMaintenance
     {
-        $qb = $this->createQueryBuilder('p')
-            ->andWhere('p.vehicle = :vehicle')
-            ->setParameter('vehicle', $vehicle->getId(), 'ulid')
-            ->andWhere('p.type = :type')
-            ->setParameter('type', $type)
-            ->andWhere('p.status = :open')
-            ->setParameter('open', PlannedMaintenanceStatus::Open)
-            ->setMaxResults(1);
+        $qb = $this->createQueryBuilder()
+            ->field('vehicle')->references($vehicle)
+            ->field('type')->equals($type->value)
+            ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
+            ->field('label')->equals($label)
+            ->limit(1);
 
-        if (null === $label) {
-            $qb->andWhere('p.label IS NULL');
-        } else {
-            $qb->andWhere('p.label = :label')->setParameter('label', $label);
-        }
-
-        return $qb->getQuery()->getOneOrNullResult();
+        return $qb->getQuery()->getSingleResult();
     }
 
     /**
@@ -73,14 +63,12 @@ final class PlannedMaintenanceRepository extends ServiceEntityRepository
      */
     public function openOfType(Vehicle $vehicle, MaintenanceType $type): array
     {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.vehicle = :vehicle')
-            ->setParameter('vehicle', $vehicle->getId(), 'ulid')
-            ->andWhere('p.type = :type')
-            ->setParameter('type', $type)
-            ->andWhere('p.status = :open')
-            ->setParameter('open', PlannedMaintenanceStatus::Open)
+        return array_values($this->createQueryBuilder()
+            ->field('vehicle')->references($vehicle)
+            ->field('type')->equals($type->value)
+            ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
             ->getQuery()
-            ->getResult();
+            ->execute()
+            ->toArray());
     }
 }
