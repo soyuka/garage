@@ -43,7 +43,10 @@ final class PlannedMaintenanceLifecycleTest extends AppTestCase
             ],
         ], 4);
 
+        // Closing flips the task to Done; it stays on the checklist (greyed in the UI), no longer open.
         $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
-        $this->assertCount(0, $body['member'] ?? $body['hydra:member'] ?? [], 'logging the service closes the matching open plan');
+        $members = $body['member'] ?? $body['hydra:member'] ?? [];
+        $this->assertCount(1, $members, 'the matching task stays on the checklist, now done');
+        $this->assertSame('done', $members[0]['status'] ?? null, 'logging the service closes the matching open plan');
     }
 }

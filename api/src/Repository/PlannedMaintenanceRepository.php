@@ -21,24 +21,29 @@ final class PlannedMaintenanceRepository extends ServiceDocumentRepository
     }
 
     /**
-     * The open, actionable checklist for a vehicle, oldest planned first. KNOWN spec carriers (open
-     * but untargeted, e.g. the catalog spec sheet) are excluded — they feed the facts projection,
-     * not the to-do list.
+     * The actionable checklist for a vehicle: Open AND Done tasks (Dismissed dropped), open first
+     * then done, oldest planned first within each. Done tasks stay on the list so the dashboard can
+     * render them ticked-off/greyed instead of vanishing. KNOWN spec carriers (untargeted, partless,
+     * e.g. the catalog spec sheet) are excluded — they feed the facts projection, not the to-do list.
      *
      * @return list<PlannedMaintenance>
      */
-    public function openForVehicle(Vehicle $vehicle): array
+    public function checklistForVehicle(Vehicle $vehicle): array
     {
-        $open = $this->createQueryBuilder()
+        $tasks = $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
-            ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
+            ->field('status')->in([PlannedMaintenanceStatus::Open->value, PlannedMaintenanceStatus::Done->value])
             ->sort('createdAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
             ->execute()
             ->toArray();
 
-        return array_values(array_filter($open, static fn (PlannedMaintenance $t): bool => $t->isActionable()));
+        $actionable = array_values(array_filter($tasks, static fn (PlannedMaintenance $t): bool => $t->isActionable()));
+        // Open before done, preserving the createdAt order the query already applied within each group.
+        usort($actionable, static fn (PlannedMaintenance $a, PlannedMaintenance $b): int => (int) !$a->isOpen() <=> (int) !$b->isOpen());
+
+        return $actionable;
     }
 
     /**

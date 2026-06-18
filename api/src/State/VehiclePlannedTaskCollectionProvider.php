@@ -12,11 +12,12 @@ use App\Repository\VehicleRepository;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * Lists a vehicle's open checklist at /garage/vehicles/{vehicleId}/planned-tasks — the dashboard's
- * "Tâches & liste de courses" card reads it on select. Returns the open PlannedTask resources (each
- * with its own tick-off IRI), so the checklist is a first-class subresource rather than an array
- * embedded on the vehicle item. An unknown vehicle yields an empty collection (not a 404): the
- * vehicle dereferences fine, it simply has nothing planned.
+ * Lists a vehicle's checklist at /garage/vehicles/{vehicleId}/planned-tasks — the dashboard's
+ * "Tâches & liste de courses" card reads it on select. Returns the Open AND Done PlannedTask
+ * resources (each with its own tick-off IRI); done tasks ride along so the card renders them
+ * greyed-out instead of vanishing on tick-off. The checklist is a first-class subresource rather
+ * than an array embedded on the vehicle item. An unknown vehicle yields an empty collection (not a
+ * 404): the vehicle dereferences fine, it simply has nothing planned.
  *
  * @implements ProviderInterface<PlannedTask>
  */
@@ -40,6 +41,6 @@ final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
             return [];
         }
 
-        return array_map(PlannedTask::fromEntity(...), $this->tasks->openForVehicle($vehicle));
+        return array_map(PlannedTask::fromEntity(...), $this->tasks->checklistForVehicle($vehicle));
     }
 }

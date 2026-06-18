@@ -229,12 +229,22 @@ body {
 .cta-actions { display: flex; flex-wrap: wrap; gap: var(--mpa-space-2); margin-top: var(--mpa-space-4); }
 
 /* ---- planned-task checklist ---- */
+.milestones { display: flex; flex-direction: column; gap: var(--mpa-space-4); }
+.milestone-title {
+  margin: 0 0 var(--mpa-space-2); font-size: var(--mpa-text-label); font-weight: 600;
+  color: var(--mpa-muted); text-transform: uppercase; letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
 .tasks { display: flex; flex-direction: column; }
 .task-row {
   display: grid; grid-template-columns: auto 1fr; align-items: start; gap: var(--mpa-space-3);
   padding: var(--mpa-space-3) 0; border-top: 1px solid var(--mpa-border);
 }
 .task-row:first-child { border-top: none; }
+/* Ticked-off task: greyed, the title struck through. The done status is persisted server-side. */
+.task-row--done { opacity: 0.55; }
+.task-row--done .task-title { text-decoration: line-through; }
+.task-row--done .task-check { color: var(--mpa-accent); border-color: var(--mpa-accent); }
 .task-check {
   width: 20px; height: 20px; flex: none; margin-top: 1px; padding: 0; line-height: 1;
   border: 1px solid var(--mpa-border-strong); border-radius: var(--mpa-radius-pill);

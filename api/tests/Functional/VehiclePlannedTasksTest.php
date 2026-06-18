@@ -36,7 +36,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $this->assertArrayHasKey('parts', $members[0], 'the shopping list rides each task');
     }
 
-    public function testTheCollectionReturnsOnlyOpenTasks(): void
+    public function testTheCollectionKeepsDoneTasks(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -54,7 +54,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
 
         $vehicleIri = $plan['task']['vehicle'];
 
-        // Logging the service closes the only open task → the subresource empties.
+        // Logging the service closes the open task as Done → it stays on the checklist, greyed.
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
@@ -65,6 +65,8 @@ final class VehiclePlannedTasksTest extends AppTestCase
         ], 4);
 
         $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
-        $this->assertCount(0, $body['member'] ?? $body['hydra:member'] ?? [], 'closed tasks drop off the open checklist');
+        $members = $body['member'] ?? $body['hydra:member'] ?? [];
+        $this->assertCount(1, $members, 'a done task stays on the checklist with its done status');
+        $this->assertSame('done', $members[0]['status'] ?? null);
     }
 }

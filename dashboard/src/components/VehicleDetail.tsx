@@ -43,14 +43,49 @@ function taskTitle(task: PlannedTask): string {
   return task.label ? `${base} — ${task.label}` : base;
 }
 
+/** The milestone a task is pegged to — its usage target, else its due date, else none. */
+function milestoneOf(task: PlannedTask): { key: string; label: string } {
+  if (task.target) {
+    const unit = task.target.unit ? ` ${task.target.unit}` : '';
+    return { key: `u:${task.target.value}:${task.target.unit ?? ''}`, label: `À ${task.target.value.toLocaleString('fr-FR')}${unit}` };
+  }
+  if (task.dueDate) {
+    return { key: `d:${task.dueDate}`, label: `Avant le ${task.dueDate}` };
+  }
+  return { key: 'none', label: 'Sans échéance' };
+}
+
+interface Milestone {
+  key: string;
+  label: string;
+  tasks: PlannedTask[];
+}
+
+/** Bucket the checklist by milestone, preserving the backend order (open before done). */
+function groupByMilestone(tasks: PlannedTask[]): Milestone[] {
+  const groups: Milestone[] = [];
+  const byKey = new Map<string, Milestone>();
+  for (const task of tasks) {
+    const { key, label } = milestoneOf(task);
+    let group = byKey.get(key);
+    if (!group) {
+      group = { key, label, tasks: [] };
+      byKey.set(key, group);
+      groups.push(group);
+    }
+    group.tasks.push(task);
+  }
+  return groups;
+}
+
 export function VehicleDetail({
   vehicle,
   onEdit,
-  onCompleteTask,
+  onSetTaskStatus,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
-  onCompleteTask: (taskIri: string) => void;
+  onSetTaskStatus: (taskIri: string, status: 'open' | 'done') => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -60,6 +95,8 @@ export function VehicleDetail({
   const defaultUnit = vehicle.usageUnit ?? (vehicle.vehicleType === 'groundscare' ? 'h' : 'km');
   const facts = vehicle.facts ?? [];
   const tasks = vehicle.plannedTasks ?? [];
+  const openCount = tasks.filter((t) => t.status === 'open').length;
+  const milestones = groupByMilestone(tasks);
   // The full data list is on-demand reference; the agent's show_fact panel is the answer surface.
   const [dataOpen, setDataOpen] = useState(false);
 
@@ -127,7 +164,7 @@ export function VehicleDetail({
         <div className="panel-title">
           <span className="t">Tâches &amp; liste de courses</span>
           <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
-            {tasks.length} ouverte{tasks.length > 1 ? 's' : ''}
+            {openCount} ouverte{openCount > 1 ? 's' : ''}
           </span>
         </div>
         {tasks.length === 0 ? (
@@ -135,9 +172,20 @@ export function VehicleDetail({
             Aucune tâche planifiée. Demandez à l'assistant « quel entretien à X km ? ».
           </div>
         ) : (
-          <div className="tasks">
-            {tasks.map((t) => (
-              <TaskRow key={t.id} task={t} onComplete={() => onCompleteTask(t.id)} />
+          <div className="milestones">
+            {milestones.map((m) => (
+              <section key={m.key} className="milestone">
+                <h3 className="milestone-title">{m.label}</h3>
+                <div className="tasks">
+                  {m.tasks.map((t) => (
+                    <TaskRow
+                      key={t.id}
+                      task={t}
+                      onToggle={() => onSetTaskStatus(t.id, t.status === 'done' ? 'open' : 'done')}
+                    />
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         )}
@@ -173,22 +221,23 @@ export function VehicleDetail({
   );
 }
 
-function TaskRow({ task, onComplete }: { task: PlannedTask; onComplete: () => void }) {
-  const target = task.target
-    ? `à ${task.target.value.toLocaleString('fr-FR')}${task.target.unit ? ` ${task.target.unit}` : ''}`
-    : task.dueDate
-      ? `avant le ${task.dueDate}`
-      : null;
+function TaskRow({ task, onToggle }: { task: PlannedTask; onToggle: () => void }) {
+  const done = task.status === 'done';
 
   return (
-    <div className="task-row">
-      <button type="button" className="task-check" aria-label="Marquer comme fait" onClick={onComplete}>
-        ○
+    <div className={done ? 'task-row task-row--done' : 'task-row'}>
+      <button
+        type="button"
+        className="task-check"
+        aria-label={done ? 'Rouvrir la tâche' : 'Marquer comme fait'}
+        aria-pressed={done}
+        onClick={onToggle}
+      >
+        {done ? '✓' : '○'}
       </button>
       <div className="task-body">
         <div className="task-head">
           <span className="task-title">{taskTitle(task)}</span>
-          {target ? <span className="task-target">{target}</span> : null}
         </div>
         {task.parts.length > 0 ? (
           <ul className="task-parts">
