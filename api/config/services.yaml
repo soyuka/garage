@@ -39,8 +39,9 @@ services:
             $server: '@mcp.server'
 
     # Merge the garage MCP tools into the garage agent's #[AsTool] toolbox (render intents). The
-    # bundle wires one toolbox per agent; this decorator is that one toolbox (fault tolerance is
-    # disabled on the agent so no other decorator competes).
+    # bundle wires one toolbox per agent; this decorator (default priority 0) sits INSIDE the
+    # bundle's FaultTolerantToolbox (priority -1024, outermost), so malformed tool calls from either
+    # family surface as error tool-results to the model instead of bubbling to a 500.
     App\Agent\Toolbox\CompositeToolbox:
         decorates: ai.toolbox.garage
         arguments:

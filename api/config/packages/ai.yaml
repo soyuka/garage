@@ -14,10 +14,14 @@ ai:
             model: 'claude-haiku-4-5?max_tokens=2048'
             # Render-intent #[AsTool] tools (select_vehicle/toast/show_fact/propose_actions) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
-            # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is off so
-            # that decorator is the only one on ai.toolbox.garage and tool routing stays crisp.
+            # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is ON: the
+            # bundle's FaultTolerantToolbox decorates at priority -1024, which (SplPriorityQueue:
+            # highest priority wired innermost first) lands it OUTSIDE CompositeToolbox (priority 0).
+            # So a malformed tool call — e.g. Haiku emitting propose_actions without a `label` —
+            # becomes an error tool-result fed back to the model to recover from, instead of a hard
+            # 500 that kills the turn (and aborts before the web→persist step ever runs).
             tools: true
-            fault_tolerant_toolbox: false
+            fault_tolerant_toolbox: true
             prompt:
                 text: |
                     You are the in-app workshop assistant ("Assistant Atelier") for a personal vehicle
