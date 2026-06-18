@@ -113,3 +113,65 @@ built inside `fromEntity()`. Both resources expose a `Patch` operation.
 - Provider: `api/src/State/GarageVehicleProvider.php`
 - Working sibling: `api/src/ApiResource/PlannedTask.php`
 - Red test: `api/tests/Functional/GarageVehiclePatchTest.php::testItemGetExposesFactsWithProvenance`
+
+---
+
+## ROOT CAUSE (diagnosed 2026-06-18)
+
+**Not an API Platform serializer / type-info / `writable: false` bug. It is a stale metadata
+cache that `cache:clear` does not invalidate.** The fresh metadata is correct; the serializer
+reads a stale cached property list.
+
+### How it was pinned
+
+1. Re-added a non-null `int` property set after `fromEntity()` (`openTasks = 7`) → dropped from
+   the body, reproducing the report. `facts` was present once the metadata cache was rebuilt.
+2. The `provider-set-vs-fromEntity-set` hypothesis is **false**: an `int` set inside `fromEntity`
+   was dropped too, while another `int` set inside `fromEntity` (`factCount`) survived. The
+   differentiator is *which* property, not where it is set.
+3. Probed the metadata factories directly with `operation_name` options →
+   `PropertyNameCollectionFactory::create()` returned the **full, fresh** list (all new props,
+   `readable=true`, native types resolved). Metadata is fine.
+4. Dumped `AbstractItemNormalizer::getAllowedAttributes()` at runtime → the serializer's
+   `propertyNameCollectionFactory->create()` returned a **stale** list missing the new props.
+   The serializer calls the factory with a *different* options array (from `getFactoryOptions()`)
+   → different cache key bucket → it hit a stale cached `PropertyNameCollection`. New readable
+   properties are silently absent, which is exactly the no-error symptom.
+5. `rm -rf var/cache/<env>` fixes it. `bin/console cache:clear` and
+   `bin/console cache:pool:clear cache.system` do **not** (verified empirically, repeatedly).
+
+### Mechanism
+
+- `api_platform.cache.metadata.property` (the `PropertyNameCollection` cache) is backed by
+  `cache.system` — a `PhpFilesAdapter` under `var/cache/<env>/pools/system/<namespace>/`.
+- That `<namespace>` is the **container build hash**. It only changes when a *tracked* container
+  resource changes (config/service files, or a resource file being added/removed) — **not** when
+  the body of an existing `ApiResource` class is edited (adding a property to an existing file
+  does not change the tracked directory listing, so the container is considered fresh and is not
+  rebuilt).
+- The metadata cache **key** carries no source-version/mtime component. So: edit an existing
+  resource → same namespace + same key → the stale `PropertyNameCollection` is served forever.
+- `cache:clear` rebuilds the container but does not purge pool *items* in the unchanged
+  namespace; `cache:pool:clear` clears the CLI build's namespace, which is often not the one the
+  app/worker reads (15 orphaned namespace dirs were observed). Only physically deleting
+  `var/cache` removes the stale namespace dir.
+- **Worker mode (FrankenPHP/Symfony runtime) makes it worse:** the container and warmed metadata
+  live in memory for the whole worker lifetime, and a restart re-reads the same stale persistent
+  pool — matching the reporter's "worker restart was a no-op". Wiping `var/cache` *before* the
+  restart is required.
+
+### Why `PlannedTask` looked unaffected
+
+Coincidence of cache state, not the property declaration. Its properties were warmed into the
+cache while present; `GarageVehicle`'s later-added properties landed under an already-populated,
+never-invalidated namespace.
+
+### Workaround / fix options
+
+- **Immediate:** `rm -rf api/var/cache/<env>` after editing a resource (then restart the worker).
+- **CI/test:** ensure the test bootstrap wipes `var/cache/test` rather than relying on
+  `cache:clear`.
+- **Durable:** make resource edits invalidate the metadata namespace — e.g. track the
+  `ApiResource`/`Entity` paths as content-sensitive container resources, or front the
+  `api_platform.cache.metadata.*` pools with a non-persistent adapter in dev/test. (Decision
+  pending — flagged for the user.)
