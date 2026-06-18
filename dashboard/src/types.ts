@@ -62,8 +62,24 @@ export interface VehicleFact {
   url?: string | null;
 }
 
-export interface SuggestionChip {
+/** A call-to-action button: its label, and the instruction re-sent to the agent when clicked. */
+export interface CtaAction {
   label: string;
+  instruction: string;
+}
+
+/** The agent's call-to-action card: a headline, an optional finding line, and next-step buttons. */
+export interface Cta {
+  headline: string;
+  finding?: string;
+  actions: CtaAction[];
+}
+
+/** The transient focused fact panel (UI label "Données"): which fact keys to spotlight. */
+export interface FactPanel {
+  keys: string[];
+  title?: string;
+  expanded: boolean;
 }
 
 /**
@@ -99,7 +115,8 @@ export interface Toast {
 export interface DashboardState {
   vehicles: Vehicle[];
   selectedId: VehicleId;
-  suggestions: SuggestionChip[];
+  factPanel: FactPanel | null; // transient agent answer surface; null when dismissed
+  cta: Cta | null; // the agent's call-to-action card; null when dismissed
   toasts: Toast[];
   live: string[]; // recent Mercure events (debug rail)
 }
@@ -111,8 +128,6 @@ export interface DashboardState {
 export type UIAction =
   | { type: 'setVehicles'; vehicles: VehicleSummary[] }
   | { type: 'selectVehicle'; id: VehicleId }
-  | { type: 'renderSuggestions'; chips: SuggestionChip[] }
-  | { type: 'patchPanel'; panel: 'nextService'; data: NextService }
-  | { type: 'patchPanel'; panel: 'health'; data: { value: number; label?: string } }
-  | { type: 'patchPanel'; panel: 'cost'; data: { total: string; period: string; delta: string } }
+  | { type: 'showFact'; keys: string[]; title?: string }
+  | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }
   | { type: 'toast'; tone: Tone; message: string };

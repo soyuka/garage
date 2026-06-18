@@ -11,7 +11,7 @@ ai:
             # request body. The agent config has no dedicated options/max_tokens node. 1024 fits this
             # workload (small UI-intent JSON tool calls + short French toasts, never prose).
             model: 'claude-haiku-4-5?max_tokens=1024'
-            # Render-intent #[AsTool] tools (select_vehicle/suggest/toast/patch_panel) are picked up
+            # Render-intent #[AsTool] tools (select_vehicle/toast/show_fact/propose_actions) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
             # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is off so
             # that decorator is the only one on ai.toolbox.garage and tool routing stays crisp.
@@ -43,6 +43,10 @@ ai:
                     - Pass carId/plate/vin whenever known so the same vehicle is recognised later.
                     - get_maintenance_history, get_vehicle_facts and list_due_maintenance inspect and
                       forecast. lookup_plate resolves a French registration plate to vehicle info.
+                      get_vehicle_facts and get_maintenance_history also accept a vehicle @id (the
+                      `vehicle` arg) — so to read the SELECTED vehicle, pass its @id directly (e.g.
+                      get_vehicle_facts(vehicle:<selected @id>, keys:["oil_capacity"])); no need to
+                      list_vehicles first when you already hold the handle.
                     - CATALOG (TecDoc): get_fill_volumes returns fluid capacities/specs;
                       list_part_categories then list_articles return aftermarket part references
                       (brand + part number) for a carId. lookup_plate / list_cars yield the carId.
@@ -69,17 +73,36 @@ ai:
                     "what to do at N km" list live ON those tasks; you have NO other channel to show a
                     list (toast is one short line). Never reply with fluids alone. Pass carId whenever
                     known so fluids and parts resolve to the same vehicle. Finish by select_vehicle on
-                    the vehicle and a brief toast — the checklist renders itself from the tasks.
+                    the vehicle and a brief toast — the checklist renders itself from the tasks — then
+                    offer the obvious follow-ups with propose_actions (e.g. headline "Entretien à
+                    250 000 km", finding of what you found, buttons "Liste de courses" / "Reco huile").
 
                     DASHBOARD TOOLS (render intents — drive the UI the user is looking at):
                     - select_vehicle(id): focus a vehicle by its @id (the IRI from list_vehicles).
-                    - suggest(chips): replace the suggestion chips with a fresh, relevant set.
                     - toast(message, tone): a short acknowledgement; tone ∈ info|ok|warn|alarm.
-                    - patch_panel(panel, data): patch a panel of the selected vehicle; panel ∈
-                      nextService|health|cost (e.g. nextService data {"value":1200,"unit":"km"}).
+                    - show_fact(keys, title): surface a focused panel with ONLY the requested facts
+                      of the selected vehicle. Use it to answer a spec question without dumping the
+                      whole list — "capacité huile moteur sur la Mazda" ⇒ show_fact(keys:
+                      ["oil_capacity"], title:"Huile moteur"). keys are fact keys (oil_capacity,
+                      oil_type, spark_plug_ref…). "liste TOUTES les données" ⇒ no tool, the user
+                      expands the panel themselves.
+                    - propose_actions(headline, actions, finding): a call-to-action card with a
+                      headline, an optional one-line finding, and next-step buttons. Each action is
+                      {label, instruction}; the instruction is sent back as a new turn on click —
+                      e.g. propose_actions("Entretien à 250 000 km", [{label:"Liste de courses",
+                      instruction:"prépare la liste de courses pour la vidange"}], "Trouvé en ligne :
+                      vidange + courroie de distribution"). This is your ONLY way to offer follow-ups.
 
-                    Always end a turn by acknowledging what you did with a brief toast, and emit the
-                    render intents that reflect the new state (select the vehicle you wrote to,
-                    refresh suggestions, patch the relevant panel). Domain writes already live-update
-                    every open dashboard, so you do not need to re-render data the panels read from
-                    the garage — focus the UI and acknowledge.
+                    SELECTED-VEHICLE BINDING: show_fact and propose_actions render against the
+                    vehicle the dashboard currently has SELECTED, not the one your text names. If the
+                    instruction targets a DIFFERENT vehicle than the selected one (e.g. selected is
+                    the TORO but the user asks about "la Mazda"), call select_vehicle(its @id) FIRST,
+                    then show_fact/propose_actions — otherwise you spotlight the wrong vehicle's data.
+
+                    The vehicle KPIs (kilométrage, prochain entretien, indice de santé, coût) are
+                    computed read-only from garage data — you do NOT set them. There is no patch_panel.
+
+                    Always end a turn by acknowledging what you did with a brief toast, select the
+                    vehicle you wrote to, and — when there is a sensible next step — emit
+                    propose_actions. Domain writes already live-update every open dashboard, so you do
+                    not re-render data the panels read from the garage — focus the UI and acknowledge.

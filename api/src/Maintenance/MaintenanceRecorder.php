@@ -104,20 +104,24 @@ final class MaintenanceRecorder
     }
 
     /**
-     * Service history for a known vehicle, newest first. Returns null when the vehicle is
-     * not in the garage — the caller turns that into the no_records contract (not an error).
+     * Service history for a known vehicle, newest first — addressed by its @id ($vehicleId) or by
+     * make+model identity. Returns null when the vehicle is not in the garage — the caller turns
+     * that into the no_records contract (not an error).
      *
      * @return list<MaintenanceRecord>|null
      */
     public function history(
-        string $make,
-        string $model,
+        ?Ulid $vehicleId,
+        ?string $make,
+        ?string $model,
         ?int $year,
         VehicleType $vehicleType,
         ?MaintenanceType $type = null,
         ?int $limit = null,
     ): ?array {
-        $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
+        $vehicle = null !== $vehicleId
+            ? $this->vehicles->find($vehicleId)
+            : $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
         if (null === $vehicle) {
             return null;
         }

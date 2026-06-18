@@ -2,16 +2,28 @@ import { useCallback, useEffect, useReducer, useState } from 'react';
 import { postTurn } from './agent';
 import { getVehicle, patchTask, patchVehicle } from './garage';
 import { Composer } from './components/Composer';
+import { CtaCard } from './components/CtaCard';
+import { FactPanel } from './components/FactPanel';
 import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { VehicleDetail, type VehicleEdit } from './components/VehicleDetail';
-import { initialState } from './mock';
 import { reduce, vehicleFromSummary } from './state';
 import { useMercure, type MercureFrame } from './useMercure';
-import type { VehicleId, VehicleSummary } from './types';
+import type { DashboardState, VehicleId, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
+
+// Empty boot state. The parc loads live from GET /garage/vehicles on mount; selectedId is filled
+// by setVehicles once the real list lands.
+const initialState: DashboardState = {
+  vehicles: [],
+  selectedId: '',
+  factPanel: null,
+  cta: null,
+  toasts: [],
+  live: [],
+};
 
 export function App() {
   const [state, dispatch] = useReducer(reduce, initialState);
@@ -127,7 +139,7 @@ export function App() {
     (frame: MercureFrame) => {
       if ('type' in frame) {
         // Render intent on the session topic. Progress toasts feed the heartbeat line; errors and
-        // any non-toast intent (select/suggest/patch) go to the reducer to drive the dashboard.
+        // any non-toast intent (selectVehicle/showFact/proposeActions) go to the reducer.
         if (frame.type === 'toast' && frame.tone !== 'alarm') {
           pushStatus(frame.message);
         } else {
@@ -177,13 +189,23 @@ export function App() {
               </div>
             )}
           </div>
-          <Composer
-            suggestions={state.suggestions}
-            busy={busy}
-            status={status}
-            onAdvanceStatus={advanceStatus}
-            onSend={send}
-          />
+          {state.cta ? (
+            <CtaCard
+              cta={state.cta}
+              busy={busy}
+              onSend={send}
+              onDismiss={() => dispatch({ kind: 'dismissCta' })}
+            />
+          ) : null}
+          {state.factPanel && selected ? (
+            <FactPanel
+              panel={state.factPanel}
+              vehicle={selected}
+              onExpand={() => dispatch({ kind: 'expandFactPanel' })}
+              onDismiss={() => dispatch({ kind: 'dismissFactPanel' })}
+            />
+          ) : null}
+          <Composer busy={busy} status={status} onAdvanceStatus={advanceStatus} onSend={send} />
         </main>
       </div>
       <Toasts toasts={state.toasts} live={state.live} onDismiss={(id) => dispatch({ kind: 'dismissToast', id })} />

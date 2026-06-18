@@ -694,6 +694,54 @@ final class McpGarageTest extends AppTestCase
         $this->fail(sprintf('No fact with key "%s" in %s', $key, json_encode($facts)));
     }
 
+    public function testGetVehicleFactsByVehicleIri(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Seed a vehicle carrying a fact.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'add_vehicle_fact',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_capacity',
+                'value' => '1.4',
+                'unit' => 'liter',
+                'source' => 'llm',
+            ],
+        ], 3);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+
+        // Read its facts by the @id alone — the selected-vehicle handle, no make/model.
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_vehicle_facts',
+            'arguments' => ['vehicle' => $iri, 'keys' => ['oil_capacity']],
+        ], 5)['result']['structuredContent'];
+
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame($iri, $content['vehicle']['@id']);
+        $this->assertSame('oil_capacity', $content['facts'][0]['key']);
+    }
+
+    public function testGetVehicleFactsByUnknownIriIsNotFound(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_vehicle_facts',
+            'arguments' => ['vehicle' => '/garage/vehicles/01JZZZZZZZZZZZZZZZZZZZZZZZ'],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame('not_found', $content['status']);
+    }
+
     /**
      * @param list<array<string, mixed>> $vehicles
      *

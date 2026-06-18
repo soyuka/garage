@@ -48,6 +48,19 @@ the remaining extension WIRING gaps (bundle `enableExtension`, tool `_meta.ui.re
 4. **Plate lookup card** — SIV plate input → vehicle identity card → "add to garage".
 5. **Parts picker** — PartCategory/Article browse → pick filter → ref number + copy button.
 
+## TODO — computed cost total (deferred from the render-tool refactor)
+
+The 2026-06-18 render-tool refactor made `health`/`cost` read-only computed KPIs (the agent can no
+longer pilot them — `patch_panel` is gone). `health` is now derived client-side from the
+open/overdue checklist. **`cost` still shows `—`** in the UI. The data IS there — wiring is missing:
+
+- `App\Entity\MaintenanceRecord` already carries `costCents` + `currency` (set via
+  `App\Dto\LogMaintenanceInput`). No schema change needed.
+- Sum `costCents` in `App\State\GarageVehicleProvider` → a new read-only `GarageVehicle::$costTotal`
+  (+ expose `costCents`/`currency` on `App\ApiResource\GarageMaintenanceRecord`, currently omitted).
+- Surface `costTotal` on `VehicleSummary` + map it in `vehicleFromSummary` so the cost KPI shows the
+  real Σ instead of the placeholder.
+
 ## Future — bills & proofs (attachments)
 
 Owner wants to attach **bills/invoices/proofs** to garage memory — e.g. work done by an

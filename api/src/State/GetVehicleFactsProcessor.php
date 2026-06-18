@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\State;
 
+use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\GetVehicleFactsInput;
+use App\Entity\Vehicle;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
@@ -33,6 +35,19 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
+        // Addressed by @id (e.g. the dashboard's selected vehicle): dereference the handle straight
+        // to its row — no make/model, no catalog write-through (the row already exists).
+        if (null !== $data->vehicle) {
+            return $this->factsByIri($data->vehicle, $data->keys);
+        }
+
+        if (null === $data->make || null === $data->model) {
+            return ToolResult::of([
+                'status' => 'invalid_input',
+                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
+            ]);
+        }
+
         $type = VehicleType::from($data->vehicleType);
         $vehicle = $this->resolver->resolve($data->make, $data->model, $data->year, $type, $data->carId);
 
@@ -55,9 +70,47 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
             ]);
         }
 
+        return $this->okResult($vehicle, $data->keys, $identity);
+    }
+
+    /**
+     * Read facts for the vehicle at the given @id. A malformed IRI is invalid_input, an IRI that
+     * resolves to nothing is not_found — never an exception, same "miss is a result" contract.
+     *
+     * @param list<string> $keys
+     */
+    private function factsByIri(string $iri, array $keys): CallToolResult
+    {
+        try {
+            $resource = $this->iriConverter->getResourceFromIri($iri);
+        } catch (ItemNotFoundException) {
+            return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $iri)]);
+        } catch (\Throwable) {
+            return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $iri)]);
+        }
+
+        $vehicle = $this->resolver->resolveById($resource->id);
+        if (null === $vehicle) {
+            return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $iri)]);
+        }
+
+        return $this->okResult($vehicle, $keys, [
+            'make' => $vehicle->getMake(),
+            'model' => $vehicle->getModel(),
+            'year' => $vehicle->getYear(),
+            'vehicleType' => $vehicle->getVehicleType()->value,
+        ]);
+    }
+
+    /**
+     * @param list<string>         $keys     fact keys to keep ([] = all)
+     * @param array<string, mixed> $identity make/model/year/vehicleType echoed back on the result
+     */
+    private function okResult(Vehicle $vehicle, array $keys, array $identity): CallToolResult
+    {
         $facts = [];
         foreach ($vehicle->getFacts() as $fact) {
-            if ([] !== $data->keys && !\in_array($fact->getKey(), $data->keys, true)) {
+            if ([] !== $keys && !\in_array($fact->getKey(), $keys, true)) {
                 continue;
             }
             $facts[] = $this->factView->toArray($fact);

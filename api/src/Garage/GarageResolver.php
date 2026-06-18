@@ -33,6 +33,16 @@ final class GarageResolver
      * fill volumes when a carId is supplied. Returns null on a total miss (no garage row and
      * no usable upstream data) — the caller turns that into the not_in_catalog contract.
      */
+    /**
+     * Resolve a vehicle straight from its ULID — the read counterpart of addressing a write by @id.
+     * Used when the caller already holds the dereferenceable handle (e.g. the dashboard's selected
+     * vehicle) and need not re-match on make/model. Returns null when no such row exists.
+     */
+    public function resolveById(Ulid $id): ?Vehicle
+    {
+        return $this->vehicles->find($id);
+    }
+
     public function resolve(string $make, string $model, ?int $year, VehicleType $vehicleType, ?int $carId): ?Vehicle
     {
         $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);

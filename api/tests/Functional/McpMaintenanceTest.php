@@ -106,6 +106,38 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame(1, $list['count']);
     }
 
+    public function testHistoryByVehicleIri(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'type' => 'oil_change',
+                'performedAt' => '2026-05-01',
+            ],
+        ], 3);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+
+        // History by the @id alone — no make/model.
+        $history = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['vehicle' => $iri],
+        ], 5)['result']['structuredContent'];
+
+        $this->assertSame('ok', $history['status']);
+        $this->assertSame($iri, $history['vehicle']['@id']);
+        $this->assertCount(1, $history['records']);
+    }
+
     public function testMaintenanceRecordExposesDereferenceableIri(): void
     {
         $client = static::createClient();

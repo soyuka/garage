@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
 import { HealthRing } from '../design/components/HealthRing';
 import { MetricStat } from '../design/components/MetricStat';
 import { StatusPill } from '../design/components/StatusPill';
-import type { PlannedTask, Vehicle, VehicleFact } from '../types';
+import type { PlannedTask, Vehicle } from '../types';
+import { FactRow } from './facts';
 import { InlineEdit } from './InlineEdit';
 
 /** The card's editable scalars — the subset the PATCH endpoint accepts. */
@@ -49,19 +51,6 @@ function taskTitle(task: PlannedTask): string {
   return task.label ? `${base} — ${task.label}` : base;
 }
 
-const FACT_LABELS: Record<string, string> = {
-  oil_type: 'Type d’huile',
-  oil_capacity: 'Capacité d’huile',
-  coolant: 'Liquide de refroidissement',
-  brake_fluid: 'Liquide de frein',
-  spark_plug_ref: 'Référence bougie',
-  oil_filter_ref: 'Référence filtre à huile',
-};
-
-function factLabel(key: string): string {
-  return FACT_LABELS[key] ?? key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
-}
-
 export function VehicleDetail({
   vehicle,
   onEdit,
@@ -79,6 +68,8 @@ export function VehicleDetail({
   const defaultUnit = vehicle.usageUnit ?? (vehicle.vehicleType === 'groundscare' ? 'h' : 'km');
   const facts = vehicle.facts ?? [];
   const tasks = vehicle.plannedTasks ?? [];
+  // The full data list is on-demand reference; the agent's show_fact panel is the answer surface.
+  const [dataOpen, setDataOpen] = useState(false);
 
   const commitUsage = (raw: string) => {
     const value = Number.parseInt(raw.replace(/[^\d]/g, ''), 10);
@@ -191,21 +182,30 @@ export function VehicleDetail({
       </Card>
 
       <Card style={{ marginTop: 'var(--mpa-gap-grid)' }}>
-        <div className="panel-title">
-          <span className="t">Faits</span>
-          <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
-            {facts.length} enregistré{facts.length > 1 ? 's' : ''}
+        <button
+          type="button"
+          className="panel-title panel-disclosure"
+          aria-expanded={dataOpen}
+          onClick={() => setDataOpen((o) => !o)}
+        >
+          <span className="t">
+            <span className="disclosure-caret">{dataOpen ? '▾' : '▸'}</span> Données
           </span>
-        </div>
-        {facts.length === 0 ? (
-          <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>Aucun fait enregistré.</div>
-        ) : (
-          <div className="facts">
-            {facts.map((f) => (
-              <FactRow key={f.id} fact={f} />
-            ))}
-          </div>
-        )}
+          <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
+            {facts.length} enregistrée{facts.length > 1 ? 's' : ''}
+          </span>
+        </button>
+        {dataOpen ? (
+          facts.length === 0 ? (
+            <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>Aucune donnée enregistrée.</div>
+          ) : (
+            <div className="facts">
+              {facts.map((f) => (
+                <FactRow key={f.id} fact={f} />
+              ))}
+            </div>
+          )
+        ) : null}
       </Card>
     </>
   );
@@ -245,21 +245,3 @@ function TaskRow({ task, onComplete }: { task: PlannedTask; onComplete: () => vo
   );
 }
 
-function FactRow({ fact }: { fact: VehicleFact }) {
-  return (
-    <div className="fact-row">
-      <span className="fact-key">{factLabel(fact.key)}</span>
-      <span className="fact-value">
-        {fact.value}
-        {fact.unit ? <span className="fact-unit"> {fact.unit}</span> : null}
-      </span>
-      {fact.verified ? (
-        <Badge variant="verified" check>
-          {fact.source}
-        </Badge>
-      ) : (
-        <Badge>{fact.source}</Badge>
-      )}
-    </div>
-  );
-}

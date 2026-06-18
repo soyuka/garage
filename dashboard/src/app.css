@@ -143,13 +143,6 @@ body {
   42% { color: var(--mpa-accent); }
   60% { color: var(--mpa-text-2); }
 }
-.chip {
-  border: 1px solid var(--mpa-border-strong); background: rgba(255,255,255,0.04);
-  color: var(--mpa-text-3); border-radius: var(--mpa-radius-sm);
-  padding: 7px 12px; font-size: var(--mpa-text-label); cursor: pointer; white-space: nowrap;
-  transition: background var(--mpa-transition-fast), color var(--mpa-transition-fast);
-}
-.chip:hover { background: rgba(255,255,255,0.07); color: var(--mpa-text); }
 .composer {
   display: flex; align-items: center; gap: var(--mpa-space-3);
   background: var(--mpa-inset); border: 1px solid var(--mpa-border-strong);
@@ -207,6 +200,31 @@ body {
 .fact-key { color: var(--mpa-text-2); font-size: var(--mpa-text-label); }
 .fact-value { font-weight: 500; font-variant-numeric: tabular-nums; }
 .fact-value .fact-unit { color: var(--mpa-muted); font-weight: 400; }
+
+/* Données card disclosure (collapsed by default) */
+.panel-disclosure {
+  width: 100%; background: transparent; border: none; padding: 0; cursor: pointer;
+  font: inherit; color: inherit; text-align: left;
+}
+.disclosure-caret { color: var(--mpa-muted); font-size: 0.85em; margin-right: var(--mpa-space-2); }
+
+/* ---- transient agent surfaces (fact panel + CTA), docked above the composer ---- */
+.fact-panel, .cta-card { margin: 0 var(--mpa-space-7) var(--mpa-space-3); }
+.fact-panel-close {
+  background: transparent; border: none; cursor: pointer; color: var(--mpa-muted);
+  font-size: 20px; line-height: 1; padding: 0 var(--mpa-space-1);
+}
+.fact-panel-close:hover { color: var(--mpa-text); }
+.fact-panel-expand {
+  margin-top: var(--mpa-space-3); background: transparent; border: none; cursor: pointer;
+  color: var(--mpa-accent); font: inherit; font-size: var(--mpa-text-label); padding: 0;
+}
+.fact-row-missing .fact-key { color: var(--mpa-faint); }
+
+.cta-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--mpa-space-3); }
+.cta-headline { font-size: var(--mpa-text-card-title); font-weight: 600; }
+.cta-finding { color: var(--mpa-text-2); font-size: var(--mpa-text-label); margin-top: var(--mpa-space-1); }
+.cta-actions { display: flex; flex-wrap: wrap; gap: var(--mpa-space-2); margin-top: var(--mpa-space-4); }
 
 /* ---- planned-task checklist ---- */
 .tasks { display: flex; flex-direction: column; }

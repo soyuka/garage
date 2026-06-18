@@ -8,11 +8,14 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class GetVehicleFactsInput
 {
-    #[ApiProperty(description: 'Vehicle make, e.g. "TORO", "IVECO". Case-insensitive.')]
-    public string $make;
+    #[ApiProperty(description: 'Target an existing vehicle by its @id (the IRI from list_vehicles, e.g. "/garage/vehicles/01J…"), e.g. the one the dashboard has selected. When set, make/model are ignored and the catalog write-through is skipped (the row already exists).')]
+    public ?string $vehicle = null;
 
-    #[ApiProperty(description: 'Vehicle model, e.g. "246-H", "DAILY". Case-insensitive.')]
-    public string $model;
+    #[ApiProperty(description: 'Vehicle make, e.g. "TORO", "IVECO". Case-insensitive. Required unless vehicle is given.')]
+    public ?string $make = null;
+
+    #[ApiProperty(description: 'Vehicle model, e.g. "246-H", "DAILY". Case-insensitive. Required unless vehicle is given.')]
+    public ?string $model = null;
 
     #[ApiProperty(description: 'Model year, when known.')]
     public ?int $year = null;

@@ -25,7 +25,7 @@ use App\State\UpdateVehicleProcessor;
     mcp: [
         'list_vehicles' => new McpTool(
             title: 'List Vehicles',
-            description: 'List the vehicles held in the garage — each as an identity summary (@id, make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. The @id is the vehicle\'s dereferenceable IRI (e.g. "/garage/vehicles/01J…"): reuse it as the `vehicle` argument of add_vehicle_fact/log_maintenance, or GET it directly. ALWAYS call this before writing, to see what already exists and reuse a vehicle\'s @id rather than risk a duplicate. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType. An empty result returns count 0, not an error.',
+            description: 'List the vehicles held in the garage — each as an identity summary (@id, make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. The @id is the vehicle\'s dereferenceable IRI (e.g. "/garage/vehicles/01J…"): reuse it as the `vehicle` argument of get_vehicle_facts/get_maintenance_history/add_vehicle_fact/log_maintenance/update_vehicle to address that exact row. ALWAYS call this before writing, to see what already exists and reuse a vehicle\'s @id rather than risk a duplicate. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType. An empty result returns count 0, not an error.',
             input: ListVehiclesInput::class,
             structuredContent: false,
             processor: ListVehiclesProcessor::class,
@@ -37,7 +37,7 @@ use App\State\UpdateVehicleProcessor;
         // content processor — so they still populate structuredContent at runtime.
         'get_vehicle_facts' => new McpTool(
             title: 'Vehicle Facts',
-            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Known vehicles return their stored facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result telling you to gather the data and call add_vehicle_fact — it is NOT an error.',
+            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their stored facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result telling you to gather the data and call add_vehicle_fact — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
             input: GetVehicleFactsInput::class,
             structuredContent: false,
             processor: GetVehicleFactsProcessor::class,

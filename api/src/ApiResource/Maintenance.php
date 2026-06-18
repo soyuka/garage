@@ -38,7 +38,7 @@ use App\State\PlanMaintenanceProcessor;
         ),
         'get_maintenance_history' => new McpTool(
             title: 'Maintenance History',
-            description: 'Get the maintenance/service history of a vehicle, newest event first, optionally filtered by type. Use this to answer "when was the oil last changed?" or "what has been done to this vehicle?". An unknown vehicle returns a no_records result (NOT an error).',
+            description: 'Get the maintenance/service history of a vehicle, newest event first, optionally filtered by type. Use this to answer "when was the oil last changed?" or "what has been done to this vehicle?". Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. An unknown vehicle returns a no_records result (NOT an error).',
             input: GetMaintenanceHistoryInput::class,
             structuredContent: false,
             processor: GetMaintenanceHistoryProcessor::class,
