@@ -4,11 +4,11 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "35725ed7df509460e0c416424d86e644",
+    "content-hash": "9379f0730dadf9a56f20bb121b30b7ca",
     "packages": [
         {
             "name": "api-platform/doctrine-common",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/doctrine-common.git",
@@ -92,22 +92,22 @@
                 "rest"
             ],
             "support": {
-                "source": "https://github.com/api-platform/doctrine-common/tree/v4.3.10"
+                "source": "https://github.com/api-platform/doctrine-common/tree/v4.3.13"
             },
             "time": "2026-06-05T09:05:29+00:00"
         },
         {
             "name": "api-platform/doctrine-orm",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/doctrine-orm.git",
-                "reference": "db75bac977cc9fe76cee90c1e5361c744cfa2144"
+                "reference": "7d8851966a55d2f53e4d86b281ba543fa14e953b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/doctrine-orm/zipball/db75bac977cc9fe76cee90c1e5361c744cfa2144",
-                "reference": "db75bac977cc9fe76cee90c1e5361c744cfa2144",
+                "url": "https://api.github.com/repos/api-platform/doctrine-orm/zipball/7d8851966a55d2f53e4d86b281ba543fa14e953b",
+                "reference": "7d8851966a55d2f53e4d86b281ba543fa14e953b",
                 "shasum": ""
             },
             "require": {
@@ -181,13 +181,13 @@
                 "rest"
             ],
             "support": {
-                "source": "https://github.com/api-platform/doctrine-orm/tree/v4.3.10"
+                "source": "https://github.com/api-platform/doctrine-orm/tree/v4.3.13"
             },
-            "time": "2026-06-04T13:58:17+00:00"
+            "time": "2026-06-13T04:46:03+00:00"
         },
         {
             "name": "api-platform/documentation",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/documentation.git",
@@ -244,22 +244,22 @@
             ],
             "description": "API Platform documentation controller.",
             "support": {
-                "source": "https://github.com/api-platform/documentation/tree/v4.3.10"
+                "source": "https://github.com/api-platform/documentation/tree/v4.3.13"
             },
             "time": "2026-04-30T12:21:24+00:00"
         },
         {
             "name": "api-platform/http-cache",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/http-cache.git",
-                "reference": "98e5ba9344abe9db7d6789429745ee4eb0a2fd8f"
+                "reference": "8e71916de766f503dd60f1a1e886b4d704f881a8"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/http-cache/zipball/98e5ba9344abe9db7d6789429745ee4eb0a2fd8f",
-                "reference": "98e5ba9344abe9db7d6789429745ee4eb0a2fd8f",
+                "url": "https://api.github.com/repos/api-platform/http-cache/zipball/8e71916de766f503dd60f1a1e886b4d704f881a8",
+                "reference": "8e71916de766f503dd60f1a1e886b4d704f881a8",
                 "shasum": ""
             },
             "require": {
@@ -324,22 +324,22 @@
                 "rest"
             ],
             "support": {
-                "source": "https://github.com/api-platform/http-cache/tree/v4.3.10"
+                "source": "https://github.com/api-platform/http-cache/tree/v4.3.13"
             },
-            "time": "2026-05-29T13:58:43+00:00"
+            "time": "2026-06-09T14:20:49+00:00"
         },
         {
             "name": "api-platform/hydra",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/hydra.git",
-                "reference": "a0314c8dda95f69f15054d7309ddbc1ca32f2149"
+                "reference": "c9c53cfc9cdf9a2b8499d49dc70cf3ea9dbf8463"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/hydra/zipball/a0314c8dda95f69f15054d7309ddbc1ca32f2149",
-                "reference": "a0314c8dda95f69f15054d7309ddbc1ca32f2149",
+                "url": "https://api.github.com/repos/api-platform/hydra/zipball/c9c53cfc9cdf9a2b8499d49dc70cf3ea9dbf8463",
+                "reference": "c9c53cfc9cdf9a2b8499d49dc70cf3ea9dbf8463",
                 "shasum": ""
             },
             "require": {
@@ -347,7 +347,7 @@
                 "api-platform/json-schema": "^4.3",
                 "api-platform/jsonld": "^4.3",
                 "api-platform/metadata": "^4.3",
-                "api-platform/serializer": "^4.3",
+                "api-platform/serializer": "^4.3.12",
                 "api-platform/state": "^4.3",
                 "php": ">=8.2",
                 "symfony/type-info": "^7.3 || ^8.0",
@@ -411,9 +411,9 @@
                 "rest"
             ],
             "support": {
-                "source": "https://github.com/api-platform/hydra/tree/v4.3.10"
+                "source": "https://github.com/api-platform/hydra/tree/v4.3.13"
             },
-            "time": "2026-06-04T13:52:24+00:00"
+            "time": "2026-06-13T05:11:46+00:00"
         },
         {
             "name": "api-platform/json-schema",
@@ -498,21 +498,21 @@
         },
         {
             "name": "api-platform/jsonld",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/jsonld.git",
-                "reference": "20ca6d7b5c11674c3046d710aaa0c9bc1795e54b"
+                "reference": "026a380c3c85c4210028da43e0cea1b64211bbf5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/jsonld/zipball/20ca6d7b5c11674c3046d710aaa0c9bc1795e54b",
-                "reference": "20ca6d7b5c11674c3046d710aaa0c9bc1795e54b",
+                "url": "https://api.github.com/repos/api-platform/jsonld/zipball/026a380c3c85c4210028da43e0cea1b64211bbf5",
+                "reference": "026a380c3c85c4210028da43e0cea1b64211bbf5",
                 "shasum": ""
             },
             "require": {
                 "api-platform/metadata": "^4.3",
-                "api-platform/serializer": "^4.3",
+                "api-platform/serializer": "^4.3.12",
                 "api-platform/state": "^4.3",
                 "php": ">=8.2"
             },
@@ -572,9 +572,9 @@
                 "rest"
             ],
             "support": {
-                "source": "https://github.com/api-platform/jsonld/tree/v4.3.10"
+                "source": "https://github.com/api-platform/jsonld/tree/v4.3.13"
             },
-            "time": "2026-04-30T12:21:24+00:00"
+            "time": "2026-06-13T05:11:46+00:00"
         },
         {
             "name": "api-platform/mcp",
@@ -745,16 +745,16 @@
         },
         {
             "name": "api-platform/openapi",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/openapi.git",
-                "reference": "21e22f4d74fafc4b01ee5790be7a264387445dcf"
+                "reference": "07c9e5c7325f810cea0cc1821ff564dbae6e57d5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/openapi/zipball/21e22f4d74fafc4b01ee5790be7a264387445dcf",
-                "reference": "21e22f4d74fafc4b01ee5790be7a264387445dcf",
+                "url": "https://api.github.com/repos/api-platform/openapi/zipball/07c9e5c7325f810cea0cc1821ff564dbae6e57d5",
+                "reference": "07c9e5c7325f810cea0cc1821ff564dbae6e57d5",
                 "shasum": ""
             },
             "require": {
@@ -772,7 +772,7 @@
                 "api-platform/doctrine-common": "^4.3",
                 "api-platform/doctrine-odm": "^4.3",
                 "api-platform/doctrine-orm": "^4.3",
-                "api-platform/serializer": "^4.3",
+                "api-platform/serializer": "^4.3.12",
                 "phpspec/prophecy-phpunit": "^2.2",
                 "phpunit/phpunit": "^11.5 || ^12.2",
                 "symfony/type-info": "^7.3 || ^8.0"
@@ -830,22 +830,22 @@
                 "swagger"
             ],
             "support": {
-                "source": "https://github.com/api-platform/openapi/tree/v4.3.10"
+                "source": "https://github.com/api-platform/openapi/tree/v4.3.13"
             },
-            "time": "2026-06-03T14:37:29+00:00"
+            "time": "2026-06-13T05:11:46+00:00"
         },
         {
             "name": "api-platform/serializer",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/serializer.git",
-                "reference": "04d56abff2910390111613716cd75796f23e34d5"
+                "reference": "69042d5861779066b54bca1f6356bf5fe0eed466"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/serializer/zipball/04d56abff2910390111613716cd75796f23e34d5",
-                "reference": "04d56abff2910390111613716cd75796f23e34d5",
+                "url": "https://api.github.com/repos/api-platform/serializer/zipball/69042d5861779066b54bca1f6356bf5fe0eed466",
+                "reference": "69042d5861779066b54bca1f6356bf5fe0eed466",
                 "shasum": ""
             },
             "require": {
@@ -924,22 +924,22 @@
                 "serializer"
             ],
             "support": {
-                "source": "https://github.com/api-platform/serializer/tree/v4.3.10"
+                "source": "https://github.com/api-platform/serializer/tree/v4.3.13"
             },
-            "time": "2026-06-05T12:07:51+00:00"
+            "time": "2026-06-13T05:11:46+00:00"
         },
         {
             "name": "api-platform/state",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/state.git",
-                "reference": "06067bf0efae09badc618fac8add67191f12f1e3"
+                "reference": "3bb76df0857dd1a6e706dd1c5c4b574432a2fa8d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/state/zipball/06067bf0efae09badc618fac8add67191f12f1e3",
-                "reference": "06067bf0efae09badc618fac8add67191f12f1e3",
+                "url": "https://api.github.com/repos/api-platform/state/zipball/3bb76df0857dd1a6e706dd1c5c4b574432a2fa8d",
+                "reference": "3bb76df0857dd1a6e706dd1c5c4b574432a2fa8d",
                 "shasum": ""
             },
             "require": {
@@ -952,7 +952,7 @@
                 "symfony/translation-contracts": "^3.0"
             },
             "require-dev": {
-                "api-platform/serializer": "^4.3",
+                "api-platform/serializer": "^4.3.12",
                 "api-platform/validator": "^4.3.1",
                 "phpunit/phpunit": "^11.5 || ^12.2",
                 "symfony/http-foundation": "^6.4.14 || ^7.0 || ^8.0",
@@ -1021,22 +1021,22 @@
                 "swagger"
             ],
             "support": {
-                "source": "https://github.com/api-platform/state/tree/v4.3.10"
+                "source": "https://github.com/api-platform/state/tree/v4.3.13"
             },
-            "time": "2026-06-05T15:16:47+00:00"
+            "time": "2026-06-13T05:11:46+00:00"
         },
         {
             "name": "api-platform/symfony",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/symfony.git",
-                "reference": "70a1a4468d77c9761ac1a6cba681277fa986c39b"
+                "reference": "358668b0de7c4a214d477a30fe83deab2a5da96c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/api-platform/symfony/zipball/70a1a4468d77c9761ac1a6cba681277fa986c39b",
-                "reference": "70a1a4468d77c9761ac1a6cba681277fa986c39b",
+                "url": "https://api.github.com/repos/api-platform/symfony/zipball/358668b0de7c4a214d477a30fe83deab2a5da96c",
+                "reference": "358668b0de7c4a214d477a30fe83deab2a5da96c",
                 "shasum": ""
             },
             "require": {
@@ -1047,7 +1047,7 @@
                 "api-platform/jsonld": "^4.3",
                 "api-platform/metadata": "^4.3",
                 "api-platform/openapi": "^4.3",
-                "api-platform/serializer": "^4.3",
+                "api-platform/serializer": "^4.3.12",
                 "api-platform/state": "^4.3",
                 "api-platform/validator": "^4.3.1",
                 "php": ">=8.2",
@@ -1150,13 +1150,13 @@
                 "symfony"
             ],
             "support": {
-                "source": "https://github.com/api-platform/symfony/tree/v4.3.10"
+                "source": "https://github.com/api-platform/symfony/tree/v4.3.13"
             },
-            "time": "2026-06-05T15:17:34+00:00"
+            "time": "2026-06-13T05:21:29+00:00"
         },
         {
             "name": "api-platform/validator",
-            "version": "v4.3.10",
+            "version": "v4.3.13",
             "source": {
                 "type": "git",
                 "url": "https://github.com/api-platform/validator.git",
@@ -1226,7 +1226,7 @@
                 "validator"
             ],
             "support": {
-                "source": "https://github.com/api-platform/validator/tree/v4.3.10"
+                "source": "https://github.com/api-platform/validator/tree/v4.3.13"
             },
             "time": "2026-05-07T11:45:31+00:00"
         },
