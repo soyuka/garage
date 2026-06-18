@@ -32,6 +32,21 @@ services:
         condition: service_started
     tty: true
 
+  # Same dev image, code bind-mount and ini as php, so the consumer runs the live source and the
+  # same max_execution_time override is irrelevant here (CLI SAPI ignores it). APP_ENV follows .env.
+  worker:
+    image: ${IMAGES_PREFIX:-}app-php-dev
+    build:
+      context: .
+      target: frankenphp_dev
+    volumes:
+      - ./:/app
+      - ./frankenphp/conf.d/20-app.dev.ini:/usr/local/etc/php/app.conf.d/20-app.dev.ini:ro
+      - /app/var
+    environment:
+      APP_ENV: "${APP_ENV:-dev}"
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+
   # Dashboard — Vite/React dev server, served same-origin behind Caddy at https://localhost.
   # Dev-only (lives in the override): prod builds the SPA to static assets instead of proxying.
   # Context is ../dashboard (sibling of api/); node_modules is an anonymous volume so the host

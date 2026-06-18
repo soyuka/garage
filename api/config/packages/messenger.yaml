@@ -1,0 +1,23 @@
+framework:
+    messenger:
+        failure_transport: failed
+
+        transports:
+            # The agent turn runs here: a Doctrine (Postgres) queue consumed by a separate
+            # `messenger:consume` worker (CLI SAPI, max_execution_time=0), so a turn can run as
+            # long as it needs — the 180s request limit that killed the in-request agent loop is
+            # gone. The HTTP endpoint only enqueues and returns 202; render intents still stream to
+            # the dashboard over Mercure as the worker produces them.
+            async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            failed: 'doctrine://default?queue_name=failed'
+
+        routing:
+            App\Message\RunAgentTurn: async
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                # Sync in tests: dispatch() runs the handler inline, so functional tests can assert
+                # the garage write and the streamed intent right after the 202, with no worker loop.
+                async: 'sync://'

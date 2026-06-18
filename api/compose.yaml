@@ -2,7 +2,7 @@
 services:
   php:
     restart: unless-stopped
-    environment:
+    environment: &php_environment
       # Dev: set SERVER_NAME=http://localhost (in .env) to serve plain HTTP on :80 with no
       # TLS/redirect, so MCP clients without a trusted cert (Goose Flatpak's reqwest) reach
       # /mcp. The OAuth metadata + WWW-Authenticate challenge derive scheme/host from the
@@ -56,6 +56,26 @@ services:
     depends_on:
       casdoor:
         condition: service_started
+      database:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  # Agent-turn consumer. Runs `messenger:consume` under the CLI SAPI (max_execution_time=0), so a
+  # turn's full tool loop is unbounded — the 180s request limit that killed the in-request agent
+  # is gone. Shares the php image and its whole environment (it calls the same agent: writes Mongo,
+  # reads the Postgres HTTP caches, publishes render intents over Mercure). No ports: it consumes
+  # the Doctrine queue, it does not serve HTTP. --time-limit recycles the worker so long-lived
+  # leaks/stale metadata cannot accumulate; restart:unless-stopped brings it straight back.
+  worker:
+    restart: unless-stopped
+    environment: *php_environment
+    command: ["php", "bin/console", "messenger:consume", "async", "failed", "-v", "--time-limit=3600"]
+    depends_on:
+      # php first: its entrypoint runs the DB migration. Waiting for it healthy means migration is
+      # done before this container's own entrypoint runs it again (a no-op), so the two never race.
+      php:
+        condition: service_healthy
       database:
         condition: service_healthy
       mongodb:
