@@ -34,6 +34,10 @@ export function App() {
   const advanceStatus = useCallback(() => setStatus((q) => q.slice(1)), []);
   // One session per tab — scopes the agent's render-intent topic to this dashboard.
   const [sessionId] = useState(() => crypto.randomUUID());
+  // "See all" toggle for the checklist — when on, dismissed (soft-removed) tasks ride along. Mirrored
+  // into a ref so the live-frame / post-write refetches in loadTasks honour it without resubscribing.
+  const [showAllTasks, setShowAllTasks] = useState(false);
+  const showAllTasksRef = useRef(false);
 
   const selected = state.vehicles.find((v) => v.id === state.selectedId) ?? state.vehicles[0];
   // Live Mercure frames carry no checklist (it is its own subresource), so onFrame needs the
@@ -90,7 +94,7 @@ export function App() {
   // length is the open count. Re-run on select, after a tick-off, and on a live frame for this vehicle.
   const loadTasks = useCallback((id: VehicleId) => {
     if (!id.startsWith('/')) return;
-    getVehicleTasks(id)
+    getVehicleTasks(id, showAllTasksRef.current)
       .then((plannedTasks) => {
         // The checklist now carries done tasks too (rendered greyed); only open ones count as pending.
         const openTasks = plannedTasks.filter((t) => t.status === 'open').length;
@@ -160,6 +164,15 @@ export function App() {
     },
     [state.selectedId, loadTasks],
   );
+
+  // Flip the "see all" toggle and refetch — on shows the dismissed (soft-removed) tasks, off hides
+  // them again. The ref keeps later background refetches (live frames, tick-offs) on the same view.
+  const toggleShowAllTasks = useCallback(() => {
+    const next = !showAllTasksRef.current;
+    showAllTasksRef.current = next;
+    setShowAllTasks(next);
+    loadTasks(state.selectedId);
+  }, [state.selectedId, loadTasks]);
 
   // Fill a missing spec straight from the fact panel: POST it as a user fact, then refetch the item
   // so the panel's "non renseignée" row flips to the entered value.
@@ -248,6 +261,8 @@ export function App() {
                 onEdit={editVehicle}
                 onSetTaskStatus={setTaskStatus}
                 onClearDone={clearDoneTasks}
+                showAllTasks={showAllTasks}
+                onToggleShowAllTasks={toggleShowAllTasks}
               />
             ) : (
               <div className="empty-parc">

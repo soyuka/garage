@@ -83,11 +83,15 @@ export function VehicleDetail({
   onEdit,
   onSetTaskStatus,
   onClearDone,
+  showAllTasks,
+  onToggleShowAllTasks,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
   onSetTaskStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') => void;
   onClearDone: (taskIris: string[]) => void;
+  showAllTasks: boolean;
+  onToggleShowAllTasks: () => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -99,6 +103,7 @@ export function VehicleDetail({
   const tasks = vehicle.plannedTasks ?? [];
   const openCount = tasks.filter((t) => t.status === 'open').length;
   const doneIris = tasks.filter((t) => t.status === 'done').map((t) => t.id);
+  const dismissedCount = tasks.filter((t) => t.status === 'dismissed').length;
   const milestones = groupByMilestone(tasks);
   // The full data list is on-demand reference; the agent's show_fact panel is the answer surface.
   const [dataOpen, setDataOpen] = useState(false);
@@ -172,6 +177,9 @@ export function VehicleDetail({
                 Nettoyer les tâches faites ({doneIris.length})
               </button>
             ) : null}
+            <button type="button" className="task-clean" aria-pressed={showAllTasks} onClick={onToggleShowAllTasks}>
+              {showAllTasks ? `Masquer les retirées${dismissedCount > 0 ? ` (${dismissedCount})` : ''}` : 'Voir les tâches retirées'}
+            </button>
             <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
               {openCount} ouverte{openCount > 1 ? 's' : ''}
             </span>
@@ -193,6 +201,7 @@ export function VehicleDetail({
                       task={t}
                       onToggle={() => onSetTaskStatus(t.id, t.status === 'done' ? 'open' : 'done')}
                       onDismiss={() => onSetTaskStatus(t.id, 'dismissed')}
+                      onRestore={() => onSetTaskStatus(t.id, 'open')}
                     />
                   ))}
                 </div>
@@ -232,19 +241,31 @@ export function VehicleDetail({
   );
 }
 
-function TaskRow({ task, onToggle, onDismiss }: { task: PlannedTask; onToggle: () => void; onDismiss: () => void }) {
+function TaskRow({
+  task,
+  onToggle,
+  onDismiss,
+  onRestore,
+}: {
+  task: PlannedTask;
+  onToggle: () => void;
+  onDismiss: () => void;
+  onRestore: () => void;
+}) {
   const done = task.status === 'done';
+  const dismissed = task.status === 'dismissed';
+  const rowClass = dismissed ? 'task-row task-row--dismissed' : done ? 'task-row task-row--done' : 'task-row';
 
   return (
-    <div className={done ? 'task-row task-row--done' : 'task-row'}>
+    <div className={rowClass}>
       <button
         type="button"
         className="task-check"
-        aria-label={done ? 'Rouvrir la tâche' : 'Marquer comme fait'}
+        aria-label={dismissed ? 'Restaurer la tâche' : done ? 'Rouvrir la tâche' : 'Marquer comme fait'}
         aria-pressed={done}
-        onClick={onToggle}
+        onClick={dismissed ? onRestore : onToggle}
       >
-        {done ? '✓' : '○'}
+        {dismissed ? '↺' : done ? '✓' : '○'}
       </button>
       <div className="task-body">
         <div className="task-head">
@@ -263,9 +284,15 @@ function TaskRow({ task, onToggle, onDismiss }: { task: PlannedTask; onToggle: (
           </ul>
         ) : null}
       </div>
-      <button type="button" className="task-dismiss" aria-label="Retirer la tâche" title="Retirer" onClick={onDismiss}>
-        ×
-      </button>
+      {dismissed ? (
+        <button type="button" className="task-dismiss" aria-label="Restaurer la tâche" title="Restaurer" onClick={onRestore}>
+          ↺
+        </button>
+      ) : (
+        <button type="button" className="task-dismiss" aria-label="Retirer la tâche" title="Retirer" onClick={onDismiss}>
+          ×
+        </button>
+      )}
     </div>
   );
 }

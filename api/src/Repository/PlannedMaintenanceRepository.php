@@ -26,13 +26,21 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
      * render them ticked-off/greyed instead of vanishing. KNOWN spec carriers (untargeted, partless,
      * e.g. the catalog spec sheet) are excluded — they feed the facts projection, not the to-do list.
      *
+     * With $includeDismissed the soft-removed tasks ride along too (the dashboard's "see all" view),
+     * sorted last so they sit beneath the live list — a dismiss is recoverable, never a hard delete.
+     *
      * @return list<PlannedMaintenance>
      */
-    public function checklistForVehicle(Vehicle $vehicle): array
+    public function checklistForVehicle(Vehicle $vehicle, bool $includeDismissed = false): array
     {
+        $statuses = [PlannedMaintenanceStatus::Open->value, PlannedMaintenanceStatus::Done->value];
+        if ($includeDismissed) {
+            $statuses[] = PlannedMaintenanceStatus::Dismissed->value;
+        }
+
         $tasks = $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
-            ->field('status')->in([PlannedMaintenanceStatus::Open->value, PlannedMaintenanceStatus::Done->value])
+            ->field('status')->in($statuses)
             ->sort('createdAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
@@ -40,10 +48,20 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->toArray();
 
         $actionable = array_values(array_filter($tasks, static fn (PlannedMaintenance $t): bool => $t->isActionable()));
-        // Open before done, preserving the createdAt order the query already applied within each group.
-        usort($actionable, static fn (PlannedMaintenance $a, PlannedMaintenance $b): int => (int) !$a->isOpen() <=> (int) !$b->isOpen());
+        // Open, then done, then dismissed — preserving the createdAt order the query already applied
+        // within each group. A stable sort keeps that intra-group order.
+        usort($actionable, static fn (PlannedMaintenance $a, PlannedMaintenance $b): int => self::statusRank($a) <=> self::statusRank($b));
 
         return $actionable;
+    }
+
+    private static function statusRank(PlannedMaintenance $task): int
+    {
+        return match ($task->getStatus()) {
+            PlannedMaintenanceStatus::Open => 0,
+            PlannedMaintenanceStatus::Done => 1,
+            PlannedMaintenanceStatus::Dismissed => 2,
+        };
     }
 
     /**

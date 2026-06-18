@@ -7,6 +7,7 @@ namespace App\Maintenance;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
+use App\Garage\DismissMaintenanceOutcome;
 use App\Garage\PlanMaintenanceOutcome;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
@@ -105,6 +106,48 @@ final class PlannedMaintenancePlanner
         $this->entityManager->flush();
 
         return PlanMaintenanceOutcome::planned($task);
+    }
+
+    /**
+     * Soft-remove a checklist task: resolve the vehicle through the same dedup brain, find its one
+     * open task for (type, label), and flip it to Dismissed — it leaves the live checklist but stays
+     * in the DB (recoverable, surfaced by the "show hidden" view). Returns task_not_found when the
+     * vehicle resolves but carries no such open task — there is nothing to remove, never an upsert.
+     */
+    public function dismiss(
+        ?Ulid $vehicleId,
+        ?string $make,
+        ?string $model,
+        ?int $year,
+        VehicleType $vehicleType,
+        ?int $carId,
+        ?string $plate,
+        ?string $vin,
+        bool $confirmNew,
+        string $type,
+        string $source,
+        ?string $label = null,
+    ): DismissMaintenanceOutcome {
+        $resolution = $this->writeResolver->resolveForWrite(
+            $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, $source,
+        );
+
+        if ('ambiguous' === $resolution->status) {
+            return DismissMaintenanceOutcome::ambiguous($resolution->candidates);
+        }
+        if ('not_found' === $resolution->status) {
+            return DismissMaintenanceOutcome::notFound($resolution->vehicleId);
+        }
+
+        $task = $this->tasks->findOpen($resolution->vehicle, $type, $label);
+        if (null === $task) {
+            return DismissMaintenanceOutcome::taskNotFound();
+        }
+
+        $task->close(PlannedMaintenanceStatus::Dismissed, new \DateTimeImmutable());
+        $this->entityManager->flush();
+
+        return DismissMaintenanceOutcome::dismissed($task);
     }
 
     /**

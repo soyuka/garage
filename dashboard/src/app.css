@@ -259,6 +259,9 @@ body {
 .task-row--done { opacity: 0.55; }
 .task-row--done .task-title { text-decoration: line-through; }
 .task-row--done .task-check { color: var(--mpa-accent); border-color: var(--mpa-accent); }
+/* Soft-removed task, shown only in the "see all" view: dimmer than done, title struck, restorable. */
+.task-row--dismissed { opacity: 0.4; }
+.task-row--dismissed .task-title { text-decoration: line-through; }
 .task-check {
   width: 20px; height: 20px; flex: none; margin-top: 1px; padding: 0; line-height: 1;
   border: 1px solid var(--mpa-border-strong); border-radius: var(--mpa-radius-pill);

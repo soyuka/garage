@@ -36,6 +36,41 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $this->assertArrayHasKey('parts', $members[0], 'the shopping list rides each task');
     }
 
+    public function testDismissedTasksAreHiddenByDefaultButSurfacedOnDemand(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $plan = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'type' => 'timing_belt',
+                'label' => 'courroie de distribution',
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $vehicleIri = $plan['task']['vehicle'];
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'dismiss_maintenance',
+            'arguments' => ['vehicle' => $vehicleIri, 'type' => 'timing_belt', 'label' => 'courroie de distribution'],
+        ], 4);
+
+        // Default view: the dismissed task is gone.
+        $live = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertCount(0, $live['member'] ?? $live['hydra:member'] ?? []);
+
+        // "See all" view: the dismissed task reappears, carrying its dismissed status.
+        $all = $client->request('GET', $vehicleIri.'/planned-tasks?includeDismissed=true', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $members = $all['member'] ?? $all['hydra:member'] ?? [];
+        $this->assertCount(1, $members, 'the see-all view must surface the dismissed task');
+        $this->assertSame('dismissed', $members[0]['status'] ?? null);
+    }
+
     public function testTheCollectionKeepsDoneTasks(): void
     {
         $client = static::createClient();

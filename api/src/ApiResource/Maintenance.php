@@ -6,11 +6,13 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\McpTool;
+use App\Dto\DismissMaintenanceInput;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Dto\ListDueMaintenanceInput;
 use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
 use App\Mcp\UiResourceLoader;
+use App\State\DismissMaintenanceProcessor;
 use App\State\GetMaintenanceHistoryProcessor;
 use App\State\ListDueMaintenanceProcessor;
 use App\State\LogMaintenanceProcessor;
@@ -56,6 +58,17 @@ use App\State\PlanMaintenanceProcessor;
             // Upsert keyed on (vehicle, type, label): re-sending the same plan updates one task, never
             // deletes — idempotent and non-destructive.
             annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
+        ),
+        'dismiss_maintenance' => new McpTool(
+            title: 'Dismiss Maintenance Task',
+            description: 'Remove a planned task from a vehicle\'s checklist — use it for "enlève la courroie de distribution de la liste" / "I don\'t need this one". It is a SOFT remove: the task is flipped to "dismissed", so it leaves the live checklist but is kept (recoverable, shown in the "hidden" view) — it never deletes the row. Identify the task by the same key plan_maintenance used: the vehicle (make+model OR its @id) plus the service `type` and, when the task carries one, its `label`. Distinct from ticking a task off as DONE (that credits the work via log_maintenance / the dashboard) — dismiss means the work will NOT be done. A vehicle with no matching open task returns task_not_found (NOT an error). Same ambiguous_match/confirmNew dedup as the other write tools.',
+            input: DismissMaintenanceInput::class,
+            structuredContent: false,
+            processor: DismissMaintenanceProcessor::class,
+            // Soft remove: writes (not read-only) and re-dismissing an already-removed task is a no-op
+            // task_not_found — idempotent. Destructive in intent (drops it off the checklist), though
+            // the row survives, so hosts should gate it behind confirmation.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => true, 'idempotentHint' => true],
         ),
         'list_due_maintenance' => new McpTool(
             title: 'Due Maintenance',

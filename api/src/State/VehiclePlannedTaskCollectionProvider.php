@@ -41,6 +41,10 @@ final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
             return [];
         }
 
-        return array_map(PlannedTask::fromEntity(...), $this->tasks->checklistForVehicle($vehicle));
+        // ?includeDismissed=true is the dashboard's "see all" toggle — soft-removed tasks ride along
+        // beneath the live list so the user can review (and reopen) what was dropped.
+        $includeDismissed = filter_var($context['filters']['includeDismissed'] ?? false, \FILTER_VALIDATE_BOOL);
+
+        return array_map(PlannedTask::fromEntity(...), $this->tasks->checklistForVehicle($vehicle, $includeDismissed));
     }
 }
