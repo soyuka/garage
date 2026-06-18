@@ -50,9 +50,15 @@ services:
 
     # Log Anthropic server-side tool use (web_search) per call. Decorates the platform the garage
     # agent runs on: server tools leave no Toolbox call or domain write, so the platform's raw
-    # response is the only place their use is observable.
+    # response is the only place their use is observable. The decorated platform is a lazy proxy
+    # (AiBundle marks ai.platform.anthropic lazy + proxy), so this decorator must be lazy and carry
+    # the same proxy interface — otherwise the inner profiler decorator (TraceablePlatform) ends up
+    # with a proxy tag but no lazy flag and the container fails to compile.
     App\Agent\ServerToolUseLogger:
         decorates: ai.platform.anthropic
+        lazy: true
+        tags:
+            - { name: proxy, interface: Symfony\AI\Platform\PlatformInterface }
         arguments:
             $inner: '@.inner'
 

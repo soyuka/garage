@@ -23,11 +23,24 @@ use Symfony\AI\Platform\Message\ToolCallMessage;
  * impossible first move, not merely a discouraged one, complementing the prompt guidance.
  */
 #[AsInputProcessor(agent: 'ai.agent.garage')]
-final class WebSearchInputProcessor implements InputProcessorInterface
+final readonly class WebSearchInputProcessor implements InputProcessorInterface
 {
+    public function __construct(
+        private WebSearchBudget $budget,
+    ) {
+    }
+
     public function processInput(Input $input): void
     {
         if (!$this->hasRunLocalTool($input)) {
+            return;
+        }
+
+        // Turn budget spent: pull web_search from the carried-over options so the model cannot
+        // keep re-searching across loop passes (the regression that starved persist/plan).
+        if ($this->budget->exhausted()) {
+            $this->withdrawWebSearch($input);
+
             return;
         }
 
@@ -43,6 +56,25 @@ final class WebSearchInputProcessor implements InputProcessorInterface
         }
 
         $options['server_tools'][] = ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 1];
+        $input->setOptions($options);
+    }
+
+    private function withdrawWebSearch(Input $input): void
+    {
+        $options = $input->getOptions();
+        if (!isset($options['server_tools'])) {
+            return;
+        }
+
+        $options['server_tools'] = array_values(array_filter(
+            $options['server_tools'],
+            static fn (array $tool): bool => 'web_search' !== ($tool['name'] ?? null),
+        ));
+
+        if ([] === $options['server_tools']) {
+            unset($options['server_tools']);
+        }
+
         $input->setOptions($options);
     }
 

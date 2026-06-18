@@ -10,6 +10,7 @@ use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Result\DeferredResult;
+use App\Agent\WebSearchBudget;
 use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\ResultConverterInterface;
 
@@ -68,7 +69,7 @@ final class ServerToolUseLoggerTest extends TestCase
         $inner->method('invoke')->willReturn($deferred);
         $inner->method('getModelCatalog')->willReturn($this->createStub(ModelCatalogInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger);
+        return new ServerToolUseLogger($inner, $logger, new WebSearchBudget(1));
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
+use App\Agent\WebSearchBudget;
 use App\Agent\WebSearchInputProcessor;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Agent\Input;
@@ -21,7 +22,7 @@ final class WebSearchInputProcessorTest extends TestCase
         // local garage/catalog tools at least once.
         $input = new Input('claude-haiku-4-5', new MessageBag(Message::ofUser('quelle huile ?')));
 
-        (new WebSearchInputProcessor())->processInput($input);
+        $this->processor()->processInput($input);
 
         $this->assertArrayNotHasKey('server_tools', $input->getOptions());
     }
@@ -32,7 +33,7 @@ final class WebSearchInputProcessorTest extends TestCase
         // tools came up short — now web_search is allowed as the fallback.
         $input = new Input('claude-haiku-4-5', $this->bagWithToolResult());
 
-        (new WebSearchInputProcessor())->processInput($input);
+        $this->processor()->processInput($input);
 
         $this->assertSame(
             [['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 1]],
@@ -45,7 +46,7 @@ final class WebSearchInputProcessorTest extends TestCase
         $existing = ['type' => 'code_execution_20250522', 'name' => 'code_execution'];
         $input = new Input('claude-haiku-4-5', $this->bagWithToolResult(), ['server_tools' => [$existing]]);
 
-        (new WebSearchInputProcessor())->processInput($input);
+        $this->processor()->processInput($input);
 
         $serverTools = $input->getOptions()['server_tools'];
         $this->assertCount(2, $serverTools);
@@ -58,13 +59,49 @@ final class WebSearchInputProcessorTest extends TestCase
         // The agent's tool-call loop re-invokes Agent::call with the carried-over options,
         // re-running input processors; declaring web_search twice would trip Anthropic's
         // "Tool names must be unique" error.
-        $processor = new WebSearchInputProcessor();
+        $processor = $this->processor();
         $input = new Input('claude-haiku-4-5', $this->bagWithToolResult());
 
         $processor->processInput($input);
         $processor->processInput($input);
 
         $this->assertCount(1, $input->getOptions()['server_tools']);
+    }
+
+    public function testItWithdrawsWebSearchOnceTheTurnBudgetIsSpent(): void
+    {
+        // A search already ran this turn (the platform decorator recorded it into the budget).
+        // web_search must be pulled from the menu so the model cannot keep re-searching the same
+        // thing across loop passes — the regression that blew the token budget.
+        $budget = new WebSearchBudget(1);
+        $budget->record(1);
+
+        $input = new Input('claude-haiku-4-5', $this->bagWithToolResult());
+
+        $this->processor($budget)->processInput($input);
+
+        $this->assertArrayNotHasKey('server_tools', $input->getOptions());
+    }
+
+    public function testItKeepsOtherServerToolsWhenWithdrawingWebSearch(): void
+    {
+        $budget = new WebSearchBudget(1);
+        $budget->record(1);
+
+        $existing = ['type' => 'code_execution_20250522', 'name' => 'code_execution'];
+        $input = new Input('claude-haiku-4-5', $this->bagWithToolResult(), ['server_tools' => [
+            $existing,
+            ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 1],
+        ]]);
+
+        $this->processor($budget)->processInput($input);
+
+        $this->assertSame([$existing], array_values($input->getOptions()['server_tools']));
+    }
+
+    private function processor(?WebSearchBudget $budget = null): WebSearchInputProcessor
+    {
+        return new WebSearchInputProcessor($budget ?? new WebSearchBudget(1));
     }
 
     private function bagWithToolResult(): MessageBag

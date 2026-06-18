@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\WebSearchBudget;
 use App\Message\RunAgentTurn;
 use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Platform\Message\Message;
@@ -24,12 +25,16 @@ final readonly class RunAgentTurnHandler
     public function __construct(
         private AgentInterface $garage,
         private RenderIntentTools $renderTools,
+        private WebSearchBudget $webSearchBudget,
     ) {
     }
 
     public function __invoke(RunAgentTurn $message): void
     {
         $this->renderTools->bindSession($message->sessionTopic);
+        // Fresh per-turn web_search allowance — the budget service is a long-lived singleton in the
+        // worker, so a prior turn's spend must not leak into this one.
+        $this->webSearchBudget->reset();
         $this->renderTools->signalTurnPhase('start');
 
         try {

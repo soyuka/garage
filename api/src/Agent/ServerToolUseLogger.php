@@ -27,6 +27,7 @@ final readonly class ServerToolUseLogger implements PlatformInterface
     public function __construct(
         private PlatformInterface $inner,
         private LoggerInterface $logger,
+        private WebSearchBudget $budget,
     ) {
     }
 
@@ -62,6 +63,10 @@ final readonly class ServerToolUseLogger implements PlatformInterface
         }
 
         $requests = (int) ($data['usage']['server_tool_use']['web_search_requests'] ?? 0);
+
+        // Feed the turn budget: this decorator is the only seam that sees a search actually ran,
+        // so WebSearchInputProcessor can withdraw web_search once the per-turn cap is reached.
+        $this->budget->record($requests);
 
         if ($requests < 1 && [] === $queries) {
             return;
