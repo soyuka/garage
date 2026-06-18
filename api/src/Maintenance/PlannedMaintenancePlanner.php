@@ -92,7 +92,7 @@ final class PlannedMaintenancePlanner
                 $task->setDueDate($dueDate);
             }
             if ([] !== $parts) {
-                $task->setParts($parts);
+                $task->mergeParts($parts);
             }
         }
 

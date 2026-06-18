@@ -109,7 +109,11 @@ final class McpPlanMaintenanceTest extends AppTestCase
 
         $this->assertSame('ok', $second['status']);
         $this->assertSame($first['task']['@id'], $second['task']['@id'], 'A re-run of the same service must update the same task, not create a new one.');
-        $this->assertSame('NEW-REF', $second['task']['parts'][0]['ref']);
+        // Parts merge by ref: a partial re-plan adds to the shopping list, it does not clobber the
+        // parts a prior pass resolved (the oil filter must survive when only the oil is re-sent).
+        $refs = array_column($second['task']['parts'], 'ref');
+        $this->assertContains('OLD-REF', $refs);
+        $this->assertContains('NEW-REF', $refs);
 
         // The upsert leaves exactly one open task on the checklist, not two.
         $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();

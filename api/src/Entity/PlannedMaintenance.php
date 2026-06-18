@@ -170,6 +170,24 @@ class PlannedMaintenance
     }
 
     /**
+     * Additively upsert parts by `ref` — incoming parts replace a same-ref entry in place, new refs
+     * append, unmentioned ones stay. Symmetric with {@see self::setAttribute()}: an incremental plan
+     * ("ajoute l'huile à la liste") must add to the shopping list, never clobber the parts a prior
+     * pass resolved (e.g. the oil filter when only the oil is re-sent).
+     *
+     * @param list<array{ref: string, label?: string, brand?: string, qty?: int}> $parts
+     */
+    public function mergeParts(array $parts): void
+    {
+        $byRef = [];
+        foreach ([...$this->parts, ...$parts] as $part) {
+            $byRef[$part['ref']] = $part;
+        }
+
+        $this->parts = array_values($byRef);
+    }
+
+    /**
      * @return Collection<string, VehicleFact>
      */
     public function getAttributes(): Collection
