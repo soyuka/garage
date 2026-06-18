@@ -29,7 +29,7 @@ final class ServerToolUseLoggerTest extends TestCase
         $logger->expects($this->once())->method('notice')->with(
             $this->stringContains('web_search'),
             $this->callback(static fn (array $ctx): bool => 1 === $ctx['count']
-                && ['Mazda6 2007 distribution chaine 250000 km'] === $ctx['queries']),
+                && 'Mazda6 2007 distribution chaine 250000 km' === $ctx['queries']),
         );
 
         $this->decorator($raw, $logger)->invoke('claude', 'hi');

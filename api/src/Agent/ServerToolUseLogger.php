@@ -69,9 +69,11 @@ final readonly class ServerToolUseLogger implements PlatformInterface
 
         // notice, not info: the worker runs `messenger:consume -v` (SHELL_VERBOSITY=1), where the
         // default HttpKernel logger floors at NOTICE — an info line would never reach the logs.
+        // queries is joined, not an array: that logger interpolates {placeholders} but renders a
+        // non-scalar as the literal "[array]", so the searches would be invisible otherwise.
         $this->logger->notice('Anthropic server tool use: web_search x{count} {queries}', [
             'count' => $requests,
-            'queries' => $queries,
+            'queries' => [] === $queries ? '(no query in this call)' : implode(' | ', $queries),
         ]);
     }
 }
