@@ -10,16 +10,16 @@ export async function getVehicle(iri: string): Promise<VehicleSummary> {
 }
 
 /**
- * GET a vehicle's open checklist — the planned-tasks subresource (a hydra collection of PlannedTask).
- * The API serves each task's IRI as `@id`; we normalize it to `id` so the UI keys/tick-off it like
- * facts do.
+ * GET a vehicle's checklist — the planned-tasks subresource (a hydra collection of PlannedTask).
+ * The API serves each task's IRI as `@id` AND a bare ULID as `id`; the UI needs the IRI to PATCH it,
+ * so normalize `id` to `@id` (the scalar `id` would build a broken `https://host<ulid>` PATCH URL).
  */
 export async function getVehicleTasks(vehicleIri: string): Promise<PlannedTask[]> {
   const res = await fetch(`${API}${vehicleIri}/planned-tasks`, { headers: { Accept: 'application/ld+json' } });
   if (!res.ok) throw new Error(`tasks fetch failed: ${res.status}`);
   const data = (await res.json()) as { member?: RawTask[]; 'hydra:member'?: RawTask[] };
   const members = data.member ?? data['hydra:member'] ?? [];
-  return members.map((t) => ({ ...t, id: t.id ?? t['@id'] }) as PlannedTask);
+  return members.map((t) => ({ ...t, id: t['@id'] ?? t.id }) as PlannedTask);
 }
 
 type RawTask = PlannedTask & { '@id'?: string };

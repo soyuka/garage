@@ -237,10 +237,24 @@ body {
 }
 .tasks { display: flex; flex-direction: column; }
 .task-row {
-  display: grid; grid-template-columns: auto 1fr; align-items: start; gap: var(--mpa-space-3);
+  display: grid; grid-template-columns: auto 1fr auto; align-items: start; gap: var(--mpa-space-3);
   padding: var(--mpa-space-3) 0; border-top: 1px solid var(--mpa-border);
 }
 .task-row:first-child { border-top: none; }
+/* Per-row hide: dismisses the task off the list (status "dismissed"). Quiet until row-hover. */
+.task-dismiss {
+  width: 20px; height: 20px; flex: none; margin-top: 1px; padding: 0; line-height: 1;
+  border: none; background: transparent; color: var(--mpa-faint); cursor: pointer; font-size: 16px;
+  opacity: 0; transition: opacity 0.12s ease;
+}
+.task-row:hover .task-dismiss { opacity: 1; }
+.task-dismiss:hover { color: var(--mpa-alarm, #c0392b); }
+/* "Nettoyer les tâches faites" — bulk-dismiss every done row. */
+.task-clean {
+  border: none; background: transparent; padding: 0; cursor: pointer;
+  color: var(--mpa-accent); font-size: var(--mpa-text-label);
+}
+.task-clean:hover { text-decoration: underline; }
 /* Ticked-off task: greyed, the title struck through. The done status is persisted server-side. */
 .task-row--done { opacity: 0.55; }
 .task-row--done .task-title { text-decoration: line-through; }

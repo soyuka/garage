@@ -82,10 +82,12 @@ export function VehicleDetail({
   vehicle,
   onEdit,
   onSetTaskStatus,
+  onClearDone,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
-  onSetTaskStatus: (taskIri: string, status: 'open' | 'done') => void;
+  onSetTaskStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') => void;
+  onClearDone: (taskIris: string[]) => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -96,6 +98,7 @@ export function VehicleDetail({
   const facts = vehicle.facts ?? [];
   const tasks = vehicle.plannedTasks ?? [];
   const openCount = tasks.filter((t) => t.status === 'open').length;
+  const doneIris = tasks.filter((t) => t.status === 'done').map((t) => t.id);
   const milestones = groupByMilestone(tasks);
   // The full data list is on-demand reference; the agent's show_fact panel is the answer surface.
   const [dataOpen, setDataOpen] = useState(false);
@@ -163,8 +166,15 @@ export function VehicleDetail({
       <Card style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <div className="panel-title">
           <span className="t">Tâches &amp; liste de courses</span>
-          <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
-            {openCount} ouverte{openCount > 1 ? 's' : ''}
+          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--mpa-space-3)' }}>
+            {doneIris.length > 0 ? (
+              <button type="button" className="task-clean" onClick={() => onClearDone(doneIris)}>
+                Nettoyer les tâches faites ({doneIris.length})
+              </button>
+            ) : null}
+            <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
+              {openCount} ouverte{openCount > 1 ? 's' : ''}
+            </span>
           </span>
         </div>
         {tasks.length === 0 ? (
@@ -182,6 +192,7 @@ export function VehicleDetail({
                       key={t.id}
                       task={t}
                       onToggle={() => onSetTaskStatus(t.id, t.status === 'done' ? 'open' : 'done')}
+                      onDismiss={() => onSetTaskStatus(t.id, 'dismissed')}
                     />
                   ))}
                 </div>
@@ -221,7 +232,7 @@ export function VehicleDetail({
   );
 }
 
-function TaskRow({ task, onToggle }: { task: PlannedTask; onToggle: () => void }) {
+function TaskRow({ task, onToggle, onDismiss }: { task: PlannedTask; onToggle: () => void; onDismiss: () => void }) {
   const done = task.status === 'done';
 
   return (
@@ -252,6 +263,9 @@ function TaskRow({ task, onToggle }: { task: PlannedTask; onToggle: () => void }
           </ul>
         ) : null}
       </div>
+      <button type="button" className="task-dismiss" aria-label="Retirer la tâche" title="Retirer" onClick={onDismiss}>
+        ×
+      </button>
     </div>
   );
 }

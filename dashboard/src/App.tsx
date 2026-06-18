@@ -127,10 +127,10 @@ export function App() {
     [state.selectedId, loadDetail],
   );
 
-  // Tick a checklist task off (or reopen it): PATCH its status, then refetch so the card + counter
-  // settle. A done task stays on the list greyed; clicking it again reopens it.
+  // Set a checklist task's status: PATCH it, then refetch so the card + counter settle. "done" stays
+  // greyed (reopen by clicking again), "dismissed" hides it off the list for good.
   const setTaskStatus = useCallback(
-    async (taskIri: string, status: 'open' | 'done') => {
+    async (taskIri: string, status: 'open' | 'done' | 'dismissed') => {
       try {
         await patchTask(taskIri, status);
         loadTasks(state.selectedId);
@@ -138,6 +138,23 @@ export function App() {
         dispatch({
           kind: 'action',
           action: { type: 'toast', tone: 'alarm', message: `Échec de la mise à jour : ${(e as Error).message}` },
+        });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
+  // Clean the list: dismiss every done task at once (one PATCH each), then refetch. Used by the
+  // card's "Nettoyer" action once the work is logged and the greyed rows are just clutter.
+  const clearDoneTasks = useCallback(
+    async (taskIris: string[]) => {
+      try {
+        await Promise.all(taskIris.map((iri) => patchTask(iri, 'dismissed')));
+        loadTasks(state.selectedId);
+      } catch (e) {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec du nettoyage : ${(e as Error).message}` },
         });
       }
     },
@@ -226,7 +243,12 @@ export function App() {
         <main className="canvas">
           <div className="scroll">
             {selected ? (
-              <VehicleDetail vehicle={selected} onEdit={editVehicle} onSetTaskStatus={setTaskStatus} />
+              <VehicleDetail
+                vehicle={selected}
+                onEdit={editVehicle}
+                onSetTaskStatus={setTaskStatus}
+                onClearDone={clearDoneTasks}
+              />
             ) : (
               <div className="empty-parc">
                 <div className="breadcrumb">Atelier / Véhicules</div>
