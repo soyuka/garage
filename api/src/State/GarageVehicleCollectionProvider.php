@@ -7,6 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageVehicle;
+use App\Entity\Vehicle;
+use App\Maintenance\VehicleFactsProjector;
 use App\Repository\VehicleRepository;
 
 /**
@@ -18,8 +20,10 @@ use App\Repository\VehicleRepository;
  */
 final class GarageVehicleCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly VehicleRepository $vehicles)
-    {
+    public function __construct(
+        private readonly VehicleRepository $vehicles,
+        private readonly VehicleFactsProjector $factsProjector,
+    ) {
     }
 
     /**
@@ -27,6 +31,12 @@ final class GarageVehicleCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
-        return array_map(GarageVehicle::fromEntity(...), $this->vehicles->findShared());
+        // The listing stays light (no inlined facts), but carries factCount so the sidebar shows it.
+        return array_map(function (Vehicle $vehicle): GarageVehicle {
+            $resource = GarageVehicle::fromEntity($vehicle);
+            $resource->factCount = \count($this->factsProjector->forVehicle($vehicle));
+
+            return $resource;
+        }, $this->vehicles->findShared());
     }
 }

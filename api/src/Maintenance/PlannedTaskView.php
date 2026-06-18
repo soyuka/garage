@@ -7,6 +7,7 @@ namespace App\Maintenance;
 use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\PlannedTask;
 use App\Entity\PlannedMaintenance;
+use App\Entity\VehicleFact;
 
 /**
  * Flattens a PlannedMaintenance into the array the MCP tool and the vehicle item GET both surface —
@@ -27,6 +28,7 @@ final class PlannedTaskView
      *     target: array{value: int, unit: string|null}|null,
      *     dueDate: string|null,
      *     parts: list<array{ref: string, label?: string, brand?: string, qty?: int}>,
+     *     attributes: list<array{key: string, value: string, unit: string|null, source: string, verified: bool, url: string|null}>,
      *     status: string,
      *     vehicle: string
      * }
@@ -44,6 +46,14 @@ final class PlannedTaskView
                 : null,
             'dueDate' => $task->getDueDate()?->format('Y-m-d'),
             'parts' => $task->getParts(),
+            'attributes' => array_map(static fn (VehicleFact $f): array => [
+                'key' => $f->getKey(),
+                'value' => $f->getValue(),
+                'unit' => $f->getUnit(),
+                'source' => $f->getSource(),
+                'verified' => $f->isVerified(),
+                'url' => $f->getUrl(),
+            ], array_values($task->getAttributes()->toArray())),
             'status' => $task->getStatus()->value,
             'vehicle' => '/garage/vehicles/'.$task->getVehicle()->getId(),
         ];

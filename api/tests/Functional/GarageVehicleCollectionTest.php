@@ -17,13 +17,13 @@ final class GarageVehicleCollectionTest extends AppTestCase
     {
         $client = static::createClient();
 
-        static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'add_vehicle_fact', [
+        // Facts ride on a plan_maintenance item's attributes now — there is no add-fact tool.
+        static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'plan_maintenance', [
             'make' => 'TORO',
             'model' => '246-H',
             'vehicleType' => 'groundscare',
-            'key' => 'oil_type',
-            'value' => 'SAE 5W-30',
-            'source' => 'llm',
+            'type' => 'oil_change',
+            'attributes' => [['key' => 'oil_type', 'value' => 'SAE 5W-30', 'source' => 'llm']],
         ]));
 
         $response = $client->request('GET', '/garage/vehicles');

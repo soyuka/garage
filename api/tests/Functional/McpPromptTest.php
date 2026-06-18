@@ -118,7 +118,8 @@ final class McpPromptTest extends AppTestCase
         $text = $result['result']['messages'][0]['content']['text'];
         $this->assertStringContainsString('XC302ZC', $text);
         $this->assertStringContainsString('lookup_plate', $text);
-        $this->assertStringContainsString('add_vehicle_fact', $text);
+        // Facts are recorded via plan_maintenance attributes now, not a dedicated add-fact tool.
+        $this->assertStringContainsString('plan_maintenance', $text);
     }
 
     public function testLogServicePromptEmbedsVehicleAndPointsAtLogTool(): void
@@ -159,7 +160,8 @@ final class McpPromptTest extends AppTestCase
         // …and steer the model through the existing tools to find + fill the gaps.
         $this->assertStringContainsString('get_vehicle_facts', $text);
         $this->assertStringContainsString('list_due_maintenance', $text);
-        $this->assertStringContainsString('add_vehicle_fact', $text);
+        // Specs are recorded as attributes on plan_maintenance now, not via a dedicated add-fact tool.
+        $this->assertStringContainsString('plan_maintenance', $text);
         $this->assertStringContainsString('log_maintenance', $text);
     }
 

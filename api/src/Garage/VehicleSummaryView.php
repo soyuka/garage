@@ -7,6 +7,7 @@ namespace App\Garage;
 use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\GarageVehicle;
 use App\Entity\Vehicle;
+use App\Maintenance\VehicleFactsProjector;
 
 /**
  * Flattens a garage Vehicle into the summary row the list_vehicles tool surfaces — identity,
@@ -16,8 +17,10 @@ use App\Entity\Vehicle;
  */
 final class VehicleSummaryView
 {
-    public function __construct(private readonly IriConverterInterface $iriConverter)
-    {
+    public function __construct(
+        private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleFactsProjector $factsProjector,
+    ) {
     }
 
     /**
@@ -38,7 +41,7 @@ final class VehicleSummaryView
             'owner' => $vehicle->getOwner(),
             'usageValue' => $vehicle->getUsageValue(),
             'usageUnit' => $vehicle->getUsageUnit()?->value,
-            'factCount' => $vehicle->getFacts()->count(),
+            'factCount' => \count($this->factsProjector->forVehicle($vehicle)),
             'openTaskCount' => $vehicle->openTaskCount(),
             'addedAt' => $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM),
         ];

@@ -6,6 +6,7 @@ namespace App\Maintenance;
 
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
+use App\Entity\VehicleFact;
 use App\Garage\PlanMaintenanceOutcome;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
@@ -32,6 +33,7 @@ final class PlannedMaintenancePlanner
 
     /**
      * @param list<array{ref: string, label?: string, brand?: string, qty?: int}> $parts
+     * @param list<VehicleFact>                                                    $attributes specs to upsert onto the item (additive — never clears unmentioned keys)
      */
     public function plan(
         ?Ulid $vehicleId,
@@ -50,6 +52,7 @@ final class PlannedMaintenancePlanner
         ?UsageUnit $targetUsageUnit = null,
         ?\DateTimeImmutable $dueDate = null,
         array $parts = [],
+        array $attributes = [],
         ?string $addedBy = null,
     ): PlanMaintenanceOutcome {
         $resolution = $this->writeResolver->resolveForWrite(
@@ -91,6 +94,12 @@ final class PlannedMaintenancePlanner
             if ([] !== $parts) {
                 $task->setParts($parts);
             }
+        }
+
+        // Attributes are additive: each upserts its key, unmentioned keys stay — a partial re-plan
+        // never wipes a spec a prior pass recorded.
+        foreach ($attributes as $attribute) {
+            $task->setAttribute($attribute);
         }
 
         $this->entityManager->flush();

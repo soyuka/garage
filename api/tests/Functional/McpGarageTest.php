@@ -16,8 +16,8 @@ final class McpGarageTest extends AppTestCase
         $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
 
         $this->assertContains('get_vehicle_facts', $tools);
-        $this->assertContains('add_vehicle_fact', $tools);
         $this->assertContains('list_vehicles', $tools);
+        $this->assertNotContains('add_vehicle_fact', $tools, 'Facts are recorded via plan_maintenance attributes — there is no add-fact tool.');
     }
 
     public function testListVehiclesReturnsStoredVehiclesWithFactCount(): void
@@ -26,27 +26,21 @@ final class McpGarageTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // Seed two distinct vehicles in the shared garage.
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-40',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY',
+            'vehicleType' => 'cv',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-40',
+            'source' => 'llm',
         ], 4);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -73,27 +67,21 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-40',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY',
+            'vehicleType' => 'cv',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-40',
+            'source' => 'llm',
         ], 4);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -114,16 +102,13 @@ final class McpGarageTest extends AppTestCase
 
         // Stored as groundscare. The presence check must find it without the caller
         // having to guess the vehicleType (the get_vehicle_facts fragility this avoids).
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -174,8 +159,8 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('TORO', $content['vehicle']['make']);
         $this->assertSame('246-H', $content['vehicle']['model']);
         $this->assertSame(['oil_type', 'oil_capacity'], $content['missing']);
-        $this->assertSame('add_vehicle_fact', $content['how_to_add']['tool']);
-        $this->assertArrayHasKey('schema', $content['how_to_add']);
+        $this->assertSame('plan_maintenance', $content['how_to_add']['tool']);
+        $this->assertArrayHasKey('hint', $content['how_to_add']);
     }
 
     public function testAddFactThenRequeryReturnsHitWithProvenance(): void
@@ -183,16 +168,13 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $add = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $add = $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
         $this->assertSame('ok', $add['result']['structuredContent']['status']);
 
@@ -261,12 +243,12 @@ final class McpGarageTest extends AppTestCase
         );
     }
 
-    public function testVerifiedFactIsNotOverwrittenByLlmInput(): void
+    public function testVerifiedFactWinsOverAgentFactForTheSameKey(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        // Seed a verified partsapi fact via the write-through path.
+        // Seed a verified partsapi fact via the write-through path (lands on the catalog_specs item).
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
             'arguments' => [
@@ -277,34 +259,26 @@ final class McpGarageTest extends AppTestCase
             ],
         ], 3);
 
-        $refusal = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'key' => 'oil_capacity',
-                'value' => '9000',
-                'unit' => 'liter',
-                'source' => 'llm',
-            ],
+        // The agent records a contradicting llm value on a service item. The write succeeds — there
+        // is no refusal anymore — but the projection must still surface the VERIFIED catalog value.
+        $plan = $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY',
+            'vehicleType' => 'cv',
+            'key' => 'oil_capacity',
+            'value' => '9000',
+            'unit' => 'liter',
+            'source' => 'llm',
         ], 4);
+        $this->assertSame('ok', $plan['result']['structuredContent']['status']);
 
-        $content = $refusal['result']['structuredContent'];
-        $this->assertSame('refused', $content['status']);
-        $this->assertSame('oil_capacity', $content['existing']['key']);
-        $this->assertSame('partsapi', $content['existing']['source']);
-        $this->assertTrue($content['existing']['verified']);
-        $this->assertNotSame('9000', $content['existing']['value']);
-
-        // The fact must be unchanged when re-read.
         $reread = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv', 'keys' => ['oil_capacity']],
         ], 5);
 
         $fact = $this->factByKey($reread['result']['structuredContent']['facts'], 'oil_capacity');
-        $this->assertSame('partsapi', $fact['source']);
+        $this->assertSame('partsapi', $fact['source'], 'The verified catalog value must win the projection.');
         $this->assertTrue($fact['verified']);
         $this->assertNotSame('9000', $fact['value']);
     }
@@ -314,17 +288,14 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'year' => 2020,
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'year' => 2020,
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -349,16 +320,13 @@ final class McpGarageTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         foreach (['SAE 5W-30', 'SAE 0W-20'] as $id => $value) {
-            $this->call($client, $sessionId, 'tools/call', [
-                'name' => 'add_vehicle_fact',
-                'arguments' => [
-                    'make' => 'TORO',
-                    'model' => '246-H',
-                    'vehicleType' => 'groundscare',
-                    'key' => 'oil_type',
-                    'value' => $value,
-                    'source' => 'llm',
-                ],
+            $this->planFact($client, $sessionId, [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => $value,
+                'source' => 'llm',
             ], 3 + $id);
         }
 
@@ -383,19 +351,16 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_capacity',
-                'value' => '1.9',
-                'unit' => 'liter',
-                'source' => 'web',
-                'url' => 'https://www.toro.com/manual/246-H',
-                'addedBy' => 'support-agent',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_capacity',
+            'value' => '1.9',
+            'unit' => 'liter',
+            'source' => 'web',
+            'url' => 'https://www.toro.com/manual/246-H',
+            'addedBy' => 'support-agent',
         ], 3);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -420,28 +385,22 @@ final class McpGarageTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // Same make+model, two different segments. They must not share a garage row.
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'AMBIGUOUS',
-                'model' => 'X1',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'GROUNDSCARE-OIL',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'AMBIGUOUS',
+            'model' => 'X1',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'GROUNDSCARE-OIL',
+            'source' => 'llm',
         ], 3);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'AMBIGUOUS',
-                'model' => 'X1',
-                'vehicleType' => 'car',
-                'key' => 'oil_type',
-                'value' => 'CAR-OIL',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'AMBIGUOUS',
+            'model' => 'X1',
+            'vehicleType' => 'car',
+            'key' => 'oil_type',
+            'value' => 'CAR-OIL',
+            'source' => 'llm',
         ], 4);
 
         $groundsCare = $this->call($client, $sessionId, 'tools/call', [
@@ -459,16 +418,13 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $list = $this->call($client, $sessionId, 'tools/call', [
@@ -491,16 +447,13 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $facts = $this->call($client, $sessionId, 'tools/call', [
@@ -508,8 +461,8 @@ final class McpGarageTest extends AppTestCase
             'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
         ], 4)['result']['structuredContent']['facts'];
 
-        // Facts are embedded on their vehicle: the value + full provenance travel inline, and a
-        // fact has no own dereferenceable IRI (no @id, no /garage/vehicle-facts endpoint).
+        // Facts are projected from the vehicle's items: the value + full provenance travel inline, and
+        // a fact has no own dereferenceable IRI (no @id, no /garage/vehicle-facts endpoint).
         $oilType = $this->factByKey($facts, 'oil_type');
         $this->assertNotNull($oilType);
         $this->assertSame('SAE 5W-30', $oilType['value']);
@@ -525,30 +478,24 @@ final class McpGarageTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // Stored as TORO 246-H. Toro acquired Wheel Horse — the 246-H is the same machine.
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         // Adding under the other brand string must NOT silently create a second row:
         // same vehicleType + same model is a candidate the agent must confront.
-        $add = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'Wheel Horse',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'engine',
-                'value' => 'Briggs & Stratton 303777',
-                'source' => 'user',
-            ],
+        $add = $this->planFact($client, $sessionId, [
+            'make' => 'Wheel Horse',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'engine',
+            'value' => 'Briggs & Stratton 303777',
+            'source' => 'user',
         ], 4)['result']['structuredContent'];
 
         $this->assertSame('ambiguous_match', $add['status']);
@@ -571,16 +518,13 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $iri = $this->call($client, $sessionId, 'tools/call', [
@@ -589,14 +533,11 @@ final class McpGarageTest extends AppTestCase
         ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
 
         // Resolve the ambiguity by addressing the existing row directly via its @id.
-        $add = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'vehicle' => $iri,
-                'key' => 'engine',
-                'value' => 'Briggs & Stratton 303777',
-                'source' => 'user',
-            ],
+        $add = $this->planFact($client, $sessionId, [
+            'vehicle' => $iri,
+            'key' => 'engine',
+            'value' => 'Briggs & Stratton 303777',
+            'source' => 'user',
         ], 5)['result']['structuredContent'];
         $this->assertSame('ok', $add['status']);
 
@@ -613,30 +554,24 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         // The agent decided it is genuinely a different machine: confirmNew overrides.
-        $add = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'Wheel Horse',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'confirmNew' => true,
-                'key' => 'engine',
-                'value' => 'Briggs & Stratton 303777',
-                'source' => 'user',
-            ],
+        $add = $this->planFact($client, $sessionId, [
+            'make' => 'Wheel Horse',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'confirmNew' => true,
+            'key' => 'engine',
+            'value' => 'Briggs & Stratton 303777',
+            'source' => 'user',
         ], 4)['result']['structuredContent'];
         $this->assertSame('ok', $add['status']);
 
@@ -664,17 +599,14 @@ final class McpGarageTest extends AppTestCase
         ], 3);
 
         // A second add for the same carId under a different model label must be caught.
-        $add = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY III Van',
-                'vehicleType' => 'cv',
-                'carId' => 34247,
-                'key' => 'engine_code',
-                'value' => 'F1AE0481B',
-                'source' => 'web',
-            ],
+        $add = $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY III Van',
+            'vehicleType' => 'cv',
+            'carId' => 34247,
+            'key' => 'engine_code',
+            'value' => 'F1AE0481B',
+            'source' => 'web',
         ], 4)['result']['structuredContent'];
 
         $this->assertSame('ambiguous_match', $add['status']);
@@ -703,17 +635,14 @@ final class McpGarageTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // Seed a vehicle carrying a fact.
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_capacity',
-                'value' => '1.4',
-                'unit' => 'liter',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_capacity',
+            'value' => '1.4',
+            'unit' => 'liter',
+            'source' => 'llm',
         ], 3);
 
         $iri = $this->call($client, $sessionId, 'tools/call', [

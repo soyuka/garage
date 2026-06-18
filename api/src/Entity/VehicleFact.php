@@ -7,18 +7,25 @@ namespace App\Entity;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 
 /**
- * A typed fact about a vehicle (oil_type, oil_capacity, spark_plug_ref…) with full provenance,
- * embedded on its {@see Vehicle} keyed by `key` (the EmbedMany 'set' strategy stores the facts
- * as a `{key: {...}}` map, so one-per-key is structural — no unique index, no join). `verified`
- * is what stops a hallucinated capacity becoming a confident lie, and doubles as the future
- * promotion marker (see docs/TODO.md "## Garage").
+ * A typed spec (oil_type, oil_capacity, spark_plug_ref…) with full provenance, embedded on a
+ * {@see PlannedMaintenance} item as an `attributes` entry keyed by `key` (the EmbedMany 'set'
+ * strategy stores them as a `{key: {...}}` map, so one-per-key is structural per item). The item
+ * list is the single fact store; a vehicle's facts are PROJECTED from its items by
+ * {@see \App\Maintenance\VehicleFactsProjector}. `verified` (derived from the source — catalog/SIV
+ * authoritative, agent not) is what stops a hallucinated value shadowing an authoritative one, and
+ * doubles as the future promotion marker (see docs/TODO.md "## Garage").
  *
- * No own identity: a fact is addressed through its vehicle (inlined on the item GET and the MCP
- * get_vehicle_facts result), never dereferenced on its own.
+ * No own identity: a spec is addressed through its item/vehicle (inlined on the item GET and the
+ * MCP get_vehicle_facts result), never dereferenced on its own.
  */
 #[ODM\EmbeddedDocument]
 class VehicleFact
 {
+    // A fact's `verified` flag is decided by its source: catalog (TecDoc/partsapi) and SIV facts are
+    // authoritative; agent facts (web/llm/user) are not. The projection uses it for precedence — a
+    // verified fact is never shadowed by an unverified one for the same key.
+    public const array AUTHORITATIVE_SOURCES = ['partsapi', 'siv'];
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $key,
@@ -39,26 +46,33 @@ class VehicleFact
     ) {
     }
 
+    public static function isAuthoritativeSource(string $source): bool
+    {
+        return \in_array($source, self::AUTHORITATIVE_SOURCES, true);
+    }
+
     /**
-     * Overwrite the mutable fields, keeping the identity (the `key` it is mapped under). Used by
-     * the resolver to update a fact in place instead of stacking a duplicate for the same key.
+     * Build a fact from a source, deriving `verified` from it (catalog/SIV = authoritative).
      */
-    public function update(
+    public static function fromSource(
+        string $key,
         string $value,
         string $source,
-        bool $verified,
-        ?string $unit,
-        ?string $addedBy,
-        ?string $url,
+        ?string $unit = null,
+        ?string $addedBy = null,
+        ?string $url = null,
         \DateTimeImmutable $addedAt = new \DateTimeImmutable(),
-    ): void {
-        $this->value = $value;
-        $this->source = $source;
-        $this->verified = $verified;
-        $this->unit = $unit;
-        $this->addedBy = $addedBy;
-        $this->url = $url;
-        $this->addedAt = $addedAt;
+    ): self {
+        return new self(
+            key: $key,
+            value: $value,
+            source: $source,
+            verified: self::isAuthoritativeSource($source),
+            addedAt: $addedAt,
+            unit: $unit,
+            addedBy: $addedBy,
+            url: $url,
+        );
     }
 
     public function getKey(): string

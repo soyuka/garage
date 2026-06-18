@@ -21,20 +21,24 @@ final class PlannedMaintenanceRepository extends ServiceDocumentRepository
     }
 
     /**
-     * The open checklist for a vehicle, oldest planned first.
+     * The open, actionable checklist for a vehicle, oldest planned first. KNOWN spec carriers (open
+     * but untargeted, e.g. the catalog spec sheet) are excluded — they feed the facts projection,
+     * not the to-do list.
      *
      * @return list<PlannedMaintenance>
      */
     public function openForVehicle(Vehicle $vehicle): array
     {
-        return array_values($this->createQueryBuilder()
+        $open = $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
             ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
             ->sort('createdAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
             ->execute()
-            ->toArray());
+            ->toArray();
+
+        return array_values(array_filter($open, static fn (PlannedMaintenance $t): bool => $t->isActionable()));
     }
 
     /**

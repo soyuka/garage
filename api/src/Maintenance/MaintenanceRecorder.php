@@ -14,9 +14,9 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * Writes and reads the append-only maintenance log. Resolves the shared vehicle through the
- * same {@see VehicleWriteResolver} as add_vehicle_fact — so logging a service can never spawn a
- * duplicate the fact path would have caught. Unlike facts, records are never updated in place:
- * each log() is a new row, so a vehicle accumulates a full service history.
+ * same {@see VehicleWriteResolver} as plan_maintenance — so logging a service can never spawn a
+ * duplicate the planning path would have caught. Unlike planned items, records are never updated
+ * in place: each log() is a new row, so a vehicle accumulates a full service history.
  */
 final class MaintenanceRecorder
 {

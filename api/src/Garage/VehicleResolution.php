@@ -14,7 +14,7 @@ use Symfony\Component\Uid\Ulid;
  *               reconcile (re-call with a vehicleId, or confirmNew) instead of creating.
  *  - notFound:  a vehicleId was given that resolves to no row.
  *
- * The single dedup brain shared by add_vehicle_fact and log_maintenance, so both write paths
+ * The single dedup brain shared by plan_maintenance and log_maintenance, so both write paths
  * make the same reconcile-or-create decision. See {@see VehicleWriteResolver}.
  */
 final readonly class VehicleResolution

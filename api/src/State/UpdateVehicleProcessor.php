@@ -22,7 +22,7 @@ use Symfony\Component\Uid\Ulid;
 /**
  * MCP `update_vehicle` tool: patches a vehicle's own scalar columns (usage reading, owner, plate,
  * vin, year, modification) on the shared vehicle (creating it if absent), leaving omitted fields
- * unchanged. Identity/dedup mirrors add_vehicle_fact (make+model or @id, with ambiguous_match and
+ * unchanged. Identity/dedup mirrors plan_maintenance (make+model or @id, with ambiguous_match and
  * confirmNew). Returns structured invalid_input/not_found/ambiguous_match results — never throws,
  * so nothing leaks as a -32603 error.
  *

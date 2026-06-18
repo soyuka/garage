@@ -7,18 +7,22 @@ namespace App\Entity;
 use App\Garage\UsageUnit;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Repository\PlannedMaintenanceRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * A planned maintenance task: work the user INTENDS to do, not yet done — the unit of the garage
- * checklist. Carries the parts/fluids it needs (the shopping list) and an optional target the work
- * is pegged to (a usage reading like "à 250 000 km", or a date).
+ * A maintenance item — the single store for everything the agent knows about a service. Two kinds:
+ *  - ACTIONABLE = a to-do on the checklist (carries parts, and/or a target/dueDate it is pegged to);
+ *  - KNOWN      = a pure spec carrier (ONLY attributes, no parts/target/date) — off the checklist
+ *                 (e.g. the catalog spec sheet, or a fact the user simply stated), surfaced only
+ *                 through the facts projection. See {@see self::isSpecCarrier()}.
+ * Both carry `attributes` — embedded {@see VehicleFact} specs keyed by fact key. The vehicle has NO
+ * fact store of its own: facts are projected from items by {@see \App\Maintenance\VehicleFactsProjector}.
  *
- * Three siblings on a Vehicle, deliberately distinct:
- *  - VehicleFact     = a spec (oil_capacity), one document per key;
- *  - MaintenanceRecord = an event that HAPPENED, append-only history;
- *  - PlannedMaintenance = an open intent that resolves to a record once performed.
+ * Siblings on a Vehicle: MaintenanceRecord = an event that HAPPENED (append-only history);
+ * PlannedMaintenance = an open intent that resolves to a record once performed.
  *
  * Dedup is logical (one open task per vehicle+type+label, enforced in the planner), NOT a DB unique
  * constraint — a done task and a fresh open task of the same type must coexist. `owner` is the same
@@ -32,6 +36,13 @@ class PlannedMaintenance
 {
     #[ODM\Id(strategy: 'NONE', type: 'string')]
     private string $id;
+
+    // The item's specs, embedded as a `{key: {...}}` map (the 'set' strategy keys the BSON object by
+    // the collection's PHP keys), so one-attribute-per-key is structural. These are the facts the
+    // projection reads — the item is the only place a spec is stored.
+    /** @var Collection<string, VehicleFact> */
+    #[ODM\EmbedMany(targetDocument: VehicleFact::class, strategy: 'set')]
+    private Collection $attributes;
 
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'plannedTasks')]
@@ -67,6 +78,7 @@ class PlannedMaintenance
         private ?string $owner = null,
     ) {
         $this->id = (string) new Ulid();
+        $this->attributes = new ArrayCollection();
         $vehicle->addPlannedTask($this);
     }
 
@@ -155,6 +167,50 @@ class PlannedMaintenance
     public function setParts(array $parts): void
     {
         $this->parts = $parts;
+    }
+
+    /**
+     * @return Collection<string, VehicleFact>
+     */
+    public function getAttributes(): Collection
+    {
+        return $this->attributes;
+    }
+
+    public function attributeByKey(string $key): ?VehicleFact
+    {
+        return $this->attributes->get($key);
+    }
+
+    /**
+     * Upsert a spec, keyed by its fact key — re-setting a key replaces it in place rather than
+     * stacking a duplicate the keyed map would shadow.
+     */
+    public function setAttribute(VehicleFact $attribute): void
+    {
+        $this->attributes->set($attribute->getKey(), $attribute);
+    }
+
+    /**
+     * Whether this item belongs on the to-do checklist — true unless it is a pure spec carrier.
+     */
+    public function isActionable(): bool
+    {
+        return !$this->isSpecCarrier();
+    }
+
+    /**
+     * A KNOWN spec carrier: it ONLY carries attributes (specs) — no parts, no target, no due date.
+     * The catalog spec sheet and a bare user-stated fact are spec carriers; they feed the facts
+     * projection but never show on the checklist. An item with parts, a target or a date is a real
+     * task even when it also carries specs.
+     */
+    public function isSpecCarrier(): bool
+    {
+        return !$this->attributes->isEmpty()
+            && [] === $this->parts
+            && null === $this->targetUsageValue
+            && null === $this->dueDate;
     }
 
     public function getCompletedAt(): ?\DateTimeImmutable

@@ -16,14 +16,14 @@ final class GarageVehiclePatchTest extends AppTestCase
 {
     private function seedVehicleIri(object $client): string
     {
-        static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'add_vehicle_fact', [
+        // Facts ride on a plan_maintenance item's attributes now — there is no add-fact tool.
+        static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'plan_maintenance', [
             'make' => 'MAZDA',
             'model' => 'MAZDA6',
             'year' => 2007,
             'vehicleType' => 'car',
-            'key' => 'oil_type',
-            'value' => 'SAE 5W-30',
-            'source' => 'llm',
+            'type' => 'oil_change',
+            'attributes' => [['key' => 'oil_type', 'value' => 'SAE 5W-30', 'source' => 'llm']],
         ]));
 
         $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Garage;
 
 use App\Catalog\PartsCatalog;
+use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use App\Repository\VehicleRepository;
@@ -19,6 +20,11 @@ use Symfony\Component\Uid\Ulid;
  */
 final class GarageResolver
 {
+    // The synthetic KNOWN item the catalog write-through hangs its fill-volume specs on: an open,
+    // untargeted maintenance item (off the checklist) whose attributes feed the facts projection.
+    // The vehicle has no fact store of its own, so the catalog spec sheet IS a maintenance item.
+    public const string CATALOG_SPECS_TYPE = 'catalog_specs';
+
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly DocumentManager $entityManager,
@@ -58,46 +64,11 @@ final class GarageResolver
     }
 
     /**
-     * Write a fact onto the vehicle chosen by the shared {@see VehicleWriteResolver} (matched,
-     * addressed by id, or freshly created). Surfaces the resolver's ambiguous/not_found verdicts
-     * as outcomes rather than writing. Returns a refusal (store untouched) when an existing
-     * verified authoritative fact would be overwritten by an llm/user value — the precedence
-     * rule that stops the DB rotting.
-     */
-    public function addFact(
-        ?Ulid $vehicleId,
-        ?string $make,
-        ?string $model,
-        ?int $year,
-        VehicleType $vehicleType,
-        ?int $carId,
-        ?string $plate,
-        ?string $vin,
-        bool $confirmNew,
-        string $key,
-        string $value,
-        ?string $unit,
-        string $source,
-        ?string $url,
-        ?string $addedBy,
-    ): AddFactOutcome {
-        $resolution = $this->writeResolver->resolveForWrite(
-            $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, $source,
-        );
-
-        return match ($resolution->status) {
-            'ambiguous' => AddFactOutcome::ambiguous($resolution->candidates),
-            'not_found' => AddFactOutcome::notFound($resolution->vehicleId),
-            default => $this->writeFact($resolution->vehicle, $key, $value, $unit, $source, $url, $addedBy),
-        };
-    }
-
-    /**
      * Patch the vehicle's OWN scalar columns (usage reading, owner, plate, vin, year, modification)
      * on the row chosen by the shared {@see VehicleWriteResolver} (matched, addressed by id, or
      * freshly created). Surfaces the resolver's ambiguous/not_found verdicts as outcomes rather
      * than writing. Only the provided (non-null) fields are applied — omitted ones are untouched.
-     * This never writes facts (that stays add_vehicle_fact), so there is no precedence rule.
+     * This never writes facts (those are recorded via plan_maintenance attributes).
      */
     public function updateVehicle(
         ?Ulid $vehicleId,
@@ -152,46 +123,6 @@ final class GarageResolver
         return UpdateVehicleOutcome::written($vehicle);
     }
 
-    private function writeFact(
-        Vehicle $vehicle,
-        string $key,
-        string $value,
-        ?string $unit,
-        string $source,
-        ?string $url,
-        ?string $addedBy,
-    ): AddFactOutcome {
-        $existing = $vehicle->factByKey($key);
-        if (null !== $existing && $existing->isVerified() && !$this->isAuthoritative($source)) {
-            return AddFactOutcome::refused($existing);
-        }
-
-        $verified = $this->isAuthoritative($source);
-
-        // One fact per (vehicle, key): update the embedded fact in place rather than stacking a
-        // duplicate the keyed map would shadow with a stale value.
-        if (null !== $existing) {
-            $existing->update($value, $source, $verified, $unit, $addedBy, $url);
-            $this->entityManager->flush();
-
-            return AddFactOutcome::written($existing, $vehicle);
-        }
-
-        $fact = new VehicleFact(
-            key: $key,
-            value: $value,
-            source: $source,
-            verified: $verified,
-            unit: $unit,
-            addedBy: $addedBy,
-            url: $url,
-        );
-        $vehicle->addFact($fact);
-        $this->entityManager->flush();
-
-        return AddFactOutcome::written($fact, $vehicle);
-    }
-
     private function writeThroughFillVolumes(string $make, string $model, ?int $year, VehicleType $vehicleType, int $carId): ?Vehicle
     {
         $facts = $this->fillVolumeFactMapper->toFacts($this->catalog->fillVolumes($carId));
@@ -202,23 +133,22 @@ final class GarageResolver
         $vehicle = new Vehicle($make, $model, $vehicleType, 'partsapi', year: $year, kType: $carId);
         $this->entityManager->persist($vehicle);
 
+        // The catalog fluid specs land on a KNOWN item (no target → off the checklist); the facts
+        // projection reads them back. source 'partsapi' ⇒ verified, so they take precedence over any
+        // agent-supplied spec for the same key.
+        $specs = new PlannedMaintenance($vehicle, self::CATALOG_SPECS_TYPE, 'partsapi');
         foreach ($facts as $fact) {
-            $vehicle->addFact(new VehicleFact(
+            $specs->setAttribute(VehicleFact::fromSource(
                 key: $fact['key'],
                 value: $fact['value'],
                 source: 'partsapi',
-                verified: true,
                 unit: $fact['unit'],
             ));
         }
+        $this->entityManager->persist($specs);
 
         $this->entityManager->flush();
 
         return $vehicle;
-    }
-
-    private function isAuthoritative(string $source): bool
-    {
-        return \in_array($source, ['partsapi', 'siv'], true);
     }
 }

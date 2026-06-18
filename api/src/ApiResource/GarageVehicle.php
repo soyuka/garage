@@ -60,11 +60,14 @@ final class GarageVehicle
     public ?int $usageValue = null;
     #[ApiProperty(description: 'Unit of the usage reading: "km", "mi" or "h" (engine hours). Must be set together with usageValue.')]
     public ?string $usageUnit = null;
+    // Projected from the vehicle's maintenance items (the single fact store); set by the providers,
+    // not by fromEntity — the entity holds no facts of its own.
     #[ApiProperty(writable: false)]
     public int $factCount = 0;
     /**
-     * The vehicle's stored facts with provenance (key/value/unit/source/verified). Populated on the
-     * item GET only; the collection leaves it empty so the parc listing stays light.
+     * The vehicle's facts with provenance (key/value/unit/source/verified), projected from its
+     * maintenance items. Populated on the item GET only; the collection leaves it empty so the parc
+     * listing stays light.
      *
      * @var list<array{key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
      */
@@ -90,7 +93,6 @@ final class GarageVehicle
         $resource->vin = $vehicle->getVin();
         $resource->usageValue = $vehicle->getUsageValue();
         $resource->usageUnit = $vehicle->getUsageUnit()?->value;
-        $resource->factCount = $vehicle->getFacts()->count();
         $resource->addedAt = $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM);
 
         return $resource;

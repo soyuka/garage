@@ -38,6 +38,7 @@ final class GarageVehicleProvider implements ProviderInterface
 
         $resource = GarageVehicle::fromEntity($vehicle);
         $resource->facts = $this->view->factsOf($vehicle);
+        $resource->factCount = \count($resource->facts);
 
         return $resource;
     }

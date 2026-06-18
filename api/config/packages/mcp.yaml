@@ -10,25 +10,26 @@ mcp:
         list_part_categories, list_articles and get_fill_volumes with that carId. Alternatively
         browse by brand with list_makes, list_models and list_cars.
 
-        GARAGE (read + write): the user keeps their own vehicles here. To save a fact about a
-        vehicle (oil type, capacity, part reference, spark plug...) use add_vehicle_fact; to
-        record a dated service event use log_maintenance. BOTH create the vehicle on first write,
-        so you never need a separate "create vehicle" step. Inspect with list_vehicles,
-        get_vehicle_facts, get_maintenance_history and forecast upcoming services with
-        list_due_maintenance.
+        GARAGE (read + write): the user keeps their own vehicles here. To plan intended work and
+        record its specs use plan_maintenance — it carries the parts (the shopping list) AND
+        `attributes` (oil type, capacity, part reference, spark plug...): facts have no separate
+        tool, they are attributes on maintenance items. To record a dated service event use
+        log_maintenance. BOTH create the vehicle on first write, so you never need a separate
+        "create vehicle" step. Inspect with list_vehicles, get_vehicle_facts (a projection over
+        those item attributes), get_maintenance_history and forecast with list_due_maintenance.
 
         AVOID DUPLICATES: before writing, call list_vehicles to see what already exists — the same
         machine is often known under another label (e.g. a TORO and a Wheel Horse 246-H are one
-        mower). If add_vehicle_fact or log_maintenance returns status "ambiguous_match", do NOT
+        mower). If plan_maintenance or log_maintenance returns status "ambiguous_match", do NOT
         retry blindly: inspect the candidates, then re-call with vehicleId set to the matching one
         to update it, or confirmNew:true only if it is genuinely a different vehicle. Pass
         carId/plate/vin whenever known so the same vehicle is recognised next time.
 
         IMPORTANT: the garage accepts ANY vehicle, including ones absent from TecDoc — lawn
         tractors, motorcycles, generators, imports without a French plate. A catalog miss
-        (not_in_catalog) is a normal outcome, not an error: fall back to add_vehicle_fact with
-        the spec sourced from documentation or web lookup. Never refuse to save a vehicle just
-        because it is not in the parts catalog.
+        (not_in_catalog) is a normal outcome, not an error: fall back to plan_maintenance with the
+        spec recorded as an attribute sourced from documentation or web lookup. Never refuse to
+        save a vehicle just because it is not in the parts catalog.
     client_transports:
         stdio: false
         http: true

@@ -43,9 +43,10 @@ final class McpServerTest extends AppTestCase
 
         // lookup_plate queries an external registry (SIV) → open world.
         $this->assertTrue($tools['lookup_plate']['annotations']['openWorldHint'] ?? null);
-        // add_vehicle_fact writes but is additive and never overwrites verified facts.
-        $this->assertFalse($tools['add_vehicle_fact']['annotations']['readOnlyHint'] ?? null);
-        $this->assertFalse($tools['add_vehicle_fact']['annotations']['destructiveHint'] ?? null);
+        // plan_maintenance writes (facts now ride on its attributes) but is additive and never
+        // overwrites verified facts — there is no separate add-fact tool anymore.
+        $this->assertFalse($tools['plan_maintenance']['annotations']['readOnlyHint'] ?? null);
+        $this->assertFalse($tools['plan_maintenance']['annotations']['destructiveHint'] ?? null);
     }
 
     public function testLookupPlateTool(): void

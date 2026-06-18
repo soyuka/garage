@@ -6,26 +6,24 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\McpTool;
-use App\Dto\AddVehicleFactInput;
 use App\Dto\GetVehicleFactsInput;
 use App\Dto\ListVehiclesInput;
 use App\Dto\UpdateVehicleInput;
-use App\State\AddVehicleFactProcessor;
 use App\State\GetVehicleFactsProcessor;
 use App\State\ListVehiclesProcessor;
 use App\State\UpdateVehicleProcessor;
 
 /**
  * The garage: a self-strengthening vehicle store exposed as MCP tools (no HTTP operations
- * in phase 1). get_vehicle_facts reads shared garage → upstream (write-through) → miss;
- * add_vehicle_fact lets the LLM fill catalog misses, with provenance and a precedence rule
- * that never lets an llm/user value overwrite a verified authoritative fact.
+ * in phase 1). get_vehicle_facts reads shared garage → upstream (write-through) → miss. Facts
+ * have no write tool of their own: they are recorded as `attributes` on maintenance items
+ * (plan_maintenance) and read back here as a projection over those items.
  */
 #[ApiResource(
     mcp: [
         'list_vehicles' => new McpTool(
             title: 'List Vehicles',
-            description: 'List the vehicles held in the garage — each as an identity summary (@id, make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. The @id is the vehicle\'s dereferenceable IRI (e.g. "/garage/vehicles/01J…"): reuse it as the `vehicle` argument of get_vehicle_facts/get_maintenance_history/add_vehicle_fact/log_maintenance/update_vehicle to address that exact row. ALWAYS call this before writing, to see what already exists and reuse a vehicle\'s @id rather than risk a duplicate. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType. An empty result returns count 0, not an error.',
+            description: 'List the vehicles held in the garage — each as an identity summary (@id, make, model, year, vehicleType, source, kType, plate, vin) plus a factCount. The @id is the vehicle\'s dereferenceable IRI (e.g. "/garage/vehicles/01J…"): reuse it as the `vehicle` argument of get_vehicle_facts/get_maintenance_history/plan_maintenance/log_maintenance/update_vehicle to address that exact row. ALWAYS call this before writing, to see what already exists and reuse a vehicle\'s @id rather than risk a duplicate. Use it to answer "what vehicles do I have?" before drilling into one with get_vehicle_facts. Filter by make and/or model and/or vehicleType. An empty result returns count 0, not an error.',
             input: ListVehiclesInput::class,
             structuredContent: false,
             processor: ListVehiclesProcessor::class,
@@ -37,7 +35,7 @@ use App\State\UpdateVehicleProcessor;
         // content processor — so they still populate structuredContent at runtime.
         'get_vehicle_facts' => new McpTool(
             title: 'Vehicle Facts',
-            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their stored facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result telling you to gather the data and call add_vehicle_fact — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
+            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Facts are a projection over the vehicle\'s maintenance items — the specs recorded as `attributes` on the tasks you planned. Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result telling you to record the data as attributes on a plan_maintenance call — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
             input: GetVehicleFactsInput::class,
             structuredContent: false,
             processor: GetVehicleFactsProcessor::class,
@@ -45,18 +43,9 @@ use App\State\UpdateVehicleProcessor;
             // not user-intent mutation — hosts should not gate a lookup behind a confirmation.
             annotations: ['readOnlyHint' => true],
         ),
-        'add_vehicle_fact' => new McpTool(
-            title: 'Add Vehicle Fact',
-            description: 'Store a maintenance fact about a vehicle. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its @id (the `vehicle` argument). To avoid duplicates, if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating: re-call with the chosen candidate\'s @id in `vehicle` to update the right one, or confirmNew:true if it is genuinely a different vehicle. Pass carId/plate/vin when known — they are stored and used to recognise the same vehicle later. Facts are stored unverified; a verified manufacturer/TecDoc fact is authoritative and is never overwritten (returns "refused").',
-            input: AddVehicleFactInput::class,
-            structuredContent: false,
-            processor: AddVehicleFactProcessor::class,
-            // Additive: never overwrites a verified fact (returns refused), so not destructive.
-            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false],
-        ),
         'update_vehicle' => new McpTool(
             title: 'Update Vehicle',
-            description: 'Patch a vehicle\'s OWN scalar fields: usage reading (usageValue + usageUnit km/mi/h), owner, plate, vin, year, modification. Omitted fields are left unchanged. This does NOT store maintenance facts (oil type/capacity, coolant…) — use add_vehicle_fact for those. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its @id (the `vehicle` argument). Same dedup as add_vehicle_fact: if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating — re-call with the chosen candidate\'s @id in `vehicle`, or confirmNew:true if it is genuinely a different vehicle. usageValue and usageUnit must be provided together.',
+            description: 'Patch a vehicle\'s OWN scalar fields: usage reading (usageValue + usageUnit km/mi/h), owner, plate, vin, year, modification. Omitted fields are left unchanged. This does NOT store maintenance facts (oil type/capacity, coolant…) — record those as `attributes` on a plan_maintenance call. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its @id (the `vehicle` argument). Dedup: if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating — re-call with the chosen candidate\'s @id in `vehicle`, or confirmNew:true if it is genuinely a different vehicle. usageValue and usageUnit must be provided together.',
             input: UpdateVehicleInput::class,
             structuredContent: false,
             processor: UpdateVehicleProcessor::class,

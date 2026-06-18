@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\GarageVehicle;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
+use App\Maintenance\VehicleFactsProjector;
 
 /**
  * Single source of truth for the dereferenceable vehicle item shape — its scalars plus the inlined
@@ -21,19 +22,19 @@ final class GarageVehicleView
 {
     public function __construct(
         private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleFactsProjector $factsProjector,
     ) {
     }
 
     /**
      * The vehicle's facts with provenance — the shape the item GET inlines (keyed `id`/`key`, not
-     * the MCP FactView's `@id`).
+     * the MCP FactView's `@id`). Facts are projected from the vehicle's maintenance items (their
+     * single store), not held on the vehicle.
      *
      * @return list<array{key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
      */
     public function factsOf(Vehicle $vehicle): array
     {
-        // Facts are a key-indexed embedded map; array_values drops the keys so it serializes as a
-        // JSON array (the dashboard reads `facts` as a list and keys each row by `key`).
         return array_map(static fn (VehicleFact $f): array => [
             'key' => $f->getKey(),
             'value' => $f->getValue(),
@@ -42,7 +43,7 @@ final class GarageVehicleView
             'verified' => $f->isVerified(),
             'addedAt' => $f->getAddedAt()->format(\DateTimeInterface::ATOM),
             'url' => $f->getUrl(),
-        ], array_values($vehicle->getFacts()->toArray()));
+        ], $this->factsProjector->forVehicle($vehicle));
     }
 
     /**
@@ -53,6 +54,8 @@ final class GarageVehicleView
      */
     public function toArray(Vehicle $vehicle): array
     {
+        $facts = $this->factsOf($vehicle);
+
         return [
             '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
             'make' => $vehicle->getMake(),
@@ -65,8 +68,8 @@ final class GarageVehicleView
             'vin' => $vehicle->getVin(),
             'usageValue' => $vehicle->getUsageValue(),
             'usageUnit' => $vehicle->getUsageUnit()?->value,
-            'factCount' => $vehicle->getFacts()->count(),
-            'facts' => $this->factsOf($vehicle),
+            'factCount' => \count($facts),
+            'facts' => $facts,
             'addedAt' => $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM),
         ];
     }

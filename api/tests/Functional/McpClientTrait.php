@@ -82,6 +82,33 @@ trait McpClientTrait
     }
 
     /**
+     * Seed a spec onto a vehicle. Facts have no write tool of their own anymore — they are recorded
+     * as `attributes` on a maintenance item (plan_maintenance). Takes the OLD add_vehicle_fact shape
+     * (make/model/.../key/value/unit/source/url) and folds key/value/unit/source/url into one
+     * attribute on a maintenance item, so the seed reads back through the facts projection. The item
+     * gets no parts/target, so it is a KNOWN spec carrier (off the checklist).
+     *
+     * @param array<string, mixed> $args add_vehicle_fact-style arguments
+     *
+     * @return array<string, mixed>
+     */
+    private function planFact(Client $client, string $sessionId, array $args, int $id): array
+    {
+        $attribute = ['key' => $args['key'], 'value' => $args['value']];
+        foreach (['unit', 'source', 'url'] as $field) {
+            if (isset($args[$field])) {
+                $attribute[$field] = $args[$field];
+            }
+        }
+        unset($args['key'], $args['value'], $args['unit'], $args['url'], $args['source']);
+
+        $args['type'] = $args['type'] ?? 'oil_change';
+        $args['attributes'] = [$attribute];
+
+        return $this->call($client, $sessionId, 'tools/call', ['name' => 'plan_maintenance', 'arguments' => $args], $id);
+    }
+
+    /**
      * @param array<string, mixed> $params
      *
      * @return array{code: int, message: string}

@@ -14,8 +14,8 @@ use App\Entity\Vehicle;
  *               must reconcile (re-call with a vehicleId, or confirmNew) rather than duplicate.
  *  - notFound:  a vehicleId was given that resolves to no row.
  *
- * Mirrors App\Garage\AddFactOutcome: both share the dedup decision via VehicleWriteResolver,
- * differing only in what they write (a record here, a fact there).
+ * Mirrors App\Garage\PlanMaintenanceOutcome: both share the dedup decision via VehicleWriteResolver,
+ * differing only in what they write (a record here, a planned item there).
  */
 final readonly class MaintenanceLogOutcome
 {

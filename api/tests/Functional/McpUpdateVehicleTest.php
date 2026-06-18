@@ -24,16 +24,13 @@ final class McpUpdateVehicleTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // Seed a car so update_vehicle resolves an existing row.
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-40',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY',
+            'vehicleType' => 'cv',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-40',
+            'source' => 'llm',
         ], 3);
 
         $update = $this->call($client, $sessionId, 'tools/call', [
@@ -72,16 +69,13 @@ final class McpUpdateVehicleTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-40',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY',
+            'vehicleType' => 'cv',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-40',
+            'source' => 'llm',
         ], 3);
 
         $iri = $this->call($client, $sessionId, 'tools/call', [
@@ -116,16 +110,13 @@ final class McpUpdateVehicleTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $update = $this->call($client, $sessionId, 'tools/call', [
@@ -150,16 +141,13 @@ final class McpUpdateVehicleTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-40',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'IVECO',
+            'model' => 'DAILY',
+            'vehicleType' => 'cv',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-40',
+            'source' => 'llm',
         ], 3);
 
         $update = $this->call($client, $sessionId, 'tools/call', [

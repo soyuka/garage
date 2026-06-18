@@ -27,8 +27,9 @@ final class AgentMcpToolboxTest extends AppTestCase
 
         $this->assertContains('list_vehicles', $names);
         $this->assertContains('log_maintenance', $names);
-        $this->assertContains('add_vehicle_fact', $names);
         $this->assertContains('get_maintenance_history', $names);
+        // Facts are recorded via plan_maintenance attributes now — there is no add-fact tool.
+        $this->assertNotContains('add_vehicle_fact', $names);
 
         // The usage-write and the checklist tools the SERVICE RECIPE drives MUST be exposed: an
         // allowlist once dropped them silently (586b223), so the prompt commanded tools the agent
@@ -51,14 +52,14 @@ final class AgentMcpToolboxTest extends AppTestCase
         $client = static::createClient();
         $toolbox = static::getContainer()->get(McpToolbox::class);
 
-        // Seed one vehicle through the in-process bridge (a write tool).
-        $toolbox->execute(new ToolCall('seed', 'add_vehicle_fact', [
+        // Seed one vehicle through the in-process bridge (a write tool). Facts ride on a
+        // plan_maintenance item's attributes now — there is no add-fact tool.
+        $toolbox->execute(new ToolCall('seed', 'plan_maintenance', [
             'make' => 'TORO',
             'model' => '246-H',
             'vehicleType' => 'groundscare',
-            'key' => 'oil_type',
-            'value' => 'SAE 5W-30',
-            'source' => 'llm',
+            'type' => 'oil_change',
+            'attributes' => [['key' => 'oil_type', 'value' => 'SAE 5W-30', 'source' => 'llm']],
         ]));
 
         // list_vehicles over the in-process bridge...

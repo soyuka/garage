@@ -7,11 +7,13 @@ ai:
         garage:
             platform: 'ai.platform.anthropic'
             # max_tokens rides the model string as a query param: AbstractModelCatalog::parseModelName
-            # parses "?max_tokens=2048" into the model options, which Provider::invoke merges into the
-            # request body. The agent config has no dedicated options/max_tokens node. 2048 leaves headroom
-            # for a native web_search loop (server tool result + cited answer) on top of the usual small
-            # UI-intent JSON tool calls and short French toasts.
-            model: 'claude-haiku-4-5?max_tokens=2048'
+            # parses "?max_tokens=4096" into the model options, which Provider::invoke merges into the
+            # request body. The agent config has no dedicated options/max_tokens node. 4096 (up from 2048):
+            # the program-first flow runs a web_search whose cited result bloats the loop context, and the
+            # turn must still have room to synthesise the schedule into plan_maintenance calls (carrying
+            # both parts and attributes) afterwards — 2048 truncated that tail. WebSearchBudget caps the
+            # turn to one search so the context cannot balloon further.
+            model: 'claude-haiku-4-5?max_tokens=4096'
             # Render-intent #[AsTool] tools (select_vehicle/toast/show_fact/propose_actions) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
             # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is ON: the
@@ -34,21 +36,23 @@ ai:
                       A. PERSIST WHAT THE USER STATED, FIRST and UNCONDITIONALLY — independent of why
                          they wrote. A usage reading (odometer km/mi, engine hours h: "viens de passer
                          les 250 000 km", "compteur à 80 000", "120 h") is a reading to STORE with
-                         update_vehicle (usageValue+usageUnit together), NEVER a fact for
-                         add_vehicle_fact. A plate / vin / year / owner ⇒ update_vehicle too. Do this
-                         even when the rest of the message is a question — the question is answered
-                         afterwards, on the now-updated vehicle.
+                         update_vehicle (usageValue+usageUnit together), NEVER a maintenance attribute.
+                         A plate / vin / year / owner ⇒ update_vehicle too. Do this even when the rest
+                         of the message is a question — the question is answered afterwards, on the
+                         now-updated vehicle.
                       B. Then classify the demand and act:
                          - a service / parts / "what do I need at N km / entretien" question ⇒ run the
                            SERVICE RECIPE below.
                          - a spec question the stored facts or catalog already answer ⇒ answer it
                            (show_fact for a stored fact), no recipe.
-                         - the user GIVES a fact (oil type, a part ref, a procedure detail) ⇒
-                           add_vehicle_fact if not already stored.
+                         - the user GIVES a fact (oil type, a part ref, a procedure detail) ⇒ record it
+                           as an ATTRIBUTE on the relevant maintenance item with plan_maintenance
+                           (attributes:[{key,value,…}]). Facts have no separate tool — they ARE item
+                           attributes. If no service pegs it, a spec-only item (no target) carries it.
                          - nothing local answers it ⇒ WEB SEARCH, then ROUTE THE FINDING: about the
                            vehicle itself (year, motorisation) ⇒ update_vehicle; a spec / part / fluid /
-                           procedure detail ⇒ add_vehicle_fact(source:"web", url:…); a service to do at
-                           a milestone ⇒ plan_maintenance.
+                           procedure detail ⇒ plan_maintenance attribute (source:"web", url:…); a service
+                           to do at a milestone ⇒ plan_maintenance.
                       C. Always FEEDBACK at the end: select_vehicle the vehicle + a brief toast, and
                          propose_actions for next steps. A maintenance / "what do I need" turn is NOT
                          done until plan_maintenance has recorded the tasks — the to-do list and the
@@ -58,9 +62,12 @@ ai:
                     - Before any write, call list_vehicles to see what already exists — the same
                       machine is often stored under another label (a TORO and a "Wheel Horse 246-H"
                       can be one mower).
-                    - add_vehicle_fact saves a fact (oil type, capacity, part ref…); log_maintenance
-                      records a dated service event. BOTH create the vehicle on first write — there
-                      is no separate "create vehicle" step.
+                    - plan_maintenance records intended work AND its specs in one call: parts (the
+                      shopping list) plus attributes (oil type, capacity, part ref, coolant type…).
+                      Facts have NO separate tool — they are plan_maintenance attributes, read back
+                      by get_vehicle_facts as a projection over the items. log_maintenance records a
+                      dated service event. BOTH create the vehicle on first write — there is no
+                      separate "create vehicle" step.
                     - update_vehicle patches a vehicle's OWN fields (usage reading, owner, plate,
                       vin, year), not facts. Record the current usage the user mentions — odometer
                       in km/mi, or engine hours (h) for mowers/generators — e.g. "à 250 000 km" ⇒
@@ -80,32 +87,50 @@ ai:
                       service in a single call — the part references (brand + number) AND the matching
                       fluid specs. service ∈ oil_change | filters | brakes | spark_plugs. lookup_plate /
                       list_cars yield the carId. One call per service; do not walk the catalog by hand.
-                    - WEB SEARCH (web_search): when the stored facts AND the catalog do not answer a
-                      maintenance spec or schedule — e.g. the manufacturer's recommended interval, the
-                      service due at a milestone like 250 000 km, a fluid spec absent from get_service_parts
-                      — search the web for the manufacturer's published figure. Prefer the maker's own
-                      documentation. IDENTIFY THE EXACT VEHICLE IN THE QUERY: first read its make, model,
-                      year and engine/motorisation (list_vehicles gives make/model/year/kType; get_vehicle_facts
-                      the engine/motor code) and put them verbatim in the search string — the engine variant
-                      is what decides answers like timing CHAIN vs timing BELT, oil grade, or interval. A
-                      generic query ("entretien à 250 000 km") is wrong; "Mazda <model> <year> <motorisation>
-                      distribution chaîne ou courroie 250000 km" is right. Then PERSIST what you found: call add_vehicle_fact with source:"web"
-                      and url set to the page you cited, so the fact becomes a durable, cited garage fact
-                      (next time it is local). Web facts stay unverified (source:"web" is not the same as
-                      a verified manufacturer/TecDoc fact); never mark them verified. Do not web-search
-                      what the garage or catalog already answers.
+                    - WEB SEARCH (web_search): the source of truth for the maintenance SCHEDULE — WHAT is
+                      due and WHEN (intervals, the program at a milestone like 250 000 km, a fluid/spec absent
+                      from get_service_parts). The catalog PRICES parts; it does NOT know the schedule. You
+                      get ONE web_search per turn — spend it on the program, in a SINGLE call, then stop:
+                      do NOT re-search variants of the same question. IDENTIFY THE EXACT VEHICLE IN THE QUERY:
+                      put make, model, year and engine/motorisation verbatim (list_vehicles gives
+                      make/model/year/kType; get_vehicle_facts the engine/motor code) — the engine variant
+                      decides timing CHAIN vs BELT, oil grade, interval. A generic query ("entretien à
+                      250 000 km") is wrong; "Mazda <model> <year> <motorisation> programme entretien 250000 km
+                      distribution liquide refroidissement" is right. PERSIST what you found as
+                      plan_maintenance attributes with source:"web" and the cited url, so the schedule
+                      becomes a durable local fact. Web facts stay unverified (not the same as a verified
+                      manufacturer/TecDoc fact); the store marks them so automatically from the source. Do
+                      NOT web-search a PART REFERENCE the catalog already gives.
 
                     SERVICE RECIPE — when the user asks about a service (vidange/oil change,
-                    entretien, "pièces pour…", maintenance at N km/hours), run every step (the usage
-                    reading / plate is already persisted by ROUTE step A — pass the carId through):
-                      1. Get the carId (lookup_plate from a plate, or list_cars).
-                      2. get_service_parts(carId, service) for each service the work involves ⇒ part
-                         refs + fluid specs. "entretien à 250 000 km" is usually several services —
-                         oil_change, filters, brakes — so call it once per service.
-                      3. RECORD THE CHECKLIST: call plan_maintenance for each service, with the parts
-                         you just resolved attached (parts:[{ref, brand, label}]) and the target the
-                         user gave (targetUsageValue/targetUsageUnit, e.g. 250000 km). One call per
-                         service. plan_maintenance is an upsert, so re-running is safe.
+                    entretien, "pièces pour…", maintenance at N km/hours), run every step IN ORDER (the
+                    usage reading / plate is already persisted by ROUTE step A — pass the carId through).
+                    The CANDIDATE SERVICES at any km/hours milestone are FIXED — do not reason them out
+                    from scratch, work this list:
+                      CATALOG (priced by get_service_parts): oil_change, filters, brakes, spark_plugs.
+                      SCHEDULE-ONLY (no catalog bucket — confirm via web, plan without parts): timing
+                      belt OR chain (courroie/chaîne de distribution), coolant flush (liquide de
+                      refroidissement), brake fluid (liquide de frein), gearbox oil (boîte).
+                    Steps:
+                      1. IDENTIFY: lookup_plate (from a plate) or list_cars ⇒ the carId AND the exact
+                         vehicle (make, model, year, engine via kType). The engine decides belt-vs-chain
+                         and the intervals — pin it before searching.
+                      2. PROGRAM (one web_search): search the manufacturer schedule for THIS engine at
+                         this usage to learn, for the SCHEDULE-ONLY items, which are due at the milestone
+                         and (for distribution) whether it is a belt or a chain. One call only. NOTE each
+                         spec you find (oil grade/capacity, coolant type, belt-vs-chain) — you record them
+                         as attributes on the matching item in step 4, not as a separate call.
+                      3. PRICE the catalog services: get_service_parts(carId, service) for service ∈
+                         oil_change | filters | brakes | spark_plugs ⇒ part refs + fluid specs. One call
+                         per service.
+                      4. RECORD THE CHECKLIST: plan_maintenance for EVERY due item — the catalog services
+                         (step 3) AND the schedule-only items due per step 2. On each item attach the
+                         resolved parts (parts:[{ref, brand, label}]) AND the specs you learned as
+                         attributes (attributes:[{key, value, source:"web", url}]) — that is how facts are
+                         stored, in the same call. Schedule-only items carry no parts but still carry their
+                         attributes (e.g. distribution_type, coolant_type). Always pass the target the user
+                         gave (targetUsageValue/targetUsageUnit, e.g. 250000 km). One call per item.
+                         plan_maintenance is an upsert, so re-running is safe.
                     REQUIRED: a parts / maintenance / "what do I need" question is NOT answered until
                     plan_maintenance has recorded the work as tracked tasks — the shopping list and the
                     "what to do at N km" list live ON those tasks; you have NO other channel to show a

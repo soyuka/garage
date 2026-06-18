@@ -10,9 +10,9 @@ use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * The single dedup brain for every garage write. Decides which vehicle a fact or maintenance
- * record lands on so the two write paths (add_vehicle_fact, log_maintenance) never disagree
- * and never silently spawn a duplicate:
+ * The single dedup brain for every garage write. Decides which vehicle a planned item or
+ * maintenance record lands on so the write paths (plan_maintenance, log_maintenance) never
+ * disagree and never silently spawn a duplicate:
  *
  *  1. vehicleId given   → that exact row (the agent reconciled an earlier ambiguity).
  *  2. exact identity     → the matching (make, model, type, year) row.

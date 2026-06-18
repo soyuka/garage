@@ -26,16 +26,13 @@ final class McpMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // A TORO 246-H already exists in the garage.
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         // Logging a service under the other brand string must surface the candidate, not dup.
@@ -66,16 +63,13 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $iri = $this->call($client, $sessionId, 'tools/call', [
@@ -172,16 +166,13 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'add_vehicle_fact',
-            'arguments' => [
-                'make' => 'TORO',
-                'model' => '246-H',
-                'vehicleType' => 'groundscare',
-                'key' => 'oil_type',
-                'value' => 'SAE 5W-30',
-                'source' => 'llm',
-            ],
+        $this->planFact($client, $sessionId, [
+            'make' => 'TORO',
+            'model' => '246-H',
+            'vehicleType' => 'groundscare',
+            'key' => 'oil_type',
+            'value' => 'SAE 5W-30',
+            'source' => 'llm',
         ], 3);
 
         $log = $this->call($client, $sessionId, 'tools/call', [

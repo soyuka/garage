@@ -15,6 +15,7 @@ use App\Garage\FactView;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
 use App\Garage\VehicleType;
+use App\Maintenance\VehicleFactsProjector;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -30,6 +31,7 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
         private readonly GarageResolver $resolver,
         private readonly FactView $factView,
         private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleFactsProjector $factsProjector,
     ) {
     }
 
@@ -64,8 +66,8 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
                 'vehicle' => $identity,
                 'missing' => $data->keys,
                 'how_to_add' => [
-                    'tool' => 'add_vehicle_fact',
-                    'schema' => $this->addFactSchema(),
+                    'tool' => 'plan_maintenance',
+                    'hint' => 'Facts are recorded as `attributes` on a maintenance item — plan the relevant service and pass attributes:[{key, value, source, url}]. There is no separate add-fact tool.',
                 ],
             ]);
         }
@@ -109,7 +111,7 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
     private function okResult(Vehicle $vehicle, array $keys, array $identity): CallToolResult
     {
         $facts = [];
-        foreach ($vehicle->getFacts() as $fact) {
+        foreach ($this->factsProjector->forVehicle($vehicle) as $fact) {
             if ([] !== $keys && !\in_array($fact->getKey(), $keys, true)) {
                 continue;
             }
@@ -121,23 +123,5 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
             'vehicle' => ['@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle))] + $identity,
             'facts' => $facts,
         ]);
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function addFactSchema(): array
-    {
-        return [
-            'make' => 'string (required)',
-            'model' => 'string (required)',
-            'year' => 'int (optional)',
-            'vehicleType' => 'string: car|moto|cv|groundscare (optional, default car)',
-            'key' => 'string (required), e.g. oil_type, oil_capacity',
-            'value' => 'string (required)',
-            'unit' => 'string (optional), e.g. liter',
-            'source' => 'string: llm|user|web (optional, default llm)',
-            'url' => 'string (optional), source URL when web-sourced',
-        ];
     }
 }

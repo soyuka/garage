@@ -38,12 +38,6 @@ class Vehicle
     #[ODM\Id(strategy: 'NONE', type: 'string')]
     private string $id;
 
-    // Facts embedded as a `{key: {...}}` map (the 'set' strategy keys the BSON object by the
-    // collection's PHP keys), so one-fact-per-key is structural and factByKey() is an O(1) lookup.
-    /** @var Collection<string, VehicleFact> */
-    #[ODM\EmbedMany(targetDocument: VehicleFact::class, strategy: 'set')]
-    private Collection $facts;
-
     /** @var Collection<int, MaintenanceRecord> */
     #[ODM\ReferenceMany(targetDocument: MaintenanceRecord::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
     private Collection $maintenanceRecords;
@@ -81,7 +75,6 @@ class Vehicle
         private ?UsageUnit $usageUnit = null,
     ) {
         $this->id = (string) new Ulid();
-        $this->facts = new ArrayCollection();
         $this->maintenanceRecords = new ArrayCollection();
         $this->plannedTasks = new ArrayCollection();
     }
@@ -212,25 +205,6 @@ class Vehicle
     }
 
     /**
-     * @return Collection<int, VehicleFact>
-     */
-    public function getFacts(): Collection
-    {
-        return $this->facts;
-    }
-
-    public function addFact(VehicleFact $fact): void
-    {
-        // Keyed by fact key — the map slot IS the dedup, and re-adding the same key replaces it.
-        $this->facts->set($fact->getKey(), $fact);
-    }
-
-    public function factByKey(string $key): ?VehicleFact
-    {
-        return $this->facts->get($key);
-    }
-
-    /**
      * @return Collection<int, MaintenanceRecord>
      */
     public function getMaintenanceRecords(): Collection
@@ -261,7 +235,8 @@ class Vehicle
     }
 
     /**
-     * The open tasks only — the live checklist. Done/dismissed tasks drop off.
+     * The open, actionable tasks — the live checklist. Done/dismissed tasks drop off, and so do
+     * KNOWN spec carriers (open but untargeted): those feed the facts projection, not the to-do list.
      *
      * @return list<PlannedMaintenance>
      */
@@ -269,7 +244,7 @@ class Vehicle
     {
         return array_values(array_filter(
             $this->plannedTasks->toArray(),
-            static fn (PlannedMaintenance $task): bool => $task->isOpen(),
+            static fn (PlannedMaintenance $task): bool => $task->isOpen() && $task->isActionable(),
         ));
     }
 

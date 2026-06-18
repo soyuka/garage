@@ -16,8 +16,8 @@ use Mcp\Schema\PromptArgument;
  * Registers the `fill_vehicle_info` MCP prompt — a user-invoked "default action" the host
  * surfaces as a quick-action/slash-command. It is NOT server-side Q&A: prompts/get returns a
  * seed user-message that steers the model to audit one vehicle through the existing tools
- * (get_vehicle_facts, list_due_maintenance) and fill every gap it finds (add_vehicle_fact,
- * log_maintenance), then surface the assumed service intervals for the user to confirm.
+ * (get_vehicle_facts, list_due_maintenance) and fill every gap it finds (plan_maintenance to
+ * record specs as attributes, log_maintenance), then surface the assumed intervals to confirm.
  *
  * A LoaderInterface (not an attribute) because the seed text is templated from the call
  * arguments at prompts/get time — there is no static resource to attach.
@@ -56,7 +56,7 @@ final class FillVehicleInfoPromptLoader implements LoaderInterface
 
             1. Check what is already known. Call get_vehicle_facts (make="{$make}", model="{$model}", vehicleType="{$type}") for its specs, and list_due_maintenance (make="{$make}", model="{$model}", vehicleType="{$type}") for its service forecast and gaps.
 
-            2. Fill the missing specs. For each spec we do not yet have (oil type, oil capacity, coolant, brake fluid, spark plug reference, filter references…), ask me for it, then store it with add_vehicle_fact. If I give a manufacturer/manual source, pass it as the source with its url.
+            2. Fill the missing specs. For each spec we do not yet have (oil type, oil capacity, coolant, brake fluid, spark plug reference, filter references…), ask me for it, then record it as an attribute on the relevant service via plan_maintenance (attributes:[{key, value, source, url}]) — that is how facts are stored, there is no separate add-fact tool. If I give a manufacturer/manual source, pass it as the source with its url.
 
             3. Fill the missing history. The "gaps" / unknownBaseline in list_due_maintenance are recurring services with no logged event, so their next-due is unknown. For each, ask me when it was last done (and the odometer/hour reading then) and record it with log_maintenance. Use usageUnit="hours" for engine-hour machinery.
 
