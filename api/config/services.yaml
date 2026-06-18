@@ -48,6 +48,14 @@ services:
             $renderToolbox: '@.inner'
             $mcpToolbox: '@App\Mcp\Agent\McpToolbox'
 
+    # Log Anthropic server-side tool use (web_search) per call. Decorates the platform the garage
+    # agent runs on: server tools leave no Toolbox call or domain write, so the platform's raw
+    # response is the only place their use is observable.
+    App\Agent\ServerToolUseLogger:
+        decorates: ai.platform.anthropic
+        arguments:
+            $inner: '@.inner'
+
     App\Command\ImportLegacyCacheCommand:
         arguments:
             $sivCache: '@cache.siv'
