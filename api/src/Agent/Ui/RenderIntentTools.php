@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -29,8 +30,10 @@ final class RenderIntentTools
 {
     private ?string $sessionTopic = null;
 
-    public function __construct(private readonly HubInterface $hub)
-    {
+    public function __construct(
+        private readonly HubInterface $hub,
+        private readonly LoggerInterface $logger,
+    ) {
     }
 
     /**
@@ -104,6 +107,17 @@ final class RenderIntentTools
     {
         Assert::notNull($this->sessionTopic, 'No session topic bound for this turn.');
 
-        $this->hub->publish(new Update($this->sessionTopic, json_encode($action, \JSON_THROW_ON_ERROR)));
+        // A render intent is best-effort UI, like the domain live-updates in DomainEventPublisher:
+        // a hub that is down (or untrusted TLS) must never turn the tool call into an error the
+        // model then sees and tries to "recover" from. Log and move on — the tool still acks ok.
+        try {
+            $this->hub->publish(new Update($this->sessionTopic, json_encode($action, \JSON_THROW_ON_ERROR)));
+        } catch (\Throwable $e) {
+            $this->logger->warning('Mercure publish failed for render intent {type} on {topic}: {error}', [
+                'type' => $action['type'] ?? '',
+                'topic' => $this->sessionTopic,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 }

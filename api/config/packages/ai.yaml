@@ -59,7 +59,12 @@ ai:
                       maintenance spec or schedule — e.g. the manufacturer's recommended interval, the
                       service due at a milestone like 250 000 km, a fluid spec absent from get_fill_volumes
                       — search the web for the manufacturer's published figure. Prefer the maker's own
-                      documentation. Then PERSIST what you found: call add_vehicle_fact with source:"web"
+                      documentation. IDENTIFY THE EXACT VEHICLE IN THE QUERY: first read its make, model,
+                      year and engine/motorisation (list_vehicles gives make/model/year/kType; get_vehicle_facts
+                      the engine/motor code) and put them verbatim in the search string — the engine variant
+                      is what decides answers like timing CHAIN vs timing BELT, oil grade, or interval. A
+                      generic query ("entretien à 250 000 km") is wrong; "Mazda <model> <year> <motorisation>
+                      distribution chaîne ou courroie 250000 km" is right. Then PERSIST what you found: call add_vehicle_fact with source:"web"
                       and url set to the page you cited, so the fact becomes a durable, cited garage fact
                       (next time it is local). Web facts stay unverified (source:"web" is not the same as
                       a verified manufacturer/TecDoc fact); never mark them verified. Do not web-search
