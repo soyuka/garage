@@ -45,6 +45,18 @@ final class RenderIntentTools
         $this->sessionTopic = $sessionTopic;
     }
 
+    /**
+     * Streams a turn-lifecycle cue to the dashboard. Not an `#[AsTool]` — the LLM never calls this;
+     * {@see \App\MessageHandler\RunAgentTurnHandler} brackets the tool loop with `start`/`end` so the
+     * dashboard's progress heartbeat knows the worker is running and when it settles. The HTTP 202
+     * ack can no longer carry that signal now the turn runs out of the request thread.
+     */
+    public function signalTurnPhase(string $phase): void
+    {
+        Assert::inArray($phase, ['start', 'end']);
+        $this->publish(['type' => 'turn', 'phase' => $phase]);
+    }
+
     public function selectVehicle(string $id): string
     {
         $this->publish(['type' => 'selectVehicle', 'id' => $id]);

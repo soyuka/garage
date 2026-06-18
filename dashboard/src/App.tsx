@@ -143,17 +143,19 @@ export function App() {
 
   const send = useCallback(
     async (instruction: string) => {
+      // Go busy on dispatch and stay busy: the turn runs in an async worker, so the POST only acks
+      // 202 (queued) — the worker clears busy with a `turn`/`end` cue on the session topic (onFrame).
       setBusy(true);
       try {
         // No action list comes back: the agent streams its intents over the session topic.
         await postTurn(instruction, { sessionId, selectedId: state.selectedId });
       } catch (e) {
+        // The turn never got queued, so no `end` cue is coming — clear busy here.
+        setBusy(false);
         dispatch({
           kind: 'action',
           action: { type: 'toast', tone: 'alarm', message: `Échec de la requête : ${(e as Error).message}` },
         });
-      } finally {
-        setBusy(false);
       }
     },
     [sessionId, state.selectedId],
@@ -162,9 +164,12 @@ export function App() {
   const onFrame = useCallback(
     (frame: MercureFrame) => {
       if ('type' in frame) {
-        // Render intent on the session topic. Progress toasts feed the heartbeat line; errors and
-        // any non-toast intent (selectVehicle/showFact/proposeActions) go to the reducer.
-        if (frame.type === 'toast' && frame.tone !== 'alarm') {
+        // Render intent on the session topic. The `turn` lifecycle cue drives the busy state (the
+        // worker runs async, so the POST ack can't); progress toasts feed the heartbeat line; errors
+        // and any non-toast intent (selectVehicle/showFact/proposeActions) go to the reducer.
+        if (frame.type === 'turn') {
+          setBusy(frame.phase === 'start');
+        } else if (frame.type === 'toast' && frame.tone !== 'alarm') {
           pushStatus(frame.message);
         } else {
           dispatch({ kind: 'action', action: frame });

@@ -132,4 +132,5 @@ export type UIAction =
   | { type: 'selectVehicle'; id: VehicleId }
   | { type: 'showFact'; keys: string[]; title?: string }
   | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }
-  | { type: 'toast'; tone: Tone; message: string };
+  | { type: 'toast'; tone: Tone; message: string }
+  | { type: 'turn'; phase: 'start' | 'end' };

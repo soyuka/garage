@@ -30,8 +30,15 @@ final readonly class RunAgentTurnHandler
     public function __invoke(RunAgentTurn $message): void
     {
         $this->renderTools->bindSession($message->sessionTopic);
+        $this->renderTools->signalTurnPhase('start');
 
-        $this->garage->call(new MessageBag(Message::ofUser($this->turnContext($message))));
+        try {
+            $this->garage->call(new MessageBag(Message::ofUser($this->turnContext($message))));
+        } finally {
+            // Always settle the dashboard's progress heartbeat — even if the loop threw and Messenger
+            // is about to retry — or the UI would stay stuck in the busy state.
+            $this->renderTools->signalTurnPhase('end');
+        }
     }
 
     /**
