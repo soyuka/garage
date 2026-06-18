@@ -8,8 +8,13 @@ use App\Catalog\PartsCatalog;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
+use App\Exception\BudgetExhaustedException;
+use App\Exception\MissingApiKeyException;
+use App\Exception\UpstreamException;
 use App\Repository\VehicleRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -31,6 +36,7 @@ final class GarageResolver
         private readonly PartsCatalog $catalog,
         private readonly FillVolumeFactMapper $fillVolumeFactMapper,
         private readonly VehicleWriteResolver $writeResolver,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -61,6 +67,56 @@ final class GarageResolver
         }
 
         return $this->writeThroughFillVolumes($make, $model, $year, $vehicleType, $carId);
+    }
+
+    /**
+     * Self-heal a vehicle whose kType was known all along but whose catalog spec sheet was never
+     * fetched — the state a row added by plate lookup / update_vehicle is in (those write the
+     * identity and kType but never the fill volumes). Fetches the catalog fluid specs once and
+     * hangs them on a {@see self::CATALOG_SPECS_TYPE} item, exactly like the create-time
+     * write-through. Idempotent: a row that already carries the spec sheet (or has no kType, or
+     * whose kType yields nothing upstream) is left untouched. Returns true only when it wrote.
+     *
+     * Side-effecting on a read is the self-strengthening-store contract (the create-time
+     * write-through already writes on a get_vehicle_facts miss). Upstream responses are cached at
+     * the client, so a kType that yields nothing is not re-fetched on the hot path beyond the cache.
+     */
+    public function backfillCatalogSpecs(Vehicle $vehicle): bool
+    {
+        $carId = $vehicle->getKType();
+        if (null === $carId) {
+            return false;
+        }
+        foreach ($vehicle->getPlannedTasks() as $task) {
+            if (self::CATALOG_SPECS_TYPE === $task->getType()) {
+                return false;
+            }
+        }
+
+        // Best-effort enrichment on a plain read: an upstream hiccup (partsapi quota 401, timeout,
+        // missing key) must never 500 the vehicle GET. Swallow it — the card still renders, facts
+        // just stay un-backfilled until the next read finds the catalog reachable.
+        try {
+            $volumes = $this->catalog->fillVolumes($carId);
+        } catch (UpstreamException|BudgetExhaustedException|MissingApiKeyException $e) {
+            $this->logger->warning('catalog spec backfill skipped: {reason}', [
+                'reason' => $e->getMessage(),
+                'kType' => $carId,
+                'exception' => $e,
+            ]);
+
+            return false;
+        }
+
+        $facts = $this->fillVolumeFactMapper->toFacts($volumes);
+        if ([] === $facts) {
+            return false;
+        }
+
+        $this->persistCatalogSpecs($vehicle, $facts);
+        $this->entityManager->flush();
+
+        return true;
     }
 
     /**
@@ -132,10 +188,21 @@ final class GarageResolver
 
         $vehicle = new Vehicle($make, $model, $vehicleType, 'partsapi', year: $year, kType: $carId);
         $this->entityManager->persist($vehicle);
+        $this->persistCatalogSpecs($vehicle, $facts);
+        $this->entityManager->flush();
 
-        // The catalog fluid specs land on a KNOWN item (no target → off the checklist); the facts
-        // projection reads them back. source 'partsapi' ⇒ verified, so they take precedence over any
-        // agent-supplied spec for the same key.
+        return $vehicle;
+    }
+
+    /**
+     * Hang the catalog fluid specs on a KNOWN item (no target → off the checklist); the facts
+     * projection reads them back. source 'partsapi' ⇒ verified, so they take precedence over any
+     * agent-supplied spec for the same key. Persists the item; the caller owns the flush.
+     *
+     * @param list<array{key: string, value: string, unit: string|null}> $facts
+     */
+    private function persistCatalogSpecs(Vehicle $vehicle, array $facts): void
+    {
         $specs = new PlannedMaintenance($vehicle, self::CATALOG_SPECS_TYPE, 'partsapi');
         foreach ($facts as $fact) {
             $specs->setAttribute(VehicleFact::fromSource(
@@ -146,9 +213,5 @@ final class GarageResolver
             ));
         }
         $this->entityManager->persist($specs);
-
-        $this->entityManager->flush();
-
-        return $vehicle;
     }
 }

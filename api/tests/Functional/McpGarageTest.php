@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Entity\Vehicle;
+use App\Garage\VehicleType;
+use Doctrine\ODM\MongoDB\DocumentManager;
+
 final class McpGarageTest extends AppTestCase
 {
     use McpClientTrait;
@@ -659,6 +663,34 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('ok', $content['status']);
         $this->assertSame($iri, $content['vehicle']['@id']);
         $this->assertSame('oil_capacity', $content['facts'][0]['key']);
+    }
+
+    public function testGetVehicleFactsByIriBackfillsCatalogSpecsWhenKTypeKnown(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // A user-created row carrying a kType but no spec sheet — exactly what plate lookup leaves.
+        $dm = static::getContainer()->get(DocumentManager::class);
+        \assert($dm instanceof DocumentManager);
+        $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007, kType: 19107);
+        $dm->persist($vehicle);
+        $dm->flush();
+        $dm->clear();
+        $iri = '/garage/vehicles/'.$vehicle->getId();
+
+        // Reading facts by @id alone (the dashboard's selected-vehicle handle) backfills the catalog
+        // fill volumes from the kType, so the oil capacity is no longer missing.
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_vehicle_facts',
+            'arguments' => ['vehicle' => $iri, 'keys' => ['oil_capacity']],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame('ok', $content['status']);
+        $oilCapacity = $this->factByKey($content['facts'], 'oil_capacity');
+        $this->assertSame('4.3', $oilCapacity['value']);
+        $this->assertSame('partsapi', $oilCapacity['source']);
+        $this->assertTrue($oilCapacity['verified']);
     }
 
     public function testGetVehicleFactsByUnknownIriIsNotFound(): void

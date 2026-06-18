@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { postTurn } from './agent';
-import { getVehicle, getVehicleTasks, patchTask, patchVehicle } from './garage';
+import { getVehicle, getVehicleTasks, patchTask, patchVehicle, postVehicleFact } from './garage';
 import { Composer } from './components/Composer';
 import { CtaCard } from './components/CtaCard';
 import { FactPanel } from './components/FactPanel';
@@ -92,7 +92,9 @@ export function App() {
     if (!id.startsWith('/')) return;
     getVehicleTasks(id)
       .then((plannedTasks) => {
-        dispatch({ kind: 'patchVehicle', id, patch: { plannedTasks, openTasks: plannedTasks.length } });
+        // The checklist now carries done tasks too (rendered greyed); only open ones count as pending.
+        const openTasks = plannedTasks.filter((t) => t.status === 'open').length;
+        dispatch({ kind: 'patchVehicle', id, patch: { plannedTasks, openTasks } });
       })
       .catch((e) => {
         dispatch({
@@ -125,11 +127,12 @@ export function App() {
     [state.selectedId, loadDetail],
   );
 
-  // Tick a checklist task off: PATCH its status, then refetch the checklist so the card + counter settle.
-  const completeTask = useCallback(
-    async (taskIri: string) => {
+  // Tick a checklist task off (or reopen it): PATCH its status, then refetch so the card + counter
+  // settle. A done task stays on the list greyed; clicking it again reopens it.
+  const setTaskStatus = useCallback(
+    async (taskIri: string, status: 'open' | 'done') => {
       try {
-        await patchTask(taskIri, 'done');
+        await patchTask(taskIri, status);
         loadTasks(state.selectedId);
       } catch (e) {
         dispatch({
@@ -139,6 +142,25 @@ export function App() {
       }
     },
     [state.selectedId, loadTasks],
+  );
+
+  // Fill a missing spec straight from the fact panel: POST it as a user fact, then refetch the item
+  // so the panel's "non renseignée" row flips to the entered value.
+  const fillFact = useCallback(
+    async (key: string, value: string) => {
+      const id = state.selectedId;
+      if (!id.startsWith('/') || value.trim() === '') return;
+      try {
+        await postVehicleFact(id, { key, value: value.trim() });
+        loadDetail(id);
+      } catch (e) {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec de l'enregistrement : ${(e as Error).message}` },
+        });
+      }
+    },
+    [state.selectedId, loadDetail],
   );
 
   const send = useCallback(
@@ -204,7 +226,7 @@ export function App() {
         <main className="canvas">
           <div className="scroll">
             {selected ? (
-              <VehicleDetail vehicle={selected} onEdit={editVehicle} onCompleteTask={completeTask} />
+              <VehicleDetail vehicle={selected} onEdit={editVehicle} onSetTaskStatus={setTaskStatus} />
             ) : (
               <div className="empty-parc">
                 <div className="breadcrumb">Atelier / Véhicules</div>
@@ -227,6 +249,7 @@ export function App() {
               vehicle={selected}
               onExpand={() => dispatch({ kind: 'expandFactPanel' })}
               onDismiss={() => dispatch({ kind: 'dismissFactPanel' })}
+              onFillFact={fillFact}
             />
           ) : null}
           <Composer busy={busy} status={status} onAdvanceStatus={advanceStatus} onSend={send} />

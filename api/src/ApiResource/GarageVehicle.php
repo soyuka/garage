@@ -9,8 +9,11 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use App\Dto\VehicleFactInput;
 use App\Entity\Vehicle;
 use App\State\GarageVehicleCollectionProvider;
+use App\State\GarageVehicleFactProcessor;
 use App\State\GarageVehiclePatchProcessor;
 use App\State\GarageVehicleProvider;
 use Symfony\Component\Uid\Ulid;
@@ -33,6 +36,13 @@ use Symfony\Component\Uid\Ulid;
             uriTemplate: '/garage/vehicles/{id}',
             provider: GarageVehicleProvider::class,
             processor: GarageVehiclePatchProcessor::class,
+        ),
+        // The dashboard's manual fact write: record one user-supplied spec on the vehicle. Input is
+        // a bare {key, value, unit} (VehicleFactInput); the processor returns the fresh vehicle.
+        new Post(
+            uriTemplate: '/garage/vehicles/{id}/facts',
+            input: VehicleFactInput::class,
+            processor: GarageVehicleFactProcessor::class,
         ),
     ],
 )]

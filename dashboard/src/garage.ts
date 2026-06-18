@@ -38,6 +38,23 @@ export async function patchVehicle(
   return res.json() as Promise<VehicleSummary>;
 }
 
+/**
+ * Record a manually-entered spec on a vehicle: POST one {key, value, unit?} to its facts
+ * subresource. Lands as a source "user" (unverified) fact; returns the fresh vehicle with facts.
+ */
+export async function postVehicleFact(
+  iri: string,
+  fact: { key: string; value: string; unit?: string | null },
+): Promise<VehicleSummary> {
+  const res = await fetch(`${API}${iri}/facts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(fact),
+  });
+  if (!res.ok) throw new Error(`fact write failed: ${res.status}`);
+  return res.json() as Promise<VehicleSummary>;
+}
+
 /** Tick a planned task off the checklist: PATCH its status (the only writable field). */
 export async function patchTask(iri: string, status: 'open' | 'done' | 'dismissed'): Promise<void> {
   const res = await fetch(`${API}${iri}`, {

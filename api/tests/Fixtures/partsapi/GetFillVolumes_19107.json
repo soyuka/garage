@@ -1,0 +1,65 @@
+[
+    {
+        "fillInfo": null,
+        "fillTitle": "Моторное масло с фильтром",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "4,30"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Моторное масло с фильтром",
+        "fillType": null,
+        "fillUnit": "л.",
+        "fillVolume": "4,30"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация моторного масла",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "ACEA A5/B5"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Масло коробки переключения передач",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "2,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация масла ступенчатой коробки передач",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "SAE 75W-90"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Охлаждающая жидкость",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "7,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация охлаждающей жидкости",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "Mazda FL22"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Тормозная жидкость при замене",
+        "fillType": null,
+        "fillUnit": "liter",
+        "fillVolume": "1,00"
+    },
+    {
+        "fillInfo": null,
+        "fillTitle": "Спецификация тормозной жидкости",
+        "fillType": null,
+        "fillUnit": null,
+        "fillVolume": "DOT 4"
+    }
+]
