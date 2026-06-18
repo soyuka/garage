@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Mcp\Agent\McpToolbox;
+use Symfony\AI\Agent\Toolbox\Exception\ToolExecutionException;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\Tool;
 
@@ -73,5 +74,22 @@ final class AgentMcpToolboxTest extends AppTestCase
         $this->assertSame($http, $inProcess);
         $this->assertSame(1, $inProcess['count']);
         $this->assertSame('TORO', $inProcess['vehicles'][0]['make']);
+    }
+
+    public function testCatalogUpstreamFailureBecomesARecoverableToolError(): void
+    {
+        static::createClient();
+        $toolbox = static::getContainer()->get(McpToolbox::class);
+
+        // carId 500200 makes the parts-API fixture answer HTTP 401 (auth/rate-limit) — the upstream
+        // failure that once aborted a whole agent turn with an uncaught exception. execute() must
+        // raise a ToolExecutionException, the catchable type FaultTolerantToolbox turns into an error
+        // tool-result for the model, instead of letting the raw UpstreamException escape the loop.
+        $this->expectException(ToolExecutionException::class);
+
+        $toolbox->execute(new ToolCall('x', 'get_service_parts', [
+            'carId' => 500200,
+            'service' => 'oil_change',
+        ]));
     }
 }
