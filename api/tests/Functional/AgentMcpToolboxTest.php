@@ -28,6 +28,21 @@ final class AgentMcpToolboxTest extends AppTestCase
         $this->assertContains('log_maintenance', $names);
         $this->assertContains('add_vehicle_fact', $names);
         $this->assertContains('get_maintenance_history', $names);
+
+        // The usage-write and the checklist tools the SERVICE RECIPE drives MUST be exposed: an
+        // allowlist once dropped them silently (586b223), so the prompt commanded tools the agent
+        // could not see. The filter is now a denylist; assert the recipe's surface stays reachable.
+        $this->assertContains('update_vehicle', $names);
+        $this->assertContains('plan_maintenance', $names);
+        $this->assertContains('get_service_parts', $names);
+
+        // Withheld: the make/model browse roots and the granular catalog walk (get_service_parts
+        // bundles the latter in one call — fewer hops, smaller agent context).
+        $this->assertNotContains('list_makes', $names);
+        $this->assertNotContains('list_models', $names);
+        $this->assertNotContains('get_fill_volumes', $names);
+        $this->assertNotContains('list_part_categories', $names);
+        $this->assertNotContains('list_articles', $names);
     }
 
     public function testExecuteMatchesTheHttpMcpPayloadVerbatim(): void

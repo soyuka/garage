@@ -1,13 +1,19 @@
 import { useEffect } from 'react';
-import type { UIAction } from './types';
+import type { UIAction, VehicleSummary } from './types';
 
 const HUB = import.meta.env.VITE_MERCURE_URL ?? '';
 
+/**
+ * A garage write fanned out on the public vehicle topics. The payload CARRIES the full vehicle
+ * read-model (`resource`, same shape as the item GET), so the dashboard renders the fresh state
+ * directly — no follow-up fetch. Published by App\Mercure\DomainPublisher after each write.
+ */
 export interface DomainEvent {
-  kind: 'vehicle' | 'maintenance' | 'fact';
+  kind: 'vehicle';
   event: 'created' | 'updated';
   vehicle: string;
   iri: string;
+  resource: VehicleSummary;
 }
 
 /**

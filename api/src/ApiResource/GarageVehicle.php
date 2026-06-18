@@ -70,16 +70,9 @@ final class GarageVehicle
      */
     #[ApiProperty(writable: false)]
     public array $facts = [];
-    #[ApiProperty(writable: false, description: 'Count of open tasks on the checklist. Carried on both the listing and the item.')]
-    public int $openTasks = 0;
-    /**
-     * The open checklist (intended work + its parts) with each task's dereferenceable @id for tick-off.
-     * Populated on the item GET only; the collection leaves it empty so the parc listing stays light.
-     *
-     * @var list<array{@id: string, type: string, label: string|null, target: array{value: int, unit: string|null}|null, dueDate: string|null, parts: list<array<string, mixed>>, status: string, vehicle: string}>
-     */
-    #[ApiProperty(writable: false)]
-    public array $plannedTasks = [];
+    // The open checklist is its own subresource — GET /garage/vehicles/{id}/planned-tasks (a
+    // collection of PlannedTask), which the dashboard fetches on select. Its length is the open
+    // count; there is no openTasks scalar on the vehicle.
     #[ApiProperty(writable: false)]
     public string $addedAt;
 
@@ -98,7 +91,6 @@ final class GarageVehicle
         $resource->usageValue = $vehicle->getUsageValue();
         $resource->usageUnit = $vehicle->getUsageUnit()?->value;
         $resource->factCount = $vehicle->getFacts()->count();
-        $resource->openTasks = $vehicle->openTaskCount();
         $resource->addedAt = $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM);
 
         return $resource;

@@ -7,10 +7,13 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use App\Entity\PlannedMaintenance;
 use App\State\PlannedTaskPatchProcessor;
 use App\State\PlannedTaskProvider;
+use App\State\VehiclePlannedTaskCollectionProvider;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -21,6 +24,13 @@ use Symfony\Component\Uid\Ulid;
  */
 #[ApiResource(
     operations: [
+        new GetCollection(
+            uriTemplate: '/garage/vehicles/{vehicleId}/planned-tasks',
+            uriVariables: [
+                'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
+            ],
+            provider: VehiclePlannedTaskCollectionProvider::class,
+        ),
         new Get(uriTemplate: '/garage/planned-tasks/{id}', provider: PlannedTaskProvider::class),
         new Patch(
             uriTemplate: '/garage/planned-tasks/{id}',

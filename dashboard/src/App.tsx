@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useReducer, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { postTurn } from './agent';
-import { getVehicle, patchTask, patchVehicle } from './garage';
+import { getVehicle, getVehicleTasks, patchTask, patchVehicle } from './garage';
 import { Composer } from './components/Composer';
 import { CtaCard } from './components/CtaCard';
 import { FactPanel } from './components/FactPanel';
@@ -36,6 +36,10 @@ export function App() {
   const [sessionId] = useState(() => crypto.randomUUID());
 
   const selected = state.vehicles.find((v) => v.id === state.selectedId) ?? state.vehicles[0];
+  // Live Mercure frames carry no checklist (it is its own subresource), so onFrame needs the
+  // current selection to know whether to refetch tasks — read it from a ref to avoid resubscribing.
+  const selectedIdRef = useRef(state.selectedId);
+  selectedIdRef.current = state.selectedId;
 
   // GET /garage/vehicles → replace the sidebar parc list. Called once on mount and again whenever a
   // vehicle domain event fans out (create/merge), so a write in this tab or another grows the list live.
@@ -54,7 +58,7 @@ export function App() {
   useEffect(loadVehicles, [loadVehicles]);
 
   // GET the selected vehicle item to pull in its facts + usage (the listing omits facts) and merge
-  // them onto the row. Re-run on select and after any vehicle/fact event refreshes the list.
+  // them onto the row. The checklist is NOT here — it rides its own subresource (see loadTasks).
   const loadDetail = useCallback((id: VehicleId) => {
     if (!id.startsWith('/')) return;
     getVehicle(id)
@@ -65,8 +69,6 @@ export function App() {
           id,
           patch: {
             facts: full.facts,
-            plannedTasks: full.plannedTasks,
-            openTasks: full.openTasks,
             usageValue: full.usageValue,
             usageUnit: full.usageUnit,
             mileage: full.mileage,
@@ -76,12 +78,34 @@ export function App() {
           },
         });
       })
-      .catch(() => {
-        /* keep current data if the item is unreachable */
+      .catch((e) => {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec du chargement du véhicule : ${(e as Error).message}` },
+        });
       });
   }, []);
 
-  useEffect(() => loadDetail(state.selectedId), [state.selectedId, loadDetail]);
+  // GET the vehicle's open checklist (the planned-tasks subresource) and merge it onto the row. Its
+  // length is the open count. Re-run on select, after a tick-off, and on a live frame for this vehicle.
+  const loadTasks = useCallback((id: VehicleId) => {
+    if (!id.startsWith('/')) return;
+    getVehicleTasks(id)
+      .then((plannedTasks) => {
+        dispatch({ kind: 'patchVehicle', id, patch: { plannedTasks, openTasks: plannedTasks.length } });
+      })
+      .catch((e) => {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec du chargement des tâches : ${(e as Error).message}` },
+        });
+      });
+  }, []);
+
+  useEffect(() => {
+    loadDetail(state.selectedId);
+    loadTasks(state.selectedId);
+  }, [state.selectedId, loadDetail, loadTasks]);
 
   // Editable-card write: PATCH the vehicle's own scalars, then refetch the item to reconcile.
   const editVehicle = useCallback(
@@ -101,12 +125,12 @@ export function App() {
     [state.selectedId, loadDetail],
   );
 
-  // Tick a checklist task off: PATCH its status, then refetch the item so the card + counter settle.
+  // Tick a checklist task off: PATCH its status, then refetch the checklist so the card + counter settle.
   const completeTask = useCallback(
     async (taskIri: string) => {
       try {
         await patchTask(taskIri, 'done');
-        loadDetail(state.selectedId);
+        loadTasks(state.selectedId);
       } catch (e) {
         dispatch({
           kind: 'action',
@@ -114,7 +138,7 @@ export function App() {
         });
       }
     },
-    [state.selectedId, loadDetail],
+    [state.selectedId, loadTasks],
   );
 
   const send = useCallback(
@@ -147,28 +171,23 @@ export function App() {
         }
         return;
       }
-      // Domain event on a public vehicle topic — a write fanned out (this tab or another).
+      // Domain event on a public vehicle topic — a write fanned out (this tab or another). The
+      // payload carries the vehicle scalars + facts, so merge it straight in. The checklist is its
+      // own subresource and is NOT in the frame, so refetch it when the write touches the open vehicle.
       dispatch({ kind: 'live', message: `${frame.kind}/${frame.event} · ${frame.vehicle.slice(0, 8)}…` });
       pushStatus(`Mise à jour live : ${frame.kind} ${frame.event}`);
-      // A vehicle write changes the parc list itself — refetch so the sidebar grows/dedups live.
-      // maintenance/fact events touch only a vehicle's panels, not the list, so they need no refetch.
-      if (frame.kind === 'vehicle') {
-        loadVehicles();
-      }
-      // A fact/maintenance/usage write on the open vehicle changes its panels — pull the fresh item.
-      if (frame.iri === state.selectedId) {
-        loadDetail(state.selectedId);
+      dispatch({ kind: 'upsertVehicle', summary: frame.resource });
+      if (frame.resource['@id'] === selectedIdRef.current) {
+        loadTasks(selectedIdRef.current);
       }
     },
-    [loadVehicles, loadDetail, pushStatus, state.selectedId],
+    [pushStatus, loadTasks],
   );
 
-  // selectedId is a vehicle IRI path (e.g. /garage/vehicles/01J…) once the real parc loads.
-  const itemTopic = state.selectedId.startsWith('/') ? `${API}${state.selectedId}` : undefined;
-  useMercure(
-    [`${API}/garage/vehicles`, ...(itemTopic ? [itemTopic] : []), `${API}/agent/sessions/${sessionId}`],
-    onFrame,
-  );
+  // The collection topic carries every vehicle's full-resource frame (the publisher fans out to
+  // both the item and collection topics with the same payload), so subscribing to it alone covers
+  // all vehicles — no per-item subscription that would only double-deliver the selected one.
+  useMercure([`${API}/garage/vehicles`, `${API}/agent/sessions/${sessionId}`], onFrame);
 
   const onSelect = (id: VehicleId) => dispatch({ kind: 'action', action: { type: 'selectVehicle', id } });
 

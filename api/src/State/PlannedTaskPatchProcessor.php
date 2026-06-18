@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
 use App\Maintenance\PlannedMaintenanceStatus;
+use App\Mercure\DomainPublisher;
 use App\Repository\PlannedMaintenanceRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -16,8 +17,8 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * The dashboard tick-off write: flips a planned task's lifecycle (status is the only writable field).
- * "done" stamps completedAt; "dismissed" drops it without crediting the work; "open" reopens it. The
- * flush triggers DomainEventPublisher, so the checklist fans out over Mercure like any garage write.
+ * "done" stamps completedAt; "dismissed" drops it without crediting the work; "open" reopens it.
+ * After the flush it publishes the owning vehicle over Mercure so the checklist live-updates.
  *
  * @implements ProcessorInterface<PlannedTask, PlannedTask>
  */
@@ -26,6 +27,7 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
     public function __construct(
         private readonly PlannedMaintenanceRepository $tasks,
         private readonly EntityManagerInterface $em,
+        private readonly DomainPublisher $publisher,
     ) {
     }
 
@@ -50,6 +52,7 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
         }
 
         $this->em->flush();
+        $this->publisher->publishVehicle($task->getVehicle());
 
         return PlannedTask::fromEntity($task);
     }

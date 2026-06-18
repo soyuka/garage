@@ -1,4 +1,4 @@
-import type { VehicleSummary } from './types';
+import type { PlannedTask, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -8,6 +8,21 @@ export async function getVehicle(iri: string): Promise<VehicleSummary> {
   if (!res.ok) throw new Error(`vehicle fetch failed: ${res.status}`);
   return res.json() as Promise<VehicleSummary>;
 }
+
+/**
+ * GET a vehicle's open checklist — the planned-tasks subresource (a hydra collection of PlannedTask).
+ * The API serves each task's IRI as `@id`; we normalize it to `id` so the UI keys/tick-off it like
+ * facts do.
+ */
+export async function getVehicleTasks(vehicleIri: string): Promise<PlannedTask[]> {
+  const res = await fetch(`${API}${vehicleIri}/planned-tasks`, { headers: { Accept: 'application/ld+json' } });
+  if (!res.ok) throw new Error(`tasks fetch failed: ${res.status}`);
+  const data = (await res.json()) as { member?: RawTask[]; 'hydra:member'?: RawTask[] };
+  const members = data.member ?? data['hydra:member'] ?? [];
+  return members.map((t) => ({ ...t, id: t.id ?? t['@id'] }) as PlannedTask);
+}
+
+type RawTask = PlannedTask & { '@id'?: string };
 
 /** Editable-card write: JSON Merge Patch of the vehicle's own scalars (usage reading, plate). */
 export async function patchVehicle(

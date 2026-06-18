@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\PlanMaintenanceInput;
+use App\Entity\PlannedMaintenance;
 use App\Garage\ToolResult;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleSummaryView;
@@ -16,6 +17,7 @@ use App\Garage\VehicleType;
 use App\Maintenance\MaintenanceType;
 use App\Maintenance\PlannedMaintenancePlanner;
 use App\Maintenance\PlannedTaskView;
+use App\Mercure\DomainPublisher;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -33,6 +35,7 @@ final class PlanMaintenanceProcessor implements ProcessorInterface
         private readonly IriConverterInterface $iriConverter,
         private readonly VehicleSummaryView $summaryView,
         private readonly PlannedTaskView $taskView,
+        private readonly DomainPublisher $publisher,
     ) {
     }
 
@@ -99,10 +102,17 @@ final class PlanMaintenanceProcessor implements ProcessorInterface
                 'status' => 'not_found',
                 'reason' => sprintf('No vehicle %s in the garage.', $outcome->vehicleId),
             ]),
-            default => ToolResult::of([
-                'status' => 'ok',
-                'task' => $this->taskView->toArray($outcome->task),
-            ]),
+            default => $this->publishedTask($outcome->task),
         };
+    }
+
+    private function publishedTask(PlannedMaintenance $task): CallToolResult
+    {
+        $this->publisher->publishVehicle($task->getVehicle());
+
+        return ToolResult::of([
+            'status' => 'ok',
+            'task' => $this->taskView->toArray($task),
+        ]);
     }
 }

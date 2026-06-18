@@ -10,7 +10,9 @@ export type Event =
   | { kind: 'dismissCta' }
   // Merge fields fetched/edited locally (facts from the item GET, an optimistic plate/usage edit)
   // onto one vehicle — distinct from the agent's UIAction vocabulary.
-  | { kind: 'patchVehicle'; id: VehicleId; patch: Partial<Vehicle> };
+  | { kind: 'patchVehicle'; id: VehicleId; patch: Partial<Vehicle> }
+  // A garage write pushed the full vehicle read-model over Mercure — merge it in, no refetch.
+  | { kind: 'upsertVehicle'; summary: VehicleSummary };
 
 let toastSeq = 0;
 
@@ -31,6 +33,21 @@ export function reduce(state: DashboardState, ev: Event): DashboardState {
         ...state,
         vehicles: state.vehicles.map((v) => (v.id === ev.id ? { ...v, ...ev.patch } : v)),
       };
+    case 'upsertVehicle': {
+      // The pushed resource is the vehicle scalars + facts (no checklist — that is its own
+      // subresource). Replace the row wholesale, but carry over the locally-loaded checklist so a
+      // live frame doesn't blank it; App.loadTasks refetches it right after for this vehicle.
+      const fresh = vehicleFromSummary(ev.summary);
+      const exists = state.vehicles.some((v) => v.id === fresh.id);
+      const vehicles = exists
+        ? state.vehicles.map((v) =>
+            v.id === fresh.id ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks } : v,
+          )
+        : [...state.vehicles, fresh];
+      // Auto-focus the first vehicle to land, so a freshly-created one is shown without a click.
+      const selectedId = state.selectedId === '' ? fresh.id : state.selectedId;
+      return { ...state, vehicles, selectedId };
+    }
     case 'action':
       return applyAction(state, ev.action);
   }
@@ -46,10 +63,14 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
         const fresh = vehicleFromSummary(s);
         const prev = state.vehicles.find((v) => v.id === fresh.id);
         if (!prev) return fresh;
+        // The listing never carries facts/checklist detail (item GET only) — it sends empty
+        // arrays, not absent ones. Treat absent OR empty as "not loaded" and keep what the item
+        // GET merged, so a collection refetch (incl. StrictMode's double mount) never blanks the
+        // open card. Real clearing flows through the item GET → patchVehicle path.
         return {
           ...fresh,
-          facts: undefined === s.facts ? prev.facts : fresh.facts,
-          plannedTasks: undefined === s.plannedTasks ? prev.plannedTasks : fresh.plannedTasks,
+          facts: s.facts?.length ? fresh.facts : prev.facts,
+          plannedTasks: s.plannedTasks?.length ? fresh.plannedTasks : prev.plannedTasks,
         };
       });
       const selectedId = vehicles.some((v) => v.id === state.selectedId)
@@ -127,8 +148,10 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
     usageUnit: s.usageUnit ?? undefined,
     facts: s.facts,
     nextService: { value: 0, unit: '' },
-    openTasks: s.openTasks ?? 0,
-    plannedTasks: s.plannedTasks ?? [],
+    // The open checklist + its count load separately from the planned-tasks subresource (see
+    // App.loadTasks); the projection starts empty and is filled by a patchVehicle merge.
+    openTasks: 0,
+    plannedTasks: [],
     cost: { total: '—', period: '12 derniers mois', delta: '' },
   };
 }

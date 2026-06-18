@@ -7,8 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageVehicle;
-use App\Entity\VehicleFact;
-use App\Maintenance\PlannedTaskView;
+use App\Garage\GarageVehicleView;
 use App\Repository\VehicleRepository;
 use Symfony\Component\Uid\Ulid;
 
@@ -24,7 +23,7 @@ final class GarageVehicleProvider implements ProviderInterface
 {
     public function __construct(
         private readonly VehicleRepository $vehicles,
-        private readonly PlannedTaskView $taskView,
+        private readonly GarageVehicleView $view,
     ) {
     }
 
@@ -38,17 +37,7 @@ final class GarageVehicleProvider implements ProviderInterface
         }
 
         $resource = GarageVehicle::fromEntity($vehicle);
-        $resource->facts = array_map(static fn (VehicleFact $f): array => [
-            'id' => (string) $f->getId(),
-            'key' => $f->getKey(),
-            'value' => $f->getValue(),
-            'unit' => $f->getUnit(),
-            'source' => $f->getSource(),
-            'verified' => $f->isVerified(),
-            'addedAt' => $f->getAddedAt()->format(\DateTimeInterface::ATOM),
-            'url' => $f->getUrl(),
-        ], $vehicle->getFacts()->toArray());
-        $resource->plannedTasks = array_map($this->taskView->toArray(...), $vehicle->openTasks());
+        $resource->facts = $this->view->factsOf($vehicle);
 
         return $resource;
     }

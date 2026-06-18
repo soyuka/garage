@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\LogMaintenanceInput;
+use App\Entity\MaintenanceRecord;
 use App\Garage\ToolResult;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
@@ -16,6 +17,7 @@ use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\MaintenanceType;
 use App\Maintenance\RecordView;
 use App\Maintenance\UsageUnit;
+use App\Mercure\DomainPublisher;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -33,6 +35,7 @@ final class LogMaintenanceProcessor implements ProcessorInterface
         private readonly IriConverterInterface $iriConverter,
         private readonly VehicleSummaryView $summaryView,
         private readonly RecordView $recordView,
+        private readonly DomainPublisher $publisher,
     ) {
     }
 
@@ -96,10 +99,19 @@ final class LogMaintenanceProcessor implements ProcessorInterface
                 'status' => 'not_found',
                 'reason' => sprintf('No vehicle %s in the garage.', $outcome->vehicleId),
             ]),
-            default => ToolResult::of([
-                'status' => 'ok',
-                'record' => $this->recordView->toArray($outcome->record),
-            ]),
+            default => $this->publishedRecord($outcome->record),
         };
+    }
+
+    private function publishedRecord(MaintenanceRecord $record): CallToolResult
+    {
+        // Logging a service can auto-close a matching open task; publishing the whole vehicle ships
+        // that updated checklist alongside the new history entry in one frame.
+        $this->publisher->publishVehicle($record->getVehicle());
+
+        return ToolResult::of([
+            'status' => 'ok',
+            'record' => $this->recordView->toArray($record),
+        ]);
     }
 }

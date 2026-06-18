@@ -14,7 +14,7 @@ use Webmozart\Assert\Assert;
  * Agent-local render-intent tools: the LLM calls these to drive the dashboard. Each validates its
  * arguments against the typed {@see UiAction} vocabulary and publishes the resulting intent to the
  * caller's *per-session* Mercure topic, so only the requesting dashboard reacts (domain writes,
- * by contrast, fan out on public vehicle topics via {@see \App\Mercure\DomainEventPublisher}).
+ * by contrast, fan out on public vehicle topics via {@see \App\Mercure\DomainPublisher}).
  *
  * These stay `#[AsTool]` (NOT MCP): an MCP tool *call* renders nothing in a host — only a tool
  * *result* carrying a UI resource does. Host-reach therefore comes from the delivery channel, not
@@ -107,7 +107,7 @@ final class RenderIntentTools
     {
         Assert::notNull($this->sessionTopic, 'No session topic bound for this turn.');
 
-        // A render intent is best-effort UI, like the domain live-updates in DomainEventPublisher:
+        // A render intent is best-effort UI, like the domain live-updates in DomainPublisher:
         // a hub that is down (or untrusted TLS) must never turn the tool call into an error the
         // model then sees and tries to "recover" from. Log and move on — the tool still acks ok.
         try {

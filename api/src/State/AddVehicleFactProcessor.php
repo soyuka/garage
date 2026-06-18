@@ -10,11 +10,13 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\AddVehicleFactInput;
+use App\Entity\VehicleFact;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
+use App\Mercure\DomainPublisher;
 use Mcp\Schema\Result\CallToolResult;
 use Symfony\Component\Uid\Ulid;
 
@@ -33,6 +35,7 @@ final class AddVehicleFactProcessor implements ProcessorInterface
         private readonly IriConverterInterface $iriConverter,
         private readonly VehicleSummaryView $summaryView,
         private readonly FactView $factView,
+        private readonly DomainPublisher $publisher,
     ) {
     }
 
@@ -100,10 +103,17 @@ final class AddVehicleFactProcessor implements ProcessorInterface
                 'status' => 'not_found',
                 'reason' => sprintf('No vehicle %s in the garage.', $outcome->vehicleId),
             ]),
-            default => ToolResult::of([
-                'status' => 'ok',
-                'fact' => $this->factView->toArray($outcome->fact),
-            ]),
+            default => $this->publishedFact($outcome->fact),
         };
+    }
+
+    private function publishedFact(VehicleFact $fact): CallToolResult
+    {
+        $this->publisher->publishVehicle($fact->getVehicle());
+
+        return ToolResult::of([
+            'status' => 'ok',
+            'fact' => $this->factView->toArray($fact),
+        ]);
     }
 }

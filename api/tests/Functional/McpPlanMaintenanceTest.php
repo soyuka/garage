@@ -47,11 +47,11 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $this->assertCount(2, $plan['task']['parts']);
         $this->assertSame('W 712/75', $plan['task']['parts'][0]['ref']);
 
-        // The task is read back on the vehicle item as part of the open checklist.
+        // The task is read back on the vehicle's planned-tasks subresource (the open checklist).
         $vehicleIri = $plan['task']['vehicle'];
-        $client->request('GET', $vehicleIri, ['headers' => ['Accept' => 'application/ld+json']]);
+        $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
         $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['openTasks' => 1]);
+        $this->assertCount(1, $body['member'] ?? $body['hydra:member'] ?? []);
     }
 
     public function testReRunningTheSameServiceUpsertsRatherThanDuplicating(): void
@@ -87,7 +87,8 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $this->assertSame($first['task']['@id'], $second['task']['@id'], 'A re-run of the same service must update the same task, not create a new one.');
         $this->assertSame('NEW-REF', $second['task']['parts'][0]['ref']);
 
-        $client->request('GET', $vehicleIri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $this->assertJsonContains(['openTasks' => 1]);
+        // The upsert leaves exactly one open task on the checklist, not two.
+        $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertCount(1, $body['member'] ?? $body['hydra:member'] ?? []);
     }
 }

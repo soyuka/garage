@@ -26,8 +26,12 @@ final class PlannedMaintenanceLifecycleTest extends AppTestCase
 
         $vehicleIri = $plan['task']['vehicle'];
 
-        $client->request('GET', $vehicleIri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $this->assertJsonContains(['openTasks' => 1]);
+        // The open checklist is the vehicle's planned-tasks subresource — the dashboard reads it to
+        // render the "Tâches & liste de courses" card. The plan opens exactly one task.
+        $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $open = $body['member'] ?? $body['hydra:member'] ?? [];
+        $this->assertCount(1, $open, 'the plan opens one task on the checklist');
+        $this->assertSame('oil_change', $open[0]['type'] ?? null);
 
         // Logging the same service this plan was about must auto-close the open task.
         $this->call($client, $sessionId, 'tools/call', [
@@ -39,7 +43,7 @@ final class PlannedMaintenanceLifecycleTest extends AppTestCase
             ],
         ], 4);
 
-        $client->request('GET', $vehicleIri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $this->assertJsonContains(['openTasks' => 0]);
+        $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertCount(0, $body['member'] ?? $body['hydra:member'] ?? [], 'logging the service closes the matching open plan');
     }
 }

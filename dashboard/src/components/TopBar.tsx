@@ -6,10 +6,10 @@ export function TopBar() {
         <div>
           <div className="name">mon-parc-auto</div>
         </div>
-        <span className="garage">Atelier Dupont · Lyon</span>
+        <span className="garage">mon-garage</span>
       </div>
       <div className="search">🔍 Rechercher un véhicule…</div>
-      <div className="avatar">JD</div>
+      <div className="avatar">SYK</div>
     </header>
   );
 }

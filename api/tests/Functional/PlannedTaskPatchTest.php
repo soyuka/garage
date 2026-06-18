@@ -35,7 +35,7 @@ final class PlannedTaskPatchTest extends AppTestCase
         $this->assertJsonContains(['status' => 'done']);
 
         // A done task leaves the open checklist.
-        $client->request('GET', $vehicleIri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $this->assertJsonContains(['openTasks' => 0]);
+        $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertCount(0, $body['member'] ?? $body['hydra:member'] ?? []);
     }
 }

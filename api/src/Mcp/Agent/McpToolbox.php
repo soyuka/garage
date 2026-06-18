@@ -28,18 +28,23 @@ final class McpToolbox implements ToolboxInterface
     private const PROTOCOL_VERSION = '2025-03-26';
 
     /**
-     * The garage read/write tools the agent may drive. The bulky TecDoc catalog-browse tools
-     * (list_makes/list_models/list_articles/…) are deliberately kept out of the agent context to
-     * control token usage; lookup_plate is the one catalog entry point the garage flow needs.
+     * Tools withheld from the agent. The filter is a DENYLIST on purpose: every garage MCP tool is
+     * meant for the agent, so it fails OPEN — a newly added tool surfaces to the agent automatically
+     * and only an explicit entry here hides it. (An allowlist failed closed and silently stripped
+     * update_vehicle/plan_maintenance when 586b223 added them without updating this list — the prompt
+     * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.)
+     *
+     * Excluded: the make/model browse roots (lookup_plate / list_cars resolve the carId directly),
+     * and the granular catalog-walk tools — the service flow uses the single get_service_parts call
+     * (parts + fluids in one round-trip) instead of get_fill_volumes → list_part_categories →
+     * list_articles. Fewer hops and one tool result keep the agent loop short and its context small.
      */
-    private const ALLOWED = [
-        'lookup_plate',
-        'list_vehicles',
-        'get_vehicle_facts',
-        'add_vehicle_fact',
-        'log_maintenance',
-        'get_maintenance_history',
-        'list_due_maintenance',
+    private const EXCLUDED = [
+        'list_makes',
+        'list_models',
+        'get_fill_volumes',
+        'list_part_categories',
+        'list_articles',
     ];
 
     /** @var list<Tool>|null */
@@ -59,7 +64,7 @@ final class McpToolbox implements ToolboxInterface
 
         $tools = [];
         foreach ($response['result']['tools'] ?? [] as $definition) {
-            if (!\in_array($definition['name'], self::ALLOWED, true)) {
+            if (\in_array($definition['name'], self::EXCLUDED, true)) {
                 continue;
             }
 

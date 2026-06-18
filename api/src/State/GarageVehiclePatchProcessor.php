@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Garage\UsageUnit;
+use App\Mercure\DomainPublisher;
 use App\Repository\VehicleRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -18,7 +19,7 @@ use Symfony\Component\Uid\Ulid;
  * The dashboard editable-card write: applies a JSON Merge Patch of a vehicle's own scalars (usage
  * reading, plate) straight to the resolved row — no dedup, since the vehicle is already identified
  * by its IRI. Identity fields are read-only at the resource layer, so only usage/plate ever reach
- * here. The flush triggers DomainEventPublisher, so the change fans out over Mercure like any write.
+ * here. After the flush it publishes the fresh vehicle over Mercure so the dashboard live-updates.
  *
  * @implements ProcessorInterface<GarageVehicle, GarageVehicle>
  */
@@ -27,6 +28,7 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly EntityManagerInterface $em,
+        private readonly DomainPublisher $publisher,
     ) {
     }
 
@@ -55,6 +57,7 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
         $vehicle->setPlate($data->plate);
 
         $this->em->flush();
+        $this->publisher->publishVehicle($vehicle);
 
         return GarageVehicle::fromEntity($vehicle);
     }

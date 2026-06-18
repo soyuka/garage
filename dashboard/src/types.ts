@@ -102,7 +102,9 @@ export interface VehicleSummary {
   factCount: number;
   openTasks?: number;
   facts?: VehicleFact[];
-  plannedTasks?: PlannedTask[]; // populated on the item GET only
+  // Populated on the item GET only. The API serves the task IRI as `@id`; vehicleFromSummary
+  // normalizes it to `id` for the UI.
+  plannedTasks?: Array<PlannedTask & { '@id'?: string }>;
   addedAt: string;
 }
 
