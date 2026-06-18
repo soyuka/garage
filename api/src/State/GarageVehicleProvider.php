@@ -7,19 +7,25 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageVehicle;
+use App\Entity\VehicleFact;
+use App\Maintenance\PlannedTaskView;
 use App\Repository\VehicleRepository;
 use Symfony\Component\Uid\Ulid;
 
 /**
  * Dereferences /garage/vehicles/{id} by loading the Entity\Vehicle behind the public ULID and
- * mapping it to the read-model. Returns null (→ 404) when the ULID matches no row.
+ * mapping it to the read-model. Returns null (→ 404) when the ULID matches no row. The item read
+ * inlines the vehicle's facts (the listing does not), so the dashboard card shows them with
+ * provenance without a second request.
  *
  * @implements ProviderInterface<GarageVehicle>
  */
 final class GarageVehicleProvider implements ProviderInterface
 {
-    public function __construct(private readonly VehicleRepository $vehicles)
-    {
+    public function __construct(
+        private readonly VehicleRepository $vehicles,
+        private readonly PlannedTaskView $taskView,
+    ) {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?GarageVehicle
@@ -27,6 +33,23 @@ final class GarageVehicleProvider implements ProviderInterface
         $id = $uriVariables['id'];
         $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        return null === $vehicle ? null : GarageVehicle::fromEntity($vehicle);
+        if (null === $vehicle) {
+            return null;
+        }
+
+        $resource = GarageVehicle::fromEntity($vehicle);
+        $resource->facts = array_map(static fn (VehicleFact $f): array => [
+            'id' => (string) $f->getId(),
+            'key' => $f->getKey(),
+            'value' => $f->getValue(),
+            'unit' => $f->getUnit(),
+            'source' => $f->getSource(),
+            'verified' => $f->isVerified(),
+            'addedAt' => $f->getAddedAt()->format(\DateTimeInterface::ATOM),
+            'url' => $f->getUrl(),
+        ], $vehicle->getFacts()->toArray());
+        $resource->plannedTasks = array_map($this->taskView->toArray(...), $vehicle->openTasks());
+
+        return $resource;
     }
 }

@@ -9,10 +9,12 @@ use ApiPlatform\Metadata\McpTool;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Dto\ListDueMaintenanceInput;
 use App\Dto\LogMaintenanceInput;
+use App\Dto\PlanMaintenanceInput;
 use App\Mcp\UiResourceLoader;
 use App\State\GetMaintenanceHistoryProcessor;
 use App\State\ListDueMaintenanceProcessor;
 use App\State\LogMaintenanceProcessor;
+use App\State\PlanMaintenanceProcessor;
 
 /**
  * The maintenance log: an append-only history of dated service events, exposed as MCP tools
@@ -44,6 +46,16 @@ use App\State\LogMaintenanceProcessor;
             // MCP Apps (io.modelcontextprotocol/ui): links the service-history card app.
             // Tool::jsonSerialize() emits this under `_meta`, so the host reads `_meta.ui.resourceUri`.
             meta: ['ui' => ['resourceUri' => UiResourceLoader::MAINTENANCE_HISTORY_URI]],
+        ),
+        'plan_maintenance' => new McpTool(
+            title: 'Plan Maintenance Task',
+            description: 'Add a service to a vehicle\'s checklist as an OPEN task the user intends to do — use it to answer "what should I do at 250 000 km?" or to turn a vidange into a tracked job. Each task carries the parts/fluids it needs (the shopping list, each with a part-number "ref"), an optional target it is pegged to (targetUsageValue+targetUsageUnit like "à 250 000 km", or a dueDate), and an optional free-text label. Distinct from log_maintenance, which records work ALREADY done — a planned task auto-closes once that service is logged. This is an UPSERT keyed on (vehicle, type, label): re-planning the same service on the same vehicle UPDATES the existing open task instead of duplicating it. Identify the vehicle by make+model (its row is created if unknown) OR by its @id (the `vehicle` argument); same ambiguous_match/confirmNew dedup as the other write tools.',
+            input: PlanMaintenanceInput::class,
+            structuredContent: false,
+            processor: PlanMaintenanceProcessor::class,
+            // Upsert keyed on (vehicle, type, label): re-sending the same plan updates one task, never
+            // deletes — idempotent and non-destructive.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
         ),
         'list_due_maintenance' => new McpTool(
             title: 'Due Maintenance',

@@ -9,9 +9,11 @@ use ApiPlatform\Metadata\McpTool;
 use App\Dto\AddVehicleFactInput;
 use App\Dto\GetVehicleFactsInput;
 use App\Dto\ListVehiclesInput;
+use App\Dto\UpdateVehicleInput;
 use App\State\AddVehicleFactProcessor;
 use App\State\GetVehicleFactsProcessor;
 use App\State\ListVehiclesProcessor;
+use App\State\UpdateVehicleProcessor;
 
 /**
  * The garage: a self-strengthening vehicle store exposed as MCP tools (no HTTP operations
@@ -51,6 +53,16 @@ use App\State\ListVehiclesProcessor;
             processor: AddVehicleFactProcessor::class,
             // Additive: never overwrites a verified fact (returns refused), so not destructive.
             annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false],
+        ),
+        'update_vehicle' => new McpTool(
+            title: 'Update Vehicle',
+            description: 'Patch a vehicle\'s OWN scalar fields: usage reading (usageValue + usageUnit km/mi/h), owner, plate, vin, year, modification. Omitted fields are left unchanged. This does NOT store maintenance facts (oil type/capacity, coolant…) — use add_vehicle_fact for those. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its @id (the `vehicle` argument). Same dedup as add_vehicle_fact: if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating — re-call with the chosen candidate\'s @id in `vehicle`, or confirmNew:true if it is genuinely a different vehicle. usageValue and usageUnit must be provided together.',
+            input: UpdateVehicleInput::class,
+            structuredContent: false,
+            processor: UpdateVehicleProcessor::class,
+            // Patches the vehicle's own columns in place; re-sending the same values is a no-op
+            // and it never deletes data, so idempotent and non-destructive.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
         ),
     ],
 )]

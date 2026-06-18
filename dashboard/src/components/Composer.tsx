@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import type { SuggestionChip } from '../types';
+import { StatusHeartbeat } from './StatusHeartbeat';
 
 interface Props {
   suggestions: SuggestionChip[];
   busy: boolean;
+  status: string[];
+  onAdvanceStatus: () => void;
   onSend: (instruction: string) => void;
 }
 
-export function Composer({ suggestions, busy, onSend }: Props) {
+export function Composer({ suggestions, busy, status, onAdvanceStatus, onSend }: Props) {
   const [value, setValue] = useState('');
 
   const submit = () => {
@@ -19,14 +22,8 @@ export function Composer({ suggestions, busy, onSend }: Props) {
 
   return (
     <div className="dock">
-      <div className="copilote">
-        <span className="lead">
-          <span className="dot" />
-          Copilote Atelier
-        </span>
-        <span style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-label)' }}>
-          · suggère pièces, procédures et plans d'entretien
-        </span>
+      <div className="assistant">
+        <StatusHeartbeat queue={status} busy={busy} onAdvance={onAdvanceStatus} />
         <span style={{ flex: 1 }} />
         {suggestions.map((c) => (
           <button key={c.label} className="chip" disabled={busy} onClick={() => onSend(c.label)}>
@@ -37,7 +34,7 @@ export function Composer({ suggestions, busy, onSend }: Props) {
       <div className="composer">
         <input
           value={value}
-          placeholder="Demandez au copilote — « pièces pour la vidange », « j'ai fait la vidange à 142 000 km »…"
+          placeholder="Demandez à l'assistant — « pièces pour la vidange », « j'ai fait la vidange à 142 000 km »…"
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
         />

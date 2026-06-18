@@ -84,6 +84,43 @@ final class GarageActionPromptLoader implements LoaderInterface
             ),
             self::logService(...),
         );
+
+        $registry->registerPrompt(
+            new Prompt(
+                name: 'parts_for_service',
+                title: 'Parts for a service',
+                description: 'List the parts and fluids needed for a service (e.g. an oil change) on a vehicle, with TecDoc references.',
+                arguments: [
+                    new PromptArgument('plate', 'French registration plate, e.g. "XB-301-ZB". Resolves the carId. Omit if you pass make+model.', required: false),
+                    new PromptArgument('make', 'Vehicle make, e.g. "MAZDA". Use with model when no plate.', required: false),
+                    new PromptArgument('model', 'Vehicle model, e.g. "MAZDA6". Use with make when no plate.', required: false),
+                    new PromptArgument('service', 'Service to prepare, e.g. "oil_change". Defaults to an oil change.', required: false),
+                ],
+            ),
+            self::partsForService(...),
+        );
+    }
+
+    /**
+     * @return list<PromptMessage>
+     */
+    private static function partsForService(?string $plate = null, ?string $make = null, ?string $model = null, ?string $service = null): array
+    {
+        $svc = null !== $service && '' !== $service ? $service : 'oil_change';
+        $idLine = null !== $plate && '' !== $plate
+            ? sprintf('Resolve the vehicle from plate "%s" with lookup_plate to get its carId.', $plate)
+            : (null !== $make && '' !== $make
+                ? sprintf('The vehicle is %s %s; get its carId via lookup_plate (if you have a plate) or list_cars.', $make, $model ?? '')
+                : 'First ask me for the vehicle (plate, or make+model).');
+
+        return self::user(<<<PROMPT
+            Prepare the parts and fluids for a {$svc} on my vehicle. Run every step:
+            1. Get the carId. {$idLine}
+            2. get_fill_volumes (or get_vehicle_facts) ⇒ oil_type + oil_capacity.
+            3. list_part_categories(carId) then list_articles ⇒ the oil filter ref.
+            4. list_articles again ⇒ the drain-plug gasket ref.
+            A parts question is NOT answered until steps 3 and 4 have run — never reply with fluids alone. Then present a single shopping list (part references with brand + number, and the oil type + quantity). Do not invent references the catalog did not return.
+            PROMPT);
     }
 
     /**
@@ -104,8 +141,10 @@ final class GarageActionPromptLoader implements LoaderInterface
         $argLine = [] === $args ? 'no arguments (the whole garage)' : implode(', ', $args);
 
         return self::user(<<<PROMPT
-            Show me the vehicles in my garage. Call list_vehicles with {$argLine}.
-            List each vehicle with its make, model, year and type, and how many facts are stored for it (factCount). If the result is empty, say the garage has no matching vehicles yet and offer to add one with identify_plate or fill_vehicle_info.
+            Show me the vehicles in my garage. Run every step:
+            1. Call list_vehicles with {$argLine}.
+            2. List each vehicle with its make, model, year and type, plus its factCount.
+            3. If the result is empty, say the garage has no matching vehicles yet and offer to add one with identify_plate or fill_vehicle_info.
             PROMPT);
     }
 
@@ -124,8 +163,11 @@ final class GarageActionPromptLoader implements LoaderInterface
         $argLine = [] === $args ? 'no arguments (whole garage, all upcoming)' : implode(', ', $args);
 
         return self::user(<<<PROMPT
-            Tell me what maintenance is due. Call list_due_maintenance with {$argLine}.
-            List the overdue services first (most overdue at the top), then the upcoming ones, each with the vehicle, the service and its due date. Mention any "gaps" (recurring services with no logged history) so I can fill them. For any service that also recurs by distance/hours, ask me the vehicle's current km/hours before concluding it is or is not due.
+            Tell me what maintenance is due. Run every step:
+            1. Call list_due_maintenance with {$argLine}.
+            2. List the overdue services first (most overdue at the top), then the upcoming ones — each with the vehicle, the service and its due date.
+            3. Mention any "gaps" (recurring services with no logged history) so I can fill them.
+            4. For any service that also recurs by distance/hours, ask me the vehicle's current km/hours before concluding it is or is not due.
             PROMPT);
     }
 
@@ -135,8 +177,11 @@ final class GarageActionPromptLoader implements LoaderInterface
     private static function nextToMaintain(): array
     {
         return self::user(<<<PROMPT
-            What is the next vehicle I should maintain? Call list_due_maintenance with limit=1 to get the single soonest-due (or most overdue) service across the garage.
-            Tell me the vehicle, the service, its due date and how overdue it is. If the result is empty, say nothing is forecast yet and that I may need to log past services first. Offer to log the work with log_maintenance once I have done it.
+            What is the next vehicle I should maintain? Run every step:
+            1. Call list_due_maintenance with limit=1 to get the single soonest-due (or most overdue) service across the garage.
+            2. Tell me the vehicle, the service, its due date and how overdue it is.
+            3. If the result is empty, say nothing is forecast yet and that I may need to log past services first.
+            4. Offer to log the work with log_maintenance once I have done it.
             PROMPT);
     }
 
@@ -146,8 +191,11 @@ final class GarageActionPromptLoader implements LoaderInterface
     private static function identifyPlate(string $plate): array
     {
         return self::user(<<<PROMPT
-            Identify the vehicle with French plate "{$plate}". Call lookup_plate (plate="{$plate}") and present its identity and technical data (make, model, engine code, fuel, power, the TecDoc carId/carType).
-            Then offer to save the useful, stable specs to the garage with add_vehicle_fact (e.g. engine code, fuel type) — ask me before storing anything, and do not invent values the lookup did not return.
+            Identify the vehicle with French plate "{$plate}". Run every step:
+            1. Call lookup_plate (plate="{$plate}").
+            2. Present its identity and technical data (make, model, engine code, fuel, power, the TecDoc carId/carType).
+            3. Identifying a plate saves the vehicle to my garage so I can track it: store its useful, stable specs (engine code, fuel type) with add_vehicle_fact.
+            Do not invent values the lookup did not return.
             PROMPT);
     }
 
@@ -164,7 +212,11 @@ final class GarageActionPromptLoader implements LoaderInterface
 
         return self::user(<<<PROMPT
             I just performed a service on {$vehicle}. {$typeLine}
-            Collect the details by asking me: the date it was performed (ISO 8601), the odometer or hour reading then (with unit — use "hours" for engine-hour machinery), the cost and currency, who did it, and any parts used. Then record it with log_maintenance (make="{$make}", model="{$model}", vehicleType="{$segment}"). Confirm afterwards with get_maintenance_history. Do not invent details I do not provide.
+            Run every step:
+            1. Ask me for the details: the date it was performed (ISO 8601), the odometer or hour reading then (with unit — use "hours" for engine-hour machinery), the cost and currency, who did it, and any parts used.
+            2. Record it with log_maintenance (make="{$make}", model="{$model}", vehicleType="{$segment}").
+            3. Confirm afterwards with get_maintenance_history.
+            Do not invent details I do not provide.
             PROMPT);
     }
 

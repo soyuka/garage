@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\UrlGeneratorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Entity\MaintenanceRecord;
+use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use Doctrine\Bundle\DoctrineBundle\Attribute\AsDoctrineListener;
@@ -90,6 +91,7 @@ final class DomainEventPublisher
         [$vehicleId, $kind] = match (true) {
             $entity instanceof Vehicle => [$entity->getId(), 'vehicle'],
             $entity instanceof MaintenanceRecord => [$entity->getVehicle()->getId(), 'maintenance'],
+            $entity instanceof PlannedMaintenance => [$entity->getVehicle()->getId(), 'planned'],
             $entity instanceof VehicleFact => [$entity->getVehicle()->getId(), 'fact'],
             default => [null, null],
         };

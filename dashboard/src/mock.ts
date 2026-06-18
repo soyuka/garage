@@ -17,6 +17,7 @@ const vehicles: Vehicle[] = [
     mileageUnit: 'h',
     nextService: { value: 40, unit: 'h' },
     openTasks: 1,
+    plannedTasks: [],
     cost: { total: '420 €', period: '12 derniers mois', delta: '+3 % vs an passé' },
   },
   {
@@ -33,6 +34,7 @@ const vehicles: Vehicle[] = [
     mileageUnit: 'h',
     nextService: { value: -12, unit: 'h' },
     openTasks: 2,
+    plannedTasks: [],
     cost: { total: '690 €', period: '12 derniers mois', delta: '+11 % vs an passé' },
   },
   {
@@ -52,6 +54,7 @@ const vehicles: Vehicle[] = [
     mileageUnit: 'km',
     nextService: { value: 1200, unit: 'km' },
     openTasks: 0,
+    plannedTasks: [],
     cost: { total: '1 970 €', period: '12 derniers mois', delta: '−8 % vs an passé' },
   },
   {
@@ -68,6 +71,7 @@ const vehicles: Vehicle[] = [
     mileageUnit: 'km',
     nextService: { value: 4200, unit: 'km' },
     openTasks: 0,
+    plannedTasks: [],
     cost: { total: '1 140 €', period: '12 derniers mois', delta: '−2 % vs an passé' },
   },
 ];

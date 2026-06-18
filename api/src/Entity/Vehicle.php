@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
 use App\Repository\VehicleRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -35,6 +36,10 @@ class Vehicle
     #[ORM\OneToMany(targetEntity: MaintenanceRecord::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
     private Collection $maintenanceRecords;
 
+    /** @var Collection<int, PlannedMaintenance> */
+    #[ORM\OneToMany(targetEntity: PlannedMaintenance::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true)]
+    private Collection $plannedTasks;
+
     public function __construct(
         #[ORM\Column]
         private string $make,
@@ -58,10 +63,15 @@ class Vehicle
         private ?string $plate = null,
         #[ORM\Column(nullable: true)]
         private ?string $owner = null,
+        #[ORM\Column(nullable: true)]
+        private ?int $usageValue = null,
+        #[ORM\Column(nullable: true, enumType: UsageUnit::class)]
+        private ?UsageUnit $usageUnit = null,
     ) {
         $this->id = new Ulid();
         $this->facts = new ArrayCollection();
         $this->maintenanceRecords = new ArrayCollection();
+        $this->plannedTasks = new ArrayCollection();
     }
 
     public function getId(): Ulid
@@ -84,9 +94,19 @@ class Vehicle
         return $this->year;
     }
 
+    public function setYear(?int $year): void
+    {
+        $this->year = $year;
+    }
+
     public function getModification(): ?string
     {
         return $this->modification;
+    }
+
+    public function setModification(?string $modification): void
+    {
+        $this->modification = $modification;
     }
 
     public function getKType(): ?int
@@ -104,9 +124,19 @@ class Vehicle
         return $this->vin;
     }
 
+    public function setVin(?string $vin): void
+    {
+        $this->vin = $vin;
+    }
+
     public function getPlate(): ?string
     {
         return $this->plate;
+    }
+
+    public function setPlate(?string $plate): void
+    {
+        $this->plate = $plate;
     }
 
     public function getVehicleType(): VehicleType
@@ -124,9 +154,49 @@ class Vehicle
         return $this->owner;
     }
 
+    public function setOwner(?string $owner): void
+    {
+        $this->owner = $owner;
+    }
+
     public function getAddedAt(): \DateTimeImmutable
     {
         return $this->addedAt;
+    }
+
+    public function getUsageValue(): ?int
+    {
+        return $this->usageValue;
+    }
+
+    public function getUsageUnit(): ?UsageUnit
+    {
+        return $this->usageUnit;
+    }
+
+    public function setUsage(int $value, UsageUnit $unit): void
+    {
+        $this->usageValue = $value;
+        $this->usageUnit = $unit;
+    }
+
+    /**
+     * Adopt an observed usage reading (e.g. the odometer noted on a maintenance log) while keeping
+     * the stored value monotonic: taken when none is stored yet, or when it advances a same-unit
+     * reading — odometers and engine-hours never run backwards. A reading in a different unit is
+     * ignored; switching the unit is a deliberate {@see setUsage} via update_vehicle, not a stray
+     * service entry. Returns whether the reading was adopted.
+     */
+    public function recordUsageReading(int $value, UsageUnit $unit): bool
+    {
+        if (null !== $this->usageValue && ($this->usageUnit !== $unit || $value <= $this->usageValue)) {
+            return false;
+        }
+
+        $this->usageValue = $value;
+        $this->usageUnit = $unit;
+
+        return true;
     }
 
     /**
@@ -168,5 +238,38 @@ class Vehicle
         if (!$this->maintenanceRecords->contains($record)) {
             $this->maintenanceRecords->add($record);
         }
+    }
+
+    /**
+     * @return Collection<int, PlannedMaintenance>
+     */
+    public function getPlannedTasks(): Collection
+    {
+        return $this->plannedTasks;
+    }
+
+    public function addPlannedTask(PlannedMaintenance $task): void
+    {
+        if (!$this->plannedTasks->contains($task)) {
+            $this->plannedTasks->add($task);
+        }
+    }
+
+    /**
+     * The open tasks only — the live checklist. Done/dismissed tasks drop off.
+     *
+     * @return list<PlannedMaintenance>
+     */
+    public function openTasks(): array
+    {
+        return array_values(array_filter(
+            $this->plannedTasks->toArray(),
+            static fn (PlannedMaintenance $task): bool => $task->isOpen(),
+        ));
+    }
+
+    public function openTaskCount(): int
+    {
+        return \count($this->openTasks());
     }
 }

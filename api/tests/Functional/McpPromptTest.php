@@ -39,6 +39,25 @@ final class McpPromptTest extends AppTestCase
         $this->assertContains('next_to_maintain', $names);
         $this->assertContains('identify_plate', $names);
         $this->assertContains('log_service', $names);
+        $this->assertContains('parts_for_service', $names);
+    }
+
+    public function testPartsForServicePromptSeedsBothFluidsAndParts(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'prompts/get', [
+            'name' => 'parts_for_service',
+            'arguments' => ['plate' => 'XB301ZB'],
+        ], 3);
+
+        $text = $result['result']['messages'][0]['content']['text'];
+        $this->assertStringContainsString('XB301ZB', $text);
+        $this->assertStringContainsString('lookup_plate', $text);
+        $this->assertStringContainsString('get_fill_volumes', $text);
+        $this->assertStringContainsString('list_part_categories', $text);
+        $this->assertStringContainsString('list_articles', $text);
     }
 
     public function testListVehiclesPromptSeedsTheListTool(): void

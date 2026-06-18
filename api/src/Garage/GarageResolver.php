@@ -82,6 +82,66 @@ final class GarageResolver
         };
     }
 
+    /**
+     * Patch the vehicle's OWN scalar columns (usage reading, owner, plate, vin, year, modification)
+     * on the row chosen by the shared {@see VehicleWriteResolver} (matched, addressed by id, or
+     * freshly created). Surfaces the resolver's ambiguous/not_found verdicts as outcomes rather
+     * than writing. Only the provided (non-null) fields are applied — omitted ones are untouched.
+     * This never writes facts (that stays add_vehicle_fact), so there is no precedence rule.
+     */
+    public function updateVehicle(
+        ?Ulid $vehicleId,
+        ?string $make,
+        ?string $model,
+        ?int $year,
+        VehicleType $vehicleType,
+        ?int $carId,
+        ?string $plate,
+        ?string $vin,
+        bool $confirmNew,
+        ?int $usageValue,
+        ?UsageUnit $usageUnit,
+        ?string $owner,
+        ?string $modification,
+    ): UpdateVehicleOutcome {
+        $resolution = $this->writeResolver->resolveForWrite(
+            $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, 'user',
+        );
+
+        if ('ambiguous' === $resolution->status) {
+            return UpdateVehicleOutcome::ambiguous($resolution->candidates);
+        }
+
+        if ('not_found' === $resolution->status) {
+            return UpdateVehicleOutcome::notFound($resolution->vehicleId);
+        }
+
+        $vehicle = $resolution->vehicle;
+
+        if (null !== $usageValue && null !== $usageUnit) {
+            $vehicle->setUsage($usageValue, $usageUnit);
+        }
+        if (null !== $year) {
+            $vehicle->setYear($year);
+        }
+        if (null !== $plate) {
+            $vehicle->setPlate($plate);
+        }
+        if (null !== $vin) {
+            $vehicle->setVin($vin);
+        }
+        if (null !== $owner) {
+            $vehicle->setOwner($owner);
+        }
+        if (null !== $modification) {
+            $vehicle->setModification($modification);
+        }
+
+        $this->entityManager->flush();
+
+        return UpdateVehicleOutcome::written($vehicle);
+    }
+
     private function writeFact(
         Vehicle $vehicle,
         string $key,

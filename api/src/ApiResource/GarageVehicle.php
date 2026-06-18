@@ -8,8 +8,10 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
 use App\Entity\Vehicle;
 use App\State\GarageVehicleCollectionProvider;
+use App\State\GarageVehiclePatchProcessor;
 use App\State\GarageVehicleProvider;
 use Symfony\Component\Uid\Ulid;
 
@@ -18,11 +20,20 @@ use Symfony\Component\Uid\Ulid;
  * (/garage/vehicles/{id}) is the handle the MCP tools surface as `@id` and accept back as the
  * `vehicle` input — so an agent can follow a listed vehicle to a real GET instead of juggling a
  * leaked DB integer. Distinct from the catalog App\ApiResource\Vehicle (SIV, plate-keyed).
+ *
+ * The PATCH is the dashboard editable-card write: a JSON Merge Patch on the vehicle's own scalars
+ * (usage reading, plate). Identity/provenance fields are read-only (writable: false) so the card
+ * can never rewrite make/model; the agent owns identity through the MCP tools' dedup path.
  */
 #[ApiResource(
     operations: [
         new GetCollection(uriTemplate: '/garage/vehicles', provider: GarageVehicleCollectionProvider::class),
         new Get(uriTemplate: '/garage/vehicles/{id}', provider: GarageVehicleProvider::class),
+        new Patch(
+            uriTemplate: '/garage/vehicles/{id}',
+            provider: GarageVehicleProvider::class,
+            processor: GarageVehiclePatchProcessor::class,
+        ),
     ],
 )]
 final class GarageVehicle
@@ -30,16 +41,46 @@ final class GarageVehicle
     #[ApiProperty(identifier: true, description: 'Public ULID identifier of the garage vehicle.')]
     public Ulid $id;
 
+    #[ApiProperty(writable: false)]
     public string $make;
+    #[ApiProperty(writable: false)]
     public string $model;
+    #[ApiProperty(writable: false)]
     public ?int $year = null;
+    #[ApiProperty(writable: false)]
     public string $vehicleType;
+    #[ApiProperty(writable: false)]
     public string $source;
-    #[ApiProperty(description: 'TecDoc kType, when known.')]
+    #[ApiProperty(writable: false, description: 'TecDoc kType, when known.')]
     public ?int $kType = null;
     public ?string $plate = null;
+    #[ApiProperty(writable: false)]
     public ?string $vin = null;
+    #[ApiProperty(description: 'Last recorded usage reading (odometer/engine-hours), when known.')]
+    public ?int $usageValue = null;
+    #[ApiProperty(description: 'Unit of the usage reading: "km", "mi" or "h" (engine hours). Must be set together with usageValue.')]
+    public ?string $usageUnit = null;
+    #[ApiProperty(writable: false)]
     public int $factCount = 0;
+    /**
+     * The vehicle's stored facts with provenance (key/value/unit/source/verified). Populated on the
+     * item GET only; the collection leaves it empty so the parc listing stays light.
+     *
+     * @var list<array{id: string, key: string, value: string, unit: string|null, source: string, verified: bool, addedAt: string, url: string|null}>
+     */
+    #[ApiProperty(writable: false)]
+    public array $facts = [];
+    #[ApiProperty(writable: false, description: 'Count of open tasks on the checklist. Carried on both the listing and the item.')]
+    public int $openTasks = 0;
+    /**
+     * The open checklist (intended work + its parts) with each task's dereferenceable @id for tick-off.
+     * Populated on the item GET only; the collection leaves it empty so the parc listing stays light.
+     *
+     * @var list<array{@id: string, type: string, label: string|null, target: array{value: int, unit: string|null}|null, dueDate: string|null, parts: list<array<string, mixed>>, status: string, vehicle: string}>
+     */
+    #[ApiProperty(writable: false)]
+    public array $plannedTasks = [];
+    #[ApiProperty(writable: false)]
     public string $addedAt;
 
     public static function fromEntity(Vehicle $vehicle): self
@@ -54,7 +95,10 @@ final class GarageVehicle
         $resource->kType = $vehicle->getKType();
         $resource->plate = $vehicle->getPlate();
         $resource->vin = $vehicle->getVin();
+        $resource->usageValue = $vehicle->getUsageValue();
+        $resource->usageUnit = $vehicle->getUsageUnit()?->value;
         $resource->factCount = $vehicle->getFacts()->count();
+        $resource->openTasks = $vehicle->openTaskCount();
         $resource->addedAt = $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM);
 
         return $resource;

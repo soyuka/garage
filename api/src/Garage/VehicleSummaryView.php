@@ -21,7 +21,7 @@ final class VehicleSummaryView
     }
 
     /**
-     * @return array{make: string, model: string, year: int|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, factCount: int, addedAt: string}
+     * @return array{make: string, model: string, year: int|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string}
      */
     public function toArray(Vehicle $vehicle): array
     {
@@ -35,7 +35,11 @@ final class VehicleSummaryView
             'kType' => $vehicle->getKType(),
             'plate' => $vehicle->getPlate(),
             'vin' => $vehicle->getVin(),
+            'owner' => $vehicle->getOwner(),
+            'usageValue' => $vehicle->getUsageValue(),
+            'usageUnit' => $vehicle->getUsageUnit()?->value,
             'factCount' => $vehicle->getFacts()->count(),
+            'openTaskCount' => $vehicle->openTaskCount(),
             'addedAt' => $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM),
         ];
     }

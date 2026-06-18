@@ -18,7 +18,8 @@ use Symfony\Component\Uid\Ulid;
  *  2. exact identity     → the matching (make, model, type, year) row.
  *  3. near-matches exist → returned as candidates (no write) for the agent to reconcile,
  *                          unless confirmNew forces a fresh row.
- *  4. otherwise          → a new row, promoting carId/plate/vin onto its identity columns.
+ *  4. otherwise          → a new row, promoting carId/plate/vin onto its identity columns and
+ *                          seeding any usage reading the caller carried.
  *
  * A freshly created vehicle is persisted but NOT flushed — the caller persists its own child
  * (fact or record) and flushes once.
@@ -42,6 +43,8 @@ final class VehicleWriteResolver
         ?string $vin,
         bool $confirmNew,
         string $source,
+        ?int $usageValue = null,
+        ?UsageUnit $usageUnit = null,
     ): VehicleResolution {
         if (null !== $vehicleId) {
             $vehicle = $this->vehicles->find($vehicleId);
@@ -64,6 +67,9 @@ final class VehicleWriteResolver
         }
 
         $vehicle = new Vehicle($make, $model, $vehicleType, $source, year: $year, kType: $carId, vin: $vin, plate: $plate);
+        if (null !== $usageValue && null !== $usageUnit) {
+            $vehicle->setUsage($usageValue, $usageUnit);
+        }
         $this->entityManager->persist($vehicle);
 
         return VehicleResolution::resolved($vehicle);

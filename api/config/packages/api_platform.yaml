@@ -6,6 +6,9 @@ api_platform:
             - application/ld+json
         html:
             - text/html
+    patch_formats:
+        json:
+            - application/merge-patch+json
     enable_swagger_ui: false
     enable_re_doc: false
     enable_scalar: true

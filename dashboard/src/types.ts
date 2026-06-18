@@ -7,24 +7,59 @@ export interface NextService {
   unit: string;
 }
 
+export interface PlannedPart {
+  ref: string;
+  label?: string;
+  brand?: string;
+  qty?: number;
+}
+
+/** An open task on a vehicle's checklist — intended work plus the parts it needs (shopping list). */
+export interface PlannedTask {
+  id: string; // the task IRI, PATCHed to tick it off
+  type: string;
+  label?: string | null;
+  target?: { value: number; unit: string | null } | null;
+  dueDate?: string | null;
+  parts: PlannedPart[];
+  status: string;
+}
+
 export interface Vehicle {
   id: VehicleId;
   initials: string;
   name: string;
   subtitle: string; // "Voiture · 2007"
+  vehicleType?: string; // raw type — drives the default usage unit (groundscare → h)
   usage: string; // "142 000 km"
   ago: string; // "il y a 4 h"
   status: VehicleStatus;
   year?: number;
   kType?: number;
+  plate?: string;
   verified?: boolean;
   health: number; // 0–100
   healthLabel: string; // "Véhicule sain"
-  mileage: string; // "142 000"
+  mileage: string; // "142 000" — display form of usageValue
   mileageUnit: string; // "km"
+  usageValue?: number; // raw reading, for inline editing
+  usageUnit?: string; // "km" | "mi" | "h"
+  facts?: VehicleFact[]; // populated from the item GET on select
   nextService: NextService;
   openTasks: number;
+  plannedTasks: PlannedTask[]; // the open checklist, populated from the item GET
   cost: { total: string; period: string; delta: string };
+}
+
+/** A stored spec about a vehicle, with provenance — read-only on the card. */
+export interface VehicleFact {
+  id: string;
+  key: string;
+  value: string;
+  unit?: string | null;
+  source: string;
+  verified: boolean;
+  url?: string | null;
 }
 
 export interface SuggestionChip {
@@ -46,7 +81,12 @@ export interface VehicleSummary {
   kType?: number | null;
   plate?: string | null;
   vin?: string | null;
+  usageValue?: number | null;
+  usageUnit?: string | null;
   factCount: number;
+  openTasks?: number;
+  facts?: VehicleFact[];
+  plannedTasks?: PlannedTask[]; // populated on the item GET only
   addedAt: string;
 }
 

@@ -483,4 +483,102 @@ final class McpMaintenanceTest extends AppTestCase
         // Append-only log: additive, never overwrites/deletes — so destructiveHint must be false.
         $this->assertFalse($write['annotations']['destructiveHint'] ?? null, 'append-only log is not destructive');
     }
+
+    public function testLoggingMaintenanceOnANewVehicleCapturesTheUsageReadingOnTheVehicle(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // log_maintenance creates the vehicle on first write; the reading the user mentioned
+        // ("vidange à 250 000 km") must land on the vehicle's own usage, not only on the record.
+        $log = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'type' => 'oil_change',
+                'performedAt' => '2026-05-01',
+                'usageValue' => 250000,
+                'usageUnit' => 'km',
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame('ok', $log['status']);
+
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => ['make' => 'IVECO'],
+        ], 4)['result']['structuredContent'];
+        $this->assertSame(250000, $list['vehicles'][0]['usageValue']);
+        $this->assertSame('km', $list['vehicles'][0]['usageUnit']);
+    }
+
+    public function testLoggingMaintenanceWithAHigherReadingAdvancesTheVehicleUsage(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'update_vehicle',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'usageValue' => 100000,
+                'usageUnit' => 'km',
+            ],
+        ], 3)['result']['structuredContent']['vehicle']['@id'];
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'vehicle' => $iri,
+                'type' => 'oil_change',
+                'performedAt' => '2026-06-01',
+                'usageValue' => 120000,
+                'usageUnit' => 'km',
+            ],
+        ], 4);
+
+        $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['usageValue' => 120000, 'usageUnit' => 'km']);
+    }
+
+    public function testLoggingMaintenanceWithALowerReadingDoesNotRegressTheVehicleUsage(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'update_vehicle',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'usageValue' => 120000,
+                'usageUnit' => 'km',
+            ],
+        ], 3)['result']['structuredContent']['vehicle']['@id'];
+
+        // A backdated service logged at an earlier odometer must not rewind the current reading.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'vehicle' => $iri,
+                'type' => 'oil_change',
+                'performedAt' => '2025-01-01',
+                'usageValue' => 90000,
+                'usageUnit' => 'km',
+            ],
+        ], 4);
+
+        $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['usageValue' => 120000, 'usageUnit' => 'km']);
+    }
 }

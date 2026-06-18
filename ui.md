@@ -126,7 +126,7 @@ Agent and user share one state.
    request doesn't wait on the hub._
 3. **[DONE] Vertical slice, no LLM.** New `dashboard/` Vite+React+TS app (separate from
    admin/), using the design TSX primitives + `--mpa-*` tokens. Wireframe shell built
-   (top bar, sidebar parc, KPI strip, HealthRing, cost panel, copilote chips, composer).
+   (top bar, sidebar parc, KPI strip, HealthRing, cost panel, assistant chips, composer).
    Typed `UIAction` vocabulary + reducer (`selectVehicle`/`renderSuggestions`/`patchPanel`/
    `toast`). Bottom input POSTs to `POST /agent/turn` (Symfony stub `AgentTurnController`,
    no LLM, returns a fixed action list); actions apply to state — **verified**: clicking a
