@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
-import { HealthRing } from '../design/components/HealthRing';
 import { MetricStat } from '../design/components/MetricStat';
-import { StatusPill } from '../design/components/StatusPill';
 import type { PlannedTask, Vehicle } from '../types';
 import { FactRow } from './facts';
 import { InlineEdit } from './InlineEdit';
@@ -20,15 +18,6 @@ function healthTone(v: number): 'ok' | 'warn' | 'alarm' {
   if (v >= 60) return 'warn';
   return 'alarm';
 }
-
-function statusPill(v: Vehicle) {
-  if (v.status === 'overdue') return <StatusPill status="overdue">{v.healthLabel}</StatusPill>;
-  if (v.status === 'soon') return <StatusPill status="soon">{v.healthLabel}</StatusPill>;
-  return <StatusPill status="ok">{v.healthLabel}</StatusPill>;
-}
-
-// Static spark heights — the real cost series is step-4 data.
-const SPARK = [38, 22, 54, 30, 70, 44, 88, 52, 66, 40, 96, 60];
 
 const TASK_LABELS: Record<string, string> = {
   oil_change: 'Vidange',
@@ -129,37 +118,7 @@ export function VehicleDetail({
         </div>
       </Card>
 
-      <div className="two-col">
-        <Card>
-          <div className="panel-title">
-            <span className="t">État du véhicule</span>
-            {statusPill(vehicle)}
-          </div>
-          <div className="health-wrap">
-            <HealthRing value={vehicle.health} tone={tone} />
-          </div>
-        </Card>
-
-        <Card>
-          <div className="cost-head">
-            <div className="panel-title" style={{ marginBottom: 0 }}>
-              <span className="t">Coût d'entretien</span>
-            </div>
-            <div className="cost-total">
-              <div className="big">{vehicle.cost.total}</div>
-              <div className="delta">{vehicle.cost.delta}</div>
-            </div>
-          </div>
-          <div style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-small)' }}>
-            {vehicle.cost.period}
-          </div>
-          <div className="spark">
-            {SPARK.map((h, i) => (
-              <div key={i} className="bar" style={{ height: `${h}%` }} />
-            ))}
-          </div>
-        </Card>
-      </div>
+      {/* État du véhicule + Coût d'entretien panels hidden for now — too noisy, freeing vertical space */}
 
       <Card style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <div className="panel-title">
