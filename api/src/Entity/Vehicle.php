@@ -19,9 +19,19 @@ use Symfony\Component\Uid\Ulid;
  * Phase 1 is a single shared garage: `owner` is the multi-tenancy seam — null means
  * shared/global. Per-user isolation later is a backfill + non-null query change, not a rewrite.
  */
+// Identity lookups (findByIdentity/findShared/findCandidates) match make+model case-insensitively
+// within an owner. The collation pushes that case-folding into the index, so the queries use plain
+// equality instead of a `^…$/i` regex (the `i` flag defeats index use). Every read narrows by owner
+// first — the tenancy seam — so owner leads each index; the same indexes serve the per-user phase.
 #[ODM\Document(collection: 'vehicles', repositoryClass: VehicleRepository::class)]
+#[ODM\Index(keys: ['owner' => 'asc', 'vehicleType' => 'asc', 'make' => 'asc', 'model' => 'asc', 'year' => 'asc'], name: 'idx_vehicle_identity', options: ['collation' => Vehicle::IDENTITY_COLLATION])]
+#[ODM\Index(keys: ['owner' => 'asc', 'addedAt' => 'desc'], name: 'idx_vehicle_owner_added')]
 class Vehicle
 {
+    // strength 2 = case-insensitive, accent-sensitive — preserves the old `/i`-regex semantics
+    // (case folded, accents kept). The queries must request the SAME collation or the index is skipped.
+    public const array IDENTITY_COLLATION = ['locale' => 'fr', 'strength' => 2];
+
     // App-assigned ULID public identifier — the dereferenceable IRI key (/garage/vehicles/{id}),
     // so no internal handle is ever exposed. Stored as its base32 string (the Mongo _id);
     // getId() rehydrates the Ulid. Time-ordered, so it stays index-friendly.

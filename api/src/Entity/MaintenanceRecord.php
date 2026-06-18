@@ -20,9 +20,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * `owner` is the same multi-tenancy seam as Vehicle: null = shared/global in phase 1.
  */
+// Both indexes are sort-covering: history() matches on vehicle (optionally type) and sorts
+// performedAt desc, so the sort key rides in the index and a limited query early-cuts instead of
+// blocking on an in-memory sort. A bare {vehicle} index would be a redundant prefix of these.
 #[ODM\Document(collection: 'maintenance_records', repositoryClass: MaintenanceRecordRepository::class)]
-#[ODM\Index(keys: ['vehicle' => 'asc'], name: 'idx_maintenance_vehicle')]
-#[ODM\Index(keys: ['vehicle' => 'asc', 'type' => 'asc'], name: 'idx_maintenance_vehicle_type')]
+#[ODM\Index(keys: ['vehicle' => 'asc', 'performedAt' => 'desc', 'id' => 'desc'], name: 'idx_maintenance_vehicle_performed')]
+#[ODM\Index(keys: ['vehicle' => 'asc', 'type' => 'asc', 'performedAt' => 'desc'], name: 'idx_maintenance_vehicle_type_performed')]
 class MaintenanceRecord
 {
     #[ODM\Id(strategy: 'NONE', type: 'string')]

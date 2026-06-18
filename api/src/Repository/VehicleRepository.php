@@ -8,7 +8,6 @@ use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
-use MongoDB\BSON\Regex;
 
 /**
  * @extends ServiceDocumentRepository<Vehicle>
@@ -29,8 +28,8 @@ final class VehicleRepository extends ServiceDocumentRepository
     public function findByIdentity(string $make, string $model, VehicleType $vehicleType, ?int $year = null): ?Vehicle
     {
         $qb = $this->createQueryBuilder()
-            ->field('make')->equals(self::ciExact($make))
-            ->field('model')->equals(self::ciExact($model))
+            ->field('make')->equals($make)
+            ->field('model')->equals($model)
             ->field('vehicleType')->equals($vehicleType->value)
             ->field('owner')->equals(null)
             ->limit(1);
@@ -39,7 +38,7 @@ final class VehicleRepository extends ServiceDocumentRepository
             $qb->field('year')->equals($year);
         }
 
-        return $qb->getQuery()->getSingleResult();
+        return $qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getSingleResult();
     }
 
     /**
@@ -59,21 +58,21 @@ final class VehicleRepository extends ServiceDocumentRepository
             ->field('vehicleType')->equals($vehicleType->value)
             ->sort('addedAt', 'desc');
 
-        $match = [$qb->expr()->field('model')->equals(self::ciExact($model))];
+        $match = [$qb->expr()->field('model')->equals($model)];
 
         if (null !== $carId) {
             $match[] = $qb->expr()->field('kType')->equals($carId);
         }
         if (null !== $plate) {
-            $match[] = $qb->expr()->field('plate')->equals(self::ciExact($plate));
+            $match[] = $qb->expr()->field('plate')->equals($plate);
         }
         if (null !== $vin) {
-            $match[] = $qb->expr()->field('vin')->equals(self::ciExact($vin));
+            $match[] = $qb->expr()->field('vin')->equals($vin);
         }
 
         $qb->addAnd($qb->expr()->addOr(...$match));
 
-        return array_values($qb->getQuery()->execute()->toArray());
+        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->execute()->toArray());
     }
 
     /**
@@ -90,25 +89,17 @@ final class VehicleRepository extends ServiceDocumentRepository
             ->sort('addedAt', 'desc');
 
         if (null !== $make) {
-            $qb->field('make')->equals(self::ciExact($make));
+            $qb->field('make')->equals($make);
         }
 
         if (null !== $model) {
-            $qb->field('model')->equals(self::ciExact($model));
+            $qb->field('model')->equals($model);
         }
 
         if (null !== $vehicleType) {
             $qb->field('vehicleType')->equals($vehicleType->value);
         }
 
-        return array_values($qb->getQuery()->execute()->toArray());
-    }
-
-    /**
-     * A case-insensitive exact-match anchored regex — the ODM equivalent of `LOWER(x) = LOWER(:v)`.
-     */
-    private static function ciExact(string $value): Regex
-    {
-        return new Regex('^'.preg_quote($value, '/').'$', 'i');
+        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->execute()->toArray());
     }
 }
