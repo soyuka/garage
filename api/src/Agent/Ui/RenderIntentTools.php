@@ -88,19 +88,16 @@ final class RenderIntentTools
     }
 
     /**
-     * @param list<array{label: string, instruction: string}> $actions next-step buttons; each click
-     *                                                                  re-runs the agent with `instruction`
+     * @param list<ActionButton> $actions next-step buttons; each click re-runs the agent with `instruction`
      */
     public function proposeActions(string $headline, array $actions, ?string $finding = null): string
     {
         Assert::notEmpty($actions);
-        $buttons = array_map(static function (array $action): array {
-            Assert::keyExists($action, 'label');
-            Assert::keyExists($action, 'instruction');
-            Assert::stringNotEmpty($action['label']);
-            Assert::stringNotEmpty($action['instruction']);
+        $buttons = array_map(static function (ActionButton $action): array {
+            Assert::stringNotEmpty($action->label);
+            Assert::stringNotEmpty($action->instruction);
 
-            return ['label' => $action['label'], 'instruction' => $action['instruction']];
+            return ['label' => $action->label, 'instruction' => $action->instruction];
         }, $actions);
 
         $payload = ['type' => 'proposeActions', 'headline' => $headline, 'actions' => $buttons];
