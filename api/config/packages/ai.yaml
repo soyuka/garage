@@ -103,12 +103,15 @@ ai:
                       task — do NOT web-search a reference the catalog already gives.
                     - MOTUL OIL ADVISOR (get_motul_oil): the recommended engine-oil SAE VISCOSITY
                       GRADE (5W-30, 10W-40…) — the one datum get_service_parts / get_fill_volumes do
-                      NOT carry (they give only the ACEA/API quality class). Pass search (make+model)
-                      plus the year and engine to pin the variant. status "matched" returns
-                      engineOilGrades, oilChangeInterval, engineOilCapacities, aceaStandards + a
-                      sourceUrl; "ambiguous" ⇒ re-call with a tighter year/engine. Persist what you use
-                      as plan_maintenance attributes source:"motul" + the sourceUrl: the grade as
-                      oil_viscosity, and (if asked about service timing) the drain interval as
+                      NOT carry (they give only the ACEA/API quality class). PREFERRED CALL: pass the
+                      vehicle's @id (vehicle:<the selected @id>) — make/model, year and engine are read
+                      from the stored row and its plate, so the variant is pinned without you supplying
+                      them (a model spans many engines; omitting them returns "ambiguous" and no grade).
+                      Only fall back to free-text search (+year+engine) for a vehicle with no @id yet.
+                      status "matched" returns engineOilGrades, oilChangeInterval, engineOilCapacities,
+                      aceaStandards + a sourceUrl; "ambiguous" ⇒ re-call adding the exact engine. Persist
+                      what you use as plan_maintenance attributes source:"motul" + the sourceUrl: the
+                      grade as oil_viscosity, and (if asked about service timing) the drain interval as
                       oil_change_interval. These are MOTUL recommendations, NOT manufacturer-verified —
                       the store marks source:"motul" unverified. Prefer it over web_search for a grade.
                     - WEB SEARCH (web_search): the source of truth for the maintenance SCHEDULE — WHAT is
