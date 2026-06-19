@@ -24,7 +24,7 @@ final class VehicleSummaryView
     }
 
     /**
-     * @return array{make: string, model: string, year: int|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string}
+     * @return array{make: string, model: string, year: int|null, modification: string|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string}
      */
     public function toArray(Vehicle $vehicle): array
     {
@@ -33,6 +33,7 @@ final class VehicleSummaryView
             'make' => $vehicle->getMake(),
             'model' => $vehicle->getModel(),
             'year' => $vehicle->getYear(),
+            'modification' => $vehicle->getModification(),
             'vehicleType' => $vehicle->getVehicleType()->value,
             'source' => $vehicle->getSource(),
             'kType' => $vehicle->getKType(),

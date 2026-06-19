@@ -46,6 +46,21 @@ final class MotulOilProcessor implements ProcessorInterface
         $year = $data->year;
         $engine = $data->engine;
 
+        // Most specific handle: an exact Motul variant id picked from a prior ambiguous result.
+        // Pins the row directly — no search, no @id/SIV derivation — so a CTA click converges.
+        $motulId = trim((string) $data->motulId);
+        if ('' !== $motulId) {
+            try {
+                return ToolResult::of($this->advisor->adviseVariant($motulId));
+            } catch (UpstreamException $e) {
+                return ToolResult::of([
+                    'status' => 'upstream_error',
+                    'query' => $motulId,
+                    'reason' => $e->getMessage(),
+                ]);
+            }
+        }
+
         if (null !== $data->vehicle) {
             $vehicle = $this->resolveVehicle($data->vehicle);
             if (null === $vehicle) {
@@ -55,10 +70,13 @@ final class MotulOilProcessor implements ProcessorInterface
                 ]);
             }
 
-            // The row's identity + plate fill whatever the caller did not override.
+            // The row's identity + plate fill whatever the caller did not override. The stored
+            // trim/modification (e.g. "2.0 16V Coupé") is the strongest engine hint — it carries the
+            // body the plate's bare displacement cannot — so it is preferred; the plate's SIV record
+            // is the fallback for a vehicle whose modification was never set.
             $search = '' !== $search ? $search : trim($vehicle->getMake().' '.$vehicle->getModel());
             $year ??= $vehicle->getYear();
-            $engine ??= $this->engineFromPlate($vehicle);
+            $engine ??= $vehicle->getModification() ?? $this->engineFromPlate($vehicle);
         }
 
         if ('' === $search) {

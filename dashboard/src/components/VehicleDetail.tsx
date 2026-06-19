@@ -153,6 +153,7 @@ export function VehicleDetail({
       <div className="title-row">
         <h1>{vehicle.name}</h1>
         {vehicle.year ? <Badge>{vehicle.year}</Badge> : null}
+        {vehicle.modification ? <Badge>{vehicle.modification}</Badge> : null}
         <Badge style={{ padding: 0 }}>
           <InlineEdit
             value={vehicle.plate ?? ''}

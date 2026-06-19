@@ -78,4 +78,88 @@ final class MotulOilProcessorTest extends TestCase
         $this->assertSame(['5W-30'], $result->structuredContent['engineOilGrades']);
         $this->assertStringContainsString('recommendations/9950', $result->structuredContent['sourceUrl']);
     }
+
+    public function testMotulIdPinsVariantWithoutSearchOrSiv(): void
+    {
+        // A `motulId` (carried from an ambiguous turn's candidate) pins the exact Motul row: no
+        // search-vehicle, no SIV, no @id resolution — the second turn converges instead of looping.
+        $advisor = new MotulOilAdvisor(new MotulClient(
+            new MockHttpClient(static function (string $m, string $url): MockResponse {
+                if (str_contains($url, 'search-vehicle')) {
+                    throw new \LogicException('motulId path must not search.');
+                }
+
+                return new MockResponse(file_get_contents(self::FIX.'recommendations_9950.html'));
+            }),
+            new ArrayAdapter(),
+            new MotulRecommendationParser(),
+        ));
+
+        $siv = new SivClient(new MockHttpClient(static function (): MockResponse {
+            throw new \LogicException('motulId path must not hit SIV.');
+        }), 'siv-token', new ArrayAdapter());
+
+        $processor = new MotulOilProcessor(
+            $advisor,
+            $this->createStub(IriConverterInterface::class),
+            $this->createStub(GarageResolver::class),
+            $siv,
+        );
+
+        $input = new MotulOilInput();
+        $input->motulId = '9950';
+
+        $result = $processor->process($input, $this->createStub(Operation::class));
+
+        $this->assertSame('matched', $result->structuredContent['status']);
+        $this->assertSame(['5W-30'], $result->structuredContent['engineOilGrades']);
+    }
+
+    public function testStoredModificationIsPreferredOverPlateEngine(): void
+    {
+        // The stored trim ("1.8") pins the variant; the plate's coarser displacement would not.
+        $advisor = new MotulOilAdvisor(new MotulClient(
+            new MockHttpClient(static fn (string $m, string $url): MockResponse => new MockResponse(
+                str_contains($url, 'search-vehicle')
+                    ? file_get_contents(self::FIX.'search-vehicle_mazda6.json')
+                    : file_get_contents(self::FIX.'recommendations_9950.html'),
+            )),
+            new ArrayAdapter(),
+            new MotulRecommendationParser(),
+        ));
+
+        // SIV would yield a displacement that pins NOTHING — proving the stored modification wins.
+        $siv = new SivClient(
+            new MockHttpClient(new MockResponse(json_encode([
+                'data' => ['marque' => 'MAZDA', 'modele' => '6', 'capacite_litres' => '9.9'],
+                'code_erreur' => 200,
+            ], \JSON_THROW_ON_ERROR))),
+            'siv-token',
+            new ArrayAdapter(),
+        );
+
+        $vehicle = new Vehicle('MAZDA', '6', VehicleType::Car, 'siv', year: 2004, plate: 'AA-123-BB', modification: '1.8');
+
+        $resolver = $this->createStub(GarageResolver::class);
+        $resolver->method('resolveById')->willReturn($vehicle);
+
+        $iriConverter = $this->createStub(IriConverterInterface::class);
+        $iriConverter->method('getResourceFromIri')->willReturn(
+            new class($vehicle->getId()) {
+                public function __construct(public readonly Ulid $id)
+                {
+                }
+            },
+        );
+
+        $processor = new MotulOilProcessor($advisor, $iriConverter, $resolver, $siv);
+
+        $input = new MotulOilInput();
+        $input->vehicle = '/garage/vehicles/'.$vehicle->getId();
+
+        $result = $processor->process($input, $this->createStub(Operation::class));
+
+        $this->assertSame('matched', $result->structuredContent['status']);
+        $this->assertSame(['5W-30'], $result->structuredContent['engineOilGrades']);
+    }
 }

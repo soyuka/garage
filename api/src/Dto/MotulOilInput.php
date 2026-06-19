@@ -8,6 +8,9 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class MotulOilInput
 {
+    #[ApiProperty(description: 'Pin an EXACT Motul variant by the candidate `id` returned in a prior "ambiguous" result. Set this — and nothing else — to resolve the variant the user picked: it skips search/year/engine entirely and returns that row\'s grade directly. This is how an ambiguous first turn converges.')]
+    public ?string $motulId = null;
+
     #[ApiProperty(description: 'PREFERRED: target an existing garage vehicle by its @id (the IRI from list_vehicles, e.g. "/garage/vehicles/01J…"), typically the selected one. The make/model, year and engine are then read from the stored row and its plate, so the variant is pinned without you supplying them. When set, search/year/engine below are optional overrides.')]
     public ?string $vehicle = null;
 

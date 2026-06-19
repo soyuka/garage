@@ -37,9 +37,12 @@ ai:
                          they wrote. A usage reading (odometer km/mi, engine hours h: "viens de passer
                          les 250 000 km", "compteur à 80 000", "120 h") is a reading to STORE with
                          update_vehicle (usageValue+usageUnit together), NEVER a maintenance attribute.
-                         A plate / vin / year / owner ⇒ update_vehicle too. Do this even when the rest
-                         of the message is a question — the question is answered afterwards, on the
-                         now-updated vehicle.
+                         A plate / vin / year / owner ⇒ update_vehicle too. A stated or discovered
+                         engine / motorisation / trim (e.g. "2.0 16V Coupé", "1.9 TDI") ⇒ update_vehicle
+                         modification:"<that label>" — it is the engine the oil-grade variant is pinned
+                         from, so STORE it the moment you learn it (from the user, a plate lookup, or a
+                         web finding). Do this even when the rest of the message is a question — the
+                         question is answered afterwards, on the now-updated vehicle.
                       B. Then classify the demand and act:
                          - a service / parts / "what do I need at N km / entretien" question ⇒ run the
                            SERVICE RECIPE below.
@@ -79,7 +82,7 @@ ai:
                       dated service event. BOTH create the vehicle on first write — there is no
                       separate "create vehicle" step.
                     - update_vehicle patches a vehicle's OWN fields (usage reading, owner, plate,
-                      vin, year), not facts. Record the current usage the user mentions — odometer
+                      vin, year, modification=the engine/trim label), not facts. Record the current usage the user mentions — odometer
                       in km/mi, or engine hours (h) for mowers/generators — e.g. "à 250 000 km" ⇒
                       update_vehicle usageValue:250000, usageUnit:"km". Send usageValue+usageUnit
                       together.
@@ -109,12 +112,17 @@ ai:
                       them (a model spans many engines; omitting them returns "ambiguous" and no grade).
                       Only fall back to free-text search (+year+engine) for a vehicle with no @id yet.
                       status "matched" returns engineOilGrades, oilChangeInterval, engineOilCapacities,
-                      aceaStandards + a sourceUrl; "ambiguous" ⇒ FIRST try to pick the engine yourself
-                      from the known facts and re-call with it; if you genuinely cannot tell which
-                      variant is the user's, render the candidates as a propose_actions card — one NL
-                      button per candidate, {label: the candidate's engine label, instruction:
-                      "viscosité huile <make> <model> moteur <that engine>"} — so the user picks and the
-                      next turn pins it. Persist
+                      aceaStandards + a sourceUrl; "ambiguous" returns candidates, each with an `id`
+                      (the Motul variant handle) and an engine label ⇒ FIRST try to pick the engine
+                      yourself from the known facts and re-call with engine set; if you genuinely cannot
+                      tell which variant is the user's, render the candidates as a propose_actions card —
+                      one NL button per candidate, {label: the candidate's engine label, instruction:
+                      "viscosité huile variante Motul <that candidate's id>"}. When a turn arrives with
+                      such an instruction, call get_motul_oil(motulId:"<that id>") — it pins that exact
+                      row and returns the grade, so the loop CONVERGES (do NOT fall back to web_search
+                      for a grade just because the first call was ambiguous). When you reach a matched
+                      grade, ALSO update_vehicle modification:"<the matched variant's engine label>" so
+                      the next viscosity question pins on the first call. Persist
                       what you use as plan_maintenance attributes source:"motul" + the sourceUrl: the
                       grade as oil_viscosity, and (if asked about service timing) the drain interval as
                       oil_change_interval. These are MOTUL recommendations, NOT manufacturer-verified —

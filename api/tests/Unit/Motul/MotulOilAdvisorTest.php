@@ -53,6 +53,27 @@ final class MotulOilAdvisorTest extends TestCase
         $this->assertArrayNotHasKey('gradeByCondition', $result);
     }
 
+    public function testMotulIdPinsVariantDirectlyWithoutSearch(): void
+    {
+        // No search-vehicle call: the variant is addressed straight by its Motul id, so an ambiguous
+        // first turn can converge on the exact row the user picked.
+        $http = new MockHttpClient(static function (string $method, string $url): MockResponse {
+            if (str_contains($url, 'search-vehicle')) {
+                throw new \LogicException('adviseVariant must not search; it pins by id.');
+            }
+
+            return new MockResponse(self::fixture('recommendations_9950.html'));
+        });
+        $advisor = new MotulOilAdvisor(new MotulClient($http, new ArrayAdapter(), new MotulRecommendationParser()));
+
+        $result = $advisor->adviseVariant('9950');
+
+        $this->assertSame('matched', $result['status']);
+        $this->assertSame('9950', $result['vehicle']['id']);
+        $this->assertSame(['5W-30'], $result['engineOilGrades']);
+        $this->assertStringContainsString('recommendations/9950', $result['sourceUrl']);
+    }
+
     public function testAmbiguousWhenSeveralVariantsMatch(): void
     {
         $result = self::advisor()->advise('mazda 6', 2004);

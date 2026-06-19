@@ -64,6 +64,40 @@ final class McpUpdateVehicleTest extends AppTestCase
         $this->assertSame('km', $list['vehicles'][0]['usageUnit']);
     }
 
+    public function testModificationIsStoredAndReadBack(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->planFact($client, $sessionId, [
+            'make' => 'PEUGEOT',
+            'model' => '406',
+            'key' => 'oil_type',
+            'value' => 'ACEA A3/B3',
+            'source' => 'llm',
+        ], 3);
+
+        $update = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'update_vehicle',
+            'arguments' => [
+                'make' => 'PEUGEOT',
+                'model' => '406',
+                'confirmNew' => true,
+                'modification' => '2.0 16V Coupé',
+            ],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertSame('ok', $update['status']);
+        $this->assertSame('2.0 16V Coupé', $update['vehicle']['modification']);
+
+        // Survives a round-trip: list_vehicles surfaces the stored trim.
+        $list = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => ['make' => 'PEUGEOT'],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame('2.0 16V Coupé', $list['vehicles'][0]['modification']);
+    }
+
     public function testPartialUpdateLeavesUsageUntouched(): void
     {
         $client = static::createClient();

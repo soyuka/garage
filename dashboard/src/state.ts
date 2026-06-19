@@ -141,6 +141,7 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
     ago: '',
     status: health.status,
     year: s.year ?? undefined,
+    modification: s.modification ?? undefined,
     kType: s.kType ?? undefined,
     plate: s.plate ?? undefined,
     verified: 'verified' === s.source,

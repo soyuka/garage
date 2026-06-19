@@ -35,6 +35,7 @@ export interface Vehicle {
   ago: string; // "il y a 4 h"
   status: VehicleStatus;
   year?: number;
+  modification?: string; // engine/trim label, e.g. "2.0 16V Coupé"
   kType?: number;
   plate?: string;
   verified?: boolean;
@@ -98,6 +99,7 @@ export interface VehicleSummary {
   make: string;
   model: string;
   year?: number | null;
+  modification?: string | null;
   vehicleType: string;
   source: string;
   kType?: number | null;

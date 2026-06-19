@@ -57,6 +57,8 @@ final class GarageVehicle
     public string $model;
     #[ApiProperty(writable: false)]
     public ?int $year = null;
+    #[ApiProperty(writable: false, description: 'Engine/trim variant label, e.g. "2.0 16V Coupé". Pins the oil-grade variant (get_motul_oil) and the catalog modification.')]
+    public ?string $modification = null;
     #[ApiProperty(writable: false)]
     public string $vehicleType;
     #[ApiProperty(writable: false)]
@@ -96,6 +98,7 @@ final class GarageVehicle
         $resource->make = $vehicle->getMake();
         $resource->model = $vehicle->getModel();
         $resource->year = $vehicle->getYear();
+        $resource->modification = $vehicle->getModification();
         $resource->vehicleType = $vehicle->getVehicleType()->value;
         $resource->source = $vehicle->getSource();
         $resource->kType = $vehicle->getKType();

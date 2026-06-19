@@ -72,6 +72,28 @@ final class MotulOilAdvisor
     }
 
     /**
+     * Pin an exact variant by its Motul id — no search, no narrowing. The id comes from a candidate
+     * surfaced by a prior "ambiguous" {@see self::advise()} result, so the caller (a CTA the user
+     * clicked) converges on the one row instead of re-tying on a coarse engine string. An id with no
+     * engine grade (decommissioned page / parse miss) comes back not_found, never an empty match.
+     *
+     * @return array<string, mixed>
+     */
+    public function adviseVariant(string $motulId): array
+    {
+        $categories = $this->client->recommendations($motulId);
+        if ([] === $this->engineGrades($categories)) {
+            return ['status' => 'not_found', 'query' => $motulId, 'candidates' => []];
+        }
+
+        // matched() only needs the id to build the sourceUrl and the candidate handle; the search-time
+        // label/year are not available on this path, so a minimal vehicle carrying the id is enough.
+        $vehicle = new MotulVehicle($motulId, '', '', '', null, null, null);
+
+        return $this->matched($motulId, [['vehicle' => $vehicle, 'categories' => $categories]]);
+    }
+
+    /**
      * @param list<array{vehicle: MotulVehicle, categories: list<MotulCategory>}> $probed
      *
      * @return array<string, mixed>
