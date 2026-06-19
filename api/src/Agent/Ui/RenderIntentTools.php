@@ -25,7 +25,7 @@ use Webmozart\Assert\Assert;
 #[AsTool('select_vehicle', 'Focus the dashboard on one vehicle, by its @id (the IRI returned by list_vehicles, e.g. /garage/vehicles/01J...).', 'selectVehicle')]
 #[AsTool('toast', 'Show a transient toast to the user. tone is one of: info, ok, warn, alarm.', 'toast')]
 #[AsTool('show_fact', 'Surface a focused panel showing ONLY the requested fact(s) of the selected vehicle — use it to answer a spec question like "capacité huile moteur" without dumping the whole list. keys are vehicle-fact keys (e.g. oil_capacity, oil_type, spark_plug_ref). Pass a short title for the panel header.', 'showFact')]
-#[AsTool('propose_actions', 'Render a call-to-action card: a headline, an optional one-line finding (e.g. "Trouvé en ligne : vidange + courroie"), and a few next-step buttons. Each action has a short label and the instruction sent back when the user clicks it. Use this to offer follow-ups after answering — it replaces ad-hoc suggestion chips.', 'proposeActions')]
+#[AsTool('propose_actions', 'Render a call-to-action card: a headline, an optional one-line finding (e.g. "Trouvé en ligne : vidange + courroie"), and a few next-step buttons. Each button is ONE of two kinds. (1) NL follow-up: set "instruction" — clicking re-runs you with that text. (2) Deterministic write: set "taskId" (an open task id from the turn context) + "parts" [{ref, brand, label}] — clicking merges those parts onto that task via a direct PATCH, NO new turn, and the shopping list re-renders. ALWAYS prefer kind (2) for "add this reference" choices, and include one button that adds the recommended refs at once. Never offer a dead-end "see all options" button.', 'proposeActions')]
 final class RenderIntentTools
 {
     private ?string $sessionTopic = null;
@@ -88,14 +88,30 @@ final class RenderIntentTools
     }
 
     /**
-     * @param list<ActionButton> $actions next-step buttons; each click re-runs the agent with `instruction`
+     * @param list<ActionButton> $actions next-step buttons; each is EITHER an NL follow-up
+     *                                    (`instruction`, re-runs the agent) OR a deterministic write
+     *                                    (`taskId` + `parts`, merges parts onto the task via PATCH)
      */
     public function proposeActions(string $headline, array $actions, ?string $finding = null): string
     {
         Assert::notEmpty($actions);
         $buttons = array_map(static function (ActionButton $action): array {
             Assert::stringNotEmpty($action->label);
-            Assert::stringNotEmpty($action->instruction);
+
+            if (null !== $action->taskId && [] !== $action->parts) {
+                return [
+                    'label' => $action->label,
+                    'patchTask' => [
+                        'id' => self::taskIri($action->taskId),
+                        'parts' => array_map(static fn (ActionPart $p): array => $p->toArray(), $action->parts),
+                    ],
+                ];
+            }
+
+            Assert::stringNotEmpty(
+                $action->instruction,
+                'A button must carry either an instruction (NL follow-up) or a taskId + parts (deterministic write).',
+            );
 
             return ['label' => $action->label, 'instruction' => $action->instruction];
         }, $actions);
@@ -107,6 +123,16 @@ final class RenderIntentTools
         $this->publish($payload);
 
         return 'ok';
+    }
+
+    /**
+     * Normalise a task handle to its dereferenceable tick-off IRI. The turn context inlines open
+     * tasks by bare ULID ({@see \App\Agent\TurnContextBuilder}), so the model usually passes a ULID;
+     * accept an already-qualified IRI unchanged so it stays robust if the model returns the full path.
+     */
+    private static function taskIri(string $taskId): string
+    {
+        return str_contains($taskId, '/') ? $taskId : '/garage/planned-tasks/'.$taskId;
     }
 
     /**

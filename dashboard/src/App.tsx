@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { postTurn } from './agent';
-import { getVehicle, getVehicleTasks, patchTask, patchVehicle, postVehicleFact } from './garage';
+import { getVehicle, getVehicleTasks, mergeTaskParts, patchTask, patchVehicle, postVehicleFact } from './garage';
 import { Composer } from './components/Composer';
 import { CtaCard } from './components/CtaCard';
-import { FactPanel } from './components/FactPanel';
 import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { VehicleDetail, type VehicleEdit } from './components/VehicleDetail';
 import { reduce, vehicleFromSummary } from './state';
 import { useMercure, type MercureFrame } from './useMercure';
-import type { DashboardState, VehicleId, VehicleSummary } from './types';
+import type { CtaAction, DashboardState, VehicleId, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -193,6 +192,25 @@ export function App() {
     [state.selectedId, loadDetail],
   );
 
+  // The deterministic CTA path: a button click that carries a structured write merges its parts onto
+  // the task with a plain PATCH — no agent turn. The checklist's shopping-list block then re-renders
+  // from the refetched task (and the live frame for other tabs).
+  const addTaskParts = useCallback(
+    async ({ id, parts }: NonNullable<CtaAction['patchTask']>) => {
+      try {
+        await mergeTaskParts(id, parts);
+        loadTasks(state.selectedId);
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'ok', message: 'Référence ajoutée à la liste.' } });
+      } catch (e) {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec de l'ajout : ${(e as Error).message}` },
+        });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
   const send = useCallback(
     async (instruction: string) => {
       // Go busy on dispatch and stay busy: the turn runs in an async worker, so the POST only acks
@@ -263,6 +281,10 @@ export function App() {
                 onClearDone={clearDoneTasks}
                 showAllTasks={showAllTasks}
                 onToggleShowAllTasks={toggleShowAllTasks}
+                factPanel={state.factPanel}
+                onExpandFacts={() => dispatch({ kind: 'expandFactPanel' })}
+                onDismissFacts={() => dispatch({ kind: 'dismissFactPanel' })}
+                onFillFact={fillFact}
               />
             ) : (
               <div className="empty-parc">
@@ -277,16 +299,8 @@ export function App() {
               cta={state.cta}
               busy={busy}
               onSend={send}
+              onAddParts={addTaskParts}
               onDismiss={() => dispatch({ kind: 'dismissCta' })}
-            />
-          ) : null}
-          {state.factPanel && selected ? (
-            <FactPanel
-              panel={state.factPanel}
-              vehicle={selected}
-              onExpand={() => dispatch({ kind: 'expandFactPanel' })}
-              onDismiss={() => dispatch({ kind: 'dismissFactPanel' })}
-              onFillFact={fillFact}
             />
           ) : null}
           <Composer busy={busy} status={status} onAdvanceStatus={advanceStatus} onSend={send} />

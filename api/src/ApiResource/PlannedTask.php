@@ -54,9 +54,9 @@ final class PlannedTask
     #[ApiProperty(writable: false)]
     public ?string $dueDate = null;
     /** @var list<array{ref: string, label?: string, brand?: string, qty?: int}> */
-    #[ApiProperty(writable: false, description: 'Parts/fluids the task needs — the shopping list.')]
+    #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list. A PATCH MERGES the supplied parts in (dedup by ref); it never replaces or clears the list.')]
     public array $parts = [];
-    #[ApiProperty(description: 'Lifecycle: "open" | "done" | "dismissed". The only writable field — set "done" to tick the task off.')]
+    #[ApiProperty(description: 'Lifecycle: "open" | "done" | "dismissed". Set "done" to tick the task off.')]
     public string $status;
     #[ApiProperty(writable: false, description: 'IRI of the vehicle this task belongs to.')]
     public string $vehicle;

@@ -1,4 +1,4 @@
-import type { PlannedTask, VehicleSummary } from './types';
+import type { PlannedPart, PlannedTask, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -59,7 +59,7 @@ export async function postVehicleFact(
   return res.json() as Promise<VehicleSummary>;
 }
 
-/** Tick a planned task off the checklist: PATCH its status (the only writable field). */
+/** Tick a planned task off the checklist: PATCH its status. */
 export async function patchTask(iri: string, status: 'open' | 'done' | 'dismissed'): Promise<void> {
   const res = await fetch(`${API}${iri}`, {
     method: 'PATCH',
@@ -67,4 +67,17 @@ export async function patchTask(iri: string, status: 'open' | 'done' | 'dismisse
     body: JSON.stringify({ status }),
   });
   if (!res.ok) throw new Error(`task update failed: ${res.status}`);
+}
+
+/**
+ * Merge parts onto a task's shopping list: PATCH its `parts`. The server merges (dedup by ref) and
+ * never clears the list — this is the deterministic CTA "add reference" path, no agent turn.
+ */
+export async function mergeTaskParts(iri: string, parts: PlannedPart[]): Promise<void> {
+  const res = await fetch(`${API}${iri}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
+    body: JSON.stringify({ parts }),
+  });
+  if (!res.ok) throw new Error(`task parts update failed: ${res.status}`);
 }

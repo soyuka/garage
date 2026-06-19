@@ -6,11 +6,14 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Catalog\OpenTaskPartsBackfiller;
 use App\Catalog\PartsCatalog;
 use App\Catalog\ServiceKind;
 use App\Dto\ServicePartsInput;
 use App\Garage\ToolResult;
 use App\Mcp\ArticleGroup;
+use App\Mercure\DomainPublisher;
+use App\Repository\VehicleRepository;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -23,8 +26,12 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class ServicePartsProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
-    {
+    public function __construct(
+        private readonly PartsCatalog $catalog,
+        private readonly VehicleRepository $vehicles,
+        private readonly OpenTaskPartsBackfiller $backfiller,
+        private readonly DomainPublisher $publisher,
+    ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
@@ -55,6 +62,16 @@ final class ServicePartsProcessor implements ProcessorInterface
                 'path' => $cat->path,
                 ...ArticleGroup::of($cat->id, $this->catalog->articles($data->carId, $cat->id, $carType)),
             ];
+        }
+
+        // Opportunistic backfill: a vehicle already in the garage under this kType gets its empty
+        // open tasks filled with these refs, so the priced parts land on the checklist without the
+        // agent (or a CTA loop) having to re-attach them. Catalog-only calls (carId not in the
+        // garage) just skip — the tool stays a pure read for them.
+        foreach ($this->vehicles->findByKType($data->carId) as $vehicle) {
+            if ($this->backfiller->backfill($vehicle, $categories) > 0) {
+                $this->publisher->publishVehicle($vehicle);
+            }
         }
 
         return ToolResult::of([

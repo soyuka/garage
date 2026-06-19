@@ -1,21 +1,25 @@
 import { Button } from '../design/components/Button';
 import { Card } from '../design/components/Card';
-import type { Cta } from '../types';
+import type { Cta, CtaAction } from '../types';
 
 /**
- * The agent's call-to-action: a headline, an optional one-line finding, and next-step buttons. Each
- * button re-runs the agent with its `instruction` (the same path a typed message takes) — this is the
- * dashboard's only "what next" affordance, replacing the old bare suggestion chips.
+ * The agent's call-to-action: a headline, an optional one-line finding, and next-step buttons. A
+ * button does ONE of two things: a structured write (`patchTask`) merges parts onto a task with a
+ * direct PATCH — no agent turn — while a plain `instruction` re-runs the agent (the same path a typed
+ * message takes). Prefer the write path for "add this reference" choices: the click takes effect
+ * immediately and the checklist's shopping list re-renders, instead of bouncing through a fresh turn.
  */
 export function CtaCard({
   cta,
   busy,
   onSend,
+  onAddParts,
   onDismiss,
 }: {
   cta: Cta;
   busy: boolean;
   onSend: (instruction: string) => void;
+  onAddParts: (patchTask: NonNullable<CtaAction['patchTask']>) => void;
   onDismiss: () => void;
 }) {
   return (
@@ -37,7 +41,7 @@ export function CtaCard({
               variant={0 === i ? 'primary' : 'secondary'}
               size="sm"
               disabled={busy}
-              onClick={() => onSend(a.instruction)}
+              onClick={() => (a.patchTask ? onAddParts(a.patchTask) : a.instruction ? onSend(a.instruction) : undefined)}
             >
               {a.label}
             </Button>

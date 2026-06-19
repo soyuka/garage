@@ -28,6 +28,15 @@ abstract class AppTestCase extends ApiTestCase
 
         $url = $_ENV['MONGODB_URL'] ?? $_SERVER['MONGODB_URL'];
         $db = $_ENV['MONGODB_DB'] ?? $_SERVER['MONGODB_DB'];
+
+        // Defence in depth: never drop a database whose name is not a test database. The container
+        // exports MONGODB_DB=app (the live garage), so a misconfigured bootstrap that let `app`
+        // through here would wipe real data on the very first setUp. tests/bootstrap.php forces the
+        // `_test` suffix; this refuses to run if that ever fails to apply.
+        if (!str_ends_with($db, '_test')) {
+            throw new \RuntimeException(sprintf('Refusing to drop non-test database "%s" — the test DB name must end in "_test".', $db));
+        }
+
         (new Client($url))->dropDatabase($db);
     }
 

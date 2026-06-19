@@ -45,10 +45,20 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
             throw new UnprocessableEntityHttpException(sprintf('Unknown status "%s"; expected open, done or dismissed.', $data->status));
         }
 
-        if (PlannedMaintenanceStatus::Open === $status) {
-            $task->reopen();
-        } else {
-            $task->close($status, new \DateTimeImmutable());
+        // merge-patch+json re-hydrates the unsent fields from the current task, so a parts-only PATCH
+        // arrives with the existing status (and vice-versa). Only act on a field that actually changed:
+        // touch the lifecycle solely when the status differs, and merge parts in (mergeParts dedups by
+        // ref, so re-sending the hydrated list is a no-op and never clears the shopping list).
+        if ($status !== $task->getStatus()) {
+            if (PlannedMaintenanceStatus::Open === $status) {
+                $task->reopen();
+            } else {
+                $task->close($status, new \DateTimeImmutable());
+            }
+        }
+
+        if ([] !== $data->parts) {
+            $task->mergeParts($data->parts);
         }
 
         $this->em->flush();

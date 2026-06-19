@@ -116,6 +116,8 @@ built inside `fromEntity()`. Both resources expose a `Patch` operation.
 
 ---
 
+**Upstream issue filed:** https://github.com/api-platform/core/issues/8332
+
 ## ROOT CAUSE (diagnosed 2026-06-18)
 
 **Not an API Platform serializer / type-info / `writable: false` bug. It is a stale metadata

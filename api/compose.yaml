@@ -73,7 +73,7 @@ services:
   worker:
     restart: unless-stopped
     environment: *php_environment
-    command: ["php", "bin/console", "messenger:consume", "async", "failed", "-v", "--time-limit=3600"]
+    command: ["php", "bin/console", "messenger:consume", "async", "failed", "-vvv", "--time-limit=3600"]
     depends_on:
       # php first: its entrypoint runs the DB migration. Waiting for it healthy means migration is
       # done before this container's own entrypoint runs it again (a no-op), so the two never race.

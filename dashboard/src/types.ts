@@ -62,10 +62,16 @@ export interface VehicleFact {
   url?: string | null;
 }
 
-/** A call-to-action button: its label, and the instruction re-sent to the agent when clicked. */
+/**
+ * A call-to-action button. Either kind, never both:
+ *  - `instruction`: re-runs the agent with that text (NL follow-up).
+ *  - `patchTask`: merges parts onto an existing task via a direct PATCH — no agent turn; the
+ *    shopping-list block re-renders from the live task.
+ */
 export interface CtaAction {
   label: string;
-  instruction: string;
+  instruction?: string;
+  patchTask?: { id: string; parts: PlannedPart[] };
 }
 
 /** The agent's call-to-action card: a headline, an optional finding line, and next-step buttons. */

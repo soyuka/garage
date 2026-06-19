@@ -210,8 +210,8 @@ body {
 }
 .disclosure-caret { color: var(--mpa-muted); font-size: 0.85em; margin-right: var(--mpa-space-2); }
 
-/* ---- transient agent surfaces (fact panel + CTA), docked above the composer ---- */
-.fact-panel, .cta-card { margin: 0 var(--mpa-space-7) var(--mpa-space-3); }
+/* ---- transient agent surface (CTA), docked above the composer ---- */
+.cta-card { margin: 0 var(--mpa-space-7) var(--mpa-space-3); }
 .fact-panel-close {
   background: transparent; border: none; cursor: pointer; color: var(--mpa-muted);
   font-size: 20px; line-height: 1; padding: 0 var(--mpa-space-1);

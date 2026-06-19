@@ -71,6 +71,48 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $this->assertSame('dismissed', $members[0]['status'] ?? null);
     }
 
+    public function testPatchMergesPartsIntoTheShoppingListWithoutTouchingStatus(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $plan = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'type' => 'oil_filter',
+                'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile']],
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $taskIri = $plan['task']['@id'];
+
+        // The dashboard CTA "add reference" path: a plain PATCH that merges a part onto the task —
+        // no agent turn. mergeParts dedups by ref, so the existing MANN ref survives and the BOSCH
+        // ref is appended.
+        $patched = $client->request('PATCH', $taskIri, [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => ['parts' => [['ref' => 'F 026 407 085', 'brand' => 'BOSCH', 'label' => 'Filtre à huile']]],
+        ])->toArray();
+
+        $refs = array_column($patched['parts'], 'ref');
+        $this->assertContains('W 712/73', $refs, 'the existing ref must survive the merge');
+        $this->assertContains('F 026 407 085', $refs, 'the new ref must be appended');
+        $this->assertSame('open', $patched['status'], 'merging parts must not change the lifecycle');
+
+        // A status-only PATCH must not wipe the shopping list the merge built up.
+        $ticked = $client->request('PATCH', $taskIri, [
+            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => ['status' => 'done'],
+        ])->toArray();
+
+        $this->assertSame('done', $ticked['status']);
+        $this->assertCount(2, $ticked['parts'], 'ticking off must keep the parts intact');
+    }
+
     public function testTheCollectionKeepsDoneTasks(): void
     {
         $client = static::createClient();

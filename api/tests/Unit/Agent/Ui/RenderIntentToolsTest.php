@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\Ui;
 
 use App\Agent\Ui\ActionButton;
+use App\Agent\Ui\ActionPart;
 use App\Agent\Ui\RenderIntentTools;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -50,20 +51,71 @@ final class RenderIntentToolsTest extends TestCase
     }
 
     /**
-     * The LLM-facing schema must describe each action as an OBJECT with required label/instruction —
-     * a phpstan `array{label, instruction}` shape silently degrades to "array of strings" and the
-     * model can never emit the right keys (see the propose_actions tool-call failures).
+     * The LLM-facing schema must describe each action as an OBJECT — a phpstan `array{...}` shape
+     * silently degrades to "array of strings" and the model can never emit the right keys (see the
+     * propose_actions tool-call failures). A button is EITHER an NL follow-up (`instruction`) OR a
+     * deterministic write (`taskId` + typed `parts`); since the schema factory lists every ctor
+     * param as required, that either/or rides on NULLABILITY (the model passes null for the unused
+     * side) and is enforced at call time. `parts` must itself recurse into a typed object so the
+     * model emits `{ref, brand, …}`, not bare strings.
      */
-    public function testProposeActionsSchemaDescribesEachActionAsLabelInstructionObject(): void
+    public function testProposeActionsSchemaDescribesEachActionAsTypedObject(): void
     {
         $schema = (new Factory())->buildParameters(RenderIntentTools::class, 'proposeActions');
 
         $items = $schema['properties']['actions']['items'];
         $this->assertSame('object', $items['type']);
         $this->assertSame('string', $items['properties']['label']['type']);
-        $this->assertSame('string', $items['properties']['instruction']['type']);
-        $this->assertContains('label', $items['required']);
-        $this->assertContains('instruction', $items['required']);
+        // instruction/taskId are nullable, so the unused side can be passed as null.
+        $this->assertContains('null', (array) $items['properties']['instruction']['type']);
+        $this->assertContains('null', (array) $items['properties']['taskId']['type']);
+
+        $part = $items['properties']['parts']['items'];
+        $this->assertSame('object', $part['type']);
+        $this->assertSame('string', $part['properties']['ref']['type']);
+    }
+
+    public function testProposeActionsPublishesAStructuredPatchTaskWrite(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        // A bare ULID is normalised to the task's tick-off IRI so the dashboard can PATCH it directly.
+        $tools->proposeActions('Référence filtre à huile', [
+            new ActionButton('Ajouter MANN W 712/73', taskId: '01KVEF1TCCBTWQR5CV6V05PQ81', parts: [
+                new ActionPart('W 712/73', 'MANN-FILTER', 'Filtre à huile'),
+            ]),
+        ]);
+
+        $this->assertNotNull($published);
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Référence filtre à huile',
+            'actions' => [[
+                'label' => 'Ajouter MANN W 712/73',
+                'patchTask' => [
+                    'id' => '/garage/planned-tasks/01KVEF1TCCBTWQR5CV6V05PQ81',
+                    'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile']],
+                ],
+            ]],
+        ], json_decode($published->getData(), true));
+    }
+
+    public function testProposeActionsRejectsAButtonThatNeitherInstructsNorWrites(): void
+    {
+        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $tools->proposeActions('Choix', [new ActionButton('Bouton mort')]);
     }
 
     public function testProposeActionsPublishesButtonsFromTypedActions(): void

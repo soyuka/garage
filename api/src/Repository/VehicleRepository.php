@@ -76,6 +76,22 @@ final class VehicleRepository extends ServiceDocumentRepository
     }
 
     /**
+     * Shared-garage vehicles carrying a given TecDoc kType — the handle get_service_parts is keyed
+     * on (carId). Used to opportunistically backfill those vehicles' empty checklist tasks with the
+     * priced parts. Newest first; a kType shared by two stored rows backfills both (additive, safe).
+     *
+     * @return list<Vehicle>
+     */
+    public function findByKType(int $kType): array
+    {
+        return array_values($this->createQueryBuilder()
+            ->field('owner')->equals(null)
+            ->field('kType')->equals($kType)
+            ->sort('addedAt', 'desc')
+            ->getQuery()->execute()->toArray());
+    }
+
+    /**
      * List the shared garage (owner IS NULL — the phase 1 tenancy seam), newest first,
      * narrowed by an optional case-insensitive make and/or model and/or vehicleType. Per-user
      * listings arrive with the owner backfill (TODO.md "## Garage"), reusing this query.

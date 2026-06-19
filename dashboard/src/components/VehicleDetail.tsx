@@ -1,9 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
 import { MetricStat } from '../design/components/MetricStat';
-import type { PlannedTask, Vehicle } from '../types';
-import { FactRow } from './facts';
+import type { FactPanel, PlannedTask, Vehicle } from '../types';
+import { FactRow, factLabel } from './facts';
 import { InlineEdit } from './InlineEdit';
 
 /** The card's editable scalars — the subset the PATCH endpoint accepts. */
@@ -85,6 +85,10 @@ export function VehicleDetail({
   onClearDone,
   showAllTasks,
   onToggleShowAllTasks,
+  factPanel,
+  onExpandFacts,
+  onDismissFacts,
+  onFillFact,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
@@ -92,6 +96,11 @@ export function VehicleDetail({
   onClearDone: (taskIris: string[]) => void;
   showAllTasks: boolean;
   onToggleShowAllTasks: () => void;
+  // The agent's focused fact answer, drawn into the Données panel instead of a separate card.
+  factPanel: FactPanel | null;
+  onExpandFacts: () => void;
+  onDismissFacts: () => void;
+  onFillFact: (key: string, value: string) => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -105,8 +114,32 @@ export function VehicleDetail({
   const doneIris = tasks.filter((t) => t.status === 'done').map((t) => t.id);
   const dismissedCount = tasks.filter((t) => t.status === 'dismissed').length;
   const milestones = groupByMilestone(tasks);
-  // The full data list is on-demand reference; the agent's show_fact panel is the answer surface.
-  const [dataOpen, setDataOpen] = useState(false);
+  // The Données list is on-demand reference, collapsed by default. The agent's show_fact answer drives
+  // this same panel — it forces it open and (until "Tout afficher") narrows it to the asked keys —
+  // rather than docking a second card. focused ⇒ a live, unexpanded fact answer is spotlighting keys.
+  const [localOpen, setLocalOpen] = useState(false);
+  const focused = factPanel != null && !factPanel.expanded;
+  const dataOpen = localOpen || factPanel != null;
+  const shownFacts = focused ? facts.filter((f) => factPanel!.keys.includes(f.key)) : facts;
+  // Asked keys the vehicle has no stored fact for — surfaced as click-to-fill rows so the answer is honest.
+  const missing = focused ? factPanel!.keys.filter((k) => !facts.some((f) => f.key === k)) : [];
+
+  // Scroll the panel into view when the agent answers, since it sits below the fold of the detail.
+  const dataRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (factPanel) dataRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [factPanel]);
+
+  // Disclosure click: when an agent answer is spotlighting facts, a click dismisses it (and collapses);
+  // otherwise it's the plain manual open/close toggle.
+  const toggleData = () => {
+    if (factPanel) {
+      onDismissFacts();
+      setLocalOpen(false);
+    } else {
+      setLocalOpen((o) => !o);
+    }
+  };
 
   const commitUsage = (raw: string) => {
     const value = Number.parseInt(raw.replace(/[^\d]/g, ''), 10);
@@ -211,30 +244,50 @@ export function VehicleDetail({
         )}
       </Card>
 
-      <Card style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+      <Card ref={dataRef} style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <button
           type="button"
           className="panel-title panel-disclosure"
           aria-expanded={dataOpen}
-          onClick={() => setDataOpen((o) => !o)}
+          onClick={toggleData}
         >
           <span className="t">
-            <span className="disclosure-caret">{dataOpen ? '▾' : '▸'}</span> Données
+            <span className="disclosure-caret">{focused ? '×' : dataOpen ? '▾' : '▸'}</span>{' '}
+            {focused && factPanel!.title ? factPanel!.title : 'Données'}
           </span>
           <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
             {facts.length} enregistrée{facts.length > 1 ? 's' : ''}
           </span>
         </button>
         {dataOpen ? (
-          facts.length === 0 ? (
+          shownFacts.length === 0 && missing.length === 0 ? (
             <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>Aucune donnée enregistrée.</div>
           ) : (
             <div className="facts">
-              {facts.map((f) => (
+              {shownFacts.map((f) => (
                 <FactRow key={f.key} fact={f} />
+              ))}
+              {missing.map((k) => (
+                <div key={k} className="fact-row fact-row-missing">
+                  <span className="fact-key">{factLabel(k)}</span>
+                  <span className="fact-value">
+                    <InlineEdit
+                      value=""
+                      placeholder="non renseignée — cliquer pour saisir"
+                      ariaLabel={`Saisir ${factLabel(k)}`}
+                      className="fact-fill"
+                      onCommit={(value) => onFillFact(k, value)}
+                    />
+                  </span>
+                </div>
               ))}
             </div>
           )
+        ) : null}
+        {focused && facts.length > shownFacts.length ? (
+          <button type="button" className="fact-panel-expand" onClick={onExpandFacts}>
+            Tout afficher ({facts.length})
+          </button>
         ) : null}
       </Card>
     </>

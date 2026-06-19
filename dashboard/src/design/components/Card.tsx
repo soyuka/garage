@@ -10,11 +10,15 @@ export interface CardProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 /** The base elevated surface — gradient fill, hairline border, soft shadow. */
-export function Card({ hover = false, padding = 'var(--mpa-pad-card-lg)', as = 'div', children, style, ...rest }: CardProps) {
+export const Card = React.forwardRef<HTMLElement, CardProps>(function Card(
+  { hover = false, padding = 'var(--mpa-pad-card-lg)', as = 'div', children, style, ...rest },
+  ref,
+) {
   const [lift, setLift] = React.useState(false);
   const El = as as React.ElementType;
   return (
     <El
+      ref={ref}
       onMouseEnter={hover ? () => setLift(true) : undefined}
       onMouseLeave={hover ? () => setLift(false) : undefined}
       style={{
@@ -32,4 +36,4 @@ export function Card({ hover = false, padding = 'var(--mpa-pad-card-lg)', as = '
       {children}
     </El>
   );
-}
+});
