@@ -32,8 +32,8 @@ final class MotulClient
         private readonly HttpClientInterface $httpClient,
         private readonly CacheItemPoolInterface $cache,
         private readonly MotulRecommendationParser $parser,
-        private readonly string $locale = 'en-US',
-        private readonly string $bu = 'USA',
+        private readonly string $locale = 'fr-FR',
+        private readonly string $bu = 'FRA',
     ) {
     }
 
