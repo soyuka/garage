@@ -58,6 +58,10 @@ final class FixtureHttpClient implements HttpClientInterface
             return $this->partsApiResponse($query);
         }
 
+        if (str_contains($host, 'motul.com')) {
+            return $this->motulResponse($parts['path'] ?? '', $query);
+        }
+
         return new MockResponse('unexpected upstream call: '.$url, ['http_code' => 502]);
     }
 
@@ -106,6 +110,34 @@ final class FixtureHttpClient implements HttpClientInterface
 
         // partsapi returns an empty list for unknown ids — mirror that
         return self::json('[]');
+    }
+
+    /**
+     * Motul Oil Advisor: the gateway `search-vehicle` JSON and the SSR recommendations HTML page
+     * (/{locale}/lubricants/recommendations/{id}). Fixtures mirror the live shapes for kType 19107
+     * (Mazda 6 1.8, Motul id 9950).
+     *
+     * @param array<string, mixed> $query
+     */
+    private function motulResponse(string $path, array $query): MockResponse
+    {
+        if (str_contains($path, 'search-vehicle')) {
+            $file = $this->fixturesDir.'/motul/search-vehicle_mazda6.json';
+
+            return is_file($file) ? self::json(file_get_contents($file)) : self::json('{"vehicles":[]}');
+        }
+
+        if (preg_match('#/recommendations/(\d+)#', $path, $m)) {
+            $file = $this->fixturesDir.'/motul/recommendations_'.$m[1].'.html';
+            if (is_file($file)) {
+                return new MockResponse(file_get_contents($file), [
+                    'http_code' => 200,
+                    'response_headers' => ['content-type' => 'text/html'],
+                ]);
+            }
+        }
+
+        return new MockResponse('not found', ['http_code' => 404]);
     }
 
     private static function json(string $body, int $status = 200): MockResponse

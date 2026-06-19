@@ -1,0 +1,504 @@
+{
+  "vehicles": [
+    {
+      "type": "6 2.0",
+      "id": "9951",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2005",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 1.8",
+      "id": "62238",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2008",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 1.8",
+      "id": "9950",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 1.8",
+      "id": "80511",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 1.8",
+      "id": "80067",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 S-VT",
+      "id": "62256",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2008",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 CiTD",
+      "id": "162442",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2005",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.0 CiTD",
+      "id": "34818",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2005",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.0 CiTD HP",
+      "id": "162444",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2005",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.5 S-VT",
+      "id": "80083",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 CiTD DPF",
+      "id": "162443",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.5 S-VT",
+      "id": "80517",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.3 DISI Turbo",
+      "id": "49364",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2006",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.5 S-VT",
+      "id": "62257",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2008",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 S-VT",
+      "id": "46572",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.3 S-VT",
+      "id": "10669",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.0 S-VT",
+      "id": "80512",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 CiTD",
+      "id": "80518",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 CiTD",
+      "id": "62258",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2008",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 CiTD HP",
+      "id": "34819",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2005",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.5 MZR",
+      "id": "162352",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2013",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.3 DISI Turbo",
+      "id": "162369",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.0 MZR",
+      "id": "162357",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2013",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 1.8 MZR",
+      "id": "162356",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2013",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.0 CiTD DPF",
+      "id": "43263",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.0 DISI",
+      "id": "68661",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 S-VT",
+      "id": "80082",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.3 S-VT AWD",
+      "id": "9952",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 1.8 MZR (88 kW)",
+      "id": "162370",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.0 CiTD HP DPF",
+      "id": "162445",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.2 CiTD (120 kW)",
+      "id": "62259",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2008",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (136 kW)",
+      "id": "62260",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2007",
+      "endYear": "2008",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (95 kW)",
+      "id": "80084",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (92 kW)",
+      "id": "80519",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (136 kW)",
+      "id": "80521",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (132 kW)",
+      "id": "68663",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (136 kW)",
+      "id": "162361",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (92 kW)",
+      "id": "162362",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2008",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.0 MZR (108 kW)",
+      "id": "162371",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.0 CiTD HP DPF",
+      "id": "43264",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2005",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.2 CiTD (120 kW)",
+      "id": "80085",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2012",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.0 MZR (104 kW)",
+      "id": "162373",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2005",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 2.2 CiTD (95 kW)",
+      "id": "162358",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2013",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (120 kW)",
+      "id": "162359",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2008",
+      "endYear": "2013",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (132 kW)",
+      "id": "162360",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2010",
+      "endYear": "2013",
+      "categoryId": "CAR",
+      "modelCode": "GH, GZ"
+    },
+    {
+      "type": "6 2.2 CiTD (120 kW)",
+      "id": "80520",
+      "brand": "Mazda (EU)",
+      "model": "6",
+      "startYear": "2009",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.3 MZR (122 kW)",
+      "id": "162367",
+      "brand": "Mazda (TUR)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2007",
+      "categoryId": "CAR",
+      "modelCode": "GG, GY"
+    },
+    {
+      "type": "6 3.0 (USA)",
+      "id": "111433",
+      "brand": "Mazda (USA / CAN)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2004",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    },
+    {
+      "type": "6 2.5 (CAN)",
+      "id": "111479",
+      "brand": "Mazda (USA / CAN)",
+      "model": "6",
+      "startYear": "2008",
+      "endYear": "2010",
+      "categoryId": "CAR",
+      "modelCode": "GH/GZ"
+    },
+    {
+      "type": "6 2.3 (USA)",
+      "id": "111422",
+      "brand": "Mazda (USA / CAN)",
+      "model": "6",
+      "startYear": "2002",
+      "endYear": "2004",
+      "categoryId": "CAR",
+      "modelCode": "GG/GY"
+    }
+  ]
+}

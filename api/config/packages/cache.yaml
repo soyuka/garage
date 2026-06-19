@@ -14,3 +14,8 @@ framework:
             cache.partsapi:
                 adapter: cache.adapter.doctrine_dbal
                 default_lifetime: 0
+            # Motul Oil Advisor responses (search + SSR recommendations) — a vehicle's
+            # recommended grade is stable, so cache forever and stay polite to the upstream.
+            cache.motul:
+                adapter: cache.adapter.doctrine_dbal
+                default_lifetime: 0
