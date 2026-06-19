@@ -56,6 +56,7 @@ final class AgentTurnController
             sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
             selectedId: trim((string) ($payload['selectedId'] ?? '')),
             summary: trim((string) ($payload['summary'] ?? '')),
+            pendingContext: trim((string) ($payload['pendingContext'] ?? '')),
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);

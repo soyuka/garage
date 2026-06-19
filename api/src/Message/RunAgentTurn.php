@@ -17,6 +17,11 @@ final readonly class RunAgentTurn
         public string $sessionTopic,
         public string $selectedId = '',
         public string $summary = '',
+        // The call-to-action card the dashboard is currently showing (headline + finding + option
+        // labels, compacted client-side). Carried so a terse reply to it ("la 2.0 16V", "oui") is
+        // interpreted against the question rather than re-routed blind — turns stay stateless, this
+        // is the one bounded breadcrumb, not a conversation history.
+        public string $pendingContext = '',
     ) {
     }
 }

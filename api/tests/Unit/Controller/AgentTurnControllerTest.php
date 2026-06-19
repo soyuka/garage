@@ -41,6 +41,7 @@ final class AgentTurnControllerTest extends TestCase
             'sessionId' => 'sess-1',
             'selectedId' => '/garage/vehicles/01J',
             'summary' => 'Mazda6 à 250000 km',
+            'pendingContext' => 'Reco huile — quel moteur ?',
         ]));
 
         $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
@@ -49,6 +50,7 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertSame('https://app.example/agent/sessions/sess-1', $dispatched->sessionTopic);
         $this->assertSame('/garage/vehicles/01J', $dispatched->selectedId);
         $this->assertSame('Mazda6 à 250000 km', $dispatched->summary);
+        $this->assertSame('Reco huile — quel moteur ?', $dispatched->pendingContext);
     }
 
     public function testRejectsMissingFieldsWithoutDispatching(): void

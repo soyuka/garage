@@ -3,6 +3,10 @@ const API = import.meta.env.VITE_API_BASE ?? '';
 export interface TurnContext {
   sessionId: string;
   selectedId?: string;
+  // Compact summary of the call-to-action card currently on screen (headline + finding + option
+  // labels). Sent so a terse reply to it ("la 2.0 16V") is read by the agent against the question
+  // it just asked, instead of being re-routed blind. One bounded line — not a conversation history.
+  pendingContext?: string;
 }
 
 /**
@@ -15,7 +19,12 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
   const res = await fetch(`${API}/agent/turn`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instruction, sessionId: ctx.sessionId, selectedId: ctx.selectedId }),
+    body: JSON.stringify({
+      instruction,
+      sessionId: ctx.sessionId,
+      selectedId: ctx.selectedId,
+      pendingContext: ctx.pendingContext,
+    }),
   });
   if (!res.ok) {
     throw new Error(`agent turn failed: ${res.status}`);

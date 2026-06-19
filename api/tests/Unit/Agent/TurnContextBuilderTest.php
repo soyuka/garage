@@ -49,6 +49,26 @@ final class TurnContextBuilderTest extends TestCase
         self::assertStringContainsString('250000', $context);
     }
 
+    public function testInjectsPendingCtaContextSoTerseRepliesLandInContext(): void
+    {
+        $builder = new TurnContextBuilder(
+            $this->createStub(GarageResolver::class),
+            new VehicleFactsProjector(),
+            $this->createStub(PlannedMaintenanceRepository::class),
+        );
+
+        $context = $builder->build(new RunAgentTurn(
+            instruction: 'la 2.0 16V',
+            sessionTopic: 'https://localhost/agent/sessions/abc',
+            pendingContext: 'Reco huile — quel moteur ? Options : 406 1.8, 406 2.0 16V, 406 2.2',
+        ));
+
+        // The card the user is answering must be in context so a terse reply ("la 2.0 16V") is
+        // interpreted against it rather than re-routed from scratch.
+        self::assertStringContainsString('406 2.0 16V', $context);
+        self::assertStringContainsString('la 2.0 16V', $context);
+    }
+
     public function testKeepsContextLeanWhenNoVehicleIsSelected(): void
     {
         $resolver = $this->createMock(GarageResolver::class);

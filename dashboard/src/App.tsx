@@ -217,8 +217,16 @@ export function App() {
       // 202 (queued) — the worker clears busy with a `turn`/`end` cue on the session topic (onFrame).
       setBusy(true);
       try {
+        // Carry the on-screen CTA (headline + finding + option labels) so a terse reply to it lands
+        // in context on the next, otherwise-stateless turn. One bounded line, not a transcript.
+        const cta = state.cta;
+        const pendingContext = cta
+          ? [cta.headline, cta.finding, cta.actions.length ? `Options : ${cta.actions.map((a) => a.label).join(', ')}` : '']
+              .filter(Boolean)
+              .join(' — ')
+          : undefined;
         // No action list comes back: the agent streams its intents over the session topic.
-        await postTurn(instruction, { sessionId, selectedId: state.selectedId });
+        await postTurn(instruction, { sessionId, selectedId: state.selectedId, pendingContext });
       } catch (e) {
         // The turn never got queued, so no `end` cue is coming — clear busy here.
         setBusy(false);
@@ -228,7 +236,7 @@ export function App() {
         });
       }
     },
-    [sessionId, state.selectedId],
+    [sessionId, state.selectedId, state.cta],
   );
 
   const onFrame = useCallback(

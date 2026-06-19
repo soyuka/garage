@@ -49,6 +49,12 @@ final readonly class TurnContextBuilder
             $context .= "\nRésumé : ".$turn->summary;
         }
 
+        if ('' !== $turn->pendingContext) {
+            $context .= "\n\nCarte d'action que tu viens d'afficher à l'utilisateur — sa réponse, même"
+                ." brève (un moteur, un nombre, « oui »), répond À CETTE QUESTION ; interprète-la dans"
+                ." ce contexte plutôt que de repartir de zéro :\n  ".$turn->pendingContext;
+        }
+
         return $context;
     }
 
