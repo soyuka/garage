@@ -17,7 +17,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * A vehicle model line of a manufacturer (TecDoc step 2).
- * Answers 501 until PARTSAPI_KEY_getModels is configured — see docs/TODO.md.
+ * Answers 501 until PARTSAPI_KEY_getModels is configured — see the root TODO.md.
  */
 #[ApiResource(
     operations: [

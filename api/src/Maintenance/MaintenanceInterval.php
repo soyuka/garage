@@ -7,7 +7,7 @@ namespace App\Maintenance;
 /**
  * The recurrence of a service type: a time interval (the axis we forecast on) plus an optional
  * usage interval kept for display only — we store past odometer/hour readings, never a live
- * one, so "due in X km" is unknowable and must not drive the schedule (see docs/TODO.md).
+ * one, so "due in X km" is unknowable and must not drive the schedule (see the root TODO.md).
  *
  * The values are GENERAL-KNOWLEDGE DEFAULTS, not manufacturer-authoritative, and deliberately
  * conservative; a per-vehicle override belongs on the future DB-backed schedule, not here.

@@ -8,7 +8,7 @@ use App\Garage\UsageUnit as GarageUsageUnit;
 
 /**
  * Unit of the usage reading captured at service time. `hours` is non-negotiable: groundscare
- * machinery (the TORO 246-H) meters engine hours, not distance — see docs/TODO.md.
+ * machinery (the TORO 246-H) meters engine hours, not distance — see the root TODO.md.
  */
 enum UsageUnit: string
 {

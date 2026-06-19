@@ -44,7 +44,7 @@ final class PartsCatalog
     /**
      * @return list<Model>
      *
-     * TODO params unverified — no getModels token yet (see docs/TODO.md).
+     * TODO params unverified — no getModels token yet (see the root TODO.md).
      */
     public function models(int $makeId, CarType $carType): array
     {
@@ -56,7 +56,7 @@ final class PartsCatalog
     /**
      * @return list<Car>
      *
-     * TODO params unverified — no getCars token yet (see docs/TODO.md).
+     * TODO params unverified — no getCars token yet (see the root TODO.md).
      */
     public function cars(int $makeId, int $modelId, CarType $carType): array
     {

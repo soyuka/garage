@@ -21,7 +21,7 @@ use Symfony\Component\Uid\Ulid;
  * The read resolver for the self-strengthening store.
  *
  * Phase 1 read order: shared garage → upstream (write-through) → miss. The "user garage"
- * and promotion layers are deferred (no auth yet — see docs/TODO.md "## Garage").
+ * and promotion layers are deferred (no auth yet — see the root TODO.md "Architecture — Garage store").
  */
 class GarageResolver
 {

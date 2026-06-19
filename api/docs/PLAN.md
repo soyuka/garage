@@ -75,20 +75,9 @@ FillVolume mapping (verified prototype facts): RU-unit duplicate rows (`л.`, `�
   query to fixture files under `tests/Fixtures/` (copied from prototype's real, paid responses).
 - Test cache dirs isolated under `var/tests/`, purged per test.
 
-## Done / verification log
-
-(keep updated)
-
-- [x] deps installed: api-platform/mcp 4.3, symfony/mcp-bundle 0.9, mcp/sdk 0.5, http-client, test-pack
-- [x] clients + resources + MCP tools — 19 functional tests green (incl. MCP initialize/tools/list/tools/call)
-- [x] prototype cache imported (`bin/import-prototype-cache.sh` + docker cp into the php container,
-      whose `var/` is an anonymous volume — NOT bind-mounted)
-- [x] live-verified against compose stack (https://localhost) 2026-06-12, all from cache, 0 paid calls:
-      `/vehicles/XC302ZC`, `/cars/34247/part-categories?carType=CV` (34 leaves),
-      `…/part-categories/200158/articles` (4 refs), `/cars/34247/fill-volumes` (17 rows mapped FR),
-      `/makes/55/models` → 501, MCP full chain lookup_plate → list_part_categories → get_fill_volumes
-- [x] `getMakes` verified live (1 paid call, now cached): response shape is camelCase
-      `{makeId, makeName}` (NOT TecDoc MFA_*), 536 makes for PC, IVECO = 55
+> Build/verification log moved to the root `TODO.md` changelog (deps, cache import, live
+> verification are now shipped history; the stack has since moved to mcp/sdk 0.6, PG cache).
+> The data-source semantics and gotchas below remain the authoritative upstream reference.
 
 ## Gotchas (verified)
 

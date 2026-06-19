@@ -19,7 +19,7 @@ use Symfony\Component\Validator\Constraints as Assert;
  * A TecDoc vehicle modification (step 3). Its id is the kType used by all parts/fluids
  * endpoints. Plate lookups resolve to a Car id directly — this browse route is the
  * alternative entry when no plate is available.
- * Answers 501 until PARTSAPI_KEY_getCars is configured — see docs/TODO.md.
+ * Answers 501 until PARTSAPI_KEY_getCars is configured — see the root TODO.md.
  */
 #[ApiResource(
     operations: [

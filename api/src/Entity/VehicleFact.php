@@ -13,7 +13,7 @@ use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
  * list is the single fact store; a vehicle's facts are PROJECTED from its items by
  * {@see \App\Maintenance\VehicleFactsProjector}. `verified` (derived from the source — catalog/SIV
  * authoritative, agent not) is what stops a hallucinated value shadowing an authoritative one, and
- * doubles as the future promotion marker (see docs/TODO.md "## Garage").
+ * doubles as the future promotion marker (see the root TODO.md "Architecture — Garage store").
  *
  * No own identity: a spec is addressed through its item/vehicle (inlined on the item GET and the
  * MCP get_vehicle_facts result), never dereferenced on its own.

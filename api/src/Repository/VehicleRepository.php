@@ -94,7 +94,7 @@ final class VehicleRepository extends ServiceDocumentRepository
     /**
      * List the shared garage (owner IS NULL — the phase 1 tenancy seam), newest first,
      * narrowed by an optional case-insensitive make and/or model and/or vehicleType. Per-user
-     * listings arrive with the owner backfill (TODO.md "## Garage"), reusing this query.
+     * listings arrive with the owner backfill (root TODO.md "Architecture — Garage store"), reusing this query.
      *
      * @return list<Vehicle>
      */
