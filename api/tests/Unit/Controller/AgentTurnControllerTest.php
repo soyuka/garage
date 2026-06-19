@@ -31,7 +31,11 @@ final class AgentTurnControllerTest extends TestCase
                 return new Envelope($message);
             });
 
-        $controller = new AgentTurnController($bus);
+        // The session topic is built from the configured public base URL (DEFAULT_URI), NOT the
+        // request host: the worker publishes render intents to it and the dashboard subscribes to
+        // `${VITE_API_BASE}/agent/sessions/<id>`, so both must derive from the same fixed origin —
+        // behind a reverse proxy the request host is unreliable. Trailing slash is normalised.
+        $controller = new AgentTurnController($bus, 'https://app.example/');
         $response = $controller($this->request([
             'instruction' => 'Quoi prévoir pour mon entretien ?',
             'sessionId' => 'sess-1',
@@ -42,7 +46,7 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
         $this->assertInstanceOf(RunAgentTurn::class, $dispatched);
         $this->assertSame('Quoi prévoir pour mon entretien ?', $dispatched->instruction);
-        $this->assertStringEndsWith('/agent/sessions/sess-1', $dispatched->sessionTopic);
+        $this->assertSame('https://app.example/agent/sessions/sess-1', $dispatched->sessionTopic);
         $this->assertSame('/garage/vehicles/01J', $dispatched->selectedId);
         $this->assertSame('Mazda6 à 250000 km', $dispatched->summary);
     }
@@ -52,7 +56,7 @@ final class AgentTurnControllerTest extends TestCase
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects($this->never())->method('dispatch');
 
-        $controller = new AgentTurnController($bus);
+        $controller = new AgentTurnController($bus, 'https://app.example');
         $response = $controller($this->request(['instruction' => '']));
 
         $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());

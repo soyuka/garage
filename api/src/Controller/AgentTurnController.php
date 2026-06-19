@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Message\RunAgentTurn;
+use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,11 +22,19 @@ use Symfony\Component\Routing\Attribute\Route;
  * The HTTP contract stays a bare 202 ack: there is no chat transcript and no action list in the
  * body. The dashboard updates progressively from the render intents the worker streams to the
  * caller's per-session Mercure topic; domain writes fan out on public vehicle topics for free.
+ *
+ * The session topic is built from the configured public base URL (DEFAULT_URI), the SAME origin
+ * {@see \App\Mercure\DomainPublisher} derives the vehicle topics from and the dashboard subscribes
+ * to (`${VITE_API_BASE}/agent/sessions/<id>`). NOT the request host: behind the reverse proxy
+ * `Request::getSchemeAndHttpHost()` can report the internal scheme/host (e.g. http://php), which
+ * would publish render intents to a topic no dashboard listens on.
  */
 final class AgentTurnController
 {
     public function __construct(
         private readonly MessageBusInterface $bus,
+        #[Autowire('%env(DEFAULT_URI)%')]
+        private readonly string $baseUri,
     ) {
     }
 
@@ -44,7 +53,7 @@ final class AgentTurnController
 
         $this->bus->dispatch(new RunAgentTurn(
             instruction: $instruction,
-            sessionTopic: $request->getSchemeAndHttpHost().'/agent/sessions/'.$sessionId,
+            sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
             selectedId: trim((string) ($payload['selectedId'] ?? '')),
             summary: trim((string) ($payload['summary'] ?? '')),
         ));
