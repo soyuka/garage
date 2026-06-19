@@ -8,11 +8,14 @@ use App\Agent\ServerToolUseLogger;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
+use Symfony\AI\Platform\PlainConverter;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Result\DeferredResult;
 use App\Agent\WebSearchBudget;
 use Symfony\AI\Platform\Result\RawResultInterface;
+use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\ResultConverterInterface;
+use Symfony\AI\Platform\TokenUsage\TokenUsage;
 
 final class ServerToolUseLoggerTest extends TestCase
 {
@@ -49,27 +52,46 @@ final class ServerToolUseLoggerTest extends TestCase
         $this->decorator($raw, $logger)->invoke('claude', 'hi');
     }
 
-    public function testDoesNotReadRawWhenStreaming(): void
+    public function testStreamingFeedsBudgetFromTokenUsageWithoutReadingRaw(): void
     {
         $raw = $this->rawResult(['content' => [], 'usage' => []]);
+
+        // The Anthropic ResultConverter surfaces server_tool_use.web_search_requests as a TokenUsage
+        // delta's toolTokens; mirror that shape in the streamed result.
+        $stream = new StreamResult((static function (): \Generator {
+            yield new TokenUsage(promptTokens: 10); // message_start: no web_search yet
+            yield new TokenUsage(completionTokens: 5, toolTokens: 1); // message_delta: one search
+        })());
 
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->never())->method('notice');
 
-        $this->decorator($raw, $logger)->invoke('claude', 'hi', ['stream' => true]);
+        $budget = new WebSearchBudget(1);
+        $result = $this->decorator($raw, $logger, $budget, new PlainConverter($stream))
+            ->invoke('claude', 'hi', ['stream' => true]);
+
+        // The worker drains the stream; that is when the listener fires.
+        foreach ($result->getResult()->getContent() as $delta) {
+            unset($delta);
+        }
 
         $this->assertSame(0, $raw->reads, 'streaming must not force the raw HTTP fetch');
+        $this->assertTrue($budget->exhausted(), 'the streamed web_search count must feed the budget');
     }
 
-    private function decorator(RawResultInterface $raw, LoggerInterface $logger): ServerToolUseLogger
-    {
-        $deferred = new DeferredResult($this->createStub(ResultConverterInterface::class), $raw);
+    private function decorator(
+        RawResultInterface $raw,
+        LoggerInterface $logger,
+        ?WebSearchBudget $budget = null,
+        ?ResultConverterInterface $converter = null,
+    ): ServerToolUseLogger {
+        $deferred = new DeferredResult($converter ?? $this->createStub(ResultConverterInterface::class), $raw);
 
         $inner = $this->createStub(PlatformInterface::class);
         $inner->method('invoke')->willReturn($deferred);
         $inner->method('getModelCatalog')->willReturn($this->createStub(ModelCatalogInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, new WebSearchBudget(1));
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1));
     }
 
     /**

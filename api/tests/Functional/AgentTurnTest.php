@@ -10,7 +10,7 @@ use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
-use Symfony\AI\Platform\Test\InMemoryPlatform;
+use App\Tests\Mock\ScriptedStreamPlatform;
 
 /**
  * The real agent behind POST /agent/turn: a deterministic instruction drives a scripted LLM
@@ -26,7 +26,7 @@ final class AgentTurnTest extends AppTestCase
         $container = static::getContainer();
 
         // Scripted LLM: 1st turn → call log_maintenance; 2nd → toast; 3rd → finish.
-        $platform = new InMemoryPlatform(static function ($model, $input): ToolCallResult|string {
+        $platform = new ScriptedStreamPlatform(static function ($model, $input): ToolCallResult|string {
             $executed = 0;
             foreach ($input instanceof MessageBag ? $input->getMessages() : [] as $message) {
                 if ($message instanceof ToolCallMessage) {

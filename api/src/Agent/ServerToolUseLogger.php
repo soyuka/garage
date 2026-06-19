@@ -9,6 +9,7 @@ use Symfony\AI\Platform\Model;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Result\DeferredResult;
+use Symfony\AI\Platform\Result\StreamResult;
 
 /**
  * Logs Anthropic server-side tool use (today: web_search) per model call. Server tools run inside
@@ -18,9 +19,17 @@ use Symfony\AI\Platform\Result\DeferredResult;
  * the platform is the one seam that sees every call's raw payload across the agent's tool-call loop
  * (an output processor would only see the final call and miss a mid-loop search).
  *
- * Non-stream only: `getData()` reads `HttpResponse::toArray()`, which is memoised, so the converter's
- * later read costs no extra round trip. Streaming is skipped — eagerly reading would drain the stream.
- * Best-effort: a read failure is swallowed, never turning observability into a turn-killing error.
+ * Non-stream: `getData()` reads `HttpResponse::toArray()`, which is memoised, so the converter's later
+ * read costs no extra round trip — the `server_tool_use` blocks (queries) and the request count are
+ * logged, and the count fed to the turn budget.
+ *
+ * Stream: there is no raw body to read (eagerly reading would drain the stream), so instead a
+ * {@see WebSearchBudgetStreamListener} is attached to the result; it feeds the budget from the
+ * `TokenUsage` deltas the stream carries. Decorating the platform is the one seam every call passes
+ * through — outer turn and each nested tool-loop pass — so attaching here covers them all. Queries are
+ * not logged on this path (the stream drops the server_tool_use blocks that carry the query text).
+ *
+ * Best-effort: a failure is swallowed, never turning observability into a turn-killing error.
  */
 final readonly class ServerToolUseLogger implements PlatformInterface
 {
@@ -35,7 +44,9 @@ final readonly class ServerToolUseLogger implements PlatformInterface
     {
         $result = $this->inner->invoke($model, $input, $options);
 
-        if (!($options['stream'] ?? false)) {
+        if ($options['stream'] ?? false) {
+            $this->attachBudgetListener($result);
+        } else {
             $this->logServerToolUse($result);
         }
 
@@ -45,6 +56,21 @@ final readonly class ServerToolUseLogger implements PlatformInterface
     public function getModelCatalog(): ModelCatalogInterface
     {
         return $this->inner->getModelCatalog();
+    }
+
+    private function attachBudgetListener(DeferredResult $result): void
+    {
+        try {
+            // getResult() converts but does not iterate the stream's generator, so the stream stays
+            // undrained; the listener fires later, when the worker drains the turn.
+            $streamResult = $result->getResult();
+        } catch (\Throwable) {
+            return;
+        }
+
+        if ($streamResult instanceof StreamResult) {
+            $streamResult->addListener(new WebSearchBudgetStreamListener($this->budget));
+        }
     }
 
     private function logServerToolUse(DeferredResult $result): void

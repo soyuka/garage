@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Tests\Mock\RecordingHub;
-use Symfony\AI\Platform\Test\InMemoryPlatform;
+use App\Tests\Mock\ScriptedStreamPlatform;
 
 /**
  * The dashboard's progress heartbeat needs to know when the worker turn is still running and when it
@@ -21,7 +21,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
         $client = static::createClient();
         $container = static::getContainer();
 
-        $platform = new InMemoryPlatform(static fn (): string => 'Fait.');
+        $platform = new ScriptedStreamPlatform(static fn (): string => 'Fait.');
         $container->set('ai.platform.anthropic', $platform);
 
         $client->request('POST', '/agent/turn', [
@@ -40,7 +40,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
         $client = static::createClient();
         $container = static::getContainer();
 
-        $platform = new InMemoryPlatform(static function (): string {
+        $platform = new ScriptedStreamPlatform(static function (): string {
             throw new \RuntimeException('boom');
         });
         $container->set('ai.platform.anthropic', $platform);
