@@ -6,6 +6,7 @@ namespace App\Tests\Unit;
 
 use App\ApiResource\FillVolume;
 use App\Garage\FillVolumeFactMapper;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 final class FillVolumeFactMapperTest extends TestCase
@@ -59,6 +60,45 @@ final class FillVolumeFactMapperTest extends TestCase
         ]);
 
         $this->assertSame([], $facts);
+    }
+
+    /**
+     * AUTONORMS lists these fluids for every transmission/trim variant of a kType (a car may carry
+     * both manual gearbox AND automatic gearbox rows). All are mapped to canonical keys — coexistence
+     * is accepted upstream of the store.
+     *
+     */
+    #[DataProvider('extendedFluidProvider')]
+    public function testExtendedFluidTitlesMapToCanonicalKeys(FillVolume $row, array $expected): void
+    {
+        $this->assertSame([$expected], (new FillVolumeFactMapper())->toFacts([$row]));
+    }
+
+    /**
+     * @return iterable<string, array{FillVolume, array{key: string, value: string, unit: string|null}}>
+     */
+    public static function extendedFluidProvider(): iterable
+    {
+        yield 'auto gearbox oil capacity' => [
+            new FillVolume(0, 'Huile boîte auto', 'Масло для автоматической коробки переключения передач', 8.14, 'liter', null),
+            ['key' => 'auto_gearbox_oil_capacity', 'value' => '8.14', 'unit' => 'liter'],
+        ];
+        yield 'auto gearbox oil spec' => [
+            new FillVolume(0, 'Spéc. boîte auto', 'Спецификация масла автоматической коробки передач', null, null, 'ATF Dexron III'),
+            ['key' => 'auto_gearbox_oil_type', 'value' => 'ATF Dexron III', 'unit' => null],
+        ];
+        yield 'clutch fluid spec' => [
+            new FillVolume(0, 'Spéc. liquide embrayage', 'Спецификация жидкости сцепления', null, null, 'DOT 4'),
+            ['key' => 'clutch_fluid_type', 'value' => 'DOT 4', 'unit' => null],
+        ];
+        yield 'a/c oil capacity' => [
+            new FillVolume(0, 'Huile climatisation', 'Масло кондиционер', 150.0, 'cm³', null),
+            ['key' => 'ac_oil_capacity', 'value' => '150', 'unit' => 'cm³'],
+        ];
+        yield 'fuel tank capacity' => [
+            new FillVolume(0, 'Réservoir carburant', 'Ёмкость бака', 64.0, 'liter', null),
+            ['key' => 'fuel_tank_capacity', 'value' => '64', 'unit' => 'liter'],
+        ];
     }
 
     public function testRepeatedTitleCollapsesToOneFactWithMergedValues(): void

@@ -47,6 +47,8 @@ final class FillVolume
         'Спецификация моторного масла' => 'Spéc. huile moteur',
         'Масло коробки переключения передач' => 'Huile boîte de vitesses',
         'Спецификация масла ступенчатой коробки передач' => 'Spéc. huile boîte',
+        'Масло для автоматической коробки переключения передач' => 'Huile boîte automatique',
+        'Спецификация масла автоматической коробки передач' => 'Spéc. huile boîte automatique',
         'Масло дифференциала заднего моста' => 'Huile différentiel arrière',
         'Спецификация масла заднего моста' => 'Spéc. huile pont arrière',
         'Масло вспомогания системы рулевого управления' => 'Huile direction assistée',
@@ -55,9 +57,12 @@ final class FillVolume
         'Спецификация охлаждающей жидкости' => 'Spéc. liquide de refroidissement',
         'Тормозная жидкость при замене' => 'Liquide de frein (vidange)',
         'Спецификация тормозной жидкости' => 'Spéc. liquide de frein',
+        'Спецификация жидкости сцепления' => 'Spéc. liquide d\'embrayage',
         'Хладагент для кондиционера' => 'Fluide climatisation',
         'Спецификация хладагента' => 'Spéc. fluide climatisation',
+        'Масло кондиционер' => 'Huile climatisation',
         'Спецификация масла кондиционерa' => 'Spéc. huile climatisation',
+        'Ёмкость бака' => 'Capacité réservoir carburant',
     ];
 
     public function __construct(

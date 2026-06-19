@@ -24,6 +24,8 @@ final class FillVolumeFactMapper
         'Спецификация моторного масла' => 'oil_type',
         'Масло коробки переключения передач' => 'gearbox_oil_capacity',
         'Спецификация масла ступенчатой коробки передач' => 'gearbox_oil_type',
+        'Масло для автоматической коробки переключения передач' => 'auto_gearbox_oil_capacity',
+        'Спецификация масла автоматической коробки передач' => 'auto_gearbox_oil_type',
         'Масло дифференциала заднего моста' => 'rear_diff_oil_capacity',
         'Спецификация масла заднего моста' => 'rear_diff_oil_type',
         'Масло вспомогания системы рулевого управления' => 'power_steering_oil_capacity',
@@ -32,9 +34,12 @@ final class FillVolumeFactMapper
         'Спецификация охлаждающей жидкости' => 'coolant_type',
         'Тормозная жидкость при замене' => 'brake_fluid_capacity',
         'Спецификация тормозной жидкости' => 'brake_fluid_type',
+        'Спецификация жидкости сцепления' => 'clutch_fluid_type',
         'Хладагент для кондиционера' => 'ac_refrigerant_capacity',
         'Спецификация хладагента' => 'ac_refrigerant_type',
+        'Масло кондиционер' => 'ac_oil_capacity',
         'Спецификация масла кондиционерa' => 'ac_oil_type',
+        'Ёмкость бака' => 'fuel_tank_capacity',
     ];
 
     /**
