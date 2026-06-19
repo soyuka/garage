@@ -5,15 +5,15 @@ declare(strict_types=1);
 namespace App\Motul;
 
 /**
- * Resolves a free-text vehicle + year into a Motul engine-oil grade.
+ * Resolves a free-text vehicle + year into a Motul engine-oil recommendation: SAE grade, drain
+ * interval, capacity and ACEA/API quality.
  *
  * The grade only makes sense once the EXACT variant is pinned — different engines of the same model
  * take different grades. Motul's free-text search often lists one engine twice (a generic "1.8" and
  * a "1.8 MZR" row), so a year+engine query ties even when there is really one answer. On a SMALL tie
- * we therefore probe each candidate and, if their engine grades AGREE, return that grade (consensus);
- * only a genuine divergence — or too many candidates to probe without spamming — comes back as
- * ambiguous for the caller to narrow. Brand-neutral: surfaces the SAE grade + ACEA/API quality, not
- * the Motul product to buy.
+ * we probe each candidate and, if their engine grades AGREE, return that grade (consensus); only a
+ * genuine divergence — or too many candidates to probe without spamming — comes back as ambiguous.
+ * Brand-neutral: surfaces the SAE grade + ACEA/API quality + interval, not the Motul product to buy.
  */
 final class MotulOilAdvisor
 {
@@ -36,7 +36,6 @@ final class MotulOilAdvisor
 
         $matches = $this->narrow($all, $year, $engine);
 
-        // Too many to pin, or none left after filtering: hand back the list, no grade.
         if ([] === $matches || \count($matches) > self::PROBE_CAP) {
             return [
                 'status' => [] === $matches ? 'not_found' : 'ambiguous',
@@ -46,34 +45,19 @@ final class MotulOilAdvisor
             ];
         }
 
-        // 1..PROBE_CAP candidates: probe each and look for a grade consensus.
         $probed = array_map(fn (MotulVehicle $v): array => [
             'vehicle' => $v,
-            'recommendations' => $this->client->recommendations($v->id),
+            'categories' => $this->client->recommendations($v->id),
         ], $matches);
 
         $gradeSets = array_unique(array_map(
-            fn (array $p): string => implode(',', $this->engineGrades($p['recommendations'])),
+            fn (array $p): string => implode(',', $this->engineGrades($p['categories'])),
             $probed,
         ));
 
-        // Consensus: every probed variant agrees on a non-empty grade set.
+        // Consensus: every probed variant agrees on a non-empty engine grade set.
         if (1 === \count($gradeSets) && '' !== reset($gradeSets)) {
-            $lead = $probed[0];
-
-            return [
-                'status' => 'matched',
-                'query' => $search,
-                'vehicle' => $this->candidate($lead['vehicle']),
-                'variants' => \count($probed) > 1 ? array_map(fn (array $p): array => $this->candidate($p['vehicle']), $probed) : [],
-                'engineOilGrades' => $this->engineGrades($lead['recommendations']),
-                'grades' => array_map(static fn (MotulOilRecommendation $r): array => [
-                    'application' => $r->application,
-                    'viscosity' => $r->viscosity,
-                    'quality' => $r->quality,
-                ], $lead['recommendations']),
-                'sourceUrl' => $this->client->recommendationsUrl($lead['vehicle']->id),
-            ];
+            return $this->matched($search, $probed);
         }
 
         // Grades diverge across variants — the caller must pick; show each variant's grade.
@@ -82,22 +66,55 @@ final class MotulOilAdvisor
             'query' => $search,
             'hint' => 'Variants take different grades — pick the one matching your engine.',
             'candidates' => array_map(fn (array $p): array => $this->candidate($p['vehicle']) + [
-                'engineOilGrades' => $this->engineGrades($p['recommendations']),
+                'engineOilGrades' => $this->engineGrades($p['categories']),
             ], $probed),
         ];
     }
 
     /**
-     * @param list<MotulOilRecommendation> $recommendations
+     * @param list<array{vehicle: MotulVehicle, categories: list<MotulCategory>}> $probed
      *
-     * @return list<string>
+     * @return array<string, mixed>
      */
-    private function engineGrades(array $recommendations): array
+    private function matched(string $search, array $probed): array
     {
-        return array_values(array_unique(array_map(
-            static fn (MotulOilRecommendation $r): string => $r->viscosity,
-            array_filter($recommendations, static fn (MotulOilRecommendation $r): bool => $r->isEngine() && '' !== $r->viscosity),
+        $lead = $probed[0];
+        $engine = $this->engineCategory($lead['categories']);
+
+        $result = [
+            'status' => 'matched',
+            'query' => $search,
+            'vehicle' => $this->candidate($lead['vehicle']),
+            'variants' => \count($probed) > 1 ? array_map(fn (array $p): array => $this->candidate($p['vehicle']), $probed) : [],
+            'engineOilGrades' => $this->engineGrades($lead['categories']),
+            'sourceUrl' => $this->client->recommendationsUrl($lead['vehicle']->id),
+        ];
+
+        if (null !== $engine) {
+            if ($engine->gradeVariesByCondition()) {
+                $result['gradeByCondition'] = array_map(static fn (MotulConditionGrade $c): array => [
+                    'usage' => $c->usage,
+                    'mileage' => $c->mileage,
+                    'viscosities' => $c->viscosities,
+                ], $engine->conditions);
+            }
+            $result['oilChangeInterval'] = $engine->intervalForUsage('Normal') ?? $engine->intervalForUsage('Severe');
+            $result['engineOilCapacities'] = array_map(self::parseCapacity(...), $engine->capacities);
+            $result['aceaStandards'] = $engine->aceaStandards;
+        }
+
+        $result['otherFluids'] = array_values(array_filter(array_map(
+            function (MotulCategory $c): ?array {
+                if ($c->isEngine() || [] === $c->viscosities()) {
+                    return null;
+                }
+
+                return ['category' => $c->name, 'viscosities' => $c->viscosities(), 'capacities' => array_map(self::parseCapacity(...), $c->capacities)];
+            },
+            $lead['categories'],
         )));
+
+        return $result;
     }
 
     /**
@@ -119,6 +136,44 @@ final class MotulOilAdvisor
         }
 
         return $vehicles;
+    }
+
+    /**
+     * @param list<MotulCategory> $categories
+     *
+     * @return list<string>
+     */
+    private function engineGrades(array $categories): array
+    {
+        $engine = $this->engineCategory($categories);
+
+        return null !== $engine ? $engine->viscosities() : [];
+    }
+
+    /**
+     * @param list<MotulCategory> $categories
+     */
+    private function engineCategory(array $categories): ?MotulCategory
+    {
+        foreach ($categories as $category) {
+            if ($category->isEngine()) {
+                return $category;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * "Capacity 4,6 liter" → "4.6 L"; leaves an unrecognised label untouched.
+     */
+    private static function parseCapacity(string $label): string
+    {
+        if (preg_match('/(\d+(?:[.,]\d+)?)\s*(?:liter|litre|l)\b/i', $label, $m)) {
+            return str_replace(',', '.', $m[1]).' L';
+        }
+
+        return $label;
     }
 
     /**

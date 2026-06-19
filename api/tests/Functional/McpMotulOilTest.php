@@ -22,6 +22,9 @@ final class McpMotulOilTest extends AppTestCase
         $this->assertSame('matched', $content['status']);
         $this->assertSame('9950', $content['vehicle']['id']);
         $this->assertSame(['5W-30'], $content['engineOilGrades']);
+        $this->assertSame('20000 km/ 12 months', $content['oilChangeInterval']);
+        $this->assertContains('4.6 L', $content['engineOilCapacities']);
+        $this->assertNotEmpty($content['aceaStandards']);
         $this->assertStringContainsString('recommendations/9950', $content['sourceUrl']);
     }
 

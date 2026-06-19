@@ -42,6 +42,17 @@ final class MotulOilAdvisorTest extends TestCase
         $this->assertStringContainsString('recommendations/9950', $result['sourceUrl']);
     }
 
+    public function testMatchedResultCarriesIntervalCapacityAndAcea(): void
+    {
+        $result = self::advisor()->advise('mazda 6', 2004, '1.8');
+
+        $this->assertSame('20000 km/ 12 months', $result['oilChangeInterval']);
+        $this->assertContains('4.6 L', $result['engineOilCapacities']);
+        $this->assertNotEmpty($result['aceaStandards']);
+        // grade is condition-invariant here, so no per-condition breakdown
+        $this->assertArrayNotHasKey('gradeByCondition', $result);
+    }
+
     public function testAmbiguousWhenSeveralVariantsMatch(): void
     {
         $result = self::advisor()->advise('mazda 6', 2004);

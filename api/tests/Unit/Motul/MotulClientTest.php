@@ -39,7 +39,7 @@ final class MotulClientTest extends TestCase
         $this->assertFalse($byId['9950']->coversYear(2010));
     }
 
-    public function testRecommendationsParsesEngineGrade(): void
+    public function testRecommendationsParsesEngineCategory(): void
     {
         $client = new MotulClient(
             new MockHttpClient(new MockResponse(self::fixture('recommendations_9950.html'))),
@@ -47,9 +47,10 @@ final class MotulClientTest extends TestCase
             new MotulRecommendationParser(),
         );
 
-        $engine = array_filter($client->recommendations('9950'), static fn ($r) => $r->isEngine());
+        $engine = array_values(array_filter($client->recommendations('9950'), static fn ($c) => $c->isEngine()))[0];
 
-        $this->assertSame(['5W-30'], array_values(array_unique(array_map(static fn ($r) => $r->viscosity, $engine))));
+        $this->assertSame(['5W-30'], $engine->viscosities());
+        $this->assertSame('20000 km/ 12 months', $engine->intervalForUsage('Normal'));
     }
 
     public function testSuccessfulResponseIsCachedNotRefetched(): void

@@ -4,42 +4,60 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Motul;
 
+use App\Motul\MotulCategory;
 use App\Motul\MotulRecommendationParser;
 use App\Motul\NextData;
 use PHPUnit\Framework\TestCase;
 
 final class MotulRecommendationParserTest extends TestCase
 {
-    private static function recommendations(): array
+    /**
+     * @return list<MotulCategory>
+     */
+    private static function categories(): array
     {
         $html = file_get_contents(__DIR__.'/../../Fixtures/motul/recommendations_9950.html');
 
         return (new MotulRecommendationParser())->fromNextData(NextData::extract($html));
     }
 
-    public function testExtractsEngineViscosityFromDehydratedPool(): void
+    private static function category(string $name): MotulCategory
     {
-        $engine = array_values(array_filter(self::recommendations(), static fn ($r) => $r->isEngine()));
+        foreach (self::categories() as $c) {
+            if ($c->name === $name) {
+                return $c;
+            }
+        }
 
-        $this->assertNotEmpty($engine);
-        $this->assertSame(['5W-30'], array_values(array_unique(array_map(static fn ($r) => $r->viscosity, $engine))));
+        self::fail("no category $name");
     }
 
-    public function testResolvesAllRecommendationFields(): void
+    public function testEngineCategoryCarriesGradeCapacityAndInterval(): void
     {
-        $first = self::recommendations()[0];
+        $engine = self::category('Engine');
 
-        $this->assertSame('Engine', $first->application);
-        $this->assertSame('5W-30', $first->viscosity);
-        $this->assertNotSame('', $first->sku);
-        $this->assertMatchesRegularExpression('/^\d+L$/', $first->quantity);
+        $this->assertSame(['5W-30'], $engine->viscosities());
+        // capacity labels off the page (with-filter / drain variants)
+        $this->assertNotEmpty($engine->capacities);
+        $this->assertSame('20000 km/ 12 months', $engine->intervalForUsage('Normal'));
     }
 
-    public function testCapturesTransmissionGrades(): void
+    public function testEngineGradeIsConditionInvariantHere(): void
     {
-        $trans = array_filter(self::recommendations(), static fn ($r) => 0 === strcasecmp($r->application, 'Transmission'));
-        $grades = array_unique(array_map(static fn ($r) => $r->viscosity, $trans));
+        // every usage×mileage cell agrees on the grade for this vehicle
+        $this->assertFalse(self::category('Engine')->gradeVariesByCondition());
+    }
 
-        $this->assertContains('75W-90', $grades);
+    public function testCapturesAceaQualityStandards(): void
+    {
+        $acea = self::category('Engine')->aceaStandards;
+        $joined = implode(' ', $acea);
+
+        $this->assertStringContainsString('ACEA', $joined);
+    }
+
+    public function testTransmissionGradesParsed(): void
+    {
+        $this->assertContains('75W-90', self::category('Transaxle, manual')->viscosities());
     }
 }

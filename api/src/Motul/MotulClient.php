@@ -53,19 +53,16 @@ final class MotulClient
     }
 
     /**
-     * @return list<MotulOilRecommendation>
+     * @return list<MotulCategory>
      */
     public function recommendations(string $vehicleId): array
     {
-        $url = sprintf('%s/%s/lubricants/recommendations/%s', self::PAGE_BASE, $this->locale, rawurlencode($vehicleId));
-        $rows = $this->cached('recs.'.sha1($url), function () use ($url): array {
-            $html = $this->get($url, [], 'text/html');
-            $recs = $this->parser->fromNextData(NextData::extract($html));
+        $url = $this->recommendationsUrl($vehicleId);
+        // Cache the raw page (the dehydrated grade format is more stable than its decoded shape) and
+        // re-parse on read — parsing is cheap, and the parser can evolve without busting the cache.
+        $html = $this->cached('recs.'.sha1($url), fn (): array => ['html' => $this->get($url, [], 'text/html')])['html'];
 
-            return array_map(static fn (MotulOilRecommendation $r): array => (array) $r, $recs);
-        });
-
-        return array_map(static fn (array $r): MotulOilRecommendation => new MotulOilRecommendation(...$r), $rows);
+        return $this->parser->fromNextData(NextData::extract($html));
     }
 
     public function recommendationsUrl(string $vehicleId): string
