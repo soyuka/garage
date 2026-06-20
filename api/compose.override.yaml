@@ -16,7 +16,11 @@ services:
       #  from the bind-mount for better performance by enabling the next line:
       #- /app/vendor
     environment:
-      FRANKENPHP_WORKER_CONFIG: watch
+      # No `watch`: the default watcher monitored /app recursively (incl. var/cache), so Symfony's
+      # own compiled-container writes triggered worker reboots — each costing a ~5s cold recompile
+      # that the dashboard's request burst stacked into 9-29s. Restart manually after code changes:
+      # `docker compose restart php`.
+      FRANKENPHP_WORKER_CONFIG: ""
       FRANKENPHP_SITE_CONFIG: hot_reload
       MERCURE_EXTRA_DIRECTIVES: demo
       # Caddy reverse-proxies @frontend requests here (the dashboard service on the compose network).
