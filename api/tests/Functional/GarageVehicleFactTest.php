@@ -101,7 +101,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $iri = '/garage/vehicles/'.$vehicle->getId();
 
         $client->request('POST', $iri.'/facts', [
-            'headers' => ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => ['key' => 'oil_capacity', 'value' => '4.3', 'unit' => 'L'],
         ]);
 
@@ -131,7 +131,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->clear();
 
         $client->request('POST', '/garage/vehicles/'.$vehicle->getId().'/facts', [
-            'headers' => ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => ['key' => '', 'value' => '4.3'],
         ]);
 

@@ -1,4 +1,10 @@
+import { getIdentity, logout } from '../auth';
+
 export function TopBar() {
+  const identity = getIdentity();
+  const label = identity.name ?? identity.email ?? 'Compte';
+  const initials = label.slice(0, 3).toUpperCase();
+
   return (
     <header className="topbar">
       <div className="brand">
@@ -9,7 +15,9 @@ export function TopBar() {
         <span className="garage">mon-garage</span>
       </div>
       <div className="search">🔍 Rechercher un véhicule…</div>
-      <div className="avatar">SYK</div>
+      <button type="button" className="avatar" title={`${label} — Déconnexion`} onClick={() => logout()}>
+        {initials}
+      </button>
     </header>
   );
 }

@@ -23,8 +23,16 @@ security:
             stateless: true
             provider: zitadel
 
-        # Everything else (the public /api reference data) stays open. To protect it, add an
-        # `api` firewall mirroring `mcp` plus an access_control rule on ^/api.
+        # The REST garage surface + the agent turn. Same Casdoor bearer as `mcp` (handler added
+        # per environment below). The token is OPTIONAL at the firewall: a request with no token
+        # falls through as anonymous so the public GET reads still work — it is the access_control
+        # rules below that force a token on the write methods and on /agent/turn.
+        api:
+            pattern: ^/(garage|agent/turn)
+            stateless: true
+            provider: zitadel
+
+        # Everything else (the public /api reference data, docs) stays open.
         main:
             security: false
 
@@ -32,6 +40,10 @@ security:
         # Force a 401 (entry point) for unauthenticated /mcp calls; without this the missing
         # token would simply fall through as anonymous and the tools would run unprotected.
         - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
+        # Garage WRITES require a token; GET stays anonymous (reads + Mercure are still public —
+        # the latent multi-tenant cluster is the next step). /agent/turn is gated wholesale.
+        - { path: ^/garage, methods: [POST, PUT, PATCH, DELETE], roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/agent/turn, roles: IS_AUTHENTICATED_FULLY }
 
 # Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC
 # handler but drops the audience check, because Casdoor sets `aud` to the (per-DCR dynamic)
@@ -40,6 +52,9 @@ when@dev: &casdoor_firewall
     security:
         firewalls:
             mcp:
+                access_token:
+                    token_handler: App\Security\CasdoorTokenHandler
+            api:
                 access_token:
                     token_handler: App\Security\CasdoorTokenHandler
 
@@ -53,4 +68,7 @@ when@test:
                     # A real Casdoor-signed JWT cannot be minted offline, so tests decode
                     # opaque test tokens instead. The firewall and ZitadelUserProvider still
                     # run for real.
+                    token_handler: App\Tests\Security\FakeOidcTokenHandler
+            api:
+                access_token:
                     token_handler: App\Tests\Security\FakeOidcTokenHandler

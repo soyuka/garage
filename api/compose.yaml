@@ -134,6 +134,12 @@ services:
   # One-time setup after first boot (see docs/AUTH.md): log in as the seeded admin
   # (built-in/admin / 123) and set Organization "built-in" → dcrPolicy = "open" to allow
   # Goose's anonymous client registration. Dev defaults are insecure; externalize for prod.
+  #
+  # init_data.json seeds the `dashboard` OAuth app (Authorization Code + PKCE public client) used
+  # by the SPA. app.conf has initDataFile = "./init_data.json" and the binary's workdir is `/`, so
+  # it is mounted at /init_data.json. Casdoor's InitDb() always creates the built-in org/app/admin
+  # unconditionally, and init data is additive/idempotent (an object is created only if absent), so
+  # this seed never clobbers the built-in objects — it just adds the dashboard app on first boot.
   casdoor:
     restart: unless-stopped
     image: casbin/casdoor:latest
@@ -141,6 +147,7 @@ services:
       RUNNING_IN_DOCKER: "true"
     volumes:
       - ./docker/casdoor/app.conf:/conf/app.conf:ro
+      - ./docker/casdoor/init_data.json:/init_data.json:ro
     depends_on:
       database:
         condition: service_healthy

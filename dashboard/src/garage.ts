@@ -1,10 +1,11 @@
+import { authFetch } from './auth';
 import type { PlannedPart, PlannedTask, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
 /** GET one garage vehicle by its IRI — the item read inlines its facts (the listing does not). */
 export async function getVehicle(iri: string): Promise<VehicleSummary> {
-  const res = await fetch(`${API}${iri}`, { headers: { Accept: 'application/ld+json' } });
+  const res = await authFetch(`${API}${iri}`, { headers: { Accept: 'application/ld+json' } });
   if (!res.ok) throw new Error(`vehicle fetch failed: ${res.status}`);
   return res.json() as Promise<VehicleSummary>;
 }
@@ -19,7 +20,7 @@ export async function getVehicle(iri: string): Promise<VehicleSummary> {
  */
 export async function getVehicleTasks(vehicleIri: string, includeDismissed = false): Promise<PlannedTask[]> {
   const query = includeDismissed ? '?includeDismissed=true' : '';
-  const res = await fetch(`${API}${vehicleIri}/planned-tasks${query}`, { headers: { Accept: 'application/ld+json' } });
+  const res = await authFetch(`${API}${vehicleIri}/planned-tasks${query}`, { headers: { Accept: 'application/ld+json' } });
   if (!res.ok) throw new Error(`tasks fetch failed: ${res.status}`);
   const data = (await res.json()) as { member?: RawTask[]; 'hydra:member'?: RawTask[] };
   const members = data.member ?? data['hydra:member'] ?? [];
@@ -33,7 +34,7 @@ export async function patchVehicle(
   iri: string,
   patch: { usageValue?: number; usageUnit?: string; plate?: string | null },
 ): Promise<VehicleSummary> {
-  const res = await fetch(`${API}${iri}`, {
+  const res = await authFetch(`${API}${iri}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
     body: JSON.stringify(patch),
@@ -50,7 +51,7 @@ export async function postVehicleFact(
   iri: string,
   fact: { key: string; value: string; unit?: string | null },
 ): Promise<VehicleSummary> {
-  const res = await fetch(`${API}${iri}/facts`, {
+  const res = await authFetch(`${API}${iri}/facts`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
     body: JSON.stringify(fact),
@@ -61,7 +62,7 @@ export async function postVehicleFact(
 
 /** Tick a planned task off the checklist: PATCH its status. */
 export async function patchTask(iri: string, status: 'open' | 'done' | 'dismissed'): Promise<void> {
-  const res = await fetch(`${API}${iri}`, {
+  const res = await authFetch(`${API}${iri}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
     body: JSON.stringify({ status }),
@@ -74,7 +75,7 @@ export async function patchTask(iri: string, status: 'open' | 'done' | 'dismisse
  * never clears the list — this is the deterministic CTA "add reference" path, no agent turn.
  */
 export async function mergeTaskParts(iri: string, parts: PlannedPart[]): Promise<void> {
-  const res = await fetch(`${API}${iri}`, {
+  const res = await authFetch(`${API}${iri}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
     body: JSON.stringify({ parts }),

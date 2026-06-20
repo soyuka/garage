@@ -1,0 +1,49 @@
+{
+  "applications": [
+    {
+      "owner": "admin",
+      "name": "dashboard",
+      "displayName": "mon-parc-auto Atelier",
+      "logo": "https://cdn.casbin.org/img/casdoor-logo_1185x256.png",
+      "homepageUrl": "https://localhost",
+      "description": "SPA dashboard — OAuth2 Authorization Code + PKCE public client. Tokens carry iss=CASDOOR_ISSUER and are validated by App\\Security\\CasdoorTokenHandler on the api firewall (^/garage writes, ^/agent/turn).",
+      "organization": "built-in",
+      "cert": "cert-built-in",
+      "enablePassword": true,
+      "enableSignUp": false,
+      "enableSigninSession": false,
+      "enableAutoSignin": false,
+      "enableCodeSignin": false,
+      "clientId": "monparc-dashboard-0a1b2c3d",
+      "clientSecret": "monparc-dashboard-secret-9f8e7d6c5b4a39281706",
+      "redirectUris": [
+        "https://localhost/callback"
+      ],
+      "grantTypes": [
+        "authorization_code",
+        "refresh_token"
+      ],
+      "tokenFormat": "JWT",
+      "tokenFields": [],
+      "expireInHours": 168,
+      "refreshExpireInHours": 168,
+      "scopes": [
+        "openid",
+        "profile",
+        "email"
+      ],
+      "signinMethods": [
+        {
+          "name": "Password",
+          "displayName": "Password",
+          "rule": "All"
+        }
+      ],
+      "signupItems": [
+        {"name": "ID", "visible": false, "required": true, "prompted": false, "rule": "Random"},
+        {"name": "Username", "visible": true, "required": true, "prompted": false, "rule": "None"},
+        {"name": "Password", "visible": true, "required": true, "prompted": false, "rule": "None"}
+      ]
+    }
+  ]
+}

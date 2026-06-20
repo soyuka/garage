@@ -28,7 +28,7 @@ final class PlannedTaskPatchTest extends AppTestCase
         $vehicleIri = $plan['task']['vehicle'];
 
         $client->request('PATCH', $taskIri, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
             'json' => ['status' => 'done'],
         ]);
         $this->assertResponseIsSuccessful();
@@ -61,7 +61,7 @@ final class PlannedTaskPatchTest extends AppTestCase
         $vehicleIri = $plan['task']['vehicle'];
 
         $client->request('PATCH', $taskIri, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
             'json' => ['status' => 'dismissed'],
         ]);
         $this->assertResponseIsSuccessful();

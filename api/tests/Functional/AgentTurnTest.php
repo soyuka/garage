@@ -52,7 +52,7 @@ final class AgentTurnTest extends AppTestCase
         $container->set('ai.platform.anthropic', $platform);
 
         $client->request('POST', '/agent/turn', [
-            'headers' => ['Content-Type' => 'application/json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
             'json' => ['instruction' => 'Logue une vidange sur le TORO 246-H', 'sessionId' => 'sess-abc'],
         ]);
 

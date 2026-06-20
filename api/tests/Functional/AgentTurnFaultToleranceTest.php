@@ -42,7 +42,7 @@ final class AgentTurnFaultToleranceTest extends AppTestCase
         $container->set('ai.platform.anthropic', $platform);
 
         $client->request('POST', '/agent/turn', [
-            'headers' => ['Content-Type' => 'application/json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
             'json' => ['instruction' => 'Propose des actions', 'sessionId' => 'sess-ft'],
         ]);
 

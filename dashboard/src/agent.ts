@@ -1,3 +1,5 @@
+import { authFetch } from './auth';
+
 const API = import.meta.env.VITE_API_BASE ?? '';
 
 export interface TurnContext {
@@ -16,7 +18,7 @@ export interface TurnContext {
  * we only surface transport failures here.
  */
 export async function postTurn(instruction: string, ctx: TurnContext): Promise<void> {
-  const res = await fetch(`${API}/agent/turn`, {
+  const res = await authFetch(`${API}/agent/turn`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({

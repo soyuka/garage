@@ -38,7 +38,7 @@ final class GarageVehiclePatchTest extends AppTestCase
         $iri = $this->seedVehicleIri($client);
 
         $client->request('PATCH', $iri, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
             'json' => ['usageValue' => 142000, 'usageUnit' => 'km', 'plate' => 'AB-123-CD'],
         ]);
 
@@ -55,7 +55,7 @@ final class GarageVehiclePatchTest extends AppTestCase
         $iri = $this->seedVehicleIri($client);
 
         $client->request('PATCH', $iri, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
             'json' => ['make' => 'FORD', 'model' => 'FOCUS', 'plate' => 'AB-123-CD'],
         ]);
 
@@ -70,7 +70,7 @@ final class GarageVehiclePatchTest extends AppTestCase
         $iri = $this->seedVehicleIri($client);
 
         $client->request('PATCH', $iri, [
-            'headers' => ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
             'json' => ['usageValue' => 142000],
         ]);
 

@@ -45,6 +45,18 @@ abstract class AppTestCase extends ApiTestCase
      * rolled-back transaction, so cache rows written by one test never leak into
      * the next — no manual wipe needed.
      */
+    /**
+     * Authorization header for a write request against the `api` firewall (^/garage, ^/agent/turn).
+     * The token is decoded by {@see \App\Tests\Security\FakeOidcTokenHandler}; the firewall,
+     * ZitadelUserProvider and find-or-create all run for real. Merge into a request's headers.
+     *
+     * @return array{Authorization: string}
+     */
+    protected static function authHeaders(string $sub = 'dashboard-test-user', string $email = 'dashboard@example.com'): array
+    {
+        return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];
+    }
+
     protected static function sivCache(): CacheItemPoolInterface
     {
         return static::getContainer()->get('cache.siv');

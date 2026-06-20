@@ -25,7 +25,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
         $container->set('ai.platform.anthropic', $platform);
 
         $client->request('POST', '/agent/turn', [
-            'headers' => ['Content-Type' => 'application/json'],
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
             'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-life'],
         ]);
 
@@ -47,7 +47,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
 
         try {
             $client->request('POST', '/agent/turn', [
-                'headers' => ['Content-Type' => 'application/json'],
+                'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
                 'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-boom'],
             ]);
         } catch (\Throwable) {

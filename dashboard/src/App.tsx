@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { postTurn } from './agent';
+import { authFetch } from './auth';
 import { getVehicle, getVehicleTasks, mergeTaskParts, patchTask, patchVehicle, postVehicleFact } from './garage';
 import { CarRail } from './components/CarRail';
 import { Composer } from './components/Composer';
@@ -47,7 +48,7 @@ export function App() {
   // GET /garage/vehicles → replace the sidebar parc list. Called once on mount and again whenever a
   // vehicle domain event fans out (create/merge), so a write in this tab or another grows the list live.
   const loadVehicles = useCallback(() => {
-    fetch(`${API}/garage/vehicles`, { headers: { Accept: 'application/ld+json' } })
+    authFetch(`${API}/garage/vehicles`, { headers: { Accept: 'application/ld+json' } })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: { member?: VehicleSummary[]; 'hydra:member'?: VehicleSummary[] }) => {
         const vehicles = data.member ?? data['hydra:member'] ?? [];
