@@ -6,7 +6,7 @@
       "displayName": "mon-parc-auto Atelier",
       "logo": "https://cdn.casbin.org/img/casdoor-logo_1185x256.png",
       "homepageUrl": "https://localhost",
-      "description": "SPA dashboard — OAuth2 Authorization Code + PKCE public client. Tokens carry iss=CASDOOR_ISSUER and are validated by App\\Security\\CasdoorTokenHandler on the api firewall (^/garage writes, ^/agent/turn).",
+      "description": "Dashboard SPA — OAuth2 Authorization Code + PKCE public client.",
       "organization": "built-in",
       "cert": "cert-built-in",
       "enablePassword": true,
