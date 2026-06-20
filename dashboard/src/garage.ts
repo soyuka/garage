@@ -1,5 +1,5 @@
 import { authFetch } from './auth';
-import type { PlannedPart, PlannedTask, VehicleSummary } from './types';
+import type { MaintenanceRecord, PlannedPart, PlannedTask, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -29,11 +29,22 @@ export async function getVehicleTasks(vehicleIri: string, includeDismissed = fal
 
 type RawTask = PlannedTask & { '@id'?: string };
 
-/** Editable-card write: JSON Merge Patch of the vehicle's own scalars (usage reading, plate). */
-export async function patchVehicle(
-  iri: string,
-  patch: { usageValue?: number; usageUnit?: string; plate?: string | null },
-): Promise<VehicleSummary> {
+/** The card's editable scalars — the subset the PATCH endpoint accepts (merge-patch: send only what changed). */
+export interface VehiclePatch {
+  make?: string;
+  model?: string;
+  year?: number | null;
+  modification?: string | null;
+  engineCode?: string | null;
+  kType?: number | null;
+  vehicleType?: string;
+  plate?: string | null;
+  usageValue?: number;
+  usageUnit?: string;
+}
+
+/** Editable-card write: JSON Merge Patch of the vehicle's card fields. */
+export async function patchVehicle(iri: string, patch: VehiclePatch): Promise<VehicleSummary> {
   const res = await authFetch(`${API}${iri}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
@@ -41,6 +52,104 @@ export async function patchVehicle(
   });
   if (!res.ok) throw new Error(`vehicle update failed: ${res.status}`);
   return res.json() as Promise<VehicleSummary>;
+}
+
+/** Create a blank vehicle (the parc's "+ Ajouter"); returns the fresh read-model to select. */
+export async function createVehicle(): Promise<VehicleSummary> {
+  const res = await authFetch(`${API}/garage/vehicles`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: '{}',
+  });
+  if (!res.ok) throw new Error(`vehicle create failed: ${res.status}`);
+  return res.json() as Promise<VehicleSummary>;
+}
+
+/** Soft-delete a vehicle: it drops off the parc but its history survives. */
+export async function deleteVehicle(iri: string): Promise<void> {
+  const res = await authFetch(`${API}${iri}`, { method: 'DELETE', headers: { Accept: 'application/ld+json' } });
+  if (!res.ok && res.status !== 204) throw new Error(`vehicle delete failed: ${res.status}`);
+}
+
+/** Remove a fact from the card by key (soft-delete; re-POST the key to bring it back). */
+export async function deleteVehicleFact(vehicleIri: string, key: string): Promise<void> {
+  const res = await authFetch(`${API}${vehicleIri}/facts/${encodeURIComponent(key)}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/ld+json' },
+  });
+  if (!res.ok && res.status !== 204) throw new Error(`fact delete failed: ${res.status}`);
+}
+
+/** The body of a manual task add. */
+export interface PlannedTaskInput {
+  type: string;
+  label?: string | null;
+  target?: { value: number; unit?: string | null } | null;
+  dueDate?: string | null;
+  parts?: PlannedPart[];
+}
+
+/** Add a checklist task by hand (POST planned-tasks). */
+export async function createTask(vehicleIri: string, input: PlannedTaskInput): Promise<PlannedTask> {
+  const res = await authFetch(`${API}${vehicleIri}/planned-tasks`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`task create failed: ${res.status}`);
+  const t = (await res.json()) as PlannedTask & { '@id'?: string };
+  return { ...t, id: t['@id'] ?? t.id };
+}
+
+/**
+ * "Archiver les entretiens terminés": file every done task into the past-maintenance log. Returns
+ * how many were archived (0 on a re-run — the call is idempotent). The caller refetches both the
+ * checklist and the records afterwards.
+ */
+export async function archiveTasks(vehicleIri: string): Promise<{ archived: number }> {
+  const res = await authFetch(`${API}${vehicleIri}/planned-tasks/archive`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: '{}',
+  });
+  if (!res.ok) throw new Error(`archive failed: ${res.status}`);
+  const data = (await res.json()) as { archived?: number };
+  return { archived: data.archived ?? 0 };
+}
+
+type RawRecord = MaintenanceRecord & { '@id'?: string };
+
+/** GET a vehicle's past maintenance (newest first). The API serves the IRI as `@id`; normalize to `id`. */
+export async function getMaintenanceRecords(vehicleIri: string): Promise<MaintenanceRecord[]> {
+  const res = await authFetch(`${API}${vehicleIri}/maintenance-records`, { headers: { Accept: 'application/ld+json' } });
+  if (!res.ok) throw new Error(`records fetch failed: ${res.status}`);
+  const data = (await res.json()) as { member?: RawRecord[]; 'hydra:member'?: RawRecord[] };
+  const members = data.member ?? data['hydra:member'] ?? [];
+  return members.map((r) => ({ ...r, id: r['@id'] ?? r.id }) as MaintenanceRecord);
+}
+
+/** The body of a manual past-service log. */
+export interface MaintenanceRecordInput {
+  type: string;
+  performedAt: string;
+  label?: string | null;
+  usageValue?: number | null;
+  usageUnit?: string | null;
+  notes?: string | null;
+  cost?: number | null;
+  currency?: string | null;
+  performedBy?: string | null;
+  partsUsed?: PlannedPart[];
+}
+
+/** Log a past service by hand (POST maintenance-records). */
+export async function createMaintenanceRecord(vehicleIri: string, input: MaintenanceRecordInput): Promise<void> {
+  const res = await authFetch(`${API}${vehicleIri}/maintenance-records`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`record create failed: ${res.status}`);
 }
 
 /**

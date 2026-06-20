@@ -10,7 +10,7 @@ const HUB = import.meta.env.VITE_MERCURE_URL ?? '';
  */
 export interface DomainEvent {
   kind: 'vehicle';
-  event: 'created' | 'updated';
+  event: 'created' | 'updated' | 'deleted';
   vehicle: string;
   iri: string;
   resource: VehicleSummary;

@@ -15,7 +15,7 @@ export function factLabel(key: string): string {
   return FACT_LABELS[key] ?? key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export function FactRow({ fact }: { fact: VehicleFact }) {
+export function FactRow({ fact, onDelete }: { fact: VehicleFact; onDelete?: (key: string) => void }) {
   const badge = fact.verified ? (
     <Badge variant="verified" check>
       {fact.source}
@@ -39,6 +39,11 @@ export function FactRow({ fact }: { fact: VehicleFact }) {
       ) : (
         badge
       )}
+      {onDelete ? (
+        <button type="button" className="fact-delete" aria-label={`Retirer ${factLabel(fact.key)}`} title="Retirer" onClick={() => onDelete(fact.key)}>
+          ×
+        </button>
+      ) : null}
     </div>
   );
 }

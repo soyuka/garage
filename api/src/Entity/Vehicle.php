@@ -46,6 +46,25 @@ class Vehicle
     #[ODM\ReferenceMany(targetDocument: PlannedMaintenance::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
     private Collection $plannedTasks;
 
+    // Manufacturer engine code (SIV code_moteur, e.g. "WJY", "F1AE0481B") or a plain displacement
+    // label the user keys in ("1.9"). Distinct from the kType (TecDoc id) and the modification
+    // (trim label): the motor a mechanic asks for. Not on the dedup path — purely descriptive.
+    //
+    // Declared (not constructor-promoted) on purpose: ODM hydrates legacy docs via
+    // newInstanceWithoutConstructor, which applies CLASS-level defaults but never a promoted
+    // param's default. Docs persisted before this field carry no `engineCode` key, so a promoted
+    // property would stay uninitialized and the getter would fatal. The `= null` default here makes
+    // the read tolerate that schema drift.
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $engineCode = null;
+
+    // Soft-delete tombstone. A deleted vehicle stays in the collection (its maintenance history is
+    // never erased) but every read path — the parc listing, identity dedup, the item GET — skips
+    // it. null = live. See {@see self::delete()}. Declared (not promoted) for the same legacy-doc
+    // hydration reason as $engineCode above.
+    #[ODM\Field(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $deletedAt = null;
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $make,
@@ -61,6 +80,7 @@ class Vehicle
         private ?int $year = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $modification = null,
+        ?string $engineCode = null,
         #[ODM\Field(type: 'int', nullable: true)]
         private ?int $kType = null,
         #[ODM\Field(type: 'string', nullable: true)]
@@ -73,10 +93,13 @@ class Vehicle
         private ?int $usageValue = null,
         #[ODM\Field(type: 'string', nullable: true, enumType: UsageUnit::class)]
         private ?UsageUnit $usageUnit = null,
+        ?\DateTimeImmutable $deletedAt = null,
     ) {
         $this->id = (string) new Ulid();
         $this->maintenanceRecords = new ArrayCollection();
         $this->plannedTasks = new ArrayCollection();
+        $this->engineCode = $engineCode;
+        $this->deletedAt = $deletedAt;
     }
 
     public function getId(): Ulid
@@ -89,9 +112,19 @@ class Vehicle
         return $this->make;
     }
 
+    public function setMake(string $make): void
+    {
+        $this->make = $make;
+    }
+
     public function getModel(): string
     {
         return $this->model;
+    }
+
+    public function setModel(string $model): void
+    {
+        $this->model = $model;
     }
 
     public function getYear(): ?int
@@ -112,6 +145,16 @@ class Vehicle
     public function setModification(?string $modification): void
     {
         $this->modification = $modification;
+    }
+
+    public function getEngineCode(): ?string
+    {
+        return $this->engineCode;
+    }
+
+    public function setEngineCode(?string $engineCode): void
+    {
+        $this->engineCode = $engineCode;
     }
 
     public function getKType(): ?int
@@ -149,6 +192,11 @@ class Vehicle
         return $this->vehicleType;
     }
 
+    public function setVehicleType(VehicleType $vehicleType): void
+    {
+        $this->vehicleType = $vehicleType;
+    }
+
     public function getSource(): string
     {
         return $this->source;
@@ -167,6 +215,22 @@ class Vehicle
     public function getAddedAt(): \DateTimeImmutable
     {
         return $this->addedAt;
+    }
+
+    public function getDeletedAt(): ?\DateTimeImmutable
+    {
+        return $this->deletedAt;
+    }
+
+    public function isDeleted(): bool
+    {
+        return null !== $this->deletedAt;
+    }
+
+    /** Tombstone the vehicle: it leaves every read path but its document (and history) survives. */
+    public function delete(\DateTimeImmutable $at = new \DateTimeImmutable()): void
+    {
+        $this->deletedAt = $at;
     }
 
     public function getUsageValue(): ?int

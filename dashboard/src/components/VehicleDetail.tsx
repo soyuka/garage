@@ -2,15 +2,26 @@ import { useEffect, useRef, useState } from 'react';
 import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
 import { MetricStat } from '../design/components/MetricStat';
+import type { MaintenanceRecordInput, PlannedTaskInput } from '../garage';
+import { serviceLabel, SERVICE_TYPES } from '../labels';
 import type { FactPanel, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
 import { InlineEdit } from './InlineEdit';
+import { PastMaintenanceRail } from './PastMaintenanceRail';
+import { Scramble } from './Scramble';
+import { TaskListSkeleton } from './Skeletons';
 
 /** The card's editable scalars — the subset the PATCH endpoint accepts. */
 export interface VehicleEdit {
+  make?: string;
+  model?: string;
+  year?: number | null;
+  modification?: string | null;
+  engineCode?: string | null;
+  kType?: number | null;
+  plate?: string | null;
   usageValue?: number;
   usageUnit?: string;
-  plate?: string | null;
 }
 
 function healthTone(v: number): 'ok' | 'warn' | 'alarm' {
@@ -19,27 +30,8 @@ function healthTone(v: number): 'ok' | 'warn' | 'alarm' {
   return 'alarm';
 }
 
-const TASK_LABELS: Record<string, string> = {
-  oil_change: 'Vidange',
-  oil_filter: 'Filtre à huile',
-  air_filter: 'Filtre à air',
-  fuel_filter: 'Filtre à carburant',
-  cabin_filter: 'Filtre d’habitacle',
-  spark_plug: 'Bougies',
-  tires: 'Pneus',
-  brakes: 'Freins',
-  coolant: 'Liquide de refroidissement',
-  brake_fluid: 'Liquide de frein',
-  timing_belt: 'Courroie de distribution',
-  gearbox_oil: 'Huile de boîte',
-  battery: 'Batterie',
-  inspection: 'Contrôle technique',
-  repair: 'Réparation',
-  other: 'Autre',
-};
-
 function taskTitle(task: PlannedTask): string {
-  const base = TASK_LABELS[task.type] ?? task.type;
+  const base = serviceLabel(task.type);
   return task.label ? `${base} — ${task.label}` : base;
 }
 
@@ -82,18 +74,25 @@ export function VehicleDetail({
   vehicle,
   onEdit,
   onSetTaskStatus,
-  onClearDone,
+  onArchiveDone,
+  onAddTask,
+  tasksLoading,
   showAllTasks,
   onToggleShowAllTasks,
   factPanel,
   onExpandFacts,
   onDismissFacts,
   onFillFact,
+  onDeleteFact,
+  recordsLoading,
+  onAddRecord,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
   onSetTaskStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') => void;
-  onClearDone: (taskIris: string[]) => void;
+  onArchiveDone: () => void;
+  onAddTask: (input: PlannedTaskInput) => void;
+  tasksLoading: boolean;
   showAllTasks: boolean;
   onToggleShowAllTasks: () => void;
   // The agent's focused fact answer, drawn into the Données panel instead of a separate card.
@@ -101,6 +100,9 @@ export function VehicleDetail({
   onExpandFacts: () => void;
   onDismissFacts: () => void;
   onFillFact: (key: string, value: string) => void;
+  onDeleteFact: (key: string) => void;
+  recordsLoading: boolean;
+  onAddRecord: (input: MaintenanceRecordInput) => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -114,10 +116,12 @@ export function VehicleDetail({
   const doneIris = tasks.filter((t) => t.status === 'done').map((t) => t.id);
   const dismissedCount = tasks.filter((t) => t.status === 'dismissed').length;
   const milestones = groupByMilestone(tasks);
+  const [addingTask, setAddingTask] = useState(false);
   // The Données list is on-demand reference, collapsed by default. The agent's show_fact answer drives
   // this same panel — it forces it open and (until "Tout afficher") narrows it to the asked keys —
   // rather than docking a second card. focused ⇒ a live, unexpanded fact answer is spotlighting keys.
   const [localOpen, setLocalOpen] = useState(false);
+  const [addingFact, setAddingFact] = useState(false);
   const focused = factPanel != null && !factPanel.expanded;
   const dataOpen = localOpen || factPanel != null;
   const shownFacts = focused ? facts.filter((f) => factPanel!.keys.includes(f.key)) : facts;
@@ -147,12 +151,45 @@ export function VehicleDetail({
     onEdit({ usageValue: value, usageUnit: defaultUnit });
   };
 
+  const commitInt = (raw: string): number | null => {
+    const value = Number.parseInt(raw.replace(/[^\d]/g, ''), 10);
+    return Number.isNaN(value) ? null : value;
+  };
+
   return (
     <>
       <div className="title-row">
-        <h1>{vehicle.name}</h1>
-        {vehicle.year ? <Badge>{vehicle.year}</Badge> : null}
-        {vehicle.modification ? <Badge>{vehicle.modification}</Badge> : null}
+        <h1>
+          <InlineEdit value={vehicle.make} placeholder="marque" ariaLabel="Marque" onCommit={(v) => onEdit({ make: v })} />{' '}
+          <InlineEdit value={vehicle.model} placeholder="modèle" ariaLabel="Modèle" onCommit={(v) => onEdit({ model: v })} />
+        </h1>
+        <Badge style={{ padding: 0 }}>
+          <InlineEdit
+            value={vehicle.year ? String(vehicle.year) : ''}
+            placeholder="+ année"
+            ariaLabel="Année"
+            className="badge-edit"
+            onCommit={(v) => onEdit({ year: commitInt(v) })}
+          />
+        </Badge>
+        <Badge style={{ padding: 0 }}>
+          <InlineEdit
+            value={vehicle.modification ?? ''}
+            placeholder="+ finition"
+            ariaLabel="Finition / motorisation"
+            className="badge-edit"
+            onCommit={(v) => onEdit({ modification: v || null })}
+          />
+        </Badge>
+        <Badge style={{ padding: 0 }}>
+          <InlineEdit
+            value={vehicle.engineCode ?? ''}
+            placeholder="+ moteur"
+            ariaLabel="Code moteur"
+            className="badge-edit"
+            onCommit={(v) => onEdit({ engineCode: v || null })}
+          />
+        </Badge>
         <Badge style={{ padding: 0 }}>
           <InlineEdit
             value={vehicle.plate ?? ''}
@@ -162,7 +199,15 @@ export function VehicleDetail({
             onCommit={(next) => onEdit({ plate: next || null })}
           />
         </Badge>
-        {vehicle.kType ? <Badge>KType {vehicle.kType}</Badge> : null}
+        <Badge style={{ padding: 0 }}>
+          <InlineEdit
+            value={vehicle.kType ? String(vehicle.kType) : ''}
+            placeholder="+ kType"
+            ariaLabel="TecDoc kType"
+            className="badge-edit"
+            onCommit={(v) => onEdit({ kType: commitInt(v) })}
+          />
+        </Badge>
         {vehicle.verified ? (
           <Badge variant="verified" check>
             TecDoc vérifié
@@ -190,24 +235,25 @@ export function VehicleDetail({
           </div>
           <MetricStat
             label="Prochain entretien"
-            value={nextValue}
+            value={<Scramble text={nextValue} delay={80} />}
             unit={next.value < 0 ? `${next.unit} de retard` : next.unit}
             tone={nextTone}
           />
-          <MetricStat label="Indice de santé" value={vehicle.health} unit="/100" tone={tone} />
-          <MetricStat label="Tâches ouvertes" value={vehicle.openTasks} unit="en attente" />
+          <MetricStat label="Indice de santé" value={<Scramble text={String(vehicle.health)} delay={160} />} unit="/100" tone={tone} />
+          <MetricStat label="Tâches ouvertes" value={<Scramble text={String(vehicle.openTasks)} delay={240} />} unit="en attente" />
         </div>
       </Card>
 
-      {/* État du véhicule + Coût d'entretien panels hidden for now — too noisy, freeing vertical space */}
-
       <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <div className="panel-title">
-          <span className="t">Tâches &amp; liste de courses</span>
+          <span className="t">Entretien en cours</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--mpa-space-3)' }}>
+            <button type="button" className="task-clean" aria-expanded={addingTask} onClick={() => setAddingTask((a) => !a)}>
+              {addingTask ? 'Annuler' : '+ Ajouter une tâche'}
+            </button>
             {doneIris.length > 0 ? (
-              <button type="button" className="task-clean" onClick={() => onClearDone(doneIris)}>
-                Nettoyer les tâches faites ({doneIris.length})
+              <button type="button" className="task-clean" onClick={() => onArchiveDone()}>
+                Archiver les entretiens terminés ({doneIris.length})
               </button>
             ) : null}
             <button type="button" className="task-clean" aria-pressed={showAllTasks} onClick={onToggleShowAllTasks}>
@@ -218,9 +264,19 @@ export function VehicleDetail({
             </span>
           </span>
         </div>
-        {tasks.length === 0 ? (
+        {addingTask ? (
+          <AddTaskForm
+            onSubmit={(input) => {
+              onAddTask(input);
+              setAddingTask(false);
+            }}
+          />
+        ) : null}
+        {tasksLoading ? (
+          <TaskListSkeleton />
+        ) : tasks.length === 0 ? (
           <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>
-            Aucune tâche planifiée. Demandez à l'assistant « quel entretien à X km ? ».
+            Aucune tâche planifiée. Ajoutez-en une, ou demandez à l'assistant « quel entretien à X km ? ».
           </div>
         ) : (
           <div className="milestones">
@@ -244,45 +300,71 @@ export function VehicleDetail({
         )}
       </Card>
 
+      <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+        <PastMaintenanceRail records={vehicle.maintenanceRecords} loading={recordsLoading} onAddRecord={onAddRecord} />
+      </Card>
+
       <Card ref={dataRef} className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
-        <button
-          type="button"
-          className="panel-title panel-disclosure"
-          aria-expanded={dataOpen}
-          onClick={toggleData}
-        >
-          <span className="t">
-            <span className="disclosure-caret">{focused ? '×' : dataOpen ? '▾' : '▸'}</span>{' '}
-            {focused && factPanel!.title ? factPanel!.title : 'Données'}
+        <div className="panel-title panel-disclosure-row">
+          <button type="button" className="panel-disclosure" aria-expanded={dataOpen} onClick={toggleData}>
+            <span className="t">
+              <span className="disclosure-caret">{focused ? '×' : dataOpen ? '▾' : '▸'}</span>{' '}
+              {focused && factPanel!.title ? factPanel!.title : 'Données'}
+            </span>
+          </button>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--mpa-space-3)' }}>
+            {!focused ? (
+              <button
+                type="button"
+                className="task-clean"
+                aria-expanded={addingFact}
+                onClick={() => {
+                  setLocalOpen(true);
+                  setAddingFact((a) => !a);
+                }}
+              >
+                {addingFact ? 'Annuler' : '+ Ajouter une donnée'}
+              </button>
+            ) : null}
+            <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
+              {facts.length} enregistrée{facts.length > 1 ? 's' : ''}
+            </span>
           </span>
-          <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
-            {facts.length} enregistrée{facts.length > 1 ? 's' : ''}
-          </span>
-        </button>
+        </div>
         {dataOpen ? (
-          shownFacts.length === 0 && missing.length === 0 ? (
-            <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>Aucune donnée enregistrée.</div>
-          ) : (
-            <div className="facts">
-              {shownFacts.map((f) => (
-                <FactRow key={f.key} fact={f} />
-              ))}
-              {missing.map((k) => (
-                <div key={k} className="fact-row fact-row-missing">
-                  <span className="fact-key">{factLabel(k)}</span>
-                  <span className="fact-value">
-                    <InlineEdit
-                      value=""
-                      placeholder="non renseignée — cliquer pour saisir"
-                      ariaLabel={`Saisir ${factLabel(k)}`}
-                      className="fact-fill"
-                      onCommit={(value) => onFillFact(k, value)}
-                    />
-                  </span>
-                </div>
-              ))}
-            </div>
-          )
+          <>
+            {addingFact && !focused ? (
+              <AddFactForm
+                onSubmit={(key, value) => {
+                  onFillFact(key, value);
+                  setAddingFact(false);
+                }}
+              />
+            ) : null}
+            {shownFacts.length === 0 && missing.length === 0 ? (
+              <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>Aucune donnée enregistrée.</div>
+            ) : (
+              <div className="facts">
+                {shownFacts.map((f) => (
+                  <FactRow key={f.key} fact={f} onDelete={focused ? undefined : onDeleteFact} />
+                ))}
+                {missing.map((k) => (
+                  <div key={k} className="fact-row fact-row-missing">
+                    <span className="fact-key">{factLabel(k)}</span>
+                    <span className="fact-value">
+                      <InlineEdit
+                        value=""
+                        placeholder="non renseignée — cliquer pour saisir"
+                        ariaLabel={`Saisir ${factLabel(k)}`}
+                        className="fact-fill"
+                        onCommit={(value) => onFillFact(k, value)}
+                      />
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
         ) : null}
         {focused && facts.length > shownFacts.length ? (
           <button type="button" className="fact-panel-expand" onClick={onExpandFacts}>
@@ -291,6 +373,65 @@ export function VehicleDetail({
         ) : null}
       </Card>
     </>
+  );
+}
+
+function AddTaskForm({ onSubmit }: { onSubmit: (input: PlannedTaskInput) => void }) {
+  const [type, setType] = useState('oil_change');
+  const [label, setLabel] = useState('');
+  const [target, setTarget] = useState('');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!type.trim()) return;
+    const km = Number.parseInt(target.replace(/[^\d]/g, ''), 10);
+    onSubmit({
+      type: type.trim(),
+      label: label.trim() || null,
+      target: Number.isNaN(km) ? null : { value: km, unit: 'km' },
+    });
+  };
+
+  return (
+    <form className="add-form" onSubmit={submit}>
+      <input list="task-service-types" className="add-input" placeholder="type (ex. brakes)" value={type} onChange={(e) => setType(e.target.value)} />
+      <datalist id="task-service-types">
+        {SERVICE_TYPES.map((t) => (
+          <option key={t} value={t}>
+            {serviceLabel(t)}
+          </option>
+        ))}
+      </datalist>
+      <input className="add-input add-input-grow" placeholder="libellé (optionnel)" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <input className="add-input add-input-sm" inputMode="numeric" placeholder="à … km" value={target} onChange={(e) => setTarget(e.target.value)} />
+      <button type="submit" className="add-submit" disabled={!type.trim()}>
+        Ajouter
+      </button>
+    </form>
+  );
+}
+
+function AddFactForm({ onSubmit }: { onSubmit: (key: string, value: string) => void }) {
+  const [key, setKey] = useState('');
+  const [value, setValue] = useState('');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!key.trim() || !value.trim()) return;
+    // Normalise the key to the snake_case the projection stores by.
+    onSubmit(key.trim().toLowerCase().replace(/\s+/g, '_'), value.trim());
+    setKey('');
+    setValue('');
+  };
+
+  return (
+    <form className="add-form" onSubmit={submit}>
+      <input className="add-input" placeholder="donnée (ex. oil_capacity)" value={key} onChange={(e) => setKey(e.target.value)} />
+      <input className="add-input add-input-grow" placeholder="valeur (ex. 4.3 L)" value={value} onChange={(e) => setValue(e.target.value)} />
+      <button type="submit" className="add-submit" disabled={!key.trim() || !value.trim()}>
+        Ajouter
+      </button>
+    </form>
   );
 }
 
@@ -349,4 +490,3 @@ function TaskRow({
     </div>
   );
 }
-

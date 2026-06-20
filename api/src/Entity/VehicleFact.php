@@ -26,6 +26,17 @@ class VehicleFact
     // verified fact is never shadowed by an unverified one for the same key.
     public const array AUTHORITATIVE_SOURCES = ['partsapi', 'siv'];
 
+    // Soft-delete tombstone. The projection skips a deleted fact, so removing a key from the card
+    // (DELETE …/facts/{key}) tombstones every matching attribute instead of erasing it; re-adding the
+    // key via POST lands a fresh, live attribute. null = live.
+    //
+    // Declared (not constructor-promoted): embedded attributes persisted before this field carry no
+    // `deletedAt` key, and ODM hydrates them via newInstanceWithoutConstructor — which applies a
+    // CLASS-level default but never a promoted param's. The `= null` here keeps isDeleted() safe on
+    // those legacy entries instead of fataling on an uninitialized typed property.
+    #[ODM\Field(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $deletedAt = null;
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $key,
@@ -43,7 +54,9 @@ class VehicleFact
         private ?string $addedBy = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $url = null,
+        ?\DateTimeImmutable $deletedAt = null,
     ) {
+        $this->deletedAt = $deletedAt;
     }
 
     public static function isAuthoritativeSource(string $source): bool
@@ -113,5 +126,16 @@ class VehicleFact
     public function getUrl(): ?string
     {
         return $this->url;
+    }
+
+    public function isDeleted(): bool
+    {
+        return null !== $this->deletedAt;
+    }
+
+    /** Tombstone the fact: it leaves the projection but its document survives (recoverable). */
+    public function delete(\DateTimeImmutable $at = new \DateTimeImmutable()): void
+    {
+        $this->deletedAt = $at;
     }
 }

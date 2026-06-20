@@ -41,6 +41,9 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
         $tasks = $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
             ->field('status')->in($statuses)
+            // Archived (filed into the past-maintenance log) tasks leave the current checklist. The
+            // null match also covers legacy docs that predate the field (a missing key reads as null).
+            ->field('archivedAt')->equals(null)
             ->sort('createdAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
@@ -93,6 +96,27 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->field('vehicle')->references($vehicle)
             ->field('type')->equals($type)
             ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
+            ->getQuery()
+            ->execute()
+            ->toArray());
+    }
+
+    /**
+     * Done-but-not-yet-filed tasks for a vehicle — the batch the "Archiver" action transforms into
+     * past-maintenance records. Dismissed tasks (discarded, never performed) are deliberately out:
+     * archiving credits done work, never resurrects abandoned plans. The null match covers legacy
+     * docs predating the field.
+     *
+     * @return list<PlannedMaintenance>
+     */
+    public function completedUnarchived(Vehicle $vehicle): array
+    {
+        return array_values($this->createQueryBuilder()
+            ->field('vehicle')->references($vehicle)
+            ->field('status')->equals(PlannedMaintenanceStatus::Done->value)
+            ->field('archivedAt')->equals(null)
+            ->sort('completedAt', 'asc')
+            ->sort('id', 'asc')
             ->getQuery()
             ->execute()
             ->toArray());

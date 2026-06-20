@@ -44,6 +44,16 @@ class PlannedMaintenance
     #[ODM\EmbedMany(targetDocument: VehicleFact::class, strategy: 'set')]
     private Collection $attributes;
 
+    // Filed into the past-maintenance log. A Done task is archived when "Archiver les entretiens
+    // terminés" mints a {@see MaintenanceRecord} from it: it then leaves the current checklist
+    // (filtered out by the repository) but its document survives. null = still on the current list.
+    //
+    // Declared (not constructor-promoted): tasks persisted before this field carry no `archivedAt`
+    // key, and ODM hydrates them via newInstanceWithoutConstructor — which applies a CLASS-level
+    // default but never a promoted param's. The `= null` here keeps isArchived() safe on legacy docs.
+    #[ODM\Field(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'plannedTasks')]
         private Vehicle $vehicle,
@@ -260,5 +270,21 @@ class PlannedMaintenance
     {
         $this->status = PlannedMaintenanceStatus::Open;
         $this->completedAt = null;
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    public function isArchived(): bool
+    {
+        return null !== $this->archivedAt;
+    }
+
+    /** File a completed task into history: it leaves the current checklist but its document survives. */
+    public function archive(\DateTimeImmutable $at = new \DateTimeImmutable()): void
+    {
+        $this->archivedAt = $at;
     }
 }

@@ -38,6 +38,7 @@ final class VehicleRepository extends ServiceDocumentRepository
             ->field('model')->equals($model)
             ->field('vehicleType')->equals($vehicleType->value)
             ->field('owner')->equals($this->owner->current())
+            ->field('deletedAt')->equals(null)
             ->limit(1);
 
         if (null !== $year) {
@@ -62,6 +63,7 @@ final class VehicleRepository extends ServiceDocumentRepository
         $qb = $this->createQueryBuilder()
             ->field('owner')->equals($this->owner->current())
             ->field('vehicleType')->equals($vehicleType->value)
+            ->field('deletedAt')->equals(null)
             ->sort('addedAt', 'desc');
 
         $match = [$qb->expr()->field('model')->equals($model)];
@@ -93,6 +95,7 @@ final class VehicleRepository extends ServiceDocumentRepository
         return array_values($this->createQueryBuilder()
             ->field('owner')->equals($this->owner->current())
             ->field('kType')->equals($kType)
+            ->field('deletedAt')->equals(null)
             ->sort('addedAt', 'desc')
             ->getQuery()->execute()->toArray());
     }
@@ -108,6 +111,7 @@ final class VehicleRepository extends ServiceDocumentRepository
     {
         $qb = $this->createQueryBuilder()
             ->field('owner')->equals($this->owner->current())
+            ->field('deletedAt')->equals(null)
             ->sort('addedAt', 'desc');
 
         if (null !== $make) {

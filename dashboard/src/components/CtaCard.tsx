@@ -1,5 +1,6 @@
 import { Button } from '../design/components/Button';
 import { Card } from '../design/components/Card';
+import { Scramble } from './Scramble';
 import type { Cta, CtaAction } from '../types';
 
 /**
@@ -26,8 +27,14 @@ export function CtaCard({
     <Card className="cta-card">
       <div className="cta-head">
         <div>
-          <div className="cta-headline">{cta.headline}</div>
-          {cta.finding ? <div className="cta-finding">{cta.finding}</div> : null}
+          <div className="cta-headline">
+            <Scramble text={cta.headline} />
+          </div>
+          {cta.finding ? (
+            <div className="cta-finding">
+              <Scramble text={cta.finding} delay={120} />
+            </div>
+          ) : null}
         </div>
         <button type="button" className="fact-panel-close" aria-label="Fermer" onClick={onDismiss}>
           ×

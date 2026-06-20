@@ -62,6 +62,7 @@ final class GarageVehicleView
             'model' => $vehicle->getModel(),
             'year' => $vehicle->getYear(),
             'modification' => $vehicle->getModification(),
+            'engineCode' => $vehicle->getEngineCode(),
             'vehicleType' => $vehicle->getVehicleType()->value,
             'source' => $vehicle->getSource(),
             'kType' => $vehicle->getKType(),

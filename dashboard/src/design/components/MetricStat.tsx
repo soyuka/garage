@@ -4,7 +4,7 @@ type Tone = 'default' | 'accent' | 'ok' | 'warn' | 'alarm';
 
 export interface MetricStatProps extends React.HTMLAttributes<HTMLDivElement> {
   label?: string;
-  value: string | number;
+  value: React.ReactNode;
   unit?: string;
   tone?: Tone;
   /** lg = 44px (KPI), md = 32px (secondary). */

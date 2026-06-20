@@ -39,58 +39,99 @@ body {
   z-index: 30;
   clip-path: var(--mpa-clip-bevel);
 }
-.app::after {
-  content: '';
-  position: absolute;
-  inset: 8px;
-  pointer-events: none;
-  z-index: 31;
-  /* four amber L-brackets at the corners */
-  background:
-    linear-gradient(var(--mpa-accent-2), var(--mpa-accent-2)) left 0 top 0 / 28px 2px no-repeat,
-    linear-gradient(var(--mpa-accent-2), var(--mpa-accent-2)) left 0 top 0 / 2px 28px no-repeat,
-    linear-gradient(var(--mpa-accent-2), var(--mpa-accent-2)) right 0 bottom 0 / 28px 2px no-repeat,
-    linear-gradient(var(--mpa-accent-2), var(--mpa-accent-2)) right 0 bottom 0 / 2px 28px no-repeat;
-  filter: drop-shadow(var(--mpa-glow-amber));
-}
+/* The amber corner L-brackets were removed (they sat top-left/bottom-right and read as clutter). */
 
 /* ---- top bar ---- */
 .topbar {
   display: flex;
   align-items: center;
   gap: var(--mpa-space-4);
-  padding: var(--mpa-space-3) var(--mpa-space-7);
+  /* +8px top: the .app::before HUD frame is inset 8px, so the visible band starts
+     8px down. Add it back here so content centers within the framed area, not the
+     full element box. */
+  padding: calc(var(--mpa-space-3) + 8px) var(--mpa-space-7) var(--mpa-space-3);
   background: var(--mpa-surface);
   backdrop-filter: var(--mpa-glass-blur);
   -webkit-backdrop-filter: var(--mpa-glass-blur);
   border-bottom: 1px solid var(--mpa-border);
   box-shadow: 0 1px 0 0 var(--mpa-border-soft);
 }
-.brand { display: flex; align-items: center; gap: var(--mpa-space-3); }
-.brand .mark {
-  width: 34px; height: 34px; border-radius: var(--mpa-radius-md);
-  background: linear-gradient(135deg, var(--mpa-accent), var(--mpa-accent-deep));
-  color: var(--mpa-on-accent); display: grid; place-items: center;
-  font-weight: 700; font-size: 17px;
-  box-shadow: var(--mpa-glow-cyan);
+/* The brand logo's slot now carries the live Mercure feed (moved off the bottom-left float). */
+.mercure-feed {
+  display: flex; align-items: center; gap: var(--mpa-space-2);
+  min-width: 0; max-width: 46vw; font-size: var(--mpa-text-small);
+  color: var(--mpa-faint); font-variant-numeric: tabular-nums;
 }
-.brand .name { font-weight: 600; text-transform: uppercase; letter-spacing: var(--mpa-track-label); }
-.brand .garage {
-  color: var(--mpa-accent); font-size: var(--mpa-text-small);
-  text-transform: uppercase; letter-spacing: var(--mpa-track-label);
+.mercure-dot {
+  width: 8px; height: 8px; flex: none; border-radius: var(--mpa-radius-pill);
+  /* Idle = a calm blue "sleeping" pulse. Mimics Apple's breathing sleep LED
+     (patent US6,658,577: ~12 breaths/min, ~1.8s breath + ~0.4s quiet hold). */
+  background: var(--mpa-accent);
+  animation: mpa-breathe 2.2s ease-in-out infinite;
 }
+/* Live = steady lit, glowing — the breath stops once events flow. */
+.mercure-dot.live { background: var(--mpa-accent); box-shadow: var(--mpa-glow-cyan); animation: none; }
+@keyframes mpa-breathe {
+  /* 1.8s breath (sine-like fade), then a ~0.4s quiet hold at the dim floor. */
+  0%   { opacity: 0.25; box-shadow: none; }
+  41%  { opacity: 1; box-shadow: 0 0 8px var(--mpa-accent); }
+  82%  { opacity: 0.25; box-shadow: none; }
+  100% { opacity: 0.25; box-shadow: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mercure-dot { animation: none; opacity: 0.6; }
+}
+.mercure-last, .mercure-idle {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.mercure-idle { color: var(--mpa-faint); }
+/* Search + account, grouped at the right edge (off the middle of the bar). */
+.topbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--mpa-space-3); }
 .topbar .search {
-  margin-left: auto; min-width: 280px; height: 36px;
+  min-width: 280px; height: 36px;
   display: flex; align-items: center; gap: var(--mpa-space-2);
   padding: 0 var(--mpa-space-3); color: var(--mpa-placeholder);
   background: var(--mpa-inset); border: 1px solid var(--mpa-border);
   border-radius: var(--mpa-radius-sm); font-size: var(--mpa-text-label);
 }
-.avatar {
-  width: 34px; height: 34px; border-radius: var(--mpa-radius-pill);
-  background: rgba(255,255,255,0.06); border: 1px solid var(--mpa-border-strong);
-  display: grid; place-items: center; font-size: 12px; font-weight: 600; color: var(--mpa-text-3);
+/* Gear trigger: a ghost icon button, no fill/border until hovered or open.
+   Sized to match the search box height (36px) so the right group lines up. */
+.tb-trigger {
+  width: 36px; height: 36px; flex: none; padding: 0; cursor: pointer;
+  display: grid; place-items: center;
+  background: transparent; border: 1px solid transparent; border-radius: var(--mpa-radius-sm);
+  color: var(--mpa-text-3); font-size: 21px; line-height: 1;
+  transition: color var(--mpa-transition-fast), border-color var(--mpa-transition-fast), background var(--mpa-transition-fast);
 }
+.tb-trigger:hover, .tb-trigger.open {
+  color: var(--mpa-accent); border-color: var(--mpa-border); background: var(--mpa-inset);
+}
+.tb-gear { display: block; transition: transform var(--mpa-transition); }
+.tb-trigger:hover .tb-gear, .tb-trigger.open .tb-gear { transform: rotate(45deg); }
+
+/* ---- account dropdown ---- */
+.tb-menu { position: relative; }
+.tb-menu-pop {
+  position: absolute; top: calc(100% + var(--mpa-space-2)); right: 0; z-index: 40;
+  min-width: 180px; display: flex; flex-direction: column;
+  padding: var(--mpa-space-2); background: var(--mpa-surface);
+  backdrop-filter: var(--mpa-glass-blur); -webkit-backdrop-filter: var(--mpa-glass-blur);
+  border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-md);
+  box-shadow: var(--mpa-shadow-card), var(--mpa-glow-cyan-soft);
+}
+.tb-menu-head {
+  padding: var(--mpa-space-2) var(--mpa-space-3) var(--mpa-space-3);
+  color: var(--mpa-faint); font-size: var(--mpa-text-small);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  border-bottom: 1px solid var(--mpa-border-soft); margin-bottom: var(--mpa-space-1);
+}
+.tb-menu-item {
+  text-align: left; border: none; background: transparent; cursor: pointer;
+  padding: var(--mpa-space-2) var(--mpa-space-3); border-radius: var(--mpa-radius-sm);
+  color: var(--mpa-text); font: inherit; font-size: var(--mpa-text-label);
+}
+.tb-menu-item:hover { background: var(--mpa-inset); color: var(--mpa-accent); }
+.tb-menu-item--danger:hover { color: var(--mpa-alarm); }
 
 /* ---- body: car-rail on top, detail canvas below ---- */
 .body { display: grid; grid-template-rows: auto 1fr; grid-template-columns: minmax(0, 1fr); overflow: hidden; }
@@ -101,7 +142,7 @@ body {
   padding: var(--mpa-space-5) var(--mpa-space-7) var(--mpa-space-4);
 }
 .car-rail-track {
-  display: flex; gap: var(--mpa-space-4); overflow-x: auto; padding: 2px 2px 8px;
+  display: flex; gap: var(--mpa-space-4); overflow-x: auto; padding: 10px 2px 8px;
   flex: 1; min-width: 0; scrollbar-width: thin;
   scrollbar-color: var(--mpa-border-strong) transparent;
 }
@@ -141,6 +182,20 @@ body {
 }
 .car-card-status { flex: none; width: 9px; height: 9px; border-radius: var(--mpa-radius-pill); }
 .car-card.active .car-card-status { box-shadow: 0 0 8px currentColor; }
+/* The card sits in a relative wrapper so its remove affordance can float top-right without nesting
+   a button inside the (button) card. */
+.car-card-wrap { position: relative; flex: none; }
+.car-card-wrap .car-card { width: 230px; }
+.car-card-remove {
+  position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; z-index: 2;
+  border-radius: var(--mpa-radius-pill); border: 1px solid var(--mpa-border-strong);
+  background: var(--mpa-surface); color: var(--mpa-faint); cursor: pointer;
+  font-size: 14px; line-height: 1; display: grid; place-items: center;
+  opacity: 0; transition: opacity 0.12s ease, color 0.12s ease;
+  backdrop-filter: var(--mpa-glass-blur); -webkit-backdrop-filter: var(--mpa-glass-blur);
+}
+.car-card-wrap:hover .car-card-remove { opacity: 1; }
+.car-card-remove:hover { color: var(--mpa-alarm); border-color: var(--mpa-alarm); }
 .car-card-add {
   justify-content: center; gap: var(--mpa-space-2); color: var(--mpa-muted);
   border-style: dashed; width: 150px;
@@ -242,6 +297,23 @@ body {
   42% { color: var(--mpa-accent); }
   60% { color: var(--mpa-text-2); }
 }
+/* ---- loading skeletons ---- */
+/* A shimmer placeholder: the inset fill with a cyan sheen sweeping across, standing in for text
+   while the frame is already on screen. Used by the boot skeletons (Skeletons.tsx). */
+.skel {
+  display: inline-block; position: relative; overflow: hidden; vertical-align: middle;
+  background: var(--mpa-inset); border-radius: var(--mpa-radius-sm);
+}
+.skel::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(25, 224, 240, 0.14), transparent);
+  transform: translateX(-100%); animation: mpa-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes mpa-shimmer { 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) {
+  .skel::after { animation: none; }
+}
+
 .composer {
   display: flex; align-items: center; gap: var(--mpa-space-3);
   background: var(--mpa-inset); border: 1px solid var(--mpa-border);
@@ -272,8 +344,6 @@ body {
   font-size: var(--mpa-text-label); display: flex; align-items: center; gap: var(--mpa-space-3);
 }
 .toast .led { width: 8px; height: 8px; border-radius: var(--mpa-radius-pill); flex: none; }
-.live-rail { position: fixed; left: var(--mpa-space-4); bottom: var(--mpa-space-4); font-size: var(--mpa-text-small); color: var(--mpa-faint); max-width: 280px; }
-.live-rail .ev { font-variant-numeric: tabular-nums; }
 
 /* ---- inline editable fields ---- */
 .inline-edit {
@@ -295,9 +365,15 @@ body {
 /* ---- facts panel ---- */
 .facts { display: flex; flex-direction: column; }
 .fact-row {
-  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: var(--mpa-space-4);
+  display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: var(--mpa-space-4);
   padding: var(--mpa-space-3) 0; border-top: 1px solid var(--mpa-border);
 }
+.fact-delete {
+  width: 18px; height: 18px; padding: 0; line-height: 1; border: none; background: transparent;
+  color: var(--mpa-faint); cursor: pointer; font-size: 15px; opacity: 0; transition: opacity 0.12s ease, color 0.12s ease;
+}
+.fact-row:hover .fact-delete { opacity: 1; }
+.fact-delete:hover { color: var(--mpa-alarm); }
 .fact-row:first-child { border-top: none; }
 .fact-key { color: var(--mpa-text-2); font-size: var(--mpa-text-label); }
 .fact-value { font-weight: 500; font-variant-numeric: tabular-nums; }
@@ -378,6 +454,60 @@ body {
 .task-parts .part-ref { font-variant-numeric: tabular-nums; color: var(--mpa-text-1); }
 .task-parts .part-brand, .task-parts .part-label, .task-parts .part-qty { color: var(--mpa-muted); }
 
+/* Editable badge fields (year, finition, engineCode, kType) — same dashed-underline affordance as
+   the plate badge, sized for short tokens. */
+.badge-edit { padding: 6px 11px; font-size: 13px; }
+.badge-edit.inline-edit-input { width: 8ch; font-size: 13px; }
+
+/* Disclosure header that also carries action buttons on its right (the Données panel). */
+.panel-disclosure-row { width: 100%; }
+.panel-disclosure-row .panel-disclosure { width: auto; flex: 1; }
+
+/* ---- inline add forms (task, fact, past service) ---- */
+.add-form {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--mpa-space-2);
+  margin-bottom: var(--mpa-space-4); padding-bottom: var(--mpa-space-4);
+  border-bottom: 1px solid var(--mpa-border-soft);
+}
+.add-input {
+  background: var(--mpa-inset); border: 1px solid var(--mpa-border); color: var(--mpa-text);
+  border-radius: var(--mpa-radius-sm); padding: 6px 9px; font: inherit; font-size: var(--mpa-text-label);
+  outline: none; min-width: 0; width: 150px;
+}
+.add-input:focus { border-color: var(--mpa-accent); }
+.add-input::placeholder { color: var(--mpa-placeholder); }
+.add-input-sm { width: 90px; }
+.add-input-grow { flex: 1; min-width: 120px; }
+.add-submit {
+  border: none; cursor: pointer; border-radius: var(--mpa-radius-sm);
+  padding: 6px 14px; font: inherit; font-size: var(--mpa-text-label); font-weight: 600;
+  background: var(--mpa-accent-2); color: var(--mpa-on-accent-2); box-shadow: var(--mpa-glow-amber);
+}
+.add-submit:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+
+/* ---- past-maintenance: a horizontal strip of compact event cards (simpler than the car rail) ---- */
+.hist-empty { color: var(--mpa-faint); font-size: var(--mpa-text-small); }
+.hist-track {
+  display: flex; gap: var(--mpa-space-3); overflow-x: auto; padding-bottom: var(--mpa-space-2);
+  scrollbar-width: thin; scrollbar-color: var(--mpa-border-strong) transparent;
+}
+.hist-track::-webkit-scrollbar { height: 6px; }
+.hist-track::-webkit-scrollbar-thumb { background: var(--mpa-border-strong); border-radius: var(--mpa-radius-pill); }
+.hist-card {
+  flex: none; width: 200px; padding: var(--mpa-space-3) var(--mpa-space-4);
+  background: var(--mpa-inset); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-lg);
+  display: flex; flex-direction: column; gap: 3px;
+}
+.hist-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mpa-space-2); }
+.hist-type { font-weight: 600; font-size: var(--mpa-text-label); }
+.hist-date { color: var(--mpa-muted); font-size: var(--mpa-text-small); font-variant-numeric: tabular-nums; flex: none; }
+.hist-label { color: var(--mpa-text-2); font-size: var(--mpa-text-small); }
+.hist-meta { color: var(--mpa-muted); font-size: var(--mpa-text-small); display: flex; gap: 6px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+.hist-notes {
+  color: var(--mpa-faint); font-size: var(--mpa-text-small); margin-top: 2px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
 /* ---- auth gate (login screen) ---- */
 .auth-screen {
   min-height: 100vh; display: grid; place-items: center;
@@ -403,5 +533,3 @@ body {
   background: var(--mpa-accent); color: var(--mpa-on-accent);
 }
 .auth-button:hover { background: var(--mpa-accent-hover); }
-.avatar { cursor: pointer; }
-.avatar:hover { color: var(--mpa-accent); border-color: var(--mpa-accent); }

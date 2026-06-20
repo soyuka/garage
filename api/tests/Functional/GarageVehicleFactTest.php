@@ -123,6 +123,74 @@ final class GarageVehicleFactTest extends AppTestCase
         ]);
     }
 
+    public function testDeleteFactRemovesItFromTheCard(): void
+    {
+        $client = static::createClient();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        \assert($dm instanceof DocumentManager);
+        $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
+        $vehicle->setOwner(self::TEST_OWNER);
+        $dm->persist($vehicle);
+        $dm->flush();
+        $dm->clear();
+        $iri = '/garage/vehicles/'.$vehicle->getId();
+
+        $client->request('POST', $iri.'/facts', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['key' => 'oil_capacity', 'value' => '4.3', 'unit' => 'L'],
+        ]);
+        $this->assertResponseIsSuccessful();
+
+        $client->request('DELETE', $iri.'/facts/oil_capacity', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $this->assertResponseStatusCodeSame(204);
+
+        // Gone from the projection.
+        $facts = $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['facts'];
+        $this->assertNotContains('oil_capacity', array_column($facts, 'key'), 'the removed fact is off the card');
+    }
+
+    public function testDeleteThenReAddFactBringsItBackLive(): void
+    {
+        $client = static::createClient();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        \assert($dm instanceof DocumentManager);
+        $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
+        $vehicle->setOwner(self::TEST_OWNER);
+        $dm->persist($vehicle);
+        $dm->flush();
+        $dm->clear();
+        $iri = '/garage/vehicles/'.$vehicle->getId();
+
+        $post = fn (string $value) => $client->request('POST', $iri.'/facts', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['key' => 'coolant', 'value' => $value],
+        ]);
+
+        $post('G12');
+        $client->request('DELETE', $iri.'/facts/coolant', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $post('G13');
+
+        // Re-adding the key after a tombstone lands a fresh, live value — the tombstone never shadows it.
+        $this->assertJsonContains(['facts' => [['key' => 'coolant', 'value' => 'G13']]]);
+    }
+
+    public function testDeleteUnknownFactIs404(): void
+    {
+        $client = static::createClient();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        \assert($dm instanceof DocumentManager);
+        $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
+        $vehicle->setOwner(self::TEST_OWNER);
+        $dm->persist($vehicle);
+        $dm->flush();
+        $dm->clear();
+
+        $client->request('DELETE', '/garage/vehicles/'.$vehicle->getId().'/facts/nonexistent', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json'],
+        ]);
+        $this->assertResponseStatusCodeSame(404);
+    }
+
     public function testPostFactRejectsBlankKey(): void
     {
         $client = static::createClient();

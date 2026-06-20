@@ -25,6 +25,12 @@ final class VehicleFactsProjector
         $byKey = [];
         foreach ($vehicle->getPlannedTasks() as $task) {
             foreach ($task->getAttributes() as $fact) {
+                // A tombstoned fact (removed from the card) is off the projection — and it does NOT
+                // shadow a live attribute for the same key on another item, so it cannot resurrect a
+                // value the user removed.
+                if ($fact->isDeleted()) {
+                    continue;
+                }
                 $incumbent = $byKey[$fact->getKey()] ?? null;
                 if (null === $incumbent || $this->supersedes($fact, $incumbent)) {
                     $byKey[$fact->getKey()] = $fact;

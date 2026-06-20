@@ -6,13 +6,19 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use App\Dto\VehicleCreateInput;
 use App\Dto\VehicleFactInput;
 use App\Entity\Vehicle;
 use App\State\GarageVehicleCollectionProvider;
+use App\State\GarageVehicleCreateProcessor;
+use App\State\GarageVehicleDeleteProcessor;
+use App\State\GarageVehicleFactDeleteProcessor;
 use App\State\GarageVehicleFactProcessor;
 use App\State\GarageVehiclePatchProcessor;
 use App\State\GarageVehicleProvider;
@@ -24,18 +30,32 @@ use Symfony\Component\Uid\Ulid;
  * `vehicle` input — so an agent can follow a listed vehicle to a real GET instead of juggling a
  * leaked DB integer. Distinct from the catalog App\ApiResource\Vehicle (SIV, plate-keyed).
  *
- * The PATCH is the dashboard editable-card write: a JSON Merge Patch on the vehicle's own scalars
- * (usage reading, plate). Identity/provenance fields are read-only (writable: false) so the card
- * can never rewrite make/model; the agent owns identity through the MCP tools' dedup path.
+ * The PATCH is the dashboard editable-card write: a JSON Merge Patch on the card's fields. The agent
+ * owns identity through the MCP tools' dedup path, but a human editing their OWN card may correct any
+ * field — including make/model — so the card's scalars are writable. Provenance (source, vin) and the
+ * projected facts stay read-only. POST creates a blank vehicle to fill in by hand; DELETE soft-deletes.
  */
 #[ApiResource(
     operations: [
         new GetCollection(uriTemplate: '/garage/vehicles', provider: GarageVehicleCollectionProvider::class),
+        // Create a blank vehicle the user then fills in via the editable card. Body is optional
+        // (VehicleCreateInput); the processor seeds placeholders and returns the fresh vehicle.
+        new Post(
+            uriTemplate: '/garage/vehicles',
+            input: VehicleCreateInput::class,
+            processor: GarageVehicleCreateProcessor::class,
+        ),
         new Get(uriTemplate: '/garage/vehicles/{id}', provider: GarageVehicleProvider::class),
         new Patch(
             uriTemplate: '/garage/vehicles/{id}',
             provider: GarageVehicleProvider::class,
             processor: GarageVehiclePatchProcessor::class,
+        ),
+        // Soft-delete: tombstone the vehicle (its history survives) and fan a 'deleted' event out.
+        new Delete(
+            uriTemplate: '/garage/vehicles/{id}',
+            provider: GarageVehicleProvider::class,
+            processor: GarageVehicleDeleteProcessor::class,
         ),
         // The dashboard's manual fact write: record one user-supplied spec on the vehicle. Input is
         // a bare {key, value, unit} (VehicleFactInput); the processor returns the fresh vehicle.
@@ -44,6 +64,18 @@ use Symfony\Component\Uid\Ulid;
             input: VehicleFactInput::class,
             processor: GarageVehicleFactProcessor::class,
         ),
+        // Soft-delete a fact by key: tombstones every matching attribute across the vehicle's items so
+        // the projection drops it. Recoverable (re-POST the key), and a verified catalog fact can be
+        // hidden too — the user's card, the user's call.
+        new Delete(
+            uriTemplate: '/garage/vehicles/{id}/facts/{key}',
+            uriVariables: [
+                'id' => new Link(fromClass: self::class, identifiers: ['id']),
+                'key' => new Link(fromClass: self::class, identifiers: ['key']),
+            ],
+            read: false,
+            processor: GarageVehicleFactDeleteProcessor::class,
+        ),
     ],
 )]
 final class GarageVehicle
@@ -51,19 +83,18 @@ final class GarageVehicle
     #[ApiProperty(identifier: true, description: 'Public ULID identifier of the garage vehicle.')]
     public Ulid $id;
 
-    #[ApiProperty(writable: false)]
-    public string $make;
-    #[ApiProperty(writable: false)]
-    public string $model;
-    #[ApiProperty(writable: false)]
+    public string $make = '';
+    public string $model = '';
     public ?int $year = null;
-    #[ApiProperty(writable: false, description: 'Engine/trim variant label, e.g. "2.0 16V Coupé". Pins the oil-grade variant (get_motul_oil) and the catalog modification.')]
+    #[ApiProperty(description: 'Engine/trim variant label, e.g. "2.0 16V Coupé". Pins the oil-grade variant (get_motul_oil) and the catalog modification.')]
     public ?string $modification = null;
-    #[ApiProperty(writable: false)]
-    public string $vehicleType;
+    #[ApiProperty(description: 'Manufacturer engine code (e.g. "WJY", "F1AE0481B") or a plain displacement label ("1.9") — the motor a mechanic asks for.')]
+    public ?string $engineCode = null;
+    #[ApiProperty(description: 'Vehicle segment: "car", "motorcycle", "cv" (commercial) or "groundscare".')]
+    public string $vehicleType = 'car';
     #[ApiProperty(writable: false)]
     public string $source;
-    #[ApiProperty(writable: false, description: 'TecDoc kType, when known.')]
+    #[ApiProperty(description: 'TecDoc kType, when known.')]
     public ?int $kType = null;
     public ?string $plate = null;
     #[ApiProperty(writable: false)]
@@ -99,6 +130,7 @@ final class GarageVehicle
         $resource->model = $vehicle->getModel();
         $resource->year = $vehicle->getYear();
         $resource->modification = $vehicle->getModification();
+        $resource->engineCode = $vehicle->getEngineCode();
         $resource->vehicleType = $vehicle->getVehicleType()->value;
         $resource->source = $vehicle->getSource();
         $resource->kType = $vehicle->getKType();

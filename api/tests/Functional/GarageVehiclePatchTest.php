@@ -49,7 +49,7 @@ final class GarageVehiclePatchTest extends AppTestCase
         $this->assertJsonContains(['usageValue' => 142000, 'usageUnit' => 'km', 'plate' => 'AB-123-CD']);
     }
 
-    public function testPatchCannotChangeIdentityFields(): void
+    public function testPatchCanCorrectIdentityFields(): void
     {
         $client = static::createClient();
         $iri = $this->seedVehicleIri($client);
@@ -60,8 +60,24 @@ final class GarageVehiclePatchTest extends AppTestCase
         ]);
 
         $this->assertResponseIsSuccessful();
-        // Identity is read-only: the make/model in the body are ignored, only the plate lands.
-        $this->assertJsonContains(['make' => 'MAZDA', 'model' => 'MAZDA6', 'plate' => 'AB-123-CD']);
+        // A human editing their own card may correct identity too (the agent's dedup path is separate).
+        $this->assertJsonContains(['make' => 'FORD', 'model' => 'FOCUS', 'plate' => 'AB-123-CD']);
+    }
+
+    public function testPatchCannotForgeProvenance(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri($client);
+        $source = $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['source'];
+
+        $client->request('PATCH', $iri, [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => ['source' => 'siv', 'plate' => 'AB-123-CD'],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        // source is provenance (writable: false), not a card field: the body's "siv" is ignored.
+        $this->assertJsonContains(['source' => $source, 'plate' => 'AB-123-CD']);
     }
 
     public function testUsageValueWithoutUnitIsRejected(): void

@@ -10,7 +10,12 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use App\Dto\ArchiveTasksOutput;
+use App\Dto\PlannedTaskInput;
 use App\Entity\PlannedMaintenance;
+use App\State\ArchiveCompletedTasksProcessor;
+use App\State\PlannedTaskCreateProcessor;
 use App\State\PlannedTaskPatchProcessor;
 use App\State\PlannedTaskProvider;
 use App\State\VehiclePlannedTaskCollectionProvider;
@@ -30,6 +35,29 @@ use Symfony\Component\Uid\Ulid;
                 'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
             ],
             provider: VehiclePlannedTaskCollectionProvider::class,
+        ),
+        // The dashboard's manual task add: a checklist item keyed by hand (source "user").
+        new Post(
+            uriTemplate: '/garage/vehicles/{vehicleId}/planned-tasks',
+            uriVariables: [
+                'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
+            ],
+            input: PlannedTaskInput::class,
+            processor: PlannedTaskCreateProcessor::class,
+        ),
+        // "Archiver les entretiens terminés": file every done task into the past-maintenance log.
+        // No request body (input: false) and no resource read (read: false) — it acts on the
+        // vehicle's whole done set and returns a small summary, not a PlannedTask.
+        new Post(
+            uriTemplate: '/garage/vehicles/{vehicleId}/planned-tasks/archive',
+            uriVariables: [
+                'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
+            ],
+            status: 200,
+            input: false,
+            output: ArchiveTasksOutput::class,
+            read: false,
+            processor: ArchiveCompletedTasksProcessor::class,
         ),
         new Get(uriTemplate: '/garage/planned-tasks/{id}', provider: PlannedTaskProvider::class),
         new Patch(

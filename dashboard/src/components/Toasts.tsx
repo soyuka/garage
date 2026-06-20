@@ -10,11 +10,10 @@ const LED: Record<Tone, string> = {
 
 interface Props {
   toasts: Toast[];
-  live: string[];
   onDismiss: (id: number) => void;
 }
 
-export function Toasts({ toasts, live, onDismiss }: Props) {
+export function Toasts({ toasts, onDismiss }: Props) {
   useEffect(() => {
     if (toasts.length === 0) return;
     const last = toasts[toasts.length - 1];
@@ -23,25 +22,13 @@ export function Toasts({ toasts, live, onDismiss }: Props) {
   }, [toasts, onDismiss]);
 
   return (
-    <>
-      <div className="toasts">
-        {toasts.map((t) => (
-          <div key={t.id} className="toast" onClick={() => onDismiss(t.id)}>
-            <span className="led" style={{ background: LED[t.tone] }} />
-            {t.message}
-          </div>
-        ))}
-      </div>
-      {live.length > 0 ? (
-        <div className="live-rail">
-          <div>● Mercure</div>
-          {live.map((e, i) => (
-            <div key={i} className="ev">
-              {e}
-            </div>
-          ))}
+    <div className="toasts">
+      {toasts.map((t) => (
+        <div key={t.id} className="toast" onClick={() => onDismiss(t.id)}>
+          <span className="led" style={{ background: LED[t.tone] }} />
+          {t.message}
         </div>
-      ) : null}
-    </>
+      ))}
+    </div>
   );
 }

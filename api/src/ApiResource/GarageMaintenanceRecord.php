@@ -7,8 +7,14 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Link;
+use ApiPlatform\Metadata\Post;
+use App\Dto\MaintenanceRecordInput;
 use App\Entity\MaintenanceRecord;
 use App\State\GarageMaintenanceRecordProvider;
+use App\State\MaintenanceRecordCreateProcessor;
+use App\State\VehicleMaintenanceRecordCollectionProvider;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -18,6 +24,23 @@ use Symfony\Component\Uid\Ulid;
  */
 #[ApiResource(
     operations: [
+        // The dashboard's "past maintenance" rail: a vehicle's service history, newest first.
+        new GetCollection(
+            uriTemplate: '/garage/vehicles/{vehicleId}/maintenance-records',
+            uriVariables: [
+                'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
+            ],
+            provider: VehicleMaintenanceRecordCollectionProvider::class,
+        ),
+        // Log a past service by hand (source "user").
+        new Post(
+            uriTemplate: '/garage/vehicles/{vehicleId}/maintenance-records',
+            uriVariables: [
+                'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
+            ],
+            input: MaintenanceRecordInput::class,
+            processor: MaintenanceRecordCreateProcessor::class,
+        ),
         new Get(uriTemplate: '/garage/maintenance-records/{id}', provider: GarageMaintenanceRecordProvider::class),
     ],
 )]

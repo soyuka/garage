@@ -1,14 +1,33 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { postTurn } from './agent';
 import { authFetch } from './auth';
-import { getVehicle, getVehicleTasks, mergeTaskParts, patchTask, patchVehicle, postVehicleFact } from './garage';
+import {
+  archiveTasks,
+  createMaintenanceRecord,
+  createTask,
+  createVehicle,
+  deleteVehicle,
+  deleteVehicleFact,
+  getMaintenanceRecords,
+  getVehicle,
+  getVehicleTasks,
+  mergeTaskParts,
+  patchTask,
+  patchVehicle,
+  postVehicleFact,
+  type MaintenanceRecordInput,
+  type PlannedTaskInput,
+} from './garage';
 import { CarRail } from './components/CarRail';
 import { Composer } from './components/Composer';
 import { CtaCard } from './components/CtaCard';
+import { VehicleDetailSkeleton } from './components/Skeletons';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { VehicleDetail, type VehicleEdit } from './components/VehicleDetail';
 import { reduce, vehicleFromSummary } from './state';
+import { loadRecency, saveRecency, vehicleSegment } from './recency';
+import { parseVehicleHash, writeVehicleHash } from './url';
 import { useMercure, type MercureFrame } from './useMercure';
 import type { CtaAction, DashboardState, VehicleId, VehicleSummary } from './types';
 
@@ -23,11 +42,16 @@ const initialState: DashboardState = {
   cta: null,
   toasts: [],
   live: [],
+  // localStorage read at init is fine — the reducer itself stays pure.
+  recency: loadRecency(),
 };
 
 export function App() {
   const [state, dispatch] = useReducer(reduce, initialState);
   const [busy, setBusy] = useState(false);
+  // True until the first GET /garage/vehicles settles — drives the boot skeletons so the empty
+  // initial state shows shimmer frames instead of flashing "Aucun véhicule".
+  const [booting, setBooting] = useState(true);
   // Loading sentences, shown one-at-a-time as a heartbeat line instead of stacking a toast each.
   const [status, setStatus] = useState<string[]>([]);
   const pushStatus = useCallback((message: string) => setStatus((q) => [...q, message]), []);
@@ -38,6 +62,10 @@ export function App() {
   // into a ref so the live-frame / post-write refetches in loadTasks honour it without resubscribing.
   const [showAllTasks, setShowAllTasks] = useState(false);
   const showAllTasksRef = useRef(false);
+  // Per-section loading flags so the checklist and history show their own shimmer on select/refetch,
+  // independent of the boot skeleton.
+  const [tasksLoading, setTasksLoading] = useState(false);
+  const [recordsLoading, setRecordsLoading] = useState(false);
 
   const selected = state.vehicles.find((v) => v.id === state.selectedId) ?? state.vehicles[0];
   // Live Mercure frames carry no checklist (it is its own subresource), so onFrame needs the
@@ -52,11 +80,17 @@ export function App() {
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((data: { member?: VehicleSummary[]; 'hydra:member'?: VehicleSummary[] }) => {
         const vehicles = data.member ?? data['hydra:member'] ?? [];
-        dispatch({ kind: 'action', action: { type: 'setVehicles', vehicles } });
+        // Resolve the URL hash (#/v/<seg>) against the fresh list so a reload restores the same car.
+        const hashSeg = parseVehicleHash(window.location.hash);
+        const preferredId = hashSeg
+          ? vehicles.find((s) => vehicleSegment(s['@id']) === hashSeg)?.['@id']
+          : undefined;
+        dispatch({ kind: 'action', action: { type: 'setVehicles', vehicles, preferredId } });
       })
       .catch(() => {
         /* keep current data if the API is unreachable */
-      });
+      })
+      .finally(() => setBooting(false));
   }, []);
 
   useEffect(loadVehicles, [loadVehicles]);
@@ -94,6 +128,7 @@ export function App() {
   // length is the open count. Re-run on select, after a tick-off, and on a live frame for this vehicle.
   const loadTasks = useCallback((id: VehicleId) => {
     if (!id.startsWith('/')) return;
+    setTasksLoading(true);
     getVehicleTasks(id, showAllTasksRef.current)
       .then((plannedTasks) => {
         // The checklist now carries done tasks too (rendered greyed); only open ones count as pending.
@@ -105,13 +140,40 @@ export function App() {
           kind: 'action',
           action: { type: 'toast', tone: 'alarm', message: `Échec du chargement des tâches : ${(e as Error).message}` },
         });
-      });
+      })
+      .finally(() => setTasksLoading(false));
+  }, []);
+
+  // GET the vehicle's past maintenance (the records subresource) and merge it onto the row.
+  const loadRecords = useCallback((id: VehicleId) => {
+    if (!id.startsWith('/')) return;
+    setRecordsLoading(true);
+    getMaintenanceRecords(id)
+      .then((maintenanceRecords) => dispatch({ kind: 'patchVehicle', id, patch: { maintenanceRecords } }))
+      .catch((e) => {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec du chargement des entretiens : ${(e as Error).message}` },
+        });
+      })
+      .finally(() => setRecordsLoading(false));
   }, []);
 
   useEffect(() => {
     loadDetail(state.selectedId);
     loadTasks(state.selectedId);
-  }, [state.selectedId, loadDetail, loadTasks]);
+    loadRecords(state.selectedId);
+  }, [state.selectedId, loadDetail, loadTasks, loadRecords]);
+
+  // Reflect the selected vehicle in the URL (hash, not path — auth owns the pathname) so a reload
+  // restores it; persist the recency order so the most-recent car stays first across reloads.
+  useEffect(() => {
+    if (state.selectedId.startsWith('/')) writeVehicleHash(state.selectedId);
+  }, [state.selectedId]);
+
+  useEffect(() => {
+    saveRecency(state.recency);
+  }, [state.recency]);
 
   // Editable-card write: PATCH the vehicle's own scalars, then refetch the item to reconcile.
   const editVehicle = useCallback(
@@ -148,22 +210,31 @@ export function App() {
     [state.selectedId, loadTasks],
   );
 
-  // Clean the list: dismiss every done task at once (one PATCH each), then refetch. Used by the
-  // card's "Nettoyer" action once the work is logged and the greyed rows are just clutter.
-  const clearDoneTasks = useCallback(
-    async (taskIris: string[]) => {
-      try {
-        await Promise.all(taskIris.map((iri) => patchTask(iri, 'dismissed')));
-        loadTasks(state.selectedId);
-      } catch (e) {
-        dispatch({
-          kind: 'action',
-          action: { type: 'toast', tone: 'alarm', message: `Échec du nettoyage : ${(e as Error).message}` },
-        });
-      }
-    },
-    [state.selectedId, loadTasks],
-  );
+  // "Archiver les entretiens terminés": transform every done task into a past-maintenance record
+  // server-side (one call), then refetch both the checklist (archived tasks drop off) and the
+  // records rail (the new entretiens land). The done→history bridge — work is filed, never lost.
+  const archiveDoneTasks = useCallback(async () => {
+    const id = state.selectedId;
+    if (!id.startsWith('/')) return;
+    try {
+      const { archived } = await archiveTasks(id);
+      loadTasks(id);
+      loadRecords(id);
+      dispatch({
+        kind: 'action',
+        action: {
+          type: 'toast',
+          tone: archived > 0 ? 'ok' : 'info',
+          message: archived > 0 ? `${archived} entretien${archived > 1 ? 's' : ''} archivé${archived > 1 ? 's' : ''}.` : 'Aucun entretien terminé à archiver.',
+        },
+      });
+    } catch (e) {
+      dispatch({
+        kind: 'action',
+        action: { type: 'toast', tone: 'alarm', message: `Échec de l'archivage : ${(e as Error).message}` },
+      });
+    }
+  }, [state.selectedId, loadTasks, loadRecords]);
 
   // Flip the "see all" toggle and refetch — on shows the dismissed (soft-removed) tasks, off hides
   // them again. The ref keeps later background refetches (live frames, tick-offs) on the same view.
@@ -212,6 +283,74 @@ export function App() {
     [state.selectedId, loadTasks],
   );
 
+  // "+ Ajouter" in the parc: create a blank vehicle, then focus it so the editable card opens ready
+  // to fill in. The Mercure 'created' frame also lands it for other tabs.
+  const addCar = useCallback(async () => {
+    try {
+      const summary = await createVehicle();
+      dispatch({ kind: 'upsertVehicle', summary });
+      dispatch({ kind: 'action', action: { type: 'selectVehicle', id: summary['@id'] } });
+    } catch (e) {
+      dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la création : ${(e as Error).message}` } });
+    }
+  }, []);
+
+  // Soft-delete a vehicle: drop it locally at once (optimistic), the DELETE + Mercure 'deleted' frame
+  // reconcile other tabs.
+  const removeCar = useCallback(async (id: VehicleId) => {
+    dispatch({ kind: 'removeVehicle', id });
+    try {
+      await deleteVehicle(id);
+    } catch (e) {
+      dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression : ${(e as Error).message}` } });
+      loadVehicles();
+    }
+  }, [loadVehicles]);
+
+  const addTask = useCallback(
+    async (input: PlannedTaskInput) => {
+      const id = state.selectedId;
+      if (!id.startsWith('/')) return;
+      try {
+        await createTask(id, input);
+        loadTasks(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'ajout de la tâche : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
+  const deleteFact = useCallback(
+    async (key: string) => {
+      const id = state.selectedId;
+      if (!id.startsWith('/')) return;
+      try {
+        await deleteVehicleFact(id, key);
+        loadDetail(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadDetail],
+  );
+
+  const addRecord = useCallback(
+    async (input: MaintenanceRecordInput) => {
+      const id = state.selectedId;
+      if (!id.startsWith('/')) return;
+      try {
+        await createMaintenanceRecord(id, input);
+        loadRecords(id);
+        // Logging a past service may auto-close a matching open task — refresh the checklist too.
+        loadTasks(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'enregistrement : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadRecords, loadTasks],
+  );
+
   const send = useCallback(
     async (instruction: string) => {
       // Go busy on dispatch and stay busy: the turn runs in an async worker, so the POST only acks
@@ -256,16 +395,21 @@ export function App() {
         return;
       }
       // Domain event on a public vehicle topic — a write fanned out (this tab or another). The
-      // payload carries the vehicle scalars + facts, so merge it straight in. The checklist is its
-      // own subresource and is NOT in the frame, so refetch it when the write touches the open vehicle.
+      // payload carries the vehicle scalars + facts, so merge it straight in. The checklist + history
+      // are their own subresources and NOT in the frame, so refetch them when the open vehicle changes.
       dispatch({ kind: 'live', message: `${frame.kind}/${frame.event} · ${frame.vehicle.slice(0, 8)}…` });
       pushStatus(`Mise à jour live : ${frame.kind} ${frame.event}`);
+      if (frame.event === 'deleted') {
+        dispatch({ kind: 'removeVehicle', id: frame.resource['@id'] });
+        return;
+      }
       dispatch({ kind: 'upsertVehicle', summary: frame.resource });
       if (frame.resource['@id'] === selectedIdRef.current) {
         loadTasks(selectedIdRef.current);
+        loadRecords(selectedIdRef.current);
       }
     },
-    [pushStatus, loadTasks],
+    [pushStatus, loadTasks, loadRecords],
   );
 
   // The collection topic carries every vehicle's full-resource frame (the publisher fans out to
@@ -277,23 +421,37 @@ export function App() {
 
   return (
     <div className="app">
-      <TopBar />
+      <TopBar live={state.live} />
       <div className="body">
-        <CarRail vehicles={state.vehicles} selectedId={state.selectedId} onSelect={onSelect} />
+        <CarRail
+          vehicles={state.vehicles}
+          selectedId={state.selectedId}
+          onSelect={onSelect}
+          onAddCar={addCar}
+          onRemoveCar={removeCar}
+          loading={booting && state.vehicles.length === 0}
+        />
         <main className="canvas">
           <div className="scroll">
-            {selected ? (
+            {booting && !selected ? (
+              <VehicleDetailSkeleton />
+            ) : selected ? (
               <VehicleDetail
                 vehicle={selected}
                 onEdit={editVehicle}
                 onSetTaskStatus={setTaskStatus}
-                onClearDone={clearDoneTasks}
+                onArchiveDone={archiveDoneTasks}
+                onAddTask={addTask}
+                tasksLoading={tasksLoading}
                 showAllTasks={showAllTasks}
                 onToggleShowAllTasks={toggleShowAllTasks}
                 factPanel={state.factPanel}
                 onExpandFacts={() => dispatch({ kind: 'expandFactPanel' })}
                 onDismissFacts={() => dispatch({ kind: 'dismissFactPanel' })}
                 onFillFact={fillFact}
+                onDeleteFact={deleteFact}
+                recordsLoading={recordsLoading}
+                onAddRecord={addRecord}
               />
             ) : (
               <div className="empty-parc">
@@ -315,7 +473,7 @@ export function App() {
           <Composer busy={busy} status={status} onAdvanceStatus={advanceStatus} onSend={send} />
         </main>
       </div>
-      <Toasts toasts={state.toasts} live={state.live} onDismiss={(id) => dispatch({ kind: 'dismissToast', id })} />
+      <Toasts toasts={state.toasts} onDismiss={(id) => dispatch({ kind: 'dismissToast', id })} />
     </div>
   );
 }

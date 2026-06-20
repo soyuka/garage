@@ -1,3 +1,4 @@
+import { orderByRecency, recordVisit } from './recency';
 import type { DashboardState, Toast, UIAction, Vehicle, VehicleId, VehicleStatus, VehicleSummary } from './types';
 
 export type Event =
@@ -12,7 +13,9 @@ export type Event =
   // onto one vehicle — distinct from the agent's UIAction vocabulary.
   | { kind: 'patchVehicle'; id: VehicleId; patch: Partial<Vehicle> }
   // A garage write pushed the full vehicle read-model over Mercure — merge it in, no refetch.
-  | { kind: 'upsertVehicle'; summary: VehicleSummary };
+  | { kind: 'upsertVehicle'; summary: VehicleSummary }
+  // A vehicle was soft-deleted (this tab or another) — drop it from the parc and reselect.
+  | { kind: 'removeVehicle'; id: VehicleId };
 
 let toastSeq = 0;
 
@@ -39,14 +42,23 @@ export function reduce(state: DashboardState, ev: Event): DashboardState {
       // live frame doesn't blank it; App.loadTasks refetches it right after for this vehicle.
       const fresh = vehicleFromSummary(ev.summary);
       const exists = state.vehicles.some((v) => v.id === fresh.id);
-      const vehicles = exists
+      const next = exists
         ? state.vehicles.map((v) =>
-            v.id === fresh.id ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks } : v,
+            v.id === fresh.id
+              ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks, maintenanceRecords: v.maintenanceRecords }
+              : v,
           )
         : [...state.vehicles, fresh];
+      const vehicles = orderByRecency(next, state.recency);
       // Auto-focus the first vehicle to land, so a freshly-created one is shown without a click.
       const selectedId = state.selectedId === '' ? fresh.id : state.selectedId;
       return { ...state, vehicles, selectedId };
+    }
+    case 'removeVehicle': {
+      const vehicles = state.vehicles.filter((v) => v.id !== ev.id);
+      // If the removed vehicle was selected, fall back to the first remaining one.
+      const selectedId = state.selectedId === ev.id ? (vehicles[0]?.id ?? '') : state.selectedId;
+      return { ...state, vehicles, selectedId, factPanel: null, cta: null };
     }
     case 'action':
       return applyAction(state, ev.action);
@@ -59,7 +71,7 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
       // The listing omits facts + the planned-task detail (only the item GET carries them), so carry
       // those over — otherwise a live collection refetch wipes the open card's facts/checklist. The
       // openTasks COUNT does ride the listing, so it stays fresh from `s`.
-      const vehicles = a.vehicles.map((s) => {
+      const merged = a.vehicles.map((s) => {
         const fresh = vehicleFromSummary(s);
         const prev = state.vehicles.find((v) => v.id === fresh.id);
         if (!prev) return fresh;
@@ -71,18 +83,24 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
           ...fresh,
           facts: s.facts?.length ? fresh.facts : prev.facts,
           plannedTasks: s.plannedTasks?.length ? fresh.plannedTasks : prev.plannedTasks,
+          maintenanceRecords: prev.maintenanceRecords,
         };
       });
+      const vehicles = orderByRecency(merged, state.recency);
       const selectedId = vehicles.some((v) => v.id === state.selectedId)
         ? state.selectedId
-        : (vehicles[0]?.id ?? state.selectedId);
+        // Prefer the URL-derived vehicle (reload restoration), else the most-recent (first) car.
+        : (vehicles.find((v) => v.id === a.preferredId)?.id ?? vehicles[0]?.id ?? state.selectedId);
       return { ...state, vehicles, selectedId };
     }
-    case 'selectVehicle':
-      // Focusing a new vehicle drops the previous vehicle's transient answer surfaces.
-      return state.vehicles.some((v) => v.id === a.id)
-        ? { ...state, selectedId: a.id, factPanel: null, cta: null }
-        : state;
+    case 'selectVehicle': {
+      // Focusing a new vehicle drops the previous vehicle's transient answer surfaces, records the
+      // visit, and re-orders the rail so the clicked card jumps to front immediately.
+      if (!state.vehicles.some((v) => v.id === a.id)) return state;
+      const recency = recordVisit(state.recency, a.id);
+      const vehicles = orderByRecency(state.vehicles, recency);
+      return { ...state, selectedId: a.id, vehicles, recency, factPanel: null, cta: null };
+    }
     case 'showFact':
       return { ...state, factPanel: { keys: a.keys, title: a.title, expanded: false } };
     case 'proposeActions':
@@ -134,6 +152,8 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
   return {
     id: s['@id'],
     initials: s.make.slice(0, 2).toUpperCase(),
+    make: s.make,
+    model: s.model,
     name: `${s.make} ${s.model}`.trim(),
     subtitle: s.year ? `${type} · ${s.year}` : type,
     vehicleType: s.vehicleType,
@@ -142,6 +162,7 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
     status: health.status,
     year: s.year ?? undefined,
     modification: s.modification ?? undefined,
+    engineCode: s.engineCode ?? undefined,
     kType: s.kType ?? undefined,
     plate: s.plate ?? undefined,
     verified: 'verified' === s.source,

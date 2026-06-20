@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Maintenance;
 
 use App\Entity\MaintenanceRecord;
+use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use App\Garage\VehicleWriteResolver;
 use App\Repository\MaintenanceRecordRepository;
+use App\Repository\PlannedMaintenanceRepository;
 use App\Repository\VehicleRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
@@ -26,7 +28,58 @@ final class MaintenanceRecorder
         private readonly DocumentManager $entityManager,
         private readonly VehicleWriteResolver $writeResolver,
         private readonly PlannedMaintenancePlanner $planner,
+        private readonly PlannedMaintenanceRepository $plannedTasks,
     ) {
+    }
+
+    /**
+     * Transform every done-but-unfiled task on a vehicle into a {@see MaintenanceRecord} ("entretien
+     * passé"), then archive the task so it leaves the current checklist. The inverse of the
+     * record→closeMatching flow: there, logging a service closes its plan; here, completing a plan
+     * files it as history. Each record is stamped at $performedAt with the vehicle's CURRENT reading
+     * (the odometer when the work is filed) and inherits the task's type/label/parts. Idempotent: a
+     * task already archived is no longer returned by completedUnarchived(), so a re-run records
+     * nothing. Dismissed tasks are excluded — abandoned work is never credited.
+     *
+     * @return list<MaintenanceRecord> the records just created (empty when nothing was pending)
+     */
+    public function archiveCompletedTasks(
+        Vehicle $vehicle,
+        \DateTimeImmutable $performedAt,
+        string $source = 'user',
+        ?string $addedBy = null,
+    ): array {
+        $tasks = $this->plannedTasks->completedUnarchived($vehicle);
+        if ([] === $tasks) {
+            return [];
+        }
+
+        $usageValue = $vehicle->getUsageValue();
+        $usageUnit = null !== $vehicle->getUsageUnit() ? UsageUnit::fromGarageUnit($vehicle->getUsageUnit()) : null;
+
+        $created = [];
+        foreach ($tasks as $task) {
+            $record = new MaintenanceRecord(
+                vehicle: $vehicle,
+                type: $task->getType(),
+                performedAt: $performedAt,
+                source: $source,
+                label: $task->getLabel(),
+                usageValue: $usageValue,
+                usageUnit: $usageUnit,
+                partsUsed: $task->getParts(),
+                addedBy: $addedBy,
+                owner: $vehicle->getOwner(),
+            );
+            $this->entityManager->persist($record);
+            $task->archive($performedAt);
+            $created[] = $record;
+        }
+
+        // One flush persists every new record and the tasks' archivedAt stamps in a single unit of work.
+        $this->entityManager->flush();
+
+        return $created;
     }
 
     /**

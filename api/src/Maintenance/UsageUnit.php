@@ -37,4 +37,17 @@ enum UsageUnit: string
             self::Hours => GarageUsageUnit::Hours,
         };
     }
+
+    /**
+     * The inverse of {@see toGarageUnit()}: lift a vehicle's garage-side reading (where engine hours
+     * are spelled `h`) into this log enum (`hours`). Crossed by case, never by backing string.
+     */
+    public static function fromGarageUnit(GarageUsageUnit $unit): self
+    {
+        return match ($unit) {
+            GarageUsageUnit::Kilometers => self::Kilometers,
+            GarageUsageUnit::Miles => self::Miles,
+            GarageUsageUnit::Hours => self::Hours,
+        };
+    }
 }

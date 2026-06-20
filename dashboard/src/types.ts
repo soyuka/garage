@@ -25,9 +25,25 @@ export interface PlannedTask {
   status: string;
 }
 
+/** One past service event — the dashboard's "past maintenance" rail reads these read-only. */
+export interface MaintenanceRecord {
+  id: string; // the record IRI (@id, normalized)
+  type: string;
+  label?: string | null;
+  performedAt: string; // YYYY-MM-DD
+  usageValue?: number | null;
+  usageUnit?: string | null;
+  notes?: string | null;
+  performedBy?: string | null;
+  partsUsed: PlannedPart[];
+  source: string;
+}
+
 export interface Vehicle {
   id: VehicleId;
   initials: string;
+  make: string;
+  model: string;
   name: string;
   subtitle: string; // "Voiture · 2007"
   vehicleType?: string; // raw type — drives the default usage unit (groundscare → h)
@@ -36,6 +52,7 @@ export interface Vehicle {
   status: VehicleStatus;
   year?: number;
   modification?: string; // engine/trim label, e.g. "2.0 16V Coupé"
+  engineCode?: string; // motor code / displacement, e.g. "WJY" or "1.9"
   kType?: number;
   plate?: string;
   verified?: boolean;
@@ -49,6 +66,7 @@ export interface Vehicle {
   nextService: NextService;
   openTasks: number;
   plannedTasks: PlannedTask[]; // the open checklist, populated from the item GET
+  maintenanceRecords?: MaintenanceRecord[]; // past services, loaded from the records subresource
   cost: { total: string; period: string; delta: string };
 }
 
@@ -100,6 +118,7 @@ export interface VehicleSummary {
   model: string;
   year?: number | null;
   modification?: string | null;
+  engineCode?: string | null;
   vehicleType: string;
   source: string;
   kType?: number | null;
@@ -129,6 +148,7 @@ export interface DashboardState {
   cta: Cta | null; // the agent's call-to-action card; null when dismissed
   toasts: Toast[];
   live: string[]; // recent Mercure events (debug rail)
+  recency: string[]; // vehicle segments, most-recently-visited first (persisted to localStorage)
 }
 
 /**
@@ -136,7 +156,7 @@ export interface DashboardState {
  * actions and the reducer maps them to state. Starts small, converges toward AG-UI.
  */
 export type UIAction =
-  | { type: 'setVehicles'; vehicles: VehicleSummary[] }
+  | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: VehicleId }
   | { type: 'selectVehicle'; id: VehicleId }
   | { type: 'showFact'; keys: string[]; title?: string }
   | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }

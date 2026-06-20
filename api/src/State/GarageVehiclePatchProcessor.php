@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Garage\UsageUnit;
+use App\Garage\VehicleType;
 use App\Mercure\DomainPublisher;
 use App\Repository\VehicleRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -37,7 +38,7 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
         $id = $uriVariables['id'];
         $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle) {
+        if (null === $vehicle || $vehicle->isDeleted()) {
             throw new NotFoundHttpException('No vehicle at this IRI.');
         }
 
@@ -54,6 +55,21 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
             $vehicle->setUsage($data->usageValue, $unit);
         }
 
+        $vehicleType = VehicleType::tryFrom($data->vehicleType);
+        if (null === $vehicleType) {
+            throw new UnprocessableEntityHttpException(sprintf('Unknown vehicleType "%s".', $data->vehicleType));
+        }
+
+        // merge-patch+json re-hydrates unsent fields from the current resource (the provider mapped
+        // the entity first), so every scalar here is either the edited value or the unchanged current
+        // one — applying them all is safe and never clobbers an omitted field.
+        $vehicle->setMake($data->make);
+        $vehicle->setModel($data->model);
+        $vehicle->setYear($data->year);
+        $vehicle->setModification($data->modification);
+        $vehicle->setEngineCode($data->engineCode);
+        $vehicle->setKType($data->kType);
+        $vehicle->setVehicleType($vehicleType);
         $vehicle->setPlate($data->plate);
 
         $this->em->flush();
