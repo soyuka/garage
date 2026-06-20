@@ -43,6 +43,13 @@ final readonly class RunAgentTurnHandler
         private WebSearchBudget $webSearchBudget,
         private TurnContextBuilder $contextBuilder,
         private OwnerContext $owner,
+        // Streaming only drives the tool-call loop here — the deltas are discarded (see below), the UI
+        // is driven by the render-intent tools' Mercure publishes. So a non-stream turn behaves the
+        // same, except the final response body is readable: that is the ONLY way to observe Qwen's
+        // server-side web search (its `search_info` block is dropped from the converted stream). The
+        // Qwen profile runs non-stream (AGENT_STREAM=0) so QwenSearchLogger can log it. Anthropic stays
+        // streamed (AGENT_STREAM=1) — its searches are observed via the stream budget listener instead.
+        private bool $stream = true,
     ) {
     }
 
@@ -61,12 +68,13 @@ final readonly class RunAgentTurnHandler
         try {
             $result = $this->garage->call(
                 new MessageBag(Message::ofUser($this->contextBuilder->build($message))),
-                ['stream' => true],
+                ['stream' => $this->stream],
             );
 
             // Drive the lazy stream to completion: a StreamResult does nothing until consumed, and it
             // is the consumption that runs the tool-call loop and emits the render intents. The
             // web_search budget is fed by the listener ServerToolUseLogger attached to each call.
+            // A non-stream call has already run the loop inside call(), so there is nothing to drain.
             if ($result instanceof StreamResult) {
                 foreach ($result->getContent() as $delta) {
                     // Deltas are side-effecting (tool execution, Mercure publishes); draining is enough.

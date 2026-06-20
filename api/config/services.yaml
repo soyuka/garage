@@ -49,6 +49,12 @@ services:
         arguments:
             $server: '@mcp.server'
 
+    # Web-search mechanism follows the agent's platform (anthropic|qwen|off) — see
+    # config/packages/ai.yaml + docs/AGENT_PROVIDER.md.
+    App\Agent\WebSearchInputProcessor:
+        arguments:
+            $provider: '%env(enum:App\Agent\WebSearchProvider:AGENT_WEB_SEARCH)%'
+
     # Merge the garage MCP tools into the garage agent's #[AsTool] toolbox (render intents). The
     # bundle wires one toolbox per agent; this decorator (default priority 0) sits INSIDE the
     # bundle's FaultTolerantToolbox (priority -1024, outermost), so malformed tool calls from either
@@ -72,6 +78,22 @@ services:
             - { name: proxy, interface: Symfony\AI\Platform\PlatformInterface }
         arguments:
             $inner: '@.inner'
+
+    # Qwen counterpart: log DashScope server-side web search (search_info) off the non-stream response.
+    # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.
+    App\Agent\QwenSearchLogger:
+        decorates: ai.platform.generic.qwen
+        lazy: true
+        tags:
+            - { name: proxy, interface: Symfony\AI\Platform\PlatformInterface }
+        arguments:
+            $inner: '@.inner'
+
+    # Turn streaming: ON for Anthropic (searches observed via the stream budget listener), OFF for Qwen
+    # so QwenSearchLogger can read search_info off the body. See docs/AGENT_PROVIDER.md.
+    App\MessageHandler\RunAgentTurnHandler:
+        arguments:
+            $stream: '%env(bool:AGENT_STREAM)%'
 
     App\Command\ImportLegacyCacheCommand:
         arguments:

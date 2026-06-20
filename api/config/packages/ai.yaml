@@ -2,9 +2,23 @@ ai:
     platform:
         anthropic:
             api_key: '%env(ANTHROPIC_API_KEY)%'
+        # Alibaba Cloud Qwen via its OpenAI-compatible MaaS endpoint. The "generic" bridge is a raw
+        # OpenAI /chat/completions client: base_url stops at /compatible-mode, completions_path defaults
+        # to /v1/chat/completions. Always defined so switching the agent below is a one-line edit; it is
+        # inert until the agent's `platform` points at it.
+        generic:
+            qwen:
+                base_url: '%env(QWEN_BASE_URL)%'
+                api_key: '%env(ALIBABACLOUD_API_KEY)%'
 
     agent:
         garage:
+            # ── PROVIDER TOGGLE ── keep exactly ONE platform/model pair uncommented.
+            # `platform` is a service id resolved at container-compile time, so it cannot be an env var:
+            # switching providers means commenting one pair and uncommenting the other, then clearing the
+            # cache. Full walkthrough in docs/AGENT_PROVIDER.md.
+            #
+            # Anthropic Claude (default):
             platform: 'ai.platform.anthropic'
             # max_tokens rides the model string as a query param: AbstractModelCatalog::parseModelName
             # parses "?max_tokens=4096" into the model options, which Provider::invoke merges into the
@@ -14,6 +28,11 @@ ai:
             # both parts and attributes) afterwards — 2048 truncated that tail. WebSearchBudget caps the
             # turn to one search so the context cannot balloon further.
             model: 'claude-haiku-4-5?max_tokens=4096'
+            #
+            # Alibaba Cloud Qwen (comment the two anthropic lines above, uncomment these two AND set
+            # AGENT_WEB_SEARCH=qwen in .env.local — switches web search to DashScope `enable_search`):
+            # platform: 'ai.platform.generic.qwen'
+            # model: 'qwen3.5-flash?max_tokens=4096'
             # Render-intent #[AsTool] tools (select_vehicle/toast/show_fact/propose_actions) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
             # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is ON: the
