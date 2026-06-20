@@ -81,6 +81,7 @@ final class PlannedMaintenancePlanner
                 dueDate: $dueDate,
                 parts: $parts,
                 addedBy: $addedBy,
+                owner: $vehicle->getOwner(),
             );
             $this->entityManager->persist($task);
         } else {

@@ -26,6 +26,7 @@ final class GarageVehicleFactTest extends AppTestCase
         \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007, kType: 19107);
+        $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
@@ -79,6 +80,7 @@ final class GarageVehicleFactTest extends AppTestCase
         // call throws. Self-heal is best-effort enrichment: its failure must NOT 500 the vehicle read
         // — the dashboard still needs the card (just without backfilled facts).
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007, kType: 500200);
+        $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
@@ -95,6 +97,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm = static::getContainer()->get(DocumentManager::class);
         \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
+        $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
@@ -126,6 +129,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm = static::getContainer()->get(DocumentManager::class);
         \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
+        $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();

@@ -57,6 +57,7 @@ final class AgentTurnStreamingTest extends AppTestCase
         $handler(new RunAgentTurn(
             instruction: 'Quelle viscosité pour la Mazda 6 ?',
             sessionTopic: 'https://localhost/.well-known/mercure?topic='.rawurlencode('/agent/sessions/sess-stream'),
+            owner: self::TEST_OWNER,
         ));
 
         self::assertTrue($receivedOptions['stream'] ?? false, 'the worker must invoke the agent in streaming mode');

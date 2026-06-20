@@ -96,6 +96,13 @@ when@test:
         # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler.
         App\Tests\Security\FakeOidcTokenHandler: ~
 
+        # A default tenant for the suite: garage reads that send no token resolve to the same owner
+        # the tests seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.
+        App\Security\OwnerContext:
+            autowire: true
+            arguments:
+                $fallback: 'test-user'
+
         # Capture Mercure publishes (no HTTP) so tests can assert streamed intents/events.
         App\Tests\Mock\RecordingHub:
             decorates: mercure.hub.default

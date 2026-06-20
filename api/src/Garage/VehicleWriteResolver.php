@@ -6,6 +6,7 @@ namespace App\Garage;
 
 use App\Entity\Vehicle;
 use App\Repository\VehicleRepository;
+use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
@@ -29,6 +30,7 @@ final class VehicleWriteResolver
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly DocumentManager $entityManager,
+        private readonly OwnerContext $owner,
     ) {
     }
 
@@ -49,7 +51,9 @@ final class VehicleWriteResolver
         if (null !== $vehicleId) {
             $vehicle = $this->vehicles->find($vehicleId);
 
-            return null === $vehicle
+            // find() is by id, not owner-scoped: a @id pointing at another tenant's row resolves to
+            // notFound rather than letting a write land on a vehicle the caller does not own.
+            return null === $vehicle || $vehicle->getOwner() !== $this->owner->current()
                 ? VehicleResolution::notFound($vehicleId)
                 : VehicleResolution::resolved($vehicle);
         }
@@ -67,6 +71,7 @@ final class VehicleWriteResolver
         }
 
         $vehicle = new Vehicle($make, $model, $vehicleType, $source, year: $year, kType: $carId, vin: $vin, plate: $plate);
+        $vehicle->setOwner($this->owner->require());
         if (null !== $usageValue && null !== $usageUnit) {
             $vehicle->setUsage($usageValue, $usageUnit);
         }

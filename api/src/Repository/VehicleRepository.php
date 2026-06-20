@@ -6,15 +6,21 @@ namespace App\Repository;
 
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\Security\OwnerContext;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 
 /**
+ * Every query is scoped to the current tenant via {@see OwnerContext}: `owner` leads each lookup
+ * (and each index — see {@see Vehicle}), so one user's garage is never visible to another. The
+ * owner is the authenticated Casdoor `sub`, resolved from the security token on an HTTP request or
+ * bound explicitly by the agent worker for the turn it is running.
+ *
  * @extends ServiceDocumentRepository<Vehicle>
  */
 final class VehicleRepository extends ServiceDocumentRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly OwnerContext $owner)
     {
         parent::__construct($registry, Vehicle::class);
     }
@@ -23,7 +29,7 @@ final class VehicleRepository extends ServiceDocumentRepository
      * Case-insensitive identity match on make + model + vehicleType, narrowed by year when
      * given. vehicleType is part of identity (TODO.md data model): a `groundscare` TORO and a
      * `cv` document sharing make+model are distinct vehicles and must not bind facts onto each
-     * other. Phase 1 looks only at the shared garage (owner IS NULL).
+     * other. Scoped to the current owner.
      */
     public function findByIdentity(string $make, string $model, VehicleType $vehicleType, ?int $year = null): ?Vehicle
     {
@@ -31,7 +37,7 @@ final class VehicleRepository extends ServiceDocumentRepository
             ->field('make')->equals($make)
             ->field('model')->equals($model)
             ->field('vehicleType')->equals($vehicleType->value)
-            ->field('owner')->equals(null)
+            ->field('owner')->equals($this->owner->current())
             ->limit(1);
 
         if (null !== $year) {
@@ -47,14 +53,14 @@ final class VehicleRepository extends ServiceDocumentRepository
      * same segment (vehicleType), a candidate is anything sharing the model label (catches a
      * rebadged machine: TORO vs Wheel Horse 246-H) or a strong stable id (kType/plate/vin,
      * catches the same TecDoc vehicle stored under two model strings). Deliberately broad: the
-     * agent judges, these ids only rank what it confronts. Phase 1 looks at the shared garage.
+     * agent judges, these ids only rank what it confronts. Scoped to the current owner.
      *
      * @return list<Vehicle>
      */
     public function findCandidates(string $make, string $model, VehicleType $vehicleType, ?int $carId, ?string $plate, ?string $vin): array
     {
         $qb = $this->createQueryBuilder()
-            ->field('owner')->equals(null)
+            ->field('owner')->equals($this->owner->current())
             ->field('vehicleType')->equals($vehicleType->value)
             ->sort('addedAt', 'desc');
 
@@ -76,32 +82,32 @@ final class VehicleRepository extends ServiceDocumentRepository
     }
 
     /**
-     * Shared-garage vehicles carrying a given TecDoc kType — the handle get_service_parts is keyed
-     * on (carId). Used to opportunistically backfill those vehicles' empty checklist tasks with the
-     * priced parts. Newest first; a kType shared by two stored rows backfills both (additive, safe).
+     * The current owner's vehicles carrying a given TecDoc kType — the handle get_service_parts is
+     * keyed on (carId). Used to opportunistically backfill those vehicles' empty checklist tasks with
+     * the priced parts. Newest first; a kType shared by two stored rows backfills both (additive, safe).
      *
      * @return list<Vehicle>
      */
     public function findByKType(int $kType): array
     {
         return array_values($this->createQueryBuilder()
-            ->field('owner')->equals(null)
+            ->field('owner')->equals($this->owner->current())
             ->field('kType')->equals($kType)
             ->sort('addedAt', 'desc')
             ->getQuery()->execute()->toArray());
     }
 
     /**
-     * List the shared garage (owner IS NULL — the phase 1 tenancy seam), newest first,
-     * narrowed by an optional case-insensitive make and/or model and/or vehicleType. Per-user
-     * listings arrive with the owner backfill (root TODO.md "Architecture — Garage store"), reusing this query.
+     * List the current owner's garage, newest first, narrowed by an optional case-insensitive make
+     * and/or model and/or vehicleType. This is the set the dashboard sidebar and the MCP
+     * list_vehicles tool show.
      *
      * @return list<Vehicle>
      */
     public function findShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null): array
     {
         $qb = $this->createQueryBuilder()
-            ->field('owner')->equals(null)
+            ->field('owner')->equals($this->owner->current())
             ->sort('addedAt', 'desc');
 
         if (null !== $make) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Message\RunAgentTurn;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -33,6 +34,7 @@ final class AgentTurnController
 {
     public function __construct(
         private readonly MessageBusInterface $bus,
+        private readonly Security $security,
         #[Autowire('%env(DEFAULT_URI)%')]
         private readonly string $baseUri,
     ) {
@@ -51,9 +53,12 @@ final class AgentTurnController
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
         }
 
+        // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
+        // owner is always present — the turn never runs unowned.
         $this->bus->dispatch(new RunAgentTurn(
             instruction: $instruction,
             sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
+            owner: $this->security->getUser()?->getUserIdentifier() ?? '',
             selectedId: trim((string) ($payload['selectedId'] ?? '')),
             summary: trim((string) ($payload['summary'] ?? '')),
             pendingContext: trim((string) ($payload['pendingContext'] ?? '')),

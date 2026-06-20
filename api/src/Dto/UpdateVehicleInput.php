@@ -41,9 +41,6 @@ final class UpdateVehicleInput
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['km', 'mi', 'h'], 'description' => 'Unit of usageValue: "km", "mi" or engine "h". Must be sent together with usageValue.'])]
     public ?string $usageUnit = null;
 
-    #[ApiProperty(description: 'Owner of the vehicle (multi-tenancy seam; null means shared/global).')]
-    public ?string $owner = null;
-
     #[ApiProperty(description: 'Trim/modification label, e.g. "35S14".')]
     public ?string $modification = null;
 }

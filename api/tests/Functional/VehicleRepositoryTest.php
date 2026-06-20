@@ -22,6 +22,7 @@ final class VehicleRepositoryTest extends AppTestCase
         \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle($make, $model, VehicleType::GroundsCare, 'test');
+        $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();

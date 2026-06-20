@@ -37,6 +37,7 @@ final class TurnContextBuilderTest extends TestCase
         $context = $builder->build(new RunAgentTurn(
             instruction: 'ajoute l\'huile et la quantité à la liste',
             sessionTopic: 'https://localhost/agent/sessions/abc',
+            owner: 'test-user',
             selectedId: '/garage/vehicles/'.$vehicle->getId(),
         ));
 
@@ -60,6 +61,7 @@ final class TurnContextBuilderTest extends TestCase
         $context = $builder->build(new RunAgentTurn(
             instruction: 'la 2.0 16V',
             sessionTopic: 'https://localhost/agent/sessions/abc',
+            owner: 'test-user',
             pendingContext: 'Reco huile — quel moteur ? Options : 406 1.8, 406 2.0 16V, 406 2.2',
         ));
 
@@ -76,7 +78,7 @@ final class TurnContextBuilderTest extends TestCase
 
         $builder = new TurnContextBuilder($resolver, new VehicleFactsProjector(), $this->createStub(PlannedMaintenanceRepository::class));
 
-        $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc'));
+        $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc', 'test-user'));
 
         self::assertStringContainsString('bonjour', $context);
         self::assertStringNotContainsString('Faits connus', $context);

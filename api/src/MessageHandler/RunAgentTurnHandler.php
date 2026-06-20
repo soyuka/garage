@@ -8,6 +8,7 @@ use App\Agent\TurnContextBuilder;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\WebSearchBudget;
 use App\Message\RunAgentTurn;
+use App\Security\OwnerContext;
 use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -41,11 +42,16 @@ final readonly class RunAgentTurnHandler
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
         private TurnContextBuilder $contextBuilder,
+        private OwnerContext $owner,
     ) {
     }
 
     public function __invoke(RunAgentTurn $message): void
     {
+        // Bind the tenant for this turn: the worker has no security token, so every garage write the
+        // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
+        // because the handler is a long-lived singleton in the consume worker.
+        $this->owner->set($message->owner);
         $this->renderTools->bindSession($message->sessionTopic);
         // Fresh per-turn web_search allowance — the budget service is a long-lived singleton in the
         // worker, so a prior turn's spend must not leak into this one.

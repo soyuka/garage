@@ -10,6 +10,13 @@ use Psr\Cache\CacheItemPoolInterface;
 
 abstract class AppTestCase extends ApiTestCase
 {
+    /**
+     * The default tenant the whole suite runs as. Matches the OwnerContext `$fallback` bound in the
+     * test env (config/services.yaml when@test), so a write seeded in-process and an anonymous read
+     * resolve to the same owner. {@see authHeaders()} and {@see McpClientTrait} issue tokens for it.
+     */
+    public const string TEST_OWNER = 'test-user';
+
     protected static ?bool $alwaysBootKernel = true;
 
     /**
@@ -52,7 +59,7 @@ abstract class AppTestCase extends ApiTestCase
      *
      * @return array{Authorization: string}
      */
-    protected static function authHeaders(string $sub = 'dashboard-test-user', string $email = 'dashboard@example.com'): array
+    protected static function authHeaders(string $sub = self::TEST_OWNER, string $email = 'dashboard@example.com'): array
     {
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];
     }

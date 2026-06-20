@@ -674,6 +674,7 @@ final class McpGarageTest extends AppTestCase
         $dm = static::getContainer()->get(DocumentManager::class);
         \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007, kType: 19107);
+        $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();

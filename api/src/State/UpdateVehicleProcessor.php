@@ -83,7 +83,6 @@ final class UpdateVehicleProcessor implements ProcessorInterface
             confirmNew: $data->confirmNew,
             usageValue: $data->usageValue,
             usageUnit: null !== $data->usageUnit ? UsageUnit::from($data->usageUnit) : null,
-            owner: $data->owner,
             modification: $data->modification,
         );
 

@@ -93,6 +93,7 @@ final class MaintenanceRecorder
             performedBy: $performedBy,
             partsUsed: $partsUsed,
             addedBy: $addedBy,
+            owner: $vehicle->getOwner(),
         );
         $this->entityManager->persist($record);
         $this->entityManager->flush();

@@ -81,6 +81,6 @@ final class GarageVehicleFactProcessor implements ProcessorInterface
             }
         }
 
-        return new PlannedMaintenance($vehicle, self::USER_FACTS_TYPE, 'user');
+        return new PlannedMaintenance($vehicle, self::USER_FACTS_TYPE, 'user', owner: $vehicle->getOwner());
     }
 }

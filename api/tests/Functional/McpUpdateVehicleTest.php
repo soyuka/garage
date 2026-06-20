@@ -124,17 +124,19 @@ final class McpUpdateVehicleTest extends AppTestCase
             ],
         ], 4)['result']['structuredContent']['vehicle']['@id'];
 
-        // Update ONLY the owner by addressing the row via its @id.
+        // Update ONLY one scalar (modification) by addressing the row via its @id.
         $update = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'vehicle' => $iri,
-                'owner' => 'fleet-dept',
+                'modification' => '35S14',
             ],
         ], 5)['result']['structuredContent'];
 
         $this->assertSame('ok', $update['status']);
-        $this->assertSame('fleet-dept', $update['vehicle']['owner']);
+        $this->assertSame('35S14', $update['vehicle']['modification']);
+        // Owner is the authenticated sub, never a client-supplied field (review Root 2).
+        $this->assertSame(self::TEST_OWNER, $update['vehicle']['owner']);
         $this->assertSame(87000, $update['vehicle']['usageValue'], 'A partial update must not clear an untouched usage reading.');
         $this->assertSame('km', $update['vehicle']['usageUnit']);
     }

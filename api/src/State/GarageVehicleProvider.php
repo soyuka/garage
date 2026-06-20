@@ -10,6 +10,7 @@ use App\ApiResource\GarageVehicle;
 use App\Garage\GarageResolver;
 use App\Garage\GarageVehicleView;
 use App\Repository\VehicleRepository;
+use App\Security\OwnerContext;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -26,6 +27,7 @@ final class GarageVehicleProvider implements ProviderInterface
         private readonly VehicleRepository $vehicles,
         private readonly GarageVehicleView $view,
         private readonly GarageResolver $resolver,
+        private readonly OwnerContext $owner,
     ) {
     }
 
@@ -34,7 +36,9 @@ final class GarageVehicleProvider implements ProviderInterface
         $id = $uriVariables['id'];
         $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle) {
+        // find() is by primary id, not owner-scoped — gate it so a ULID belonging to another tenant
+        // reads as 404, not a cross-owner disclosure (the IDOR seam of review Root 2).
+        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current()) {
             return null;
         }
 

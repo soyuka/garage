@@ -12,6 +12,7 @@ use App\Exception\BudgetExhaustedException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use App\Repository\VehicleRepository;
+use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -36,6 +37,7 @@ class GarageResolver
         private readonly PartsCatalog $catalog,
         private readonly FillVolumeFactMapper $fillVolumeFactMapper,
         private readonly VehicleWriteResolver $writeResolver,
+        private readonly OwnerContext $owner,
         private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
@@ -138,7 +140,6 @@ class GarageResolver
         bool $confirmNew,
         ?int $usageValue,
         ?UsageUnit $usageUnit,
-        ?string $owner,
         ?string $modification,
     ): UpdateVehicleOutcome {
         $resolution = $this->writeResolver->resolveForWrite(
@@ -167,9 +168,6 @@ class GarageResolver
         if (null !== $vin) {
             $vehicle->setVin($vin);
         }
-        if (null !== $owner) {
-            $vehicle->setOwner($owner);
-        }
         if (null !== $modification) {
             $vehicle->setModification($modification);
         }
@@ -187,6 +185,7 @@ class GarageResolver
         }
 
         $vehicle = new Vehicle($make, $model, $vehicleType, 'partsapi', year: $year, kType: $carId);
+        $vehicle->setOwner($this->owner->require());
         $this->entityManager->persist($vehicle);
         $this->persistCatalogSpecs($vehicle, $facts);
         $this->entityManager->flush();
@@ -203,7 +202,7 @@ class GarageResolver
      */
     private function persistCatalogSpecs(Vehicle $vehicle, array $facts): void
     {
-        $specs = new PlannedMaintenance($vehicle, self::CATALOG_SPECS_TYPE, 'partsapi');
+        $specs = new PlannedMaintenance($vehicle, self::CATALOG_SPECS_TYPE, 'partsapi', owner: $vehicle->getOwner());
         foreach ($facts as $fact) {
             $specs->setAttribute(VehicleFact::fromSource(
                 key: $fact['key'],

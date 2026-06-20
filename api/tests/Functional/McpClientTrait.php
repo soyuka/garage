@@ -28,7 +28,7 @@ trait McpClientTrait
     private function mcpHeaders(array $extra = []): array
     {
         return self::MCP_HEADERS + [
-            'Authorization' => 'Bearer '.FakeOidcToken::for('mcp-test-user', 'mcp@example.com'),
+            'Authorization' => 'Bearer '.FakeOidcToken::for(AppTestCase::TEST_OWNER, 'mcp@example.com'),
         ] + $extra;
     }
 

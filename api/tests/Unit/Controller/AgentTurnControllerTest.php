@@ -7,10 +7,12 @@ namespace App\Tests\Unit\Controller;
 use App\Controller\AgentTurnController;
 use App\Message\RunAgentTurn;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\MessageBusInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * The endpoint must only ENQUEUE the turn and ack — never run the agent in the request thread.
@@ -35,7 +37,7 @@ final class AgentTurnControllerTest extends TestCase
         // request host: the worker publishes render intents to it and the dashboard subscribes to
         // `${VITE_API_BASE}/agent/sessions/<id>`, so both must derive from the same fixed origin —
         // behind a reverse proxy the request host is unreliable. Trailing slash is normalised.
-        $controller = new AgentTurnController($bus, 'https://app.example/');
+        $controller = new AgentTurnController($bus, $this->securityFor('owner-sub'), 'https://app.example/');
         $response = $controller($this->request([
             'instruction' => 'Quoi prévoir pour mon entretien ?',
             'sessionId' => 'sess-1',
@@ -48,6 +50,8 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertInstanceOf(RunAgentTurn::class, $dispatched);
         $this->assertSame('Quoi prévoir pour mon entretien ?', $dispatched->instruction);
         $this->assertSame('https://app.example/agent/sessions/sess-1', $dispatched->sessionTopic);
+        // The turn carries the authenticated owner so the worker's writes are owner-scoped.
+        $this->assertSame('owner-sub', $dispatched->owner);
         $this->assertSame('/garage/vehicles/01J', $dispatched->selectedId);
         $this->assertSame('Mazda6 à 250000 km', $dispatched->summary);
         $this->assertSame('Reco huile — quel moteur ?', $dispatched->pendingContext);
@@ -58,10 +62,21 @@ final class AgentTurnControllerTest extends TestCase
         $bus = $this->createMock(MessageBusInterface::class);
         $bus->expects($this->never())->method('dispatch');
 
-        $controller = new AgentTurnController($bus, 'https://app.example');
+        $controller = new AgentTurnController($bus, $this->securityFor('owner-sub'), 'https://app.example');
         $response = $controller($this->request(['instruction' => '']));
 
         $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
+    private function securityFor(string $sub): Security
+    {
+        $user = $this->createStub(UserInterface::class);
+        $user->method('getUserIdentifier')->willReturn($sub);
+
+        $security = $this->createMock(Security::class);
+        $security->method('getUser')->willReturn($user);
+
+        return $security;
     }
 
     /**
