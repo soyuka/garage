@@ -149,7 +149,6 @@ export function VehicleDetail({
 
   return (
     <>
-      <div className="breadcrumb">Atelier / Véhicules</div>
       <div className="title-row">
         <h1>{vehicle.name}</h1>
         {vehicle.year ? <Badge>{vehicle.year}</Badge> : null}
@@ -171,7 +170,7 @@ export function VehicleDetail({
         ) : null}
       </div>
 
-      <Card className="kpi-card" style={{ marginBottom: 'var(--mpa-gap-grid)' }} padding="var(--mpa-pad-card-lg) 0">
+      <Card className="kpi-card hud-panel" style={{ marginBottom: 'var(--mpa-gap-grid)' }} padding="var(--mpa-pad-card-lg) 0">
         <div className="kpi-strip">
           <div style={{ fontFamily: 'var(--mpa-font)', fontVariantNumeric: 'tabular-nums' }}>
             <div style={{ fontSize: 13, color: 'var(--mpa-muted)', marginBottom: 12 }}>Kilométrage</div>
@@ -202,7 +201,7 @@ export function VehicleDetail({
 
       {/* État du véhicule + Coût d'entretien panels hidden for now — too noisy, freeing vertical space */}
 
-      <Card style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+      <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <div className="panel-title">
           <span className="t">Tâches &amp; liste de courses</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--mpa-space-3)' }}>
@@ -245,7 +244,7 @@ export function VehicleDetail({
         )}
       </Card>
 
-      <Card ref={dataRef} style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+      <Card ref={dataRef} className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <button
           type="button"
           className="panel-title panel-disclosure"

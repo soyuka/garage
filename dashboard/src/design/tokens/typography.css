@@ -26,4 +26,6 @@
   /* ---- tracking ---- */
   --mpa-track-tight: -0.02em;  /* large numerals + display */
   --mpa-track-snug: -0.01em;
+  --mpa-track-wide: 0.14em;    /* uppercase HUD headers (GARAGE OVERVIEW) */
+  --mpa-track-label: 0.08em;   /* uppercase panel titles / labels */
 }

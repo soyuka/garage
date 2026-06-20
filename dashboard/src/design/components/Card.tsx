@@ -9,7 +9,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLElement> {
   as?: keyof JSX.IntrinsicElements;
 }
 
-/** The base elevated surface — gradient fill, hairline border, soft shadow. */
+/** The base floating-glass surface — translucent fill, glowing cyan edge, backdrop blur. */
 export const Card = React.forwardRef<HTMLElement, CardProps>(function Card(
   { hover = false, padding = 'var(--mpa-pad-card-lg)', as = 'div', children, style, ...rest },
   ref,
@@ -26,9 +26,12 @@ export const Card = React.forwardRef<HTMLElement, CardProps>(function Card(
         border: '1px solid var(--mpa-border)',
         borderRadius: 'var(--mpa-radius-2xl)',
         padding,
+        backdropFilter: 'var(--mpa-glass-blur)',
+        WebkitBackdropFilter: 'var(--mpa-glass-blur)',
         boxShadow: lift ? 'var(--mpa-shadow-hover)' : 'var(--mpa-shadow-card)',
+        borderColor: lift ? 'var(--mpa-border-strong)' : 'var(--mpa-border)',
         transform: lift ? 'var(--mpa-hover-lift)' : 'none',
-        transition: 'transform var(--mpa-transition), box-shadow var(--mpa-transition)',
+        transition: 'transform var(--mpa-transition), box-shadow var(--mpa-transition), border-color var(--mpa-transition)',
         ...style,
       }}
       {...rest}

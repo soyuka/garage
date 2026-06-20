@@ -19,12 +19,13 @@ const SIZES: Record<Size, { height: number; fontSize: number; padding: string }>
 };
 
 const VARIANTS: Record<Variant, React.CSSProperties> = {
-  primary: { background: 'var(--mpa-accent)', color: 'var(--mpa-on-accent)', border: '1px solid transparent' },
-  secondary: { background: 'rgba(255,255,255,0.05)', color: 'var(--mpa-text-3)', border: '1px solid var(--mpa-border-strong)' },
+  // amber = the single action focus per view; cyan-glass = structural / secondary.
+  primary: { background: 'var(--mpa-accent-2)', color: 'var(--mpa-on-accent-2)', border: '1px solid transparent', boxShadow: 'var(--mpa-glow-amber)' },
+  secondary: { background: 'var(--mpa-accent-tint)', color: 'var(--mpa-accent)', border: '1px solid var(--mpa-border)' },
   ghost: { background: 'transparent', color: 'var(--mpa-muted)', border: '1px solid transparent' },
 };
 
-/** The action control. One primary (cyan) per view; secondary/ghost for the rest. */
+/** The action control. One amber primary (the action focus) per view; cyan secondary/ghost for the rest. */
 export function Button({ variant = 'primary', size = 'md', icon, disabled = false, children, style, ...rest }: ButtonProps) {
   const sz = SIZES[size];
   const vr = VARIANTS[variant];

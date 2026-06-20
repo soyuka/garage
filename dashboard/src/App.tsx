@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import { postTurn } from './agent';
 import { getVehicle, getVehicleTasks, mergeTaskParts, patchTask, patchVehicle, postVehicleFact } from './garage';
+import { CarRail } from './components/CarRail';
 import { Composer } from './components/Composer';
 import { CtaCard } from './components/CtaCard';
-import { Sidebar } from './components/Sidebar';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
 import { VehicleDetail, type VehicleEdit } from './components/VehicleDetail';
@@ -278,7 +278,7 @@ export function App() {
     <div className="app">
       <TopBar />
       <div className="body">
-        <Sidebar vehicles={state.vehicles} selectedId={state.selectedId} onSelect={onSelect} />
+        <CarRail vehicles={state.vehicles} selectedId={state.selectedId} onSelect={onSelect} />
         <main className="canvas">
           <div className="scroll">
             {selected ? (
