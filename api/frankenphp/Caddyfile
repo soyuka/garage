@@ -64,6 +64,15 @@
 	# route {} enforces strict first-match-wins in file order, so the @frontend proxy is tried
 	# before the PHP rewrite (Caddy's default directive order runs rewrite before reverse_proxy).
 	route {
+		# Same-origin proxy to Casdoor for the SPA's OAuth token exchange. The dashboard page is
+		# served over HTTPS, so a fetch() to the plain-http Casdoor (http://casdoor:8000) is blocked
+		# as mixed active content. Routing the token POST through this HTTPS origin removes the block;
+		# the token `iss` is Casdoor's app.conf origin (http://casdoor:8000), independent of the URL
+		# the browser used, so the API's issuer/JWKS check is unaffected. handle_path strips /casdoor.
+		handle_path /casdoor/* {
+			reverse_proxy http://{$CASDOOR_UPSTREAM:casdoor:8000}
+		}
+
 		# Vite dev server. Default upstream lets a PHP-only stack (no dashboard service) still parse;
 		# requests then 502 only when something actually matches @frontend.
 		reverse_proxy @frontend http://{$FRONTEND_UPSTREAM:dashboard:5173}

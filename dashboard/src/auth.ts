@@ -9,8 +9,14 @@ const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'http://casdoor:8000').re
 const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? 'monparc-dashboard-0a1b2c3d';
 const SCOPE = 'openid profile email';
 
+// The authorize step is a full-page navigation to Casdoor's hosted login (plain http is fine — the
+// mixed-content rule only governs subresource fetches, not top-level navigations).
 const AUTHORIZE_ENDPOINT = `${ISSUER}/login/oauth/authorize`;
-const TOKEN_ENDPOINT = `${ISSUER}/api/login/oauth/access_token`;
+// The token exchange is a fetch() from the HTTPS dashboard page, so it CANNOT hit http://casdoor:8000
+// directly (mixed active content → blocked). It goes through the same-origin Caddy proxy at
+// /casdoor/* which reverse-proxies to http://casdoor:8000. The returned JWT's `iss` is still
+// Casdoor's app.conf origin, so the API's issuer check (CASDOOR_ISSUER) is unaffected.
+const tokenEndpoint = (): string => `${window.location.origin}/casdoor/api/login/oauth/access_token`;
 
 // Persisted across the redirect round-trip. The token lives in localStorage so a reload keeps the
 // session; the PKCE verifier/state are single-use and live in sessionStorage (one login attempt).
@@ -129,7 +135,7 @@ export async function completeLoginIfCallback(): Promise<boolean> {
     code_verifier: verifier,
   });
 
-  const res = await fetch(TOKEN_ENDPOINT, {
+  const res = await fetch(tokenEndpoint(), {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
