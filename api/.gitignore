@@ -9,6 +9,11 @@
 /vendor/
 ###< symfony/framework-bundle ###
 
+###> app: generated config reference ###
+# Auto-generated DI config shapes (config:dump-reference style); regenerated on demand, no need to track.
+/config/reference.php
+###< app ###
+
 ###> phpunit/phpunit ###
 /phpunit.xml
 /.phpunit.cache/
