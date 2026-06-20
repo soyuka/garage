@@ -25,6 +25,7 @@ RUN <<-EOF
 	install-php-extensions \
 		@composer \
 		apcu \
+		gmp \
 		intl \
 		mongodb \
 		opcache \
