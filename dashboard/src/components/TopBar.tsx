@@ -1,17 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
 import { getIdentity, logout } from '../auth';
+import { StatusHeartbeat } from './StatusHeartbeat';
+
+interface TopBarProps {
+  live: string[];
+  status: string[];
+  busy: boolean;
+  onAdvanceStatus: () => void;
+  onSettings?: () => void;
+}
 
 /**
  * The top chrome. Left: a compact live indicator (the former Mercure feed, now wordless — just a
- * status dot and the last event). Right: search and the account menu grouped together, off the
- * middle of the bar.
+ * status dot and the last event) followed by the agent's heartbeat sentence while it answers.
+ * Right: search and the account menu grouped together, off the middle of the bar.
  */
-export function TopBar({ live, onSettings }: { live: string[]; onSettings?: () => void }) {
+export function TopBar({ live, status, busy, onAdvanceStatus, onSettings }: TopBarProps) {
   return (
     <header className="topbar">
       <div className="mercure-feed" aria-label="Flux temps réel">
         <span className={`mercure-dot${live.length ? ' live' : ''}`} />
-        {live.length > 0 ? <span className="mercure-last">{live[0]}</span> : null}
+        {busy || status.length > 0 ? (
+          <StatusHeartbeat queue={status} busy={busy} onAdvance={onAdvanceStatus} />
+        ) : live.length > 0 ? (
+          <span className="mercure-last">{live[0]}</span>
+        ) : null}
       </div>
       <div className="topbar-right">
         <div className="search">🔍 Rechercher un véhicule…</div>

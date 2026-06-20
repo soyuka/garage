@@ -94,12 +94,16 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
       return { ...state, vehicles, selectedId };
     }
     case 'selectVehicle': {
-      // Focusing a new vehicle drops the previous vehicle's transient answer surfaces, records the
-      // visit, and re-orders the rail so the clicked card jumps to front immediately.
+      // Records the visit and re-orders the rail so the clicked card jumps to front immediately. Does
+      // NOT clear the transient answer surfaces (cta/factPanel): the agent emits select_vehicle in the
+      // SAME turn as propose_actions/show_fact — and sometimes AFTER them — so clearing here wiped the
+      // very CTA/panel it had just raised (the fade-in-then-away bug). Those surfaces are turn-scoped,
+      // not vehicle-scoped; they are cleared at user boundaries instead (a new turn in App.send, manual
+      // navigation in App.onSelect).
       if (!state.vehicles.some((v) => v.id === a.id)) return state;
       const recency = recordVisit(state.recency, a.id);
       const vehicles = orderByRecency(state.vehicles, recency);
-      return { ...state, selectedId: a.id, vehicles, recency, factPanel: null, cta: null };
+      return { ...state, selectedId: a.id, vehicles, recency };
     }
     case 'showFact':
       return { ...state, factPanel: { keys: a.keys, title: a.title, expanded: false } };

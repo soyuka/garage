@@ -85,6 +85,11 @@ body {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .mercure-idle { color: var(--mpa-faint); }
+/* The agent heartbeat shares the feed slot — the mercure-dot is the single indicator,
+   so drop the heartbeat's own dot and let its sentence truncate within the feed. */
+.mercure-feed .heartbeat { min-width: 0; }
+.mercure-feed .heartbeat .hb-dot { display: none; }
+.mercure-feed .heartbeat .hb-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
 /* Search + account, grouped at the right edge (off the middle of the bar). */
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--mpa-space-3); }
 .topbar .search {
@@ -270,12 +275,11 @@ body {
 .dock {
   border-top: 1px solid var(--mpa-border); background: var(--mpa-surface);
   backdrop-filter: var(--mpa-glass-blur); -webkit-backdrop-filter: var(--mpa-glass-blur);
-  box-shadow: var(--mpa-shadow-dock); padding: var(--mpa-space-4) var(--mpa-space-7) var(--mpa-space-5);
+  /* +4px bottom: the .app::before HUD frame is inset 8px, so the visible band ends
+     8px up. Add some back here so the composer centers within the framed area,
+     mirroring the .topbar top-padding fix. */
+  box-shadow: var(--mpa-shadow-dock); padding: var(--mpa-space-4) var(--mpa-space-7) calc(var(--mpa-space-5) + 4px);
 }
-.assistant { display: flex; align-items: center; gap: var(--mpa-space-3); margin-bottom: var(--mpa-space-3); flex-wrap: wrap; }
-.assistant .lead { display: flex; align-items: center; gap: var(--mpa-space-2); color: var(--mpa-text-3); font-size: var(--mpa-text-label); }
-.assistant .lead .dot { width: 8px; height: 8px; border-radius: var(--mpa-radius-pill); background: var(--mpa-accent); box-shadow: var(--mpa-glow-cyan); }
-
 /* ---- heartbeat loading line ---- */
 .heartbeat { display: inline-flex; align-items: center; gap: var(--mpa-space-2); font-size: var(--mpa-text-label); color: var(--mpa-text-2); }
 .heartbeat .hb-dot {

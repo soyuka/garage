@@ -365,6 +365,10 @@ export function App() {
               .filter(Boolean)
               .join(' — ')
           : undefined;
+        // A new turn supersedes the prior answer's surfaces (its context is already captured in
+        // pendingContext above) — clear them so a stale CTA/panel doesn't linger under the new reply.
+        dispatch({ kind: 'dismissCta' });
+        dispatch({ kind: 'dismissFactPanel' });
         // No action list comes back: the agent streams its intents over the session topic.
         await postTurn(instruction, { sessionId, selectedId: state.selectedId, pendingContext });
       } catch (e) {
@@ -417,11 +421,17 @@ export function App() {
   // all vehicles — no per-item subscription that would only double-deliver the selected one.
   useMercure([`${API}/garage/vehicles`, `${API}/agent/sessions/${sessionId}`], onFrame);
 
-  const onSelect = (id: VehicleId) => dispatch({ kind: 'action', action: { type: 'selectVehicle', id } });
+  // Manual navigation: drop the prior answer's transient surfaces (the reducer no longer does — see
+  // its comment), then focus the car.
+  const onSelect = (id: VehicleId) => {
+    dispatch({ kind: 'dismissCta' });
+    dispatch({ kind: 'dismissFactPanel' });
+    dispatch({ kind: 'action', action: { type: 'selectVehicle', id } });
+  };
 
   return (
     <div className="app">
-      <TopBar live={state.live} />
+      <TopBar live={state.live} status={status} busy={busy} onAdvanceStatus={advanceStatus} />
       <div className="body">
         <CarRail
           vehicles={state.vehicles}
@@ -470,7 +480,7 @@ export function App() {
               onDismiss={() => dispatch({ kind: 'dismissCta' })}
             />
           ) : null}
-          <Composer busy={busy} status={status} onAdvanceStatus={advanceStatus} onSend={send} />
+          <Composer busy={busy} onSend={send} />
         </main>
       </div>
       <Toasts toasts={state.toasts} onDismiss={(id) => dispatch({ kind: 'dismissToast', id })} />
