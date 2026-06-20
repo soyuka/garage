@@ -27,22 +27,13 @@
       "tokenFields": [],
       "expireInHours": 168,
       "refreshExpireInHours": 168,
-      "scopes": [
-        "openid",
-        "profile",
-        "email"
-      ],
+      "scopes": [],
       "signinMethods": [
         {
           "name": "Password",
           "displayName": "Password",
           "rule": "All"
         }
-      ],
-      "signupItems": [
-        {"name": "ID", "visible": false, "required": true, "prompted": false, "rule": "Random"},
-        {"name": "Username", "visible": true, "required": true, "prompted": false, "rule": "None"},
-        {"name": "Password", "visible": true, "required": true, "prompted": false, "rule": "None"}
       ]
     }
   ]
