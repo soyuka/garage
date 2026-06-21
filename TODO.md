@@ -264,6 +264,18 @@ mowers, snow throwers like TORO 246-H). TecDoc/partsapi is automotive only.
   open. The moat layer is a **vendor problem (partsapi, in hand)**, never an open-dataset
   problem. GitHub has only an identity/spec layer (`abhionlyone/us-car-models-data` US/frozen,
   `vbalagovic/cars-dataset` proprietary sample) — the layer an LLM already knows.
+- **auto-data.net Car Specs API** (api.auto-data.net) — EVALUATED 2026-06-21, parked as a
+  *potential future* spec/fluids source. Commercial, pay-per-parameter. ~55k modifications,
+  hierarchy brand→model→generation→modification(engine), 14 langs incl. FR. Delivery =
+  **bulk XML/JSON dump you store + re-download ~every 5h** (NOT a per-vehicle real-time API →
+  clashes with our on-demand tool arch; needs Mongo import + make/model/gen/modif→vehicle
+  matching layer). HAS: engine oil spec + capacity, coolant/fuel/AdBlue capacity, power/
+  torque/dims/emissions. LACKS the three things we actually need: ❌ service/maintenance
+  **intervals**, ❌ OEM **part numbers**, ❌ **VIN** lookup. Only real overlap = structured
+  oil capacity + fluids (could replace brittle Motul `__NEXT_DATA__` scrape) but Motul still
+  wins on exact SAE grade. Revisit ONLY if fluid-capacity/spec enrichment becomes a priority;
+  not worth the import+matching cost for forecasting (no intervals). Automotive analogue of
+  the agri-segment `agro-specs.com` spec layer noted above.
 
 ## Non-goals (for now)
 - stdio transport (explicitly not needed)

@@ -31,7 +31,11 @@ export function TopBar({ live, status, busy, onAdvanceStatus, onSettings, onJour
         <div className="search">🔍 Rechercher un véhicule…</div>
         {onJournal ? (
           <button type="button" className="tb-journal" onClick={onJournal} title="Journal de l'agent" aria-label="Journal de l'agent">
-            <span aria-hidden="true">🪵</span>
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+              <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+              <path d="M9 7h7M9 11h7" />
+            </svg>
           </button>
         ) : null}
         <AccountMenu onSettings={onSettings} />
