@@ -128,9 +128,16 @@ export async function getMaintenanceRecords(vehicleIri: string): Promise<Mainten
   return members.map((r) => ({ ...r, id: r['@id'] ?? r.id }) as MaintenanceRecord);
 }
 
-/** The body of a manual past-service log. */
-export interface MaintenanceRecordInput {
+/** One service line of a manual visit: a type + the parts it consumed. */
+export interface MaintenanceItemInput {
   type: string;
+  label?: string | null;
+  parts: PlannedPart[];
+}
+
+/** The body of a manual maintenance visit — a list of service items plus visit-level fields. */
+export interface MaintenanceRecordInput {
+  items: MaintenanceItemInput[];
   performedAt: string;
   label?: string | null;
   usageValue?: number | null;
@@ -139,7 +146,6 @@ export interface MaintenanceRecordInput {
   cost?: number | null;
   currency?: string | null;
   performedBy?: string | null;
-  partsUsed?: PlannedPart[];
 }
 
 /** Log a past service by hand (POST maintenance-records). */
@@ -150,6 +156,25 @@ export async function createMaintenanceRecord(vehicleIri: string, input: Mainten
     body: JSON.stringify(input),
   });
   if (!res.ok) throw new Error(`record create failed: ${res.status}`);
+}
+
+/** Edit a logged visit (PATCH /garage/maintenance-records/{id}). The body replaces the whole visit. */
+export async function updateMaintenanceRecord(recordIri: string, input: MaintenanceRecordInput): Promise<void> {
+  const res = await authFetch(`${API}${recordIri}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error(`record update failed: ${res.status}`);
+}
+
+/** Remove a logged visit (DELETE /garage/maintenance-records/{id}). */
+export async function deleteMaintenanceRecord(recordIri: string): Promise<void> {
+  const res = await authFetch(`${API}${recordIri}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/ld+json' },
+  });
+  if (!res.ok) throw new Error(`record delete failed: ${res.status}`);
 }
 
 /**

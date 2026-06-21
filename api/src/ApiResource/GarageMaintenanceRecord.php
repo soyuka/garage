@@ -6,14 +6,18 @@ namespace App\ApiResource;
 
 use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Delete;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
+use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Dto\MaintenanceRecordInput;
 use App\Entity\MaintenanceRecord;
 use App\State\GarageMaintenanceRecordProvider;
 use App\State\MaintenanceRecordCreateProcessor;
+use App\State\MaintenanceRecordDeleteProcessor;
+use App\State\MaintenanceRecordUpdateProcessor;
 use App\State\VehicleMaintenanceRecordCollectionProvider;
 use Symfony\Component\Uid\Ulid;
 
@@ -42,6 +46,19 @@ use Symfony\Component\Uid\Ulid;
             processor: MaintenanceRecordCreateProcessor::class,
         ),
         new Get(uriTemplate: '/garage/maintenance-records/{id}', provider: GarageMaintenanceRecordProvider::class),
+        // Edit a logged visit by hand (owner-gated). Replaces the items/visit fields it carries.
+        new Patch(
+            uriTemplate: '/garage/maintenance-records/{id}',
+            input: MaintenanceRecordInput::class,
+            read: false,
+            processor: MaintenanceRecordUpdateProcessor::class,
+        ),
+        // Remove a logged visit (owner-gated).
+        new Delete(
+            uriTemplate: '/garage/maintenance-records/{id}',
+            read: false,
+            processor: MaintenanceRecordDeleteProcessor::class,
+        ),
     ],
 )]
 final class GarageMaintenanceRecord

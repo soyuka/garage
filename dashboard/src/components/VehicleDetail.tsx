@@ -86,6 +86,8 @@ export function VehicleDetail({
   onDeleteFact,
   recordsLoading,
   onAddRecord,
+  onEditRecord,
+  onDeleteRecord,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
@@ -103,6 +105,8 @@ export function VehicleDetail({
   onDeleteFact: (key: string) => void;
   recordsLoading: boolean;
   onAddRecord: (input: MaintenanceRecordInput) => void;
+  onEditRecord: (recordIri: string, input: MaintenanceRecordInput) => void;
+  onDeleteRecord: (recordIri: string) => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -301,7 +305,13 @@ export function VehicleDetail({
       </Card>
 
       <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
-        <PastMaintenanceRail records={vehicle.maintenanceRecords} loading={recordsLoading} onAddRecord={onAddRecord} />
+        <PastMaintenanceRail
+          records={vehicle.maintenanceRecords}
+          loading={recordsLoading}
+          onAddRecord={onAddRecord}
+          onEditRecord={onEditRecord}
+          onDeleteRecord={onDeleteRecord}
+        />
       </Card>
 
       <Card ref={dataRef} className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>

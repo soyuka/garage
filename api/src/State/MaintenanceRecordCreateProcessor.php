@@ -37,10 +37,19 @@ final class MaintenanceRecordCreateProcessor implements ProcessorInterface
         $id = $uriVariables['vehicleId'];
         $vehicleId = $id instanceof Ulid ? $id : Ulid::fromString((string) $id);
 
+        if ('' === trim($data->performedAt)) {
+            throw new UnprocessableEntityHttpException('performedAt is required (YYYY-MM-DD).');
+        }
+
         try {
             $performedAt = new \DateTimeImmutable($data->performedAt);
         } catch (\Exception) {
             throw new UnprocessableEntityHttpException(sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
+        }
+
+        $items = $data->resolveItems();
+        if ([] === $items) {
+            throw new UnprocessableEntityHttpException('A maintenance log must carry at least one service item with a non-empty type.');
         }
 
         $unit = null;
@@ -64,8 +73,7 @@ final class MaintenanceRecordCreateProcessor implements ProcessorInterface
             plate: null,
             vin: null,
             confirmNew: false,
-            // The manual form logs one service per entry; wrap it as a single-item visit.
-            items: [['type' => $data->type, 'parts' => $data->partsUsed]],
+            items: $items,
             performedAt: $performedAt,
             source: 'user',
             label: $data->label,

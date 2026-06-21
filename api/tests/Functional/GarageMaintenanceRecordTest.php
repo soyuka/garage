@@ -96,4 +96,105 @@ final class GarageMaintenanceRecordTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(404);
     }
+
+    public function testPostWithMultipleItemsAndParts(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => [
+                'label' => 'Entretien complet',
+                'performedAt' => '2025-09-12',
+                'usageValue' => 138000,
+                'usageUnit' => 'km',
+                'items' => [
+                    ['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'brand' => 'Motul', 'label' => 'Huile 5W30', 'qty' => 5]]],
+                    ['type' => 'oil_filter', 'parts' => [['ref' => 'W712/52', 'brand' => 'MANN']]],
+                    ['type' => 'inspection'],
+                ],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertJsonContains([
+            'label' => 'Entretien complet',
+            'items' => [
+                ['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'brand' => 'Motul', 'label' => 'Huile 5W30', 'qty' => 5]]],
+                ['type' => 'oil_filter', 'parts' => [['ref' => 'W712/52', 'brand' => 'MANN']]],
+                ['type' => 'inspection', 'parts' => []],
+            ],
+        ]);
+    }
+
+    public function testPatchReplacesItemsAndVisitFields(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        $created = $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['type' => 'oil_change', 'performedAt' => '2025-09-12', 'cost' => 50.0],
+        ])->toArray();
+
+        $client->request('PATCH', $created['@id'], [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => [
+                'label' => 'Révision corrigée',
+                'cost' => 120.5,
+                'items' => [
+                    ['type' => 'brakes', 'parts' => [['ref' => 'BRK-1', 'brand' => 'Brembo']]],
+                    ['type' => 'brake_fluid'],
+                ],
+            ],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains([
+            'label' => 'Révision corrigée',
+            'costCents' => 12050,
+            'items' => [
+                ['type' => 'brakes', 'parts' => [['ref' => 'BRK-1', 'brand' => 'Brembo']]],
+                ['type' => 'brake_fluid', 'parts' => []],
+            ],
+        ]);
+    }
+
+    public function testDeleteRemovesRecord(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        $created = $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['type' => 'oil_change', 'performedAt' => '2025-09-12'],
+        ])->toArray();
+
+        $client->request('DELETE', $created['@id'], ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $this->assertResponseStatusCodeSame(204);
+
+        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $this->assertCount(0, $members);
+    }
+
+    public function testPatchForeignRecordIs404(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        $created = $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['type' => 'oil_change', 'performedAt' => '2025-09-12'],
+        ])->toArray();
+
+        $client->request('PATCH', $created['@id'], [
+            'headers' => self::authHeaders('intruder') + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => ['label' => 'hijack'],
+        ]);
+        $this->assertResponseStatusCodeSame(404);
+
+        $client->request('DELETE', $created['@id'], ['headers' => self::authHeaders('intruder') + ['Accept' => 'application/ld+json']]);
+        $this->assertResponseStatusCodeSame(404);
+    }
 }

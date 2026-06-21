@@ -519,19 +519,78 @@ body {
 .hist-track::-webkit-scrollbar { height: 6px; }
 .hist-track::-webkit-scrollbar-thumb { background: var(--mpa-border-strong); border-radius: var(--mpa-radius-pill); }
 .hist-card {
-  flex: none; width: 200px; padding: var(--mpa-space-3) var(--mpa-space-4);
+  flex: none; width: 232px; padding: var(--mpa-space-3) var(--mpa-space-4);
   background: var(--mpa-inset); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-lg);
-  display: flex; flex-direction: column; gap: 3px;
+  display: flex; flex-direction: column; gap: var(--mpa-space-2);
 }
-.hist-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mpa-space-2); }
-.hist-type { font-weight: 600; font-size: var(--mpa-text-label); }
+.hist-card-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--mpa-space-2);
+  padding-bottom: var(--mpa-space-2); border-bottom: 1px solid var(--mpa-border);
+}
+.hist-type { font-weight: 600; font-size: var(--mpa-text-body, 14px); line-height: 1.25; }
 .hist-date { color: var(--mpa-muted); font-size: var(--mpa-text-small); font-variant-numeric: tabular-nums; flex: none; }
-.hist-label { color: var(--mpa-text-2); font-size: var(--mpa-text-small); }
-.hist-meta { color: var(--mpa-muted); font-size: var(--mpa-text-small); display: flex; gap: 6px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+
+/* the visit checklist — one row per service done, with the parts it consumed underneath */
+.hist-items { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--mpa-space-2); }
+.hist-item { position: relative; padding-left: 18px; display: flex; flex-direction: column; gap: 1px; }
+.hist-item::before {
+  content: '✓'; position: absolute; left: 0; top: 0;
+  color: var(--mpa-ok); font-size: 11px; font-weight: 700; line-height: 1.35;
+}
+.hist-item-name { color: var(--mpa-text-2); font-size: var(--mpa-text-label); font-weight: 500; }
+.hist-item-parts { color: var(--mpa-faint); font-size: var(--mpa-text-small); line-height: 1.3; }
+
+.hist-meta {
+  color: var(--mpa-muted); font-size: var(--mpa-text-small); display: flex; gap: 6px; flex-wrap: wrap;
+  font-variant-numeric: tabular-nums; margin-top: auto; padding-top: var(--mpa-space-1, 4px);
+}
+.hist-meta > :not(:first-child)::before { content: '· '; color: var(--mpa-faint); }
+.hist-cost { color: var(--mpa-text-2); font-weight: 600; }
 .hist-notes {
-  color: var(--mpa-faint); font-size: var(--mpa-text-small); margin-top: 2px;
+  color: var(--mpa-faint); font-size: var(--mpa-text-small); margin-top: 2px; font-style: italic;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
 }
+
+/* per-card manage actions (edit / delete), revealed on hover of the card */
+.hist-actions { display: flex; gap: 2px; flex: none; opacity: 0; transition: opacity 0.12s ease; }
+.hist-card:hover .hist-actions, .hist-card:focus-within .hist-actions { opacity: 1; }
+.hist-act {
+  border: none; background: none; cursor: pointer; color: var(--mpa-muted); font: inherit;
+  font-size: var(--mpa-text-label); line-height: 1; padding: 2px 4px; border-radius: var(--mpa-radius-sm);
+}
+.hist-act:hover { background: var(--mpa-surface); color: var(--mpa-accent); }
+.hist-act-danger:hover { color: var(--mpa-alarm, #ff5c5c); }
+.hist-card-editing { width: 320px; }
+
+/* ---- manual visit form (create + edit), used inside the past-maintenance rail ---- */
+.record-form {
+  display: flex; flex-direction: column; gap: var(--mpa-space-2);
+  padding: var(--mpa-space-3) var(--mpa-space-4); margin-bottom: var(--mpa-space-3);
+  background: var(--mpa-inset); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-lg);
+}
+.rf-items { display: flex; flex-direction: column; gap: var(--mpa-space-2); }
+.rf-item {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: var(--mpa-space-2); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-md);
+  background: var(--mpa-surface);
+}
+.rf-item-head, .rf-part, .rf-visit { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.rf-part { padding-left: var(--mpa-space-3); }
+.add-input-xs { width: 56px; flex: none; }
+.rf-remove {
+  border: none; background: none; cursor: pointer; color: var(--mpa-faint); font: inherit;
+  padding: 2px 6px; border-radius: var(--mpa-radius-sm); flex: none;
+}
+.rf-remove:hover { color: var(--mpa-alarm, #ff5c5c); background: var(--mpa-inset); }
+.rf-add-part, .rf-add-item, .rf-cancel {
+  align-self: flex-start; border: 1px dashed var(--mpa-border-strong); background: none; cursor: pointer;
+  color: var(--mpa-muted); font: inherit; font-size: var(--mpa-text-small); font-weight: 600;
+  padding: 4px 10px; border-radius: var(--mpa-radius-pill);
+}
+.rf-add-part:hover, .rf-add-item:hover, .rf-cancel:hover { color: var(--mpa-accent); border-color: var(--mpa-accent); }
+.rf-notes { resize: vertical; font-family: inherit; }
+.rf-actions { display: flex; justify-content: flex-end; gap: var(--mpa-space-2); align-items: center; }
+.rf-cancel { border-style: solid; }
 
 /* ---- auth gate (login screen) ---- */
 .auth-screen {
@@ -564,10 +623,10 @@ body {
   width: 36px; height: 36px; flex: none; padding: 0; cursor: pointer;
   display: grid; place-items: center;
   background: transparent; border: 1px solid transparent; border-radius: var(--mpa-radius-sm);
-  font-size: 18px; line-height: 1;
-  transition: border-color var(--mpa-transition-fast), background var(--mpa-transition-fast);
+  font-size: 18px; line-height: 1; color: var(--mpa-muted);
+  transition: border-color var(--mpa-transition-fast), background var(--mpa-transition-fast), color var(--mpa-transition-fast);
 }
-.tb-journal:hover { border-color: var(--mpa-border); background: var(--mpa-inset); }
+.tb-journal:hover { border-color: var(--mpa-border); background: var(--mpa-inset); color: var(--mpa-text); }
 
 .journal-overlay {
   position: fixed; inset: 0; z-index: 60;

@@ -81,11 +81,25 @@ class MaintenanceRecord
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $owner = null,
     ) {
+        $this->items = self::normaliseItems($items);
+        $this->id = (string) new Ulid();
+        $vehicle->addMaintenanceRecord($this);
+    }
+
+    /**
+     * Validate + normalise a visit's line-items: drop empties, keep {type, optional label, parts}.
+     *
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     *
+     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>
+     */
+    private static function normaliseItems(array $items): array
+    {
         if ([] === $items) {
             throw new \InvalidArgumentException('A maintenance visit must carry at least one item.');
         }
 
-        $this->items = array_map(static function (array $item): array {
+        return array_map(static function (array $item): array {
             $type = $item['type'] ?? '';
             if ('' === $type) {
                 throw new \InvalidArgumentException('Every maintenance item must carry a non-empty type.');
@@ -98,9 +112,6 @@ class MaintenanceRecord
 
             return $normalised;
         }, array_values($items));
-
-        $this->id = (string) new Ulid();
-        $vehicle->addMaintenanceRecord($this);
     }
 
     public function getId(): Ulid
@@ -189,5 +200,56 @@ class MaintenanceRecord
     public function getOwner(): ?string
     {
         return $this->owner;
+    }
+
+    /**
+     * Manual edit from the dashboard — the one exception to the append-only rule. Replaces the whole
+     * visit (items + visit-level fields); forecasting re-keys off the fresh item types on next read.
+     *
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     */
+    public function replaceItems(array $items): void
+    {
+        $this->items = self::normaliseItems($items);
+    }
+
+    public function setPerformedAt(\DateTimeImmutable $performedAt): void
+    {
+        $this->performedAt = $performedAt;
+    }
+
+    public function setLabel(?string $label): void
+    {
+        $this->label = $label;
+    }
+
+    public function setUsageValue(?int $usageValue): void
+    {
+        $this->usageValue = $usageValue;
+    }
+
+    public function setUsageUnit(?UsageUnit $usageUnit): void
+    {
+        $this->usageUnit = $usageUnit;
+    }
+
+    public function setNotes(?string $notes): void
+    {
+        $this->notes = $notes;
+    }
+
+    public function setCostCents(?int $costCents): void
+    {
+        $this->costCents = $costCents;
+    }
+
+    public function setCurrency(?string $currency): void
+    {
+        $this->currency = $currency;
+    }
+
+    public function setPerformedBy(?string $performedBy): void
+    {
+        $this->performedBy = $performedBy;
     }
 }

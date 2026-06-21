@@ -6,6 +6,7 @@ import {
   createMaintenanceRecord,
   createTask,
   createVehicle,
+  deleteMaintenanceRecord,
   deleteVehicle,
   deleteVehicleFact,
   getMaintenanceRecords,
@@ -15,6 +16,7 @@ import {
   patchTask,
   patchVehicle,
   postVehicleFact,
+  updateMaintenanceRecord,
   type MaintenanceRecordInput,
   type PlannedTaskInput,
 } from './garage';
@@ -354,6 +356,33 @@ export function App() {
     [state.selectedId, loadRecords, loadTasks],
   );
 
+  const editRecord = useCallback(
+    async (recordIri: string, input: MaintenanceRecordInput) => {
+      const id = state.selectedId;
+      try {
+        await updateMaintenanceRecord(recordIri, input);
+        loadRecords(id);
+        loadTasks(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la modification : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadRecords, loadTasks],
+  );
+
+  const removeRecord = useCallback(
+    async (recordIri: string) => {
+      const id = state.selectedId;
+      try {
+        await deleteMaintenanceRecord(recordIri);
+        loadRecords(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadRecords],
+  );
+
   const send = useCallback(
     async (instruction: string) => {
       // Go busy on dispatch and stay busy: the turn runs in an async worker, so the POST only acks
@@ -479,6 +508,8 @@ export function App() {
                 onDeleteFact={deleteFact}
                 recordsLoading={recordsLoading}
                 onAddRecord={addRecord}
+                onEditRecord={editRecord}
+                onDeleteRecord={removeRecord}
               />
             ) : (
               <div className="empty-parc">
