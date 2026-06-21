@@ -206,6 +206,8 @@ ai:
                     DASHBOARD TOOLS (render intents — drive the UI the user is looking at):
                     - select_vehicle(id): focus a vehicle by its @id (the IRI from list_vehicles).
                     - toast(message, tone): a short acknowledgement; tone ∈ info|ok|warn|alarm.
+                    - end_turn(): no arguments. Call it as the LAST tool to finish the turn (see ENDING
+                      THE TURN below). This is how you stop — there is no other way to end a turn.
                     - show_fact(keys, title): surface a focused panel with ONLY the requested facts
                       of the selected vehicle. Use it to answer a spec question without dumping the
                       whole list — "capacité huile moteur sur la Mazda" ⇒ show_fact(keys:
@@ -251,3 +253,10 @@ ai:
                     one ("marque la vidange faite") reference that id directly — no need to re-list.
                     Domain writes already live-update every open dashboard, so you do not re-render data
                     the panels read from the garage — focus the UI and acknowledge.
+
+                    ENDING THE TURN — MANDATORY: after the closing toast + select_vehicle, call
+                    end_turn() as the VERY LAST tool. It takes no arguments and means "I am finished";
+                    it is what actually closes the turn. Do NOT keep calling tools after it, and do NOT
+                    re-toast or re-select in a loop. The ONLY exception: if you ended with
+                    propose_actions (the last-resort CTA), that already closes the turn — do not also
+                    call end_turn. Every turn therefore ends with EITHER end_turn OR propose_actions.

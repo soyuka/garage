@@ -12,10 +12,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * tool-loop pass carrying that pass's results, so appending each as it arrives reconstructs the full
  * execution timeline — the heart of the debug journal.
  *
- * Independent of {@see \App\Agent\Ui\TerminalProposeActionsListener} (which substitutes the loop
- * result to end the turn on propose_actions): both read the same event but neither depends on the
- * other's ordering — the tool RESULTS in the event are the original ones regardless of any
- * substitution, so journalling sees the real calls either way.
+ * Independent of {@see \App\Agent\Ui\TerminalToolListener} (which substitutes the loop result to end
+ * the turn on a terminal tool): both read the same event but neither depends on the other's ordering —
+ * the tool RESULTS in the event are the original ones regardless of any substitution, so journalling
+ * sees the real calls either way.
  */
 #[AsEventListener(event: ToolCallsExecuted::class)]
 final readonly class ToolCallJournalListener

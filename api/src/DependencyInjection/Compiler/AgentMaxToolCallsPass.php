@@ -18,8 +18,8 @@ use Symfony\Component\DependencyInjection\ContainerBuilder;
  * append arg 5 here. Runs after ResolveChildDefinitionsPass (default optimization phase), so the
  * service is a flattened Definition with args 0-4 present and 5 is the next index to set.
  *
- * This is the HARD backstop; the normal exit is {@see \App\Agent\Ui\TerminalProposeActionsListener},
- * which ends the turn as soon as a CTA is rendered.
+ * This is the HARD backstop; the normal exit is {@see \App\Agent\Ui\TerminalToolListener}, which ends
+ * the turn as soon as the agent calls a terminal tool (end_turn or propose_actions).
  */
 final class AgentMaxToolCallsPass implements CompilerPassInterface
 {
