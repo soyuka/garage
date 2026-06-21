@@ -50,6 +50,35 @@ final class TurnContextBuilderTest extends TestCase
         self::assertStringContainsString('250000', $context);
     }
 
+    public function testInlinesVehicleIdentitySoToolsPinTheVariantWithoutARoundTrip(): void
+    {
+        $vehicle = new Vehicle(
+            'Mazda', '6', VehicleType::Car, 'siv',
+            year: 2007, modification: '2.0 MZR-CD', engineCode: 'RF5C',
+        );
+
+        $builder = new TurnContextBuilder(
+            $this->resolver($vehicle),
+            new VehicleFactsProjector(),
+            $this->repository([]),
+        );
+
+        $context = $builder->build(new RunAgentTurn(
+            instruction: 'quelle viscosité pour la mazda ?',
+            sessionTopic: 'https://localhost/agent/sessions/abc',
+            owner: 'test-user',
+            selectedId: '/garage/vehicles/'.$vehicle->getId(),
+        ));
+
+        // Identity must be inline so get_motul_oil / web_search pin the exact variant
+        // without first calling list_vehicles to learn which Mazda this is.
+        self::assertStringContainsString('Mazda', $context);
+        self::assertStringContainsString('6', $context);
+        self::assertStringContainsString('2007', $context);
+        self::assertStringContainsString('2.0 MZR-CD', $context);
+        self::assertStringContainsString('RF5C', $context);
+    }
+
     public function testInjectsPendingCtaContextSoTerseRepliesLandInContext(): void
     {
         $builder = new TurnContextBuilder(

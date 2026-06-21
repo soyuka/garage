@@ -41,7 +41,7 @@ final readonly class TurnContextBuilder
 
             $vehicle = $this->resolve($turn->selectedId);
             if (null !== $vehicle) {
-                $context .= $this->knownFacts($vehicle).$this->openTasks($vehicle);
+                $context .= $this->identity($vehicle).$this->knownFacts($vehicle).$this->openTasks($vehicle);
             }
         }
 
@@ -66,6 +66,27 @@ final readonly class TurnContextBuilder
         }
 
         return $this->garage->resolveById(Ulid::fromString($id));
+    }
+
+    /**
+     * Inlines the identifying spec (make/model/year/motor/finition) so get_motul_oil and web_search
+     * pin the exact variant from the first turn, instead of calling list_vehicles to learn which
+     * vehicle the bare IRI points to.
+     */
+    private function identity(Vehicle $vehicle): string
+    {
+        $parts = [$vehicle->getMake(), $vehicle->getModel()];
+        if (null !== $vehicle->getYear()) {
+            $parts[] = (string) $vehicle->getYear();
+        }
+        if (null !== $vehicle->getModification()) {
+            $parts[] = 'finition '.$vehicle->getModification();
+        }
+        if (null !== $vehicle->getEngineCode()) {
+            $parts[] = 'moteur '.$vehicle->getEngineCode();
+        }
+
+        return "\nVéhicule : ".implode(', ', $parts);
     }
 
     private function knownFacts(Vehicle $vehicle): string
