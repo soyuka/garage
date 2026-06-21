@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent;
 
+use App\Agent\Journal\TurnJournal;
+use App\Agent\Ui\StepNarrator;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Model;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
@@ -37,6 +39,8 @@ final readonly class ServerToolUseLogger implements PlatformInterface
         private PlatformInterface $inner,
         private LoggerInterface $logger,
         private WebSearchBudget $budget,
+        private StepNarrator $narrator,
+        private TurnJournal $journal,
     ) {
     }
 
@@ -44,7 +48,12 @@ final readonly class ServerToolUseLogger implements PlatformInterface
     {
         $result = $this->inner->invoke($model, $input, $options);
 
-        if ($options['stream'] ?? false) {
+        $stream = (bool) ($options['stream'] ?? false);
+        // Record the live model on the debug journal: the active platform/model is a compile-time
+        // choice in ai.yaml, so this decorator — in the path of every call — is where it is observable.
+        $this->journal->recordModel('anthropic', $model instanceof Model ? $model->getName() : (string) $model, $stream);
+
+        if ($stream) {
             $this->attachBudgetListener($result);
         } else {
             $this->logServerToolUse($result);
@@ -69,7 +78,7 @@ final readonly class ServerToolUseLogger implements PlatformInterface
         }
 
         if ($streamResult instanceof StreamResult) {
-            $streamResult->addListener(new WebSearchBudgetStreamListener($this->budget));
+            $streamResult->addListener(new WebSearchBudgetStreamListener($this->budget, $this->narrator, $this->journal));
         }
     }
 
@@ -93,6 +102,15 @@ final readonly class ServerToolUseLogger implements PlatformInterface
         // Feed the turn budget: this decorator is the only seam that sees a search actually ran,
         // so WebSearchInputProcessor can withdraw web_search once the per-turn cap is reached.
         $this->budget->record($requests);
+
+        // Feed the debug journal: web-search spend, token usage and the raw response payload (this is
+        // the non-stream path, where the full body is readable — see the class docblock).
+        $this->journal->recordWebSearch($requests, array_values(array_filter($queries)));
+        $this->journal->recordLlmCall(
+            ['response' => $data],
+            isset($data['usage']['input_tokens']) ? (int) $data['usage']['input_tokens'] : null,
+            isset($data['usage']['output_tokens']) ? (int) $data['usage']['output_tokens'] : null,
+        );
 
         if ($requests < 1 && [] === $queries) {
             return;

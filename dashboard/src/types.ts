@@ -161,4 +161,7 @@ export type UIAction =
   | { type: 'showFact'; keys: string[]; title?: string }
   | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }
   | { type: 'toast'; tone: Tone; message: string }
+  // Transient progress narration ("Je consulte le catalogue…"), emitted per tool the agent runs.
+  // Feeds only the heartbeat line — never a toast popup — and carries no reducer state.
+  | { type: 'status'; message: string }
   | { type: 'turn'; phase: 'start' | 'end' };

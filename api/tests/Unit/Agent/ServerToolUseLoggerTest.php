@@ -4,18 +4,24 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent;
 
+use App\Agent\Journal\TurnJournal;
 use App\Agent\ServerToolUseLogger;
+use App\Agent\Ui\RenderIntentTools;
+use App\Agent\Ui\StepNarrator;
+use App\Agent\WebSearchBudget;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
 use Symfony\AI\Platform\PlainConverter;
 use Symfony\AI\Platform\PlatformInterface;
 use Symfony\AI\Platform\Result\DeferredResult;
-use App\Agent\WebSearchBudget;
 use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
+use Symfony\Component\Mercure\HubInterface;
+use Symfony\Component\Mercure\Update;
 
 final class ServerToolUseLoggerTest extends TestCase
 {
@@ -67,7 +73,8 @@ final class ServerToolUseLoggerTest extends TestCase
         $logger->expects($this->never())->method('notice');
 
         $budget = new WebSearchBudget(1);
-        $result = $this->decorator($raw, $logger, $budget, new PlainConverter($stream))
+        $published = new \ArrayObject();
+        $result = $this->decorator($raw, $logger, $budget, new PlainConverter($stream), $published)
             ->invoke('claude', 'hi', ['stream' => true]);
 
         // The worker drains the stream; that is when the listener fires.
@@ -77,13 +84,19 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $this->assertSame(0, $raw->reads, 'streaming must not force the raw HTTP fetch');
         $this->assertTrue($budget->exhausted(), 'the streamed web_search count must feed the budget');
+        // The same toolTokens delta also narrates the search on the dashboard heartbeat.
+        $this->assertSame([['type' => 'status', 'message' => 'Je cherche en ligne…']], $published->getArrayCopy());
     }
 
+    /**
+     * @param \ArrayObject<int, array<string, mixed>>|null $published filled with each narration frame
+     */
     private function decorator(
         RawResultInterface $raw,
         LoggerInterface $logger,
         ?WebSearchBudget $budget = null,
         ?ResultConverterInterface $converter = null,
+        ?\ArrayObject $published = null,
     ): ServerToolUseLogger {
         $deferred = new DeferredResult($converter ?? $this->createStub(ResultConverterInterface::class), $raw);
 
@@ -91,7 +104,19 @@ final class ServerToolUseLoggerTest extends TestCase
         $inner->method('invoke')->willReturn($deferred);
         $inner->method('getModelCatalog')->willReturn($this->createStub(ModelCatalogInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1));
+        $published ??= new \ArrayObject();
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+            $published->append(json_decode($update->getData(), true));
+
+            return 'id';
+        });
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
+
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools), $journal);
     }
 
     /**

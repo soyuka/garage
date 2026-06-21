@@ -59,6 +59,31 @@ final class RenderIntentToolsTest extends TestCase
      * side) and is enforced at call time. `parts` must itself recurse into a typed object so the
      * model emits `{ref, brand, …}`, not bare strings.
      */
+    public function testNarratePublishesATransientStatusFrameSeparateFromToast(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->narrate('Je consulte le catalogue de pièces…');
+
+        $this->assertNotNull($published);
+        $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
+        // A `status` frame, not a `toast`: progress narration feeds only the heartbeat line, never a
+        // toast popup.
+        $this->assertSame(
+            ['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…'],
+            json_decode($published->getData(), true),
+        );
+    }
+
     public function testProposeActionsSchemaDescribesEachActionAsTypedObject(): void
     {
         $schema = (new Factory())->buildParameters(RenderIntentTools::class, 'proposeActions');

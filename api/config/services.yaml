@@ -64,6 +64,7 @@ services:
         arguments:
             $renderToolbox: '@.inner'
             $mcpToolbox: '@App\Mcp\Agent\McpToolbox'
+            $narrator: '@App\Agent\Ui\StepNarrator'
 
     # Log Anthropic server-side tool use (web_search) per call. Decorates the platform the garage
     # agent runs on: server tools leave no Toolbox call or domain write, so the platform's raw
@@ -79,21 +80,15 @@ services:
         arguments:
             $inner: '@.inner'
 
-    # Qwen counterpart: log DashScope server-side web search (search_info) off the non-stream response.
+    # Qwen counterpart: record the live model on the debug journal off each call.
     # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.
-    App\Agent\QwenSearchLogger:
+    App\Agent\QwenModelLogger:
         decorates: ai.platform.generic.qwen
         lazy: true
         tags:
             - { name: proxy, interface: Symfony\AI\Platform\PlatformInterface }
         arguments:
             $inner: '@.inner'
-
-    # Turn streaming: ON for Anthropic (searches observed via the stream budget listener), OFF for Qwen
-    # so QwenSearchLogger can read search_info off the body. See docs/AGENT_PROVIDER.md.
-    App\MessageHandler\RunAgentTurnHandler:
-        arguments:
-            $stream: '%env(bool:AGENT_STREAM)%'
 
     App\Command\ImportLegacyCacheCommand:
         arguments:

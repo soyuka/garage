@@ -113,9 +113,10 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
       const toast: Toast = { id: ++toastSeq, tone: a.tone, message: a.message };
       return { ...state, toasts: [...state.toasts, toast] };
     }
+    case 'status':
     case 'turn':
-      // A turn-lifecycle cue is consumed in App.onFrame to drive the busy state; it never carries
-      // reducer state. Listed so the switch stays exhaustive over UIAction.
+      // Transient cues consumed in App.onFrame (status → heartbeat line, turn → busy state); neither
+      // carries reducer state. Listed so the switch stays exhaustive over UIAction.
       return state;
   }
 }

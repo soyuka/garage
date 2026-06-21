@@ -19,7 +19,7 @@ ai:
             # cache. Full walkthrough in docs/AGENT_PROVIDER.md.
             #
             # Anthropic Claude (default):
-            # platform: 'ai.platform.anthropic'
+            platform: 'ai.platform.anthropic'
             # max_tokens rides the model string as a query param: AbstractModelCatalog::parseModelName
             # parses "?max_tokens=4096" into the model options, which Provider::invoke merges into the
             # request body. The agent config has no dedicated options/max_tokens node. 4096 (up from 2048):
@@ -27,15 +27,15 @@ ai:
             # turn must still have room to synthesise the schedule into plan_maintenance calls (carrying
             # both parts and attributes) afterwards — 2048 truncated that tail. WebSearchBudget caps the
             # turn to one search so the context cannot balloon further.
-            # model: 'claude-haiku-4-5?max_tokens=4096'
+            model: 'claude-haiku-4-5?max_tokens=4096'
             #
             # Alibaba Cloud Qwen (comment the two anthropic lines above, uncomment these two AND set
             # AGENT_WEB_SEARCH=qwen in .env.local — switches web search to DashScope `enable_search`):
-            platform: 'ai.platform.generic.qwen'
+            # platform: 'ai.platform.generic.qwen'
             # Dated snapshot, not the rolling `qwen3.5-flash` alias: the alias resolved to a free-tier
             # deployment that exhausted its quota (403 insufficient_quota) mid-turn. Pin the stable
             # release so the model is reproducible and on the paid tier.
-            model: 'qwen3.5-flash-2026-02-23?max_tokens=4096'
+            # model: 'qwen3.5-flash-2026-02-23?max_tokens=4096'
             # Render-intent #[AsTool] tools (select_vehicle/toast/show_fact/propose_actions) are picked up
             # here; the garage MCP tools are merged in by App\Agent\Toolbox\CompositeToolbox, which
             # decorates this agent's toolbox (see config/services.yaml). Fault tolerance is ON: the

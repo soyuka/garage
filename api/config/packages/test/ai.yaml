@@ -1,0 +1,11 @@
+# The garage agent's platform is a compile-time choice in config/packages/ai.yaml (the prod toggle,
+# currently Qwen). The functional turn tests assert the streaming contract — the turn always streams —
+# and swap in a ScriptedStreamPlatform on `ai.platform.anthropic`, so the test env pins the agent to
+# Anthropic regardless of which provider prod ships. Without this pin the agent resolves the Qwen
+# generic platform, the test's `ai.platform.anthropic` swap is ignored, and the scripted stream is
+# never used (the real generic-completions converter runs and throws on the empty body).
+ai:
+    agent:
+        garage:
+            platform: 'ai.platform.anthropic'
+            model: 'claude-haiku-4-5?max_tokens=4096'

@@ -21,6 +21,7 @@ import {
 import { CarRail } from './components/CarRail';
 import { Composer } from './components/Composer';
 import { CtaCard } from './components/CtaCard';
+import { JournalPanel } from './components/JournalPanel';
 import { VehicleDetailSkeleton } from './components/Skeletons';
 import { Toasts } from './components/Toasts';
 import { TopBar } from './components/TopBar';
@@ -66,6 +67,8 @@ export function App() {
   // independent of the boot skeleton.
   const [tasksLoading, setTasksLoading] = useState(false);
   const [recordsLoading, setRecordsLoading] = useState(false);
+  // The agent debug journal drawer — opened from the TopBar, reads GET /agent/turns on demand.
+  const [journalOpen, setJournalOpen] = useState(false);
 
   const selected = state.vehicles.find((v) => v.id === state.selectedId) ?? state.vehicles[0];
   // Live Mercure frames carry no checklist (it is its own subresource), so onFrame needs the
@@ -387,10 +390,14 @@ export function App() {
     (frame: MercureFrame) => {
       if ('type' in frame) {
         // Render intent on the session topic. The `turn` lifecycle cue drives the busy state (the
-        // worker runs async, so the POST ack can't); progress toasts feed the heartbeat line; errors
-        // and any non-toast intent (selectVehicle/showFact/proposeActions) go to the reducer.
+        // worker runs async, so the POST ack can't); step narration + progress toasts feed the
+        // heartbeat line; errors and any non-toast intent (selectVehicle/showFact/proposeActions) go
+        // to the reducer.
         if (frame.type === 'turn') {
           setBusy(frame.phase === 'start');
+        } else if (frame.type === 'status') {
+          // Running narration of the agent's current step — heartbeat only, no reducer state.
+          pushStatus(frame.message);
         } else if (frame.type === 'toast' && frame.tone !== 'alarm') {
           pushStatus(frame.message);
         } else {
@@ -431,7 +438,7 @@ export function App() {
 
   return (
     <div className="app">
-      <TopBar live={state.live} status={status} busy={busy} onAdvanceStatus={advanceStatus} />
+      <TopBar live={state.live} status={status} busy={busy} onAdvanceStatus={advanceStatus} onJournal={() => setJournalOpen(true)} />
       <div className="body">
         <CarRail
           vehicles={state.vehicles}
@@ -484,6 +491,7 @@ export function App() {
         </main>
       </div>
       <Toasts toasts={state.toasts} onDismiss={(id) => dispatch({ kind: 'dismissToast', id })} />
+      <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
     </div>
   );
 }

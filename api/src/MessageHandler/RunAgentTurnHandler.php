@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Agent\Journal\TurnJournal;
 use App\Agent\TurnContextBuilder;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\WebSearchBudget;
+use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
@@ -14,7 +16,6 @@ use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
-use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlerException;
 
@@ -45,15 +46,9 @@ final readonly class RunAgentTurnHandler
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
         private TurnContextBuilder $contextBuilder,
+        private TurnJournal $journal,
         private OwnerContext $owner,
         private LoggerInterface $logger,
-        // Streaming only drives the tool-call loop here — the deltas are discarded (see below), the UI
-        // is driven by the render-intent tools' Mercure publishes. So a non-stream turn behaves the
-        // same, except the final response body is readable: that is the ONLY way to observe Qwen's
-        // server-side web search (its `search_info` block is dropped from the converted stream). The
-        // Qwen profile runs non-stream (AGENT_STREAM=0) so QwenSearchLogger can log it. Anthropic stays
-        // streamed (AGENT_STREAM=1) — its searches are observed via the stream budget listener instead.
-        private bool $stream = true,
     ) {
     }
 
@@ -67,25 +62,30 @@ final readonly class RunAgentTurnHandler
         // Fresh per-turn web_search allowance — the budget service is a long-lived singleton in the
         // worker, so a prior turn's spend must not leak into this one.
         $this->webSearchBudget->reset();
+        // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so
+        // the journal records exactly what the model saw (instruction + inlined facts/tasks).
+        $context = $this->contextBuilder->build($message);
+        $this->journal->begin($message, $context);
         $this->renderTools->signalTurnPhase('start');
 
+        $status = AgentTurnStatus::Completed;
+        $error = null;
         try {
             $result = $this->garage->call(
-                new MessageBag(Message::ofUser($this->contextBuilder->build($message))),
-                ['stream' => $this->stream],
+                new MessageBag(Message::ofUser($context)),
+                ['stream' => true],
             );
 
             // Drive the lazy stream to completion: a StreamResult does nothing until consumed, and it
             // is the consumption that runs the tool-call loop and emits the render intents. The
             // web_search budget is fed by the listener ServerToolUseLogger attached to each call.
-            // A non-stream call has already run the loop inside call(), so there is nothing to drain.
-            if ($result instanceof StreamResult) {
-                foreach ($result->getContent() as $delta) {
-                    // Deltas are side-effecting (tool execution, Mercure publishes); draining is enough.
-                    unset($delta);
-                }
+            foreach ($result->getContent() as $delta) {
+                // Deltas are side-effecting (tool execution, Mercure publishes); draining is enough.
+                unset($delta);
             }
         } catch (MaxIterationsExceededException $e) {
+            $status = AgentTurnStatus::Capped;
+            $error = $e->getMessage();
             // The tool-call cap fired (see AgentMaxToolCallsPass): a model that wouldn't converge.
             // Tell the user, then dead-letter WITHOUT retrying: UnrecoverableMessageHandlerException
             // skips the retry policy (a plain rethrow would replay the same expensive runaway 3x) and
@@ -95,7 +95,17 @@ final readonly class RunAgentTurnHandler
             $this->renderTools->toast("Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.", 'warn');
 
             throw new UnrecoverableMessageHandlerException('Garage turn exceeded the tool-call cap.', previous: $e);
+        } catch (\Throwable $e) {
+            // Any other failure inside the loop: record it on the journal, then let it propagate so
+            // Messenger applies its retry policy unchanged.
+            $status = AgentTurnStatus::Failed;
+            $error = $e->getMessage();
+
+            throw $e;
         } finally {
+            // Persist the debug journal for this turn — completed, capped or failed alike, so a run
+            // that misbehaved stays inspectable. Best-effort: a journal write never sinks the turn.
+            $this->journal->finish($status, $error);
             // Always settle the dashboard's progress heartbeat — even if the loop threw and Messenger
             // is about to retry — or the UI would stay stuck in the busy state.
             $this->renderTools->signalTurnPhase('end');

@@ -39,3 +39,11 @@ describe('selectVehicle reducer', () => {
     expect(next.cta).toBe(cta);
   });
 });
+
+describe('status narration frame', () => {
+  it('is a reducer no-op — it feeds the heartbeat in App.onFrame, never reducer state', () => {
+    const state = baseState({ cta });
+    const next = reduce(state, { kind: 'action', action: { type: 'status', message: 'Je cherche en ligne…' } });
+    expect(next).toBe(state);
+  });
+});

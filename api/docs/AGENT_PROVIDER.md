@@ -21,8 +21,8 @@ clear. The `model:` string and `AGENT_WEB_SEARCH` flag *are* env-adjacent and mo
    platform: 'ai.platform.generic.qwen'
    model: 'qwen3.5-flash?max_tokens=4096'
    ```
-2. `.env.local`: set `AGENT_WEB_SEARCH=qwen` and `AGENT_STREAM=0` (see web search note below),
-   and confirm `ALIBABACLOUD_API_KEY` is set (it already is).
+2. `.env.local`: set `AGENT_WEB_SEARCH=qwen` (see web search note below), and confirm
+   `ALIBABACLOUD_API_KEY` is set (it already is).
 3. Clear the compiled container — config and metadata caches are sticky here:
    ```sh
    rm -rf var/cache/dev && php bin/console cache:clear
@@ -32,9 +32,8 @@ clear. The `model:` string and `AGENT_WEB_SEARCH` flag *are* env-adjacent and mo
 
 ## Switch back to Anthropic (default)
 
-Reverse step 1 (uncomment the Anthropic pair, comment Qwen), set `AGENT_WEB_SEARCH=anthropic` and
-`AGENT_STREAM=1` in `.env.local`, then `rm -rf var/cache/dev && php bin/console cache:clear` and
-restart the worker.
+Reverse step 1 (uncomment the Anthropic pair, comment Qwen), set `AGENT_WEB_SEARCH=anthropic`
+in `.env.local`, then `rm -rf var/cache/dev && php bin/console cache:clear` and restart the worker.
 
 ## Web search (`AGENT_WEB_SEARCH`)
 
@@ -62,27 +61,6 @@ Differences on Qwen:
 - No citation tool-call loop. Qwen folds results into the model context server-side; there is no
   `web_search` `ToolCallMessage` to observe (so `App\Agent\ServerToolUseLogger`, which decorates
   `ai.platform.anthropic`, reports nothing on Qwen — it only logs Anthropic server-tool use).
-
-## Logging Qwen searches (`AGENT_STREAM`)
-
-Qwen reports its server-side search in a top-level `search_info` block on the response. The generic
-ResultConverter keeps only content + token-usage deltas, so that block survives **only on a
-non-stream response** — hence `AGENT_STREAM=0` on the Qwen profile. `App\Agent\QwenSearchLogger`
-(decorates `ai.platform.generic.qwen`, mirrors `ServerToolUseLogger`) then reads the memoised body
-and logs `Qwen server web search: N result(s) <urls>` at NOTICE — visible under
-`messenger:consume -v`.
-
-Streaming is safe to drop here: `RunAgentTurnHandler` discards the streamed deltas (the UI renders
-from the render-intent tools' Mercure publishes, not from the text stream), so a non-stream turn runs
-the identical tool-call loop and side effects — it just also exposes the body. Anthropic keeps
-`AGENT_STREAM=1`; its searches are logged via the stream budget listener instead.
-
-⚠️ The exact `search_info` shape is provider-defined and only confirmable against the live
-deployment. `QwenSearchLogger` reads it defensively (`search_info.search_results[].url`, falling back
-to `results[]`). If your deployment nests it differently, the log line will show
-`0 result(s) (no urls in search_info)` even though a search ran — adjust the field paths in
-`QwenSearchLogger::logSearch()` once you see a real body. Bump it to a `debug` dump of `$data` first
-if you need to discover the shape.
 
 ## Endpoint details (Qwen)
 

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent;
 
+use App\Agent\Journal\TurnJournal;
+use App\Agent\Ui\StepNarrator;
 use Symfony\AI\Platform\Result\Stream\AbstractStreamListener;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
@@ -28,6 +30,15 @@ final class WebSearchBudgetStreamListener extends AbstractStreamListener
 {
     public function __construct(
         private readonly WebSearchBudget $budget,
+        // Narrate the search on the dashboard heartbeat. web_search is server-side (no Toolbox call),
+        // so this toolTokens delta — Anthropic's per-message web_search_requests count — is the only
+        // mid-turn seam that sees a search ran, just as it is for the budget. Optional: a listener
+        // built without a narrator (none today) simply does not narrate.
+        private readonly ?StepNarrator $narrator = null,
+        // The debug journal, fed from the same TokenUsage delta: the streamed path has no raw body, so
+        // this is where token usage and web-search spend are observable for the journal. Optional —
+        // a listener built without one simply does not journal.
+        private readonly ?TurnJournal $journal = null,
     ) {
     }
 
@@ -35,8 +46,22 @@ final class WebSearchBudgetStreamListener extends AbstractStreamListener
     {
         $delta = $event->getDelta();
 
-        if ($delta instanceof TokenUsage && null !== $delta->getToolTokens()) {
-            $this->budget->record($delta->getToolTokens());
+        if (!$delta instanceof TokenUsage) {
+            return;
         }
+
+        // Token usage rides the same delta — record it on the journal regardless of any search.
+        $this->journal?->recordLlmCall([], $delta->getPromptTokens(), $delta->getCompletionTokens());
+
+        $searches = $delta->getToolTokens();
+        if (null === $searches || $searches < 1) {
+            return;
+        }
+
+        $this->budget->record($searches);
+        // Queries are not in the stream (the server_tool_use blocks are dropped on conversion); record
+        // the count so the journal still shows a search ran this turn.
+        $this->journal?->recordWebSearch($searches);
+        $this->narrator?->forTool('web_search');
     }
 }

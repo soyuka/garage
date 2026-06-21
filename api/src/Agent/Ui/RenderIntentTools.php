@@ -57,6 +57,18 @@ final class RenderIntentTools
         $this->publish(['type' => 'turn', 'phase' => $phase]);
     }
 
+    /**
+     * Streams a transient progress sentence to the dashboard's heartbeat line. Not an `#[AsTool]` —
+     * the LLM never calls this; it is emitted deterministically as the tool-call loop runs (see
+     * {@see StepNarrator}, wired into {@see \App\Agent\Toolbox\CompositeToolbox}), so the user sees
+     * "Je consulte le catalogue…" while the agent works, without the model spending a tool call on it.
+     * A distinct `status` frame (not a `toast`) so it feeds only the heartbeat, never a toast popup.
+     */
+    public function narrate(string $message): void
+    {
+        $this->publish(['type' => 'status', 'message' => $message]);
+    }
+
     public function selectVehicle(string $id): string
     {
         $this->publish(['type' => 'selectVehicle', 'id' => $id]);

@@ -8,6 +8,7 @@ interface TopBarProps {
   busy: boolean;
   onAdvanceStatus: () => void;
   onSettings?: () => void;
+  onJournal?: () => void;
 }
 
 /**
@@ -15,7 +16,7 @@ interface TopBarProps {
  * status dot and the last event) followed by the agent's heartbeat sentence while it answers.
  * Right: search and the account menu grouped together, off the middle of the bar.
  */
-export function TopBar({ live, status, busy, onAdvanceStatus, onSettings }: TopBarProps) {
+export function TopBar({ live, status, busy, onAdvanceStatus, onSettings, onJournal }: TopBarProps) {
   return (
     <header className="topbar">
       <div className="mercure-feed" aria-label="Flux temps réel">
@@ -28,6 +29,11 @@ export function TopBar({ live, status, busy, onAdvanceStatus, onSettings }: TopB
       </div>
       <div className="topbar-right">
         <div className="search">🔍 Rechercher un véhicule…</div>
+        {onJournal ? (
+          <button type="button" className="tb-journal" onClick={onJournal} title="Journal de l'agent" aria-label="Journal de l'agent">
+            <span aria-hidden="true">🪵</span>
+          </button>
+        ) : null}
         <AccountMenu onSettings={onSettings} />
       </div>
     </header>
