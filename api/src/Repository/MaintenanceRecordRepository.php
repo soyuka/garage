@@ -21,7 +21,8 @@ final class MaintenanceRecordRepository extends ServiceDocumentRepository
 
     /**
      * Service history for a vehicle, newest event first (tie-break on id so same-day events
-     * keep insertion order — the ULID _id is time-ordered). Optionally narrowed to a single type.
+     * keep insertion order — the ULID _id is time-ordered). Optionally narrowed to visits that
+     * include a given service type among their line-items (matches on the items.type multikey path).
      *
      * @return list<MaintenanceRecord>
      */
@@ -33,7 +34,7 @@ final class MaintenanceRecordRepository extends ServiceDocumentRepository
             ->sort('id', 'desc');
 
         if (null !== $type) {
-            $qb->field('type')->equals($type);
+            $qb->field('items.type')->equals($type);
         }
 
         if (null !== $limit) {

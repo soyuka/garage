@@ -49,15 +49,16 @@ final class GarageMaintenanceRecord
     #[ApiProperty(identifier: true, description: 'Public ULID identifier of the maintenance record.')]
     public Ulid $id;
 
-    public string $type;
+    /** @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}> */
+    public array $items = [];
     public ?string $label = null;
     public string $performedAt;
     public ?int $usageValue = null;
     public ?string $usageUnit = null;
     public ?string $notes = null;
     public ?string $performedBy = null;
-    /** @var list<array{ref: string, label?: string}> */
-    public array $partsUsed = [];
+    public ?int $costCents = null;
+    public ?string $currency = null;
     public string $source;
     public string $addedAt;
 
@@ -65,14 +66,15 @@ final class GarageMaintenanceRecord
     {
         $resource = new self();
         $resource->id = $record->getId();
-        $resource->type = $record->getType();
+        $resource->items = $record->getItems();
         $resource->label = $record->getLabel();
         $resource->performedAt = $record->getPerformedAt()->format('Y-m-d');
         $resource->usageValue = $record->getUsageValue();
         $resource->usageUnit = $record->getUsageUnit()?->value;
         $resource->notes = $record->getNotes();
         $resource->performedBy = $record->getPerformedBy();
-        $resource->partsUsed = $record->getPartsUsed();
+        $resource->costCents = $record->getCostCents();
+        $resource->currency = $record->getCurrency();
         $resource->source = $record->getSource();
         $resource->addedAt = $record->getAddedAt()->format(\DateTimeInterface::ATOM);
 

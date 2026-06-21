@@ -28,9 +28,11 @@ final readonly class DueMaintenanceCalculator
         /** @var array<string, MaintenanceRecord> $latestByType */
         $latestByType = [];
         foreach ($vehicle->getMaintenanceRecords() as $record) {
-            $key = $record->getType();
-            if (!isset($latestByType[$key]) || $record->getPerformedAt() > $latestByType[$key]->getPerformedAt()) {
-                $latestByType[$key] = $record;
+            // A visit covers several types; each line-item seeds the forecast for its own type.
+            foreach ($record->getTypes() as $key) {
+                if (!isset($latestByType[$key]) || $record->getPerformedAt() > $latestByType[$key]->getPerformedAt()) {
+                    $latestByType[$key] = $record;
+                }
             }
         }
 

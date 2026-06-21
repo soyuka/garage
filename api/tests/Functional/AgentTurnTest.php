@@ -39,7 +39,7 @@ final class AgentTurnTest extends AppTestCase
                     'make' => 'TORO',
                     'model' => '246-H',
                     'vehicleType' => 'groundscare',
-                    'type' => 'oil_change',
+                    'items' => [['type' => 'oil_change', 'parts' => []]],
                     'performedAt' => '2026-05-01',
                 ])]),
                 1 => new ToolCallResult([new ToolCall('c2', 'toast', [

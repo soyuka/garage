@@ -57,33 +57,37 @@ final class MaintenanceRecorder
         $usageValue = $vehicle->getUsageValue();
         $usageUnit = null !== $vehicle->getUsageUnit() ? UsageUnit::fromGarageUnit($vehicle->getUsageUnit()) : null;
 
-        $created = [];
+        // Everything completed in one pass is filed as ONE visit (a single dated row), each task
+        // contributing a line-item with its own type/label/parts — not one record per task.
+        $items = array_map(static fn ($task): array => [
+            'type' => $task->getType(),
+            ...(null !== $task->getLabel() ? ['label' => $task->getLabel()] : []),
+            'parts' => $task->getParts(),
+        ], $tasks);
+
+        $record = new MaintenanceRecord(
+            vehicle: $vehicle,
+            items: $items,
+            performedAt: $performedAt,
+            source: $source,
+            usageValue: $usageValue,
+            usageUnit: $usageUnit,
+            addedBy: $addedBy,
+            owner: $vehicle->getOwner(),
+        );
+        $this->entityManager->persist($record);
         foreach ($tasks as $task) {
-            $record = new MaintenanceRecord(
-                vehicle: $vehicle,
-                type: $task->getType(),
-                performedAt: $performedAt,
-                source: $source,
-                label: $task->getLabel(),
-                usageValue: $usageValue,
-                usageUnit: $usageUnit,
-                partsUsed: $task->getParts(),
-                addedBy: $addedBy,
-                owner: $vehicle->getOwner(),
-            );
-            $this->entityManager->persist($record);
             $task->archive($performedAt);
-            $created[] = $record;
         }
 
-        // One flush persists every new record and the tasks' archivedAt stamps in a single unit of work.
+        // One flush persists the new record and the tasks' archivedAt stamps in a single unit of work.
         $this->entityManager->flush();
 
-        return $created;
+        return [$record];
     }
 
     /**
-     * @param list<array{ref: string, label?: string}> $partsUsed
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
      */
     public function log(
         ?Ulid $vehicleId,
@@ -95,7 +99,7 @@ final class MaintenanceRecorder
         ?string $plate,
         ?string $vin,
         bool $confirmNew,
-        string $type,
+        array $items,
         \DateTimeImmutable $performedAt,
         string $source,
         ?string $label = null,
@@ -105,7 +109,6 @@ final class MaintenanceRecorder
         ?int $costCents = null,
         ?string $currency = null,
         ?string $performedBy = null,
-        array $partsUsed = [],
         ?string $addedBy = null,
     ): MaintenanceLogOutcome {
         // The maintenance log and the garage store spell engine hours differently ('hours' vs 'h'),
@@ -134,7 +137,7 @@ final class MaintenanceRecorder
 
         $record = new MaintenanceRecord(
             vehicle: $vehicle,
-            type: $type,
+            items: $items,
             performedAt: $performedAt,
             source: $source,
             label: $label,
@@ -144,15 +147,16 @@ final class MaintenanceRecorder
             costCents: $costCents,
             currency: $currency,
             performedBy: $performedBy,
-            partsUsed: $partsUsed,
             addedBy: $addedBy,
             owner: $vehicle->getOwner(),
         );
         $this->entityManager->persist($record);
         $this->entityManager->flush();
 
-        // Performing a service clears any open plan for it off the checklist.
-        $this->planner->closeMatching($vehicle, $type, $performedAt);
+        // Performing a service clears any open plan for each type it covered off the checklist.
+        foreach ($record->getTypes() as $type) {
+            $this->planner->closeMatching($vehicle, $type, $performedAt);
+        }
 
         return MaintenanceLogOutcome::recorded($record);
     }

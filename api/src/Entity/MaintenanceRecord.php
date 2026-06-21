@@ -10,39 +10,57 @@ use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * A dated service event performed on a vehicle (oil change, filter swap, tyres…).
+ * A dated service VISIT performed on a vehicle (a vidange that swapped oil + oil filter + fuel
+ * filter in one go). One visit carries a list of {@see $items} line-items — each its own service
+ * type with the parts it consumed — so the whole visit is ONE history row, not one row per part.
+ * Cost, performedBy, notes and the usage reading are visit-level (the bill is for the visit).
  *
  * Distinct from VehicleFact: a fact is a *spec* (oil_capacity = 1.1 L, one row per key,
- * UNIQUE(vehicle, key)); a MaintenanceRecord is an *event* — append-only, many documents
- * of the same type over time are the whole point (full oil-change history). NEVER add a
- * unique constraint on (vehicle, type) here.
+ * UNIQUE(vehicle, key)); a MaintenanceRecord is an *event* — append-only, many visits over time
+ * are the whole point (full service history). NEVER add a unique constraint on (vehicle, type) here.
+ *
+ * Forecasting ({@see \App\Maintenance\DueMaintenanceCalculator}) keys off the per-item type, so a
+ * visit that changed N services seeds N independent due-dates from one row.
  *
  * `owner` is the same multi-tenancy seam as Vehicle: null = shared/global in phase 1.
  */
-// Both indexes are sort-covering: history() matches on vehicle (optionally type) and sorts
+// Both indexes are sort-covering: history() matches on vehicle (optionally an item type) and sorts
 // performedAt desc, so the sort key rides in the index and a limited query early-cuts instead of
 // blocking on an in-memory sort. A bare {vehicle} index would be a redundant prefix of these.
+// items.type is a multikey path (one index entry per line-item) so the type-narrowed history still
+// hits the index.
 #[ODM\Document(collection: 'maintenance_records', repositoryClass: MaintenanceRecordRepository::class)]
 #[ODM\Index(keys: ['vehicle' => 'asc', 'performedAt' => 'desc', 'id' => 'desc'], name: 'idx_maintenance_vehicle_performed')]
-#[ODM\Index(keys: ['vehicle' => 'asc', 'type' => 'asc', 'performedAt' => 'desc'], name: 'idx_maintenance_vehicle_type_performed')]
+#[ODM\Index(keys: ['vehicle' => 'asc', 'items.type' => 'asc', 'performedAt' => 'desc'], name: 'idx_maintenance_vehicle_type_performed')]
 class MaintenanceRecord
 {
     #[ODM\Id(strategy: 'NONE', type: 'string')]
     private string $id;
 
+    /**
+     * The visit's line-items, each a service type with the parts it consumed. Declared class-level
+     * (not constructor-promoted) so a legacy document predating this field hydrates to [] instead of
+     * leaving a typed property uninitialised — newInstanceWithoutConstructor skips promoted defaults.
+     *
+     * @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>
+     */
+    #[ODM\Field(type: 'collection')]
+    private array $items = [];
+
+    /**
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     */
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'maintenanceRecords')]
         private Vehicle $vehicle,
-        // Free-form service label (snake_case); see PlannedMaintenance::$type. Not a closed enum so
-        // the long tail (timing_belt, gearbox_oil, blade_sharpening…) is recorded verbatim, not "other".
-        #[ODM\Field(type: 'string')]
-        private string $type,
+        array $items,
         #[ODM\Field(type: 'date_immutable')]
         private \DateTimeImmutable $performedAt,
         #[ODM\Field(type: 'string')]
         private string $source,
         #[ODM\Field(type: 'date_immutable')]
         private \DateTimeImmutable $addedAt = new \DateTimeImmutable(),
+        // Visit label, e.g. "révision annuelle"; per-item labels live on each item.
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $label = null,
         #[ODM\Field(type: 'int', nullable: true)]
@@ -51,21 +69,36 @@ class MaintenanceRecord
         private ?UsageUnit $usageUnit = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $notes = null,
-        // Money as integer minor units (cents) — never a binary float.
+        // Money as integer minor units (cents) — never a binary float. Visit-level: the bill total.
         #[ODM\Field(type: 'int', nullable: true)]
         private ?int $costCents = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $currency = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $performedBy = null,
-        /** @var list<array{ref: string, label?: string}> */
-        #[ODM\Field(type: 'collection')]
-        private array $partsUsed = [],
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $addedBy = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $owner = null,
     ) {
+        if ([] === $items) {
+            throw new \InvalidArgumentException('A maintenance visit must carry at least one item.');
+        }
+
+        $this->items = array_map(static function (array $item): array {
+            $type = $item['type'] ?? '';
+            if ('' === $type) {
+                throw new \InvalidArgumentException('Every maintenance item must carry a non-empty type.');
+            }
+
+            $normalised = ['type' => $type, 'parts' => array_values($item['parts'] ?? [])];
+            if (isset($item['label']) && '' !== $item['label']) {
+                $normalised['label'] = $item['label'];
+            }
+
+            return $normalised;
+        }, array_values($items));
+
         $this->id = (string) new Ulid();
         $vehicle->addMaintenanceRecord($this);
     }
@@ -80,9 +113,22 @@ class MaintenanceRecord
         return $this->vehicle;
     }
 
-    public function getType(): string
+    /**
+     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>
+     */
+    public function getItems(): array
     {
-        return $this->type;
+        return $this->items;
+    }
+
+    /**
+     * The distinct service types this visit covered — the keys forecasting and history-filtering use.
+     *
+     * @return list<string>
+     */
+    public function getTypes(): array
+    {
+        return array_values(array_unique(array_column($this->items, 'type')));
     }
 
     public function getPerformedAt(): \DateTimeImmutable
@@ -133,14 +179,6 @@ class MaintenanceRecord
     public function getPerformedBy(): ?string
     {
         return $this->performedBy;
-    }
-
-    /**
-     * @return list<array{ref: string, label?: string}>
-     */
-    public function getPartsUsed(): array
-    {
-        return $this->partsUsed;
     }
 
     public function getAddedBy(): ?string

@@ -42,7 +42,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'Wheel Horse',
                 'model' => '246-H',
                 'vehicleType' => 'groundscare',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
         ], 4)['result']['structuredContent'];
@@ -81,7 +81,7 @@ final class McpMaintenanceTest extends AppTestCase
             'name' => 'log_maintenance',
             'arguments' => [
                 'vehicle' => $iri,
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
         ], 5)['result']['structuredContent'];
@@ -111,7 +111,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'TORO',
                 'model' => '246-H',
                 'vehicleType' => 'groundscare',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
         ], 3);
@@ -143,7 +143,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'TORO',
                 'model' => '246-H',
                 'vehicleType' => 'groundscare',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
         ], 3);
@@ -158,7 +158,7 @@ final class McpMaintenanceTest extends AppTestCase
 
         $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
         $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['type' => 'oil_change', 'performedAt' => '2026-05-01']);
+        $this->assertJsonContains(['items' => [['type' => 'oil_change', 'parts' => []]], 'performedAt' => '2026-05-01']);
     }
 
     public function testLoggingWithConfirmNewCreatesDistinctRowDespiteCandidate(): void
@@ -182,7 +182,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'model' => '246-H',
                 'vehicleType' => 'groundscare',
                 'confirmNew' => true,
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
         ], 4)['result']['structuredContent'];
@@ -207,7 +207,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'IVECO',
                 'model' => 'DAILY',
                 'vehicleType' => 'cv',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2018-01-01',
             ],
         ], 3);
@@ -248,7 +248,7 @@ final class McpMaintenanceTest extends AppTestCase
             'arguments' => [
                 'make' => 'PEUGEOT',
                 'model' => '308',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => (new \DateTimeImmutable())->format('Y-m-d'),
             ],
         ], 3);
@@ -292,14 +292,13 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'IVECO',
                 'model' => 'DAILY',
                 'vehicleType' => 'cv',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => [['ref' => '21548991', 'label' => 'oil filter']]]],
                 'performedAt' => '2026-06-15',
                 'usageValue' => 124000,
                 'usageUnit' => 'km',
                 'cost' => '89.90',
                 'currency' => 'EUR',
                 'performedBy' => 'self',
-                'partsUsed' => [['ref' => '21548991', 'label' => 'oil filter']],
             ],
         ], 3);
         $this->assertSame('ok', $log['result']['structuredContent']['status']);
@@ -314,15 +313,59 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertCount(1, $content['records']);
 
         $record = $content['records'][0];
-        $this->assertSame('oil_change', $record['type']);
+        $this->assertSame('oil_change', $record['items'][0]['type']);
         $this->assertStringStartsWith('2026-06-15', $record['performedAt']);
         $this->assertSame(124000, $record['usage']['value']);
         $this->assertSame('km', $record['usage']['unit']);
         $this->assertSame('89.90', $record['cost']['amount']);
         $this->assertSame('EUR', $record['cost']['currency']);
         $this->assertSame('self', $record['performedBy']);
-        $this->assertSame('21548991', $record['partsUsed'][0]['ref']);
+        $this->assertSame('21548991', $record['items'][0]['parts'][0]['ref']);
         $this->assertSame('user', $record['source']);
+    }
+
+    public function testOneVisitLogsMultipleItemsWithACostAsASingleRecord(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // A vidange that changed oil + oil filter + fuel filter on one date is ONE visit carrying
+        // three items and a single bill — not three separate records.
+        $log = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'MAZDA',
+                'model' => 'MAZDA6',
+                'performedAt' => '2025-01-10',
+                'performedBy' => 'self',
+                'cost' => '189.00',
+                'currency' => 'EUR',
+                'items' => [
+                    ['type' => 'oil_change', 'parts' => [['ref' => 'GF5W30', 'brand' => 'TOTAL', 'label' => 'Quartz 5W30']]],
+                    ['type' => 'oil_filter', 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER']]],
+                    ['type' => 'fuel_filter', 'parts' => []],
+                ],
+            ],
+        ], 3)['result']['structuredContent'];
+        $this->assertSame('ok', $log['status']);
+
+        $history = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6'],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertCount(1, $history['records'], 'the visit is a single record, not one per part');
+        $visit = $history['records'][0];
+        $this->assertSame(['oil_change', 'oil_filter', 'fuel_filter'], array_column($visit['items'], 'type'));
+        $this->assertSame('189.00', $visit['cost']['amount']);
+        $this->assertSame('W712/73', $visit['items'][1]['parts'][0]['ref']);
+
+        // Each item seeds its own forecast — a type-narrowed history finds the visit.
+        $byFilter = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6', 'type' => 'fuel_filter'],
+        ], 5)['result']['structuredContent'];
+        $this->assertCount(1, $byFilter['records'], 'a per-type history query matches a visit that contains that item type');
     }
 
     public function testRepeatedSameTypeAppendsRatherThanOverwrites(): void
@@ -336,7 +379,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'arguments' => [
                     'make' => 'PEUGEOT',
                     'model' => '208',
-                    'type' => 'oil_change',
+                    'items' => [['type' => 'oil_change', 'parts' => []]],
                     'performedAt' => $date,
                 ],
             ], 10 + $i);
@@ -363,7 +406,7 @@ final class McpMaintenanceTest extends AppTestCase
         foreach ([['oil_change', '2026-01-10'], ['tires', '2026-02-20']] as $i => [$type, $date]) {
             $this->call($client, $sessionId, 'tools/call', [
                 'name' => 'log_maintenance',
-                'arguments' => ['make' => 'RENAULT', 'model' => 'CLIO', 'type' => $type, 'performedAt' => $date],
+                'arguments' => ['make' => 'RENAULT', 'model' => 'CLIO', 'items' => [['type' => $type, 'parts' => []]], 'performedAt' => $date],
             ], 30 + $i);
         }
 
@@ -374,7 +417,7 @@ final class McpMaintenanceTest extends AppTestCase
 
         $records = $history['result']['structuredContent']['records'];
         $this->assertCount(1, $records);
-        $this->assertSame('tires', $records[0]['type']);
+        $this->assertSame('tires', $records[0]['items'][0]['type']);
     }
 
     public function testGroundscareHourMeterRoundTrips(): void
@@ -388,7 +431,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'TORO',
                 'model' => '246-H',
                 'vehicleType' => 'groundscare',
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-06-15',
                 'usageValue' => 50,
                 'usageUnit' => 'hours',
@@ -417,8 +460,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'make' => 'TORO',
                 'model' => '246-H',
                 'vehicleType' => 'groundscare',
-                'type' => 'other',
-                'label' => 'blade sharpening',
+                'items' => [['type' => 'other', 'label' => 'blade sharpening', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
         ], 3);
@@ -429,8 +471,8 @@ final class McpMaintenanceTest extends AppTestCase
         ], 4);
 
         $record = $history['result']['structuredContent']['records'][0];
-        $this->assertSame('other', $record['type']);
-        $this->assertSame('blade sharpening', $record['label']);
+        $this->assertSame('other', $record['items'][0]['type']);
+        $this->assertSame('blade sharpening', $record['items'][0]['label']);
     }
 
     public function testHistoryOfUnknownVehicleReturnsNoRecords(): void
@@ -521,7 +563,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'model' => 'DAILY',
                 'vehicleType' => 'cv',
                 'confirmNew' => true,
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
                 'usageValue' => 250000,
                 'usageUnit' => 'km',
@@ -559,7 +601,7 @@ final class McpMaintenanceTest extends AppTestCase
             'name' => 'log_maintenance',
             'arguments' => [
                 'vehicle' => $iri,
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-06-01',
                 'usageValue' => 120000,
                 'usageUnit' => 'km',
@@ -593,7 +635,7 @@ final class McpMaintenanceTest extends AppTestCase
             'name' => 'log_maintenance',
             'arguments' => [
                 'vehicle' => $iri,
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2025-01-01',
                 'usageValue' => 90000,
                 'usageUnit' => 'km',

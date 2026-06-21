@@ -66,17 +66,17 @@ final class PlannedTaskArchiveTest extends AppTestCase
         $this->assertResponseIsSuccessful();
         $this->assertSame(2, $response->toArray()['archived']);
 
-        // The two done tasks are now entretiens passés, stamped with the vehicle's current reading.
+        // The two done tasks are filed as ONE entretien passé (a single visit), each task an item,
+        // stamped with the vehicle's current reading.
         $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
-        $this->assertCount(2, $records);
-        $types = array_column($records, 'type');
+        $this->assertCount(1, $records);
+        $visit = $records[0];
+        $types = array_column($visit['items'], 'type');
         sort($types);
         $this->assertSame(['brakes', 'oil_change'], $types);
-        foreach ($records as $record) {
-            $this->assertSame(142000, $record['usageValue']);
-            $this->assertSame('km', $record['usageUnit']);
-            $this->assertSame('user', $record['source']);
-        }
+        $this->assertSame(142000, $visit['usageValue']);
+        $this->assertSame('km', $visit['usageUnit']);
+        $this->assertSame('user', $visit['source']);
     }
 
     public function testArchivedTasksLeaveTheChecklistWhileOpenTasksStay(): void
@@ -109,7 +109,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
         $this->assertSame(0, $second->toArray()['archived'], 'a re-run archives nothing — no duplicate records');
 
         $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
-        $this->assertCount(2, $records);
+        $this->assertCount(1, $records, 'the done tasks are filed as a single visit; a re-run adds no duplicate');
     }
 
     public function testDismissedTaskIsNeverRecorded(): void
@@ -123,7 +123,8 @@ final class PlannedTaskArchiveTest extends AppTestCase
         ]);
 
         $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
-        $this->assertNotContains('wipers', array_column($records, 'type'), 'a dismissed task is discarded, never filed as history');
+        $loggedTypes = array_merge(...array_map(static fn ($r): array => array_column($r['items'], 'type'), $records));
+        $this->assertNotContains('wipers', $loggedTypes, 'a dismissed task is discarded, never filed as history');
     }
 
     public function testArchiveOnUnknownVehicleIs404(): void

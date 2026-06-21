@@ -23,14 +23,13 @@ final class RecordView
     /**
      * @return array{
      *     @id: string,
-     *     type: string,
+     *     items: list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>,
      *     label: string|null,
      *     performedAt: string,
      *     usage: array{value: int, unit: string|null}|null,
      *     cost: array{amount: string, currency: string|null}|null,
      *     notes: string|null,
      *     performedBy: string|null,
-     *     partsUsed: list<array{ref: string, label?: string}>,
      *     source: string,
      *     addedAt: string
      * }
@@ -42,7 +41,7 @@ final class RecordView
 
         return [
             '@id' => $this->iriConverter->getIriFromResource(GarageMaintenanceRecord::fromEntity($record)),
-            'type' => $record->getType(),
+            'items' => $record->getItems(),
             'label' => $record->getLabel(),
             'performedAt' => $record->getPerformedAt()->format('Y-m-d'),
             'usage' => null !== $usageValue
@@ -53,7 +52,6 @@ final class RecordView
                 : null,
             'notes' => $record->getNotes(),
             'performedBy' => $record->getPerformedBy(),
-            'partsUsed' => $record->getPartsUsed(),
             'source' => $record->getSource(),
             'addedAt' => $record->getAddedAt()->format(\DateTimeInterface::ATOM),
         ];

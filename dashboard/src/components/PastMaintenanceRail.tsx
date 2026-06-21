@@ -9,6 +9,12 @@ function reading(value?: number | null, unit?: string | null): string {
   return `${value.toLocaleString('fr-FR')}${unit ? ` ${unit}` : ''}`;
 }
 
+/** Format a visit bill (18900 cents → "189,00 €"); empty when none. */
+function money(cents?: number | null, currency?: string | null): string {
+  if (cents == null) return '';
+  return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: currency ?? 'EUR' });
+}
+
 /**
  * Past maintenance as a horizontal strip of compact event cards (newest first) — the read-only
  * counterpart of the car rail, deliberately simpler. A disclosure reveals the manual "log a past
@@ -53,12 +59,13 @@ export function PastMaintenanceRail({
           {list.map((r) => (
             <div key={r.id} className="hist-card">
               <div className="hist-card-head">
-                <span className="hist-type">{serviceLabel(r.type)}</span>
+                <span className="hist-type">{(r.items ?? []).map((it) => serviceLabel(it.type)).join(' · ') || '—'}</span>
                 <span className="hist-date">{r.performedAt}</span>
               </div>
               {r.label ? <div className="hist-label">{r.label}</div> : null}
               <div className="hist-meta">
                 {reading(r.usageValue, r.usageUnit) ? <span>{reading(r.usageValue, r.usageUnit)}</span> : null}
+                {money(r.costCents, r.currency) ? <span>· {money(r.costCents, r.currency)}</span> : null}
                 {r.performedBy ? <span>· {r.performedBy}</span> : null}
               </div>
               {r.notes ? <div className="hist-notes">{r.notes}</div> : null}

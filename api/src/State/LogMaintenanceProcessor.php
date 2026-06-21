@@ -47,6 +47,13 @@ final class LogMaintenanceProcessor implements ProcessorInterface
             ]);
         }
 
+        if ([] === $data->items) {
+            return ToolResult::of([
+                'status' => 'invalid_input',
+                'reason' => 'Provide at least one item ({type, parts}) — a visit logs the services it covered.',
+            ]);
+        }
+
         $vehicleId = null;
         if (null !== $data->vehicle) {
             try {
@@ -74,7 +81,7 @@ final class LogMaintenanceProcessor implements ProcessorInterface
             plate: $data->plate,
             vin: $data->vin,
             confirmNew: $data->confirmNew,
-            type: $data->type,
+            items: $data->items,
             performedAt: new \DateTimeImmutable($data->performedAt),
             source: $data->source,
             label: $data->label,
@@ -84,7 +91,6 @@ final class LogMaintenanceProcessor implements ProcessorInterface
             costCents: null !== $data->cost ? (int) round(((float) $data->cost) * 100) : null,
             currency: $data->currency,
             performedBy: $data->performedBy,
-            partsUsed: $data->partsUsed,
             addedBy: $data->addedBy,
         );
 

@@ -47,11 +47,11 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(201);
-        $this->assertJsonContains(['type' => 'oil_change', 'performedAt' => '2025-09-12', 'usageValue' => 138000]);
+        $this->assertJsonContains(['items' => [['type' => 'oil_change', 'parts' => []]], 'performedAt' => '2025-09-12', 'usageValue' => 138000]);
 
         $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
         $this->assertCount(1, $members);
-        $this->assertSame('oil_change', $members[0]['type']);
+        $this->assertSame('oil_change', $members[0]['items'][0]['type']);
         $this->assertStringStartsWith('/garage/maintenance-records/', $members[0]['@id']);
     }
 

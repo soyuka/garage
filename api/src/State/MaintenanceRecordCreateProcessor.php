@@ -64,7 +64,8 @@ final class MaintenanceRecordCreateProcessor implements ProcessorInterface
             plate: null,
             vin: null,
             confirmNew: false,
-            type: $data->type,
+            // The manual form logs one service per entry; wrap it as a single-item visit.
+            items: [['type' => $data->type, 'parts' => $data->partsUsed]],
             performedAt: $performedAt,
             source: 'user',
             label: $data->label,
@@ -74,7 +75,6 @@ final class MaintenanceRecordCreateProcessor implements ProcessorInterface
             costCents: null !== $data->cost ? (int) round($data->cost * 100) : null,
             currency: null !== $data->cost ? ($data->currency ?? 'EUR') : $data->currency,
             performedBy: $data->performedBy,
-            partsUsed: $data->partsUsed,
         );
 
         if ('not_found' === $outcome->status) {

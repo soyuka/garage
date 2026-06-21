@@ -37,10 +37,26 @@ final class LogMaintenanceInput
     #[ApiProperty(description: 'Set true to log against a NEW vehicle even though candidates were surfaced — i.e. you have judged it is genuinely a different vehicle. Defaults to false.')]
     public bool $confirmNew = false;
 
-    #[ApiProperty(schema: ['type' => 'string', 'description' => 'What was done, as a snake_case label. Common: oil_change, oil_filter, air_filter, fuel_filter, cabin_filter, spark_plug, brakes, coolant, tires, battery, inspection, timing_belt, gearbox_oil. Use any descriptive value for anything else — never collapse to "other".'])]
-    public string $type;
+    /**
+     * @var list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}>
+     */
+    #[ApiProperty(schema: [
+        'type' => 'array',
+        'minItems' => 1,
+        'items' => [
+            'type' => 'object',
+            'properties' => [
+                'type' => ['type' => 'string', 'description' => 'Service type, snake_case: oil_change, oil_filter, air_filter, fuel_filter, cabin_filter, spark_plug, brakes, coolant, tires, battery, inspection, timing_belt, gearbox_oil. Any descriptive value for the long tail — never collapse to "other".'],
+                'label' => ['type' => 'string', 'description' => 'Optional per-item label, e.g. "blade sharpening" for an "other" item.'],
+                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string']], 'required' => ['ref']], 'description' => 'Parts/fluids this item consumed, each a part number "ref" with optional brand/label.'],
+            ],
+            'required' => ['type'],
+        ],
+        'description' => 'The line-items of ONE service visit — a vidange that changed oil AND the oil filter is a SINGLE log_maintenance call with TWO items, not two calls. Each item is one service type with the parts it used.',
+    ])]
+    public array $items = [];
 
-    #[ApiProperty(description: 'Free-text description of the work. Required in spirit when type is "other" (e.g. "blade sharpening"); optional otherwise.')]
+    #[ApiProperty(description: 'Optional label for the whole visit, e.g. "révision annuelle".')]
     public ?string $label = null;
 
     #[ApiProperty(description: 'Date the work was performed, ISO 8601 (e.g. "2026-06-15").')]
@@ -63,12 +79,6 @@ final class LogMaintenanceInput
 
     #[ApiProperty(description: 'Who did the work: "self" or the name of the garage that performed it.')]
     public ?string $performedBy = null;
-
-    /**
-     * @var list<array{ref: string, label?: string}>
-     */
-    #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'label' => ['type' => 'string']], 'required' => ['ref']], 'description' => 'Parts consumed, each with a part number "ref" and optional "label".'])]
-    public array $partsUsed = [];
 
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['user', 'llm', 'web'], 'description' => 'Where the record came from. Defaults to "user" (the owner did/knows it — ground truth).'])]
     public string $source = 'user';

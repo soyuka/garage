@@ -48,8 +48,12 @@ final class ArchiveCompletedTasksProcessor implements ProcessorInterface
             $this->publisher->publishVehicle($vehicle);
         }
 
+        // The done tasks are filed as ONE visit carrying an item per task, so "archived" counts the
+        // line-items (= tasks moved off the checklist), not the single record row created.
+        $archived = array_sum(array_map(static fn ($record): int => \count($record->getItems()), $records));
+
         return new ArchiveTasksOutput(
-            archived: \count($records),
+            archived: $archived,
             records: array_map(static fn ($record): string => '/garage/maintenance-records/'.$record->getId(), $records),
         );
     }

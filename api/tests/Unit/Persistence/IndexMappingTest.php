@@ -79,8 +79,8 @@ final class IndexMappingTest extends KernelTestCase
             'Unfiltered history() must be served index-sorted (vehicle, performedAt desc, id desc).',
         );
         $this->assertTrue(
-            self::hasIndexWithKeys($indexes, ['vehicle' => 1, 'type' => 1, 'performedAt' => -1]),
-            'Typed history() must be served index-sorted (vehicle, type, performedAt desc).',
+            self::hasIndexWithKeys($indexes, ['vehicle' => 1, 'items.type' => 1, 'performedAt' => -1]),
+            'Typed history() must be served index-sorted (vehicle, items.type, performedAt desc).',
         );
     }
 

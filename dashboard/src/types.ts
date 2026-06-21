@@ -26,16 +26,24 @@ export interface PlannedTask {
 }
 
 /** One past service event — the dashboard's "past maintenance" rail reads these read-only. */
-export interface MaintenanceRecord {
-  id: string; // the record IRI (@id, normalized)
+/** One line-item of a service visit: a single service type with the parts it consumed. */
+export interface MaintenanceItem {
   type: string;
   label?: string | null;
+  parts: PlannedPart[];
+}
+
+export interface MaintenanceRecord {
+  id: string; // the record IRI (@id, normalized)
+  items: MaintenanceItem[]; // the services this visit covered — one row, many items
+  label?: string | null; // visit-level label, e.g. "révision annuelle"
   performedAt: string; // YYYY-MM-DD
   usageValue?: number | null;
   usageUnit?: string | null;
   notes?: string | null;
   performedBy?: string | null;
-  partsUsed: PlannedPart[];
+  costCents?: number | null; // visit bill total, integer minor units
+  currency?: string | null;
   source: string;
 }
 

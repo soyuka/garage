@@ -38,7 +38,7 @@ final class PlannedMaintenanceLifecycleTest extends AppTestCase
             'name' => 'log_maintenance',
             'arguments' => [
                 'vehicle' => $vehicleIri,
-                'type' => 'oil_change',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-06-18',
             ],
         ], 4);

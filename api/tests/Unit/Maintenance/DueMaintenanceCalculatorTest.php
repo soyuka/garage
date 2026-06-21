@@ -58,6 +58,29 @@ final class DueMaintenanceCalculatorTest extends TestCase
         $this->assertNotContains(MaintenanceType::OilChange, $forecast->unknownBaseline, 'A serviced type is not an unknown baseline.');
     }
 
+    public function testOneVisitWithMultipleItemsForecastsEachItemType(): void
+    {
+        // A single service visit changed oil AND the oil filter on the same day. One record, two
+        // items — each item's type must seed its own forecast (the visit is not collapsed to one type).
+        $vehicle = $this->vehicle();
+        new MaintenanceRecord(
+            $vehicle,
+            [
+                ['type' => MaintenanceType::OilChange->value, 'parts' => []],
+                ['type' => MaintenanceType::OilFilter->value, 'parts' => []],
+            ],
+            new \DateTimeImmutable('2026-05-15'),
+            'user',
+        );
+
+        $forecast = $this->calculator()->forVehicle($vehicle);
+        $dueTypes = array_map(static fn ($d): MaintenanceType => $d->type, $forecast->due);
+
+        $this->assertContains(MaintenanceType::OilChange, $dueTypes);
+        $this->assertContains(MaintenanceType::OilFilter, $dueTypes);
+        $this->assertNotContains(MaintenanceType::OilFilter, $forecast->unknownBaseline, 'An item logged in the visit is a real baseline, not a gap.');
+    }
+
     public function testNonRecurringTypeIsNeitherForecastNorAnUnknownBaseline(): void
     {
         $vehicle = $this->vehicle();
@@ -118,6 +141,6 @@ final class DueMaintenanceCalculatorTest extends TestCase
 
     private function record(Vehicle $vehicle, MaintenanceType $type, string $performedAt): void
     {
-        new MaintenanceRecord($vehicle, $type->value, new \DateTimeImmutable($performedAt), 'llm');
+        new MaintenanceRecord($vehicle, [['type' => $type->value, 'parts' => []]], new \DateTimeImmutable($performedAt), 'llm');
     }
 }
