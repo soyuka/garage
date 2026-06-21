@@ -78,12 +78,18 @@ final class VehicleResourceTest extends AppTestCase
         $this->assertJsonContains(['make' => 'IVECO']);
     }
 
-    public function testFailedLookupIsNotCached(): void
+    public function testUnknownPlateIsNegativelyCached(): void
     {
         $client = static::createClient();
         $client->request('GET', '/vehicles/ZZ999ZZ');
 
         $this->assertResponseStatusCodeSame(404);
-        $this->assertFalse(self::sivCache()->getItem('ZZ999ZZ')->isHit());
+
+        // The unknown plate is cached as a negative marker (no `data` → no PII) so a repeat lookup
+        // is not re-billed to the paid SIV API. Transient errors staying uncached is covered by the
+        // SivClient unit test.
+        $item = self::sivCache()->getItem('ZZ999ZZ');
+        $this->assertTrue($item->isHit());
+        $this->assertArrayNotHasKey('data', $item->get());
     }
 }

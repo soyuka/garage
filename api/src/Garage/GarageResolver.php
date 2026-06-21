@@ -179,7 +179,22 @@ class GarageResolver
 
     private function writeThroughFillVolumes(string $make, string $model, ?int $year, VehicleType $vehicleType, int $carId): ?Vehicle
     {
-        $facts = $this->fillVolumeFactMapper->toFacts($this->catalog->fillVolumes($carId));
+        // Same contract as backfillCatalogSpecs: an upstream hiccup (partsapi quota 401, timeout,
+        // missing key) is a catalog MISS, not a 500. Return null → the caller maps it to
+        // not_in_catalog, exactly as a genuine empty fill-volume response would.
+        try {
+            $volumes = $this->catalog->fillVolumes($carId);
+        } catch (UpstreamException|BudgetExhaustedException|MissingApiKeyException $e) {
+            $this->logger->warning('fill-volume write-through skipped: {reason}', [
+                'reason' => $e->getMessage(),
+                'kType' => $carId,
+                'exception' => $e,
+            ]);
+
+            return null;
+        }
+
+        $facts = $this->fillVolumeFactMapper->toFacts($volumes);
         if ([] === $facts) {
             return null;
         }

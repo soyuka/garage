@@ -15,6 +15,21 @@ By dimension: security 13 · correctness 15 · performance 13 · architecture 5.
 
 ---
 
+## Progress log
+
+**Auth cluster — shipped earlier** (commits `d181d26`, `5c78bb9`/`ac779ac`, `86f62b5`):
+- ✅ **Critical — garage writes unauthenticated**: `api` firewall added (`security.yaml`), `^/garage` write methods + `^/agent/turn` require `IS_AUTHENTICATED_FULLY`.
+- ✅ **High — `/agent/turn` unauthenticated + topic injection**: gated behind the firewall; the Mercure session topic is now derived server-side (`DEFAULT_URI`), not from client input. *(Per-user rate limit still open.)*
+- ✅ **High — no per-user tenant isolation (Root 2)**: every garage row scoped to its owner = Casdoor `sub` via `OwnerContext`; `owner` derived from the token, not the DTO.
+
+**This session — 2026-06-21** (branch `review-fixes-2026-06-21`, all TDD, full suite green: API 256, dashboard 23):
+- ✅ **Medium/corr — McpToolbox empty-tool cache**: memoise only a non-empty catalog; an empty `tools/list` (transient handshake failure) is no longer pinned for the worker lifetime — next turn re-fetches. (`McpToolbox.php`, `tests/Unit/Mcp/McpToolboxTest.php`)
+- ✅ **Medium/corr — `resolve()` upstream catch**: `writeThroughFillVolumes` now catches `UpstreamException|BudgetExhaustedException|MissingApiKeyException` like its `backfill` sibling → a partsapi hiccup is a `not_in_catalog` miss, not a 500. (`GarageResolver.php`, `tests/Functional/GarageResolverUpstreamTest.php`)
+- ✅ **Medium/perf — negative SIV plate cache**: an unknown plate is cached as a marker (envelope minus `data` → no PII), so repeat lookups are not re-billed to the paid SIV API; transient errors stay uncached. (`SivClient.php`, `tests/Unit/Siv/SivClientTest.php`; existing `testFailedLookupIsNotCached` re-cast as `testUnknownPlateIsNegativelyCached`)
+- ✅ **Medium/sec — `fact.url` `javascript:` XSS**: new `safeHref()` allowlists `^https?://` before the URL reaches an `href`; non-http schemes collapse to no link. (`dashboard/src/components/safeHref.ts` + `.test.ts`, `facts.tsx`) *(Backend validation of `fact.url` still recommended as defence-in-depth.)*
+
+---
+
 ## The two root causes
 
 ### Root 1 — Auth posture: `main` firewall is `security: false`
@@ -32,7 +47,7 @@ Only `^/mcp` is gated (OAuth/Casdoor). Everything else — the entire REST surfa
 
 ## Critical
 
-### 🔴 Garage write endpoints fully unauthenticated
+### ✅ 🔴 Garage write endpoints fully unauthenticated — **DONE** (`d181d26`: `api` firewall + access_control)
 `config/packages/security.yaml:28-34` · `src/ApiResource/GarageVehicle.php` · `PlannedTask.php` — security
 
 Anonymous client can `PATCH /garage/vehicles/{id}` (plate, usage), `POST .../facts`, `PATCH /garage/planned-tasks/{id}` (status + arbitrary parts). No operation declares `security:`; processors do zero ownership checks. MCP mirror of these writes is OAuth-protected — the REST path is the gap.
@@ -43,7 +58,7 @@ Anonymous client can `PATCH /garage/vehicles/{id}` (plate, usage), `POST .../fac
 
 ## High
 
-### 🟠 `/agent/turn` unauthenticated, accepts attacker-chosen sessionId + instruction
+### 🟡 🟠 `/agent/turn` unauthenticated, accepts attacker-chosen sessionId + instruction — **MOSTLY DONE** (gated + server-derived topic; per-user rate limit still open)
 `src/Controller/AgentTurnController.php:41-63` — security
 
 Anonymous POST drives the LLM with the full garage toolset (writes included). `sessionId` is concatenated unsanitised into the Mercure topic → cross-session render-intent injection (publish `select_vehicle`/`toast` into another user's dashboard). No rate limit → unauthenticated cost amplifier (web_search bounded to 1/turn, but request count uncapped).
@@ -57,7 +72,7 @@ Commit `f069fd1` repointed MotulClient to fr-FR (engine category renders "Moteur
 
 **Fix:** key on a locale-stable category id from `__NEXT_DATA__` (like FillVolumeFactMapper keys on Russian originalTitle), or match a per-locale label set. Re-capture a fr-FR fixture and assert grade extraction.
 
-### 🟠 No per-user tenant isolation — every user shares one `owner=null` garage
+### ✅ 🟠 No per-user tenant isolation — **DONE** (`86f62b5`: rows scoped to owner = Casdoor `sub` via `OwnerContext`)
 `src/Repository/VehicleRepository.php:34,57,88,104` — security (Root 2)
 
 Multiple distinct principals can authenticate via `/mcp` (Zitadel find-or-create per `sub`), all read/write the same global parc. Intentional Phase-1 per the entity docblock, but a live cross-tenant exposure the moment >1 user authenticates.
@@ -78,14 +93,14 @@ Whole shared garage enumerable with no token; `plate`/`vin` are PII. Combined wi
 | Dim | Issue | Location | Fix |
 |-----|-------|----------|-----|
 | corr | Failed agent turn retried 3× → replays `log_maintenance` writes (duplicate history rows) + re-spends LLM/web_search. `budget->reset()` runs on every retry. *(usage-reading dup refuted — monotonic guard)* | `RunAgentTurnHandler.php:47-75` | `max_retries:0` for RunAgentTurn, or idempotency key; don't reset budget on retry |
-| corr | Transient MCP handshake failure caches empty tool list for worker lifetime — agent silently loses all garage tools until restart | `Mcp/Agent/McpToolbox.php:59-82` | only memoise non-empty; treat empty/error as failure (throw), or separate `?bool $loaded` flag |
+| ✅ corr | ~~Transient MCP handshake failure caches empty tool list for worker lifetime~~ **DONE 2026-06-21** — memoise only non-empty | `Mcp/Agent/McpToolbox.php` | only memoise non-empty; treat empty/error as failure (throw), or separate `?bool $loaded` flag |
 | perf | N+1: facts projection lazy-loads PlannedMaintenance once per vehicle in the list endpoint (only `factCount` kept, facts discarded) | `State/GarageVehicleCollectionProvider.php:35-40` | single `$group` aggregation, denormalized `factCount`, or prime the ReferenceMany |
 | perf | `findCandidates` `$or` over kType/plate/vin has no supporting index → scans owner+vehicleType subset on every dedup write | `Repository/VehicleRepository.php:54-76` | add `{owner,vehicleType,kType}`, `{owner,plate}`, `{owner,vin}` (sparse-unique) |
-| sec | `fact.url` rendered into `href` with no scheme check → `javascript:` XSS (URL is agent/web-influenceable) | `dashboard/src/components/facts.tsx:34-38` | allowlist `/^https?:\/\//i` via `safeHref()` before emitting anchor; validate backend too |
+| ✅ sec | ~~`fact.url` `javascript:` XSS~~ **DONE 2026-06-21** — `safeHref()` http(s) allowlist; backend validation still TODO | `dashboard/src/components/facts.tsx`, `safeHref.ts` | allowlist `/^https?:\/\//i` via `safeHref()` before emitting anchor; validate backend too |
 | sec | Mercure SSE unauthenticated, topics public — full vehicle read-model (plate/VIN/facts) broadcast to anyone who knows the topic IRI *(latent multi-tenant)* | `dashboard/src/useMercure.ts:42-50` | `private: true` updates + subscriber JWT cookie + per-owner topics |
-| corr | `resolve()` write-through doesn't catch `UpstreamException` (sibling `backfillCatalogSpecs` does) → partsapi hiccup 500s a vehicle miss | `Garage/GarageResolver.php:58-70` | same catch as backfill, return null → graceful `not_in_catalog` |
+| ✅ corr | ~~`resolve()` write-through doesn't catch `UpstreamException`~~ **DONE 2026-06-21** — same catch as backfill, returns null | `Garage/GarageResolver.php` | same catch as backfill, return null → graceful `not_in_catalog` |
 | corr | Motul recommendations cached even when page yields zero categories — transient empty/WAF-blocked page pinned forever (TTL 0) | `Motul/MotulClient.php:63-65` | cache only after parse yields ≥1 category, else skip save / short-TTL negative marker |
-| perf | Unknown plates never cached → every repeat lookup of a non-existent plate re-hits the paid SIV API | `Siv/SivClient.php:81-84` | cache negative sentinel for "plate not in SIV"; keep transient errors uncached |
+| ✅ perf | ~~Unknown plates never cached → repeat lookup re-hits paid SIV API~~ **DONE 2026-06-21** — negative marker cached (no PII), transient errors still uncached | `Siv/SivClient.php` | cache negative sentinel for "plate not in SIV"; keep transient errors uncached |
 | arch | No retry/backoff on any external client — one transient 429/503 fails the user-facing op (finding mis-filed on cache.yaml; real evidence in the 3 client classes) | `SivClient · MotulClient · PartsApiClient` | `RetryableHttpClient` scoped per upstream, retryable 429/5xx/conn-reset only, not 4xx |
 | arch | GET item provider does external HTTP fetch + Mongo `flush()` as side effect (also the PATCH provider) — 20s cold-cache stall, breaks GET idempotency. *(bounded: once per vehicle)* | `State/GarageVehicleProvider.php:43` | move backfill to write-time or async Messenger job; never flush in GET |
 | arch | Motul fixtures keyed by id only, ignore locale → test green-washes the live fr-FR path (enables the high-sev bug above) | `tests/Mock/FixtureHttpClient.php:128-140` | key fixtures by locale+id, add fr-FR capture, pin test locale |

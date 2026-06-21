@@ -45,6 +45,7 @@ final class SivClient
 
         $item = $this->cache->getItem($plate);
         if ($item->isHit()) {
+            // A negative hit (unknown plate) is cached as an envelope with no `data` → resolves to null.
             return $item->get()['data'] ?? null;
         }
 
@@ -78,8 +79,13 @@ final class SivClient
             return $envelope['data'];
         }
 
-        // Unknown plate: the upstream signals it via data.erreur and/or a 404 error code.
+        // Unknown plate: the upstream signals it via data.erreur and/or a 404 error code. Cache a
+        // negative marker (the envelope minus `data`) so a repeat lookup of a non-existent plate is
+        // not re-billed to the paid SIV API. Transient errors below stay uncached for later retry.
         if ('' !== $dataError || 404 === $errorCode) {
+            unset($envelope['data']);
+            $this->cache->save($item->set($envelope));
+
             return null;
         }
 

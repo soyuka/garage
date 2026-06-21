@@ -25,7 +25,7 @@ use Symfony\AI\Platform\Tool\Tool;
  * {@see CapturingTransport}; the garage tools never use sampling/elicitation/progress, so a single
  * synchronous round-trip per call is enough (no SDK Client, no Fibers).
  */
-final class McpToolbox implements ToolboxInterface
+class McpToolbox implements ToolboxInterface
 {
     private const PROTOCOL_VERSION = '2025-03-26';
 
@@ -78,7 +78,15 @@ final class McpToolbox implements ToolboxInterface
             );
         }
 
-        return $this->tools = $tools;
+        // Memoise ONLY a non-empty catalog. An empty list means the in-process handshake or the
+        // tools/list call failed (the garage server always exposes tools), so [] is a transient
+        // failure, not a valid answer — caching it would strand this long-lived worker tool-less for
+        // its whole lifetime. Leaving $this->tools null lets the next turn re-fetch and self-heal.
+        if ([] !== $tools) {
+            $this->tools = $tools;
+        }
+
+        return $tools;
     }
 
     public function execute(ToolCall $toolCall): ToolResult
@@ -126,7 +134,7 @@ final class McpToolbox implements ToolboxInterface
      *
      * @return array<string, mixed> the decoded JSON-RPC response to $request
      */
-    private function drive(array $request): array
+    protected function drive(array $request): array
     {
         $initialize = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => [
             'protocolVersion' => self::PROTOCOL_VERSION,
