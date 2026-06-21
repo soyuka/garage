@@ -1,4 +1,3 @@
-import { Scramble } from './Scramble';
 import { CarCardSkeleton } from './Skeletons';
 import type { Vehicle, VehicleId, VehicleStatus } from '../types';
 
@@ -35,7 +34,7 @@ export function CarRail({ vehicles, selectedId, onSelect, onAddCar, onRemoveCar,
   return (
     <div className="car-rail">
       <div className="car-rail-track">
-        {vehicles.map((v, i) => (
+        {vehicles.map((v) => (
           <div key={v.id} className="car-card-wrap">
             <button
               type="button"
@@ -45,12 +44,8 @@ export function CarRail({ vehicles, selectedId, onSelect, onAddCar, onRemoveCar,
             >
               <span className="car-card-ini">{v.initials}</span>
               <span className="car-card-body">
-                <span className="car-card-name">
-                  <Scramble text={v.name} delay={i * 90} />
-                </span>
-                <span className="car-card-sub">
-                  <Scramble text={v.usage || v.subtitle} delay={i * 90 + 60} />
-                </span>
+                <span className="car-card-name">{v.name}</span>
+                <span className="car-card-sub">{v.usage || v.subtitle}</span>
               </span>
               <span className="car-card-status" style={{ background: STATUS_COLOR[v.status] }} />
             </button>

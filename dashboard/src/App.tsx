@@ -6,6 +6,7 @@ import {
   createMaintenanceRecord,
   createTask,
   createVehicle,
+  deleteMaintenanceAttachment,
   deleteMaintenanceRecord,
   deleteVehicle,
   deleteVehicleFact,
@@ -17,6 +18,7 @@ import {
   patchVehicle,
   postVehicleFact,
   updateMaintenanceRecord,
+  uploadMaintenanceAttachment,
   type MaintenanceRecordInput,
   type PlannedTaskInput,
 } from './garage';
@@ -77,6 +79,9 @@ export function App() {
   // current selection to know whether to refetch tasks — read it from a ref to avoid resubscribing.
   const selectedIdRef = useRef(state.selectedId);
   selectedIdRef.current = state.selectedId;
+  // The live feed sentence self-clears a few seconds after the last frame — each new frame resets
+  // the timer, so a burst keeps it lit and the feed falls back to the calm idle dot once quiet.
+  const liveTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // GET /garage/vehicles → replace the sidebar parc list. Called once on mount and again whenever a
   // vehicle domain event fans out (create/merge), so a write in this tab or another grows the list live.
@@ -383,6 +388,32 @@ export function App() {
     [state.selectedId, loadRecords],
   );
 
+  const uploadAttachment = useCallback(
+    async (recordIri: string, file: File) => {
+      const id = state.selectedId;
+      try {
+        await uploadMaintenanceAttachment(recordIri, file);
+        loadRecords(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'ajout de la facture : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadRecords],
+  );
+
+  const removeAttachment = useCallback(
+    async (attachmentUrl: string) => {
+      const id = state.selectedId;
+      try {
+        await deleteMaintenanceAttachment(attachmentUrl);
+        loadRecords(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression de la facture : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadRecords],
+  );
+
   const send = useCallback(
     async (instruction: string) => {
       // Go busy on dispatch and stay busy: the turn runs in an async worker, so the POST only acks
@@ -448,6 +479,8 @@ export function App() {
       // payload carries the vehicle scalars + facts, so merge it straight in. The checklist + history
       // are their own subresources and NOT in the frame, so refetch them when the open vehicle changes.
       dispatch({ kind: 'live', message: `${frame.kind}/${frame.event} · ${frame.vehicle.slice(0, 8)}…` });
+      clearTimeout(liveTimerRef.current);
+      liveTimerRef.current = setTimeout(() => dispatch({ kind: 'clearLive' }), 8000);
       pushStatus(`Mise à jour live : ${frame.kind} ${frame.event}`);
       if (frame.event === 'deleted') {
         dispatch({ kind: 'removeVehicle', id: frame.resource['@id'] });
@@ -510,6 +543,8 @@ export function App() {
                 onAddRecord={addRecord}
                 onEditRecord={editRecord}
                 onDeleteRecord={removeRecord}
+                onUploadAttachment={uploadAttachment}
+                onDeleteAttachment={removeAttachment}
               />
             ) : (
               <div className="empty-parc">

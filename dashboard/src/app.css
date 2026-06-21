@@ -62,42 +62,40 @@ body {
   min-width: 0; max-width: 46vw; font-size: var(--mpa-text-small);
   color: var(--mpa-faint); font-variant-numeric: tabular-nums;
 }
+/* ONE breath for the whole feed. The dot, the live sentence and the agent heartbeat line all read
+   --mpa-pulse off this shared parent, so they pulse frame-locked — independent per-element
+   animations drifted out of phase because each child started its own timeline at mount and the
+   heartbeat span even remounted on every sentence swap (the desync). Mimics Apple's breathing sleep
+   LED (patent US6,658,577: ~12 breaths/min, ~1.8s breath + ~0.4s quiet hold). */
+@property --mpa-pulse {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+.mercure-feed { animation: mpa-pulse 2.2s ease-in-out infinite; }
+@keyframes mpa-pulse {
+  /* 1.8s breath (sine-like fade), then a ~0.4s quiet hold at the dim floor. */
+  0%   { --mpa-pulse: 0; }
+  41%  { --mpa-pulse: 1; }
+  82%  { --mpa-pulse: 0; }
+  100% { --mpa-pulse: 0; }
+}
 .mercure-dot {
   width: 8px; height: 8px; flex: none; border-radius: var(--mpa-radius-pill);
-  /* Idle = a calm blue "sleeping" pulse. Mimics Apple's breathing sleep LED
-     (patent US6,658,577: ~12 breaths/min, ~1.8s breath + ~0.4s quiet hold). */
   background: var(--mpa-accent);
-  animation: mpa-breathe 2.2s ease-in-out infinite;
+  opacity: calc(0.25 + var(--mpa-pulse) * 0.75);
+  box-shadow: 0 0 calc(var(--mpa-pulse) * 8px) var(--mpa-accent);
 }
-/* Live keeps the same breath as idle so the dot and the sentence beside it pulse in lockstep —
-   one heartbeat across the whole feed (the steady-when-live freeze desynced them). */
 .mercure-dot.live { background: var(--mpa-accent); }
-@keyframes mpa-breathe {
-  /* 1.8s breath (sine-like fade), then a ~0.4s quiet hold at the dim floor. */
-  0%   { opacity: 0.25; box-shadow: none; }
-  41%  { opacity: 1; box-shadow: 0 0 8px var(--mpa-accent); }
-  82%  { opacity: 0.25; box-shadow: none; }
-  100% { opacity: 0.25; box-shadow: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mercure-dot { animation: none; opacity: 0.6; }
-}
 .mercure-last, .mercure-idle {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
 }
 .mercure-idle { color: var(--mpa-faint); }
-/* The sentence beside the dot — whether the last live event (.mercure-last) or the agent's
-   heartbeat line (.hb-text below) — glows on the SAME keyframe and 2.2s rhythm as the dot's breath,
-   so the circle and the sentence pulse as one indicator, not a dot plus a static log line. */
-.mercure-last { animation: mpa-breathe-text 2.2s ease-in-out infinite; }
-@keyframes mpa-breathe-text {
-  0%   { color: var(--mpa-faint); text-shadow: none; }
-  41%  { color: var(--mpa-accent); text-shadow: 0 0 8px var(--mpa-accent); }
-  82%  { color: var(--mpa-faint); text-shadow: none; }
-  100% { color: var(--mpa-faint); text-shadow: none; }
-}
-@media (prefers-reduced-motion: reduce) {
-  .mercure-last { animation: none; }
+/* The sentence beside the dot — the last live event (.mercure-last) or the agent's heartbeat line
+   (.hb-text) — glows off the SAME --mpa-pulse as the dot, so circle and sentence are one indicator. */
+.mercure-last {
+  color: color-mix(in srgb, var(--mpa-accent) calc(var(--mpa-pulse) * 100%), var(--mpa-faint));
+  text-shadow: 0 0 calc(var(--mpa-pulse) * 8px) var(--mpa-accent);
 }
 /* The agent heartbeat shares the feed slot — the mercure-dot is the single indicator,
    so drop the heartbeat's own dot and let its sentence truncate within the feed. */
@@ -105,9 +103,15 @@ body {
 .mercure-feed .heartbeat .hb-dot { display: none; }
 .mercure-feed .heartbeat .hb-text {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
-  /* In the feed, beat on the dot's 2.2s breath (not the standalone 1.6s heartbeat) so the agent's
-     narration sentence pulses in unison with the circle. */
-  animation: mpa-breathe-text 2.2s ease-in-out infinite;
+  /* Drop the standalone 1.6s self-animation — a running color animation would override the shared
+     pulse and desync again. The glow comes from --mpa-pulse on the feed parent instead. */
+  animation: none;
+  color: color-mix(in srgb, var(--mpa-accent) calc(var(--mpa-pulse) * 100%), var(--mpa-faint));
+  text-shadow: 0 0 calc(var(--mpa-pulse) * 8px) var(--mpa-accent);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Freeze the breath at a steady, legible mid-glow instead of pulsing. */
+  .mercure-feed { animation: none; --mpa-pulse: 0.55; }
 }
 /* Search + account, grouped at the right edge (off the middle of the bar). */
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--mpa-space-3); }
@@ -560,7 +564,31 @@ body {
 }
 .hist-act:hover { background: var(--mpa-surface); color: var(--mpa-accent); }
 .hist-act-danger:hover { color: var(--mpa-alarm, #ff5c5c); }
-.hist-card-editing { width: 320px; }
+.hist-card-active { border-color: var(--mpa-accent); }
+
+/* attached bills (PDF/JPEG/PNG) — a chip per file plus an add button, at the foot of the card */
+.hist-bills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: var(--mpa-space-2); padding-top: var(--mpa-space-2); border-top: 1px solid var(--mpa-border); }
+.hist-bill {
+  display: inline-flex; align-items: center; max-width: 100%;
+  background: var(--mpa-surface); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-pill);
+}
+.hist-bill-name {
+  border: none; background: none; cursor: pointer; color: var(--mpa-text-2); font: inherit;
+  font-size: var(--mpa-text-small); padding: 3px 4px 3px 9px; border-radius: var(--mpa-radius-pill) 0 0 var(--mpa-radius-pill);
+  max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hist-bill-name:hover { color: var(--mpa-accent); }
+.hist-bill-del {
+  border: none; background: none; cursor: pointer; color: var(--mpa-faint); font: inherit;
+  font-size: var(--mpa-text-small); line-height: 1; padding: 3px 8px 3px 4px; flex: none;
+}
+.hist-bill-del:hover { color: var(--mpa-alarm, #ff5c5c); }
+.hist-bill-add {
+  border: 1px dashed var(--mpa-border-strong); background: none; cursor: pointer;
+  color: var(--mpa-muted); font: inherit; font-size: var(--mpa-text-small); font-weight: 600;
+  padding: 3px 10px; border-radius: var(--mpa-radius-pill);
+}
+.hist-bill-add:hover { color: var(--mpa-accent); border-color: var(--mpa-accent); }
 
 /* ---- manual visit form (create + edit), used inside the past-maintenance rail ---- */
 .record-form {

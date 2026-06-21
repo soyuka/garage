@@ -8,7 +8,6 @@ import type { FactPanel, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
 import { InlineEdit } from './InlineEdit';
 import { PastMaintenanceRail } from './PastMaintenanceRail';
-import { Scramble } from './Scramble';
 import { TaskListSkeleton } from './Skeletons';
 
 /** The card's editable scalars — the subset the PATCH endpoint accepts. */
@@ -88,6 +87,8 @@ export function VehicleDetail({
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
+  onUploadAttachment,
+  onDeleteAttachment,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
@@ -107,6 +108,8 @@ export function VehicleDetail({
   onAddRecord: (input: MaintenanceRecordInput) => void;
   onEditRecord: (recordIri: string, input: MaintenanceRecordInput) => void;
   onDeleteRecord: (recordIri: string) => void;
+  onUploadAttachment: (recordIri: string, file: File) => void;
+  onDeleteAttachment: (attachmentUrl: string) => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -239,12 +242,12 @@ export function VehicleDetail({
           </div>
           <MetricStat
             label="Prochain entretien"
-            value={<Scramble text={nextValue} delay={80} />}
+            value={nextValue}
             unit={next.value < 0 ? `${next.unit} de retard` : next.unit}
             tone={nextTone}
           />
-          <MetricStat label="Indice de santé" value={<Scramble text={String(vehicle.health)} delay={160} />} unit="/100" tone={tone} />
-          <MetricStat label="Tâches ouvertes" value={<Scramble text={String(vehicle.openTasks)} delay={240} />} unit="en attente" />
+          <MetricStat label="Indice de santé" value={String(vehicle.health)} unit="/100" tone={tone} />
+          <MetricStat label="Tâches ouvertes" value={String(vehicle.openTasks)} unit="en attente" />
         </div>
       </Card>
 
@@ -311,6 +314,8 @@ export function VehicleDetail({
           onAddRecord={onAddRecord}
           onEditRecord={onEditRecord}
           onDeleteRecord={onDeleteRecord}
+          onUploadAttachment={onUploadAttachment}
+          onDeleteAttachment={onDeleteAttachment}
         />
       </Card>
 

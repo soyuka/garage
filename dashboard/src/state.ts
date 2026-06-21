@@ -5,6 +5,8 @@ export type Event =
   | { kind: 'action'; action: UIAction }
   | { kind: 'dismissToast'; id: number }
   | { kind: 'live'; message: string }
+  // The live feed sentence is transient — cleared on a timer after the last frame (see App.onFrame).
+  | { kind: 'clearLive' }
   // UI-local dismissals of the transient agent surfaces — no agent round-trip.
   | { kind: 'dismissFactPanel' }
   | { kind: 'expandFactPanel' }
@@ -25,6 +27,8 @@ export function reduce(state: DashboardState, ev: Event): DashboardState {
       return { ...state, toasts: state.toasts.filter((t) => t.id !== ev.id) };
     case 'live':
       return { ...state, live: [ev.message, ...state.live].slice(0, 6) };
+    case 'clearLive':
+      return state.live.length === 0 ? state : { ...state, live: [] };
     case 'dismissFactPanel':
       return { ...state, factPanel: null };
     case 'expandFactPanel':
