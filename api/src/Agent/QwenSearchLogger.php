@@ -39,7 +39,7 @@ final readonly class QwenSearchLogger implements PlatformInterface
         $result = $this->inner->invoke($model, $input, $options);
 
         if (!($options['stream'] ?? false)) {
-            $this->logSearch($result);
+            $this->logSearch($result, (bool) ($options['enable_search'] ?? false));
         }
 
         return $result;
@@ -50,7 +50,7 @@ final readonly class QwenSearchLogger implements PlatformInterface
         return $this->inner->getModelCatalog();
     }
 
-    private function logSearch(DeferredResult $result): void
+    private function logSearch(DeferredResult $result, bool $requested): void
     {
         try {
             $data = $result->getRawResult()->getData();
@@ -60,6 +60,17 @@ final readonly class QwenSearchLogger implements PlatformInterface
 
         $searchInfo = $data['search_info'] ?? $data['choices'][0]['message']['search_info'] ?? null;
         if (!\is_array($searchInfo)) {
+            // The live MaaS endpoint (ws-*.maas.aliyuncs.com) honours enable_search by injecting the
+            // results into the PROMPT and returns no search_info block — so a missing block does NOT
+            // mean "no search ran". When search was requested, leave a trace instead of going silent
+            // (which previously read as "Qwen never searched"); prompt_tokens is the only weak signal
+            // of the injected context's size.
+            if ($requested) {
+                $this->logger->notice('Qwen web search requested but response carried no search_info block (endpoint may inject results into prompt context); prompt_tokens={promptTokens}', [
+                    'promptTokens' => $data['usage']['prompt_tokens'] ?? 0,
+                ]);
+            }
+
             return;
         }
 

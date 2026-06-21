@@ -9,11 +9,14 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Agent\WebSearchBudget;
 use App\Message\RunAgentTurn;
 use App\Security\OwnerContext;
+use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\AgentInterface;
+use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlerException;
 
 /**
  * Runs the garage agent for one turn, out of the HTTP request. Consumed by `messenger:consume`
@@ -43,6 +46,7 @@ final readonly class RunAgentTurnHandler
         private WebSearchBudget $webSearchBudget,
         private TurnContextBuilder $contextBuilder,
         private OwnerContext $owner,
+        private LoggerInterface $logger,
         // Streaming only drives the tool-call loop here — the deltas are discarded (see below), the UI
         // is driven by the render-intent tools' Mercure publishes. So a non-stream turn behaves the
         // same, except the final response body is readable: that is the ONLY way to observe Qwen's
@@ -81,6 +85,16 @@ final readonly class RunAgentTurnHandler
                     unset($delta);
                 }
             }
+        } catch (MaxIterationsExceededException $e) {
+            // The tool-call cap fired (see AgentMaxToolCallsPass): a model that wouldn't converge.
+            // Tell the user, then dead-letter WITHOUT retrying: UnrecoverableMessageHandlerException
+            // skips the retry policy (a plain rethrow would replay the same expensive runaway 3x) and
+            // routes the turn straight to the `failed` transport, so capped runs stay visible for
+            // monitoring instead of vanishing into a log line.
+            $this->logger->warning('Garage turn hit the tool-call cap, dead-lettering: {error}', ['error' => $e->getMessage()]);
+            $this->renderTools->toast("Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.", 'warn');
+
+            throw new UnrecoverableMessageHandlerException('Garage turn exceeded the tool-call cap.', previous: $e);
         } finally {
             // Always settle the dashboard's progress heartbeat — even if the loop threw and Messenger
             // is about to retry — or the UI would stay stuck in the busy state.

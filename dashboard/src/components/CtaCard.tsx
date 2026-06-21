@@ -1,6 +1,5 @@
 import { Button } from '../design/components/Button';
 import { Card } from '../design/components/Card';
-import { Scramble } from './Scramble';
 import type { Cta, CtaAction } from '../types';
 
 /**
@@ -27,14 +26,8 @@ export function CtaCard({
     <Card className="cta-card">
       <div className="cta-head">
         <div>
-          <div className="cta-headline">
-            <Scramble text={cta.headline} />
-          </div>
-          {cta.finding ? (
-            <div className="cta-finding">
-              <Scramble text={cta.finding} delay={120} />
-            </div>
-          ) : null}
+          <div className="cta-headline">{cta.headline}</div>
+          {cta.finding ? <div className="cta-finding">{cta.finding}</div> : null}
         </div>
         <button type="button" className="fact-panel-close" aria-label="Fermer" onClick={onDismiss}>
           ×
@@ -47,7 +40,9 @@ export function CtaCard({
               key={`${a.label}-${i}`}
               variant={0 === i ? 'primary' : 'secondary'}
               size="sm"
-              disabled={busy}
+              // A structured write takes effect immediately (no agent turn), so it is never gated by
+              // busy; only a re-prompt action waits for the running turn to finish.
+              disabled={busy && !a.patchTask}
               onClick={() => (a.patchTask ? onAddParts(a.patchTask) : a.instruction ? onSend(a.instruction) : undefined)}
             >
               {a.label}
