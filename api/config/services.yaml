@@ -74,11 +74,25 @@ services:
     # with a proxy tag but no lazy flag and the container fails to compile.
     App\Agent\ServerToolUseLogger:
         decorates: ai.platform.anthropic
+        # Name the undecorated platform so the out-of-band web-search client can reach Anthropic
+        # WITHOUT this logger — routing the side call through here would double-feed the turn's
+        # WebSearchBudget (the tool already records it) and overwrite the journal's live model.
+        decoration_inner_name: 'App\Agent\ServerToolUseLogger.inner'
         lazy: true
         tags:
             - { name: proxy, interface: Symfony\AI\Platform\PlatformInterface }
         arguments:
             $inner: '@.inner'
+
+    # Out-of-band web search: a focused Haiku call with the native web_search tool, behind the
+    # provider-agnostic WebSearchClient seam so the orchestrator (any model) borrows real grounding.
+    # Swapping in a Gemini-backed client later = a new WebSearchClient impl + re-aliasing below.
+    App\Agent\WebSearch\AnthropicWebSearchClient:
+        arguments:
+            $platform: '@App\Agent\ServerToolUseLogger.inner'
+            $model: '%env(WEB_SEARCH_MODEL)%'
+
+    App\Agent\WebSearch\WebSearchClient: '@App\Agent\WebSearch\AnthropicWebSearchClient'
 
     # Qwen counterpart: record the live model on the debug journal off each call.
     # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.

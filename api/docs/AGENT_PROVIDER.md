@@ -21,8 +21,8 @@ clear. The `model:` string and `AGENT_WEB_SEARCH` flag *are* env-adjacent and mo
    platform: 'ai.platform.generic.qwen'
    model: 'qwen3.5-flash?max_tokens=4096'
    ```
-2. `.env.local`: set `AGENT_WEB_SEARCH=qwen` (see web search note below), and confirm
-   `ALIBABACLOUD_API_KEY` is set (it already is).
+2. `.env.local`: leave `AGENT_WEB_SEARCH=off` (web search is the provider-agnostic custom tool now —
+   see web search note below), and confirm `ALIBABACLOUD_API_KEY` is set (it already is).
 3. Clear the compiled container — config and metadata caches are sticky here:
    ```sh
    rm -rf var/cache/dev && php bin/console cache:clear
@@ -32,35 +32,52 @@ clear. The `model:` string and `AGENT_WEB_SEARCH` flag *are* env-adjacent and mo
 
 ## Switch back to Anthropic (default)
 
-Reverse step 1 (uncomment the Anthropic pair, comment Qwen), set `AGENT_WEB_SEARCH=anthropic`
+Reverse step 1 (uncomment the Anthropic pair, comment Qwen), leave `AGENT_WEB_SEARCH=off`
 in `.env.local`, then `rm -rf var/cache/dev && php bin/console cache:clear` and restart the worker.
 
-## Web search (`AGENT_WEB_SEARCH`)
+## Web search
 
-Both providers support web search, but through **incompatible request shapes**, so the mechanism
-must match the active platform. `App\Agent\WebSearchInputProcessor` switches on the
-`AGENT_WEB_SEARCH` env (cast to `App\Agent\WebSearchProvider`):
+Web search is **decoupled from the orchestrator**. The garage agent calls a `web_search` custom tool
+(`App\Agent\WebSearch\WebSearchTool`); that tool delegates to a `WebSearchClient` which runs a
+separate, focused model call to do the searching and grounding. So whichever model orchestrates the
+turn — including Qwen, whose native search is weak — borrows real grounding, and the **main loop
+carries no provider-native web search**.
+
+```
+garage agent (any platform)
+  └─ tool call: web_search(query)
+       └─ WebSearchClient.search()  → out-of-band Haiku call w/ native web_search → answer + citations
+  └─ agent persists the finding (plan_maintenance attribute, source:"web", url:…)
+```
+
+- Backend: `AnthropicWebSearchClient` (Haiku, model from `WEB_SEARCH_MODEL`), wired via the
+  `WebSearchClient` alias in `config/services.yaml`. **Adding Gemini = a new `WebSearchClient` impl +
+  re-aliasing — nothing else changes.** It calls the *undecorated* Anthropic platform
+  (`App\Agent\ServerToolUseLogger.inner`) so the side call doesn't pollute the turn's budget/journal.
+- Per-turn cap: `WebSearchTool` consults `WebSearchBudget` (reset per turn by `RunAgentTurnHandler`),
+  records one use per call, and refuses once exhausted — a hard ceiling on searches per turn. The
+  search is narrated on the dashboard naturally as a `web_search` toolbox call (`StepNarrator`).
+
+Keep **`AGENT_WEB_SEARCH=off`** so the legacy per-platform mechanism below stays inert. It and the
+custom tool both declare a `web_search`, and Anthropic rejects duplicate tool names.
+
+### Legacy native path (`AGENT_WEB_SEARCH`)
+
+`App\Agent\WebSearchInputProcessor` declares a provider-native web search, switching on the
+`AGENT_WEB_SEARCH` env (cast to `App\Agent\WebSearchProvider`). Superseded by the custom tool; only
+use it if you remove the tool.
 
 | value       | mechanism                                                   | use with   |
 |-------------|-------------------------------------------------------------|------------|
 | `anthropic` | server-side tool sent as a `server_tools` block, max_uses:1 | Anthropic  |
 | `qwen`      | DashScope `enable_search: true` boolean in the request body | Qwen       |
-| `off`       | no web search                                               | either     |
+| `off`       | no native web search (the custom tool is the path)          | either     |
 
 Sending the wrong one fails: Anthropic `server_tools` is an unknown field on Qwen's
-OpenAI-compatible endpoint (`400`), and vice versa.
-
-For **both**, web search is a last resort — withheld until the agent has run ≥1 local tool (the
-processor checks for a `ToolCallMessage` in the bag), so it can never be the first move.
-
-Differences on Qwen:
-- No per-turn search cap. Anthropic uses `max_uses:1` + `WebSearchBudget` (fed from
-  `server_tool_use.web_search_requests` token deltas) to cap a turn to one search. Qwen's
-  `enable_search` is a flat boolean — the model decides whether/how often to search, and
-  `WebSearchBudget` never throttles it (its `exhausted()` only ever trips on Anthropic deltas).
-- No citation tool-call loop. Qwen folds results into the model context server-side; there is no
-  `web_search` `ToolCallMessage` to observe (so `App\Agent\ServerToolUseLogger`, which decorates
-  `ai.platform.anthropic`, reports nothing on Qwen — it only logs Anthropic server-tool use).
+OpenAI-compatible endpoint (`400`), and vice versa. On this path web search is a last resort —
+withheld until the agent has run ≥1 local tool (the processor checks for a `ToolCallMessage` in the
+bag). Qwen's `enable_search` has no per-turn cap and folds results into the model context server-side
+(no `web_search` `ToolCallMessage`, so `ServerToolUseLogger` reports nothing on Qwen).
 
 ## Endpoint details (Qwen)
 

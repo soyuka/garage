@@ -5,13 +5,17 @@ declare(strict_types=1);
 namespace App\Agent;
 
 /**
- * Per-turn cap on Anthropic's native web_search. Each loop pass is a separate API call and
- * `max_uses:1` only bounds a single call, so without a turn-level ceiling the model can search
- * once per pass — observed burning five near-identical searches on one turn, bloating the context
- * past max_tokens and starving the persist/plan steps. web_search use leaves no trace in the
- * message bag (the ResultConverter drops the block), so the count is fed in from the platform
- * decorator that reads the raw response ({@see ServerToolUseLogger}); {@see WebSearchInputProcessor}
- * withdraws the tool once spent, and {@see \App\MessageHandler\RunAgentTurnHandler} resets it per turn.
+ * Per-turn cap on web search — the costliest move (each cited result is re-sent on every subsequent
+ * loop pass, bloating context past max_tokens and starving the persist/plan steps). Reset per turn by
+ * {@see \App\MessageHandler\RunAgentTurnHandler}.
+ *
+ * Two feeders, depending on the active web-search path:
+ *  - Custom-tool path (default): {@see \App\Agent\WebSearch\WebSearchTool} records one use per call and
+ *    refuses once exhausted — a hard ceiling on how often the orchestrator may search per turn.
+ *  - Legacy native path ({@see WebSearchInputProcessor}, AGENT_WEB_SEARCH=anthropic): web_search use
+ *    leaves no trace in the message bag (the ResultConverter drops the block), so the count is fed from
+ *    the platform decorator that reads the raw response ({@see ServerToolUseLogger}), and the processor
+ *    withdraws the tool once spent.
  */
 final class WebSearchBudget
 {
