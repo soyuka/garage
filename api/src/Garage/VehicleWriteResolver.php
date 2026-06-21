@@ -53,13 +53,21 @@ final class VehicleWriteResolver
 
             // find() is by id, not owner-scoped: a @id pointing at another tenant's row resolves to
             // notFound rather than letting a write land on a vehicle the caller does not own.
-            return null === $vehicle || $vehicle->getOwner() !== $this->owner->current()
-                ? VehicleResolution::notFound($vehicleId)
-                : VehicleResolution::resolved($vehicle);
+            if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current()) {
+                return VehicleResolution::notFound($vehicleId);
+            }
+
+            // Every resolve-for-write is activity on the vehicle: stamp it so the parc orders
+            // most-recently-touched first (the caller flushes its own unit of work).
+            $vehicle->touch();
+
+            return VehicleResolution::resolved($vehicle);
         }
 
         $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
         if (null !== $vehicle) {
+            $vehicle->touch();
+
             return VehicleResolution::resolved($vehicle);
         }
 
@@ -72,6 +80,9 @@ final class VehicleWriteResolver
 
         $vehicle = new Vehicle($make, $model, $vehicleType, $source, year: $year, kType: $carId, vin: $vin, plate: $plate);
         $vehicle->setOwner($this->owner->require());
+        // A brand-new vehicle is the most recent activity in the parc — stamp it so it sorts first
+        // (without this it would have a null updatedAt and sink below already-touched vehicles).
+        $vehicle->touch();
         if (null !== $usageValue && null !== $usageUnit) {
             $vehicle->setUsage($usageValue, $usageUnit);
         }

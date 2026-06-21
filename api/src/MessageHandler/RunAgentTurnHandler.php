@@ -4,9 +4,13 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Journal\TurnJournal;
+use App\Agent\SelectedVehicleContext;
 use App\Agent\TurnContextBuilder;
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\Ui\RepeatedToolFailureGuard;
+use App\Agent\Ui\TurnActivityTracker;
 use App\Agent\TurnCancellations;
 use App\Agent\WebSearchBudget;
 use App\Entity\AgentTurnStatus;
@@ -46,9 +50,12 @@ final readonly class RunAgentTurnHandler
         private AgentInterface $garage,
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
+        private RepeatedToolFailureGuard $repeatedToolFailureGuard,
+        private TurnActivityTracker $activityTracker,
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
+        private SelectedVehicleContext $selectedVehicle,
         private TurnCancellations $cancellations,
         private LoggerInterface $logger,
     ) {
@@ -60,6 +67,9 @@ final readonly class RunAgentTurnHandler
         // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
         // because the handler is a long-lived singleton in the consume worker.
         $this->owner->set($message->owner);
+        // Carry the dashboard's selected vehicle so list_vehicles floats it first (singleton in the
+        // worker — bound each turn, empty when nothing is selected).
+        $this->selectedVehicle->set($message->selectedId);
         $this->renderTools->bindSession($message->sessionTopic);
         // Drop any stale cancel flag before the turn starts: a cancel that arrived after the previous
         // turn on this session already finished must not abort this fresh one. From here on, only a
@@ -70,6 +80,12 @@ final readonly class RunAgentTurnHandler
         // Fresh per-turn web_search allowance — the budget service is a long-lived singleton in the
         // worker, so a prior turn's spend must not leak into this one.
         $this->webSearchBudget->reset();
+        // Fresh per-turn loop-failure tally — singleton in the worker, so a prior turn's stuck calls
+        // must not count against this one.
+        $this->repeatedToolFailureGuard->reset();
+        // Reset the per-turn activity tracker so a no-op turn (prose exit, nothing rendered/written) is
+        // detected against THIS turn only.
+        $this->activityTracker->reset();
         // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so
         // the journal records exactly what the model saw (instruction + inlined facts/tasks).
         $context = $this->contextBuilder->build($message);
@@ -91,18 +107,30 @@ final readonly class RunAgentTurnHandler
                 // Deltas are side-effecting (tool execution, Mercure publishes); draining is enough.
                 unset($delta);
             }
-        } catch (MaxIterationsExceededException $e) {
+
+            // The loop exited cleanly but the model called no write/render/terminal tool — it "answered"
+            // in prose the UI cannot show. Surface it instead of leaving the dashboard silently
+            // unchanged, and record it distinctly so these silent stalls are visible in the journal.
+            if (!$this->activityTracker->wasProductive()) {
+                $status = AgentTurnStatus::NoOp;
+                $error = 'Turn ended without any write or render action (prose-only exit).';
+                $this->logger->warning('Garage turn was a no-op: {error}', ['error' => $error]);
+                $this->renderTools->toast("Je n'ai pas pu traiter ta demande. Reformule ou précise ce que tu veux enregistrer.", 'warn');
+            }
+        } catch (MaxIterationsExceededException | RepeatedToolFailureException $e) {
             $status = AgentTurnStatus::Capped;
             $error = $e->getMessage();
-            // The tool-call cap fired (see AgentMaxToolCallsPass): a model that wouldn't converge.
+            // The turn could not converge: either the blunt tool-call cap fired (AgentMaxToolCallsPass)
+            // or the agent looped on the same failing call (RepeatedToolFailureGuard) — both mean a model
+            // that wouldn't converge.
             // Tell the user, then dead-letter WITHOUT retrying: UnrecoverableMessageHandlerException
             // skips the retry policy (a plain rethrow would replay the same expensive runaway 3x) and
             // routes the turn straight to the `failed` transport, so capped runs stay visible for
             // monitoring instead of vanishing into a log line.
-            $this->logger->warning('Garage turn hit the tool-call cap, dead-lettering: {error}', ['error' => $e->getMessage()]);
+            $this->logger->warning('Garage turn did not converge, dead-lettering: {error}', ['error' => $e->getMessage()]);
             $this->renderTools->toast("Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.", 'warn');
 
-            throw new UnrecoverableMessageHandlerException('Garage turn exceeded the tool-call cap.', previous: $e);
+            throw new UnrecoverableMessageHandlerException('Garage turn did not converge.', previous: $e);
         } catch (\Throwable $e) {
             // Any other failure inside the loop: record it on the journal, then let it propagate so
             // Messenger applies its retry policy unchanged.

@@ -26,6 +26,7 @@ use Symfony\Component\Uid\Ulid;
 #[ODM\Document(collection: 'vehicles', repositoryClass: VehicleRepository::class)]
 #[ODM\Index(keys: ['owner' => 'asc', 'vehicleType' => 'asc', 'make' => 'asc', 'model' => 'asc', 'year' => 'asc'], name: 'idx_vehicle_identity', options: ['collation' => Vehicle::IDENTITY_COLLATION])]
 #[ODM\Index(keys: ['owner' => 'asc', 'addedAt' => 'desc'], name: 'idx_vehicle_owner_added')]
+#[ODM\Index(keys: ['owner' => 'asc', 'updatedAt' => 'desc'], name: 'idx_vehicle_owner_updated')]
 class Vehicle
 {
     // strength 2 = case-insensitive, accent-sensitive — preserves the old `/i`-regex semantics
@@ -64,6 +65,14 @@ class Vehicle
     // hydration reason as $engineCode above.
     #[ODM\Field(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $deletedAt = null;
+
+    // Last write to this vehicle (a maintenance log/plan, or an update_vehicle patch). Surfaced so the
+    // parc listing and list_vehicles can order most-recently-touched first — the server-side echo of
+    // the dashboard's client-side recency rail. Declared (not promoted) with a null default for the
+    // same legacy-doc hydration reason as $deletedAt: docs persisted before this field carry no
+    // `updatedAt` key, so the read must tolerate its absence (it sorts last until first touched).
+    #[ODM\Field(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $updatedAt = null;
 
     public function __construct(
         #[ODM\Field(type: 'string')]
@@ -215,6 +224,17 @@ class Vehicle
     public function getAddedAt(): \DateTimeImmutable
     {
         return $this->addedAt;
+    }
+
+    public function getUpdatedAt(): ?\DateTimeImmutable
+    {
+        return $this->updatedAt;
+    }
+
+    /** Stamp the vehicle as just modified — drives the most-recently-touched ordering of the parc. */
+    public function touch(\DateTimeImmutable $at = new \DateTimeImmutable()): void
+    {
+        $this->updatedAt = $at;
     }
 
     public function getDeletedAt(): ?\DateTimeImmutable

@@ -9,6 +9,7 @@ use App\Garage\VehicleType;
 use App\Security\OwnerContext;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
+use Doctrine\ODM\MongoDB\Query\Builder;
 
 /**
  * Every query is scoped to the current tenant via {@see OwnerContext}: `owner` leads each lookup
@@ -101,18 +102,43 @@ final class VehicleRepository extends ServiceDocumentRepository
     }
 
     /**
-     * List the current owner's garage, newest first, narrowed by an optional case-insensitive make
-     * and/or model and/or vehicleType. This is the set the dashboard sidebar and the MCP
-     * list_vehicles tool show.
+     * List the current owner's garage, MOST-RECENTLY-TOUCHED first (updatedAt desc, addedAt as the
+     * tiebreak — legacy docs with no updatedAt fall back to creation order), narrowed by an optional
+     * case-insensitive make and/or model and/or vehicleType. This is the set the dashboard sidebar
+     * and the MCP list_vehicles tool show. Pass $limit to page the result (with $offset); $limit null
+     * returns the whole parc (the dashboard, which reorders client-side).
      *
      * @return list<Vehicle>
      */
-    public function findShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null): array
+    public function findShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null, ?int $limit = null, int $offset = 0): array
+    {
+        $qb = $this->sharedQuery($make, $model, $vehicleType)
+            ->sort(['updatedAt' => 'desc', 'addedAt' => 'desc']);
+
+        if (null !== $limit) {
+            $qb->limit($limit)->skip(max(0, $offset));
+        }
+
+        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->execute()->toArray());
+    }
+
+    /**
+     * Total size of the current owner's garage for the same filters as {@see findShared()} — lets the
+     * paginated list_vehicles report how many vehicles exist beyond the returned page.
+     */
+    public function countShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null): int
+    {
+        return $this->sharedQuery($make, $model, $vehicleType)
+            ->count()
+            ->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])
+            ->execute();
+    }
+
+    private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType): Builder
     {
         $qb = $this->createQueryBuilder()
             ->field('owner')->equals($this->owner->current())
-            ->field('deletedAt')->equals(null)
-            ->sort('addedAt', 'desc');
+            ->field('deletedAt')->equals(null);
 
         if (null !== $make) {
             $qb->field('make')->equals($make);
@@ -126,6 +152,6 @@ final class VehicleRepository extends ServiceDocumentRepository
             $qb->field('vehicleType')->equals($vehicleType->value);
         }
 
-        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->execute()->toArray());
+        return $qb;
     }
 }

@@ -59,4 +59,49 @@ final class VehicleRepositoryTest extends AppTestCase
         $this->assertCount(1, $found);
         $this->assertSame('TORO', $found[0]->getMake());
     }
+
+    public function testFindSharedOrdersMostRecentlyTouchedFirst(): void
+    {
+        static::createClient();
+        // OLD touched yesterday, NEW touched today, NEVER never touched (null updatedAt sorts last).
+        $this->persistTouched('TORO', 'OLD', new \DateTimeImmutable('2026-01-01'));
+        $this->persistTouched('TORO', 'NEW', new \DateTimeImmutable('2026-06-01'));
+        $this->persistVehicle('TORO', 'NEVER');
+
+        $models = array_map(static fn (Vehicle $v): string => $v->getModel(), $this->repository()->findShared());
+
+        $this->assertSame(['NEW', 'OLD', 'NEVER'], $models);
+    }
+
+    public function testFindSharedPaginates(): void
+    {
+        static::createClient();
+        $this->persistTouched('TORO', 'A', new \DateTimeImmutable('2026-06-03'));
+        $this->persistTouched('TORO', 'B', new \DateTimeImmutable('2026-06-02'));
+        $this->persistTouched('TORO', 'C', new \DateTimeImmutable('2026-06-01'));
+
+        $repo = $this->repository();
+        $this->assertSame(3, $repo->countShared());
+
+        $page1 = array_map(static fn (Vehicle $v): string => $v->getModel(), $repo->findShared(null, null, null, 2, 0));
+        $page2 = array_map(static fn (Vehicle $v): string => $v->getModel(), $repo->findShared(null, null, null, 2, 2));
+
+        $this->assertSame(['A', 'B'], $page1);
+        $this->assertSame(['C'], $page2);
+    }
+
+    private function persistTouched(string $make, string $model, \DateTimeImmutable $at): Vehicle
+    {
+        $dm = static::getContainer()->get(DocumentManager::class);
+        \assert($dm instanceof DocumentManager);
+
+        $vehicle = new Vehicle($make, $model, VehicleType::GroundsCare, 'test');
+        $vehicle->setOwner(self::TEST_OWNER);
+        $vehicle->touch($at);
+        $dm->persist($vehicle);
+        $dm->flush();
+        $dm->clear();
+
+        return $vehicle;
+    }
 }

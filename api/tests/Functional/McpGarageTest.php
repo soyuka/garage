@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\SelectedVehicleContext;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -64,6 +65,67 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('246-H', $toro['model']);
         $this->assertSame('groundscare', $toro['vehicleType']);
         $this->assertSame(1, $toro['factCount']);
+    }
+
+    public function testListVehiclesPaginatesAndReportsTotal(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        foreach (['A', 'B', 'C'] as $i => $model) {
+            $this->planFact($client, $sessionId, [
+                'make' => 'TORO',
+                'model' => $model,
+                'vehicleType' => 'groundscare',
+                'key' => 'oil_type',
+                'value' => 'SAE 5W-30',
+                'source' => 'llm',
+            ], 3 + $i);
+        }
+
+        $page1 = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => ['limit' => 2],
+        ], 10)['result']['structuredContent'];
+
+        $this->assertSame(3, $page1['total']);
+        $this->assertSame(2, $page1['count']);
+        $this->assertSame(0, $page1['offset']);
+        $this->assertSame(2, $page1['limit']);
+        $this->assertTrue($page1['hasMore']);
+
+        $page2 = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => ['limit' => 2, 'offset' => 2],
+        ], 11)['result']['structuredContent'];
+
+        $this->assertSame(1, $page2['count']);
+        $this->assertFalse($page2['hasMore']);
+    }
+
+    public function testListVehiclesFloatsTheSelectedVehicleFirst(): void
+    {
+        $client = static::createClient();
+        // Keep one kernel/container across requests so the SelectedVehicleContext set below (which the
+        // worker would bind per turn) survives into the tool-call request.
+        $client->disableReboot();
+        $sessionId = $this->initialize($client);
+
+        // TORO created first, IVECO second — IVECO is the most-recently-touched, so it leads by default.
+        $this->planFact($client, $sessionId, ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare', 'key' => 'oil_type', 'value' => 'x', 'source' => 'llm'], 3);
+        $this->planFact($client, $sessionId, ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv', 'key' => 'oil_type', 'value' => 'y', 'source' => 'llm'], 4);
+
+        $list = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 5)['result']['structuredContent'];
+        $this->assertSame('IVECO', $list['vehicles'][0]['make'], 'default order is most-recently-touched first');
+        $toroIri = $this->vehicleByMake($list['vehicles'], 'TORO')['@id'];
+
+        // With TORO selected on the dashboard, it must lead even though IVECO is more recent.
+        $selected = static::getContainer()->get(SelectedVehicleContext::class);
+        \assert($selected instanceof SelectedVehicleContext);
+        $selected->set($toroIri);
+
+        $list = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 6)['result']['structuredContent'];
+        $this->assertSame('TORO', $list['vehicles'][0]['make'], 'the selected vehicle is floated to the top');
     }
 
     public function testListVehiclesFiltersByVehicleType(): void
