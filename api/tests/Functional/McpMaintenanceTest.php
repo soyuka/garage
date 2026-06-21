@@ -20,6 +20,29 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertContains('list_due_maintenance', $tools);
     }
 
+    public function testLoggingWithoutItemsNamesTheItemsFieldSoTheModelCanCorrect(): void
+    {
+        // A weaker model (e.g. Qwen) guesses a "natural" field name like `partsUsed` instead of the
+        // tool's `items`, so the array binds empty and the call is rejected. The error must name the
+        // exact field and show its shape, otherwise the model retries the same wrong key in a loop.
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $log = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'performedAt' => '2026-05-01',
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame('invalid_input', $log['status']);
+        $this->assertStringContainsString('items', $log['reason'], 'the error must name the `items` field');
+        $this->assertStringContainsString('"type"', $log['reason'], 'the error must show the item shape');
+    }
+
     public function testLoggingUnderAnAmbiguousMakeSurfacesCandidateInsteadOfCreating(): void
     {
         $client = static::createClient();

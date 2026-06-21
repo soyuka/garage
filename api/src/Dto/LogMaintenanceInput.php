@@ -52,15 +52,15 @@ final class LogMaintenanceInput
             ],
             'required' => ['type'],
         ],
-        'description' => 'The line-items of ONE service visit — a vidange that changed oil AND the oil filter is a SINGLE log_maintenance call with TWO items, not two calls. Each item is one service type with the parts it used.',
+        'description' => 'REQUIRED. The services covered by ONE visit, in the field named exactly "items" (NOT partsUsed/parts/services) — one entry per service, each {type, optional parts}. A vidange that changed oil AND the oil filter is a SINGLE call with TWO items ([{"type":"oil_change"},{"type":"oil_filter","parts":[{"ref":"W 712/73"}]}]), never two calls. A service with no recorded part is still an item, e.g. [{"type":"air_filter"}].',
     ])]
     public array $items = [];
 
     #[ApiProperty(description: 'Optional label for the whole visit, e.g. "révision annuelle".')]
     public ?string $label = null;
 
-    #[ApiProperty(description: 'Date the work was performed, ISO 8601 (e.g. "2026-06-15").')]
-    public string $performedAt;
+    #[ApiProperty(description: 'Date the work was performed, ISO 8601 (e.g. "2026-06-15"). Optional — omit it for work just done ("je viens de faire la vidange") and it defaults to today.')]
+    public ?string $performedAt = null;
 
     #[ApiProperty(description: 'Odometer / hour-meter reading at the time of service, when known.')]
     public ?int $usageValue = null;

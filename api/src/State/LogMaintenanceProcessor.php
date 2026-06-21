@@ -50,7 +50,7 @@ final class LogMaintenanceProcessor implements ProcessorInterface
         if ([] === $data->items) {
             return ToolResult::of([
                 'status' => 'invalid_input',
-                'reason' => 'Provide at least one item ({type, parts}) — a visit logs the services it covered.',
+                'reason' => 'The services go in the `items` array (not partsUsed/services) — one entry per service covered. Example: "items": [{"type": "oil_change", "parts": []}, {"type": "oil_filter", "parts": [{"ref": "W 712/73"}]}]. Provide at least one item, each with a "type".',
             ]);
         }
 
@@ -82,7 +82,7 @@ final class LogMaintenanceProcessor implements ProcessorInterface
             vin: $data->vin,
             confirmNew: $data->confirmNew,
             items: $data->items,
-            performedAt: new \DateTimeImmutable($data->performedAt),
+            performedAt: new \DateTimeImmutable($data->performedAt ?? 'now'),
             source: $data->source,
             label: $data->label,
             usageValue: $data->usageValue,
