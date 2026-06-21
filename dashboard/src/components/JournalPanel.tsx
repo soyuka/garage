@@ -52,12 +52,18 @@ export function JournalPanel({ open, onClose }: JournalPanelProps) {
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  const select = useCallback((iri: string) => {
-    setSelectedId(iri);
-    setDetail(null);
-    getTurn(iri)
-      .then(setDetail)
-      .catch((e) => setError((e as Error).message));
+  const toggle = useCallback((iri: string) => {
+    setSelectedId((current) => {
+      if (current === iri) {
+        setDetail(null);
+        return null;
+      }
+      setDetail(null);
+      getTurn(iri)
+        .then(setDetail)
+        .catch((e) => setError((e as Error).message));
+      return iri;
+    });
   }, []);
 
   if (!open) return null;
@@ -84,7 +90,8 @@ export function JournalPanel({ open, onClose }: JournalPanelProps) {
                 <button
                   type="button"
                   className={`journal-row${selectedId === t.id ? ' selected' : ''}`}
-                  onClick={() => select(t.id)}
+                  onClick={() => toggle(t.id)}
+                  aria-expanded={selectedId === t.id}
                 >
                   <span className={`journal-status journal-status--${STATUS_TONE[t.status]}`}>{t.status}</span>
                   <span className="journal-instruction">{t.instruction || '(vide)'}</span>
@@ -109,6 +116,10 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
 
   return (
     <div className="journal-detail">
+      <Section title="Prompt">
+        <pre className="journal-pre journal-prompt">{detail.instruction || '(vide)'}</pre>
+      </Section>
+
       <dl className="journal-facts">
         <dt>Modèle</dt>
         <dd>{detail.provider || '?'} / {detail.model || '?'} {detail.stream ? '(stream)' : ''}</dd>

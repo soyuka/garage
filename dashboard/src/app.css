@@ -631,6 +631,7 @@ body {
   font-size: 12px; white-space: pre-wrap; word-break: break-word; max-height: 320px; overflow: auto;
 }
 .journal-pre--sm { font-size: 11px; max-height: 200px; }
+.journal-prompt { user-select: text; -webkit-user-select: text; max-height: 160px; }
 .journal-pre--muted { color: var(--mpa-muted); }
 .journal-mono { font-family: var(--mpa-font-mono, monospace); font-size: 12px; word-break: break-word; }
 .journal-muted { color: var(--mpa-muted); font-size: var(--mpa-text-label); margin: 0; }
