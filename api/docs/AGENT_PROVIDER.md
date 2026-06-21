@@ -46,14 +46,28 @@ carries no provider-native web search**.
 ```
 garage agent (any platform)
   └─ tool call: web_search(query)
-       └─ WebSearchClient.search()  → out-of-band Haiku call w/ native web_search → answer + citations
+       └─ WebSearchClient.search()  → out-of-band side call (Anthropic|Gemini) → answer + citations
   └─ agent persists the finding (plan_maintenance attribute, source:"web", url:…)
 ```
 
-- Backend: `AnthropicWebSearchClient` (Haiku, model from `WEB_SEARCH_MODEL`), wired via the
-  `WebSearchClient` alias in `config/services.yaml`. **Adding Gemini = a new `WebSearchClient` impl +
-  re-aliasing — nothing else changes.** It calls the *undecorated* Anthropic platform
-  (`App\Agent\ServerToolUseLogger.inner`) so the side call doesn't pollute the turn's budget/journal.
+### Switching the web-search backend (`WEB_SEARCH_BACKEND`)
+
+Two interchangeable `WebSearchClient` implementations sit behind `SelectableWebSearchClient`, a runtime
+router that picks one from the **`WEB_SEARCH_BACKEND`** env (cast to `App\Agent\WebSearch\WebSearchBackend`):
+
+| `WEB_SEARCH_BACKEND` | impl                       | platform / model                              | key             |
+|----------------------|----------------------------|-----------------------------------------------|-----------------|
+| `anthropic`          | `AnthropicWebSearchClient` | undecorated Anthropic, `WEB_SEARCH_MODEL`     | `ANTHROPIC_API_KEY` |
+| `gemini`             | `GeminiWebSearchClient`    | `ai.platform.gemini`, `GEMINI_WEB_SEARCH_MODEL` | `GEMINI_API_KEY` |
+
+Switching is a **one-line `.env.local` edit + worker restart** — no recompile and no service
+re-aliasing (unlike the orchestrator toggle above, which is compile-time). The clients live behind a
+service locator, so only the selected backend's (lazy) platform is instantiated; the unused backend
+needs no API key. The Anthropic backend calls the *undecorated* platform
+(`App\Agent\ServerToolUseLogger.inner`) so the side call doesn't pollute the turn's budget/journal;
+the Gemini backend uses Google Search grounding (`server_tools: {google_search: true}`) and reads its
+sources from the response `groundingMetadata`.
+
 - Per-turn cap: `WebSearchTool` consults `WebSearchBudget` (reset per turn by `RunAgentTurnHandler`),
   records one use per call, and refuses once exhausted — a hard ceiling on searches per turn. The
   search is narrated on the dashboard naturally as a `web_search` toolbox call (`StepNarrator`).

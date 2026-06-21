@@ -2,6 +2,10 @@ ai:
     platform:
         anthropic:
             api_key: '%env(ANTHROPIC_API_KEY)%'
+        # Google Gemini — used ONLY by the out-of-band web-search backend (GeminiWebSearchClient),
+        # never by the garage agent below. Lazy: inert unless WEB_SEARCH_BACKEND=gemini selects it.
+        gemini:
+            api_key: '%env(GEMINI_API_KEY)%'
         # Alibaba Cloud Qwen via its OpenAI-compatible MaaS endpoint. The "generic" bridge is a raw
         # OpenAI /chat/completions client: base_url stops at /compatible-mode, completions_path defaults
         # to /v1/chat/completions. Always defined so switching the agent below is a one-line edit; it is

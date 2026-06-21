@@ -84,15 +84,30 @@ services:
         arguments:
             $inner: '@.inner'
 
-    # Out-of-band web search: a focused Haiku call with the native web_search tool, behind the
-    # provider-agnostic WebSearchClient seam so the orchestrator (any model) borrows real grounding.
-    # Swapping in a Gemini-backed client later = a new WebSearchClient impl + re-aliasing below.
+    # Out-of-band web search: a focused side call behind the provider-agnostic WebSearchClient seam so
+    # the orchestrator (any model) borrows real grounding. Two backends; WEB_SEARCH_BACKEND selects one.
+    # Anthropic: Haiku + native web_search. Uses the UNDECORATED anthropic platform (.inner) — routing
+    # through ServerToolUseLogger would double-feed the turn's WebSearchBudget and clobber the journal.
     App\Agent\WebSearch\AnthropicWebSearchClient:
         arguments:
             $platform: '@App\Agent\ServerToolUseLogger.inner'
             $model: '%env(WEB_SEARCH_MODEL)%'
 
-    App\Agent\WebSearch\WebSearchClient: '@App\Agent\WebSearch\AnthropicWebSearchClient'
+    # Gemini: Gemini + Google Search grounding. Plain ai.platform.gemini (no decorator on it).
+    App\Agent\WebSearch\GeminiWebSearchClient:
+        arguments:
+            $platform: '@ai.platform.gemini'
+            $model: '%env(GEMINI_WEB_SEARCH_MODEL)%'
+
+    # The seam the WebSearchTool depends on: a runtime router picking the backend from WEB_SEARCH_BACKEND.
+    # Service locator so only the selected backend's (lazy) platform is ever instantiated.
+    App\Agent\WebSearch\WebSearchClient:
+        class: App\Agent\WebSearch\SelectableWebSearchClient
+        arguments:
+            $clients: !service_locator
+                anthropic: '@App\Agent\WebSearch\AnthropicWebSearchClient'
+                gemini: '@App\Agent\WebSearch\GeminiWebSearchClient'
+            $backend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
 
     # Qwen counterpart: record the live model on the debug journal off each call.
     # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.
