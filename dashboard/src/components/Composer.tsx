@@ -3,9 +3,10 @@ import { useState } from 'react';
 interface Props {
   busy: boolean;
   onSend: (instruction: string) => void;
+  onCancel: () => void;
 }
 
-export function Composer({ busy, onSend }: Props) {
+export function Composer({ busy, onSend, onCancel }: Props) {
   const [value, setValue] = useState('');
 
   const submit = () => {
@@ -24,9 +25,15 @@ export function Composer({ busy, onSend }: Props) {
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && submit()}
         />
-        <button className="send" disabled={busy || !value.trim()} onClick={submit} title="Envoyer">
-          {busy ? '…' : '↑'}
-        </button>
+        {busy ? (
+          <button className="send send-stop" onClick={onCancel} title="Arrêter">
+            ◼
+          </button>
+        ) : (
+          <button className="send" disabled={!value.trim()} onClick={submit} title="Envoyer">
+            ↑
+          </button>
+        )}
       </div>
     </div>
   );

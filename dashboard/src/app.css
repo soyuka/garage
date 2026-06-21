@@ -356,6 +356,8 @@ body {
   font-size: 17px; display: grid; place-items: center; box-shadow: var(--mpa-glow-amber);
 }
 .send:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+/* Stop button shown while a turn runs — reads as "halt", not "send". */
+.send-stop { background: var(--mpa-warn, #b4541f); color: #fff; box-shadow: none; font-size: 13px; }
 
 /* ---- toasts + live rail ---- */
 .toasts { position: fixed; right: var(--mpa-space-6); bottom: 120px; display: flex; flex-direction: column; gap: var(--mpa-space-2); z-index: 20; }

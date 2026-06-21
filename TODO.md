@@ -154,6 +154,33 @@ identifier (carId+index) before exposing items.
 
 ---
 
+## Ops / deployment
+
+### Deploy MUST rebuild the cache AND restart the worker
+The `messenger:consume` worker (`api/compose*.yaml`, service `worker`) is a long-lived
+process: it loads the compiled container (service wiring, compiler passes like the
+agent tool-call cap) **and** the API Platform metadata/tool schemas into memory at boot,
+then holds them for its whole life. Class *bodies* autoload fresh from disk, but the
+compiled container and cached schemas do **not** — so shipping code without rebuilding
+the cache and restarting the worker leaves it advertising the OLD tool schema while
+running NEW handler code.
+
+Incident (2026-06-21): `log_maintenance` moved from `{type, partsUsed}` to `{items[]}`.
+The worker kept advertising the old schema, so Haiku sent `type`/`partsUsed`, the fresh
+processor rejected the empty `items`, and the agent looped 46 times burning ~8.5k tokens
+before the (also-stale, so absent) cap could fire. Cleared by `rm -rf var/cache/<env>` +
+`docker restart worker php`.
+
+Deploy step (encode in the pipeline / worker entrypoint):
+1. `rm -rf var/cache/$APP_ENV` (NOT `cache:clear` — see Known bugs: it is a no-op for the
+   metadata cache) then `bin/console cache:warmup`.
+2. Restart the `worker` (and `php`) container so it boots on the fresh cache.
+
+Candidate durable fix: bake `rm -rf var/cache/$APP_ENV && cache:warmup` into the worker
+container entrypoint before `messenger:consume`, so every (re)start is self-healing.
+
+---
+
 ## Pending tokens / data from user
 
 - [ ] `PARTSAPI_KEY_getModels` — activates `/makes/{makeId}/models` + `list_models`

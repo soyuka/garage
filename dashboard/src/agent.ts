@@ -32,3 +32,19 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
     throw new Error(`agent turn failed: ${res.status}`);
   }
 }
+
+/**
+ * Ask the worker to stop the turn running for this session. Cooperative: the endpoint acks 202 and
+ * the worker ends the turn at its next tool-call boundary (it cannot cut a single in-flight LLM
+ * call), so the busy state clears on the streamed turn-end, not on this response.
+ */
+export async function cancelTurn(sessionId: string): Promise<void> {
+  const res = await authFetch(`${API}/agent/turn/cancel`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId }),
+  });
+  if (!res.ok) {
+    throw new Error(`agent cancel failed: ${res.status}`);
+  }
+}

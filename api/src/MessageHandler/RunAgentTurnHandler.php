@@ -7,6 +7,7 @@ namespace App\MessageHandler;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\TurnContextBuilder;
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\TurnCancellations;
 use App\Agent\WebSearchBudget;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
@@ -48,6 +49,7 @@ final readonly class RunAgentTurnHandler
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
+        private TurnCancellations $cancellations,
         private LoggerInterface $logger,
     ) {
     }
@@ -59,6 +61,12 @@ final readonly class RunAgentTurnHandler
         // because the handler is a long-lived singleton in the consume worker.
         $this->owner->set($message->owner);
         $this->renderTools->bindSession($message->sessionTopic);
+        // Drop any stale cancel flag before the turn starts: a cancel that arrived after the previous
+        // turn on this session already finished must not abort this fresh one. From here on, only a
+        // cancel raised DURING this turn trips CancelTurnListener.
+        if (null !== ($sessionId = $this->renderTools->sessionId())) {
+            $this->cancellations->clear($sessionId);
+        }
         // Fresh per-turn web_search allowance — the budget service is a long-lived singleton in the
         // worker, so a prior turn's spend must not leak into this one.
         $this->webSearchBudget->reset();

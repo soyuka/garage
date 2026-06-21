@@ -46,6 +46,20 @@ final class RenderIntentTools
     }
 
     /**
+     * The bound session's id — the last segment of the topic (`…/agent/sessions/<id>`). It is the
+     * key the cancel flag is stored under, so {@see \App\Agent\Ui\CancelTurnListener} can tell whether
+     * THIS turn was asked to stop. Null before a session is bound.
+     */
+    public function sessionId(): ?string
+    {
+        if (null === $this->sessionTopic) {
+            return null;
+        }
+
+        return substr($this->sessionTopic, (int) strrpos($this->sessionTopic, '/') + 1);
+    }
+
+    /**
      * Streams a turn-lifecycle cue to the dashboard. Not an `#[AsTool]` — the LLM never calls this;
      * {@see \App\MessageHandler\RunAgentTurnHandler} brackets the tool loop with `start`/`end` so the
      * dashboard's progress heartbeat knows the worker is running and when it settles. The HTTP 202

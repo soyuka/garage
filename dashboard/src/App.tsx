@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { postTurn } from './agent';
+import { cancelTurn, postTurn } from './agent';
 import { authFetch } from './auth';
 import {
   archiveTasks,
@@ -386,6 +386,16 @@ export function App() {
     [sessionId, state.selectedId, state.cta],
   );
 
+  // Stop a running turn. Cooperative: the worker ends it at the next tool boundary and streams the
+  // `turn`/`end` cue that clears busy — so we don't flip busy here, only ask.
+  const cancel = useCallback(async () => {
+    try {
+      await cancelTurn(sessionId);
+    } catch {
+      // Best-effort: a failed cancel leaves the turn running; the hard cap is still the backstop.
+    }
+  }, [sessionId]);
+
   const onFrame = useCallback(
     (frame: MercureFrame) => {
       if ('type' in frame) {
@@ -487,7 +497,7 @@ export function App() {
               onDismiss={() => dispatch({ kind: 'dismissCta' })}
             />
           ) : null}
-          <Composer busy={busy} onSend={send} />
+          <Composer busy={busy} onSend={send} onCancel={cancel} />
         </main>
       </div>
       <Toasts toasts={state.toasts} onDismiss={(id) => dispatch({ kind: 'dismissToast', id })} />
