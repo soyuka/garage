@@ -80,6 +80,16 @@ services:
     restart: unless-stopped
     environment: *php_environment
     command: ["php", "bin/console", "messenger:consume", "async", "failed", "-vvv", "--time-limit=3600"]
+    # The php image's HEALTHCHECK probes FrankenPHP's :2019/metrics, but this container only consumes
+    # the queue (no HTTP server), so it would always report unhealthy. Override with a real liveness
+    # check: the consumer process must be present. pgrep is unavailable (no procps in the image), so
+    # scan /proc/<pid>/cmdline directly (NUL-separated, hence grep -a).
+    healthcheck:
+      test: ["CMD-SHELL", "grep -aqs messenger:consume /proc/[0-9]*/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     depends_on:
       # php first: its entrypoint runs the DB migration. Waiting for it healthy means migration is
       # done before this container's own entrypoint runs it again (a no-op), so the two never race.
