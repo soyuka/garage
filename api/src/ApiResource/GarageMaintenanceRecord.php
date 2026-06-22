@@ -13,6 +13,7 @@ use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Dto\MaintenanceRecordInput;
+use App\Entity\MaintenanceAttachment;
 use App\Entity\MaintenanceRecord;
 use App\State\GarageMaintenanceRecordProvider;
 use App\State\MaintenanceRecordCreateProcessor;
@@ -68,6 +69,15 @@ final class GarageMaintenanceRecord
 
     /** @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}> */
     public array $items = [];
+
+    /**
+     * The visit's bills, each {id, filename, contentType, size, url}. `url` is the download IRI the
+     * dashboard fetches (with its Bearer) to render the file. Read-only here — bills are written
+     * through the dedicated multipart upload/delete operations, not this read-model.
+     *
+     * @var list<array{id: string, filename: string, contentType: string, size: int, url: string}>
+     */
+    public array $attachments = [];
     public ?string $label = null;
     public string $performedAt;
     public ?int $usageValue = null;
@@ -84,6 +94,11 @@ final class GarageMaintenanceRecord
         $resource = new self();
         $resource->id = $record->getId();
         $resource->items = $record->getItems();
+        $recordId = (string) $record->getId();
+        $resource->attachments = array_map(
+            static fn (MaintenanceAttachment $a): array => self::attachmentView($a, $recordId),
+            $record->getAttachments(),
+        );
         $resource->label = $record->getLabel();
         $resource->performedAt = $record->getPerformedAt()->format('Y-m-d');
         $resource->usageValue = $record->getUsageValue();
@@ -96,5 +111,22 @@ final class GarageMaintenanceRecord
         $resource->addedAt = $record->getAddedAt()->format(\DateTimeInterface::ATOM);
 
         return $resource;
+    }
+
+    /**
+     * The wire shape of one bill, shared by this read-model and the upload endpoint's 201 body so the
+     * download IRI is built in exactly one place.
+     *
+     * @return array{id: string, filename: string, contentType: string, size: int, url: string}
+     */
+    public static function attachmentView(MaintenanceAttachment $attachment, string $recordId): array
+    {
+        return [
+            'id' => $attachment->getId(),
+            'filename' => $attachment->getFilename(),
+            'contentType' => $attachment->getContentType(),
+            'size' => $attachment->getSize(),
+            'url' => sprintf('/garage/maintenance-records/%s/attachments/%s', $recordId, $attachment->getId()),
+        ];
     }
 }

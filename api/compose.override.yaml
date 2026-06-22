@@ -79,3 +79,10 @@ services:
     ports:
       - "${MONGODB_PORT:-27017}:27017"
 ###< doctrine/mongodb-odm-bundle ###
+
+  # Publish the S3 API (9000) so a host-run `symfony serve` reaches it at 127.0.0.1:9000 (the .env
+  # default), and the web console (9001) for eyeballing stored bills during dev.
+  minio:
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"

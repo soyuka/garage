@@ -1,5 +1,5 @@
 import { authFetch } from './auth';
-import type { MaintenanceRecord, PlannedPart, PlannedTask, VehicleSummary } from './types';
+import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart, PlannedTask, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -175,6 +175,36 @@ export async function deleteMaintenanceRecord(recordIri: string): Promise<void> 
     headers: { Accept: 'application/ld+json' },
   });
   if (!res.ok) throw new Error(`record delete failed: ${res.status}`);
+}
+
+/**
+ * Attach one bill (PDF/JPEG/PNG) to a logged visit: multipart POST to its attachments subresource.
+ * The browser sets the multipart Content-Type (with boundary) itself — never set it by hand.
+ * Returns the stored attachment's metadata.
+ */
+export async function uploadMaintenanceAttachment(recordIri: string, file: File): Promise<MaintenanceAttachment> {
+  const body = new FormData();
+  body.append('file', file);
+  const res = await authFetch(`${API}${recordIri}/attachments`, { method: 'POST', body });
+  if (!res.ok) throw new Error(`attachment upload failed: ${res.status}`);
+  return res.json() as Promise<MaintenanceAttachment>;
+}
+
+/** Remove one bill from a visit (DELETE the attachment IRI). */
+export async function deleteMaintenanceAttachment(attachmentUrl: string): Promise<void> {
+  const res = await authFetch(`${API}${attachmentUrl}`, { method: 'DELETE', headers: { Accept: 'application/ld+json' } });
+  if (!res.ok && res.status !== 204) throw new Error(`attachment delete failed: ${res.status}`);
+}
+
+/**
+ * Fetch a bill's bytes with the Bearer and hand back an object URL for viewing. The endpoint is
+ * owner-gated, so a plain <a href>/<img src> (no Authorization header) would 404 — we fetch then
+ * URL.createObjectURL. The caller must URL.revokeObjectURL when done to avoid leaking the blob.
+ */
+export async function fetchAttachmentObjectUrl(attachmentUrl: string): Promise<string> {
+  const res = await authFetch(`${API}${attachmentUrl}`);
+  if (!res.ok) throw new Error(`attachment fetch failed: ${res.status}`);
+  return URL.createObjectURL(await res.blob());
 }
 
 /**

@@ -124,6 +124,27 @@ services:
             $sivCache: '@cache.siv'
             $partsApiCache: '@cache.partsapi'
 
+    # The S3-compatible client backing the maintenance-bills Flysystem storage (config/packages/
+    # flysystem.yaml). pathStyleEndpoint is required for MinIO and other non-AWS S3 servers, which
+    # serve buckets as a path segment (host/bucket/key) rather than a vhost (bucket.host/key). In
+    # the test env the storage swaps to a local adapter, so this client is never instantiated there.
+    maintenance.s3_client:
+        class: AsyncAws\S3\S3Client
+        arguments:
+            $configuration:
+                endpoint: '%env(S3_ENDPOINT)%'
+                accessKeyId: '%env(S3_ACCESS_KEY)%'
+                accessKeySecret: '%env(S3_SECRET_KEY)%'
+                region: '%env(S3_REGION)%'
+                pathStyleEndpoint: true
+
+    # Bind the named Flysystem storage explicitly: the bundle's argument alias camelises the
+    # dotted storage name into something unusable ($maintenance_Storage), so reference the
+    # storage service id directly instead.
+    App\Storage\MaintenanceAttachmentStorage:
+        arguments:
+            $filesystem: '@maintenance.storage'
+
     # Validates Casdoor JWTs for the /mcp firewall (dev/prod). Audience is intentionally
     # unpinned — see the class docblock. JWKS discovered from CASDOOR_ISSUER, cached in cache.app.
     App\Security\CasdoorTokenHandler:

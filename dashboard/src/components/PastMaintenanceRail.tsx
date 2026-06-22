@@ -1,7 +1,10 @@
-import { useState } from 'react';
-import type { MaintenanceItemInput, MaintenanceRecordInput } from '../garage';
+import { useRef, useState } from 'react';
+import { fetchAttachmentObjectUrl, type MaintenanceItemInput, type MaintenanceRecordInput } from '../garage';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
-import type { MaintenanceRecord, PlannedPart } from '../types';
+import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart } from '../types';
+
+/** Browser-accepted bill types — must mirror the server's allow-list (PDF/JPEG/PNG). */
+const ACCEPTED_BILL_TYPES = 'application/pdf,image/png,image/jpeg';
 
 /** Format a stored reading (138000 → "138 000 km"); empty when none. */
 function reading(value?: number | null, unit?: string | null): string {
@@ -43,16 +46,21 @@ export function PastMaintenanceRail({
   onAddRecord,
   onEditRecord,
   onDeleteRecord,
+  onUploadAttachment,
+  onDeleteAttachment,
 }: {
   records: MaintenanceRecord[] | undefined;
   loading?: boolean;
   onAddRecord: (input: MaintenanceRecordInput) => void;
   onEditRecord: (recordIri: string, input: MaintenanceRecordInput) => void;
   onDeleteRecord: (recordIri: string) => void;
+  onUploadAttachment: (recordIri: string, file: File) => void;
+  onDeleteAttachment: (attachmentUrl: string) => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const list = records ?? [];
+  const editing = editingId ? list.find((r) => r.id === editingId) : undefined;
 
   return (
     <div className="hist">
@@ -71,7 +79,18 @@ export function PastMaintenanceRail({
         </button>
       </div>
 
-      {adding ? (
+      {editing ? (
+        <RecordForm
+          key={editing.id}
+          initial={editing}
+          submitLabel="Mettre à jour"
+          onSubmit={(input) => {
+            onEditRecord(editing.id, input);
+            setEditingId(null);
+          }}
+          onCancel={() => setEditingId(null)}
+        />
+      ) : adding ? (
         <RecordForm
           submitLabel="Enregistrer"
           onSubmit={(input) => {
@@ -100,20 +119,8 @@ export function PastMaintenanceRail({
             const title = visitTitle(r);
             // Skip the redundant checklist when it would just echo the title (single unnamed service, no parts).
             const showItems = items.length > 1 || (items.length === 1 && items[0].parts.length > 0);
-            return editingId === r.id ? (
-              <div key={r.id} className="hist-card hist-card-editing">
-                <RecordForm
-                  initial={r}
-                  submitLabel="Mettre à jour"
-                  onSubmit={(input) => {
-                    onEditRecord(r.id, input);
-                    setEditingId(null);
-                  }}
-                  onCancel={() => setEditingId(null)}
-                />
-              </div>
-            ) : (
-              <div key={r.id} className="hist-card">
+            return (
+              <div key={r.id} className={`hist-card${editingId === r.id ? ' hist-card-active' : ''}`}>
                 <div className="hist-card-head">
                   <span className="hist-type">{title}</span>
                   <div className="hist-actions">
@@ -161,11 +168,77 @@ export function PastMaintenanceRail({
                   {r.performedBy ? <span>{r.performedBy}</span> : null}
                 </div>
                 {r.notes ? <div className="hist-notes">{r.notes}</div> : null}
+                <BillStrip
+                  record={r}
+                  onUpload={(file) => onUploadAttachment(r.id, file)}
+                  onDelete={onDeleteAttachment}
+                />
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * The bills attached to one logged visit: a chip per file (click to view it in a new tab), a delete
+ * on each, and a button to add more. Bills upload onto the already-saved visit, so this lives on the
+ * card rather than in the create form. The download is owner-gated, so viewing fetches the bytes
+ * with the Bearer and opens an object URL — a bare link would 404.
+ */
+function BillStrip({
+  record,
+  onUpload,
+  onDelete,
+}: {
+  record: MaintenanceRecord;
+  onUpload: (file: File) => void;
+  onDelete: (attachmentUrl: string) => void;
+}) {
+  const fileInput = useRef<HTMLInputElement>(null);
+  const attachments = record.attachments ?? [];
+
+  const view = async (att: MaintenanceAttachment) => {
+    try {
+      const url = await fetchAttachmentObjectUrl(att.url);
+      window.open(url, '_blank', 'noopener');
+      // Give the new tab time to load the blob before releasing it.
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch {
+      /* non-critical: the bill just won't open; the fetch failure is surfaced elsewhere */
+    }
+  };
+
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    Array.from(e.target.files ?? []).forEach(onUpload);
+    e.target.value = ''; // let the same file be re-picked after a failed upload
+  };
+
+  return (
+    <div className="hist-bills">
+      {attachments.map((att) => (
+        <span key={att.id} className="hist-bill">
+          <button type="button" className="hist-bill-name" title={att.filename} onClick={() => view(att)}>
+            <span aria-hidden="true">{att.contentType === 'application/pdf' ? '📄' : '🖼️'}</span> {att.filename}
+          </button>
+          <button
+            type="button"
+            className="hist-bill-del"
+            aria-label={`Supprimer la facture ${att.filename}`}
+            onClick={() => {
+              if (window.confirm(`Supprimer la facture « ${att.filename} » ?`)) onDelete(att.url);
+            }}
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+      <button type="button" className="hist-bill-add" onClick={() => fileInput.current?.click()}>
+        + facture
+      </button>
+      <input ref={fileInput} type="file" accept={ACCEPTED_BILL_TYPES} multiple hidden onChange={onPick} />
     </div>
   );
 }

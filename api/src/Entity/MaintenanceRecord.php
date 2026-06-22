@@ -6,6 +6,8 @@ namespace App\Entity;
 
 use App\Maintenance\UsageUnit;
 use App\Repository\MaintenanceRecordRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
@@ -48,6 +50,16 @@ class MaintenanceRecord
     private array $items = [];
 
     /**
+     * The visit's bills (PDF/JPEG/PNG), one embedded metadata doc per file; the binaries live in the
+     * object store. Declared class-level and initialised in the constructor — ODM hydrates a record
+     * predating this field to an empty collection, so a legacy document never trips on it.
+     *
+     * @var Collection<int, MaintenanceAttachment>
+     */
+    #[ODM\EmbedMany(targetDocument: MaintenanceAttachment::class)]
+    private Collection $attachments;
+
+    /**
      * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
      */
     public function __construct(
@@ -82,6 +94,7 @@ class MaintenanceRecord
         private ?string $owner = null,
     ) {
         $this->items = self::normaliseItems($items);
+        $this->attachments = new ArrayCollection();
         $this->id = (string) new Ulid();
         $vehicle->addMaintenanceRecord($this);
     }
@@ -130,6 +143,41 @@ class MaintenanceRecord
     public function getItems(): array
     {
         return $this->items;
+    }
+
+    /** @return list<MaintenanceAttachment> */
+    public function getAttachments(): array
+    {
+        return array_values($this->attachments->toArray());
+    }
+
+    public function addAttachment(MaintenanceAttachment $attachment): void
+    {
+        $this->attachments->add($attachment);
+    }
+
+    public function findAttachment(string $id): ?MaintenanceAttachment
+    {
+        foreach ($this->attachments as $attachment) {
+            if ($attachment->getId() === $id) {
+                return $attachment;
+            }
+        }
+
+        return null;
+    }
+
+    /** Detach a bill by its id; returns false when the visit has no such attachment. */
+    public function removeAttachment(string $id): bool
+    {
+        $attachment = $this->findAttachment($id);
+        if (null === $attachment) {
+            return false;
+        }
+
+        $this->attachments->removeElement($attachment);
+
+        return true;
     }
 
     /**

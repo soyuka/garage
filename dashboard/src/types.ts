@@ -33,9 +33,19 @@ export interface MaintenanceItem {
   parts: PlannedPart[];
 }
 
+/** A bill attached to a visit. `url` is the gated download IRI (fetch with the Bearer, not <img src>). */
+export interface MaintenanceAttachment {
+  id: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  url: string;
+}
+
 export interface MaintenanceRecord {
   id: string; // the record IRI (@id, normalized)
   items: MaintenanceItem[]; // the services this visit covered — one row, many items
+  attachments?: MaintenanceAttachment[]; // the visit's bills (PDF/JPEG/PNG)
   label?: string | null; // visit-level label, e.g. "révision annuelle"
   performedAt: string; // YYYY-MM-DD
   usageValue?: number | null;

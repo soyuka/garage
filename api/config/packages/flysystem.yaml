@@ -1,0 +1,23 @@
+# Maintenance bills live in an S3-like object store (MinIO in dev, any S3-compatible bucket in
+# prod) behind the async-aws adapter. The `maintenance.s3_client` service (services.yaml) carries
+# the endpoint/credentials; this just names the bucket + a key prefix so bills never collide with
+# other content in the same bucket.
+flysystem:
+    storages:
+        maintenance.storage:
+            adapter: 'asyncaws'
+            options:
+                client: 'maintenance.s3_client'
+                bucket: '%env(S3_BUCKET)%'
+                prefix: 'maintenance-bills'
+
+# The suite must stay hermetic — no MinIO/S3 dependency to run `php bin/phpunit` on the host. A
+# local adapter under the cache dir gives the same FilesystemOperator contract; setUp drops Mongo,
+# and the cache dir is disposable, so stored test bytes never leak between runs.
+when@test:
+    flysystem:
+        storages:
+            maintenance.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.cache_dir%/maintenance-storage'
