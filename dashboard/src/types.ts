@@ -2,6 +2,20 @@ export type VehicleId = string;
 export type VehicleStatus = 'ok' | 'soon' | 'overdue';
 export type Tone = 'info' | 'ok' | 'warn' | 'alarm';
 
+/**
+ * The API's maintenance-health rollup, served on the item GET only (the collection listing omits it).
+ * `red` = at least one overdue service; `amber` = something due soon or a coverage gap; `green` = all
+ * tracked & current; `unknown` = nothing tracked yet — render neutral/grey, NOT as a healthy state.
+ */
+export interface MaintenanceHealth {
+  status: 'green' | 'amber' | 'red' | 'unknown';
+  score: number | null; // null only when status is "unknown"
+  overdue: number; // overdue services
+  dueSoon: number; // due within 30 days
+  tracked: number; // services with a logged baseline
+  gaps: number; // recurring services with NO logged baseline
+}
+
 export interface NextService {
   value: number;
   unit: string;
@@ -58,6 +72,58 @@ export interface MaintenanceRecord {
   source: string;
 }
 
+/** The usage axis of a forecast item — engine-hours / km / mi against the service's cadence. */
+export interface ForecastUsage {
+  last: number;
+  due: number;
+  remaining: number;
+  unit: 'hours' | 'km' | 'mi';
+}
+
+/**
+ * One predicted-due service from the per-vehicle forecast. A `rule` of "schedule" is a per-vehicle
+ * cadence (authoritative-ish); "default" is a generic general-knowledge fallback (less authoritative,
+ * tagged "générique"). Usage-axis items carry `usage`; time-axis items carry `dueAt`/`projectedDueAt`.
+ */
+export interface ForecastDue {
+  type: string;
+  action: 'change' | 'replace' | 'clean' | 'inspect' | null;
+  component: string | null;
+  rule: 'schedule' | 'default';
+  lastPerformedAt: string | null; // Y-m-d
+  dueAt: string | null; // Y-m-d, time axis
+  projectedDueAt: string | null; // Y-m-d, usage axis projected onto the calendar (estimate)
+  overdue: boolean;
+  daysUntilDue: number | null;
+  intervalMonths: number | null;
+  usage: ForecastUsage | null;
+  usageInterval: { value: number; unit: string } | null; // advisory, rule="default" only
+}
+
+/** The per-vehicle forecast (GET …/forecast): due items sorted soonest-first + coverage gaps. */
+export interface VehicleForecast {
+  vehicle: string; // the vehicle IRI
+  due: ForecastDue[];
+  gaps: string[]; // recurring types with a known cadence but no logged baseline
+}
+
+/**
+ * The compact next-due summary carried on each parc-listing member (collection only), driving the
+ * sidebar rail's one-line forecast. Null when nothing is predictable yet.
+ */
+export interface NextDue {
+  type: string;
+  action: 'change' | 'replace' | 'clean' | 'inspect' | null;
+  label: string;
+  rule: 'schedule' | 'default';
+  overdue: boolean;
+  dueAt: string | null;
+  projectedDueAt: string | null;
+  daysUntilDue: number | null;
+  usageRemaining: number | null;
+  usageUnit: 'hours' | 'km' | 'mi' | null;
+}
+
 export interface Vehicle {
   id: VehicleId;
   initials: string;
@@ -75,17 +141,18 @@ export interface Vehicle {
   kType?: number;
   plate?: string;
   verified?: boolean;
-  health: number; // 0–100
-  healthLabel: string; // "Véhicule sain"
   mileage: string; // "142 000" — display form of usageValue
   mileageUnit: string; // "km"
   usageValue?: number; // raw reading, for inline editing
   usageUnit?: string; // "km" | "mi" | "h"
   facts?: VehicleFact[]; // populated from the item GET on select
+  maintenanceHealth?: MaintenanceHealth; // API-computed rollup, item GET only (listing omits it)
   nextService: NextService;
   openTasks: number;
   plannedTasks: PlannedTask[]; // the open checklist, populated from the item GET
   maintenanceRecords?: MaintenanceRecord[]; // past services, loaded from the records subresource
+  forecast?: VehicleForecast; // maintenance forecast, loaded from the forecast subresource
+  nextDue?: NextDue | null; // compact next-due, carried on the listing for the rail line
   cost: { total: string; period: string; delta: string };
 }
 
@@ -148,6 +215,10 @@ export interface VehicleSummary {
   factCount: number;
   openTasks?: number;
   facts?: VehicleFact[];
+  // The maintenance-health rollup — served on the item GET only, absent on the collection listing.
+  health?: MaintenanceHealth;
+  // The compact next-due summary — carried on the collection listing for the rail line; may be null.
+  nextDue?: NextDue | null;
   // Populated on the item GET only. The API serves the task IRI as `@id`; vehicleFromSummary
   // normalizes it to `id` for the UI.
   plannedTasks?: Array<PlannedTask & { '@id'?: string }>;

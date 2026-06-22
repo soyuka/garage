@@ -9,6 +9,7 @@ use App\ApiResource\GarageVehicle;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use App\Maintenance\VehicleFactsProjector;
+use App\Maintenance\VehicleHealthCalculator;
 
 /**
  * Single source of truth for the dereferenceable vehicle item shape — its scalars plus the inlined
@@ -23,7 +24,28 @@ final class GarageVehicleView
     public function __construct(
         private readonly IriConverterInterface $iriConverter,
         private readonly VehicleFactsProjector $factsProjector,
+        private readonly VehicleHealthCalculator $health,
     ) {
+    }
+
+    /**
+     * The vehicle's composed maintenance health badge — status + 0–100 score + the breakdown the
+     * badge explains itself with. Computed on read from the forecast; the vehicle stores no health.
+     *
+     * @return array{status: string, score: int|null, overdue: int, dueSoon: int, tracked: int, gaps: int}
+     */
+    public function healthOf(Vehicle $vehicle): array
+    {
+        $health = $this->health->forVehicle($vehicle);
+
+        return [
+            'status' => $health->status->value,
+            'score' => $health->score,
+            'overdue' => $health->overdue,
+            'dueSoon' => $health->dueSoon,
+            'tracked' => $health->tracked,
+            'gaps' => $health->gaps,
+        ];
     }
 
     /**
@@ -72,6 +94,7 @@ final class GarageVehicleView
             'usageUnit' => $vehicle->getUsageUnit()?->value,
             'factCount' => \count($facts),
             'facts' => $facts,
+            'health' => $this->healthOf($vehicle),
             'addedAt' => $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM),
         ];
     }

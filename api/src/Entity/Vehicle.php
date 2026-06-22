@@ -47,6 +47,15 @@ class Vehicle
     #[ODM\ReferenceMany(targetDocument: PlannedMaintenance::class, mappedBy: 'vehicle', cascade: ['persist'], orphanRemoval: true, storeAs: 'id')]
     private Collection $plannedTasks;
 
+    // The per-vehicle recurring SCHEDULE — embedded {@see ServiceInterval} rules keyed by
+    // {@see ServiceInterval::key()} (the 'set' strategy stores them as a `{key: {...}}` map, so one
+    // rule per key is structural while one type still holds several cadences via distinct keys).
+    // Distinct from plannedTasks (open to-dos that resolve to records) and maintenanceRecords (the
+    // history): this is the rule the forecast projects the next occurrence from.
+    /** @var Collection<string, ServiceInterval> */
+    #[ODM\EmbedMany(targetDocument: ServiceInterval::class, strategy: 'set')]
+    private Collection $serviceSchedule;
+
     // Manufacturer engine code (SIV code_moteur, e.g. "WJY", "F1AE0481B") or a plain displacement
     // label the user keys in ("1.9"). Distinct from the kType (TecDoc id) and the modification
     // (trim label): the motor a mechanic asks for. Not on the dedup path — purely descriptive.
@@ -121,6 +130,7 @@ class Vehicle
         $this->id = (string) new Ulid();
         $this->maintenanceRecords = new ArrayCollection();
         $this->plannedTasks = new ArrayCollection();
+        $this->serviceSchedule = new ArrayCollection();
         $this->engineCode = $engineCode;
         $this->deletedAt = $deletedAt;
     }
@@ -366,5 +376,32 @@ class Vehicle
     public function openTaskCount(): int
     {
         return \count($this->openTasks());
+    }
+
+    /**
+     * Upsert a recurring rule, keyed by {@see ServiceInterval::key()} — re-setting a key replaces it
+     * in place (a refreshed interval, or a fix), unmentioned keys stay. Additive like the fact store.
+     */
+    public function setServiceInterval(ServiceInterval $interval): void
+    {
+        $this->serviceSchedule->set($interval->key(), $interval);
+    }
+
+    public function serviceIntervalByKey(string $key): ?ServiceInterval
+    {
+        return $this->serviceSchedule->get($key);
+    }
+
+    /**
+     * The live recurring schedule — tombstoned rules drop off. This is what the forecast reads.
+     *
+     * @return list<ServiceInterval>
+     */
+    public function serviceSchedule(): array
+    {
+        return array_values(array_filter(
+            $this->serviceSchedule->toArray(),
+            static fn (ServiceInterval $interval): bool => !$interval->isDeleted(),
+        ));
     }
 }

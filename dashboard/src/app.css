@@ -222,6 +222,12 @@ body {
   color: var(--mpa-muted); font-size: var(--mpa-text-small);
   font-variant-numeric: tabular-nums;
 }
+/* compact next-due forecast line, beneath the usage reading; overdue reads red */
+.car-card-next {
+  color: var(--mpa-text-3); font-size: var(--mpa-text-tiny); font-variant-numeric: tabular-nums;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px;
+}
+.car-card-next--overdue { color: var(--mpa-alarm); font-weight: 600; }
 .car-card-status { flex: none; width: 9px; height: 9px; border-radius: var(--mpa-radius-pill); }
 .car-card.active .car-card-status { box-shadow: 0 0 8px currentColor; }
 /* The card sits in a relative wrapper so its remove affordance can float top-right without nesting
@@ -606,6 +612,63 @@ body {
   padding: 3px 10px; border-radius: var(--mpa-radius-pill);
 }
 .hist-bill-add:hover { color: var(--mpa-accent); border-color: var(--mpa-accent); }
+
+/* ---- maintenance forecast: a grid of predicted-due cards + an "à renseigner" gap list ---- */
+.forecast-empty { color: var(--mpa-faint); font-size: var(--mpa-text-small); }
+.forecast-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--mpa-space-3);
+}
+.forecast-card {
+  padding: var(--mpa-space-3) var(--mpa-space-4);
+  background: var(--mpa-inset); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-lg);
+  display: flex; flex-direction: column; gap: var(--mpa-space-2);
+}
+/* Overdue cards take a red edge so they read urgent at a glance. */
+.forecast-card--overdue { border-color: var(--mpa-alarm); }
+.forecast-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--mpa-space-2); }
+.forecast-card-title { font-weight: 600; font-size: var(--mpa-text-body, 14px); line-height: 1.25; min-width: 0; }
+.forecast-card-tags { display: inline-flex; align-items: center; gap: 6px; flex: none; }
+/* "générique" — a quiet tag for a default (general-knowledge) rule, less authoritative than a schedule. */
+.forecast-tag-generic {
+  font-size: var(--mpa-text-tiny); font-weight: 600; color: var(--mpa-muted);
+  background: rgba(255,255,255,0.05); border: 1px solid var(--mpa-border-soft);
+  border-radius: var(--mpa-radius-sm); padding: 2px 7px;
+}
+/* The headline: remaining usage / firm date. */
+.forecast-lead {
+  font-size: var(--mpa-text-label); font-weight: 600; color: var(--mpa-text-2);
+  font-variant-numeric: tabular-nums;
+}
+/* A rate-derived estimate (projectedDueAt) reads softer than a firm schedule date. */
+.forecast-lead--estimate { font-weight: 500; color: var(--mpa-muted); font-style: italic; }
+.forecast-lead--overdue { color: var(--mpa-alarm); }
+.forecast-bar {
+  height: 5px; border-radius: var(--mpa-radius-pill); background: var(--mpa-inset);
+  border: 1px solid var(--mpa-border-soft); overflow: hidden;
+}
+.forecast-bar-fill { display: block; height: 100%; background: var(--mpa-accent); border-radius: inherit; }
+.forecast-bar-fill--overdue { background: var(--mpa-alarm); }
+.forecast-sub { color: var(--mpa-faint); font-size: var(--mpa-text-small); font-variant-numeric: tabular-nums; }
+
+/* the gap list — recurring services with a known cadence but no logged baseline */
+.forecast-gaps { margin-top: var(--mpa-space-4); padding-top: var(--mpa-space-3); border-top: 1px solid var(--mpa-border-soft); }
+.forecast-gaps-title {
+  margin: 0 0 var(--mpa-space-2); font-size: var(--mpa-text-label); font-weight: 600;
+  color: var(--mpa-muted); text-transform: uppercase; letter-spacing: var(--mpa-track-label);
+}
+.forecast-gaps-list { display: flex; flex-direction: column; }
+.forecast-gap {
+  display: flex; align-items: baseline; gap: var(--mpa-space-3);
+  padding: var(--mpa-space-2) 0; border-top: 1px solid var(--mpa-border);
+}
+.forecast-gap:first-child { border-top: none; }
+.forecast-gap-name { font-weight: 500; flex: none; }
+.forecast-gap-note { color: var(--mpa-faint); font-size: var(--mpa-text-small); flex: 1 1 auto; }
+.forecast-gap-cta {
+  border: none; background: transparent; padding: 0; cursor: pointer; flex: none;
+  color: var(--mpa-accent); font-size: var(--mpa-text-label);
+}
+.forecast-gap-cta:hover { text-decoration: underline; }
 
 /* ---- manual visit form (create + edit), used inside the past-maintenance rail ---- */
 .record-form {

@@ -1,4 +1,5 @@
 import { CarCardSkeleton } from './Skeletons';
+import { formatNextDue } from '../forecast';
 import type { Vehicle, VehicleId, VehicleStatus } from '../types';
 
 const STATUS_COLOR: Record<VehicleStatus, string> = {
@@ -34,7 +35,9 @@ export function CarRail({ vehicles, selectedId, onSelect, onAddCar, onRemoveCar,
   return (
     <div className="car-rail">
       <div className="car-rail-track">
-        {vehicles.map((v) => (
+        {vehicles.map((v) => {
+          const nextDue = formatNextDue(v.nextDue);
+          return (
           <div key={v.id} className="car-card-wrap">
             <button
               type="button"
@@ -46,6 +49,9 @@ export function CarRail({ vehicles, selectedId, onSelect, onAddCar, onRemoveCar,
               <span className="car-card-body">
                 <span className="car-card-name">{v.name}</span>
                 <span className="car-card-sub">{v.usage || v.subtitle}</span>
+                {nextDue ? (
+                  <span className={`car-card-next${nextDue.overdue ? ' car-card-next--overdue' : ''}`}>{nextDue.text}</span>
+                ) : null}
               </span>
               <span className="car-card-status" style={{ background: STATUS_COLOR[v.status] }} />
             </button>
@@ -61,7 +67,8 @@ export function CarRail({ vehicles, selectedId, onSelect, onAddCar, onRemoveCar,
               ×
             </button>
           </div>
-        ))}
+          );
+        })}
         <button type="button" className="car-card car-card-add hud-panel" title="Ajouter un véhicule" onClick={onAddCar}>
           <span className="car-card-add-glyph">+</span>
           <span className="car-card-add-label">Ajouter</span>

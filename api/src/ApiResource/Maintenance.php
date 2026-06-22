@@ -12,6 +12,7 @@ use App\Dto\GetMaintenanceHistoryInput;
 use App\Dto\ListDueMaintenanceInput;
 use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
+use App\Dto\SetMaintenanceScheduleInput;
 use App\Mcp\UiResourceLoader;
 use App\State\DismissMaintenanceProcessor;
 use App\State\EditMaintenanceProcessor;
@@ -19,6 +20,7 @@ use App\State\GetMaintenanceHistoryProcessor;
 use App\State\ListDueMaintenanceProcessor;
 use App\State\LogMaintenanceProcessor;
 use App\State\PlanMaintenanceProcessor;
+use App\State\SetMaintenanceScheduleProcessor;
 
 /**
  * The maintenance log: an append-only history of dated service events, exposed as MCP tools
@@ -69,6 +71,16 @@ use App\State\PlanMaintenanceProcessor;
             structuredContent: false,
             processor: PlanMaintenanceProcessor::class,
             // Upsert keyed on (vehicle, type, label): re-sending the same plan updates one task, never
+            // deletes — idempotent and non-destructive.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
+        ),
+        'set_maintenance_schedule' => new McpTool(
+            title: 'Set Maintenance Schedule',
+            description: 'Persist a vehicle\'s RECURRING service schedule — the manufacturer/owner-manual cadences that say HOW OFTEN each service recurs, so the forecast can predict the next occurrence. Use it after looking up a maintenance schedule (e.g. "what is the maintenance schedule for my TORO 246-H?"): record EVERY cadence as its own `items` entry, never collapse them into one log. Distinct from log_maintenance (a past event) and plan_maintenance (one open to-do): this stores the rule. Each rule carries a `type`, an `action` (change/replace/clean/inspect — so ONE type holds several cadences: spark plug INSPECT every 25 h vs REPLACE every 100 h), an optional `component` (the air filter\'s "foam element" cleaned vs "paper cartridge" replaced), and at least one cadence: `everyUsageValue`+`everyUsageUnit` (use "hours" for hour-metered machinery — the axis that matters for groundscare), `everyMonths` ("or once a year" = 12; when both axes are set the soonest wins), and/or `firstUsageValue` (a break-in override, e.g. first oil change at 5 h then every 50 h). This is an UPSERT keyed on (type, action, component): re-sending a cadence refreshes it, new cadences append. Identify the vehicle by make+model (its row is created if unknown) OR by its @id; same ambiguous_match/confirmNew dedup as the other write tools.',
+            input: SetMaintenanceScheduleInput::class,
+            structuredContent: false,
+            processor: SetMaintenanceScheduleProcessor::class,
+            // Upsert keyed on (type, action, component): re-sending the same rule refreshes it, never
             // deletes — idempotent and non-destructive.
             annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
         ),

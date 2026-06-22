@@ -8,6 +8,8 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageVehicle;
 use App\Entity\Vehicle;
+use App\Maintenance\DueMaintenanceCalculator;
+use App\Maintenance\DueMaintenanceView;
 use App\Maintenance\VehicleFactsProjector;
 use App\Repository\VehicleRepository;
 
@@ -23,6 +25,8 @@ final class GarageVehicleCollectionProvider implements ProviderInterface
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly VehicleFactsProjector $factsProjector,
+        private readonly DueMaintenanceCalculator $calculator,
+        private readonly DueMaintenanceView $dueView,
     ) {
     }
 
@@ -31,10 +35,15 @@ final class GarageVehicleCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
-        // The listing stays light (no inlined facts), but carries factCount so the sidebar shows it.
+        // The listing stays light (no inlined facts), but carries factCount and the soonest-due
+        // summary so the sidebar shows both. The forecast walks the same records the facts projector
+        // already loads per vehicle, so the rail summary costs no extra query.
         return array_map(function (Vehicle $vehicle): GarageVehicle {
             $resource = GarageVehicle::fromEntity($vehicle);
             $resource->factCount = \count($this->factsProjector->forVehicle($vehicle));
+
+            $due = $this->calculator->forVehicle($vehicle)->due;
+            $resource->nextDue = [] === $due ? null : $this->dueView->compact($due[0]);
 
             return $resource;
         }, $this->vehicles->findShared());

@@ -10,6 +10,7 @@ import {
   deleteMaintenanceRecord,
   deleteVehicle,
   deleteVehicleFact,
+  fetchForecast,
   getMaintenanceRecords,
   getVehicle,
   getVehicleTasks,
@@ -71,6 +72,7 @@ export function App() {
   // independent of the boot skeleton.
   const [tasksLoading, setTasksLoading] = useState(false);
   const [recordsLoading, setRecordsLoading] = useState(false);
+  const [forecastLoading, setForecastLoading] = useState(false);
   // The agent debug journal drawer — opened from the TopBar, reads GET /agent/turns on demand.
   const [journalOpen, setJournalOpen] = useState(false);
   // True while the vehicle title is scrolled out of view — drives the identity echo in the top bar.
@@ -120,6 +122,7 @@ export function App() {
           id,
           patch: {
             facts: full.facts,
+            maintenanceHealth: full.maintenanceHealth,
             usageValue: full.usageValue,
             usageUnit: full.usageUnit,
             mileage: full.mileage,
@@ -172,11 +175,28 @@ export function App() {
       .finally(() => setRecordsLoading(false));
   }, []);
 
+  // GET the vehicle's maintenance forecast (the forecast subresource) and merge it onto the row.
+  // Re-run on select and on a live frame for this vehicle (a logged service shifts the next-due).
+  const loadForecast = useCallback((id: VehicleId) => {
+    if (!id.startsWith('/')) return;
+    setForecastLoading(true);
+    fetchForecast(id)
+      .then((forecast) => dispatch({ kind: 'patchVehicle', id, patch: { forecast } }))
+      .catch((e) => {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec du chargement des prévisions : ${(e as Error).message}` },
+        });
+      })
+      .finally(() => setForecastLoading(false));
+  }, []);
+
   useEffect(() => {
     loadDetail(state.selectedId);
     loadTasks(state.selectedId);
     loadRecords(state.selectedId);
-  }, [state.selectedId, loadDetail, loadTasks, loadRecords]);
+    loadForecast(state.selectedId);
+  }, [state.selectedId, loadDetail, loadTasks, loadRecords, loadForecast]);
 
   // Reflect the selected vehicle in the URL (hash, not path — auth owns the pathname) so a reload
   // restores it; persist the recency order so the most-recent car stays first across reloads.
@@ -357,11 +377,13 @@ export function App() {
         loadRecords(id);
         // Logging a past service may auto-close a matching open task — refresh the checklist too.
         loadTasks(id);
+        // A new baseline shifts the next-due (and may fill a coverage gap) — refresh the forecast.
+        loadForecast(id);
       } catch (e) {
         dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'enregistrement : ${(e as Error).message}` } });
       }
     },
-    [state.selectedId, loadRecords, loadTasks],
+    [state.selectedId, loadRecords, loadTasks, loadForecast],
   );
 
   const editRecord = useCallback(
@@ -371,11 +393,12 @@ export function App() {
         await updateMaintenanceRecord(recordIri, input);
         loadRecords(id);
         loadTasks(id);
+        loadForecast(id);
       } catch (e) {
         dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la modification : ${(e as Error).message}` } });
       }
     },
-    [state.selectedId, loadRecords, loadTasks],
+    [state.selectedId, loadRecords, loadTasks, loadForecast],
   );
 
   const removeRecord = useCallback(
@@ -384,11 +407,12 @@ export function App() {
       try {
         await deleteMaintenanceRecord(recordIri);
         loadRecords(id);
+        loadForecast(id);
       } catch (e) {
         dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression : ${(e as Error).message}` } });
       }
     },
-    [state.selectedId, loadRecords],
+    [state.selectedId, loadRecords, loadForecast],
   );
 
   const uploadAttachment = useCallback(
@@ -493,9 +517,10 @@ export function App() {
       if (frame.resource['@id'] === selectedIdRef.current) {
         loadTasks(selectedIdRef.current);
         loadRecords(selectedIdRef.current);
+        loadForecast(selectedIdRef.current);
       }
     },
-    [pushStatus, loadTasks, loadRecords],
+    [pushStatus, loadTasks, loadRecords, loadForecast],
   );
 
   // The collection topic carries every vehicle's full-resource frame (the publisher fans out to
@@ -555,6 +580,7 @@ export function App() {
                 onDeleteRecord={removeRecord}
                 onUploadAttachment={uploadAttachment}
                 onDeleteAttachment={removeAttachment}
+                forecastLoading={forecastLoading}
                 onTitleVisibility={onTitleVisibility}
               />
             ) : (
