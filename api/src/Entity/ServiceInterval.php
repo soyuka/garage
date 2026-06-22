@@ -7,6 +7,7 @@ namespace App\Entity;
 use App\Maintenance\MaintenanceAction;
 use App\Maintenance\UsageUnit;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * A per-vehicle RECURRING service rule — the schedule layer that sits between the append-only
@@ -30,6 +31,14 @@ use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 class ServiceInterval
 {
     public const array AUTHORITATIVE_SOURCES = ['partsapi', 'siv'];
+
+    // Stable per-rule ULID — the dereferenceable handle the dashboard DELETEs (the type:action:component
+    // {@see self::key()} is the dedup key, but carries colons/spaces, so it is unfit for an IRI segment).
+    // Assigned in the constructor. Declared class-level + nullable (not promoted) so a rule persisted
+    // before this field hydrates to null rather than an uninitialized typed property — {@see getId()}
+    // backfills it lazily, and any write flushes the vehicle so it persists.
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $id = null;
 
     // Soft-delete tombstone (declared, not promoted, for the same legacy-doc hydration reason as the
     // other embedded docs: newInstanceWithoutConstructor applies a CLASS-level default, never a
@@ -74,7 +83,38 @@ class ServiceInterval
         private ?string $addedBy = null,
         ?\DateTimeImmutable $deletedAt = null,
     ) {
+        $this->id = (string) new Ulid();
         $this->deletedAt = $deletedAt;
+    }
+
+    public function getId(): string
+    {
+        return $this->id ??= (string) new Ulid();
+    }
+
+    /**
+     * Revise the cadence + provenance of an existing rule in place (the dashboard edit / a re-POST of
+     * the same key), keeping its id. type/action/component are the identity (the dedup key) and are
+     * NOT revised here — changing them is a different rule. Re-revising un-tombstones a deleted rule.
+     */
+    public function revise(
+        ?int $everyUsageValue,
+        ?UsageUnit $everyUsageUnit,
+        ?int $everyMonths,
+        ?int $firstUsageValue,
+        string $source,
+        ?string $url = null,
+        \DateTimeImmutable $addedAt = new \DateTimeImmutable(),
+    ): void {
+        $this->everyUsageValue = $everyUsageValue;
+        $this->everyUsageUnit = $everyUsageUnit;
+        $this->everyMonths = $everyMonths;
+        $this->firstUsageValue = $firstUsageValue;
+        $this->source = $source;
+        $this->verified = self::isAuthoritativeSource($source);
+        $this->url = $url;
+        $this->addedAt = $addedAt;
+        $this->deletedAt = null;
     }
 
     public static function isAuthoritativeSource(string $source): bool

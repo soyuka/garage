@@ -3,13 +3,14 @@ import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
 import { MetricStat } from '../design/components/MetricStat';
 import { StatusPill } from '../design/components/StatusPill';
-import type { MaintenanceRecordInput, PlannedTaskInput } from '../garage';
+import type { MaintenanceRecordInput, PlannedTaskInput, ServiceRuleInput } from '../garage';
 import { healthBadge } from '../health';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import type { FactPanel, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
 import { ForecastSection } from './ForecastSection';
 import { InlineEdit } from './InlineEdit';
+import { ScheduleSection } from './ScheduleSection';
 import { PastMaintenanceRail } from './PastMaintenanceRail';
 import { TaskListSkeleton } from './Skeletons';
 
@@ -87,6 +88,9 @@ export function VehicleDetail({
   onUploadAttachment,
   onDeleteAttachment,
   forecastLoading,
+  scheduleLoading,
+  onSaveRule,
+  onDeleteRule,
   onTitleVisibility,
 }: {
   vehicle: Vehicle;
@@ -110,6 +114,9 @@ export function VehicleDetail({
   onUploadAttachment: (recordIri: string, file: File) => void;
   onDeleteAttachment: (attachmentUrl: string) => void;
   forecastLoading: boolean;
+  scheduleLoading: boolean;
+  onSaveRule: (input: ServiceRuleInput) => void;
+  onDeleteRule: (ruleId: string) => void;
   // Fires as the vehicle title scrolls in/out of view, so the chrome can echo its identity once lost.
   onTitleVisibility?: (visible: boolean) => void;
 }) {
@@ -297,6 +304,15 @@ export function VehicleDetail({
             setGapPrefill(type);
             recordsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
+        />
+      </Card>
+
+      <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+        <ScheduleSection
+          rules={vehicle.serviceSchedule}
+          loading={scheduleLoading}
+          onSave={onSaveRule}
+          onDelete={onDeleteRule}
         />
       </Card>
 

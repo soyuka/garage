@@ -152,6 +152,7 @@ export interface Vehicle {
   plannedTasks: PlannedTask[]; // the open checklist, populated from the item GET
   maintenanceRecords?: MaintenanceRecord[]; // past services, loaded from the records subresource
   forecast?: VehicleForecast; // maintenance forecast, loaded from the forecast subresource
+  serviceSchedule?: ServiceRule[]; // the recurring maintenance rules, loaded from the service-schedule subresource
   nextDue?: NextDue | null; // compact next-due, carried on the listing for the rail line
   cost: { total: string; period: string; delta: string };
 }
@@ -164,6 +165,26 @@ export interface VehicleFact {
   unit?: string | null;
   source: string;
   verified: boolean;
+  url?: string | null;
+}
+
+/**
+ * One recurring maintenance-schedule rule on a vehicle — a `ServiceInterval`. The cadence drives the
+ * forecast: a usage cadence (everyUsage), a time cadence (everyMonths), or a break-in first interval
+ * (firstUsageValue). Identity is (type, action, component) — re-POSTing the same identity corrects the
+ * cadence in place (upsert). `verified` is true only for catalog sources (partsapi/siv) — show a badge.
+ */
+export interface ServiceRule {
+  id: string; // the rule's ULID — used to DELETE it
+  vehicleId: string;
+  type: string; // service, snake_case (SERVICE_TYPES)
+  action: 'change' | 'replace' | 'clean' | 'inspect';
+  component?: string | null; // sub-part; part of the dedup identity
+  everyUsage?: { value: number; unit: 'hours' | 'km' | 'mi' } | null;
+  everyMonths?: number | null;
+  firstUsageValue?: number | null; // break-in override
+  source: 'user' | 'web' | 'partsapi' | 'siv' | 'llm';
+  verified: boolean; // true only for partsapi/siv (catalog)
   url?: string | null;
 }
 

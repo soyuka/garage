@@ -49,7 +49,7 @@ export function reduce(state: DashboardState, ev: Event): DashboardState {
       const next = exists
         ? state.vehicles.map((v) =>
             v.id === fresh.id
-              ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks, maintenanceRecords: v.maintenanceRecords, forecast: v.forecast }
+              ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks, maintenanceRecords: v.maintenanceRecords, forecast: v.forecast, serviceSchedule: v.serviceSchedule }
               : v,
           )
         : [...state.vehicles, fresh];
@@ -92,6 +92,8 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
           maintenanceRecords: prev.maintenanceRecords,
           // The forecast rides its own subresource (item GET only); a listing refetch must not blank it.
           forecast: prev.forecast,
+          // The schedule rides its own subresource too — preserve it across a listing refetch.
+          serviceSchedule: prev.serviceSchedule,
         };
       });
       const vehicles = orderByRecency(merged, state.recency);

@@ -8,9 +8,11 @@ import {
   createVehicle,
   deleteMaintenanceAttachment,
   deleteMaintenanceRecord,
+  deleteServiceRule,
   deleteVehicle,
   deleteVehicleFact,
   fetchForecast,
+  fetchServiceSchedule,
   getMaintenanceRecords,
   getVehicle,
   getVehicleTasks,
@@ -18,10 +20,12 @@ import {
   patchTask,
   patchVehicle,
   postVehicleFact,
+  saveServiceRule,
   updateMaintenanceRecord,
   uploadMaintenanceAttachment,
   type MaintenanceRecordInput,
   type PlannedTaskInput,
+  type ServiceRuleInput,
 } from './garage';
 import { CarRail } from './components/CarRail';
 import { Composer } from './components/Composer';
@@ -73,6 +77,7 @@ export function App() {
   const [tasksLoading, setTasksLoading] = useState(false);
   const [recordsLoading, setRecordsLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
+  const [scheduleLoading, setScheduleLoading] = useState(false);
   // The agent debug journal drawer — opened from the TopBar, reads GET /agent/turns on demand.
   const [journalOpen, setJournalOpen] = useState(false);
   // True while the vehicle title is scrolled out of view — drives the identity echo in the top bar.
@@ -191,12 +196,29 @@ export function App() {
       .finally(() => setForecastLoading(false));
   }, []);
 
+  // GET the vehicle's recurring maintenance schedule (the service-schedule subresource) and merge it
+  // onto the row. These rules are the forecast's input — re-run on select and after a rule write.
+  const loadSchedule = useCallback((id: VehicleId) => {
+    if (!id.startsWith('/')) return;
+    setScheduleLoading(true);
+    fetchServiceSchedule(id)
+      .then((serviceSchedule) => dispatch({ kind: 'patchVehicle', id, patch: { serviceSchedule } }))
+      .catch((e) => {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec du chargement du programme : ${(e as Error).message}` },
+        });
+      })
+      .finally(() => setScheduleLoading(false));
+  }, []);
+
   useEffect(() => {
     loadDetail(state.selectedId);
     loadTasks(state.selectedId);
     loadRecords(state.selectedId);
     loadForecast(state.selectedId);
-  }, [state.selectedId, loadDetail, loadTasks, loadRecords, loadForecast]);
+    loadSchedule(state.selectedId);
+  }, [state.selectedId, loadDetail, loadTasks, loadRecords, loadForecast, loadSchedule]);
 
   // Reflect the selected vehicle in the URL (hash, not path — auth owns the pathname) so a reload
   // restores it; persist the recency order so the most-recent car stays first across reloads.
@@ -441,6 +463,38 @@ export function App() {
     [state.selectedId, loadRecords],
   );
 
+  // Add or correct a recurring rule: POST it, then refetch the schedule (the row settles) AND the
+  // forecast — a cadence change shifts the next-due. A 422 (no cadence) surfaces as its own toast.
+  const saveRule = useCallback(
+    async (input: ServiceRuleInput) => {
+      const id = state.selectedId;
+      if (!id.startsWith('/')) return;
+      try {
+        await saveServiceRule(id, input);
+        loadSchedule(id);
+        loadForecast(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'enregistrement de la règle : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadSchedule, loadForecast],
+  );
+
+  const deleteRule = useCallback(
+    async (ruleId: string) => {
+      const id = state.selectedId;
+      if (!id.startsWith('/')) return;
+      try {
+        await deleteServiceRule(id, ruleId);
+        loadSchedule(id);
+        loadForecast(id);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression de la règle : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadSchedule, loadForecast],
+  );
+
   const send = useCallback(
     async (instruction: string) => {
       // Go busy on dispatch and stay busy: the turn runs in an async worker, so the POST only acks
@@ -518,9 +572,10 @@ export function App() {
         loadTasks(selectedIdRef.current);
         loadRecords(selectedIdRef.current);
         loadForecast(selectedIdRef.current);
+        loadSchedule(selectedIdRef.current);
       }
     },
-    [pushStatus, loadTasks, loadRecords, loadForecast],
+    [pushStatus, loadTasks, loadRecords, loadForecast, loadSchedule],
   );
 
   // The collection topic carries every vehicle's full-resource frame (the publisher fans out to
@@ -581,6 +636,9 @@ export function App() {
                 onUploadAttachment={uploadAttachment}
                 onDeleteAttachment={removeAttachment}
                 forecastLoading={forecastLoading}
+                scheduleLoading={scheduleLoading}
+                onSaveRule={saveRule}
+                onDeleteRule={deleteRule}
                 onTitleVisibility={onTitleVisibility}
               />
             ) : (

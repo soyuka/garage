@@ -392,6 +392,18 @@ class Vehicle
         return $this->serviceSchedule->get($key);
     }
 
+    /** A live (non-tombstoned) rule by its ULID — the handle the dashboard DELETE addresses. */
+    public function serviceIntervalById(string $id): ?ServiceInterval
+    {
+        foreach ($this->serviceSchedule as $interval) {
+            if ($interval->getId() === $id && !$interval->isDeleted()) {
+                return $interval;
+            }
+        }
+
+        return null;
+    }
+
     /**
      * The live recurring schedule — tombstoned rules drop off. This is what the forecast reads.
      *

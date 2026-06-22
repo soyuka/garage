@@ -436,6 +436,24 @@ body {
 .fact-source-link { text-decoration: none; }
 .fact-source-link:hover { text-decoration: underline; }
 
+/* ---- service-schedule rules (the editable forecast input) ---- */
+.schedule-rows { display: flex; flex-direction: column; }
+.schedule-row {
+  display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: var(--mpa-space-4);
+  padding: var(--mpa-space-3) 0; border-top: 1px solid var(--mpa-border);
+}
+.schedule-row:first-child { border-top: none; }
+.schedule-row:hover .fact-delete { opacity: 1; }
+.schedule-rule-main {
+  display: flex; flex-direction: column; gap: var(--mpa-space-1); align-items: flex-start;
+  background: transparent; border: none; padding: 0; cursor: pointer; font: inherit; color: inherit; text-align: left;
+}
+.schedule-rule-title { font-weight: 500; }
+.schedule-rule-cadence {
+  color: var(--mpa-muted); font-size: var(--mpa-text-label); font-variant-numeric: tabular-nums;
+}
+.schedule-form { flex-wrap: wrap; }
+
 /* Données card disclosure (collapsed by default) */
 .panel-disclosure {
   width: 100%; background: transparent; border: none; padding: 0; cursor: pointer;

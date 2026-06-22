@@ -1,5 +1,5 @@
 import { authFetch } from './auth';
-import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart, PlannedTask, VehicleForecast, VehicleSummary } from './types';
+import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart, PlannedTask, ServiceRule, VehicleForecast, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -127,6 +127,63 @@ export async function fetchForecast(vehicleIri: string): Promise<VehicleForecast
   if (!res.ok) throw new Error(`forecast fetch failed: ${res.status}`);
   const data = (await res.json()) as VehicleForecast;
   return { vehicle: data.vehicle, due: data.due ?? [], gaps: data.gaps ?? [] };
+}
+
+type RawRule = ServiceRule & { '@id'?: string };
+
+/**
+ * GET a vehicle's recurring maintenance schedule — the service-schedule subresource (a hydra
+ * collection of ServiceRule). Mirrors the records/tasks fetchers; the rule's `id` is already the
+ * bare ULID we DELETE by, so no @id normalisation is needed.
+ */
+export async function fetchServiceSchedule(vehicleIri: string): Promise<ServiceRule[]> {
+  const res = await authFetch(`${API}${vehicleIri}/service-schedule`, { headers: { Accept: 'application/ld+json' } });
+  if (!res.ok) throw new Error(`schedule fetch failed: ${res.status}`);
+  const data = (await res.json()) as { member?: RawRule[]; 'hydra:member'?: RawRule[] };
+  return data.member ?? data['hydra:member'] ?? [];
+}
+
+/** The body of a schedule-rule write — the fields the POST endpoint accepts (source is server-set). */
+export interface ServiceRuleInput {
+  type: string;
+  action: 'change' | 'replace' | 'clean' | 'inspect';
+  component?: string | null;
+  everyUsageValue?: number | null;
+  everyUsageUnit?: 'km' | 'mi' | 'hours' | null;
+  everyMonths?: number | null;
+  firstUsageValue?: number | null;
+  url?: string | null;
+}
+
+/**
+ * Add or correct a recurring rule (POST service-schedule). UPSERT keyed on (type, action, component):
+ * re-POSTing the same identity corrects the cadence in place. Lands server-side as source "user".
+ * The server returns 422 when no cadence is given — surface its message so the form can explain.
+ */
+export async function saveServiceRule(vehicleIri: string, input: ServiceRuleInput): Promise<ServiceRule> {
+  const res = await authFetch(`${API}${vehicleIri}/service-schedule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) {
+    // RFC 7807 / hydra error: prefer the server's human description (e.g. the 422 "cadence required").
+    const detail = await res
+      .json()
+      .then((d: { detail?: string; description?: string; 'hydra:description'?: string }) => d.detail ?? d.description ?? d['hydra:description'])
+      .catch(() => undefined);
+    throw new Error(detail ?? `schedule write failed: ${res.status}`);
+  }
+  return res.json() as Promise<ServiceRule>;
+}
+
+/** Remove a recurring rule by its ULID (DELETE service-schedule/{ruleId}; soft-delete → drops off). */
+export async function deleteServiceRule(vehicleIri: string, ruleId: string): Promise<void> {
+  const res = await authFetch(`${API}${vehicleIri}/service-schedule/${encodeURIComponent(ruleId)}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/ld+json' },
+  });
+  if (!res.ok && res.status !== 204) throw new Error(`schedule delete failed: ${res.status}`);
 }
 
 type RawRecord = MaintenanceRecord & { '@id'?: string };
