@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { getIdentity, logout } from '../auth';
+import type { Vehicle } from '../types';
 import { StatusHeartbeat } from './StatusHeartbeat';
 
 interface TopBarProps {
@@ -9,6 +10,8 @@ interface TopBarProps {
   onAdvanceStatus: () => void;
   onSettings?: () => void;
   onJournal?: () => void;
+  // The selected vehicle, passed only while its title is scrolled out of view (else undefined).
+  vehicle?: Vehicle;
 }
 
 /**
@@ -16,7 +19,7 @@ interface TopBarProps {
  * status dot and the last event) followed by the agent's heartbeat sentence while it answers.
  * Right: search and the account menu grouped together, off the middle of the bar.
  */
-export function TopBar({ live, status, busy, onAdvanceStatus, onSettings, onJournal }: TopBarProps) {
+export function TopBar({ live, status, busy, onAdvanceStatus, onSettings, onJournal, vehicle }: TopBarProps) {
   return (
     <header className="topbar">
       <div className="mercure-feed" aria-label="Flux temps réel">
@@ -27,6 +30,7 @@ export function TopBar({ live, status, busy, onAdvanceStatus, onSettings, onJour
           <span className="mercure-last">{live[0]}</span>
         ) : null}
       </div>
+      {vehicle ? <VehicleEcho vehicle={vehicle} /> : null}
       <div className="topbar-right">
         <div className="search">🔍 Rechercher un véhicule…</div>
         {onJournal ? (
@@ -41,6 +45,26 @@ export function TopBar({ live, status, busy, onAdvanceStatus, onSettings, onJour
         <AccountMenu onSettings={onSettings} />
       </div>
     </header>
+  );
+}
+
+/**
+ * The selected vehicle's identity, echoed in the top bar once its title scrolls off. Name in front,
+ * then the same metadata badges the detail header carries (year · finition · plaque · relevé).
+ */
+function VehicleEcho({ vehicle }: { vehicle: Vehicle }) {
+  const name = [vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Véhicule';
+  const meta = [
+    vehicle.year ? String(vehicle.year) : '',
+    vehicle.modification ?? '',
+    vehicle.plate ?? '',
+    vehicle.mileage ? `${vehicle.mileage} ${vehicle.mileageUnit}` : '',
+  ].filter(Boolean);
+  return (
+    <div className="tb-vehicle" aria-label="Véhicule sélectionné">
+      <span className="tb-veh-name">{name}</span>
+      {meta.length ? <span className="tb-veh-meta">{meta.join(' · ')}</span> : null}
+    </div>
   );
 }
 

@@ -73,6 +73,9 @@ export function App() {
   const [recordsLoading, setRecordsLoading] = useState(false);
   // The agent debug journal drawer — opened from the TopBar, reads GET /agent/turns on demand.
   const [journalOpen, setJournalOpen] = useState(false);
+  // True while the vehicle title is scrolled out of view — drives the identity echo in the top bar.
+  const [titleHidden, setTitleHidden] = useState(false);
+  const onTitleVisibility = useCallback((visible: boolean) => setTitleHidden(!visible), []);
 
   const selected = state.vehicles.find((v) => v.id === state.selectedId) ?? state.vehicles[0];
   // Live Mercure frames carry no checklist (it is its own subresource), so onFrame needs the
@@ -258,11 +261,11 @@ export function App() {
   // Fill a missing spec straight from the fact panel: POST it as a user fact, then refetch the item
   // so the panel's "non renseignée" row flips to the entered value.
   const fillFact = useCallback(
-    async (key: string, value: string) => {
+    async (key: string, value: string, unit?: string | null) => {
       const id = state.selectedId;
       if (!id.startsWith('/') || value.trim() === '') return;
       try {
-        await postVehicleFact(id, { key, value: value.trim() });
+        await postVehicleFact(id, { key, value: value.trim(), unit });
         loadDetail(id);
       } catch (e) {
         dispatch({
@@ -510,7 +513,14 @@ export function App() {
 
   return (
     <div className="app">
-      <TopBar live={state.live} status={status} busy={busy} onAdvanceStatus={advanceStatus} onJournal={() => setJournalOpen(true)} />
+      <TopBar
+        live={state.live}
+        status={status}
+        busy={busy}
+        onAdvanceStatus={advanceStatus}
+        onJournal={() => setJournalOpen(true)}
+        vehicle={titleHidden ? selected : undefined}
+      />
       <div className="body">
         <CarRail
           vehicles={state.vehicles}
@@ -545,6 +555,7 @@ export function App() {
                 onDeleteRecord={removeRecord}
                 onUploadAttachment={uploadAttachment}
                 onDeleteAttachment={removeAttachment}
+                onTitleVisibility={onTitleVisibility}
               />
             ) : (
               <div className="empty-parc">

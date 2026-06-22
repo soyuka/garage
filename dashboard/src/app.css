@@ -113,6 +113,20 @@ body {
   /* Freeze the breath at a steady, legible mid-glow instead of pulsing. */
   .mercure-feed { animation: none; --mpa-pulse: 0.55; }
 }
+/* The vehicle identity echoed once its detail title scrolls off — name + faint metadata, one line. */
+.tb-vehicle {
+  display: flex; align-items: baseline; gap: var(--mpa-space-3); min-width: 0;
+  padding-left: var(--mpa-space-4); border-left: 1px solid var(--mpa-border);
+  animation: tb-veh-in 0.18s ease;
+}
+.tb-veh-name { font-weight: 600; font-size: var(--mpa-text-label); white-space: nowrap; flex: none; }
+.tb-veh-meta {
+  color: var(--mpa-muted); font-size: var(--mpa-text-small); font-variant-numeric: tabular-nums;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+@keyframes tb-veh-in { from { opacity: 0; transform: translateY(-2px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tb-vehicle { animation: none; } }
+
 /* Search + account, grouped at the right edge (off the middle of the bar). */
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: var(--mpa-space-3); }
 .topbar .search {
@@ -523,21 +537,18 @@ body {
 /* ---- past-maintenance: a horizontal strip of compact event cards (simpler than the car rail) ---- */
 .hist-empty { color: var(--mpa-faint); font-size: var(--mpa-text-small); }
 .hist-track {
-  display: flex; gap: var(--mpa-space-3); overflow-x: auto; padding-bottom: var(--mpa-space-2);
-  scrollbar-width: thin; scrollbar-color: var(--mpa-border-strong) transparent;
+  display: flex; flex-direction: column; gap: var(--mpa-space-3);
 }
-.hist-track::-webkit-scrollbar { height: 6px; }
-.hist-track::-webkit-scrollbar-thumb { background: var(--mpa-border-strong); border-radius: var(--mpa-radius-pill); }
 .hist-card {
-  flex: none; width: 232px; padding: var(--mpa-space-3) var(--mpa-space-4);
+  width: 100%; padding: var(--mpa-space-3) var(--mpa-space-4);
   background: var(--mpa-inset); border: 1px solid var(--mpa-border); border-radius: var(--mpa-radius-lg);
   display: flex; flex-direction: column; gap: var(--mpa-space-2);
 }
 .hist-card-head {
-  display: flex; align-items: baseline; justify-content: space-between; gap: var(--mpa-space-2);
+  display: flex; align-items: baseline; justify-content: space-between; gap: var(--mpa-space-3);
   padding-bottom: var(--mpa-space-2); border-bottom: 1px solid var(--mpa-border);
 }
-.hist-type { font-weight: 600; font-size: var(--mpa-text-body, 14px); line-height: 1.25; }
+.hist-type { font-weight: 600; font-size: var(--mpa-text-body, 14px); line-height: 1.25; flex: 1 1 auto; min-width: 0; }
 .hist-date { color: var(--mpa-muted); font-size: var(--mpa-text-small); font-variant-numeric: tabular-nums; flex: none; }
 
 /* the visit checklist — one row per service done, with the parts it consumed underneath */

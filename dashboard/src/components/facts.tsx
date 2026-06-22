@@ -1,8 +1,10 @@
 import { Badge } from '../design/components/Badge';
 import type { VehicleFact } from '../types';
+import { InlineEdit } from './InlineEdit';
 import { safeHref } from './safeHref';
 
-// French labels for the known fact keys; unknown keys fall back to a humanised form.
+// French labels for the known fact keys; unknown keys fall back to a humanised form. The `{type}_ref`
+// family mirrors the part-derived facts the backend projects from logged maintenance items.
 const FACT_LABELS: Record<string, string> = {
   oil_type: 'Type d’huile',
   oil_capacity: 'Capacité d’huile',
@@ -10,13 +12,32 @@ const FACT_LABELS: Record<string, string> = {
   brake_fluid: 'Liquide de frein',
   spark_plug_ref: 'Référence bougie',
   oil_filter_ref: 'Référence filtre à huile',
+  air_filter_ref: 'Référence filtre à air',
+  fuel_filter_ref: 'Référence filtre à carburant',
+  cabin_filter_ref: 'Référence filtre habitacle',
+  timing_belt_ref: 'Référence courroie de distribution',
+  battery_ref: 'Référence batterie',
+  brakes_ref: 'Référence freins',
+  tires_ref: 'Référence pneus',
+  gearbox_oil_ref: 'Référence huile de boîte',
 };
 
 export function factLabel(key: string): string {
   return FACT_LABELS[key] ?? key.replace(/_/g, ' ').replace(/^\w/, (c) => c.toUpperCase());
 }
 
-export function FactRow({ fact, onDelete }: { fact: VehicleFact; onDelete?: (key: string) => void }) {
+export function FactRow({
+  fact,
+  onDelete,
+  onEdit,
+}: {
+  fact: VehicleFact;
+  onDelete?: (key: string) => void;
+  // Commit an edited value; the existing unit is carried so an in-place edit never drops it. The
+  // write lands as a source "user" fact, which the projection ranks above catalog/log — so editing
+  // works uniformly, even over a verified spec or a part-derived value.
+  onEdit?: (key: string, value: string, unit?: string | null) => void;
+}) {
   const badge = fact.verified ? (
     <Badge variant="verified" check>
       {fact.source}
@@ -31,7 +52,16 @@ export function FactRow({ fact, onDelete }: { fact: VehicleFact; onDelete?: (key
     <div className="fact-row">
       <span className="fact-key">{factLabel(fact.key)}</span>
       <span className="fact-value">
-        {fact.value}
+        {onEdit ? (
+          <InlineEdit
+            value={fact.value}
+            ariaLabel={`Modifier ${factLabel(fact.key)}`}
+            className="fact-value-edit"
+            onCommit={(v) => onEdit(fact.key, v, fact.unit)}
+          />
+        ) : (
+          fact.value
+        )}
         {fact.unit ? <span className="fact-unit"> {fact.unit}</span> : null}
       </span>
       {href ? (

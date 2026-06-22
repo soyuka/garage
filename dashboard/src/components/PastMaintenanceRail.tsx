@@ -36,7 +36,7 @@ function visitTitle(r: MaintenanceRecord): string {
 }
 
 /**
- * Past maintenance as a horizontal strip of visit cards (newest first). Each card is fully
+ * Past maintenance as a full-width vertical list of visit cards (newest first). Each card is fully
  * manageable: edit reopens the visit in the form prefilled, delete removes it. A disclosure reveals
  * the same form blank to log a new visit by hand.
  */
@@ -123,6 +123,7 @@ export function PastMaintenanceRail({
               <div key={r.id} className={`hist-card${editingId === r.id ? ' hist-card-active' : ''}`}>
                 <div className="hist-card-head">
                   <span className="hist-type">{title}</span>
+                  <span className="hist-date">{r.performedAt}</span>
                   <div className="hist-actions">
                     <button
                       type="button"
@@ -149,7 +150,6 @@ export function PastMaintenanceRail({
                     </button>
                   </div>
                 </div>
-                <div className="hist-date">{r.performedAt}</div>
                 {showItems ? (
                   <ul className="hist-items">
                     {items.map((it, i) => (

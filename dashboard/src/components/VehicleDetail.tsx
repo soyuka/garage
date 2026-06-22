@@ -89,6 +89,7 @@ export function VehicleDetail({
   onDeleteRecord,
   onUploadAttachment,
   onDeleteAttachment,
+  onTitleVisibility,
 }: {
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
@@ -102,7 +103,7 @@ export function VehicleDetail({
   factPanel: FactPanel | null;
   onExpandFacts: () => void;
   onDismissFacts: () => void;
-  onFillFact: (key: string, value: string) => void;
+  onFillFact: (key: string, value: string, unit?: string | null) => void;
   onDeleteFact: (key: string) => void;
   recordsLoading: boolean;
   onAddRecord: (input: MaintenanceRecordInput) => void;
@@ -110,6 +111,8 @@ export function VehicleDetail({
   onDeleteRecord: (recordIri: string) => void;
   onUploadAttachment: (recordIri: string, file: File) => void;
   onDeleteAttachment: (attachmentUrl: string) => void;
+  // Fires as the vehicle title scrolls in/out of view, so the chrome can echo its identity once lost.
+  onTitleVisibility?: (visible: boolean) => void;
 }) {
   const tone = healthTone(vehicle.health);
   const next = vehicle.nextService;
@@ -141,6 +144,20 @@ export function VehicleDetail({
     if (factPanel) dataRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [factPanel]);
 
+  // Tell the chrome when the title leaves the viewport so the top bar can echo the vehicle identity.
+  const titleRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el || !onTitleVisibility) return;
+    onTitleVisibility(true);
+    const obs = new IntersectionObserver(([entry]) => onTitleVisibility(entry.isIntersecting), { threshold: 0 });
+    obs.observe(el);
+    return () => {
+      obs.disconnect();
+      onTitleVisibility(true);
+    };
+  }, [onTitleVisibility]);
+
   // Disclosure click: when an agent answer is spotlighting facts, a click dismisses it (and collapses);
   // otherwise it's the plain manual open/close toggle.
   const toggleData = () => {
@@ -165,7 +182,7 @@ export function VehicleDetail({
 
   return (
     <>
-      <div className="title-row">
+      <div className="title-row" ref={titleRef}>
         <h1>
           <InlineEdit value={vehicle.make} placeholder="marque" ariaLabel="Marque" onCommit={(v) => onEdit({ make: v })} />{' '}
           <InlineEdit value={vehicle.model} placeholder="modèle" ariaLabel="Modèle" onCommit={(v) => onEdit({ model: v })} />
@@ -372,7 +389,7 @@ export function VehicleDetail({
             ) : (
               <div className="facts">
                 {shownFacts.map((f) => (
-                  <FactRow key={f.key} fact={f} onDelete={focused ? undefined : onDeleteFact} />
+                  <FactRow key={f.key} fact={f} onDelete={focused ? undefined : onDeleteFact} onEdit={focused ? undefined : onFillFact} />
                 ))}
                 {missing.map((k) => (
                   <div key={k} className="fact-row fact-row-missing">
