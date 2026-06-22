@@ -1,5 +1,5 @@
 import { authFetch } from './auth';
-import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart, PlannedTask, VehicleSummary } from './types';
+import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart, PlannedTask, VehicleForecast, VehicleSummary } from './types';
 
 const API = import.meta.env.VITE_API_BASE ?? '';
 
@@ -115,6 +115,18 @@ export async function archiveTasks(vehicleIri: string): Promise<{ archived: numb
   if (!res.ok) throw new Error(`archive failed: ${res.status}`);
   const data = (await res.json()) as { archived?: number };
   return { archived: data.archived ?? 0 };
+}
+
+/**
+ * GET a vehicle's maintenance forecast (the forecast subresource): the due items (soonest-first) and
+ * the coverage gaps. Mirrors the records/tasks fetchers; the response needs no @id normalisation
+ * (the items are value objects, not addressable resources).
+ */
+export async function fetchForecast(vehicleIri: string): Promise<VehicleForecast> {
+  const res = await authFetch(`${API}${vehicleIri}/forecast`, { headers: { Accept: 'application/ld+json' } });
+  if (!res.ok) throw new Error(`forecast fetch failed: ${res.status}`);
+  const data = (await res.json()) as VehicleForecast;
+  return { vehicle: data.vehicle, due: data.due ?? [], gaps: data.gaps ?? [] };
 }
 
 type RawRecord = MaintenanceRecord & { '@id'?: string };

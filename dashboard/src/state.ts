@@ -49,7 +49,7 @@ export function reduce(state: DashboardState, ev: Event): DashboardState {
       const next = exists
         ? state.vehicles.map((v) =>
             v.id === fresh.id
-              ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks, maintenanceRecords: v.maintenanceRecords }
+              ? { ...fresh, plannedTasks: v.plannedTasks, openTasks: v.openTasks, maintenanceRecords: v.maintenanceRecords, forecast: v.forecast }
               : v,
           )
         : [...state.vehicles, fresh];
@@ -90,6 +90,8 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
           maintenanceHealth: s.health ? fresh.maintenanceHealth : prev.maintenanceHealth,
           plannedTasks: s.plannedTasks?.length ? fresh.plannedTasks : prev.plannedTasks,
           maintenanceRecords: prev.maintenanceRecords,
+          // The forecast rides its own subresource (item GET only); a listing refetch must not blank it.
+          forecast: prev.forecast,
         };
       });
       const vehicles = orderByRecency(merged, state.recency);
@@ -184,6 +186,8 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
     facts: s.facts,
     maintenanceHealth: s.health,
     nextService: { value: 0, unit: '' },
+    // The compact next-due rides the listing (collection) for the rail line; absent on a stale row.
+    nextDue: s.nextDue ?? null,
     // The open checklist + its count load separately from the planned-tasks subresource (see
     // App.loadTasks); the projection starts empty and is filled by a patchVehicle merge.
     openTasks: 0,

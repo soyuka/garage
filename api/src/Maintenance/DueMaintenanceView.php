@@ -35,9 +35,45 @@ final class DueMaintenanceView
     }
 
     /**
+     * The garage-wide due row: the bare forecast item plus the vehicle identity (the listing spans
+     * vehicles). The per-vehicle forecast sub-resource uses {@see self::item()} without the identity.
+     *
      * @return array<string, mixed>
      */
     public function dueItem(Vehicle $vehicle, DueMaintenance $due): array
+    {
+        return ['vehicle' => $this->identity($vehicle), ...$this->item($due)];
+    }
+
+    /**
+     * A compact one-line summary of a single due item — what the parc listing carries per vehicle so
+     * the sidebar rail shows the soonest service without a forecast fetch.
+     *
+     * @return array{type: string, action: string|null, label: string, rule: string, overdue: bool, dueAt: string|null, projectedDueAt: string|null, daysUntilDue: int|null, usageRemaining: int|null, usageUnit: string|null}
+     */
+    public function compact(DueMaintenance $due): array
+    {
+        return [
+            'type' => $due->type->value,
+            'action' => $due->action?->value,
+            'label' => $due->component ?? $due->type->value,
+            'rule' => $due->rule,
+            'overdue' => $due->overdue,
+            'dueAt' => $due->dueAt?->format('Y-m-d'),
+            'projectedDueAt' => $due->projectedDueAt?->format('Y-m-d'),
+            'daysUntilDue' => $due->daysUntilDue,
+            'usageRemaining' => $due->usageRemaining,
+            'usageUnit' => $due->usageUnit?->value,
+        ];
+    }
+
+    /**
+     * One forecast item, vehicle-agnostic — both axes (time + usage), the action/component, and the
+     * rule provenance.
+     *
+     * @return array<string, mixed>
+     */
+    public function item(DueMaintenance $due): array
     {
         // The usage axis (engine-hours/km): what the schedule-driven forecast actually measures.
         $usage = null === $due->usageUnit || null === $due->dueUsageValue ? null : [
@@ -48,7 +84,6 @@ final class DueMaintenanceView
         ];
 
         return [
-            'vehicle' => $this->identity($vehicle),
             'type' => $due->type->value,
             // The action/component disambiguate two cadences of one type (spark plug inspect vs
             // replace); null on a generic-default due. `rule` flags schedule-driven vs default.

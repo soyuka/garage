@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { fetchAttachmentObjectUrl, type MaintenanceItemInput, type MaintenanceRecordInput } from '../garage';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart } from '../types';
@@ -48,6 +48,8 @@ export function PastMaintenanceRail({
   onDeleteRecord,
   onUploadAttachment,
   onDeleteAttachment,
+  prefillType,
+  onPrefillConsumed,
 }: {
   records: MaintenanceRecord[] | undefined;
   loading?: boolean;
@@ -56,11 +58,26 @@ export function PastMaintenanceRail({
   onDeleteRecord: (recordIri: string) => void;
   onUploadAttachment: (recordIri: string, file: File) => void;
   onDeleteAttachment: (attachmentUrl: string) => void;
+  // A forecast "gap" CTA asks to log a baseline for this service type — open the add form prefilled.
+  prefillType?: string | null;
+  onPrefillConsumed?: () => void;
 }) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // The service type a gap CTA seeded the blank add form with; reset once the form is dismissed.
+  const [seedType, setSeedType] = useState<string | null>(null);
   const list = records ?? [];
   const editing = editingId ? list.find((r) => r.id === editingId) : undefined;
+
+  // A gap CTA (from the forecast) opens the add form prefilled with its service type; ack it so the
+  // parent's transient prefill clears (a second click on the same gap re-opens the form).
+  useEffect(() => {
+    if (!prefillType) return;
+    setEditingId(null);
+    setSeedType(prefillType);
+    setAdding(true);
+    onPrefillConsumed?.();
+  }, [prefillType, onPrefillConsumed]);
 
   return (
     <div className="hist">
@@ -72,6 +89,7 @@ export function PastMaintenanceRail({
           aria-expanded={adding}
           onClick={() => {
             setEditingId(null);
+            setSeedType(null);
             setAdding((a) => !a);
           }}
         >
@@ -92,12 +110,18 @@ export function PastMaintenanceRail({
         />
       ) : adding ? (
         <RecordForm
+          key={seedType ?? 'blank'}
+          initialType={seedType ?? undefined}
           submitLabel="Enregistrer"
           onSubmit={(input) => {
             onAddRecord(input);
             setAdding(false);
+            setSeedType(null);
           }}
-          onCancel={() => setAdding(false)}
+          onCancel={() => {
+            setAdding(false);
+            setSeedType(null);
+          }}
         />
       ) : null}
 
@@ -250,8 +274,8 @@ interface ItemDraft {
   parts: PlannedPart[];
 }
 
-function itemDraftsFrom(record?: MaintenanceRecord): ItemDraft[] {
-  if (!record || (record.items ?? []).length === 0) return [{ type: 'oil_change', label: '', parts: [] }];
+function itemDraftsFrom(record?: MaintenanceRecord, initialType?: string): ItemDraft[] {
+  if (!record || (record.items ?? []).length === 0) return [{ type: initialType ?? 'oil_change', label: '', parts: [] }];
   return record.items.map((it) => ({ type: it.type, label: it.label ?? '', parts: it.parts.map((p) => ({ ...p })) }));
 }
 
@@ -261,16 +285,19 @@ function itemDraftsFrom(record?: MaintenanceRecord): ItemDraft[] {
  */
 function RecordForm({
   initial,
+  initialType,
   submitLabel,
   onSubmit,
   onCancel,
 }: {
   initial?: MaintenanceRecord;
+  // Seed a blank form's first service row with this type (a forecast-gap baseline log).
+  initialType?: string;
   submitLabel: string;
   onSubmit: (input: MaintenanceRecordInput) => void;
   onCancel: () => void;
 }) {
-  const [items, setItems] = useState<ItemDraft[]>(() => itemDraftsFrom(initial));
+  const [items, setItems] = useState<ItemDraft[]>(() => itemDraftsFrom(initial, initialType));
   const [label, setLabel] = useState(initial?.label ?? '');
   const [performedAt, setPerformedAt] = useState(initial?.performedAt ?? '');
   const [usageValue, setUsageValue] = useState(initial?.usageValue != null ? String(initial.usageValue) : '');
