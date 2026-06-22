@@ -237,7 +237,18 @@ export function VehicleDetail({
                   onCommit={commitUsage}
                 />
               </span>
-              {vehicle.usageValue != null ? <span style={{ fontSize: 16, color: 'var(--mpa-muted)' }}>{vehicle.mileageUnit}</span> : null}
+              {vehicle.usageValue != null ? (
+                <select
+                  aria-label="Unité de relevé"
+                  className="usage-unit-edit"
+                  value={vehicle.usageUnit ?? defaultUnit}
+                  onChange={(e) => onEdit({ usageUnit: e.target.value })}
+                >
+                  <option value="km">km</option>
+                  <option value="mi">mi</option>
+                  <option value="h">h</option>
+                </select>
+              ) : null}
             </div>
           </div>
           <MetricStat

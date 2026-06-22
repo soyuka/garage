@@ -388,6 +388,12 @@ body {
   border-radius: var(--mpa-radius-sm); padding: 1px 6px; outline: none; width: auto; max-width: 100%;
 }
 .usage-edit.inline-edit-input { width: 8ch; }
+.usage-unit-edit {
+  font: inherit; font-size: 16px; color: var(--mpa-muted);
+  background: transparent; border: 1px solid transparent;
+  border-radius: var(--mpa-radius-sm); padding: 1px 4px; cursor: pointer; outline: none;
+}
+.usage-unit-edit:hover, .usage-unit-edit:focus { border-color: var(--mpa-accent); }
 .plate-edit { padding: 6px 11px; }
 .plate-edit.inline-edit-input { width: 9ch; font-size: 13px; }
 
