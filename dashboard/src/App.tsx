@@ -120,6 +120,7 @@ export function App() {
           id,
           patch: {
             facts: full.facts,
+            maintenanceHealth: full.maintenanceHealth,
             usageValue: full.usageValue,
             usageUnit: full.usageUnit,
             mileage: full.mileage,

@@ -39,15 +39,33 @@ final class DueMaintenanceView
      */
     public function dueItem(Vehicle $vehicle, DueMaintenance $due): array
     {
+        // The usage axis (engine-hours/km): what the schedule-driven forecast actually measures.
+        $usage = null === $due->usageUnit || null === $due->dueUsageValue ? null : [
+            'last' => $due->lastUsageValue,
+            'due' => $due->dueUsageValue,
+            'remaining' => $due->usageRemaining,
+            'unit' => $due->usageUnit->value,
+        ];
+
         return [
             'vehicle' => $this->identity($vehicle),
             'type' => $due->type->value,
+            // The action/component disambiguate two cadences of one type (spark plug inspect vs
+            // replace); null on a generic-default due. `rule` flags schedule-driven vs default.
+            'action' => $due->action?->value,
+            'component' => $due->component,
+            'rule' => $due->rule,
             'lastPerformedAt' => $due->lastPerformedAt->format('Y-m-d'),
-            'dueAt' => $due->dueAt->format('Y-m-d'),
+            // Time axis (null for a usage-only rule); projectedDueAt lifts the usage axis onto the
+            // calendar when the history gives a usage rate.
+            'dueAt' => $due->dueAt?->format('Y-m-d'),
+            'projectedDueAt' => $due->projectedDueAt?->format('Y-m-d'),
             'overdue' => $due->overdue,
             'daysUntilDue' => $due->daysUntilDue,
-            'intervalMonths' => $due->interval->months,
-            'usageInterval' => null === $due->interval->usageValue ? null : [
+            'intervalMonths' => $due->interval?->months,
+            'usage' => $usage,
+            // Generic-default advisory usage interval (null for schedule-driven, which uses `usage`).
+            'usageInterval' => null === $due->interval || null === $due->interval->usageValue ? null : [
                 'value' => $due->interval->usageValue,
                 'unit' => $due->interval->usageUnit?->value,
             ],

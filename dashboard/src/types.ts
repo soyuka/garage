@@ -2,6 +2,20 @@ export type VehicleId = string;
 export type VehicleStatus = 'ok' | 'soon' | 'overdue';
 export type Tone = 'info' | 'ok' | 'warn' | 'alarm';
 
+/**
+ * The API's maintenance-health rollup, served on the item GET only (the collection listing omits it).
+ * `red` = at least one overdue service; `amber` = something due soon or a coverage gap; `green` = all
+ * tracked & current; `unknown` = nothing tracked yet — render neutral/grey, NOT as a healthy state.
+ */
+export interface MaintenanceHealth {
+  status: 'green' | 'amber' | 'red' | 'unknown';
+  score: number | null; // null only when status is "unknown"
+  overdue: number; // overdue services
+  dueSoon: number; // due within 30 days
+  tracked: number; // services with a logged baseline
+  gaps: number; // recurring services with NO logged baseline
+}
+
 export interface NextService {
   value: number;
   unit: string;
@@ -74,13 +88,12 @@ export interface Vehicle {
   kType?: number;
   plate?: string;
   verified?: boolean;
-  health: number; // 0–100
-  healthLabel: string; // "Véhicule sain"
   mileage: string; // "142 000" — display form of usageValue
   mileageUnit: string; // "km"
   usageValue?: number; // raw reading, for inline editing
   usageUnit?: string; // "km" | "mi" | "h"
   facts?: VehicleFact[]; // populated from the item GET on select
+  maintenanceHealth?: MaintenanceHealth; // API-computed rollup, item GET only (listing omits it)
   nextService: NextService;
   openTasks: number;
   plannedTasks: PlannedTask[]; // the open checklist, populated from the item GET
@@ -147,6 +160,8 @@ export interface VehicleSummary {
   factCount: number;
   openTasks?: number;
   facts?: VehicleFact[];
+  // The maintenance-health rollup — served on the item GET only, absent on the collection listing.
+  health?: MaintenanceHealth;
   // Populated on the item GET only. The API serves the task IRI as `@id`; vehicleFromSummary
   // normalizes it to `id` for the UI.
   plannedTasks?: Array<PlannedTask & { '@id'?: string }>;

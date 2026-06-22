@@ -86,6 +86,8 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
         return {
           ...fresh,
           facts: s.facts?.length ? fresh.facts : prev.facts,
+          // The rollup rides the item GET only; a listing refetch must not blank what it loaded.
+          maintenanceHealth: s.health ? fresh.maintenanceHealth : prev.maintenanceHealth,
           plannedTasks: s.plannedTasks?.length ? fresh.plannedTasks : prev.plannedTasks,
           maintenanceRecords: prev.maintenanceRecords,
         };
@@ -126,19 +128,20 @@ function applyAction(state: DashboardState, a: UIAction): DashboardState {
 }
 
 /**
- * Coarse, honest health from the checklist — no invented telemetry. No open tasks ⇒ healthy; an
- * open task whose usage target is already passed ⇒ overdue; otherwise service is due soon. The
- * overdue check needs the per-task targets, which only the item GET carries, so the listing (which
- * has the count but not the tasks) lands on "due soon" until the item refines it.
+ * Coarse, honest status from the checklist — no invented telemetry. Drives the sidebar rail dot
+ * (CarRail's STATUS_COLOR) on the collection listing, which the API maintenance-health rollup does
+ * not cover (item GET only). No open tasks ⇒ healthy; an open task whose usage target is already
+ * passed ⇒ overdue; otherwise service is due soon. The overdue check needs the per-task targets,
+ * which only the item GET carries, so the listing (which has the count but not the tasks) lands on
+ * "due soon" until the item refines it.
  */
-function computeHealth(s: VehicleSummary): { value: number; label: string; status: VehicleStatus } {
+function computeStatus(s: VehicleSummary): VehicleStatus {
   const open = s.openTasks ?? 0;
-  if (0 === open) return { value: 100, label: 'Véhicule suivi', status: 'ok' };
+  if (0 === open) return 'ok';
   const usage = s.usageValue ?? null;
   const overdue =
     null !== usage && (s.plannedTasks ?? []).some((t) => t.target != null && t.target.value <= usage);
-  if (overdue) return { value: 55, label: 'Entretien en retard', status: 'overdue' };
-  return { value: 78, label: `${open} tâche${open > 1 ? 's' : ''} en attente`, status: 'soon' };
+  return overdue ? 'overdue' : 'soon';
 }
 
 const VEHICLE_TYPE_LABELS: Record<string, string> = {
@@ -151,13 +154,12 @@ const VEHICLE_TYPE_LABELS: Record<string, string> = {
 /**
  * Projects a raw API vehicle onto the dashboard's display model. The API serves the durable facts
  * (make/model/type/plate…); the UI-only `cost` has no source yet (a placeholder until the maintenance
- * cost total lands — see TODO_UI Part B), while `health`/`status` are computed read-only from the
+ * cost total lands — see TODO_UI Part B), while `status` is computed read-only from the
  * open/overdue checklist. None of these are agent-piloted.
  */
 export function vehicleFromSummary(s: VehicleSummary): Vehicle {
   const type = VEHICLE_TYPE_LABELS[s.vehicleType] ?? s.vehicleType;
   const hasUsage = s.usageValue != null && !!s.usageUnit;
-  const health = computeHealth(s);
   return {
     id: s['@id'],
     initials: s.make.slice(0, 2).toUpperCase(),
@@ -168,20 +170,19 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
     vehicleType: s.vehicleType,
     usage: hasUsage ? `${formatReading(s.usageValue!)} ${s.usageUnit}` : `${s.factCount} donnée${s.factCount > 1 ? 's' : ''}`,
     ago: '',
-    status: health.status,
+    status: computeStatus(s),
     year: s.year ?? undefined,
     modification: s.modification ?? undefined,
     engineCode: s.engineCode ?? undefined,
     kType: s.kType ?? undefined,
     plate: s.plate ?? undefined,
     verified: 'verified' === s.source,
-    health: health.value,
-    healthLabel: health.label,
     mileage: hasUsage ? formatReading(s.usageValue!) : '—',
     mileageUnit: hasUsage ? s.usageUnit! : '',
     usageValue: s.usageValue ?? undefined,
     usageUnit: s.usageUnit ?? undefined,
     facts: s.facts,
+    maintenanceHealth: s.health,
     nextService: { value: 0, unit: '' },
     // The open checklist + its count load separately from the planned-tasks subresource (see
     // App.loadTasks); the projection starts empty and is filled by a patchVehicle merge.

@@ -116,6 +116,15 @@ final class GarageVehicle
      */
     #[ApiProperty(writable: false)]
     public array $facts = [];
+    /**
+     * The composed maintenance health badge — status (green/amber/red/unknown), a 0–100 score (null
+     * when unknown), and the breakdown (overdue/dueSoon/tracked/gaps) it explains itself with.
+     * Computed on read from the forecast; populated on the item GET only, like facts.
+     *
+     * @var array{status: string, score: int|null, overdue: int, dueSoon: int, tracked: int, gaps: int}|null
+     */
+    #[ApiProperty(writable: false)]
+    public ?array $health = null;
     // The open checklist is its own subresource — GET /garage/vehicles/{id}/planned-tasks (a
     // collection of PlannedTask), which the dashboard fetches on select. Its length is the open
     // count; there is no openTasks scalar on the vehicle.
