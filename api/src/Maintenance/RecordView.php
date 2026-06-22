@@ -23,7 +23,7 @@ final class RecordView
     /**
      * @return array{
      *     @id: string,
-     *     items: list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>,
+     *     items: list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>,
      *     label: string|null,
      *     performedAt: string,
      *     usage: array{value: int, unit: string|null}|null,

@@ -19,7 +19,7 @@ final class EditMaintenanceInput
     public ?string $record = null;
 
     /**
-     * @var list<array{type?: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string}>}>
+     * @var list<array{type?: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, price?: float}>}>
      */
     #[ApiProperty(schema: [
         'type' => 'array',
@@ -28,7 +28,7 @@ final class EditMaintenanceInput
             'properties' => [
                 'type' => ['type' => 'string', 'description' => 'Service type, snake_case (oil_change, oil_filter…) or any descriptive label.'],
                 'label' => ['type' => 'string', 'description' => 'Optional per-item label.'],
-                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string']], 'required' => ['ref']]],
+                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string'], 'price' => ['type' => 'number', 'description' => 'Unit price in major units (12.50 for €12.50); stored as integer cents.']], 'required' => ['ref']]],
             ],
             'required' => ['type'],
         ],

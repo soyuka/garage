@@ -87,7 +87,7 @@ final class MaintenanceRecorder
     }
 
     /**
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
      */
     public function log(
         ?Ulid $vehicleId,
@@ -173,7 +173,7 @@ final class MaintenanceRecorder
      * odometer (unlike {@see log()}).
      *
      * @param array{
-     *     items?: list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}>,
+     *     items?: list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}>,
      *     performedAt?: \DateTimeImmutable,
      *     usageValue?: int|null,
      *     usageUnit?: UsageUnit|null,

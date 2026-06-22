@@ -44,7 +44,7 @@ class MaintenanceRecord
      * (not constructor-promoted) so a legacy document predating this field hydrates to [] instead of
      * leaving a typed property uninitialised — newInstanceWithoutConstructor skips promoted defaults.
      *
-     * @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>
+     * @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     #[ODM\Field(type: 'collection')]
     private array $items = [];
@@ -60,7 +60,7 @@ class MaintenanceRecord
     private Collection $attachments;
 
     /**
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
      */
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'maintenanceRecords')]
@@ -102,9 +102,9 @@ class MaintenanceRecord
     /**
      * Validate + normalise a visit's line-items: drop empties, keep {type, optional label, parts}.
      *
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
      *
-     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>
+     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     private static function normaliseItems(array $items): array
     {
@@ -118,13 +118,38 @@ class MaintenanceRecord
                 throw new \InvalidArgumentException('Every maintenance item must carry a non-empty type.');
             }
 
-            $normalised = ['type' => $type, 'parts' => array_values($item['parts'] ?? [])];
+            $normalised = ['type' => $type, 'parts' => self::normaliseParts($item['parts'] ?? [])];
             if (isset($item['label']) && '' !== $item['label']) {
                 $normalised['label'] = $item['label'];
             }
 
             return $normalised;
         }, array_values($items));
+    }
+
+    /**
+     * The single place a part's price crosses from the wire (major units, the `price` key) to its
+     * stored form (integer minor units, `priceCents`) — so every entry path (the dashboard's
+     * MaintenanceRecordInput and the MCP log/edit tools) yields one consistent shape. Every other key
+     * passes through untouched; a part with no price simply carries none (never a 0).
+     *
+     * @param list<array<string, mixed>> $parts
+     *
+     * @return list<array<string, mixed>>
+     */
+    private static function normaliseParts(array $parts): array
+    {
+        return array_map(static function (array $part): array {
+            if (\array_key_exists('price', $part)) {
+                $price = $part['price'];
+                unset($part['price']);
+                if (null !== $price && '' !== $price) {
+                    $part['priceCents'] = (int) round(((float) $price) * 100);
+                }
+            }
+
+            return $part;
+        }, array_values($parts));
     }
 
     public function getId(): Ulid
@@ -138,7 +163,7 @@ class MaintenanceRecord
     }
 
     /**
-     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string}>}>
+     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     public function getItems(): array
     {
@@ -254,7 +279,7 @@ class MaintenanceRecord
      * Manual edit from the dashboard — the one exception to the append-only rule. Replaces the whole
      * visit (items + visit-level fields); forecasting re-keys off the fresh item types on next read.
      *
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}> $items
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
      */
     public function replaceItems(array $items): void
     {

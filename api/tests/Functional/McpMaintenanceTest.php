@@ -326,6 +326,46 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame('W712/73', $record['items'][0]['parts'][0]['ref']);
     }
 
+    public function testLoggingAndEditingPartPriceStoresCents(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // A part price entered in euros is stored as integer cents — the same chokepoint the dashboard
+        // uses, so the agent and the UI agree on the shape.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'items' => [['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'brand' => 'Motul', 'price' => 12.5]]]],
+                'performedAt' => '2026-06-15',
+            ],
+        ], 3);
+
+        $record = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
+        ], 4)['result']['structuredContent']['records'][0];
+        $this->assertSame(1250, $record['items'][0]['parts'][0]['priceCents']);
+        $this->assertArrayNotHasKey('price', $record['items'][0]['parts'][0], 'the wire "price" is converted, never stored raw');
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'edit_maintenance',
+            'arguments' => [
+                'record' => $record['@id'],
+                'items' => [['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'brand' => 'Motul', 'price' => 14.9]]]],
+            ],
+        ], 5);
+
+        $edited = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
+        ], 6)['result']['structuredContent']['records'][0];
+        $this->assertSame(1490, $edited['items'][0]['parts'][0]['priceCents']);
+    }
+
     public function testEditMaintenanceToolIsDiscoverableAndCarriesIdempotentHint(): void
     {
         $client = static::createClient();

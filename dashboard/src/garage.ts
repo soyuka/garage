@@ -128,11 +128,20 @@ export async function getMaintenanceRecords(vehicleIri: string): Promise<Mainten
   return members.map((r) => ({ ...r, id: r['@id'] ?? r.id }) as MaintenanceRecord);
 }
 
+/** A part as entered on the manual visit form. `price` is in major units (euros); the API stores it as priceCents. */
+export interface PartInput {
+  ref: string;
+  brand?: string;
+  label?: string;
+  qty?: number;
+  price?: number;
+}
+
 /** One service line of a manual visit: a type + the parts it consumed. */
 export interface MaintenanceItemInput {
   type: string;
   label?: string | null;
-  parts: PlannedPart[];
+  parts: PartInput[];
 }
 
 /** The body of a manual maintenance visit — a list of service items plus visit-level fields. */

@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { fetchAttachmentObjectUrl, type MaintenanceItemInput, type MaintenanceRecordInput } from '../garage';
+import { fetchAttachmentObjectUrl, type MaintenanceItemInput, type MaintenanceRecordInput, type PartInput } from '../garage';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import type { MaintenanceAttachment, MaintenanceRecord, PlannedPart } from '../types';
 
@@ -18,10 +18,11 @@ function money(cents?: number | null, currency?: string | null): string {
   return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: currency ?? 'EUR' });
 }
 
-/** A part rendered for the visit checklist: "MANN W712/52" / "Filtre à huile ×2". */
-function partLabel(p: PlannedPart): string {
+/** A part rendered for the visit checklist: "MANN W712/52 ×2 — 12,50 €" (qty/price shown when set). */
+export function partLabel(p: PlannedPart, currency?: string | null): string {
   const name = [p.brand, p.label || p.ref].filter(Boolean).join(' ');
-  return p.qty && p.qty > 1 ? `${name} ×${p.qty}` : name;
+  const withQty = p.qty && p.qty > 1 ? `${name} ×${p.qty}` : name;
+  return p.priceCents != null ? `${withQty} — ${money(p.priceCents, currency)}` : withQty;
 }
 
 /**
@@ -156,7 +157,7 @@ export function PastMaintenanceRail({
                       <li key={i} className="hist-item">
                         <span className="hist-item-name">{it.label?.trim() || serviceLabel(it.type)}</span>
                         {it.parts.length ? (
-                          <span className="hist-item-parts">{it.parts.map(partLabel).join(' · ')}</span>
+                          <span className="hist-item-parts">{it.parts.map((p) => partLabel(p, r.currency)).join(' · ')}</span>
                         ) : null}
                       </li>
                     ))}
@@ -243,16 +244,32 @@ function BillStrip({
   );
 }
 
-/** Editable item row state — parts are edited as four parallel string fields, parsed on submit. */
+/**
+ * Editable part row state. `price` is kept as a raw euros string (not priceCents) so decimal typing
+ * ("12,5") isn't mangled mid-keystroke — it's parsed to a number only on submit, like the visit cost.
+ */
+interface PartDraft {
+  ref?: string;
+  brand?: string;
+  label?: string;
+  qty?: number;
+  price: string;
+}
+
+/** Editable item row state — parts are edited as parallel string fields, parsed on submit. */
 interface ItemDraft {
   type: string;
   label: string;
-  parts: PlannedPart[];
+  parts: PartDraft[];
 }
 
 function itemDraftsFrom(record?: MaintenanceRecord): ItemDraft[] {
   if (!record || (record.items ?? []).length === 0) return [{ type: 'oil_change', label: '', parts: [] }];
-  return record.items.map((it) => ({ type: it.type, label: it.label ?? '', parts: it.parts.map((p) => ({ ...p })) }));
+  return record.items.map((it) => ({
+    type: it.type,
+    label: it.label ?? '',
+    parts: it.parts.map((p) => ({ ref: p.ref, brand: p.brand, label: p.label, qty: p.qty, price: p.priceCents != null ? String(p.priceCents / 100) : '' })),
+  }));
 }
 
 /**
@@ -284,9 +301,9 @@ function RecordForm({
   const addItem = () => setItems((prev) => [...prev, { type: '', label: '', parts: [] }]);
   const removeItem = (idx: number) => setItems((prev) => prev.filter((_, i) => i !== idx));
 
-  const setPart = (itemIdx: number, partIdx: number, patch: Partial<PlannedPart>) =>
+  const setPart = (itemIdx: number, partIdx: number, patch: Partial<PartDraft>) =>
     setItem(itemIdx, { parts: items[itemIdx].parts.map((p, i) => (i === partIdx ? { ...p, ...patch } : p)) });
-  const addPart = (itemIdx: number) => setItem(itemIdx, { parts: [...items[itemIdx].parts, { ref: '' }] });
+  const addPart = (itemIdx: number) => setItem(itemIdx, { parts: [...items[itemIdx].parts, { ref: '', price: '' }] });
   const removePart = (itemIdx: number, partIdx: number) =>
     setItem(itemIdx, { parts: items[itemIdx].parts.filter((_, i) => i !== partIdx) });
 
@@ -295,12 +312,16 @@ function RecordForm({
       type: it.type.trim(),
       label: it.label.trim() || null,
       parts: it.parts
-        .map((p) => ({
-          ref: (p.ref ?? '').trim(),
-          brand: p.brand?.trim() || undefined,
-          label: p.label?.trim() || undefined,
-          qty: p.qty && p.qty > 0 ? p.qty : undefined,
-        }))
+        .map((p): PartInput => {
+          const price = Number.parseFloat((p.price ?? '').replace(',', '.'));
+          return {
+            ref: (p.ref ?? '').trim(),
+            brand: p.brand?.trim() || undefined,
+            label: p.label?.trim() || undefined,
+            qty: p.qty && p.qty > 0 ? p.qty : undefined,
+            price: Number.isNaN(price) ? undefined : price,
+          };
+        })
         .filter((p) => p.ref !== ''),
     }))
     .filter((it) => it.type !== '');
@@ -379,6 +400,14 @@ function RecordForm({
                     const n = Number.parseInt(e.target.value.replace(/[^\d]/g, ''), 10);
                     setPart(i, j, { qty: Number.isNaN(n) ? undefined : n });
                   }}
+                />
+                <input
+                  className="add-input add-input-xs"
+                  inputMode="decimal"
+                  placeholder="prix €"
+                  aria-label="Prix unitaire en euros"
+                  value={p.price}
+                  onChange={(e) => setPart(i, j, { price: e.target.value })}
                 />
                 <button type="button" className="rf-remove" aria-label="Retirer cette pièce" onClick={() => removePart(i, j)}>
                   ✕

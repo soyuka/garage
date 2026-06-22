@@ -21,7 +21,7 @@ final class MaintenanceRecordInput
      * {type, optional label, optional parts}. A vidange that changed oil AND the oil filter is ONE
      * visit with TWO items.
      *
-     * @var list<array{type?: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int}>}>
+     * @var list<array{type?: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, price?: float}>}>
      */
     #[ApiProperty(schema: [
         'type' => 'array',
@@ -30,7 +30,7 @@ final class MaintenanceRecordInput
             'properties' => [
                 'type' => ['type' => 'string', 'description' => 'Service type, snake_case (oil_change, brakes…) or any descriptive free-text label for the long tail.'],
                 'label' => ['type' => 'string', 'description' => 'Optional per-item label.'],
-                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string'], 'qty' => ['type' => 'integer']], 'required' => ['ref']]],
+                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string'], 'qty' => ['type' => 'integer'], 'price' => ['type' => 'number', 'description' => 'Unit price in major units (12.50 for €12.50); stored as integer cents (priceCents) like the visit cost.']], 'required' => ['ref']]],
             ],
             'required' => ['type'],
         ],
@@ -76,7 +76,10 @@ final class MaintenanceRecordInput
      * legacy single-{@see $type} wrapped as one item. Blank/typeless entries are dropped — the caller
      * turns an empty result into a 422.
      *
-     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int}>}>
+     * Part prices stay in major units (the `price` key) here — {@see MaintenanceRecord::normaliseItems}
+     * is the single chokepoint that converts them to the stored `priceCents`, shared with the MCP path.
+     *
+     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}>
      */
     public function resolveItems(): array
     {

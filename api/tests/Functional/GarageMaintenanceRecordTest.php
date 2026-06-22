@@ -128,6 +128,39 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         ]);
     }
 
+    public function testPostStoresPerPartPriceAsCents(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => [
+                'performedAt' => '2025-09-12',
+                'items' => [
+                    ['type' => 'oil_change', 'parts' => [
+                        ['ref' => '5W30', 'brand' => 'Motul', 'qty' => 5, 'price' => 12.5],
+                        ['ref' => 'W712/52', 'brand' => 'MANN'],
+                    ]],
+                ],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(201);
+        // Price entered in euros is stored as integer minor units, like the visit-level cost; a part
+        // with no price stays priceless (no key) rather than 0.
+        $this->assertJsonContains([
+            'items' => [
+                ['type' => 'oil_change', 'parts' => [
+                    ['ref' => '5W30', 'brand' => 'Motul', 'qty' => 5, 'priceCents' => 1250],
+                    ['ref' => 'W712/52', 'brand' => 'MANN'],
+                ]],
+            ],
+        ]);
+        $part = $client->getResponse()->toArray()['items'][0]['parts'][1];
+        $this->assertArrayNotHasKey('priceCents', $part, 'a part with no price carries no priceCents');
+    }
+
     public function testPatchReplacesItemsAndVisitFields(): void
     {
         $client = static::createClient();
@@ -159,6 +192,30 @@ final class GarageMaintenanceRecordTest extends AppTestCase
                 ['type' => 'brake_fluid', 'parts' => []],
             ],
         ]);
+    }
+
+    public function testPatchUpdatesPerPartPrice(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        $created = $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['performedAt' => '2025-09-12', 'items' => [
+                ['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'price' => 12.5]]],
+            ]],
+        ])->toArray();
+        $this->assertSame(1250, $created['items'][0]['parts'][0]['priceCents']);
+
+        $client->request('PATCH', $created['@id'], [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => ['items' => [
+                ['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'price' => 14.9]]],
+            ]],
+        ]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertJsonContains(['items' => [['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'priceCents' => 1490]]]]]);
     }
 
     public function testDeleteRemovesRecord(): void

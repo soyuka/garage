@@ -12,6 +12,7 @@ export interface PlannedPart {
   label?: string;
   brand?: string;
   qty?: number;
+  priceCents?: number; // unit price, integer minor units (like MaintenanceRecord.costCents)
 }
 
 /** An open task on a vehicle's checklist — intended work plus the parts it needs (shopping list). */

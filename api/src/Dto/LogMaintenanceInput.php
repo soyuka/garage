@@ -38,7 +38,7 @@ final class LogMaintenanceInput
     public bool $confirmNew = false;
 
     /**
-     * @var list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}>
+     * @var list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, price?: float}>}>
      */
     #[ApiProperty(schema: [
         'type' => 'array',
@@ -48,7 +48,7 @@ final class LogMaintenanceInput
             'properties' => [
                 'type' => ['type' => 'string', 'description' => 'Service type, snake_case: oil_change, oil_filter, air_filter, fuel_filter, cabin_filter, spark_plug, brakes, coolant, tires, battery, inspection, timing_belt, gearbox_oil. Any descriptive value for the long tail — never collapse to "other".'],
                 'label' => ['type' => 'string', 'description' => 'Optional per-item label, e.g. "blade sharpening" for an "other" item.'],
-                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string']], 'required' => ['ref']], 'description' => 'Parts/fluids this item consumed, each a part number "ref" with optional brand/label.'],
+                'parts' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'label' => ['type' => 'string'], 'price' => ['type' => 'number', 'description' => 'Unit price in major units (12.50 for €12.50); stored as integer cents.']], 'required' => ['ref']], 'description' => 'Parts/fluids this item consumed, each a part number "ref" with optional brand/label/price.'],
             ],
             'required' => ['type'],
         ],
