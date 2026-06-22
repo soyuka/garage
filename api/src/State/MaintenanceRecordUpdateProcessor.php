@@ -8,11 +8,11 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageMaintenanceRecord;
 use App\Dto\MaintenanceRecordInput;
+use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
 use App\Repository\MaintenanceRecordRepository;
 use App\Security\OwnerContext;
-use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -30,7 +30,7 @@ final class MaintenanceRecordUpdateProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly MaintenanceRecordRepository $records,
-        private readonly DocumentManager $em,
+        private readonly MaintenanceRecorder $recorder,
         private readonly OwnerContext $owner,
         private readonly DomainPublisher $publisher,
     ) {
@@ -45,14 +45,26 @@ final class MaintenanceRecordUpdateProcessor implements ProcessorInterface
             throw new NotFoundHttpException('No maintenance record at this IRI.');
         }
 
+        // The dashboard editor holds the full visit state, so every field is authoritative: a blank
+        // usageUnit/label/cost clears it. Hence every key but items/performedAt is always present in
+        // the change set (items can never be emptied to zero; performedAt is kept when omitted).
+        $changes = [
+            'label' => $data->label,
+            'usageValue' => $data->usageValue,
+            'notes' => $data->notes,
+            'performedBy' => $data->performedBy,
+            'costCents' => null !== $data->cost ? (int) round($data->cost * 100) : null,
+            'currency' => null !== $data->cost ? ($data->currency ?? 'EUR') : $data->currency,
+        ];
+
         $items = $data->resolveItems();
         if ([] !== $items) {
-            $record->replaceItems($items);
+            $changes['items'] = $items;
         }
 
         if ('' !== trim($data->performedAt)) {
             try {
-                $record->setPerformedAt(new \DateTimeImmutable($data->performedAt));
+                $changes['performedAt'] = new \DateTimeImmutable($data->performedAt);
             } catch (\Exception) {
                 throw new UnprocessableEntityHttpException(sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
             }
@@ -64,19 +76,12 @@ final class MaintenanceRecordUpdateProcessor implements ProcessorInterface
             if (null === $unit) {
                 throw new UnprocessableEntityHttpException(sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
             }
-            $record->setUsageUnit($unit);
+            $changes['usageUnit'] = $unit;
         } else {
-            $record->setUsageUnit(null);
+            $changes['usageUnit'] = null;
         }
 
-        $record->setLabel($data->label);
-        $record->setUsageValue($data->usageValue);
-        $record->setNotes($data->notes);
-        $record->setPerformedBy($data->performedBy);
-        $record->setCostCents(null !== $data->cost ? (int) round($data->cost * 100) : null);
-        $record->setCurrency(null !== $data->cost ? ($data->currency ?? 'EUR') : $data->currency);
-
-        $this->em->flush();
+        $this->recorder->edit($record, $changes);
         $this->publisher->publishVehicle($record->getVehicle());
 
         return GarageMaintenanceRecord::fromEntity($record);

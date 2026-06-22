@@ -218,6 +218,166 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame(2, $list['count'], 'confirmNew must create the distinct row.');
     }
 
+    public function testEditMaintenanceUpdatesAVisitInPlaceWithoutDuplicating(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // A logged visit carrying a cost, notes and a performedBy.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
+                'performedAt' => '2026-06-15',
+                'notes' => 'first pass',
+                'performedBy' => 'self',
+            ],
+        ], 3);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
+        ], 4)['result']['structuredContent']['records'][0]['@id'];
+
+        // Edit only the cost and notes; performedBy is NOT supplied — a sparse edit must leave it.
+        $edit = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'edit_maintenance',
+            'arguments' => [
+                'record' => $iri,
+                'cost' => '149.90',
+                'currency' => 'EUR',
+                'notes' => 'corrected bill',
+            ],
+        ], 5)['result']['structuredContent'];
+        $this->assertSame('ok', $edit['status']);
+
+        $history = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
+        ], 6)['result']['structuredContent'];
+
+        $this->assertCount(1, $history['records'], 'an edit must mutate the visit in place, never append a second row');
+        $record = $history['records'][0];
+        $this->assertSame($iri, $record['@id'], 'the edited record keeps its identity (same @id)');
+        $this->assertSame('149.90', $record['cost']['amount']);
+        $this->assertSame('corrected bill', $record['notes']);
+        $this->assertSame('self', $record['performedBy'], 'a field omitted from the edit is left untouched');
+        $this->assertSame('oil_change', $record['items'][0]['type'], 'items untouched when not supplied');
+    }
+
+    public function testEditMaintenanceOnAnUnknownRecordIsNotFoundNotAnError(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $edit = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'edit_maintenance',
+            'arguments' => [
+                'record' => '/garage/maintenance-records/'.new \Symfony\Component\Uid\Ulid(),
+                'notes' => 'ghost',
+            ],
+        ], 3);
+
+        $this->assertFalse($edit['result']['isError'] ?? false, 'a missing record is a result, not a protocol error');
+        $this->assertSame('not_found', $edit['result']['structuredContent']['status']);
+    }
+
+    public function testEditMaintenanceReplacesItemsWhenSupplied(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'items' => [['type' => 'oil_change', 'parts' => []]],
+                'performedAt' => '2026-06-15',
+            ],
+        ], 3);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
+        ], 4)['result']['structuredContent']['records'][0]['@id'];
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'edit_maintenance',
+            'arguments' => [
+                'record' => $iri,
+                'items' => [
+                    ['type' => 'oil_change', 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER']]],
+                    ['type' => 'oil_filter', 'parts' => []],
+                ],
+            ],
+        ], 5);
+
+        $record = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
+        ], 6)['result']['structuredContent']['records'][0];
+
+        $this->assertSame(['oil_change', 'oil_filter'], array_column($record['items'], 'type'));
+        $this->assertSame('W712/73', $record['items'][0]['parts'][0]['ref']);
+    }
+
+    public function testEditMaintenanceToolIsDiscoverableAndCarriesIdempotentHint(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $tools = [];
+        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+            $tools[$tool['name']] = $tool;
+        }
+
+        $this->assertArrayHasKey('edit_maintenance', $tools);
+        $edit = $tools['edit_maintenance'];
+        $this->assertNotEmpty($edit['title'] ?? null);
+        $this->assertFalse($edit['annotations']['readOnlyHint'] ?? null, 'editing modifies state');
+        // Re-sending the same edit yields the same record — idempotent, and not destructive (in-place).
+        $this->assertTrue($edit['annotations']['idempotentHint'] ?? null);
+        $this->assertFalse($edit['annotations']['destructiveHint'] ?? null);
+    }
+
+    public function testLoggedPartsSurfaceAsVehicleFacts(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // Logging a visit that fitted real parts must make those parts queryable as facts — no
+        // separate fact-entry step. The part is the single store; the fact is a projection of it.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'MAZDA',
+                'model' => 'MAZDA6',
+                'items' => [
+                    ['type' => 'oil_filter', 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER']]],
+                    ['type' => 'air_filter', 'parts' => [['ref' => 'C25024']]],
+                ],
+                'performedAt' => '2026-06-15',
+            ],
+        ], 3);
+
+        $facts = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_vehicle_facts',
+            'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6'],
+        ], 4)['result']['structuredContent']['facts'];
+
+        $byKey = array_column($facts, null, 'key');
+        $this->assertArrayHasKey('oil_filter_ref', $byKey);
+        $this->assertSame('MANN-FILTER W712/73', $byKey['oil_filter_ref']['value']);
+        $this->assertSame('log', $byKey['oil_filter_ref']['source']);
+        $this->assertArrayHasKey('air_filter_ref', $byKey);
+        $this->assertSame('C25024', $byKey['air_filter_ref']['value']);
+    }
+
     public function testListDueMaintenanceFlagsAnOverdueServiceAndSurfacesGaps(): void
     {
         $client = static::createClient();

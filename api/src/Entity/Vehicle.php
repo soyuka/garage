@@ -74,6 +74,20 @@ class Vehicle
     #[ODM\Field(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $updatedAt = null;
 
+    /**
+     * Suppression tombstones for PROJECTED facts that have no document of their own — the ref facts
+     * {@see \App\Maintenance\VehicleFactsProjector} derives from logged parts. Maps a fact key to the
+     * instant the user removed it from the card; the projector hides that key while its source visit
+     * is no newer than this stamp, so a later fitment (a fresh visit) re-surfaces it as new evidence.
+     * Attribute-backed facts are tombstoned on their own document instead (see VehicleFact::delete()).
+     *
+     * @var array<string, string> key => ISO-8601 suppression instant
+     */
+    // Declared (not promoted) with a `= []` default for the same legacy-doc hydration reason as the
+    // fields above: docs persisted before this field carry no `suppressedFactKeys` key.
+    #[ODM\Field(type: 'hash')]
+    private array $suppressedFactKeys = [];
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $make,
@@ -294,6 +308,23 @@ class Vehicle
     public function getMaintenanceRecords(): Collection
     {
         return $this->maintenanceRecords;
+    }
+
+    /**
+     * Suppress a projected (history-derived) fact key from the card as of $at. A logged part whose
+     * visit is no newer than $at is hidden; a later fitment re-surfaces it.
+     */
+    public function suppressFactKey(string $key, \DateTimeImmutable $at = new \DateTimeImmutable()): void
+    {
+        $this->suppressedFactKeys[$key] = $at->format(\DateTimeInterface::ATOM);
+    }
+
+    /** The instant a projected fact key was suppressed, or null if it is not suppressed. */
+    public function factSuppressedAt(string $key): ?\DateTimeImmutable
+    {
+        $at = $this->suppressedFactKeys[$key] ?? null;
+
+        return null !== $at ? new \DateTimeImmutable($at) : null;
     }
 
     public function addMaintenanceRecord(MaintenanceRecord $record): void

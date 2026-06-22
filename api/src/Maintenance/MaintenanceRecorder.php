@@ -162,6 +162,62 @@ final class MaintenanceRecorder
     }
 
     /**
+     * Edit a logged visit in place — the one exception to the append-only rule, shared by the
+     * dashboard's PATCH and the edit_maintenance MCP tool. $changes is SPARSE: only the keys present
+     * are applied, so a caller can patch a single field (MCP) or replace the whole visit (the
+     * dashboard editor holds full state and sends every key). Recognised keys mirror the record's
+     * mutators — items, performedAt, usageValue, usageUnit, label, notes, performedBy, costCents,
+     * currency — each already converted to its domain type by the caller (the unit vocabulary and
+     * error wording differ per surface, so normalisation stays caller-side). The vehicle's own usage
+     * reading is deliberately NOT promoted here: an edit corrects history, it never advances the
+     * odometer (unlike {@see log()}).
+     *
+     * @param array{
+     *     items?: list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string}>}>,
+     *     performedAt?: \DateTimeImmutable,
+     *     usageValue?: int|null,
+     *     usageUnit?: UsageUnit|null,
+     *     label?: string|null,
+     *     notes?: string|null,
+     *     performedBy?: string|null,
+     *     costCents?: int|null,
+     *     currency?: string|null
+     * } $changes
+     */
+    public function edit(MaintenanceRecord $record, array $changes): void
+    {
+        if (\array_key_exists('items', $changes)) {
+            $record->replaceItems($changes['items']);
+        }
+        if (\array_key_exists('performedAt', $changes)) {
+            $record->setPerformedAt($changes['performedAt']);
+        }
+        if (\array_key_exists('usageValue', $changes)) {
+            $record->setUsageValue($changes['usageValue']);
+        }
+        if (\array_key_exists('usageUnit', $changes)) {
+            $record->setUsageUnit($changes['usageUnit']);
+        }
+        if (\array_key_exists('label', $changes)) {
+            $record->setLabel($changes['label']);
+        }
+        if (\array_key_exists('notes', $changes)) {
+            $record->setNotes($changes['notes']);
+        }
+        if (\array_key_exists('performedBy', $changes)) {
+            $record->setPerformedBy($changes['performedBy']);
+        }
+        if (\array_key_exists('costCents', $changes)) {
+            $record->setCostCents($changes['costCents']);
+        }
+        if (\array_key_exists('currency', $changes)) {
+            $record->setCurrency($changes['currency']);
+        }
+
+        $this->entityManager->flush();
+    }
+
+    /**
      * Service history for a known vehicle, newest first — addressed by its @id ($vehicleId) or by
      * make+model identity. Returns null when the vehicle is not in the garage — the caller turns
      * that into the no_records contract (not an error).

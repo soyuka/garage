@@ -7,12 +7,14 @@ namespace App\ApiResource;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\McpTool;
 use App\Dto\DismissMaintenanceInput;
+use App\Dto\EditMaintenanceInput;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Dto\ListDueMaintenanceInput;
 use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
 use App\Mcp\UiResourceLoader;
 use App\State\DismissMaintenanceProcessor;
+use App\State\EditMaintenanceProcessor;
 use App\State\GetMaintenanceHistoryProcessor;
 use App\State\ListDueMaintenanceProcessor;
 use App\State\LogMaintenanceProcessor;
@@ -37,6 +39,17 @@ use App\State\PlanMaintenanceProcessor;
             // Append-only: writes (not read-only), additive only (not destructive), and every call
             // adds a fresh record (not idempotent). Hosts use these to gate confirmation prompts.
             annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => false],
+        ),
+        'edit_maintenance' => new McpTool(
+            title: 'Edit Maintenance Event',
+            description: 'Fix an ALREADY-logged maintenance visit in place — use it for "the oil change actually cost 149€", "set the bill on the révision complète", "that service was on the 12th not the 15th". Address the visit by its @id (the `record` argument, the IRI surfaced by get_maintenance_history). This is a SPARSE edit: pass ONLY the fields to change and everything else is left exactly as it was — its identity (@id) and any attached bills are preserved. Distinct from log_maintenance, which RECORDS a NEW visit: never edit to log a fresh service, and never log to fix an existing one (that would duplicate it). Editing usageValue corrects the record only — it does NOT move the vehicle\'s current odometer. To replace the services covered, pass a full `items` array (an empty array keeps the current items, it does not clear them). An unknown @id returns a not_found result (NOT an error).',
+            input: EditMaintenanceInput::class,
+            structuredContent: false,
+            processor: EditMaintenanceProcessor::class,
+            // In-place edit keyed on the record @id: writes (not read-only), mutates one existing row
+            // (not additive, never deletes — re-sending the same edit is a no-op), so idempotent and
+            // not destructive. Hosts gate it like any write.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
         ),
         'get_maintenance_history' => new McpTool(
             title: 'Maintenance History',
