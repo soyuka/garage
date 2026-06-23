@@ -531,6 +531,9 @@ body {
 .task-parts li { color: var(--mpa-text-2); font-size: var(--mpa-text-small); }
 .task-parts .part-ref { font-variant-numeric: tabular-nums; color: var(--mpa-text-1); }
 .task-parts .part-brand, .task-parts .part-label, .task-parts .part-qty { color: var(--mpa-muted); }
+/* Derived fluid spec: the "which oil" grade reads as primary text, the unverified marker stays faint. */
+.task-parts .part-spec { color: var(--mpa-text-1); }
+.task-parts .part-spec-unverified { color: var(--mpa-faint); cursor: help; }
 
 /* Editable badge fields (year, finition, engineCode, kType) — same dashed-underline affordance as
    the plate badge, sized for short tokens. */

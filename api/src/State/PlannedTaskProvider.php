@@ -7,6 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\PlannedTask;
+use App\Maintenance\PlannedTaskFluidEnricher;
+use App\Maintenance\VehicleFactsProjector;
 use App\Repository\PlannedMaintenanceRepository;
 use Symfony\Component\Uid\Ulid;
 
@@ -19,8 +21,11 @@ use Symfony\Component\Uid\Ulid;
  */
 final class PlannedTaskProvider implements ProviderInterface
 {
-    public function __construct(private readonly PlannedMaintenanceRepository $tasks)
-    {
+    public function __construct(
+        private readonly PlannedMaintenanceRepository $tasks,
+        private readonly VehicleFactsProjector $facts,
+        private readonly PlannedTaskFluidEnricher $fluids,
+    ) {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?PlannedTask
@@ -28,6 +33,16 @@ final class PlannedTaskProvider implements ProviderInterface
         $id = $uriVariables['id'];
         $task = $this->tasks->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        return null === $task ? null : PlannedTask::fromEntity($task);
+        if (null === $task) {
+            return null;
+        }
+
+        $parts = $this->fluids->enrich(
+            $task->getType(),
+            $task->getParts(),
+            $this->facts->forVehicle($task->getVehicle()),
+        );
+
+        return PlannedTask::fromEntity($task, $parts);
     }
 }

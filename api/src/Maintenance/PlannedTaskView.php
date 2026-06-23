@@ -16,8 +16,11 @@ use App\Entity\VehicleFact;
  */
 final class PlannedTaskView
 {
-    public function __construct(private readonly IriConverterInterface $iriConverter)
-    {
+    public function __construct(
+        private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleFactsProjector $facts,
+        private readonly PlannedTaskFluidEnricher $fluids,
+    ) {
     }
 
     /**
@@ -27,7 +30,7 @@ final class PlannedTaskView
      *     label: string|null,
      *     target: array{value: int, unit: string|null}|null,
      *     dueDate: string|null,
-     *     parts: list<array{ref: string, label?: string, brand?: string, qty?: int}>,
+     *     parts: list<array{ref: string, label?: string, brand?: string, qty?: int, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}>,
      *     attributes: list<array{key: string, value: string, unit: string|null, source: string, verified: bool, url: string|null}>,
      *     status: string,
      *     vehicle: string
@@ -45,7 +48,11 @@ final class PlannedTaskView
                 ? ['value' => $targetValue, 'unit' => $task->getTargetUsageUnit()?->value]
                 : null,
             'dueDate' => $task->getDueDate()?->format('Y-m-d'),
-            'parts' => $task->getParts(),
+            'parts' => $this->fluids->enrich(
+                $task->getType(),
+                $task->getParts(),
+                $this->facts->forVehicle($task->getVehicle()),
+            ),
             'attributes' => array_map(static fn (VehicleFact $f): array => [
                 'key' => $f->getKey(),
                 'value' => $f->getValue(),

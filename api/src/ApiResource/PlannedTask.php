@@ -81,8 +81,8 @@ final class PlannedTask
     public ?array $target = null;
     #[ApiProperty(writable: false)]
     public ?string $dueDate = null;
-    /** @var list<array{ref: string, label?: string, brand?: string, qty?: int}> */
-    #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list. A PATCH MERGES the supplied parts in (dedup by ref); it never replaces or clears the list.')]
+    /** @var list<array{ref: string, label?: string, brand?: string, qty?: int, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
+    #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list. A PATCH MERGES the supplied parts in (dedup by ref); it never replaces or clears the list. A ref-less fluid line carries a read-only derived `spec` (which oil, what quantity) projected from the vehicle facts.')]
     public array $parts = [];
     #[ApiProperty(description: 'Lifecycle: "open" | "done" | "dismissed". Set "done" to tick the task off.')]
     public string $status;
@@ -93,7 +93,10 @@ final class PlannedTask
     #[ApiProperty(writable: false)]
     public ?string $completedAt = null;
 
-    public static function fromEntity(PlannedMaintenance $task): self
+    /**
+     * @param list<array<string, mixed>>|null $parts derived (fluid-enriched) parts; defaults to the stored parts
+     */
+    public static function fromEntity(PlannedMaintenance $task, ?array $parts = null): self
     {
         $resource = new self();
         $resource->id = $task->getId();
@@ -103,7 +106,7 @@ final class PlannedTask
             ? ['value' => $task->getTargetUsageValue(), 'unit' => $task->getTargetUsageUnit()?->value]
             : null;
         $resource->dueDate = $task->getDueDate()?->format('Y-m-d');
-        $resource->parts = $task->getParts();
+        $resource->parts = $parts ?? $task->getParts();
         $resource->status = $task->getStatus()->value;
         $resource->vehicle = '/garage/vehicles/'.$task->getVehicle()->getId();
         $resource->createdAt = $task->getCreatedAt()->format(\DateTimeInterface::ATOM);

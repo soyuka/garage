@@ -36,6 +36,53 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $this->assertArrayHasKey('parts', $members[0], 'the shopping list rides each task');
     }
 
+    public function testRefLessOilLineCarriesADerivedSpecFromTheVehicleFacts(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // An oil_change carrying the oil spec as attributes (the facts) plus a cataloged filter and a
+        // bare "Huile moteur" line — the vague "×5" the spec must enrich.
+        $plan = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'type' => 'oil_change',
+                'parts' => [
+                    ['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile'],
+                    ['ref' => '', 'label' => 'Huile moteur', 'qty' => 5],
+                ],
+                'attributes' => [
+                    ['key' => 'oil_capacity', 'value' => '4.3', 'unit' => 'L', 'source' => 'user'],
+                    ['key' => 'oil_type', 'value' => 'ACEA A3/B3', 'source' => 'web'],
+                    ['key' => 'oil_viscosity', 'value' => '5W-30', 'source' => 'web'],
+                ],
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $vehicleIri = $plan['task']['vehicle'];
+
+        $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $members = $body['member'] ?? $body['hydra:member'] ?? [];
+        $parts = $members[0]['parts'] ?? [];
+
+        $byRef = [];
+        foreach ($parts as $part) {
+            $byRef[$part['ref'] ?? ''] = $part;
+        }
+
+        $this->assertArrayNotHasKey('spec', $byRef['W 712/73'], 'a cataloged part carries no derived fluid spec');
+        $spec = $byRef['']['spec'] ?? null;
+        $this->assertNotNull($spec, 'the ref-less oil line must pick up the derived spec');
+        $this->assertSame('5W-30', $spec['viscosity']);
+        $this->assertSame('ACEA A3/B3', $spec['standard']);
+        $this->assertSame('4.3', $spec['capacity']);
+        $this->assertSame('L', $spec['unit']);
+    }
+
     public function testDismissedTasksAreHiddenByDefaultButSurfacedOnDemand(): void
     {
         $client = static::createClient();

@@ -7,6 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\PlannedTask;
+use App\Maintenance\PlannedTaskFluidEnricher;
+use App\Maintenance\VehicleFactsProjector;
 use App\Repository\PlannedMaintenanceRepository;
 use App\Repository\VehicleRepository;
 use Symfony\Component\Uid\Ulid;
@@ -26,6 +28,8 @@ final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly PlannedMaintenanceRepository $tasks,
+        private readonly VehicleFactsProjector $facts,
+        private readonly PlannedTaskFluidEnricher $fluids,
     ) {
     }
 
@@ -45,6 +49,16 @@ final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
         // beneath the live list so the user can review (and reopen) what was dropped.
         $includeDismissed = filter_var($context['filters']['includeDismissed'] ?? false, \FILTER_VALIDATE_BOOL);
 
-        return array_map(PlannedTask::fromEntity(...), $this->tasks->checklistForVehicle($vehicle, $includeDismissed));
+        // The fluid line ("which oil, what quantity") is derived from the vehicle facts once and shared
+        // across every task in the checklist.
+        $facts = $this->facts->forVehicle($vehicle);
+
+        return array_map(
+            fn ($task): PlannedTask => PlannedTask::fromEntity(
+                $task,
+                $this->fluids->enrich($task->getType(), $task->getParts(), $facts),
+            ),
+            $this->tasks->checklistForVehicle($vehicle, $includeDismissed),
+        );
     }
 }

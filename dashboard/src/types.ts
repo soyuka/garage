@@ -21,12 +21,22 @@ export interface NextService {
   unit: string;
 }
 
+/** Derived (read-only) fluid spec for a ref-less fluid line — "which oil, what quantity", projected from the vehicle facts. */
+export interface FluidSpec {
+  verified: boolean; // true when the standard (manufacturer spec) is catalog-sourced
+  viscosity?: string; // e.g. "5W-30"
+  standard?: string; // e.g. "ACEA A3/B3|ACEA A5/B5" ("|" separates alternatives)
+  capacity?: string; // e.g. "4.3"
+  unit?: string; // e.g. "L"
+}
+
 export interface PlannedPart {
   ref: string;
   label?: string;
   brand?: string;
   qty?: number;
   priceCents?: number; // unit price, integer minor units (like MaintenanceRecord.costCents)
+  spec?: FluidSpec; // present only on a derived fluid line (server-computed, never written back)
 }
 
 /** An open task on a vehicle's checklist — intended work plus the parts it needs (shopping list). */

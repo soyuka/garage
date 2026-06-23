@@ -3,7 +3,7 @@ import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
 import type { MaintenanceRecordInput, PlannedTaskInput, ServiceRuleInput } from '../garage';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
-import type { FactPanel, PlannedTask, Vehicle } from '../types';
+import type { FactPanel, FluidSpec, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
 import { ForecastSection } from './ForecastSection';
 import { InlineEdit } from './InlineEdit';
@@ -499,6 +499,23 @@ function AddFactForm({ onSubmit }: { onSubmit: (key: string, value: string) => v
   );
 }
 
+/** The derived fluid line: which oil (viscosity · standard) and what quantity (capacity), projected from the vehicle facts. */
+function PartSpec({ spec }: { spec: FluidSpec }) {
+  const grade = [spec.viscosity, spec.standard?.split('|').join(' / ')].filter(Boolean).join(' · ');
+  const qty = spec.capacity ? `${spec.capacity.replace('.', ',')}${spec.unit ? ` ${spec.unit}` : ''}` : null;
+  return (
+    <>
+      {grade ? <span className="part-spec"> · {grade}</span> : null}
+      {qty ? <span className="part-qty"> — {qty}</span> : null}
+      {!spec.verified ? (
+        <span className="part-spec-unverified" title="Spécification non vérifiée (hors catalogue)">
+          {' '}≈
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function TaskRow({
   task,
   onToggle,
@@ -533,10 +550,14 @@ function TaskRow({
           <ul className="task-parts">
             {task.parts.map((p, i) => (
               <li key={`${p.ref}-${i}`}>
-                <span className="part-ref">{p.ref}</span>
-                {p.brand ? <span className="part-brand"> · {p.brand}</span> : null}
-                {p.label ? <span className="part-label"> — {p.label}</span> : null}
-                {p.qty ? <span className="part-qty"> ×{p.qty}</span> : null}
+                {p.ref ? <span className="part-ref">{p.ref}</span> : null}
+                {p.brand ? <span className="part-brand">{p.ref ? ' · ' : ''}{p.brand}</span> : null}
+                {p.label ? <span className="part-label">{p.ref || p.brand ? ' — ' : ''}{p.label}</span> : null}
+                {p.spec ? (
+                  <PartSpec spec={p.spec} />
+                ) : p.qty ? (
+                  <span className="part-qty"> ×{p.qty}</span>
+                ) : null}
               </li>
             ))}
           </ul>
