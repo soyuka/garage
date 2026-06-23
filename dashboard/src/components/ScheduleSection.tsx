@@ -27,68 +27,86 @@ export function ScheduleSection({
   onDelete: (ruleId: string) => void;
 }) {
   const list = rules ?? [];
+  // Collapsed by default — the schedule is the editable input behind the forecast, not the headline.
+  const [open, setOpen] = useState(false);
   const [adding, setAdding] = useState(false);
   // The rule being edited in the form, or null when adding fresh. Editing prefills + closes its row.
   const [editing, setEditing] = useState<ServiceRule | null>(null);
   const formOpen = adding || editing != null;
 
+  // Editing a rule must reveal the (collapsed) panel so the prefilled form is visible.
+  const startEdit = (rule: ServiceRule) => {
+    setOpen(true);
+    setEditing(rule);
+  };
+
   return (
     <div className="schedule">
-      <div className="panel-title">
-        <span className="t">Programme d'entretien</span>
+      <div className="panel-title panel-disclosure-row">
+        <button type="button" className="panel-disclosure" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+          <span className="t">
+            <span className="disclosure-caret">{open ? '▾' : '▸'}</span> Programme d'entretien
+          </span>
+        </button>
         <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--mpa-space-3)' }}>
-          <button
-            type="button"
-            className="task-clean"
-            aria-expanded={formOpen}
-            onClick={() => {
-              if (formOpen) {
-                setAdding(false);
-                setEditing(null);
-              } else {
-                setAdding(true);
-              }
-            }}
-          >
-            {formOpen ? 'Annuler' : '+ Ajouter une règle'}
-          </button>
+          {open ? (
+            <button
+              type="button"
+              className="task-clean"
+              aria-expanded={formOpen}
+              onClick={() => {
+                if (formOpen) {
+                  setAdding(false);
+                  setEditing(null);
+                } else {
+                  setAdding(true);
+                }
+              }}
+            >
+              {formOpen ? 'Annuler' : '+ Ajouter une règle'}
+            </button>
+          ) : null}
           <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
             {list.length} règle{list.length > 1 ? 's' : ''}
           </span>
         </span>
       </div>
 
-      {formOpen ? (
-        <RuleForm
-          rule={editing}
-          onSubmit={(input) => {
-            onSave(input);
-            setAdding(false);
-            setEditing(null);
-          }}
-        />
-      ) : null}
+      {open ? (
+        <>
+          {formOpen ? (
+            <RuleForm
+              rule={editing}
+              onSubmit={(input) => {
+                onSave(input);
+                setAdding(false);
+                setEditing(null);
+              }}
+            />
+          ) : null}
 
-      {loading ? (
-        <div className="schedule-rows" aria-hidden="true">
-          {[0, 1].map((i) => (
-            <div key={i} className="schedule-row">
-              <span className="skel" style={{ width: '45%', height: 13 }} />
-              <span className="skel" style={{ width: '30%', height: 11 }} />
+          {loading ? (
+            <div className="schedule-rows" aria-hidden="true">
+              {[0, 1].map((i) => (
+                <div key={i} className="schedule-row">
+                  <span className="skel" style={{ width: '45%', height: 13 }} />
+                  <span className="skel" style={{ width: '30%', height: 11 }} />
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : list.length === 0 ? (
-        <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>
-          Aucune règle d'entretien. Ajoutez-en une pour piloter les prévisions.
-        </div>
-      ) : (
-        <div className="schedule-rows">
-          {list.map((r) => (
-            <RuleRow key={r.id} rule={r} onEdit={() => setEditing(r)} onDelete={() => onDelete(r.id)} />
-          ))}
-        </div>
-      )}
+          ) : list.length === 0 ? (
+            <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>
+              Aucune règle d'entretien. Ajoutez-en une pour piloter les prévisions.
+            </div>
+          ) : (
+            <div className="schedule-rows">
+              {list.map((r) => (
+                <RuleRow key={r.id} rule={r} onEdit={() => startEdit(r)} onDelete={() => onDelete(r.id)} />
+              ))}
+            </div>
+          )}
+        </>
+      ) : null}
     </div>
   );
 }

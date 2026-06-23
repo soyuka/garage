@@ -286,15 +286,6 @@ export function VehicleDetail({
       </Card>
 
       <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
-        <ScheduleSection
-          rules={vehicle.serviceSchedule}
-          loading={scheduleLoading}
-          onSave={onSaveRule}
-          onDelete={onDeleteRule}
-        />
-      </Card>
-
-      <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <div className="panel-title">
           <span className="t">Entretien en cours</span>
           <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--mpa-space-3)' }}>
@@ -435,6 +426,15 @@ export function VehicleDetail({
             Tout afficher ({facts.length})
           </button>
         ) : null}
+      </Card>
+
+      <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+        <ScheduleSection
+          rules={vehicle.serviceSchedule}
+          loading={scheduleLoading}
+          onSave={onSaveRule}
+          onDelete={onDeleteRule}
+        />
       </Card>
     </>
   );
