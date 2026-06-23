@@ -57,7 +57,7 @@ class Vehicle
     private Collection $serviceSchedule;
 
     // Manufacturer engine code (SIV code_moteur, e.g. "WJY", "F1AE0481B") or a plain displacement
-    // label the user keys in ("1.9"). Distinct from the kType (TecDoc id) and the modification
+    // label the user keys in ("1.9"). Distinct from the kType (TecDoc id) and the engineVariant
     // (trim label): the motor a mechanic asks for. Not on the dedup path — purely descriptive.
     //
     // Declared (not constructor-promoted) on purpose: ODM hydrates legacy docs via
@@ -67,6 +67,15 @@ class Vehicle
     // the read tolerate that schema drift.
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $engineCode = null;
+
+    // Engine/trim variant label the user states or a lookup discovers ("2.0 16V Coupé", "1.9 TDI",
+    // "35S14") — the motorisation that pins the oil-grade variant (get_motul_oil) and the catalog
+    // modification. NEVER a fluid grade. Declared (not constructor-promoted) with a null default for
+    // the same legacy-doc hydration reason as $engineCode above: docs persisted before this rename
+    // carry no `engineVariant` key (the prior `modification` key is dropped by migration), so a
+    // promoted property would stay uninitialized and the getter would fatal.
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $engineVariant = null;
 
     // Soft-delete tombstone. A deleted vehicle stays in the collection (its maintenance history is
     // never erased) but every read path — the parc listing, identity dedup, the item GET — skips
@@ -110,8 +119,7 @@ class Vehicle
         private \DateTimeImmutable $addedAt = new \DateTimeImmutable(),
         #[ODM\Field(type: 'int', nullable: true)]
         private ?int $year = null,
-        #[ODM\Field(type: 'string', nullable: true)]
-        private ?string $modification = null,
+        ?string $engineVariant = null,
         ?string $engineCode = null,
         #[ODM\Field(type: 'int', nullable: true)]
         private ?int $kType = null,
@@ -131,6 +139,7 @@ class Vehicle
         $this->maintenanceRecords = new ArrayCollection();
         $this->plannedTasks = new ArrayCollection();
         $this->serviceSchedule = new ArrayCollection();
+        $this->engineVariant = $engineVariant;
         $this->engineCode = $engineCode;
         $this->deletedAt = $deletedAt;
     }
@@ -170,14 +179,14 @@ class Vehicle
         $this->year = $year;
     }
 
-    public function getModification(): ?string
+    public function getEngineVariant(): ?string
     {
-        return $this->modification;
+        return $this->engineVariant;
     }
 
-    public function setModification(?string $modification): void
+    public function setEngineVariant(?string $engineVariant): void
     {
-        $this->modification = $modification;
+        $this->engineVariant = $engineVariant;
     }
 
     public function getEngineCode(): ?string

@@ -16,7 +16,7 @@ export interface VehicleEdit {
   make?: string;
   model?: string;
   year?: number | null;
-  modification?: string | null;
+  engineVariant?: string | null;
   engineCode?: string | null;
   kType?: number | null;
   plate?: string | null;
@@ -230,11 +230,11 @@ export function VehicleDetail({
         </Badge>
         <Badge style={{ padding: 0 }}>
           <InlineEdit
-            value={vehicle.modification ?? ''}
+            value={vehicle.engineVariant ?? ''}
             placeholder="+ finition"
             ariaLabel="Finition / motorisation"
             className="badge-edit"
-            onCommit={(v) => onEdit({ modification: v || null })}
+            onCommit={(v) => onEdit({ engineVariant: v || null })}
           />
         </Badge>
         <Badge style={{ padding: 0 }}>

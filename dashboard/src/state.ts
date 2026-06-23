@@ -176,7 +176,7 @@ export function vehicleFromSummary(s: VehicleSummary): Vehicle {
     ago: '',
     status: computeStatus(s),
     year: s.year ?? undefined,
-    modification: s.modification ?? undefined,
+    engineVariant: s.engineVariant ?? undefined,
     engineCode: s.engineCode ?? undefined,
     kType: s.kType ?? undefined,
     plate: s.plate ?? undefined,

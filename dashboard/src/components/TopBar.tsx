@@ -56,7 +56,7 @@ function VehicleEcho({ vehicle }: { vehicle: Vehicle }) {
   const name = [vehicle.make, vehicle.model].filter(Boolean).join(' ') || 'Véhicule';
   const meta = [
     vehicle.year ? String(vehicle.year) : '',
-    vehicle.modification ?? '',
+    vehicle.engineVariant ?? '',
     vehicle.plate ?? '',
     vehicle.mileage ? `${vehicle.mileage} ${vehicle.mileageUnit}` : '',
   ].filter(Boolean);

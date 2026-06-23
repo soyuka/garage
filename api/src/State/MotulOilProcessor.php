@@ -70,13 +70,13 @@ final class MotulOilProcessor implements ProcessorInterface
                 ]);
             }
 
-            // The row's identity + plate fill whatever the caller did not override. The stored
-            // trim/modification (e.g. "2.0 16V Coupé") is the strongest engine hint — it carries the
-            // body the plate's bare displacement cannot — so it is preferred; the plate's SIV record
-            // is the fallback for a vehicle whose modification was never set.
+            // The row's identity + plate fill whatever the caller did not override. The stored engine
+            // variant (e.g. "2.0 16V Coupé") is the strongest engine hint — it carries the body the
+            // plate's bare displacement cannot — so it is preferred; the plate's SIV record is the
+            // fallback for a vehicle whose engineVariant was never set.
             $search = '' !== $search ? $search : trim($vehicle->getMake().' '.$vehicle->getModel());
             $year ??= $vehicle->getYear();
-            $engine ??= $vehicle->getModification() ?? $this->engineFromPlate($vehicle);
+            $engine ??= $vehicle->getEngineVariant() ?? $this->engineFromPlate($vehicle);
         }
 
         if ('' === $search) {

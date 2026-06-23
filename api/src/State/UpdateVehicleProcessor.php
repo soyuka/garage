@@ -21,7 +21,7 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * MCP `update_vehicle` tool: patches a vehicle's own scalar columns (usage reading, owner, plate,
- * vin, year, modification) on the shared vehicle (creating it if absent), leaving omitted fields
+ * vin, year, engineVariant) on the shared vehicle (creating it if absent), leaving omitted fields
  * unchanged. Identity/dedup mirrors plan_maintenance (make+model or @id, with ambiguous_match and
  * confirmNew). Returns structured invalid_input/not_found/ambiguous_match results — never throws,
  * so nothing leaks as a -32603 error.
@@ -83,7 +83,7 @@ final class UpdateVehicleProcessor implements ProcessorInterface
             confirmNew: $data->confirmNew,
             usageValue: $data->usageValue,
             usageUnit: null !== $data->usageUnit ? UsageUnit::from($data->usageUnit) : null,
-            modification: $data->modification,
+            engineVariant: $data->engineVariant,
         );
 
         return match ($outcome->status) {

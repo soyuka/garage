@@ -79,11 +79,14 @@ final readonly class TurnContextBuilder
         if (null !== $vehicle->getYear()) {
             $parts[] = (string) $vehicle->getYear();
         }
-        if (null !== $vehicle->getModification()) {
-            $parts[] = 'finition '.$vehicle->getModification();
+        if (null !== $vehicle->getEngineVariant()) {
+            $parts[] = 'finition '.$vehicle->getEngineVariant();
         }
         if (null !== $vehicle->getEngineCode()) {
             $parts[] = 'moteur '.$vehicle->getEngineCode();
+        }
+        if (null !== $vehicle->getPlate()) {
+            $parts[] = 'plaque '.$vehicle->getPlate();
         }
 
         return "\nVéhicule : ".implode(', ', $parts);

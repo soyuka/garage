@@ -86,8 +86,8 @@ final class GarageVehicle
     public string $make = '';
     public string $model = '';
     public ?int $year = null;
-    #[ApiProperty(description: 'Engine/trim variant label, e.g. "2.0 16V Coupé". Pins the oil-grade variant (get_motul_oil) and the catalog modification.')]
-    public ?string $modification = null;
+    #[ApiProperty(description: 'Engine/trim variant label, e.g. "2.0 16V Coupé". Pins the oil-grade variant (get_motul_oil) and the catalog modification. NEVER a fluid/oil grade.')]
+    public ?string $engineVariant = null;
     #[ApiProperty(description: 'Manufacturer engine code (e.g. "WJY", "F1AE0481B") or a plain displacement label ("1.9") — the motor a mechanic asks for.')]
     public ?string $engineCode = null;
     #[ApiProperty(description: 'Vehicle segment: "car", "motorcycle", "cv" (commercial) or "groundscare".')]
@@ -147,7 +147,7 @@ final class GarageVehicle
         $resource->make = $vehicle->getMake();
         $resource->model = $vehicle->getModel();
         $resource->year = $vehicle->getYear();
-        $resource->modification = $vehicle->getModification();
+        $resource->engineVariant = $vehicle->getEngineVariant();
         $resource->engineCode = $vehicle->getEngineCode();
         $resource->vehicleType = $vehicle->getVehicleType()->value;
         $resource->source = $vehicle->getSource();

@@ -122,7 +122,7 @@ class GarageResolver
     }
 
     /**
-     * Patch the vehicle's OWN scalar columns (usage reading, owner, plate, vin, year, modification)
+     * Patch the vehicle's OWN scalar columns (usage reading, owner, plate, vin, year, engineVariant)
      * on the row chosen by the shared {@see VehicleWriteResolver} (matched, addressed by id, or
      * freshly created). Surfaces the resolver's ambiguous/not_found verdicts as outcomes rather
      * than writing. Only the provided (non-null) fields are applied — omitted ones are untouched.
@@ -140,7 +140,7 @@ class GarageResolver
         bool $confirmNew,
         ?int $usageValue,
         ?UsageUnit $usageUnit,
-        ?string $modification,
+        ?string $engineVariant,
     ): UpdateVehicleOutcome {
         $resolution = $this->writeResolver->resolveForWrite(
             $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, 'user',
@@ -168,8 +168,8 @@ class GarageResolver
         if (null !== $vin) {
             $vehicle->setVin($vin);
         }
-        if (null !== $modification) {
-            $vehicle->setModification($modification);
+        if (null !== $engineVariant) {
+            $vehicle->setEngineVariant($engineVariant);
         }
 
         $this->entityManager->flush();

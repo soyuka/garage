@@ -138,7 +138,7 @@ final class MotulOilProcessorTest extends TestCase
             new ArrayAdapter(),
         );
 
-        $vehicle = new Vehicle('MAZDA', '6', VehicleType::Car, 'siv', year: 2004, plate: 'AA-123-BB', modification: '1.8');
+        $vehicle = new Vehicle('MAZDA', '6', VehicleType::Car, 'siv', year: 2004, plate: 'AA-123-BB', engineVariant: '1.8');
 
         $resolver = $this->createStub(GarageResolver::class);
         $resolver->method('resolveById')->willReturn($vehicle);

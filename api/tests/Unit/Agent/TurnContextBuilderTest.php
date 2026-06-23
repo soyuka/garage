@@ -54,7 +54,7 @@ final class TurnContextBuilderTest extends TestCase
     {
         $vehicle = new Vehicle(
             'Mazda', '6', VehicleType::Car, 'siv',
-            year: 2007, modification: '2.0 MZR-CD', engineCode: 'RF5C',
+            year: 2007, engineVariant: '2.0 MZR-CD', engineCode: 'RF5C',
         );
 
         $builder = new TurnContextBuilder(

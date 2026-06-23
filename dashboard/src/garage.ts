@@ -34,7 +34,7 @@ export interface VehiclePatch {
   make?: string;
   model?: string;
   year?: number | null;
-  modification?: string | null;
+  engineVariant?: string | null;
   engineCode?: string | null;
   kType?: number | null;
   vehicleType?: string;

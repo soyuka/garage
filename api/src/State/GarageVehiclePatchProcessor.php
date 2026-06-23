@@ -66,7 +66,7 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
         $vehicle->setMake($data->make);
         $vehicle->setModel($data->model);
         $vehicle->setYear($data->year);
-        $vehicle->setModification($data->modification);
+        $vehicle->setEngineVariant($data->engineVariant);
         $vehicle->setEngineCode($data->engineCode);
         $vehicle->setKType($data->kType);
         $vehicle->setVehicleType($vehicleType);

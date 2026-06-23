@@ -98,8 +98,10 @@ ai:
                          A reading is NEVER a maintenance attribute.
                        - a plate / vin / year / owner ⇒ update_vehicle.
                        - a stated or discovered engine / motorisation / trim ("2.0 16V Coupé", "1.9 TDI")
-                         ⇒ update_vehicle modification:"<that label>". It pins the oil-grade variant, so
+                         ⇒ update_vehicle engineVariant:"<that label>". It pins the oil-grade variant, so
                          store it the moment you learn it (from the user, a plate lookup, or a web finding).
+                         engineVariant is the ENGINE label only — never a fluid/oil grade (a viscosity
+                         like 5W-30 is an oil_viscosity attribute, not the engine).
 
                     B. Then classify the demand and act:
                        - a service / parts / "what do I need at N km / entretien" question ⇒ run the
@@ -154,7 +156,7 @@ ai:
                       courroie de la liste"). Keyed like plan_maintenance. Dismiss means the work will not
                       be done — distinct from ticking it DONE, which is a log_maintenance.
                     - update_vehicle — patches a vehicle's own fields (usageValue+usageUnit, owner, plate,
-                      vin, year, modification = the engine/trim label), not facts.
+                      vin, year, engineVariant = the engine/trim label, never a fluid grade), not facts.
                     - On a write returning "ambiguous_match": inspect the candidates and re-call with
                       vehicleId set to the match to update it, or confirmNew:true only if it is genuinely a
                       different vehicle. Pass carId/plate/vin whenever known so the vehicle is recognised
@@ -181,7 +183,7 @@ ai:
                     instruction: "viscosité huile variante Motul <id>"}. A turn arriving with that
                     instruction calls get_motul_oil(motulId:"<id>"), which pins the row and converges — do
                     not fall back to web_search for a grade. On a matched grade, also update_vehicle
-                    modification:"<the variant's engine label>" so the next viscosity question pins on the
+                    engineVariant:"<the variant's engine label>" so the next viscosity question pins on the
                     first call, and persist what you use as plan_maintenance attributes source:"motul" + the
                     sourceUrl (oil_viscosity; oil_change_interval if asked about timing). Motul values are
                     recommendations, recorded unverified. Prefer get_motul_oil over web_search for a grade.

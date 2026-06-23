@@ -58,7 +58,7 @@ final class GarageVehicleCrudTest extends AppTestCase
                 'make' => 'PEUGEOT',
                 'model' => '206',
                 'year' => 2003,
-                'modification' => '1.9 D',
+                'engineVariant' => '1.9 D',
                 'engineCode' => 'WJY',
                 'kType' => 12345,
                 'plate' => 'AB-123-CD',
@@ -70,7 +70,7 @@ final class GarageVehicleCrudTest extends AppTestCase
             'make' => 'PEUGEOT',
             'model' => '206',
             'year' => 2003,
-            'modification' => '1.9 D',
+            'engineVariant' => '1.9 D',
             'engineCode' => 'WJY',
             'kType' => 12345,
             'plate' => 'AB-123-CD',
@@ -78,7 +78,7 @@ final class GarageVehicleCrudTest extends AppTestCase
 
         // It persists across a fresh read.
         $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $this->assertJsonContains(['engineCode' => 'WJY', 'modification' => '1.9 D', 'make' => 'PEUGEOT']);
+        $this->assertJsonContains(['engineCode' => 'WJY', 'engineVariant' => '1.9 D', 'make' => 'PEUGEOT']);
     }
 
     public function testDeleteSoftRemovesVehicle(): void

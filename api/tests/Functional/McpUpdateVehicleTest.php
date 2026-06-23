@@ -83,19 +83,19 @@ final class McpUpdateVehicleTest extends AppTestCase
                 'make' => 'PEUGEOT',
                 'model' => '406',
                 'confirmNew' => true,
-                'modification' => '2.0 16V Coupé',
+                'engineVariant' => '2.0 16V Coupé',
             ],
         ], 4)['result']['structuredContent'];
 
         $this->assertSame('ok', $update['status']);
-        $this->assertSame('2.0 16V Coupé', $update['vehicle']['modification']);
+        $this->assertSame('2.0 16V Coupé', $update['vehicle']['engineVariant']);
 
         // Survives a round-trip: list_vehicles surfaces the stored trim.
         $list = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => ['make' => 'PEUGEOT'],
         ], 5)['result']['structuredContent'];
-        $this->assertSame('2.0 16V Coupé', $list['vehicles'][0]['modification']);
+        $this->assertSame('2.0 16V Coupé', $list['vehicles'][0]['engineVariant']);
     }
 
     public function testPartialUpdateLeavesUsageUntouched(): void
@@ -124,17 +124,17 @@ final class McpUpdateVehicleTest extends AppTestCase
             ],
         ], 4)['result']['structuredContent']['vehicle']['@id'];
 
-        // Update ONLY one scalar (modification) by addressing the row via its @id.
+        // Update ONLY one scalar (engineVariant) by addressing the row via its @id.
         $update = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'vehicle' => $iri,
-                'modification' => '35S14',
+                'engineVariant' => '35S14',
             ],
         ], 5)['result']['structuredContent'];
 
         $this->assertSame('ok', $update['status']);
-        $this->assertSame('35S14', $update['vehicle']['modification']);
+        $this->assertSame('35S14', $update['vehicle']['engineVariant']);
         // Owner is the authenticated sub, never a client-supplied field (review Root 2).
         $this->assertSame(self::TEST_OWNER, $update['vehicle']['owner']);
         $this->assertSame(87000, $update['vehicle']['usageValue'], 'A partial update must not clear an untouched usage reading.');

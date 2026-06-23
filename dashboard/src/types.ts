@@ -144,7 +144,7 @@ export interface Vehicle {
   ago: string; // "il y a 4 h"
   status: VehicleStatus;
   year?: number;
-  modification?: string; // engine/trim label, e.g. "2.0 16V Coupé"
+  engineVariant?: string; // engine/trim label, e.g. "2.0 16V Coupé"
   engineCode?: string; // motor code / displacement, e.g. "WJY" or "1.9"
   kType?: number;
   plate?: string;
@@ -232,7 +232,7 @@ export interface VehicleSummary {
   make: string;
   model: string;
   year?: number | null;
-  modification?: string | null;
+  engineVariant?: string | null;
   engineCode?: string | null;
   vehicleType: string;
   source: string;
