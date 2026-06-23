@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\MaintenanceRecord;
+use App\Entity\ServiceInterval;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\Maintenance\MaintenanceAction;
 use App\Maintenance\MaintenanceType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 
@@ -35,7 +37,8 @@ final class GarageVehicleHealthTest extends AppTestCase
     {
         $client = static::createClient();
         $vehicle = $this->seed(function (Vehicle $vehicle): void {
-            // Oil change in 2018, generic interval 12 months → overdue regardless of the wall clock.
+            // A 12-month oil-change schedule, last done 2018 → overdue regardless of the wall clock.
+            $vehicle->setServiceInterval(ServiceInterval::fromSource('oil_change', MaintenanceAction::Change, 'web', everyMonths: 12));
             new MaintenanceRecord($vehicle, [['type' => MaintenanceType::OilChange->value, 'parts' => []]], new \DateTimeImmutable('2018-01-01'), 'user');
         });
 
