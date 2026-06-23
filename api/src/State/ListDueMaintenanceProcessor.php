@@ -28,11 +28,10 @@ use Mcp\Schema\Result\CallToolResult;
 final class ListDueMaintenanceProcessor implements ProcessorInterface
 {
     private const array NOTES = [
-        'A due item with rule "schedule" comes from a per-vehicle recurring rule (set_maintenance_schedule); rule "default" is a general-knowledge time interval, not the manufacturer schedule.',
+        'Every due item comes from a per-vehicle recurring rule the user/LLM set (set_maintenance_schedule). There is no general-knowledge fallback: a vehicle with no schedule has no forecast — define its intervals first.',
         'The `usage` block (last/due/remaining) is the hours/km axis — what matters for hour-metered machinery. `projectedDueAt` lifts it onto the calendar when enough readings give a usage rate; otherwise only `remaining` is known.',
         'When both a time and a usage cadence apply, whichever comes first binds — `overdue` is true if either axis is breached.',
-        'A generic `usageInterval` (rule "default") is advisory: the forecast cannot use it without a current reading — ask "what is the vehicle\'s current km/hours?" and set_maintenance_schedule to refine.',
-        'gaps lists recurring services with no logged baseline: their next-due is unknown even when the cadence is known. Ask when each was last done, or log the past event, to forecast it.',
+        'gaps lists scheduled services with no logged baseline: their next-due is unknown even when the cadence is known. Ask when each was last done, or log the past event, to forecast it.',
     ];
 
     public function __construct(

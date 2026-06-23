@@ -66,6 +66,18 @@ final class MotulOilAdvisor
             return $this->matched($search, $probed);
         }
 
+        // All probed variants agree on… nothing — vehicle exists in catalog but Motul has no grade data.
+        if (1 === \count($gradeSets) && '' === reset($gradeSets)) {
+            return [
+                'status' => 'not_found',
+                'query' => $search,
+                'hint' => 'Vehicle found in Motul catalog but no engine oil grade data for these variants. Check the source URLs or use the ACEA spec from known facts.',
+                'candidates' => array_map(fn (array $p): array => $this->candidate($p['vehicle']) + [
+                    'sourceUrl' => $this->client->recommendationsUrl($p['vehicle']->id),
+                ], $probed),
+            ];
+        }
+
         // Grades diverge across variants — the caller must pick; show each variant's grade.
         return [
             'status' => 'ambiguous',
@@ -89,7 +101,13 @@ final class MotulOilAdvisor
     {
         $categories = $this->client->recommendations($motulId);
         if ([] === $this->engineGrades($categories)) {
-            return ['status' => 'not_found', 'query' => $motulId, 'candidates' => []];
+            return [
+                'status' => 'not_found',
+                'query' => $motulId,
+                'candidates' => [],
+                'sourceUrl' => $this->client->recommendationsUrl($motulId),
+                'hint' => 'Vehicle found in Motul catalog but no engine oil grade data for this variant. Check sourceUrl or use the ACEA spec from known facts.',
+            ];
         }
 
         // matched() only needs the id to build the sourceUrl and the candidate handle; the search-time

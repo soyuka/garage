@@ -15,9 +15,9 @@ use Symfony\Component\Uid\Ulid;
  * The per-vehicle maintenance forecast read-model at /garage/vehicles/{vehicleId}/forecast — the
  * dashboard's "Prévisions d'entretien" section. Two honest halves, mirroring the list_due_maintenance
  * MCP tool but scoped to one vehicle (no garage-wide identity block on each row):
- *  - `due`:  services we can predict (last logged service + the schedule/default interval), each with
+ *  - `due`:  services we can predict (last logged service + the per-vehicle schedule rule), each with
  *            its time and/or usage axis, soonest first.
- *  - `gaps`: recurring services with a known cadence but NO logged baseline — next-due unknown, a
+ *  - `gaps`: scheduled services with a known cadence but NO logged baseline — next-due unknown, a
  *            prompt to log when each was last done.
  */
 #[ApiResource(
@@ -40,8 +40,8 @@ final class VehicleForecast
     public string $vehicle;
 
     /**
-     * Predicted services, soonest first. Each: {type, action, component, rule (schedule|default),
-     * lastPerformedAt, dueAt, projectedDueAt, overdue, daysUntilDue, intervalMonths, usage, usageInterval}.
+     * Predicted services, soonest first. Each: {type, action, component, rule (always "schedule"),
+     * lastPerformedAt, dueAt, projectedDueAt, overdue, daysUntilDue, usage}.
      *
      * @var list<array<string, mixed>>
      */

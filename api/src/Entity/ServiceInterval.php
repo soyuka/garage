@@ -20,8 +20,8 @@ use Symfony\Component\Uid\Ulid;
  *
  * Sourced exactly like {@see VehicleFact}: a schedule IS knowledge about the vehicle, so it carries
  * provenance and a `verified` flag (catalog/SIV authoritative, a web/agent answer advisory). A
- * verified rule outranks an unverified one for the same key in the calculator's precedence, and the
- * per-vehicle rule outranks the generic {@see \App\Maintenance\MaintenanceInterval} fallback.
+ * verified rule outranks an unverified one for the same key in the calculator's precedence. These
+ * rules are the SOLE forecast source — there is no generic general-knowledge fallback behind them.
  *
  * Embedded on a {@see Vehicle} with the 'set' strategy keyed by {@see self::key()}, so one type can
  * hold several independent cadences (spark plug inspect@25 h vs replace@100 h; air filter foam

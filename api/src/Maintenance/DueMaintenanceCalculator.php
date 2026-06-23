@@ -11,11 +11,11 @@ use Psr\Clock\ClockInterface;
 use Symfony\Component\Clock\Clock;
 
 /**
- * Service forecasting from three layers: the per-vehicle {@see ServiceInterval} SCHEDULE (the rule),
- * the {@see MaintenanceRecord} history (the baseline), and the vehicle's current reading (the usage
- * axis). Precedence mirrors the facts projection: a per-vehicle schedule rule overrides the generic
- * {@see MaintenanceInterval} default for the same type; types with neither a rule nor a record become
- * a surfaced gap (no honest baseline = no forecast) rather than silent absence.
+ * Service forecasting from two layers: the per-vehicle {@see ServiceInterval} SCHEDULE (the rule) and
+ * the {@see MaintenanceRecord} history (the baseline), read against the vehicle's current reading (the
+ * usage axis). The schedule the user/LLM curated is the SOLE source — there is no general-knowledge
+ * fallback, so a vehicle inherits nothing it was not explicitly given. A scheduled type with no logged
+ * baseline is a surfaced gap (no honest baseline = no forecast); a type never scheduled is silent.
  *
  * For a rule with a usage cadence the forecast measures the hours/km axis directly (the only axis
  * that matters for the hour-metered TORO), and — when the history yields a usage rate — projects it
@@ -46,15 +46,12 @@ final readonly class DueMaintenanceCalculator
 
         $due = [];
         $unknownBaseline = [];
-        /** @var array<string, true> $covered the enum types the schedule already answers for */
-        $covered = [];
 
-        // 1. Per-vehicle schedule rules take precedence over the generic defaults.
+        // The forecast is driven ONLY by the per-vehicle schedule the user/LLM curated — there are no
+        // general-knowledge defaults (a mower must never inherit a car's brakes/CT cadence). A
+        // scheduled type with no logged baseline is an honest gap; a type never scheduled is silent.
         foreach ($vehicle->serviceSchedule() as $interval) {
             $type = MaintenanceType::tryFrom($interval->getType());
-            if (null !== $type) {
-                $covered[$type->value] = true;
-            }
 
             $record = $latestByType[$interval->getType()] ?? null;
             if (null === $record) {
@@ -67,33 +64,6 @@ final readonly class DueMaintenanceCalculator
             }
 
             $due[] = $this->dueFromSchedule($type ?? MaintenanceType::Other, $interval, $record, $currentUsage, $vehicle, $now);
-        }
-
-        // 2. Generic fallback for the known recurring types the schedule does not cover.
-        foreach (MaintenanceType::cases() as $type) {
-            if (isset($covered[$type->value])) {
-                continue;
-            }
-            $interval = MaintenanceInterval::forType($type);
-            if (null === $interval) {
-                continue;
-            }
-
-            $record = $latestByType[$type->value] ?? null;
-            if (null === $record) {
-                $unknownBaseline[] = $type;
-                continue;
-            }
-
-            $dueAt = $record->getPerformedAt()->modify(sprintf('+%d months', $interval->months));
-            $due[] = new DueMaintenance(
-                type: $type,
-                lastPerformedAt: $record->getPerformedAt(),
-                dueAt: $dueAt,
-                overdue: $dueAt < $now,
-                daysUntilDue: (int) $now->diff($dueAt)->format('%r%a'),
-                interval: $interval,
-            );
         }
 
         // Soonest due first; usage-only items with no calendar projection sort last.
@@ -173,7 +143,6 @@ final readonly class DueMaintenanceCalculator
             dueAt: $dueAt,
             overdue: $timeOverdue || $usageOverdue,
             daysUntilDue: $daysUntilDue,
-            interval: null,
             action: $interval->getAction(),
             component: $interval->getComponent(),
             lastUsageValue: $lastUsageValue,

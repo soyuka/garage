@@ -97,7 +97,7 @@ use App\State\SetMaintenanceScheduleProcessor;
         ),
         'list_due_maintenance' => new McpTool(
             title: 'Due Maintenance',
-            description: 'Forecast which services are upcoming or overdue across the garage, soonest due first — use it for "what is the next vehicle to maintain?" (limit=1) or "what is due soon?" (withinDays). Each due item is derived from the last logged service of that type plus a time interval. The result has two honest halves: "due" (what we can predict) and "gaps" (recurring services with NO logged history, whose next-due is unknown — ask when they were last done). Due dates are time-based; for items carrying a usageInterval, ask the user for the current km/hours to refine. An empty garage returns count 0, not an error.',
+            description: 'Forecast which services are upcoming or overdue across the garage, soonest due first — use it for "what is the next vehicle to maintain?" (limit=1) or "what is due soon?" (withinDays). Each due item is derived from the last logged service of that type plus the vehicle\'s own recurring schedule rule (set_maintenance_schedule). There is NO general-knowledge fallback: a vehicle with no schedule produces no forecast — define its intervals first. The result has two honest halves: "due" (what we can predict) and "gaps" (scheduled services with NO logged history, whose next-due is unknown — ask when they were last done). An empty garage returns count 0, not an error.',
             input: ListDueMaintenanceInput::class,
             structuredContent: false,
             processor: ListDueMaintenanceProcessor::class,

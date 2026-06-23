@@ -155,6 +155,44 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertCount(1, $history['records']);
     }
 
+    public function testKnownServiceLabelsAreCanonicalisedWhileTheLongTailIsKept(): void
+    {
+        // The "Huile" bug: a weaker model logs a KNOWN service under its French label instead of the
+        // canonical snake_case key, so it never matches the schedule/forecast. The recorder must fold
+        // recognised aliases to canonical — and leave an unplanned service (fuel_line) untouched.
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'items' => [
+                    ['type' => 'Huile', 'parts' => [['ref' => 'SAE30-2L']]],
+                    ['type' => 'Bougies', 'parts' => []],
+                    ['type' => 'fuel_line', 'parts' => []],
+                ],
+                'performedAt' => '2026-05-01',
+            ],
+        ], 3);
+
+        $iri = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_vehicles',
+            'arguments' => [],
+        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+
+        $record = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['vehicle' => $iri],
+        ], 5)['result']['structuredContent']['records'][0];
+
+        $this->assertSame(['oil_change', 'spark_plug', 'fuel_line'], array_column($record['items'], 'type'));
+        // The canonicalisation never disturbs the parts riding on the item.
+        $this->assertSame('SAE30-2L', $record['items'][0]['parts'][0]['ref']);
+    }
+
     public function testMaintenanceRecordExposesDereferenceableIri(): void
     {
         $client = static::createClient();
@@ -423,7 +461,23 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        // An oil change far in the past — overdue regardless of the wall clock.
+        // The forecast is schedule-only: define the vehicle's cadences first (oil yearly, air filter
+        // every 2 years), then a logged service anchors the prediction.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'set_maintenance_schedule',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'items' => [
+                    ['type' => 'oil_change', 'action' => 'change', 'everyMonths' => 12],
+                    ['type' => 'air_filter', 'action' => 'replace', 'everyMonths' => 24],
+                ],
+            ],
+        ], 3);
+
+        // An oil change far in the past — overdue against the 12-month cadence regardless of the clock.
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
@@ -433,12 +487,12 @@ final class McpMaintenanceTest extends AppTestCase
                 'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2018-01-01',
             ],
-        ], 3);
+        ], 4);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_due_maintenance',
             'arguments' => [],
-        ], 4);
+        ], 5);
 
         $content = $result['result']['structuredContent'];
         $this->assertSame('ok', $content['status']);
@@ -448,11 +502,9 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertTrue($oil['overdue']);
         $this->assertLessThan(0, $oil['daysUntilDue']);
         $this->assertSame('DAILY', $oil['vehicle']['model']);
-        // Usage axis is advisory: the interval is surfaced so the host can ask for a live reading.
-        $this->assertSame(10000, $oil['usageInterval']['value']);
-        $this->assertSame('km', $oil['usageInterval']['unit']);
+        $this->assertSame('schedule', $oil['rule'], 'every forecast is schedule-driven now');
 
-        // The gap half: recurring services never logged for this vehicle are surfaced, not hidden.
+        // The gap half: a SCHEDULED service never logged for this vehicle is surfaced, not hidden.
         $gap = $this->gapFor($content['gaps'], 'IVECO', 'DAILY');
         $this->assertContains('air_filter', $gap['unknownBaseline']);
         $this->assertNotContains('oil_change', $gap['unknownBaseline']);

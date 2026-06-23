@@ -29,6 +29,7 @@ final class MaintenanceRecorder
         private readonly VehicleWriteResolver $writeResolver,
         private readonly PlannedMaintenancePlanner $planner,
         private readonly PlannedMaintenanceRepository $plannedTasks,
+        private readonly MaintenanceTypeNormalizer $typeNormalizer = new MaintenanceTypeNormalizer(),
     ) {
     }
 
@@ -128,6 +129,10 @@ final class MaintenanceRecorder
 
         $vehicle = $resolution->vehicle;
 
+        // A known service entered under a label/synonym ("Huile") is canonicalised to its snake_case
+        // key so it matches the schedule + forecast; the long tail is kept verbatim (never rejected).
+        $items = $this->typeNormalizer->normalizeItems($items);
+
         // The odometer/hours noted on a service is a fresh reading of the vehicle itself: promote it
         // onto the vehicle's current usage (monotonic — a backdated log never rewinds it). The record
         // below keeps its own usageValue as the historical reading at that service.
@@ -187,7 +192,7 @@ final class MaintenanceRecorder
     public function edit(MaintenanceRecord $record, array $changes): void
     {
         if (\array_key_exists('items', $changes)) {
-            $record->replaceItems($changes['items']);
+            $record->replaceItems($this->typeNormalizer->normalizeItems($changes['items']));
         }
         if (\array_key_exists('performedAt', $changes)) {
             $record->setPerformedAt($changes['performedAt']);

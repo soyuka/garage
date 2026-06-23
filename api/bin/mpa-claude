@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# Launch `claude` (interactive or -p) wired to the mon-parc-auto garage MCP server.
+#
+# It guarantees the three preconditions that a bare `claude` misses:
+#   1. Caddy's self-signed localhost CA is trusted   (NODE_EXTRA_CA_CERTS)
+#   2. a non-expired Casdoor bearer exists            (re-minted via PKCE when stale)
+#   3. the `mon-parc-auto` MCP server is registered   (local scope, current token)
+#
+# Then it execs `claude`, forwarding every argument. Examples:
+#   bin/mpa-claude                              # interactive
+#   bin/mpa-claude -p "list my vehicles" --allowedTools "mcp__mon-parc-auto__list_vehicles"
+#
+# Casdoor admin password defaults to 123; override with MPA_CASDOOR_PASSWORD.
+set -euo pipefail
+
+API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+VAR="$API_DIR/var"
+CA="$VAR/caddy-root.crt"
+TOKEN="$VAR/token.txt"
+MINT="$VAR/mint_token.py"
+PASSWORD="${MPA_CASDOOR_PASSWORD:-123}"
+SERVER="mon-parc-auto"
+URL="https://localhost/mcp"
+
+mkdir -p "$VAR"
+
+# 1. Caddy root CA — extract from the php container if absent.
+if [[ ! -s "$CA" ]]; then
+  echo "[mpa-claude] extracting Caddy root CA…" >&2
+  docker compose -f "$API_DIR/compose.yaml" exec -T php \
+    cat /data/caddy/pki/authorities/local/root.crt > "$CA"
+fi
+export NODE_EXTRA_CA_CERTS="$CA"
+
+# 2. Token — re-mint when missing or within 1h of expiry (`exp` claim, base64url payload).
+token_fresh() {
+  [[ -s "$TOKEN" ]] || return 1
+  python3 - "$TOKEN" <<'PY'
+import base64, json, sys, time
+tok = open(sys.argv[1]).read().strip()
+try:
+    p = tok.split('.')[1]; p += '=' * (-len(p) % 4)
+    exp = json.loads(base64.urlsafe_b64decode(p))['exp']
+except Exception:
+    sys.exit(1)
+sys.exit(0 if exp - time.time() > 3600 else 1)
+PY
+}
+
+REMINTED=0
+if ! token_fresh; then
+  echo "[mpa-claude] minting Casdoor token…" >&2
+  python3 "$MINT" "$PASSWORD" >&2
+  REMINTED=1
+fi
+
+# 3. MCP registration — (re)register when missing or after a re-mint (token changed).
+if [[ "$REMINTED" == 1 ]] || ! claude mcp get "$SERVER" >/dev/null 2>&1; then
+  echo "[mpa-claude] registering MCP server '$SERVER'…" >&2
+  claude mcp remove "$SERVER" -s local >/dev/null 2>&1 || true
+  claude mcp add "$SERVER" "$URL" --transport http --scope local \
+    --header "Authorization: Bearer $(cat "$TOKEN")" >/dev/null
+fi
+
+exec claude "$@"

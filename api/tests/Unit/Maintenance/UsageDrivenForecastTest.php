@@ -45,7 +45,7 @@ final class UsageDrivenForecastTest extends TestCase
         $this->assertSame(UsageUnit::Hours, $due[0]->usageUnit);
     }
 
-    public function testScheduleOverridesGenericDefaultForSameTypeNoDoubleCount(): void
+    public function testEachScheduleRuleForecastsExactlyOnce(): void
     {
         $vehicle = $this->vehicle();
         $vehicle->setUsage(190, GarageUsageUnit::Hours);
@@ -60,8 +60,9 @@ final class UsageDrivenForecastTest extends TestCase
             static fn ($d): bool => MaintenanceType::OilChange === $d->type,
         ));
 
-        $this->assertCount(1, $oil, 'oil_change is forecast once — the schedule rule, not also the generic default.');
-        $this->assertNull($oil[0]->interval, 'A schedule-driven due carries no generic MaintenanceInterval.');
+        // The schedule is the sole source — one rule, one forecast (no generic default double-counts).
+        $this->assertCount(1, $oil);
+        $this->assertSame('schedule', $oil[0]->rule);
     }
 
     public function testScheduleRuleWithNoMatchingRecordIsAnHonestGapNotAFalseForecast(): void

@@ -85,8 +85,7 @@ final class DueMaintenanceView
 
         return [
             'type' => $due->type->value,
-            // The action/component disambiguate two cadences of one type (spark plug inspect vs
-            // replace); null on a generic-default due. `rule` flags schedule-driven vs default.
+            // The action/component disambiguate two cadences of one type (spark plug inspect vs replace).
             'action' => $due->action?->value,
             'component' => $due->component,
             'rule' => $due->rule,
@@ -97,13 +96,7 @@ final class DueMaintenanceView
             'projectedDueAt' => $due->projectedDueAt?->format('Y-m-d'),
             'overdue' => $due->overdue,
             'daysUntilDue' => $due->daysUntilDue,
-            'intervalMonths' => $due->interval?->months,
             'usage' => $usage,
-            // Generic-default advisory usage interval (null for schedule-driven, which uses `usage`).
-            'usageInterval' => null === $due->interval || null === $due->interval->usageValue ? null : [
-                'value' => $due->interval->usageValue,
-                'unit' => $due->interval->usageUnit?->value,
-            ],
         ];
     }
 }

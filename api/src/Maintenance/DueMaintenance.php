@@ -15,9 +15,8 @@ namespace App\Maintenance;
  *    matters for hour-metered groundscare, which the time axis cannot express.
  *
  * {@see $projectedDueAt} lifts the usage axis onto the calendar when the history yields a usage rate.
- * {@see $overdue} is true when EITHER axis is breached. A schedule-driven due carries its
- * {@see $action}/{@see $component} and a null {@see $interval}; a generic-default due carries the
- * {@see MaintenanceInterval} and null action.
+ * {@see $overdue} is true when EITHER axis is breached. Every due is schedule-driven — it carries its
+ * {@see $action}/{@see $component} from the per-vehicle {@see \App\Entity\ServiceInterval} rule.
  */
 final readonly class DueMaintenance
 {
@@ -27,7 +26,6 @@ final readonly class DueMaintenance
         public ?\DateTimeImmutable $dueAt,
         public bool $overdue,
         public ?int $daysUntilDue,
-        public ?MaintenanceInterval $interval = null,
         public ?MaintenanceAction $action = null,
         public ?string $component = null,
         public ?int $lastUsageValue = null,
@@ -35,9 +33,9 @@ final readonly class DueMaintenance
         public ?int $usageRemaining = null,
         public ?UsageUnit $usageUnit = null,
         public ?\DateTimeImmutable $projectedDueAt = null,
-        // Provenance of the rule this due came from: 'schedule' (a per-vehicle ServiceInterval) or
-        // 'default' (the generic MaintenanceInterval fallback).
-        public string $rule = 'default',
+        // Provenance of the rule this due came from — always 'schedule' (a per-vehicle ServiceInterval)
+        // now that the generic fallback is gone. Kept on the wire for forward-compatibility.
+        public string $rule = 'schedule',
     ) {
     }
 

@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\MaintenanceRecord;
+use App\Entity\ServiceInterval;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\Maintenance\MaintenanceAction;
 use App\Maintenance\MaintenanceType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 
@@ -32,9 +34,11 @@ final class GarageVehicleNextDueTest extends AppTestCase
     public function testListingCarriesNextDueSummaryAndIsNullWithNoHistory(): void
     {
         $this->seed('OVERDUEMAKE', static function (Vehicle $v): void {
-            // Oil change in 2018, generic 12-month interval → overdue regardless of the clock.
+            // A 12-month oil-change schedule, last done 2018 → overdue regardless of the clock.
+            $v->setServiceInterval(ServiceInterval::fromSource('oil_change', MaintenanceAction::Change, 'web', everyMonths: 12));
             new MaintenanceRecord($v, [['type' => MaintenanceType::OilChange->value, 'parts' => []]], new \DateTimeImmutable('2018-01-01'), 'user');
         });
+        // No schedule and no history → nothing predictable.
         $this->seed('BLANKMAKE', static function (): void {});
 
         $client = static::createClient();
