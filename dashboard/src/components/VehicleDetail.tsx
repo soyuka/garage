@@ -1,9 +1,9 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
-import type { MaintenanceRecordInput, PlannedTaskInput, ServiceRuleInput } from '../garage';
+import type { MaintenanceRecordInput, TaskPartInput, PlannedTaskInput, ServiceRuleInput, TaskEdit } from '../garage';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
-import type { FactPanel, FluidSpec, PlannedTask, Vehicle } from '../types';
+import type { FactPanel, FluidSpec, PlannedPart, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
 import { ForecastSection } from './ForecastSection';
 import { InlineEdit } from './InlineEdit';
@@ -68,6 +68,10 @@ export function VehicleDetail({
   vehicle,
   onEdit,
   onSetTaskStatus,
+  onEditTask,
+  onAddTaskPart,
+  onEditTaskPart,
+  onRemoveTaskPart,
   onArchiveDone,
   onAddTask,
   tasksLoading,
@@ -93,6 +97,10 @@ export function VehicleDetail({
   vehicle: Vehicle;
   onEdit: (edit: VehicleEdit) => void;
   onSetTaskStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') => void;
+  onEditTask: (taskIri: string, fields: TaskEdit) => void;
+  onAddTaskPart: (taskIri: string, part: TaskPartInput) => void;
+  onEditTaskPart: (taskIri: string, partId: string, fields: TaskPartInput) => void;
+  onRemoveTaskPart: (taskIri: string, partId: string) => void;
   onArchiveDone: () => void;
   onAddTask: (input: PlannedTaskInput) => void;
   tasksLoading: boolean;
@@ -329,6 +337,10 @@ export function VehicleDetail({
                       onToggle={() => onSetTaskStatus(t.id, t.status === 'done' ? 'open' : 'done')}
                       onDismiss={() => onSetTaskStatus(t.id, 'dismissed')}
                       onRestore={() => onSetTaskStatus(t.id, 'open')}
+                      onEdit={(fields) => onEditTask(t.id, fields)}
+                      onAddPart={(part) => onAddTaskPart(t.id, part)}
+                      onEditPart={(partId, fields) => onEditTaskPart(t.id, partId, fields)}
+                      onRemovePart={(partId) => onRemoveTaskPart(t.id, partId)}
                     />
                   ))}
                 </div>
@@ -475,6 +487,154 @@ function AddTaskForm({ onSubmit }: { onSubmit: (input: PlannedTaskInput) => void
   );
 }
 
+/** The inline editor a checklist row opens: the task definition (type/label/échéance) plus a
+ *  line-by-line shopping-list editor backed by the parts subresource. */
+function TaskEditForm({
+  task,
+  onSubmit,
+  onCancel,
+  onAddPart,
+  onEditPart,
+  onRemovePart,
+}: {
+  task: PlannedTask;
+  onSubmit: (fields: TaskEdit) => void;
+  onCancel: () => void;
+  onAddPart: (part: TaskPartInput) => void;
+  onEditPart: (partId: string, fields: TaskPartInput) => void;
+  onRemovePart: (partId: string) => void;
+}) {
+  const listId = useId();
+  const unit = task.target?.unit ?? 'km';
+  const [type, setType] = useState(task.type);
+  const [label, setLabel] = useState(task.label ?? '');
+  const [usage, setUsage] = useState(task.target ? String(task.target.value) : '');
+  const [dueDate, setDueDate] = useState(task.dueDate ?? '');
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!type.trim()) return;
+    const km = Number.parseInt(usage.replace(/[^\d]/g, ''), 10);
+    const target = Number.isNaN(km) ? null : { value: km, unit };
+    onSubmit({
+      type: type.trim(),
+      label: label.trim() || null,
+      target,
+      // A usage target wins over a date (milestoneOf prefers it); clear the date when one is set.
+      dueDate: target ? null : dueDate || null,
+    });
+  };
+
+  return (
+    <div className="task-edit-form">
+      <form className="add-form" onSubmit={submit}>
+        <input list={listId} className="add-input" placeholder="type" value={type} onChange={(e) => setType(e.target.value)} />
+        <datalist id={listId}>
+          {SERVICE_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {serviceLabel(t)}
+            </option>
+          ))}
+        </datalist>
+        <input className="add-input add-input-grow" placeholder="libellé (optionnel)" value={label} onChange={(e) => setLabel(e.target.value)} />
+        <input className="add-input add-input-sm" inputMode="numeric" placeholder={`à … ${unit}`} value={usage} onChange={(e) => setUsage(e.target.value)} />
+        <input className="add-input add-input-sm" type="date" aria-label="échéance" value={dueDate} disabled={usage.trim() !== ''} onChange={(e) => setDueDate(e.target.value)} />
+        <button type="submit" className="add-submit" disabled={!type.trim()}>
+          Enregistrer
+        </button>
+        <button type="button" className="task-clean" onClick={onCancel}>
+          Annuler
+        </button>
+      </form>
+      <div className="task-parts-edit">
+        {task.parts.map((p, i) =>
+          p.id ? (
+            <PartEditRow key={p.id} part={p} onSave={(fields) => onEditPart(p.id as string, fields)} onRemove={() => onRemovePart(p.id as string)} />
+          ) : (
+            // A derived fluid line has no id — read-only here (it is projected, not stored).
+            <div key={`derived-${i}`} className="part-edit-row part-edit-row--derived">
+              <span className="part-label">{p.label ?? 'Fluide'}</span>
+              {p.spec ? <PartSpec spec={p.spec} /> : null}
+            </div>
+          ),
+        )}
+        <AddPartRow onAdd={onAddPart} />
+      </div>
+    </div>
+  );
+}
+
+/** One editable shopping-list line: commits on blur (only when a field actually changed). */
+function PartEditRow({ part, onSave, onRemove }: { part: PlannedPart; onSave: (fields: TaskPartInput) => void; onRemove: () => void }) {
+  const [ref, setRef] = useState(part.ref);
+  const [brand, setBrand] = useState(part.brand ?? '');
+  const [label, setLabel] = useState(part.label ?? '');
+  const [qty, setQty] = useState(part.qty != null ? String(part.qty) : '');
+
+  const commit = () => {
+    const next: TaskPartInput = {
+      ref: ref.trim(),
+      brand: brand.trim() || null,
+      label: label.trim() || null,
+      qty: qty.trim() ? Number.parseInt(qty, 10) : null,
+    };
+    const unchanged =
+      next.ref === part.ref &&
+      (next.brand ?? null) === (part.brand ?? null) &&
+      (next.label ?? null) === (part.label ?? null) &&
+      (next.qty ?? null) === (part.qty ?? null);
+    if (unchanged) return;
+    onSave(next);
+  };
+
+  return (
+    <div className="part-edit-row">
+      <input className="add-input add-input-sm" placeholder="réf." value={ref} onChange={(e) => setRef(e.target.value)} onBlur={commit} />
+      <input className="add-input add-input-sm" placeholder="marque" value={brand} onChange={(e) => setBrand(e.target.value)} onBlur={commit} />
+      <input className="add-input add-input-grow" placeholder="libellé" value={label} onChange={(e) => setLabel(e.target.value)} onBlur={commit} />
+      <input className="add-input add-input-xs" inputMode="numeric" placeholder="qté" value={qty} onChange={(e) => setQty(e.target.value)} onBlur={commit} />
+      <button type="button" className="rf-remove" aria-label="Retirer cette pièce" title="Retirer" onClick={onRemove}>
+        ×
+      </button>
+    </div>
+  );
+}
+
+/** The blank add-a-part row at the foot of the parts editor. */
+function AddPartRow({ onAdd }: { onAdd: (part: TaskPartInput) => void }) {
+  const [ref, setRef] = useState('');
+  const [brand, setBrand] = useState('');
+  const [label, setLabel] = useState('');
+  const [qty, setQty] = useState('');
+
+  const add = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ref.trim() && !label.trim()) return;
+    onAdd({
+      ref: ref.trim(),
+      brand: brand.trim() || null,
+      label: label.trim() || null,
+      qty: qty.trim() ? Number.parseInt(qty, 10) : null,
+    });
+    setRef('');
+    setBrand('');
+    setLabel('');
+    setQty('');
+  };
+
+  return (
+    <form className="part-edit-row part-edit-row--add" onSubmit={add}>
+      <input className="add-input add-input-sm" placeholder="réf." value={ref} onChange={(e) => setRef(e.target.value)} />
+      <input className="add-input add-input-sm" placeholder="marque" value={brand} onChange={(e) => setBrand(e.target.value)} />
+      <input className="add-input add-input-grow" placeholder="libellé" value={label} onChange={(e) => setLabel(e.target.value)} />
+      <input className="add-input add-input-xs" inputMode="numeric" placeholder="qté" value={qty} onChange={(e) => setQty(e.target.value)} />
+      <button type="submit" className="add-submit" disabled={!ref.trim() && !label.trim()}>
+        + Pièce
+      </button>
+    </form>
+  );
+}
+
 function AddFactForm({ onSubmit }: { onSubmit: (key: string, value: string) => void }) {
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
@@ -521,14 +681,23 @@ function TaskRow({
   onToggle,
   onDismiss,
   onRestore,
+  onEdit,
+  onAddPart,
+  onEditPart,
+  onRemovePart,
 }: {
   task: PlannedTask;
   onToggle: () => void;
   onDismiss: () => void;
   onRestore: () => void;
+  onEdit: (fields: TaskEdit) => void;
+  onAddPart: (part: TaskPartInput) => void;
+  onEditPart: (partId: string, fields: TaskPartInput) => void;
+  onRemovePart: (partId: string) => void;
 }) {
   const done = task.status === 'done';
   const dismissed = task.status === 'dismissed';
+  const [editing, setEditing] = useState(false);
   const rowClass = dismissed ? 'task-row task-row--dismissed' : done ? 'task-row task-row--done' : 'task-row';
 
   return (
@@ -545,11 +714,35 @@ function TaskRow({
       <div className="task-body">
         <div className="task-head">
           <span className="task-title">{taskTitle(task)}</span>
+          {!dismissed ? (
+            <button
+              type="button"
+              className="task-edit-toggle"
+              aria-label="Modifier la tâche"
+              aria-expanded={editing}
+              title="Modifier"
+              onClick={() => setEditing((e) => !e)}
+            >
+              ✎
+            </button>
+          ) : null}
         </div>
-        {task.parts.length > 0 ? (
+        {editing ? (
+          <TaskEditForm
+            task={task}
+            onSubmit={(fields) => {
+              onEdit(fields);
+              setEditing(false);
+            }}
+            onCancel={() => setEditing(false)}
+            onAddPart={onAddPart}
+            onEditPart={onEditPart}
+            onRemovePart={onRemovePart}
+          />
+        ) : task.parts.length > 0 ? (
           <ul className="task-parts">
             {task.parts.map((p, i) => (
-              <li key={`${p.ref}-${i}`}>
+              <li key={p.id ?? `${p.ref}-${i}`}>
                 {p.ref ? <span className="part-ref">{p.ref}</span> : null}
                 {p.brand ? <span className="part-brand">{p.ref ? ' · ' : ''}{p.brand}</span> : null}
                 {p.label ? <span className="part-label">{p.ref || p.brand ? ' — ' : ''}{p.label}</span> : null}

@@ -44,6 +44,13 @@ class PlannedMaintenance
     #[ODM\EmbedMany(targetDocument: VehicleFact::class, strategy: 'set')]
     private Collection $attributes;
 
+    // The shopping list, an ordered list of embedded {@see PlannedPart} lines. Each owns a ULID so the
+    // dashboard can address one line for edit/remove through the parts subresource. Was a plain
+    // `collection` of {ref,...} maps; legacy lines hydrate fine (PlannedPart mints a missing id).
+    /** @var Collection<int, PlannedPart> */
+    #[ODM\EmbedMany(targetDocument: PlannedPart::class)]
+    private Collection $parts;
+
     // Filed into the past-maintenance log. A Done task is archived when "Archiver les entretiens
     // terminés" mints a {@see MaintenanceRecord} from it: it then leaves the current checklist
     // (filtered out by the repository) but its document survives. null = still on the current list.
@@ -77,9 +84,8 @@ class PlannedMaintenance
         private ?UsageUnit $targetUsageUnit = null,
         #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $dueDate = null,
-        /** @var list<array{ref: string, label?: string, brand?: string, qty?: int}> */
-        #[ODM\Field(type: 'collection')]
-        private array $parts = [],
+        /** @var list<array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, id?: string}> */
+        array $parts = [],
         #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $completedAt = null,
         #[ODM\Field(type: 'string', nullable: true)]
@@ -89,6 +95,8 @@ class PlannedMaintenance
     ) {
         $this->id = (string) new Ulid();
         $this->attributes = new ArrayCollection();
+        $this->parts = new ArrayCollection();
+        $this->setParts($parts);
         $vehicle->addPlannedTask($this);
     }
 
@@ -105,6 +113,11 @@ class PlannedMaintenance
     public function getType(): string
     {
         return $this->type;
+    }
+
+    public function setType(string $type): void
+    {
+        $this->type = $type;
     }
 
     public function getSource(): string
@@ -164,37 +177,98 @@ class PlannedMaintenance
     }
 
     /**
-     * @return list<array{ref: string, label?: string, brand?: string, qty?: int}>
+     * @return list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int}>
      */
     public function getParts(): array
     {
-        return $this->parts;
+        return array_map(static fn (PlannedPart $part): array => $part->toArray(), array_values($this->parts->toArray()));
     }
 
     /**
-     * @param list<array{ref: string, label?: string, brand?: string, qty?: int}> $parts
+     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, id?: string}> $parts
      */
     public function setParts(array $parts): void
     {
-        $this->parts = $parts;
+        $this->parts->clear();
+        foreach ($parts as $part) {
+            $this->parts->add(PlannedPart::fromArray($part));
+        }
     }
 
     /**
-     * Additively upsert parts by `ref` — incoming parts replace a same-ref entry in place, new refs
-     * append, unmentioned ones stay. Symmetric with {@see self::setAttribute()}: an incremental plan
-     * ("ajoute l'huile à la liste") must add to the shopping list, never clobber the parts a prior
-     * pass resolved (e.g. the oil filter when only the oil is re-sent).
+     * Additively upsert parts by `ref` — an incoming part updates a same-ref line in place (its ULID
+     * survives), a new ref appends, unmentioned lines stay. Symmetric with {@see self::setAttribute()}:
+     * an incremental plan ("ajoute l'huile à la liste") must add to the shopping list, never clobber
+     * the parts a prior pass resolved (e.g. the oil filter when only the oil is re-sent).
      *
-     * @param list<array{ref: string, label?: string, brand?: string, qty?: int}> $parts
+     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int}> $parts
      */
     public function mergeParts(array $parts): void
     {
-        $byRef = [];
-        foreach ([...$this->parts, ...$parts] as $part) {
-            $byRef[$part['ref']] = $part;
+        foreach ($parts as $incoming) {
+            $existing = $this->partByRef((string) ($incoming['ref'] ?? ''));
+            if (null !== $existing) {
+                $existing->update($incoming);
+            } else {
+                $this->parts->add(PlannedPart::fromArray($incoming));
+            }
+        }
+    }
+
+    /**
+     * Append a part to the shopping list (the parts-subresource POST). Upserts by `ref` like
+     * {@see self::mergeParts()} so adding a known ref twice updates it rather than stacking a dupe.
+     *
+     * @param array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int} $part
+     */
+    public function addPart(array $part): PlannedPart
+    {
+        $existing = $this->partByRef((string) ($part['ref'] ?? ''));
+        if (null !== $existing) {
+            $existing->update($part);
+
+            return $existing;
         }
 
-        $this->parts = array_values($byRef);
+        $created = PlannedPart::fromArray($part);
+        $this->parts->add($created);
+
+        return $created;
+    }
+
+    public function findPart(Ulid $id): ?PlannedPart
+    {
+        foreach ($this->parts as $part) {
+            if ($part->getId()->equals($id)) {
+                return $part;
+            }
+        }
+
+        return null;
+    }
+
+    /** Drop a line by its ULID; false when no line carries that id. */
+    public function removePart(Ulid $id): bool
+    {
+        $part = $this->findPart($id);
+        if (null === $part) {
+            return false;
+        }
+
+        $this->parts->removeElement($part);
+
+        return true;
+    }
+
+    private function partByRef(string $ref): ?PlannedPart
+    {
+        foreach ($this->parts as $part) {
+            if ($part->getRef() === $ref) {
+                return $part;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -236,7 +310,7 @@ class PlannedMaintenance
     public function isSpecCarrier(): bool
     {
         return !$this->attributes->isEmpty()
-            && [] === $this->parts
+            && $this->parts->isEmpty()
             && null === $this->targetUsageValue
             && null === $this->dueDate;
     }

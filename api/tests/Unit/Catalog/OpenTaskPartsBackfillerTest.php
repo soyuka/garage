@@ -43,7 +43,10 @@ final class OpenTaskPartsBackfillerTest extends TestCase
         $this->assertContains('OC 1182', $refs);
         $this->assertSame('Filtre à huile', $oilFilter->getParts()[0]['label'] ?? null, 'the category name labels the part');
 
-        $this->assertSame([['ref' => 'C 3233', 'brand' => 'MANN-FILTER']], $airFilter->getParts(), 'a task that already has parts is never touched');
+        $untouched = $airFilter->getParts();
+        $this->assertCount(1, $untouched, 'a task that already has parts is never touched');
+        $this->assertSame('C 3233', $untouched[0]['ref']);
+        $this->assertSame('MANN-FILTER', $untouched[0]['brand']);
         $this->assertSame([], $sparkPlug->getParts(), 'a task with no matching category stays empty');
     }
 

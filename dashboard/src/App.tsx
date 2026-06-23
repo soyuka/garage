@@ -22,10 +22,16 @@ import {
   postVehicleFact,
   saveServiceRule,
   updateMaintenanceRecord,
+  updateTask,
+  updateTaskPart,
+  addTaskPart,
+  removeTaskPart,
   uploadMaintenanceAttachment,
   type MaintenanceRecordInput,
+  type TaskPartInput,
   type PlannedTaskInput,
   type ServiceRuleInput,
+  type TaskEdit,
 } from './garage';
 import { CarRail } from './components/CarRail';
 import { Composer } from './components/Composer';
@@ -338,6 +344,61 @@ export function App() {
     [state.selectedId, loadTasks],
   );
 
+  // Edit a task's definition (type/label/target/dueDate) from the checklist row's inline form, then
+  // refetch so the row + milestone bucketing settle.
+  const editTask = useCallback(
+    async (taskIri: string, fields: TaskEdit) => {
+      try {
+        await updateTask(taskIri, fields);
+        loadTasks(state.selectedId);
+      } catch (e) {
+        dispatch({
+          kind: 'action',
+          action: { type: 'toast', tone: 'alarm', message: `Échec de la mise à jour : ${(e as Error).message}` },
+        });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
+  // Add / edit / remove a single shopping-list line through the parts subresource, then refetch the
+  // checklist. partId is the line's ULID (PlannedPart.id).
+  const editTaskPart = useCallback(
+    async (taskIri: string, partId: string, fields: TaskPartInput) => {
+      try {
+        await updateTaskPart(taskIri, partId, fields);
+        loadTasks(state.selectedId);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la mise à jour : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
+  const addPart = useCallback(
+    async (taskIri: string, part: TaskPartInput) => {
+      try {
+        await addTaskPart(taskIri, part);
+        loadTasks(state.selectedId);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'ajout : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
+  const removePart = useCallback(
+    async (taskIri: string, partId: string) => {
+      try {
+        await removeTaskPart(taskIri, partId);
+        loadTasks(state.selectedId);
+      } catch (e) {
+        dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec du retrait : ${(e as Error).message}` } });
+      }
+    },
+    [state.selectedId, loadTasks],
+  );
+
   // "+ Ajouter" in the parc: create a blank vehicle, then focus it so the editable card opens ready
   // to fill in. The Mercure 'created' frame also lands it for other tabs.
   const addCar = useCallback(async () => {
@@ -623,6 +684,10 @@ export function App() {
                 vehicle={selected}
                 onEdit={editVehicle}
                 onSetTaskStatus={setTaskStatus}
+                onEditTask={editTask}
+                onAddTaskPart={addPart}
+                onEditTaskPart={editTaskPart}
+                onRemoveTaskPart={removePart}
                 onArchiveDone={archiveDoneTasks}
                 onAddTask={addTask}
                 tasksLoading={tasksLoading}

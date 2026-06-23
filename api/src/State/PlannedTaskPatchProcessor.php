@@ -7,6 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
+use App\Garage\UsageUnit;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Mercure\DomainPublisher;
 use App\Repository\PlannedMaintenanceRepository;
@@ -57,6 +58,13 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
             }
         }
 
+        // Edit the task definition. Re-applying a hydrated (unchanged) field is a no-op, so these run
+        // unconditionally; a sent null genuinely clears the field (merge-patch semantics).
+        $task->setType($data->type);
+        $task->setLabel($data->label);
+        $task->setTarget(...$this->target($data->target));
+        $task->setDueDate(null !== $data->dueDate ? new \DateTimeImmutable($data->dueDate) : null);
+
         if ([] !== $data->parts) {
             $task->mergeParts($data->parts);
         }
@@ -65,5 +73,27 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
         $this->publisher->publishVehicle($task->getVehicle());
 
         return PlannedTask::fromEntity($task);
+    }
+
+    /**
+     * @param array{value?: int|null, unit?: string|null}|null $target
+     *
+     * @return array{0: int|null, 1: UsageUnit|null}
+     */
+    private function target(?array $target): array
+    {
+        if (null === $target || null === ($target['value'] ?? null)) {
+            return [null, null];
+        }
+
+        $unit = null;
+        if (isset($target['unit']) && null !== $target['unit']) {
+            $unit = UsageUnit::tryFrom((string) $target['unit']);
+            if (null === $unit) {
+                throw new UnprocessableEntityHttpException(sprintf('Unknown target unit "%s"; expected km, mi or h.', $target['unit']));
+            }
+        }
+
+        return [(int) $target['value'], $unit];
     }
 }

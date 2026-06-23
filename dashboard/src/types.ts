@@ -31,6 +31,7 @@ export interface FluidSpec {
 }
 
 export interface PlannedPart {
+  id?: string; // stable ULID of a stored line — the edit/remove handle (absent on a derived fluid spec line)
   ref: string;
   label?: string;
   brand?: string;

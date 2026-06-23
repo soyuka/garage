@@ -324,3 +324,60 @@ export async function mergeTaskParts(iri: string, parts: PlannedPart[]): Promise
   });
   if (!res.ok) throw new Error(`task parts update failed: ${res.status}`);
 }
+
+/** Editable definition fields of a task. A merge-patch: omitted keys keep, a sent `null` clears. */
+export interface TaskEdit {
+  type?: string;
+  label?: string | null;
+  target?: { value: number; unit?: string | null } | null;
+  dueDate?: string | null;
+}
+
+/** Edit a task's definition (type/label/target/dueDate) — merge-patch, leaves status & parts intact. */
+export async function updateTask(iri: string, fields: TaskEdit): Promise<void> {
+  const res = await authFetch(`${API}${iri}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error(`task update failed: ${res.status}`);
+}
+
+/** A writable planned-task part line — the parts subresource's input shape (no derived `spec`, no
+ *  `id`). All keys optional and nullable: omitted keeps (merge-patch), `null` clears. */
+export interface TaskPartInput {
+  ref?: string;
+  label?: string | null;
+  brand?: string | null;
+  qty?: number | null;
+  priceCents?: number | null;
+}
+
+/** Append a line to a task's shopping list (POST the parts subresource; upserts by ref server-side). */
+export async function addTaskPart(taskIri: string, part: TaskPartInput): Promise<void> {
+  const res = await authFetch(`${API}${taskIri}/parts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(part),
+  });
+  if (!res.ok) throw new Error(`part add failed: ${res.status}`);
+}
+
+/** Merge-edit one line by its ULID (PATCH the parts subresource). */
+export async function updateTaskPart(taskIri: string, partId: string, fields: TaskPartInput): Promise<void> {
+  const res = await authFetch(`${API}${taskIri}/parts/${partId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/merge-patch+json', Accept: 'application/ld+json' },
+    body: JSON.stringify(fields),
+  });
+  if (!res.ok) throw new Error(`part update failed: ${res.status}`);
+}
+
+/** Remove one line by its ULID (DELETE the parts subresource). */
+export async function removeTaskPart(taskIri: string, partId: string): Promise<void> {
+  const res = await authFetch(`${API}${taskIri}/parts/${partId}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/ld+json' },
+  });
+  if (!res.ok) throw new Error(`part remove failed: ${res.status}`);
+}

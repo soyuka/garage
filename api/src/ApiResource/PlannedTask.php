@@ -23,9 +23,11 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * The dereferenceable read-model of a PlannedMaintenance task — one open item on the garage
- * checklist. Its ULID-keyed IRI (/garage/planned-tasks/{id}) is surfaced as `@id` so the dashboard
- * can tick it off: the PATCH flips `status` (the only writable field) to "done"/"dismissed". All
- * identity/content fields are read-only — the agent owns those through plan_maintenance.
+ * checklist. Its ULID-keyed IRI (/garage/planned-tasks/{id}) is surfaced as `@id`. The PATCH ticks it
+ * off (`status` → "done"/"dismissed") and also edits the task definition (`type`, `label`, `target`,
+ * `dueDate`). The agent still owns these through plan_maintenance; the dashboard now edits them too.
+ * The shopping list is managed line-by-line through the parts subresource ({@see PlannedTaskPart}); a
+ * `parts` PATCH here still merges (dedup by ref) for the deterministic CTA "add reference" path.
  */
 #[ApiResource(
     operations: [
@@ -72,16 +74,13 @@ final class PlannedTask
     #[ApiProperty(identifier: true, description: 'Public ULID identifier of the planned task.')]
     public Ulid $id;
 
-    #[ApiProperty(writable: false)]
     public string $type;
-    #[ApiProperty(writable: false)]
     public ?string $label = null;
     /** @var array{value: int, unit: string|null}|null */
-    #[ApiProperty(writable: false, description: 'Usage reading the work is pegged to, e.g. {"value":250000,"unit":"km"}.')]
+    #[ApiProperty(description: 'Usage reading the work is pegged to, e.g. {"value":250000,"unit":"km"}.')]
     public ?array $target = null;
-    #[ApiProperty(writable: false)]
     public ?string $dueDate = null;
-    /** @var list<array{ref: string, label?: string, brand?: string, qty?: int, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
+    /** @var list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
     #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list. A PATCH MERGES the supplied parts in (dedup by ref); it never replaces or clears the list. A ref-less fluid line carries a read-only derived `spec` (which oil, what quantity) projected from the vehicle facts.')]
     public array $parts = [];
     #[ApiProperty(description: 'Lifecycle: "open" | "done" | "dismissed". Set "done" to tick the task off.')]
