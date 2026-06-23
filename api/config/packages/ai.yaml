@@ -109,6 +109,25 @@ ai:
                       by get_vehicle_facts as a projection over the items. log_maintenance records a
                       dated service event. BOTH create the vehicle on first write — there is no
                       separate "create vehicle" step.
+                    - set_maintenance_schedule records a vehicle's RECURRING cadences — HOW OFTEN each
+                      service recurs (e.g. vidange every 10 000 km OR 12 months; mower oil every 50 h
+                      with a 5 h break-in first). This is the ONLY thing list_due_maintenance forecasts
+                      from — there is NO general-knowledge fallback, so a vehicle with no schedule
+                      produces NO forecast. Distinct from log_maintenance (a past event) and
+                      plan_maintenance (one open to-do): this stores the RULE. One items[] entry per
+                      cadence, each with type + action (change/replace/clean/inspect) + an optional
+                      component + at least one of everyUsageValue/everyUsageUnit, everyMonths,
+                      firstUsageValue. Upsert keyed on (type, action, component). When the user states
+                      or the web gives a manufacturer program with intervals, STORE it here — not as a
+                      loose plan_maintenance.
+                    - edit_maintenance fixes an ALREADY-logged visit IN PLACE by its @id (from
+                      get_maintenance_history) — "la vidange a coûté 149€ en fait", "c'était le 12 pas
+                      le 15". Sparse: pass only the fields to change. NEVER log a new visit to fix one
+                      (that duplicates it), never edit to record a fresh service.
+                    - dismiss_maintenance soft-removes a planned task from the checklist — "enlève la
+                      courroie de la liste", "pas besoin de celle-ci". Keyed like plan_maintenance
+                      (vehicle + type + label). Distinct from ticking a task DONE (that credits the work
+                      via log_maintenance) — dismiss means it will NOT be done.
                     - update_vehicle patches a vehicle's OWN fields (usage reading, owner, plate,
                       vin, year, modification=the engine/trim label), not facts. Record the current usage the user mentions — odometer
                       in km/mi, or engine hours (h) for mowers/generators — e.g. "à 250 000 km" ⇒
@@ -200,6 +219,12 @@ ai:
                          attributes (e.g. distribution_type, coolant_type). Always pass the target the user
                          gave (targetUsageValue/targetUsageUnit, e.g. 250000 km). One call per item.
                          plan_maintenance is an upsert, so re-running is safe.
+                      5. STORE THE CADENCES: when step 2 yielded recurring intervals ("every 10 000 km /
+                         12 months", "every 50 h", a 5 h break-in), call set_maintenance_schedule with one
+                         items[] entry per cadence — otherwise list_due_maintenance cannot forecast the
+                         NEXT occurrence. plan_maintenance (step 4) is the to-do NOW; set_maintenance_schedule
+                         is the RULE that regenerates it. Upsert, safe to re-run. Skip only if the program
+                         gave no recurring interval (a one-off at a milestone needs no rule).
                     REQUIRED: a parts / maintenance / "what do I need" question is NOT answered until
                     plan_maintenance has recorded the work as tracked tasks — the shopping list and the
                     "what to do at N km" list live ON those tasks; you have NO other channel to show a
