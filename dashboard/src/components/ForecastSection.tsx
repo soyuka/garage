@@ -4,7 +4,8 @@ import { formatDue } from '../forecast';
 import type { MaintenanceRecordInput } from '../garage';
 import { healthView } from '../health';
 import { serviceLabel } from '../labels';
-import type { ForecastDue, MaintenanceHealth, VehicleForecast } from '../types';
+import { formatCadenceShort } from '../schedule';
+import type { ForecastDue, MaintenanceHealth, ServiceRule, VehicleForecast } from '../types';
 
 /** The vehicle's current reading — seeds the inline gap-log so "fait à … h" defaults sensibly. */
 export interface CurrentUsage {
@@ -22,32 +23,75 @@ const HEALTH_COLOR: Record<NonNullable<ReturnType<typeof healthView>>['status'],
 
 const HEALTH_SEGMENTS = 14;
 
+/** Relative-date shortcuts for the "date inconnue ?" row — set an approximate last-done date with one
+ *  tap instead of opening the date picker. Each offset is months back from today. */
+const APPROX_DATES: { months: number; label: string }[] = [
+  { months: 1, label: 'récemment' },
+  { months: 6, label: '~6 mois' },
+  { months: 12, label: '~1 an' },
+  { months: 24, label: '~2 ans' },
+];
+
+/** Known per-visit service bundles — services a shop does in one go, so one baseline entry covers the
+ *  set. Only these collapse; everything else stays on its own card. Order within a bundle is preserved. */
+const VISIT_BUNDLES: readonly (readonly string[])[] = [
+  ['oil_change', 'oil_filter'],
+];
+
+/** A bundle of gaps logged together as one visit (one record, an item per type). */
+interface GapGroup {
+  key: string;
+  types: string[];
+  cadence: string; // "tous les 10 000 km / 1 an", or '' when no rule was found
+}
+
+/** Collapse gap types into per-visit cards using the VISIT_BUNDLES whitelist: a bundle merges only when
+ *  two or more of its members are gaps; anything else stays solo. First-appearance order is kept. */
+function groupGaps(gaps: string[], rules: ServiceRule[]): GapGroup[] {
+  const ruleFor = (type: string) => rules.find((r) => r.type === type);
+  const gapSet = new Set(gaps);
+  const consumed = new Set<string>();
+  const groups: GapGroup[] = [];
+
+  for (const type of gaps) {
+    if (consumed.has(type)) continue;
+    const bundle = VISIT_BUNDLES.find((b) => b.includes(type));
+    const types = bundle ? bundle.filter((t) => gapSet.has(t)) : [type];
+    types.forEach((t) => consumed.add(t));
+    // Cadence comes from the first bundled member that actually has a rule.
+    const rule = types.map(ruleFor).find((r): r is ServiceRule => r != null);
+    groups.push({ key: types.join('+'), types, cadence: rule ? formatCadenceShort(rule) : '' });
+  }
+  return groups;
+}
+
 /**
  * Maintenance forecast — a split card: the health rollup on the left (score + segment gauge + verdict),
  * the predicted-due services on the right as compact bars (soonest-first). Below, an "À renseigner"
- * sub-section lists recurring services with a known cadence but no logged baseline; each gap carries an
- * inline quick-log (date + reading → one minimal record) so a baseline can be set without leaving the
- * panel, with a "détails…" escape hatch into the full past-maintenance form.
+ * sub-section bundles recurring services that have a cadence but no logged baseline into per-visit cards;
+ * each card shows the cadence and carries a baseline form (date + reading → one record covering the whole
+ * bundle), with relative-date shortcuts for when the exact date is unknown.
  */
 export function ForecastSection({
   forecast,
   health,
   loading = false,
   currentUsage,
+  rules = [],
   onQuickLogGap,
-  onOpenFullForm,
 }: {
   forecast: VehicleForecast | undefined;
   health: MaintenanceHealth | undefined;
   loading?: boolean;
   currentUsage: CurrentUsage;
-  /** Log a minimal baseline for a gap type (one item, date + reading) — no jump, no form. */
+  /** The vehicle's recurring rules — supplies each gap's cadence and drives per-visit bundling. */
+  rules?: ServiceRule[];
+  /** Log a baseline for a gap bundle (one record, an item per bundled type) — no jump, no form. */
   onQuickLogGap: (input: MaintenanceRecordInput) => void;
-  /** Escape hatch: open the full past-maintenance form prefilled with this gap's service type. */
-  onOpenFullForm: (type: string) => void;
 }) {
   const due = forecast?.due ?? [];
   const gaps = forecast?.gaps ?? [];
+  const groups = groupGaps(gaps, rules);
 
   return (
     <div className="forecast">
@@ -78,20 +122,14 @@ export function ForecastSection({
 
       {gaps.length > 0 ? (
         <div className="forecast-gaps">
-          <h3 className="forecast-gaps-title">À renseigner — {gaps.length} service{gaps.length > 1 ? 's' : ''} sans date de référence</h3>
-          <p className="forecast-gaps-why">
-            La fréquence est connue, mais aucune intervention passée n’est consignée : impossible de prévoir la prochaine
-            échéance. Indiquez quand (et à combien {currentUsage.unit === 'km' || currentUsage.unit === 'mi' ? 'de km' : "d'heures"}) chacun a été fait pour la dernière fois.
-          </p>
+          <div className="forecast-gaps-head">
+            <h3 className="forecast-gaps-title">À renseigner</h3>
+            <span className="forecast-gaps-count">{gaps.length} service{gaps.length > 1 ? 's' : ''}</span>
+          </div>
+          <p className="forecast-gaps-why">Indiquez la dernière intervention pour activer les prévisions.</p>
           <div className="forecast-gaps-list">
-            {gaps.map((type) => (
-              <GapRow
-                key={type}
-                type={type}
-                currentUsage={currentUsage}
-                onLog={onQuickLogGap}
-                onFull={() => onOpenFullForm(type)}
-              />
+            {groups.map((group) => (
+              <GapCard key={group.key} group={group} currentUsage={currentUsage} onLog={onQuickLogGap} />
             ))}
           </div>
         </div>
@@ -100,17 +138,16 @@ export function ForecastSection({
   );
 }
 
-/** One coverage gap: a header (service + cadence hint) over an inline quick-log row. */
-function GapRow({
-  type,
+/** One baseline card for a gap bundle: the service name(s) + cadence over a big date/reading form,
+ *  plus relative-date chips ("date inconnue ?") that fill an approximate last-done date in one tap. */
+function GapCard({
+  group,
   currentUsage,
   onLog,
-  onFull,
 }: {
-  type: string;
+  group: GapGroup;
   currentUsage: CurrentUsage;
   onLog: (input: MaintenanceRecordInput) => void;
-  onFull: () => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
@@ -120,34 +157,52 @@ function GapRow({
     e.preventDefault();
     const usageValue = Number.parseInt(reading.replace(/[^\d]/g, ''), 10);
     onLog({
-      items: [{ type, parts: [] }],
+      items: group.types.map((type) => ({ type, parts: [] })),
       performedAt: date,
       usageValue: Number.isNaN(usageValue) ? null : usageValue,
       usageUnit: Number.isNaN(usageValue) ? null : currentUsage.unit,
     });
   };
 
+  const monthsAgo = (months: number): string => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - months);
+    return d.toISOString().slice(0, 10);
+  };
+
+  const name = group.types.map(serviceLabel).join(' + ');
+
   return (
-    <div className="forecast-gap">
-      <div className="forecast-gap-top">
-        <span className="forecast-gap-name">{serviceLabel(type)}</span>
-        <span className="forecast-gap-note">cadence connue, jamais consigné</span>
+    <div className="gap-card">
+      <div className="gap-card-head">
+        <span className="gap-card-name">{name}</span>
+        {group.cadence ? <span className="gap-card-cadence">{group.cadence}</span> : null}
       </div>
-      <form className="forecast-gap-log" onSubmit={submit}>
-        <span className="forecast-gap-lbl">fait le</span>
-        <input className="add-input add-input-sm" type="date" value={date} onChange={(e) => setDate(e.target.value)} aria-label="Date de la dernière intervention" />
-        <span className="forecast-gap-lbl">à</span>
-        <input
-          className="add-input add-input-xs"
-          inputMode="numeric"
-          value={reading}
-          onChange={(e) => setReading(e.target.value)}
-          aria-label="Relevé à cette date"
-        />
-        <span className="forecast-gap-lbl">{currentUsage.unit}</span>
-        <button type="submit" className="add-submit">Consigner</button>
-        <button type="button" className="forecast-gap-full" onClick={onFull}>détails (pièces, coût)…</button>
+      <form className="gap-card-form" onSubmit={submit}>
+        <label className="gap-field">
+          <span className="gap-field-lbl">Dernière fois</span>
+          <input className="gap-input" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} />
+        </label>
+        <label className="gap-field">
+          <span className="gap-field-lbl">Relevé ({currentUsage.unit})</span>
+          <input
+            className="gap-input"
+            inputMode="numeric"
+            placeholder="—"
+            value={reading}
+            onChange={(e) => setReading(e.target.value)}
+          />
+        </label>
+        <button type="submit" className="gap-submit">Consigner</button>
       </form>
+      <div className="gap-approx">
+        <span className="gap-approx-lbl">Date inconnue&nbsp;?</span>
+        {APPROX_DATES.map((a) => (
+          <button key={a.months} type="button" className="gap-chip" onClick={() => setDate(monthsAgo(a.months))}>
+            {a.label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

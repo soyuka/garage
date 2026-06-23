@@ -141,17 +141,12 @@ export function VehicleDetail({
   // rather than docking a second card. focused ⇒ a live, unexpanded fact answer is spotlighting keys.
   const [localOpen, setLocalOpen] = useState(false);
   const [addingFact, setAddingFact] = useState(false);
-  // A forecast "gap" CTA seeds the past-maintenance add form with a service type; transient — once
-  // PastMaintenanceRail opens its form it acks via onPrefillConsumed and this clears.
-  const [gapPrefill, setGapPrefill] = useState<string | null>(null);
   const focused = factPanel != null && !factPanel.expanded;
   const dataOpen = localOpen || factPanel != null;
   const shownFacts = focused ? facts.filter((f) => factPanel!.keys.includes(f.key)) : facts;
   // Asked keys the vehicle has no stored fact for — surfaced as click-to-fill rows so the answer is honest.
   const missing = focused ? factPanel!.keys.filter((k) => !facts.some((f) => f.key === k)) : [];
 
-  // Scroll the past-maintenance card into view when a forecast gap CTA opens its prefilled form.
-  const recordsRef = useRef<HTMLElement>(null);
   // Scroll the panel into view when the agent answers, since it sits below the fold of the detail.
   const dataRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -285,11 +280,8 @@ export function VehicleDetail({
           health={vehicle.maintenanceHealth}
           loading={forecastLoading}
           currentUsage={{ value: vehicle.usageValue ?? null, unit: defaultUnit }}
+          rules={vehicle.serviceSchedule ?? []}
           onQuickLogGap={onAddRecord}
-          onOpenFullForm={(type) => {
-            setGapPrefill(type);
-            recordsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          }}
         />
       </Card>
 
@@ -357,7 +349,7 @@ export function VehicleDetail({
         ) : null}
       </Card>
 
-      <Card ref={recordsRef} className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
+      <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <PastMaintenanceRail
           records={vehicle.maintenanceRecords}
           loading={recordsLoading}
@@ -366,8 +358,6 @@ export function VehicleDetail({
           onDeleteRecord={onDeleteRecord}
           onUploadAttachment={onUploadAttachment}
           onDeleteAttachment={onDeleteAttachment}
-          prefillType={gapPrefill}
-          onPrefillConsumed={() => setGapPrefill(null)}
         />
       </Card>
 

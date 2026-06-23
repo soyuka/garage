@@ -45,3 +45,21 @@ export function formatCadence(r: ServiceRule): string {
   if (r.firstUsageValue != null) parts.push(`1ʳᵉ à ${group(r.firstUsageValue)}`);
   return parts.length ? parts.join(' · ') : '—';
 }
+
+/** Whole-month spans fold to years: 12 → "1 an", 24 → "2 ans", 18 stays "18 mois". */
+function spanLabel(months: number): string {
+  if (months % 12 === 0) {
+    const years = months / 12;
+    return `${years} an${years > 1 ? 's' : ''}`;
+  }
+  return `${months} mois`;
+}
+
+/** Compact cadence for the gap panel: "tous les 10 000 km / 1 an". Drops the break-in interval —
+ *  the gap card only needs the recurring rhythm. Empty string when no cadence is set. */
+export function formatCadenceShort(r: ServiceRule): string {
+  const parts: string[] = [];
+  if (r.everyUsage) parts.push(`${group(r.everyUsage.value)} ${unitLabel(r.everyUsage.unit)}`);
+  if (r.everyMonths != null) parts.push(spanLabel(r.everyMonths));
+  return parts.length ? `tous les ${parts.join(' / ')}` : '';
+}
