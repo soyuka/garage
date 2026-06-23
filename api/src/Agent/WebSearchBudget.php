@@ -6,8 +6,9 @@ namespace App\Agent;
 
 /**
  * Per-turn cap on web search — the costliest move (each cited result is re-sent on every subsequent
- * loop pass, bloating context past max_tokens and starving the persist/plan steps). Reset per turn by
- * {@see \App\MessageHandler\RunAgentTurnHandler}.
+ * loop pass, bloating context past max_tokens and starving the persist/plan steps). Default 2 per turn:
+ * one good search on the happy path, plus a single retry when the first comes back empty (a too-broad or
+ * too-narrow query). Reset per turn by {@see \App\MessageHandler\RunAgentTurnHandler}.
  *
  * Two feeders, depending on the active web-search path:
  *  - Custom-tool path (default): {@see \App\Agent\WebSearch\WebSearchTool} records one use per call and
@@ -22,7 +23,7 @@ final class WebSearchBudget
     private int $used = 0;
 
     public function __construct(
-        private readonly int $maxPerTurn = 1,
+        private readonly int $maxPerTurn = 2,
     ) {
     }
 

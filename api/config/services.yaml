@@ -98,6 +98,8 @@ services:
         arguments:
             $platform: '@ai.platform.gemini'
             $model: '%env(GEMINI_WEB_SEARCH_MODEL)%'
+            # Trace the raw Gemini body onto the turn journal so an empty answer is diagnosable.
+            $tracer: '@App\Agent\Journal\TurnJournal'
 
     # The seam the WebSearchTool depends on: a runtime router picking the backend from WEB_SEARCH_BACKEND.
     # Service locator so only the selected backend's (lazy) platform is ever instantiated.

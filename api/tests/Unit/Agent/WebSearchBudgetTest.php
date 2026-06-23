@@ -38,4 +38,15 @@ final class WebSearchBudgetTest extends TestCase
 
         $this->assertFalse($budget->exhausted());
     }
+
+    public function testDefaultsToTwoSearchesPerTurn(): void
+    {
+        $budget = new WebSearchBudget();
+
+        $budget->record(1);
+        $this->assertFalse($budget->exhausted(), 'one search of two must leave room for a retry');
+
+        $budget->record(1);
+        $this->assertTrue($budget->exhausted());
+    }
 }

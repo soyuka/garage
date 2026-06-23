@@ -15,16 +15,21 @@ use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
  * `web_search` (Anthropic rejects duplicate tool names).
  *
  * Per-turn cap: web search is the costliest move (each cited result is re-sent every subsequent loop
- * pass), so a search is allowed only while the turn's {@see WebSearchBudget} has room — reset per turn
- * by {@see \App\MessageHandler\RunAgentTurnHandler}. Once spent, the tool returns a plain instruction
- * to answer from what's already known instead of searching again.
+ * pass), so a search is allowed only while the turn's {@see WebSearchBudget} has room (default 2) —
+ * reset per turn by {@see \App\MessageHandler\RunAgentTurnHandler}. Once spent, the tool returns a plain
+ * instruction to answer from what's already known instead of searching again.
+ *
+ * An empty grounded answer is NOT passed through as a blank string (that left the orchestrator with no
+ * signal and a noop turn): it returns an explicit "no result" message and lets the model decide whether
+ * to spend its remaining budget on another query or fall back to known facts. The empty attempt still
+ * spends one unit, so the two-search cap bounds an unproductive query loop.
  *
  * Class-level #[AsTool] (like {@see \App\Agent\Ui\EndTurnTool}) so `tools: true` autoloads it into the
  * garage toolbox; the bundle only autoconfigures class-level attributes.
  */
 #[AsTool(
     'web_search',
-    'Search the web for facts not available from the local garage tools or the parts catalog (a maintenance schedule/program, an interval, a fluid/spec, belt-vs-chain). Returns a grounded answer with source URLs. Last resort, one search per turn — put the exact vehicle (make, model, year, engine) in the query.',
+    'Search the web for facts not available from the local garage tools or the parts catalog (a maintenance schedule/program, an interval, a fluid/spec, belt-vs-chain). Returns a grounded answer with source URLs. Last resort, max two searches per turn — put the exact vehicle (make, model, year, engine) in the query; if the first comes back empty, refine once.',
     'search',
 )]
 final readonly class WebSearchTool
@@ -47,6 +52,10 @@ final readonly class WebSearchTool
         $this->budget->record(1);
 
         $result = $this->client->search($query);
+
+        if ('' === trim($result->answer)) {
+            return 'Aucun résultat web pour cette recherche.';
+        }
 
         if ([] === $result->citations) {
             return $result->answer;

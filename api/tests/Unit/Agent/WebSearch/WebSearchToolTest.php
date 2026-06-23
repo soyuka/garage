@@ -60,4 +60,19 @@ final class WebSearchToolTest extends TestCase
 
         $this->assertStringContainsString('Réponse sans source.', $out);
     }
+
+    public function testEmptyAnswerReturnsExplicitNoResultMessageNotBlank(): void
+    {
+        $client = $this->createStub(WebSearchClient::class);
+        $client->method('search')->willReturn(new WebSearchResult('   '));
+
+        $budget = new WebSearchBudget(2);
+        $out = (new WebSearchTool($client, $budget))->search('Mazda 6 2007 programme entretien');
+
+        $this->assertNotSame('', trim($out), 'an empty search must not return a blank string to the orchestrator');
+        $this->assertMatchesRegularExpression('/aucun résultat|no result/i', $out);
+        $this->assertStringNotContainsString('http', $out);
+        $this->assertStringNotContainsString('Limite de recherche', $out, 'no-result is distinct from budget-exhausted');
+        $this->assertFalse($budget->exhausted(), 'a single empty search of two must leave a retry');
+    }
 }

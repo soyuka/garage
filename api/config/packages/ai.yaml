@@ -29,7 +29,7 @@ ai:
             # the program-first flow runs a web_search whose cited result bloats the loop context, and the
             # turn must still have room to synthesise the schedule into plan_maintenance calls (carrying
             # both parts and attributes) afterwards — 2048 truncated that tail. WebSearchBudget caps the
-            # turn to one search so the context cannot balloon further.
+            # turn to two searches (one happy-path + one retry on an empty result) so context cannot balloon.
             # platform: 'ai.platform.anthropic'
             # model: 'claude-haiku-4-5?max_tokens=8192'
             #
@@ -158,8 +158,8 @@ ai:
                     - WEB SEARCH (web_search): the source of truth for the maintenance SCHEDULE — WHAT is
                       due and WHEN (intervals, the program at a milestone like 250 000 km, a fluid/spec absent
                       from get_service_parts). The catalog PRICES parts; it does NOT know the schedule. You
-                      get ONE web_search per turn — spend it on the program, in a SINGLE call, then stop:
-                      do NOT re-search variants of the same question. IDENTIFY THE EXACT VEHICLE IN THE QUERY:
+                      get at most TWO web_searches per turn — make the first a SINGLE precise call and do
+                      NOT re-search variants of the same question once it answers. IDENTIFY THE EXACT VEHICLE IN THE QUERY:
                       put make, model, year and engine/motorisation verbatim (list_vehicles gives
                       make/model/year/kType; get_vehicle_facts the engine/motor code) — the engine variant
                       decides timing CHAIN vs BELT, oil grade, interval. A generic query ("entretien à

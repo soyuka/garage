@@ -32,6 +32,7 @@ final readonly class GeminiWebSearchClient implements WebSearchClient
     public function __construct(
         private PlatformInterface $platform,
         private string $model,
+        private ?WebSearchTracer $tracer = null,
     ) {
     }
 
@@ -45,6 +46,10 @@ final readonly class GeminiWebSearchClient implements WebSearchClient
 
         /** @var array<string, mixed> $data */
         $data = $result->getRawResult()->getData();
+
+        // Trace the raw body BEFORE distilling: an empty answer (MAX_TOKENS cut, safety block, no
+        // grounding) leaves no trace in the WebSearchResult, so the journal is the only place it survives.
+        $this->tracer?->recordWebSearchResponse('gemini', $query, $data);
 
         return new WebSearchResult($this->extractAnswer($data), $this->extractCitations($data));
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Agent\Journal;
 
+use App\Agent\WebSearch\WebSearchTracer;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
@@ -26,7 +27,7 @@ use Psr\Log\LoggerInterface;
  * a turn-killing error. Recording before {@see self::begin()} (or after {@see self::finish()}) is a
  * no-op — the seams fire on their own schedule and must not assume a turn is open.
  */
-final class TurnJournal
+final class TurnJournal implements WebSearchTracer
 {
     private ?AgentTurn $current = null;
     private int $toolSeq = 0;
@@ -82,6 +83,23 @@ final class TurnJournal
     public function recordWebSearch(int $count, array $queries = []): void
     {
         $this->current?->recordWebSearch($count, $queries);
+    }
+
+    /**
+     * Raw web-search response, tagged so it is identifiable among the turn's raw payloads. Goes into the
+     * same `rawCalls` bucket the frontend journal already renders, WITHOUT touching token usage (the side
+     * call's tokens are not the orchestrator's). Best-effort: a no-op when no turn is open.
+     *
+     * @param array<string, mixed> $rawBody
+     */
+    public function recordWebSearchResponse(string $backend, string $query, array $rawBody): void
+    {
+        $this->current?->addRawCall([
+            'kind' => 'web_search',
+            'backend' => $backend,
+            'query' => $query,
+            'response' => $rawBody,
+        ]);
     }
 
     /**

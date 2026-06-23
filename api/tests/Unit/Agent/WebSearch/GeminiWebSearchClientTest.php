@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\WebSearch;
 
 use App\Agent\WebSearch\GeminiWebSearchClient;
+use App\Agent\WebSearch\WebSearchTracer;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
@@ -65,6 +66,26 @@ final class GeminiWebSearchClientTest extends TestCase
         $result = (new GeminiWebSearchClient($platform, 'gemini-2.5-flash'))->search('q');
 
         $this->assertSame('Réponse.', $result->answer);
+        $this->assertSame([], $result->citations);
+    }
+
+    public function testTracesTheRawGeminiBodyForTheJournal(): void
+    {
+        $captured = [];
+        // An EMPTY-answer body — the exact shape that produced a silent noop turn — must still be traced
+        // so the raw response is recoverable from the journal even when no text/citations come back.
+        $body = ['candidates' => [['content' => ['role' => 'model', 'parts' => []], 'finishReason' => 'MAX_TOKENS']]];
+        $platform = $this->platform($body, $captured);
+
+        $tracer = $this->createMock(WebSearchTracer::class);
+        $tracer->expects($this->once())
+            ->method('recordWebSearchResponse')
+            ->with('gemini', 'Mazda 6 2007 programme entretien', $body);
+
+        $result = (new GeminiWebSearchClient($platform, 'gemini-2.5-flash', $tracer))
+            ->search('Mazda 6 2007 programme entretien');
+
+        $this->assertSame('', $result->answer);
         $this->assertSame([], $result->citations);
     }
 
