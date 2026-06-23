@@ -34,14 +34,20 @@ final class MotulOilAdvisor
             return ['status' => 'not_found', 'query' => $search, 'candidates' => []];
         }
 
-        $matches = $this->narrow($all, $year, $engine);
+        // Motul's search-vehicle fuzzy-matches the make/model and returns cross-brand noise (a "Mazda 6"
+        // query yields "Maeda" mini-cranes). Drop anything whose brand/model do not match what we asked
+        // for, BEFORE narrowing — otherwise the noise (often with absurd year ranges that survive a
+        // year filter) floods the candidate list and buries the real variant.
+        $relevant = $this->relevant($all, $search);
+
+        $matches = $this->narrow($relevant, $year, $engine);
 
         if ([] === $matches || \count($matches) > self::PROBE_CAP) {
             return [
                 'status' => [] === $matches ? 'not_found' : 'ambiguous',
                 'query' => $search,
                 'hint' => 'Several variants match — re-call with the exact year and/or engine to pin one.',
-                'candidates' => array_map($this->candidate(...), [] === $matches ? $all : $matches),
+                'candidates' => array_map($this->candidate(...), [] === $matches ? $relevant : $matches),
             ];
         }
 
@@ -137,6 +143,52 @@ final class MotulOilAdvisor
         )));
 
         return $result;
+    }
+
+    /**
+     * Keep only candidates whose brand AND model actually match the search, killing Motul's fuzzy
+     * cross-brand noise. The first token of the search is the make, the rest the model. Matching is
+     * alphanumeric-normalised, substring either-direction, and tolerant of the make leaking into a
+     * model token ("MAZDA MAZDA6" — the @id path concatenates make+model — must still match Motul's
+     * bare "6"). A search with no model token (make only) is left unfiltered.
+     *
+     * @param list<MotulVehicle> $vehicles
+     *
+     * @return list<MotulVehicle>
+     */
+    private function relevant(array $vehicles, string $search): array
+    {
+        $tokens = array_values(array_filter(preg_split('/\s+/', trim($search)) ?: []));
+        if (\count($tokens) < 2) {
+            return $vehicles;
+        }
+
+        $make = $this->norm($tokens[0]);
+        $modelTokens = array_values(array_filter(array_map($this->norm(...), \array_slice($tokens, 1))));
+
+        return array_values(array_filter($vehicles, function (MotulVehicle $v) use ($make, $modelTokens): bool {
+            $brand = $this->norm($v->brand);
+            if ('' === $brand || ('' !== $make && !str_contains($brand, $make) && !str_contains($make, $brand))) {
+                return false;
+            }
+
+            $haystack = $this->norm($v->model.$v->type);
+            foreach ($modelTokens as $token) {
+                $stripped = '' !== $make ? str_replace($make, '', $token) : $token;
+                foreach (array_unique([$token, $stripped]) as $needle) {
+                    if ('' !== $needle && (str_contains($haystack, $needle) || str_contains($needle, $haystack))) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }));
+    }
+
+    private function norm(string $value): string
+    {
+        return preg_replace('/[^a-z0-9]/', '', mb_strtolower($value)) ?? '';
     }
 
     /**
