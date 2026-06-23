@@ -47,11 +47,14 @@ export interface DueView {
   sub: string;
   /** Progress consumed against the cadence (0–100), null for time-axis items with no bar. */
   progress: number | null;
+  /** The compact-bar readout for a usage-axis item — consumed/cadence + remaining, grouped and
+   *  unit-labelled. Null on the time axis (no cadence to fill). */
+  bar: { consumed: string; cadence: string; remaining: string; unit: string } | null;
   /** True when `lead` is a rate-derived estimate (projectedDueAt) — render it softer. */
   estimate: boolean;
   /** Maps onto StatusPill: overdue→red, otherwise soon→amber. */
   status: 'overdue' | 'soon';
-  /** Quiet labels: "en retard" and/or "générique" (a default, less-authoritative rule). */
+  /** Quiet labels: currently just "en retard". */
   tags: string[];
 }
 
@@ -68,13 +71,11 @@ function dueTitle(d: ForecastDue): string {
  * Project one forecast due item onto display copy. Usage-axis items (with `usage`) lead with the
  * remaining engine-hours/km and carry a progress bar (consumed vs the cadence due−last). Time-axis
  * items lead with a firm `dueAt` ("prévu le …") or, failing that, a softer `projectedDueAt` estimate
- * ("~ déc. 2026"). Overdue items take the red status and an "en retard" tag; a `default` rule earns a
- * quiet "générique" tag (general-knowledge interval, less authoritative than a real schedule).
+ * ("~ déc. 2026"). Overdue items take the red status and an "en retard" tag.
  */
 export function formatDue(d: ForecastDue): DueView {
   const tags: string[] = [];
   if (d.overdue) tags.push('en retard');
-  if (d.rule === 'default') tags.push('générique');
   const status: DueView['status'] = d.overdue ? 'overdue' : 'soon';
 
   if (d.usage) {
@@ -91,6 +92,7 @@ export function formatDue(d: ForecastDue): DueView {
       lead,
       sub: `dernière : ${group(d.usage.last)} ${u}`,
       progress,
+      bar: { consumed: group(consumed), cadence: group(cadence), remaining: group(d.usage.remaining), unit: u },
       estimate: false,
       status,
       tags,
@@ -106,7 +108,7 @@ export function formatDue(d: ForecastDue): DueView {
     lead = `~ ${monthYear(d.projectedDueAt)}`;
     estimate = true;
   }
-  return { title: dueTitle(d), axis: 'time', lead, sub: '', progress: null, estimate, status, tags };
+  return { title: dueTitle(d), axis: 'time', lead, sub: '', progress: null, bar: null, estimate, status, tags };
 }
 
 /** The compact rail line for a vehicle's next-due, plus whether it reads red. */

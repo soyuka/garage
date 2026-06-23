@@ -401,11 +401,13 @@ export function App() {
         loadTasks(id);
         // A new baseline shifts the next-due (and may fill a coverage gap) — refresh the forecast.
         loadForecast(id);
+        // …and recomputes the health rollup (a filled gap lifts the score) — refresh the item too.
+        loadDetail(id);
       } catch (e) {
         dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de l'enregistrement : ${(e as Error).message}` } });
       }
     },
-    [state.selectedId, loadRecords, loadTasks, loadForecast],
+    [state.selectedId, loadRecords, loadTasks, loadForecast, loadDetail],
   );
 
   const editRecord = useCallback(
@@ -416,11 +418,12 @@ export function App() {
         loadRecords(id);
         loadTasks(id);
         loadForecast(id);
+        loadDetail(id);
       } catch (e) {
         dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la modification : ${(e as Error).message}` } });
       }
     },
-    [state.selectedId, loadRecords, loadTasks, loadForecast],
+    [state.selectedId, loadRecords, loadTasks, loadForecast, loadDetail],
   );
 
   const removeRecord = useCallback(
@@ -430,11 +433,12 @@ export function App() {
         await deleteMaintenanceRecord(recordIri);
         loadRecords(id);
         loadForecast(id);
+        loadDetail(id);
       } catch (e) {
         dispatch({ kind: 'action', action: { type: 'toast', tone: 'alarm', message: `Échec de la suppression : ${(e as Error).message}` } });
       }
     },
-    [state.selectedId, loadRecords, loadForecast],
+    [state.selectedId, loadRecords, loadForecast, loadDetail],
   );
 
   const uploadAttachment = useCallback(

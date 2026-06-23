@@ -81,23 +81,21 @@ export interface ForecastUsage {
 }
 
 /**
- * One predicted-due service from the per-vehicle forecast. A `rule` of "schedule" is a per-vehicle
- * cadence (authoritative-ish); "default" is a generic general-knowledge fallback (less authoritative,
- * tagged "générique"). Usage-axis items carry `usage`; time-axis items carry `dueAt`/`projectedDueAt`.
+ * One predicted-due service from the per-vehicle forecast. Every due is `rule: "schedule"` — driven by
+ * a per-vehicle cadence the user/LLM set (there is no generic fallback). Usage-axis items carry
+ * `usage`; time-axis items carry `dueAt`/`projectedDueAt`.
  */
 export interface ForecastDue {
   type: string;
   action: 'change' | 'replace' | 'clean' | 'inspect' | null;
   component: string | null;
-  rule: 'schedule' | 'default';
+  rule: 'schedule';
   lastPerformedAt: string | null; // Y-m-d
   dueAt: string | null; // Y-m-d, time axis
   projectedDueAt: string | null; // Y-m-d, usage axis projected onto the calendar (estimate)
   overdue: boolean;
   daysUntilDue: number | null;
-  intervalMonths: number | null;
   usage: ForecastUsage | null;
-  usageInterval: { value: number; unit: string } | null; // advisory, rule="default" only
 }
 
 /** The per-vehicle forecast (GET …/forecast): due items sorted soonest-first + coverage gaps. */
@@ -115,7 +113,7 @@ export interface NextDue {
   type: string;
   action: 'change' | 'replace' | 'clean' | 'inspect' | null;
   label: string;
-  rule: 'schedule' | 'default';
+  rule: 'schedule';
   overdue: boolean;
   dueAt: string | null;
   projectedDueAt: string | null;

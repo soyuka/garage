@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
-import { MetricStat } from '../design/components/MetricStat';
-import { StatusPill } from '../design/components/StatusPill';
 import type { MaintenanceRecordInput, PlannedTaskInput, ServiceRuleInput } from '../garage';
-import { healthBadge } from '../health';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import type { FactPanel, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
@@ -122,10 +119,6 @@ export function VehicleDetail({
 }) {
   // The API's maintenance-health rollup (item GET only) → meaning-locked status chip. Null on the
   // listing (rollup absent) — the chip simply doesn't render until the item GET fills it.
-  const health = healthBadge(vehicle.maintenanceHealth);
-  const next = vehicle.nextService;
-  const nextTone = next.value < 0 ? 'alarm' : next.value < 1500 ? 'warn' : 'accent';
-  const nextValue = next.value < 0 ? `${Math.abs(next.value)}` : `${next.value}`;
   // Road vehicles read in km; ground-care machinery accrues engine hours.
   const defaultUnit = vehicle.usageUnit ?? (vehicle.vehicleType === 'groundscare' ? 'h' : 'km');
   const facts = vehicle.facts ?? [];
@@ -201,6 +194,32 @@ export function VehicleDetail({
           <InlineEdit value={vehicle.model} placeholder="modèle" ariaLabel="Modèle" onCommit={(v) => onEdit({ model: v })} />
         </h1>
         <Badge style={{ padding: 0 }}>
+          <span className="usage-badge">
+            <InlineEdit
+              value={vehicle.usageValue != null ? vehicle.mileage : ''}
+              placeholder="+ relevé"
+              type="text"
+              ariaLabel="Relevé (km / heures)"
+              className="badge-edit"
+              onCommit={commitUsage}
+            />
+            {vehicle.usageValue != null ? (
+              <select
+                aria-label="Unité de relevé"
+                className="usage-unit-badge"
+                value={vehicle.usageUnit ?? defaultUnit}
+                onChange={(e) => onEdit({ usageUnit: e.target.value })}
+              >
+                <option value="km">km</option>
+                <option value="mi">mi</option>
+                <option value="h">h</option>
+              </select>
+            ) : (
+              <span className="usage-unit-static">{defaultUnit}</span>
+            )}
+          </span>
+        </Badge>
+        <Badge style={{ padding: 0 }}>
           <InlineEdit
             value={vehicle.year ? String(vehicle.year) : ''}
             placeholder="+ année"
@@ -250,57 +269,16 @@ export function VehicleDetail({
             TecDoc vérifié
           </Badge>
         ) : null}
-        {health ? (
-          <StatusPill status={health.status} aria-label={`Santé entretien : ${health.label}`}>
-            {health.score != null ? `${health.score} · ${health.label}` : health.label}
-          </StatusPill>
-        ) : null}
       </div>
-
-      <Card className="kpi-card hud-panel" style={{ marginBottom: 'var(--mpa-gap-grid)' }} padding="var(--mpa-pad-card-lg) 0">
-        <div className="kpi-strip">
-          <div style={{ fontFamily: 'var(--mpa-font)', fontVariantNumeric: 'tabular-nums' }}>
-            <div style={{ fontSize: 13, color: 'var(--mpa-muted)', marginBottom: 12 }}>Kilométrage</div>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: 7 }}>
-              <span style={{ fontSize: 44, fontWeight: 500, letterSpacing: '-0.02em', lineHeight: 1 }}>
-                <InlineEdit
-                  value={vehicle.usageValue != null ? vehicle.mileage : ''}
-                  placeholder="—"
-                  type="text"
-                  ariaLabel="Relevé de kilométrage"
-                  className="usage-edit"
-                  onCommit={commitUsage}
-                />
-              </span>
-              {vehicle.usageValue != null ? (
-                <select
-                  aria-label="Unité de relevé"
-                  className="usage-unit-edit"
-                  value={vehicle.usageUnit ?? defaultUnit}
-                  onChange={(e) => onEdit({ usageUnit: e.target.value })}
-                >
-                  <option value="km">km</option>
-                  <option value="mi">mi</option>
-                  <option value="h">h</option>
-                </select>
-              ) : null}
-            </div>
-          </div>
-          <MetricStat
-            label="Prochain entretien"
-            value={nextValue}
-            unit={next.value < 0 ? `${next.unit} de retard` : next.unit}
-            tone={nextTone}
-          />
-          <MetricStat label="Tâches ouvertes" value={String(vehicle.openTasks)} unit="en attente" />
-        </div>
-      </Card>
 
       <Card className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>
         <ForecastSection
           forecast={vehicle.forecast}
+          health={vehicle.maintenanceHealth}
           loading={forecastLoading}
-          onLogGap={(type) => {
+          currentUsage={{ value: vehicle.usageValue ?? null, unit: defaultUnit }}
+          onQuickLogGap={onAddRecord}
+          onOpenFullForm={(type) => {
             setGapPrefill(type);
             recordsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }}
@@ -328,9 +306,6 @@ export function VehicleDetail({
                 Archiver les entretiens terminés ({doneIris.length})
               </button>
             ) : null}
-            <button type="button" className="task-clean" aria-pressed={showAllTasks} onClick={onToggleShowAllTasks}>
-              {showAllTasks ? `Masquer les retirées${dismissedCount > 0 ? ` (${dismissedCount})` : ''}` : 'Voir les tâches retirées'}
-            </button>
             <span style={{ color: 'var(--mpa-muted)', fontSize: 'var(--mpa-text-label)' }}>
               {openCount} ouverte{openCount > 1 ? 's' : ''}
             </span>
@@ -370,6 +345,13 @@ export function VehicleDetail({
             ))}
           </div>
         )}
+        {tasks.length > 0 || showAllTasks ? (
+          <div className="task-foot">
+            <button type="button" aria-pressed={showAllTasks} onClick={onToggleShowAllTasks}>
+              {showAllTasks ? `Masquer les tâches retirées${dismissedCount > 0 ? ` (${dismissedCount})` : ''}` : 'Voir les tâches retirées'}
+            </button>
+          </div>
+        ) : null}
       </Card>
 
       <Card ref={recordsRef} className="hud-panel" style={{ marginTop: 'var(--mpa-gap-grid)' }}>

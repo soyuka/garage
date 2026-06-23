@@ -13,9 +13,7 @@ function due(over: Partial<ForecastDue> = {}): ForecastDue {
     projectedDueAt: null,
     overdue: false,
     daysUntilDue: null,
-    intervalMonths: null,
     usage: null,
-    usageInterval: null,
     ...over,
   };
 }
@@ -73,6 +71,17 @@ describe('formatDue — usage axis', () => {
     expect(v.lead).toBe('15 000 km restantes');
     expect(v.sub).toBe('dernière : 138 000 km');
   });
+
+  it('exposes a grouped consumed/cadence bar readout for the compact bar', () => {
+    const v = formatDue(due({ usage: { last: 100, due: 600, remaining: 200, unit: 'hours' } }));
+    // cadence 500, consumed 300, remaining 200.
+    expect(v.bar).toEqual({ consumed: '300', cadence: '500', remaining: '200', unit: 'h' });
+  });
+
+  it('groups large km readings in the bar readout', () => {
+    const v = formatDue(due({ usage: { last: 138000, due: 153000, remaining: 15000, unit: 'km' } }));
+    expect(v.bar).toEqual({ consumed: '0', cadence: '15 000', remaining: '15 000', unit: 'km' });
+  });
 });
 
 describe('formatDue — time axis', () => {
@@ -94,6 +103,10 @@ describe('formatDue — time axis', () => {
     const v = formatDue(due({ usage: null, dueAt: null, projectedDueAt: null }));
     expect(v.lead).toBe('—');
   });
+
+  it('has no bar readout on the time axis', () => {
+    expect(formatDue(due({ usage: null, dueAt: '2026-12-15' })).bar).toBeNull();
+  });
 });
 
 describe('formatDue — overdue + rule tags', () => {
@@ -102,16 +115,6 @@ describe('formatDue — overdue + rule tags', () => {
     expect(v.status).toBe('overdue');
     expect(v.lead).toBe('20 h de retard');
     expect(v.tags).toContain('en retard');
-  });
-
-  it('tags a default rule as "générique"', () => {
-    const v = formatDue(due({ rule: 'default' }));
-    expect(v.tags).toContain('générique');
-  });
-
-  it('does not tag a schedule rule as générique', () => {
-    const v = formatDue(due({ rule: 'schedule' }));
-    expect(v.tags).not.toContain('générique');
   });
 
   it('a non-overdue usage item is soon, not overdue', () => {

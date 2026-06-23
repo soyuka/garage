@@ -41,3 +41,73 @@ export function healthBadge(health: MaintenanceHealth | undefined): HealthBadge 
     label: parts.length > 0 ? parts.join(' · ') : 'À jour',
   };
 }
+
+/** A breakdown chip: a coloured count driving the health-card's at-a-glance summary. */
+export interface HealthChip {
+  /** Maps onto StatusPill tones — overdue→red, soon→amber, gap→neutral-cyan, ok→green. */
+  tone: 'overdue' | 'soon' | 'gap' | 'ok';
+  label: string;
+}
+
+/** The richer view-model behind the explicit health card (ring + verdict + breakdown chips). */
+export interface HealthView {
+  status: HealthBadge['status'];
+  /** 0–100, or null when nothing is tracked (status "unknown"). */
+  score: number | null;
+  /** A short headline verdict — "Bon état général", "Entretien en retard"… */
+  verdict: string;
+  /** One sentence expanding the verdict in plain language. */
+  detail: string;
+  /** The non-zero counts, most-urgent first; a lone "À jour" chip when green and clean. */
+  chips: HealthChip[];
+}
+
+/**
+ * Projects the health rollup onto the explicit card view-model. Unlike {@see healthBadge} (a single
+ * cramped pill string), this splits the verdict, a plain-language sentence, and the individual
+ * coloured counts so the card can render a ring + breakdown instead of "92 · 5 sans historique".
+ */
+export function healthView(health: MaintenanceHealth | undefined): HealthView | null {
+  if (!health) return null;
+
+  const chips: HealthChip[] = [];
+  if (health.overdue > 0) chips.push({ tone: 'overdue', label: `${health.overdue} en retard` });
+  if (health.dueSoon > 0) chips.push({ tone: 'soon', label: `${health.dueSoon} bientôt` });
+  if (health.gaps > 0) chips.push({ tone: 'gap', label: `${health.gaps} sans historique` });
+
+  if (health.status === 'unknown') {
+    return {
+      status: 'info',
+      score: null,
+      verdict: 'Aucun suivi',
+      detail: 'Aucun entretien consigné. Renseignez une première intervention pour activer la prévision.',
+      chips,
+    };
+  }
+
+  const { verdict, detail } = verdictFor(health);
+  return {
+    status: STATUS_TO_PILL[health.status],
+    score: health.score,
+    verdict,
+    detail,
+    chips: chips.length > 0 ? chips : [{ tone: 'ok', label: 'À jour' }],
+  };
+}
+
+/** The headline + sentence for a scored (non-unknown) vehicle, severity-ordered like the status. */
+function verdictFor(health: MaintenanceHealth): { verdict: string; detail: string } {
+  if (health.overdue > 0) {
+    return { verdict: 'Entretien en retard', detail: 'Un ou plusieurs services ont dépassé leur échéance.' };
+  }
+  if (health.dueSoon > 0) {
+    return { verdict: 'Entretien bientôt dû', detail: 'Une échéance approche dans les 30 prochains jours.' };
+  }
+  if (health.gaps > 0) {
+    return {
+      verdict: 'Suivi incomplet',
+      detail: 'Des services planifiés n’ont aucune date de référence : leur prochaine échéance reste imprévisible.',
+    };
+  }
+  return { verdict: 'Bon état général', detail: 'Tout l’entretien suivi est à jour.' };
+}
