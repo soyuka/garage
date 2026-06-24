@@ -10,6 +10,7 @@ use App\Dto\DismissMaintenanceInput;
 use App\Dto\EditMaintenanceInput;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Dto\ListDueMaintenanceInput;
+use App\Dto\ListPlannedMaintenanceInput;
 use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
 use App\Dto\SetMaintenanceScheduleInput;
@@ -18,6 +19,7 @@ use App\State\DismissMaintenanceProcessor;
 use App\State\EditMaintenanceProcessor;
 use App\State\GetMaintenanceHistoryProcessor;
 use App\State\ListDueMaintenanceProcessor;
+use App\State\ListPlannedMaintenanceProcessor;
 use App\State\LogMaintenanceProcessor;
 use App\State\PlanMaintenanceProcessor;
 use App\State\SetMaintenanceScheduleProcessor;
@@ -101,6 +103,14 @@ use App\State\SetMaintenanceScheduleProcessor;
             input: ListDueMaintenanceInput::class,
             structuredContent: false,
             processor: ListDueMaintenanceProcessor::class,
+            annotations: ['readOnlyHint' => true],
+        ),
+        'list_planned_maintenance' => new McpTool(
+            title: 'Planned Maintenance Checklist',
+            description: 'Read a vehicle\'s OPEN planned-maintenance checklist — the live "Entretien en cours" to-do, each task WITH its parts (the shopping list, every part\'s ref/brand/label) and its spec attributes (oil grade/capacity, part references…). Use this to answer "is my current maintenance todo complete and does it have all the parts?" or "what is still to do on this vehicle?" — it returns the ACTUAL checklist the user is working through. Three honest distinctions: this is the live INTENT (what is planned but not yet done), whereas get_maintenance_history is the logged PAST (what was actually done and when) and list_due_maintenance is the FORECAST (what an interval predicts is coming, derived — not a real task). Only open, actionable tasks are returned: ones ticked off (done) or removed (dismissed) drop off, as do pure spec carriers (facts, no work attached). Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. An unknown vehicle returns a no_records result (NOT an error). Read-only: it never creates or changes anything — plan_maintenance owns adding to the checklist.',
+            input: ListPlannedMaintenanceInput::class,
+            structuredContent: false,
+            processor: ListPlannedMaintenanceProcessor::class,
             annotations: ['readOnlyHint' => true],
         ),
     ],
