@@ -69,6 +69,23 @@ final class AnthropicWebSearchClientTest extends TestCase
         $this->assertSame('https://only.example', $result->citations[0]->url);
     }
 
+    public function testBackendErrorBodyIsReportedUnavailableNotEmpty(): void
+    {
+        $captured = [];
+        // Anthropic's overloaded shape: a top-level error envelope, no `content`. Like the Gemini case,
+        // it must be flagged unavailable so the tool returns a distinct signal to the orchestrator.
+        $platform = $this->platform([
+            'type' => 'error',
+            'error' => ['type' => 'overloaded_error', 'message' => 'Overloaded'],
+        ], $captured);
+
+        $result = (new AnthropicWebSearchClient($platform, 'claude-haiku-4-5'))->search('q');
+
+        $this->assertTrue($result->unavailable, 'a backend error envelope must mark the result unavailable');
+        $this->assertSame('', $result->answer);
+        $this->assertSame([], $result->citations);
+    }
+
     /**
      * @param array<string, mixed> $data
      * @param array<string, mixed> $captured filled with the model/input/options passed to invoke()

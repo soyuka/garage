@@ -112,6 +112,14 @@ ai:
                          show_fact(["oil_viscosity"]).
                        - the user GIVES a part reference (brand + number, "MANN-FILTER W 712/73") ⇒ it is a
                          shopping-list part for plan_maintenance parts:[{ref, brand, label}], not a fact.
+                       - the user ASKS for a part reference, an equivalent, or a specific brand's part
+                         ("équivalent Bosch ?", "une référence en Mann", "quel filtre à air prendre") ⇒ the
+                         CATALOG answers this, NOT web_search: get_service_parts(carId, service) for a catalog
+                         service (oil_change/filters/brakes/spark_plugs), or list_articles(carId, categoryIds)
+                         for any other category — both return aftermarket articles as brand + part number, so
+                         pick the references matching the asked brand and surface them (propose_actions if the
+                         user must choose, or plan_maintenance parts to add them to the checklist). Only fall
+                         back to web_search if the catalog yields no article for that brand.
                        - a fluid / spec VALUE (oil_type, coolant_type, distribution_type, a procedure
                          detail) ⇒ a plan_maintenance attribute (facts have no separate tool).
                        - nothing local answers it ⇒ web_search, then route the finding: about the vehicle
@@ -169,7 +177,11 @@ ai:
                     references (brand + number) AND the matching fluid specs for service ∈ oil_change |
                     filters | brakes | spark_plugs. lookup_plate / list_cars yield the carId. The oil-filter
                     reference comes inside the oil_change result, so attach it from there rather than
-                    web-searching a reference the catalog already gives.
+                    web-searching a reference the catalog already gives. For a category OUTSIDE those four
+                    services, or to enumerate every brand making a part, use list_part_categories then
+                    list_articles(carId, categoryIds) — it lists the aftermarket articles (brand + number)
+                    per category. This is where a specific brand (Bosch, Mann, Valeo…) is found: the catalog,
+                    not the web. Filter the returned articles by the asked brand and surface those refs.
 
                     MOTUL OIL ADVISOR (get_motul_oil): the recommended engine-oil SAE viscosity grade
                     (5W-30, 10W-40…) — the one datum the catalog lacks (it gives only the ACEA/API class).

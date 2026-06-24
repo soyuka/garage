@@ -53,6 +53,13 @@ final readonly class AnthropicWebSearchClient implements WebSearchClient
         /** @var array<string, mixed> $data */
         $data = $result->getRawResult()->getData();
 
+        // A top-level error envelope (e.g. an `overloaded_error`) carries no content blocks — flag it
+        // unavailable rather than letting it distil to a blank answer, so the orchestrator can tell a
+        // backend failure apart from a genuine empty result. Symmetric with GeminiWebSearchClient.
+        if (isset($data['error'])) {
+            return new WebSearchResult('', unavailable: true);
+        }
+
         return new WebSearchResult($this->extractAnswer($data), $this->extractCitations($data));
     }
 

@@ -89,6 +89,27 @@ final class GeminiWebSearchClientTest extends TestCase
         $this->assertSame([], $result->citations);
     }
 
+    public function testBackendErrorBodyIsReportedUnavailableNotEmpty(): void
+    {
+        $captured = [];
+        // The exact shape an overloaded Gemini returns (HTTP 503): an `error` envelope, no `candidates`.
+        // It must be distinguished from a genuine empty result so the orchestrator can pivot rather than
+        // read it as "the web has nothing".
+        $body = ['error' => ['code' => 503, 'message' => 'This model is currently experiencing high demand.', 'status' => 'UNAVAILABLE']];
+        $platform = $this->platform($body, $captured);
+
+        $tracer = $this->createMock(WebSearchTracer::class);
+        $tracer->expects($this->once())
+            ->method('recordWebSearchResponse')
+            ->with('gemini', 'q', $body);
+
+        $result = (new GeminiWebSearchClient($platform, 'gemini-2.5-flash', $tracer))->search('q');
+
+        $this->assertTrue($result->unavailable, 'a backend error envelope must mark the result unavailable');
+        $this->assertSame('', $result->answer);
+        $this->assertSame([], $result->citations);
+    }
+
     /**
      * @param array<string, mixed> $data
      * @param array<string, mixed> $captured filled with the model/input/options passed to invoke()

@@ -61,6 +61,23 @@ final class WebSearchToolTest extends TestCase
         $this->assertStringContainsString('Réponse sans source.', $out);
     }
 
+    public function testUnavailableBackendReturnsDistinctOverloadMessageAndStillSpendsBudget(): void
+    {
+        $client = $this->createStub(WebSearchClient::class);
+        $client->method('search')->willReturn(new WebSearchResult('', [], unavailable: true));
+
+        $budget = new WebSearchBudget(1);
+        $out = (new WebSearchTool($client, $budget))->search('Mazda 6 équivalent Bosch filtres');
+
+        // Distinct from the genuine "no result" message: the model must know the SERVICE failed, not that
+        // the web had nothing — and be steered to the parts catalog rather than retrying blindly.
+        $this->assertMatchesRegularExpression('/indisponible|surchargé/i', $out);
+        $this->assertStringContainsString('catalogue', $out);
+        $this->assertDoesNotMatchRegularExpression('/aucun résultat|no result/i', $out);
+        $this->assertStringNotContainsString('http', $out);
+        $this->assertTrue($budget->exhausted(), 'an unavailable backend still spends one unit to bound retries');
+    }
+
     public function testEmptyAnswerReturnsExplicitNoResultMessageNotBlank(): void
     {
         $client = $this->createStub(WebSearchClient::class);

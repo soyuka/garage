@@ -53,6 +53,14 @@ final readonly class WebSearchTool
 
         $result = $this->client->search($query);
 
+        // Backend failure (provider overloaded/errored), not an empty web result: the model must NOT read
+        // it as "the web has nothing" and give up. Steer it to the parts catalog (which lists brand refs)
+        // or to known facts instead of burning the remaining budget on the same down service. The attempt
+        // still spent a unit above, so two overloads exhaust the turn's budget and bound the retry loop.
+        if ($result->unavailable) {
+            return 'Recherche web temporairement indisponible (service surchargé). N\'insiste pas avec une nouvelle recherche : pour une référence ou un équivalent de pièce, utilise le catalogue (get_service_parts / list_articles) qui donne la marque et le numéro ; sinon réponds avec les faits déjà connus.';
+        }
+
         if ('' === trim($result->answer)) {
             return 'Aucun résultat web pour cette recherche.';
         }

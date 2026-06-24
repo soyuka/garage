@@ -51,6 +51,13 @@ final readonly class GeminiWebSearchClient implements WebSearchClient
         // grounding) leaves no trace in the WebSearchResult, so the journal is the only place it survives.
         $this->tracer?->recordWebSearchResponse('gemini', $query, $data);
 
+        // An `error` envelope (e.g. HTTP 503 "experiencing high demand") carries no candidates — distilling
+        // it would yield a blank answer indistinguishable from "the web had nothing". Flag it unavailable so
+        // the tool tells the orchestrator the service failed, not that the search came back empty.
+        if (isset($data['error'])) {
+            return new WebSearchResult('', unavailable: true);
+        }
+
         return new WebSearchResult($this->extractAnswer($data), $this->extractCitations($data));
     }
 
