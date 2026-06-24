@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { StatusPill } from '../design/components/StatusPill';
-import { formatDue } from '../forecast';
+import { formatDue, type DueView } from '../forecast';
 import type { MaintenanceRecordInput } from '../garage';
 import { healthView } from '../health';
 import { serviceLabel } from '../labels';
 import { formatCadenceShort } from '../schedule';
-import type { ForecastDue, MaintenanceHealth, ServiceRule, VehicleForecast } from '../types';
+import type { MaintenanceHealth, ServiceRule, VehicleForecast } from '../types';
 
 /** The vehicle's current reading — seeds the inline gap-log so "fait à … h" defaults sensibly. */
 export interface CurrentUsage {
@@ -89,9 +89,19 @@ export function ForecastSection({
   /** Log a baseline for a gap bundle (one record, an item per bundled type) — no jump, no form. */
   onQuickLogGap: (input: MaintenanceRecordInput) => void;
 }) {
-  const due = forecast?.due ?? [];
   const gaps = forecast?.gaps ?? [];
   const groups = groupGaps(gaps, rules);
+
+  // Critical → alright → planned: the binding axis's health drives the order (lowest first), so the
+  // reddest bars sit on top. Items with no measurable axis (bare estimates) sink to the bottom.
+  const views = (forecast?.due ?? [])
+    .map((d) => formatDue(d))
+    .sort((a, b) => {
+      if (a.health == null && b.health == null) return 0;
+      if (a.health == null) return 1;
+      if (b.health == null) return -1;
+      return a.health - b.health;
+    });
 
   return (
     <div className="forecast">
@@ -108,12 +118,12 @@ export function ForecastSection({
                 </div>
               ))}
             </div>
-          ) : due.length === 0 ? (
+          ) : views.length === 0 ? (
             <div className="forecast-empty">Aucune échéance prévisible pour le moment.</div>
           ) : (
             <div className="forecast-bars">
-              {due.map((d, i) => (
-                <DueRow key={`${d.type}-${i}`} due={d} />
+              {views.map((v, i) => (
+                <DueRow key={`${v.title}-${i}`} view={v} />
               ))}
             </div>
           )}
@@ -152,9 +162,14 @@ function GapCard({
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
   const [reading, setReading] = useState(currentUsage.value != null ? String(currentUsage.value) : '');
+  // Only log once the user has actually engaged the card (and only once) — a glance-and-leave or a
+  // re-focus must never spawn a stray or duplicate baseline.
+  const [touched, setTouched] = useState(false);
+  const logged = useRef(false);
 
-  const submit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const commit = () => {
+    if (logged.current || !touched) return;
+    logged.current = true;
     const usageValue = Number.parseInt(reading.replace(/[^\d]/g, ''), 10);
     onLog({
       items: group.types.map((type) => ({ type, parts: [] })),
@@ -162,6 +177,12 @@ function GapCard({
       usageValue: Number.isNaN(usageValue) ? null : usageValue,
       usageUnit: Number.isNaN(usageValue) ? null : currentUsage.unit,
     });
+  };
+
+  // Commit when focus leaves the card entirely; ignore focus hops between the card's own controls.
+  const onBlurCard = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+    commit();
   };
 
   const monthsAgo = (months: number): string => {
@@ -173,15 +194,21 @@ function GapCard({
   const name = group.types.map(serviceLabel).join(' + ');
 
   return (
-    <div className="gap-card">
+    <div className="gap-card" onBlur={onBlurCard}>
       <div className="gap-card-head">
         <span className="gap-card-name">{name}</span>
         {group.cadence ? <span className="gap-card-cadence">{group.cadence}</span> : null}
       </div>
-      <form className="gap-card-form" onSubmit={submit}>
+      <div className="gap-card-form">
         <label className="gap-field">
           <span className="gap-field-lbl">Dernière fois</span>
-          <input className="gap-input" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} />
+          <input
+            className="gap-input"
+            type="date"
+            max={today}
+            value={date}
+            onChange={(e) => { setDate(e.target.value); setTouched(true); }}
+          />
         </label>
         <label className="gap-field">
           <span className="gap-field-lbl">Relevé ({currentUsage.unit})</span>
@@ -190,15 +217,20 @@ function GapCard({
             inputMode="numeric"
             placeholder="—"
             value={reading}
-            onChange={(e) => setReading(e.target.value)}
+            onChange={(e) => { setReading(e.target.value); setTouched(true); }}
+            onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
           />
         </label>
-        <button type="submit" className="gap-submit">Consigner</button>
-      </form>
+      </div>
       <div className="gap-approx">
         <span className="gap-approx-lbl">Date inconnue&nbsp;?</span>
         {APPROX_DATES.map((a) => (
-          <button key={a.months} type="button" className="gap-chip" onClick={() => setDate(monthsAgo(a.months))}>
+          <button
+            key={a.months}
+            type="button"
+            className="gap-chip"
+            onClick={() => { setDate(monthsAgo(a.months)); setTouched(true); }}
+          >
             {a.label}
           </button>
         ))}
@@ -226,7 +258,10 @@ function HealthColumn({ health }: { health: MaintenanceHealth | undefined }) {
       aria-label={`Santé d'entretien${v ? ` : ${v.verdict}` : ''}`}
     >
       <div className="forecast-health-top">
-        <span className="forecast-health-score" style={{ color }}>{score ?? '—'}</span>
+        <span className="forecast-health-score" style={{ color }}>
+          {score ?? '?'}
+          {score == null ? <span className="forecast-health-max"> / 100</span> : null}
+        </span>
         <span className="forecast-health-cap">santé</span>
       </div>
       <span className="forecast-health-track" style={{ ['--seg' as string]: color }} aria-hidden="true">
@@ -239,26 +274,10 @@ function HealthColumn({ health }: { health: MaintenanceHealth | undefined }) {
   );
 }
 
-/** One forecast row — usage-axis rows lead with a consumed/cadence readout + a progress bar against the
- *  cadence; overdue rows swap the readout for a red "en retard" pill; time-axis rows show a firm or
- *  estimated date instead of a bar. */
-function DueRow({ due }: { due: ForecastDue }) {
-  const v = formatDue(due);
-
-  if (v.axis === 'time') {
-    return (
-      <div className="forecast-row forecast-row--time">
-        <div className="forecast-row-line">
-          <span className="forecast-row-name">{v.title}</span>
-          <span className={`forecast-date${v.estimate ? ' forecast-date--est' : ''}`}>
-            <span className="forecast-date-dot" />
-            {v.lead}
-          </span>
-        </div>
-      </div>
-    );
-  }
-
+/** One forecast row — the binding axis leads (red "en retard" pill when overdue, else a quiet lead),
+ *  over a health bar that drains from a full green to an empty red sliver as the service comes due.
+ *  Rows with no measurable axis (a bare projection) show the lead alone, no bar. */
+function DueRow({ view: v }: { view: DueView }) {
   const overdue = v.status === 'overdue';
   return (
     <div className="forecast-row">
@@ -266,15 +285,20 @@ function DueRow({ due }: { due: ForecastDue }) {
         <span className="forecast-row-name">{v.title}</span>
         {overdue ? (
           <StatusPill status="overdue">{v.lead}</StatusPill>
-        ) : v.bar ? (
-          <span className="forecast-readout">
-            <b>{v.bar.consumed}</b> / {v.bar.cadence} {v.bar.unit} · reste {v.bar.remaining} {v.bar.unit}
-          </span>
-        ) : null}
+        ) : (
+          <span className={`forecast-lead${v.estimate ? ' forecast-lead--est' : ''}`}>{v.lead}</span>
+        )}
       </div>
-      {v.progress != null ? (
-        <div className="forecast-track" role="progressbar" aria-valuenow={v.progress} aria-valuemin={0} aria-valuemax={100}>
-          <span className={`forecast-fill forecast-fill--${v.status}`} style={{ width: `${v.progress}%` }} />
+      {v.fill != null ? (
+        <div
+          className="forecast-track"
+          role="progressbar"
+          aria-valuenow={v.fill}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label={`Santé : ${v.fill}%`}
+        >
+          <span className="forecast-fill" style={{ width: `${v.fill}%`, background: v.color ?? undefined }} />
         </div>
       ) : null}
     </div>

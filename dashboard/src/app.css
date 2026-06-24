@@ -687,6 +687,7 @@ body {
   font-size: 38px; font-weight: 500; line-height: 1; letter-spacing: var(--mpa-track-tight);
   font-variant-numeric: tabular-nums;
 }
+.forecast-health-max { font-size: var(--mpa-text-body, 15px); font-weight: 400; color: var(--mpa-faint); }
 .forecast-health-cap {
   font-size: var(--mpa-text-tiny); text-transform: uppercase; letter-spacing: var(--mpa-track-label);
   color: var(--mpa-muted);
@@ -708,31 +709,23 @@ body {
   font-size: var(--mpa-text-label); font-weight: 500; color: var(--mpa-text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.forecast-readout {
-  font-size: var(--mpa-text-small); color: var(--mpa-muted); font-variant-numeric: tabular-nums;
+/* The binding-axis headline: how late, how much usage is left, or a date. */
+.forecast-lead {
+  font-size: var(--mpa-text-small); color: var(--mpa-text-3); font-variant-numeric: tabular-nums;
   white-space: nowrap; flex: none;
 }
-.forecast-readout b { color: var(--mpa-text-2); font-weight: 600; }
+.forecast-lead--est { color: var(--mpa-faint); font-style: italic; }
 
 .forecast-track {
   position: relative; height: 5px; border-radius: var(--mpa-radius-pill);
   background: var(--mpa-inset); overflow: hidden;
 }
+/* Health bar — width and colour are set inline (a continuous green→amber→red ramp from the binding
+   axis's life left), so no per-status colour class here. */
 .forecast-fill {
   position: absolute; inset: 0 auto 0 0; border-radius: var(--mpa-radius-pill);
-  background: var(--mpa-warn); box-shadow: 0 0 8px -2px var(--mpa-warn);
+  transition: width var(--mpa-dur, .25s) ease;
 }
-.forecast-fill--soon { background: var(--mpa-warn); box-shadow: 0 0 8px -2px var(--mpa-warn); }
-.forecast-fill--overdue { background: var(--mpa-alarm); box-shadow: 0 0 8px -2px var(--mpa-alarm); }
-
-/* Time-axis rows show a date instead of a usage bar (no cadence to fill). */
-.forecast-date {
-  display: inline-flex; align-items: center; gap: 6px; flex: none;
-  font-size: var(--mpa-text-small); color: var(--mpa-text-3); font-variant-numeric: tabular-nums;
-}
-.forecast-date-dot { width: 5px; height: 5px; border-radius: var(--mpa-radius-pill); background: var(--mpa-accent); }
-.forecast-date--est { color: var(--mpa-faint); font-style: italic; }
-.forecast-date--est .forecast-date-dot { background: var(--mpa-faint); }
 
 /* the gap list — recurring services with a known cadence but no logged baseline, bundled per visit */
 .forecast-gaps { margin-top: var(--mpa-space-4); padding-top: var(--mpa-space-3); border-top: 1px solid var(--mpa-border-soft); }
@@ -746,11 +739,13 @@ body {
   padding: 1px 7px; border: 1px solid var(--mpa-border-soft); border-radius: 999px;
 }
 .forecast-gaps-why { margin: 0 0 var(--mpa-space-3); color: var(--mpa-faint); font-size: var(--mpa-text-small); }
-.forecast-gaps-list { display: flex; flex-direction: column; gap: var(--mpa-space-3); }
+/* One column when narrow, capped at two side-by-side once the row is wide enough. */
+.forecast-gaps-list { display: grid; grid-template-columns: 1fr; gap: var(--mpa-space-3); }
+@media (min-width: 720px) { .forecast-gaps-list { grid-template-columns: 1fr 1fr; } }
 
 /* One per-visit baseline card: name(s) + cadence over a roomy date/reading form + relative-date chips. */
 .gap-card {
-  border: 1px solid var(--mpa-border-soft); border-left: 2px solid var(--mpa-accent-2);
+  border: 1px solid var(--mpa-border-soft);
   border-radius: var(--mpa-radius-md); background: rgba(8, 18, 28, 0.35);
   padding: var(--mpa-space-3) var(--mpa-space-4);
 }
@@ -772,11 +767,6 @@ body {
 .gap-input::placeholder { color: var(--mpa-placeholder); }
 .gap-field:first-child .gap-input { width: 170px; }
 .gap-field:nth-child(2) .gap-input { width: 120px; }
-.gap-submit {
-  border: none; cursor: pointer; border-radius: var(--mpa-radius-sm);
-  padding: 10px 18px; font: inherit; font-size: var(--mpa-text-label); font-weight: 600;
-  background: var(--mpa-accent-2); color: var(--mpa-on-accent-2); box-shadow: var(--mpa-glow-amber);
-}
 .gap-approx { display: flex; flex-wrap: wrap; align-items: center; gap: var(--mpa-space-2); margin-top: var(--mpa-space-3); }
 .gap-approx-lbl { color: var(--mpa-faint); font-size: var(--mpa-text-small); }
 .gap-chip {
