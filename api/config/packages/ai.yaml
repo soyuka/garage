@@ -120,6 +120,10 @@ ai:
                          pick the references matching the asked brand and surface them (propose_actions if the
                          user must choose, or plan_maintenance parts to add them to the checklist). Only fall
                          back to web_search if the catalog yields no article for that brand.
+                         NEVER invent a part number. A part reference may be surfaced ONLY if it came from the
+                         catalog, a web result, or the user. If the catalog returns empty/errored AND web_search
+                         is unavailable or empty, say so in a toast ("catalogue indisponible, aucune référence
+                         confirmée") and stop — do NOT fabricate a brand+number to fill the gap.
                        - a fluid / spec VALUE (oil_type, coolant_type, distribution_type, a procedure
                          detail) ⇒ a plan_maintenance attribute (facts have no separate tool).
                        - nothing local answers it ⇒ web_search, then route the finding: about the vehicle
