@@ -19,26 +19,38 @@ use Symfony\Component\Uid\Ulid;
 #[ODM\EmbeddedDocument]
 class PlannedPart
 {
-    // Lazily minted (not constructor-promoted): parts persisted before this field carry no `id`, and
-    // ODM hydrates them via newInstanceWithoutConstructor — which applies a CLASS-level default but
-    // never a promoted param's. getId() mints one on first access so a legacy line is still
-    // addressable; the migration command persists them. See [[odm-promoted-field-hydration-500]].
+    // ALL fields are declared class-level (NOT constructor-promoted) with a default. ODM hydrates a
+    // stored line via newInstanceWithoutConstructor — which applies a CLASS-level default but never a
+    // promoted param's — so a legacy doc that omits an optional key (qty/brand/label) would leave a
+    // promoted property uninitialized and fatal on read. The class defaults are what survive that.
+    // `id` is also minted lazily in getId() so a pre-identity line stays addressable.
+    // See [[odm-promoted-field-hydration-500]].
     #[ODM\Field(type: 'string')]
     private ?string $id = null;
+    #[ODM\Field(type: 'string')]
+    private string $ref = '';
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $label = null;
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $brand = null;
+    #[ODM\Field(type: 'int', nullable: true)]
+    private ?int $qty = null;
+    #[ODM\Field(type: 'int', nullable: true)]
+    private ?int $priceCents = null;
 
     public function __construct(
-        #[ODM\Field(type: 'string')]
-        private string $ref = '',
-        #[ODM\Field(type: 'string', nullable: true)]
-        private ?string $label = null,
-        #[ODM\Field(type: 'string', nullable: true)]
-        private ?string $brand = null,
-        #[ODM\Field(type: 'int', nullable: true)]
-        private ?int $qty = null,
-        #[ODM\Field(type: 'int', nullable: true)]
-        private ?int $priceCents = null,
+        string $ref = '',
+        ?string $label = null,
+        ?string $brand = null,
+        ?int $qty = null,
+        ?int $priceCents = null,
         ?string $id = null,
     ) {
+        $this->ref = $ref;
+        $this->label = $label;
+        $this->brand = $brand;
+        $this->qty = $qty;
+        $this->priceCents = $priceCents;
         $this->id = $id ?? (string) new Ulid();
     }
 
