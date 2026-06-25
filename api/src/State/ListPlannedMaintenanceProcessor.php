@@ -1,0 +1,99 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\State;
+
+use ApiPlatform\Metadata\Exception\ItemNotFoundException;
+use ApiPlatform\Metadata\IriConverterInterface;
+use ApiPlatform\Metadata\Operation;
+use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\GarageVehicle;
+use App\Dto\ListPlannedMaintenanceInput;
+use App\Entity\Vehicle;
+use App\Garage\ToolResult;
+use App\Garage\VehicleType;
+use App\Maintenance\PlannedTaskView;
+use App\Repository\VehicleRepository;
+use Mcp\Schema\Result\CallToolResult;
+
+/**
+ * MCP `list_planned_maintenance` tool: returns a vehicle's OPEN, actionable checklist — the live
+ * "Entretien en cours" todo with its parts (shopping list) and spec attributes. A pure READ
+ * (findByIdentity, never the write-through resolver), so an unknown vehicle is a no_records RESULT
+ * (isError=false), not an exception and never a freshly-created row — same "miss is not an error"
+ * contract as get_maintenance_history. The open+actionable filter mirrors {@see Vehicle::openTasks()}:
+ * done/dismissed tasks and KNOWN spec carriers drop off the checklist.
+ *
+ * @implements ProcessorInterface<ListPlannedMaintenanceInput, CallToolResult>
+ */
+final class ListPlannedMaintenanceProcessor implements ProcessorInterface
+{
+    public function __construct(
+        private readonly VehicleRepository $vehicles,
+        private readonly PlannedTaskView $taskView,
+        private readonly IriConverterInterface $iriConverter,
+    ) {
+    }
+
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
+    {
+        $identity = [
+            'make' => $data->make,
+            'model' => $data->model,
+            'year' => $data->year,
+            'vehicleType' => $data->vehicleType,
+        ];
+
+        // Addressed by @id (e.g. the dashboard's selected vehicle): dereference the handle straight
+        // to its row, so make/model are optional.
+        if (null !== $data->vehicle) {
+            try {
+                $resource = $this->iriConverter->getResourceFromIri($data->vehicle);
+            } catch (ItemNotFoundException) {
+                return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle)]);
+            } catch (\Throwable) {
+                return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $data->vehicle)]);
+            }
+
+            $vehicle = $this->vehicles->find($resource->id);
+            if (null === $vehicle) {
+                return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle)]);
+            }
+
+            return $this->okResult($vehicle);
+        }
+
+        if (null === $data->make || null === $data->model) {
+            return ToolResult::of([
+                'status' => 'invalid_input',
+                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
+            ]);
+        }
+
+        $vehicle = $this->vehicles->findByIdentity($data->make, $data->model, VehicleType::from($data->vehicleType), $data->year);
+        if (null === $vehicle) {
+            return ToolResult::of([
+                'status' => 'no_records',
+                'vehicle' => $identity,
+            ]);
+        }
+
+        return $this->okResult($vehicle);
+    }
+
+    private function okResult(Vehicle $vehicle): CallToolResult
+    {
+        return ToolResult::of([
+            'status' => 'ok',
+            'vehicle' => [
+                '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
+                'make' => $vehicle->getMake(),
+                'model' => $vehicle->getModel(),
+                'year' => $vehicle->getYear(),
+                'vehicleType' => $vehicle->getVehicleType()->value,
+            ],
+            'tasks' => array_map($this->taskView->toArray(...), $vehicle->openTasks()),
+        ]);
+    }
+}
