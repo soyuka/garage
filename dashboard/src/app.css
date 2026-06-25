@@ -534,6 +534,11 @@ body {
 /* Derived fluid spec: the "which oil" grade reads as primary text, the unverified marker stays faint. */
 .task-parts .part-spec { color: var(--mpa-text-1); }
 .task-parts .part-spec-unverified { color: var(--mpa-faint); cursor: help; }
+/* Per-part shop searches (Mister-Auto / Auto-Doc) — faint affordance, surfaced on row hover. */
+.task-parts .part-shop { display: inline-flex; gap: 8px; margin-left: 8px; opacity: 0; transition: opacity 120ms ease; }
+.task-row:hover .task-parts .part-shop, .task-parts li:focus-within .part-shop { opacity: 1; }
+.task-parts .part-shop-link { color: var(--mpa-muted); font-size: var(--mpa-text-small); text-decoration: none; border-bottom: 1px dotted currentColor; }
+.task-parts .part-shop-link:hover { color: var(--mpa-text-1); }
 
 /* Pencil affordance in a task row's head — reveals the inline editor. Mirrors .task-dismiss: faint,
    surfaced on row hover (and kept visible while the editor is open via aria-expanded). */

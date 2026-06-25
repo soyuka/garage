@@ -3,6 +3,7 @@ import { Badge } from '../design/components/Badge';
 import { Card } from '../design/components/Card';
 import type { MaintenanceRecordInput, TaskPartInput, PlannedTaskInput, ServiceRuleInput, TaskEdit } from '../garage';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
+import { partShopLinks } from '../parts';
 import type { FactPanel, FluidSpec, PlannedPart, PlannedTask, Vehicle } from '../types';
 import { FactRow, factLabel } from './facts';
 import { ForecastSection } from './ForecastSection';
@@ -310,7 +311,7 @@ export function VehicleDetail({
             }}
           />
         ) : null}
-        {tasksLoading ? (
+        {tasksLoading && tasks.length === 0 ? (
           <TaskListSkeleton />
         ) : tasks.length === 0 ? (
           <div style={{ color: 'var(--mpa-faint)', fontSize: 'var(--mpa-text-small)' }}>
@@ -666,6 +667,20 @@ function PartSpec({ spec }: { spec: FluidSpec }) {
   );
 }
 
+function PartShopLinks({ part }: { part: PlannedPart }) {
+  const links = partShopLinks(part);
+  if (links.length === 0) return null;
+  return (
+    <span className="part-shop">
+      {links.map((l) => (
+        <a key={l.name} className="part-shop-link" href={l.url} target="_blank" rel="noopener noreferrer" title={`Chercher cette pièce sur ${l.name}`}>
+          {l.name}
+        </a>
+      ))}
+    </span>
+  );
+}
+
 function TaskRow({
   task,
   onToggle,
@@ -741,6 +756,7 @@ function TaskRow({
                 ) : p.qty ? (
                   <span className="part-qty"> ×{p.qty}</span>
                 ) : null}
+                <PartShopLinks part={p} />
               </li>
             ))}
           </ul>
