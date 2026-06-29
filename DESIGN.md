@@ -130,6 +130,13 @@ components:
     border: "{colors.primary}"
 ---
 
+> ⚠️ **DEPRECATED — superseded by [`theming/DESIGN-VISION.md`](theming/DESIGN-VISION.md) ("Atelier").**
+> This flat "Control Panel" HMI is the *rejected* baseline, kept only as a record of the surface
+> language Atelier deliberately leaves behind: flat fills, no gloss, no shadow, low radius,
+> tonal-only depth. The salvaged bones — signal-color semantics (vert/ambre/rouge), mono telemetry,
+> and "color is meaning" (upgraded to "light is meaning") — live on in DESIGN-VISION.md.
+> **Do not build to this file.**
+
 ## Overview
 
 Control Panel is an industrial HMI aesthetic — the screen reads like a SCADA
