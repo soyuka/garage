@@ -1,6 +1,14 @@
-import { authFetch } from './auth';
+import { API, authFetch } from './auth';
+import { hydraMembers, normalizeIri } from './garage';
 
-const API = import.meta.env.VITE_API_BASE ?? '';
+// ─────────────────────────────────────────────────────────────────────────────
+// Atelier — the agent debug journal (see PROVENANCE: Tier-1 transport re-authored
+// fresh from the /agent/turns contract; reuses garage's tested hydra/@id helpers).
+//
+// The agent is a black box once a turn runs; this is where you see what it actually
+// did — the built LLM context, every tool call with arguments + result, the web
+// searches, the token usage, the raw payloads. The user's favourite debug surface.
+// ─────────────────────────────────────────────────────────────────────────────
 
 /** One journalled tool call, in execution order. */
 export interface JournalToolCall {
@@ -14,7 +22,7 @@ export interface JournalToolCall {
 
 /** The light listing row (GET /agent/turns) — summary + counts, no heavy payload. */
 export interface TurnSummary {
-  id: string; // the turn IRI (@id, normalized), used to GET the detail
+  id: string; // the turn IRI (@id, normalized) — used to GET the detail
   instruction: string;
   status: 'completed' | 'capped' | 'failed';
   error?: string | null;
@@ -44,21 +52,18 @@ export interface TurnDetail extends TurnSummary {
   rawCalls: Array<Record<string, unknown>>;
 }
 
-type Raw<T> = T & { '@id'?: string };
+const LD = 'application/ld+json';
 
-/** GET the journal listing — the owner's turns, newest first. Normalizes the IRI to `id`. */
+/** GET the journal listing — the owner's turns, newest first. Normalizes each IRI to `id`. */
 export async function getTurns(): Promise<TurnSummary[]> {
-  const res = await authFetch(`${API}/agent/turns`, { headers: { Accept: 'application/ld+json' } });
+  const res = await authFetch(`${API}/agent/turns`, { headers: { Accept: LD } });
   if (!res.ok) throw new Error(`journal fetch failed: ${res.status}`);
-  const data = (await res.json()) as { member?: Raw<TurnSummary>[]; 'hydra:member'?: Raw<TurnSummary>[] };
-  const members = data.member ?? data['hydra:member'] ?? [];
-  return members.map((t) => ({ ...t, id: t['@id'] ?? t.id }) as TurnSummary);
+  return hydraMembers<TurnSummary & { '@id'?: string }>(await res.json()).map((t) => normalizeIri(t));
 }
 
 /** GET one turn's full detail by its IRI. */
 export async function getTurn(iri: string): Promise<TurnDetail> {
-  const res = await authFetch(`${API}${iri}`, { headers: { Accept: 'application/ld+json' } });
+  const res = await authFetch(`${API}${iri}`, { headers: { Accept: LD } });
   if (!res.ok) throw new Error(`turn fetch failed: ${res.status}`);
-  const t = (await res.json()) as Raw<TurnDetail>;
-  return { ...t, id: t['@id'] ?? t.id } as TurnDetail;
+  return normalizeIri((await res.json()) as TurnDetail & { '@id'?: string });
 }

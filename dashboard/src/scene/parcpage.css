@@ -1,0 +1,29 @@
+/* Le Parc playground page chrome (the ParcLot grid itself is styled by parclot.css). */
+.at-parc-page {
+  min-height: 100vh;
+  background: radial-gradient(130% 100% at 50% 0%, #1a1813 0%, #131210 55%, #0c0b09 100%);
+  color: var(--at-text);
+  font-family: var(--at-font-ui);
+  padding: 20px 12px 48px;
+  box-sizing: border-box;
+}
+.at-parc-page-top {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 12px;
+}
+.at-parc-back {
+  color: var(--at-text-dim);
+  text-decoration: none;
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+}
+.at-parc-back:hover {
+  color: var(--at-text);
+}
+.at-parc-page-title {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 16px 12px 4px;
+}

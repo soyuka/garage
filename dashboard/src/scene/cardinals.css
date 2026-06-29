@@ -1,0 +1,79 @@
+/* CardinalReadouts — mono telemetry at the four cardinal points of the turntable disc (§2). DOM HUD
+   over the R3F stage: pointer-events:none so it never blocks orbiting the car. Signal is carried by
+   the literal "EN RETARD" label + a shape (heavier weight) as well as colour, so it stays legible in
+   grayscale (§8). */
+
+.at-cardinals {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.at-card {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+/* the readouts float on the bare scene (no glass), so a dark scrim keeps mono telemetry legible even
+   when a key-lit / specular car body rotates behind them — WCAG holds over the body, not just the void. */
+.at-card-label {
+  margin-bottom: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+.at-card-value {
+  font-family: var(--at-font-mono);
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--at-text-mono);
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+}
+
+/* overdue: colour AND a heavier shape, never colour alone (§8). The "EN RETARD" label already names
+   the meaning in text. The dark scrim stays; the red GLOW (liveness) is what reduced-motion drops. */
+.at-card-value[data-late='true'] {
+  color: var(--at-red-hi);
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9), var(--at-glow-red);
+}
+
+/* ── cardinal placement around the disc; values lean outward, away from the car ── */
+.at-card--top {
+  top: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.at-card--bottom {
+  bottom: 6%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.at-card--left {
+  left: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: left;
+}
+.at-card--right {
+  right: 4%;
+  top: 50%;
+  transform: translateY(-50%);
+  text-align: right;
+}
+
+/* reduced-motion: values are already static (count-up is Stage D); drop the glow's implied liveness so
+   nothing reads as lit-from-within. The prop sets data-reduced; the media query is the system guard. */
+.at-cardinals[data-reduced='true'] .at-card-value[data-late='true'] {
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9); /* keep the legibility scrim; drop only the red glow */
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-card-value[data-late='true'] {
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  }
+}

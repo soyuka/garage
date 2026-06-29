@@ -1,0 +1,122 @@
+/* Parts-as-objects (DESIGN-VISION §2): each part stands on a lit brushed-metal pedestal, its TecDoc
+   ref etched in mono beneath. Reads the --at-* tokens only. A part is not a signal, so NO signal
+   colour here — the object's SHAPE carries its category; chrome + glow give the "lit pedestal" feel.
+   Static by design (no motion to gate). Grayscale-legible: every glyph differs by shape + has text. */
+
+.at-shelf {
+  width: 100%;
+  font-family: var(--at-font-ui);
+  color: var(--at-text);
+  box-sizing: border-box;
+}
+.at-shelf-title {
+  font-family: var(--at-font-ui);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--at-text);
+  margin: 0 0 var(--at-space-3);
+}
+.at-shelf-empty {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+}
+
+.at-shelf-rail {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 var(--at-space-2);
+  display: flex;
+  gap: var(--at-space-4);
+  overflow-x: auto;
+}
+
+.at-pedestal {
+  flex: 0 0 auto;
+  width: 116px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* the object sits in a lit niche above the plinth — soft top-glow simulates the key light */
+.at-pedestal-stage {
+  position: relative;
+  width: 100%;
+  height: 72px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.at-pedestal-stage::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  width: 56px;
+  height: 26px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 70%);
+  pointer-events: none;
+}
+.at-pedestal-object {
+  position: relative;
+  width: 46px;
+  height: 56px;
+  color: var(--at-chrome-hi);
+}
+.at-pedestal-object svg { display: block; width: 100%; height: 100%; }
+
+/* brushed-metal plinth — an anisotropic chrome disc with a crisp lit top edge */
+.at-pedestal-plinth {
+  width: 84px;
+  height: 12px;
+  border-radius: var(--at-radius-chip);
+  background: linear-gradient(180deg, var(--at-chrome-hi) 0%, var(--at-chrome) 45%, #1c1f24 100%);
+  border-top: 1px solid var(--at-glass-edge);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.45);
+  margin-top: -2px;
+}
+
+.at-pedestal-ref {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--at-text-mono);
+  margin-top: var(--at-space-3);
+  word-break: break-word;
+}
+.at-pedestal-brand {
+  font-family: var(--at-font-ui);
+  font-size: 9px;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+  color: var(--at-label);
+  margin-top: var(--at-space-1);
+}
+.at-pedestal-meta {
+  display: flex;
+  gap: var(--at-space-2);
+  justify-content: center;
+  align-items: baseline;
+  margin-top: var(--at-space-1);
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  color: var(--at-text-mono);
+  font-variant-numeric: tabular-nums;
+}
+.at-pedestal-qty { color: var(--at-text-dim); }
+
+/* a ref-less fluid spec line — etched honestly as spec rows, never a fabricated ref */
+.at-pedestal-spec {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: var(--at-space-3);
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  color: var(--at-text-mono);
+}
+.at-pedestal-spec-row { white-space: nowrap; }

@@ -1,0 +1,372 @@
+/* The honest data floor — flat plan list + glass truth-panel. Reads the --at-* tokens. Crisp, honest,
+   full-precision, grayscale-legible. No WebGL: this is the floor everything else flourishes on top of. */
+
+.glass {
+  background: var(--at-glass-fill);
+  backdrop-filter: blur(var(--at-glass-blur));
+  -webkit-backdrop-filter: blur(var(--at-glass-blur));
+  border: 1px solid var(--at-hairline);
+  border-top-color: var(--at-glass-edge);
+  border-radius: var(--at-radius-glass);
+  box-shadow: var(--at-glass-inner-shadow);
+}
+
+.at-label {
+  display: block;
+  font-family: var(--at-font-ui);
+  font-size: 10px;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+  color: var(--at-label);
+  margin-bottom: 4px;
+}
+
+/* signal dot — paired ALWAYS with a text label/tag; never the sole cue */
+.at-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--at-sig-hi, var(--at-unknown));
+  box-shadow: var(--at-glow-sig, none);
+  flex: 0 0 auto;
+}
+
+/* ── flat plan list ─────────────────────────────────────────────────────── */
+.at-plan {
+  font-family: var(--at-font-mono);
+  color: var(--at-text-mono);
+  width: 100%;
+}
+.at-plan-title {
+  font-family: var(--at-font-ui);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--at-text);
+  margin: 0 0 10px;
+}
+.at-plan-empty,
+.at-plan-gaps {
+  font-size: 12px;
+  color: var(--at-text-dim);
+}
+.at-plan-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.at-plan-row {
+  display: grid;
+  grid-template-columns: 12px 1.4fr 1.3fr 0.9fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--at-hairline);
+  font-size: 12px;
+}
+.at-plan-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  align-self: center;
+  background: var(--at-sig-hi, var(--at-unknown));
+  box-shadow: var(--at-glow-sig, none);
+}
+.at-plan-name { color: var(--at-text); }
+.at-plan-when { display: flex; flex-direction: column; }
+.at-plan-horizon { color: var(--at-text-mono); }
+.at-plan-date { color: var(--at-text-dim); font-size: 10px; }
+.at-plan-until { color: var(--at-text-mono); text-align: right; font-variant-numeric: tabular-nums; }
+/* shared status tag — the grayscale-legible text cue that pairs with every signal dot */
+.at-tag {
+  font-family: var(--at-font-ui);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  padding: 2px 6px;
+  border-radius: var(--at-radius-chip);
+  border: 1px solid var(--at-hairline);
+  color: var(--at-text-dim);
+  white-space: nowrap;
+}
+.at-tag--ok { color: var(--at-green-hi); border-color: rgba(74, 222, 128, 0.35); }
+.at-tag--soon { color: var(--at-amber-hi); border-color: rgba(252, 211, 153, 0.4); }
+.at-tag--late {
+  color: var(--at-red-hi);
+  border-color: rgba(252, 165, 165, 0.5);
+  text-shadow: var(--at-glow-red);
+}
+.at-tag--gap { color: var(--at-text-dim); border-style: dashed; }
+
+/* ── glass truth-panel ──────────────────────────────────────────────────── */
+.at-truth {
+  width: 100%;
+  max-width: 360px;
+  padding: var(--at-space-5);
+  color: var(--at-text);
+  font-family: var(--at-font-ui);
+  box-sizing: border-box;
+}
+.at-truth-plate {
+  display: inline-block;
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #dfe6ee;
+  background: #11161f;
+  border: 1px solid var(--at-hairline);
+  border-left: 6px solid #1b3fae; /* EU blue band */
+  border-radius: 4px;
+  padding: 3px 8px 3px 10px;
+  margin-bottom: var(--at-space-3);
+}
+.at-truth-name {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  margin: 0;
+}
+.at-truth-sub {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+  margin: 2px 0 0;
+}
+.at-truth-block { margin-top: var(--at-space-4); }
+.at-truth-big {
+  font-family: var(--at-font-mono);
+  font-size: 30px;
+  color: var(--at-text);
+  font-variant-numeric: tabular-nums;
+}
+.at-row { display: flex; align-items: center; gap: 8px; }
+.at-pill {
+  font-size: 12px;
+  color: var(--at-sig-hi, var(--at-text));
+  text-shadow: var(--at-glow-sig, none);
+}
+.at-truth-score {
+  font-family: var(--at-font-mono);
+  font-size: 18px;
+  margin-left: auto;
+  color: var(--at-sig-hi, var(--at-text));
+}
+.at-truth-context {
+  display: block;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  color: var(--at-text-dim);
+  margin-top: 4px;
+}
+.at-truth-systems { list-style: none; margin: 6px 0 0; padding: 0; }
+.at-truth-system {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto minmax(0, 1.1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--at-hairline);
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+}
+.at-truth-system .at-dot { align-self: center; }
+/* showFact focus: a one-time light-sweep etch-in + a persistent inset rail so the focused row stays
+   marked (a non-colour cue, layered over the always-visible truth). */
+.at-truth-system[data-focus='true'] {
+  box-shadow: inset 2px 0 0 var(--at-text-mono);
+  animation: at-truth-etch 1000ms var(--at-ease-sine) 1;
+}
+@keyframes at-truth-etch {
+  0% { background: linear-gradient(90deg, transparent 0%, rgba(231, 227, 218, 0.12) 50%, transparent 100%); background-size: 220% 100%; background-position: 220% 0; }
+  100% { background-size: 220% 100%; background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-truth-system[data-focus='true'] { animation: none; }
+}
+.at-truth-system-name { color: var(--at-text); min-width: 0; }
+.at-truth-system-pct { color: var(--at-text-mono); font-variant-numeric: tabular-nums; }
+.at-truth-system-when { display: flex; flex-direction: column; text-align: right; min-width: 0; }
+.at-truth-system-due { color: var(--at-text-dim); }
+.at-truth-system-date { color: var(--at-text-dim); font-size: 10px; opacity: 0.8; }
+.at-truth-system-due--late {
+  color: var(--at-red-hi);
+  text-shadow: var(--at-glow-red);
+}
+.at-truth-last-date {
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  color: var(--at-text-mono);
+}
+.at-truth-gaps {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  color: var(--at-text-dim);
+}
+
+/* ── #9 inline edit (click-to-edit). Inherits the surrounding font/colour so each field reads as the
+   text it replaces; a dashed underline on hover is the only at-rest affordance. Cyan stays rationed to
+   Le Noyau — the edit cue is the neutral chrome highlight, never cyan. ───────────────────────────── */
+.at-inline {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px dashed transparent;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+  text-align: inherit;
+  cursor: text;
+  max-width: 100%;
+}
+.at-inline:hover,
+.at-inline:focus-visible {
+  border-bottom-color: var(--at-chrome-hi);
+  outline: none;
+}
+.at-inline-empty {
+  color: var(--at-text-dim);
+  font-style: italic;
+  opacity: 0.85;
+}
+.at-inline-input {
+  font: inherit;
+  color: var(--at-text);
+  letter-spacing: inherit;
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-chrome-hi);
+  border-radius: var(--at-radius-chip);
+  padding: 0 4px;
+  margin: 0;
+  width: 12ch;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.at-inline-input:focus { outline: none; border-color: var(--at-text-mono); }
+.at-truth-plate--edit {
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #dfe6ee;
+  width: 12ch;
+}
+.at-truth-plate-row { min-height: 1px; }
+.at-truth-sub-sep { color: var(--at-text-dim); opacity: 0.6; }
+
+/* ── #9 usage value + unit editor ──────────────────────────────────────────── */
+.at-usage-edit {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--at-font-mono);
+  font-size: 30px;
+  color: var(--at-text);
+}
+.at-usage-edit-val {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  width: 7ch;
+}
+.at-usage-edit-unit {
+  appearance: none;
+  font-family: var(--at-font-mono);
+  font-size: 14px;
+  color: var(--at-text-mono);
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.at-usage-edit-unit:focus { outline: none; border-color: var(--at-chrome-hi); }
+
+/* ── #9 facts / specs section ──────────────────────────────────────────────── */
+.at-facts-list { list-style: none; margin: 6px 0 0; padding: 0; }
+.at-facts-empty { font-size: 12px; color: var(--at-text-dim); padding: 6px 0; }
+.at-fact-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.2fr) auto auto;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-top: 1px solid var(--at-hairline);
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+}
+.at-fact-key { color: var(--at-text-dim); min-width: 0; overflow-wrap: anywhere; }
+.at-fact-value { color: var(--at-text); min-width: 0; overflow-wrap: anywhere; }
+.at-fact-unit { color: var(--at-text-dim); margin-left: 4px; }
+.at-fact-source {
+  font-family: var(--at-font-ui);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+.at-fact-source--verified { color: var(--at-green-hi); border-color: rgba(74, 222, 128, 0.35); }
+.at-fact-link { text-decoration: none; }
+.at-fact-del {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--at-text-dim);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.at-fact-del:hover { color: var(--at-red-hi); }
+.at-fact-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 5ch auto;
+  gap: 6px;
+  margin-top: 10px;
+}
+.at-fact-add input {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text);
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 3px 6px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.at-fact-add input:focus { outline: none; border-color: var(--at-chrome-hi); }
+.at-fact-add-btn {
+  appearance: none;
+  font-family: var(--at-font-ui);
+  font-size: 11px;
+  color: var(--at-text);
+  background: var(--at-chrome);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 3px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.at-fact-add-btn:hover:not(:disabled) { border-color: var(--at-chrome-hi); }
+.at-fact-add-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ── #9 soft-delete (discreet, destructive — set apart, never loud) ─────────── */
+.at-truth-danger { display: flex; justify-content: flex-end; }
+.at-truth-delete {
+  appearance: none;
+  font-family: var(--at-font-ui);
+  font-size: 11px;
+  color: var(--at-text-dim);
+  background: transparent;
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+.at-truth-delete:hover { color: var(--at-red-hi); border-color: rgba(252, 165, 165, 0.5); }

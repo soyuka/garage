@@ -1,0 +1,72 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   Atelier `--at-*` token layer — FROZEN in Stage B.0. Re-derived field-by-field from
+   DESIGN-VISION §3 (material/light) + §4 (color/mood) + §5 (type). This is the canonical token
+   source for every Atelier component. NO Stage-B fan-out agent may add or rename a token here.
+   (The Stage-A `--nx-*` set in noyau/ is local to Le Noyau and will migrate onto these later.)
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* ── surfaces: a warm near-black graphite void (warmer/deeper than the old #0E1116) ── */
+  --at-void: #131210;
+  --at-void-lift: #181611; /* faintly lifted panels / inset wells */
+  --at-chrome: #2a2d33; /* gunmetal structural metal */
+  --at-chrome-hi: #767b85; /* metal highlight under the key light */
+  --at-hairline: rgba(180, 196, 210, 0.16); /* 0.5px structural seams */
+
+  /* ── glass (telemetry panels): depth comes from the blurred car behind, not box-shadow ── */
+  --at-glass-fill: rgba(10, 11, 14, 0.78);
+  --at-glass-blur: 20px;
+  --at-glass-edge: rgba(255, 255, 255, 0.06); /* top-edge key-light highlight */
+  --at-glass-inner-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.4);
+  --at-radius-glass: 18px; /* soft cinematic shell */
+  --at-radius-chip: 5px; /* crisp honest data chips */
+
+  /* ── signal palette — luminous, never a large flat fill (max width ~180px) ── */
+  --at-green: #16a34a;
+  --at-green-hi: #4ade80;
+  --at-amber: #b45309;
+  --at-amber-hi: #fcd34d;
+  --at-red: #9b1c1c;
+  --at-red-hi: #fca5a5;
+  /* cyan = l'intelligence — RATIONED to Le Noyau (filament, narration, glass edge). Never a fill. */
+  --at-cyan: #22d3ee;
+  --at-cyan-hi: #67e8f9;
+  /* unknown / not-tracked — neutral grey, NOT a healthy state */
+  --at-unknown: #5b5f66;
+
+  /* glow recipes — "light is meaning": signal values look lit from inside */
+  --at-glow-green: 0 0 8px rgba(74, 222, 128, 0.55);
+  --at-glow-amber: 0 0 8px rgba(252, 211, 153, 0.55);
+  --at-glow-red: 0 0 10px rgba(252, 165, 165, 0.6);
+  --at-glow-cyan: 0 0 8px rgba(103, 232, 234, 0.5);
+
+  /* ── text ── */
+  --at-text: #e7e3da; /* primary prose */
+  --at-text-mono: #c9c5bc; /* telemetry */
+  --at-text-dim: #8b8a85; /* context lines */
+  --at-label: #9aa0a6; /* uppercase tracked nameplate labels */
+
+  /* ── type ── */
+  --at-font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --at-font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', monospace;
+  --at-label-tracking: 0.08em;
+
+  /* ── spacing scale ── */
+  --at-space-1: 4px;
+  --at-space-2: 8px;
+  --at-space-3: 12px;
+  --at-space-4: 16px;
+  --at-space-5: 24px;
+  --at-space-6: 32px;
+
+  /* ── motion (data cascade ~800ms; everything yields to Le Noyau) ── */
+  --at-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --at-ease-sine: cubic-bezier(0.37, 0, 0.63, 1);
+  --at-cascade: 800ms;
+}
+
+/* ── signal resolution by data-attribute: a component sets data-signal and reads --at-sig* ──
+   Keeps every component coloring identically; no agent re-derives signal colors. */
+[data-signal='green'] { --at-sig: var(--at-green); --at-sig-hi: var(--at-green-hi); --at-glow-sig: var(--at-glow-green); }
+[data-signal='amber'] { --at-sig: var(--at-amber); --at-sig-hi: var(--at-amber-hi); --at-glow-sig: var(--at-glow-amber); }
+[data-signal='red'] { --at-sig: var(--at-red); --at-sig-hi: var(--at-red-hi); --at-glow-sig: var(--at-glow-red); }
+[data-signal='unknown'] { --at-sig: var(--at-unknown); --at-sig-hi: var(--at-unknown); --at-glow-sig: none; }

@@ -1,78 +1,108 @@
-export type VehicleId = string;
-export type VehicleStatus = 'ok' | 'soon' | 'overdue';
+// ─────────────────────────────────────────────────────────────────────────────
+// Atelier — frozen backend-contract types (Stage 0 deliverable).
+//
+// These mirror the shapes the Symfony/API-Platform backend actually serves and the
+// frames it publishes over Mercure. They are contract-level type shapes: a faithful
+// client of the same contract converges on the same fields by necessity. They were
+// re-derived field-by-field from the live backend (see CONTRACT.md), then
+// re-authored here in Atelier's own structure (see PROVENANCE.md). Nothing here is a
+// display/view model — those are rebuilt fresh from fixtures in Stage B.
+//
+// The vehicle handle EVERYWHERE is the dereferenceable `@id` IRI (e.g.
+// "/garage/vehicles/01J…"), never a bare ULID.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** An IRI string, e.g. "/garage/vehicles/01JABC…" or "/garage/planned-tasks/01J…". */
+export type Iri = string;
+
+/** Signal semantics, locked: vert = ok, ambre = bientôt, rouge = en retard. */
+export type Signal = 'green' | 'amber' | 'red';
+
+/** Toast tone. `alarm` is the only tone that surfaces a real toast popup; the rest feed narration. */
 export type Tone = 'info' | 'ok' | 'warn' | 'alarm';
 
-/**
- * The API's maintenance-health rollup, served on the item GET only (the collection listing omits it).
- * `red` = at least one overdue service; `amber` = something due soon or a coverage gap; `green` = all
- * tracked & current; `unknown` = nothing tracked yet — render neutral/grey, NOT as a healthy state.
- */
-export interface MaintenanceHealth {
-  status: 'green' | 'amber' | 'red' | 'unknown';
-  score: number | null; // null only when status is "unknown"
-  overdue: number; // overdue services
-  dueSoon: number; // due within 30 days
-  tracked: number; // services with a logged baseline
-  gaps: number; // recurring services with NO logged baseline
+/** A usage axis unit. Drives whether a service forecasts on km / miles / engine-hours. */
+export type UsageUnit = 'km' | 'mi' | 'hours';
+
+/** What a service does to its component — shapes the verb in labels. */
+export type ServiceAction = 'change' | 'replace' | 'clean' | 'inspect';
+
+// ── Vehicle facts ────────────────────────────────────────────────────────────
+
+/** One stored spec about a vehicle, with provenance. Keyed by `key` (one fact per key per vehicle). */
+export interface VehicleFact {
+  key: string;
+  value: string;
+  unit?: string | null;
+  source: string;
+  /** true only for catalog sources (partsapi/siv) — render a verified badge. */
+  verified: boolean;
+  url?: string | null;
 }
 
-export interface NextService {
-  value: number;
-  unit: string;
-}
-
-/** Derived (read-only) fluid spec for a ref-less fluid line — "which oil, what quantity", projected from the vehicle facts. */
+/** Derived fluid spec for a ref-less fluid line ("which oil, how much"), projected from the facts. */
 export interface FluidSpec {
-  verified: boolean; // true when the standard (manufacturer spec) is catalog-sourced
-  viscosity?: string; // e.g. "5W-30"
-  standard?: string; // e.g. "ACEA A3/B3|ACEA A5/B5" ("|" separates alternatives)
-  capacity?: string; // e.g. "4.3"
-  unit?: string; // e.g. "L"
+  /** true when the standard (manufacturer spec) is catalog-sourced. */
+  verified: boolean;
+  viscosity?: string; // "5W-30"
+  standard?: string; // "ACEA A3/B3|ACEA A5/B5"  ("|" separates alternatives)
+  capacity?: string; // "4.3"
+  unit?: string; // "L"
 }
 
+// ── Parts ──────────────────────────────────────────────────────────────────--
+
+/** A part line on a task's shopping list — or a derived fluid line (carries `spec`, no `id`/`ref`). */
 export interface PlannedPart {
-  id?: string; // stable ULID of a stored line — the edit/remove handle (absent on a derived fluid spec line)
+  /** stable ULID of a stored line — the edit/remove handle. Absent on a derived fluid spec line. */
+  id?: string;
   ref: string;
   label?: string;
   brand?: string;
   qty?: number;
-  priceCents?: number; // unit price, integer minor units (like MaintenanceRecord.costCents)
-  spec?: FluidSpec; // present only on a derived fluid line (server-computed, never written back)
+  /** unit price, integer minor units (cents). */
+  priceCents?: number;
+  /** present only on a server-computed fluid line; never written back. */
+  spec?: FluidSpec;
 }
 
-/** An open task on a vehicle's checklist — intended work plus the parts it needs (shopping list). */
+// ── Planned tasks (the open checklist) ────────────────────────────────────────
+
+/** An open task: intended work plus the parts it needs. `id` is the task IRI, PATCHed to mutate it. */
 export interface PlannedTask {
-  id: string; // the task IRI, PATCHed to tick it off
+  id: Iri;
   type: string;
   label?: string | null;
   target?: { value: number; unit: string | null } | null;
-  dueDate?: string | null;
+  dueDate?: string | null; // YYYY-MM-DD
   parts: PlannedPart[];
-  status: string;
+  status: string; // "open" | "done" | "dismissed"
 }
 
-/** One past service event — the dashboard's "past maintenance" rail reads these read-only. */
-/** One line-item of a service visit: a single service type with the parts it consumed. */
+// ── Maintenance records (past visits) ─────────────────────────────────────────
+
+/** One service line of a visit: a single service type with the parts it consumed. */
 export interface MaintenanceItem {
   type: string;
   label?: string | null;
   parts: PlannedPart[];
 }
 
-/** A bill attached to a visit. `url` is the gated download IRI (fetch with the Bearer, not <img src>). */
+/** A bill attached to a visit. `url` is the owner-gated download IRI — fetch with the Bearer, not <img src>. */
 export interface MaintenanceAttachment {
   id: string;
   filename: string;
   contentType: string;
   size: number;
-  url: string;
+  url: Iri;
 }
 
+/** One past service event — a VISIT carrying one or many service items + visit-level fields. */
 export interface MaintenanceRecord {
-  id: string; // the record IRI (@id, normalized)
-  items: MaintenanceItem[]; // the services this visit covered — one row, many items
-  attachments?: MaintenanceAttachment[]; // the visit's bills (PDF/JPEG/PNG)
-  label?: string | null; // visit-level label, e.g. "révision annuelle"
+  id: Iri;
+  items: MaintenanceItem[];
+  attachments?: MaintenanceAttachment[];
+  label?: string | null;
   performedAt: string; // YYYY-MM-DD
   usageValue?: number | null;
   usageUnit?: string | null;
@@ -83,113 +113,20 @@ export interface MaintenanceRecord {
   source: string;
 }
 
-/** The usage axis of a forecast item — engine-hours / km / mi against the service's cadence. */
-export interface ForecastUsage {
-  last: number;
-  due: number;
-  remaining: number;
-  unit: 'hours' | 'km' | 'mi';
-}
+// ── Service schedule (recurring rules) ────────────────────────────────────────
 
 /**
- * One predicted-due service from the per-vehicle forecast. Every due is `rule: "schedule"` — driven by
- * a per-vehicle cadence the user/LLM set (there is no generic fallback). Usage-axis items carry
- * `usage`; time-axis items carry `dueAt`/`projectedDueAt`.
- */
-export interface ForecastDue {
-  type: string;
-  action: 'change' | 'replace' | 'clean' | 'inspect' | null;
-  component: string | null;
-  rule: 'schedule';
-  lastPerformedAt: string | null; // Y-m-d
-  dueAt: string | null; // Y-m-d, time axis
-  projectedDueAt: string | null; // Y-m-d, usage axis projected onto the calendar (estimate)
-  overdue: boolean;
-  daysUntilDue: number | null;
-  usage: ForecastUsage | null;
-}
-
-/** The per-vehicle forecast (GET …/forecast): due items sorted soonest-first + coverage gaps. */
-export interface VehicleForecast {
-  vehicle: string; // the vehicle IRI
-  due: ForecastDue[];
-  gaps: string[]; // recurring types with a known cadence but no logged baseline
-}
-
-/**
- * The compact next-due summary carried on each parc-listing member (collection only), driving the
- * sidebar rail's one-line forecast. Null when nothing is predictable yet.
- */
-export interface NextDue {
-  type: string;
-  action: 'change' | 'replace' | 'clean' | 'inspect' | null;
-  label: string;
-  rule: 'schedule';
-  overdue: boolean;
-  dueAt: string | null;
-  projectedDueAt: string | null;
-  daysUntilDue: number | null;
-  usageRemaining: number | null;
-  usageUnit: 'hours' | 'km' | 'mi' | null;
-}
-
-export interface Vehicle {
-  id: VehicleId;
-  initials: string;
-  make: string;
-  model: string;
-  name: string;
-  subtitle: string; // "Voiture · 2007"
-  vehicleType?: string; // raw type — drives the default usage unit (groundscare → h)
-  usage: string; // "142 000 km"
-  ago: string; // "il y a 4 h"
-  status: VehicleStatus;
-  year?: number;
-  engineVariant?: string; // engine/trim label, e.g. "2.0 16V Coupé"
-  engineCode?: string; // motor code / displacement, e.g. "WJY" or "1.9"
-  kType?: number;
-  plate?: string;
-  verified?: boolean;
-  mileage: string; // "142 000" — display form of usageValue
-  mileageUnit: string; // "km"
-  usageValue?: number; // raw reading, for inline editing
-  usageUnit?: string; // "km" | "mi" | "h"
-  facts?: VehicleFact[]; // populated from the item GET on select
-  maintenanceHealth?: MaintenanceHealth; // API-computed rollup, item GET only (listing omits it)
-  nextService: NextService;
-  openTasks: number;
-  plannedTasks: PlannedTask[]; // the open checklist, populated from the item GET
-  maintenanceRecords?: MaintenanceRecord[]; // past services, loaded from the records subresource
-  forecast?: VehicleForecast; // maintenance forecast, loaded from the forecast subresource
-  serviceSchedule?: ServiceRule[]; // the recurring maintenance rules, loaded from the service-schedule subresource
-  nextDue?: NextDue | null; // compact next-due, carried on the listing for the rail line
-  cost: { total: string; period: string; delta: string };
-}
-
-/** A stored spec about a vehicle, with provenance — read-only on the card. Keyed by `key`
- * (one fact per key per vehicle); it has no own identity since facts are embedded server-side. */
-export interface VehicleFact {
-  key: string;
-  value: string;
-  unit?: string | null;
-  source: string;
-  verified: boolean;
-  url?: string | null;
-}
-
-/**
- * One recurring maintenance-schedule rule on a vehicle — a `ServiceInterval`. The cadence drives the
- * forecast: a usage cadence (everyUsage), a time cadence (everyMonths), or a break-in first interval
- * (firstUsageValue). Identity is (type, action, component) — re-POSTing the same identity corrects the
- * cadence in place (upsert). `verified` is true only for catalog sources (partsapi/siv) — show a badge.
+ * One recurring maintenance rule — a `ServiceInterval`. Cadence drives the forecast: a usage cadence
+ * (everyUsage), a time cadence (everyMonths), or a break-in first interval (firstUsageValue).
+ * Identity is (type, action, component); re-POSTing the same identity corrects the cadence (upsert).
  */
 export interface ServiceRule {
   id: string; // the rule's ULID — used to DELETE it
-  vehicleId: string;
-  type: string; // service, snake_case (SERVICE_TYPES)
-  action: 'change' | 'replace' | 'clean' | 'inspect';
-  component?: string | null; // sub-part; part of the dedup identity
-  everyUsage?: { value: number; unit: 'hours' | 'km' | 'mi' } | null;
+  vehicleId: Iri;
+  type: string; // snake_case service type
+  action: ServiceAction;
+  component?: string | null; // part of the dedup identity
+  everyUsage?: { value: number; unit: UsageUnit } | null;
   everyMonths?: number | null;
   firstUsageValue?: number | null; // break-in override
   source: 'user' | 'web' | 'partsapi' | 'siv' | 'llm';
@@ -197,39 +134,87 @@ export interface ServiceRule {
   url?: string | null;
 }
 
+// ── Forecast ─────────────────────────────────────────────────────────────────
+
+/** The usage axis of a forecast item — last reading / due-at / remaining against the cadence. */
+export interface ForecastUsage {
+  last: number;
+  due: number;
+  remaining: number;
+  unit: UsageUnit;
+}
+
 /**
- * A call-to-action button. Either kind, never both:
- *  - `instruction`: re-runs the agent with that text (NL follow-up).
- *  - `patchTask`: merges parts onto an existing task via a direct PATCH — no agent turn; the
- *    shopping-list block re-renders from the live task.
+ * One predicted-due service. Every due is `rule: "schedule"` (per-vehicle cadence; no generic
+ * fallback). Usage-axis items carry `usage`; time-axis items carry `dueAt`/`projectedDueAt`.
  */
-export interface CtaAction {
-  label: string;
-  instruction?: string;
-  patchTask?: { id: string; parts: PlannedPart[] };
+export interface ForecastDue {
+  type: string;
+  action: ServiceAction | null;
+  component: string | null;
+  rule: 'schedule';
+  lastPerformedAt: string | null; // YYYY-MM-DD
+  dueAt: string | null; // YYYY-MM-DD, time axis
+  projectedDueAt: string | null; // YYYY-MM-DD, usage axis projected onto the calendar (estimate)
+  overdue: boolean;
+  daysUntilDue: number | null;
+  usage: ForecastUsage | null;
 }
 
-/** The agent's call-to-action card: a headline, an optional finding line, and next-step buttons. */
-export interface Cta {
-  headline: string;
-  finding?: string;
-  actions: CtaAction[];
-}
-
-/** The transient focused fact panel (UI label "Données"): which fact keys to spotlight. */
-export interface FactPanel {
-  keys: string[];
-  title?: string;
-  expanded: boolean;
+/** The per-vehicle forecast (GET …/forecast): due items soonest-first + coverage gaps. */
+export interface VehicleForecast {
+  vehicle: Iri;
+  due: ForecastDue[];
+  gaps: string[]; // recurring types with a known cadence but no logged baseline
 }
 
 /**
- * The raw garage vehicle as the API serves it (GET /garage/vehicles) — the same projection the MCP
- * list_vehicles tool returns. `@id` is the dereferenceable IRI the agent uses as the vehicle handle
- * (select_vehicle, log_maintenance), so it doubles as our VehicleId.
+ * The compact next-due summary carried on each parc-listing member (collection only), driving the
+ * parc rail's one-line forecast. Null when nothing is predictable yet.
+ */
+export interface NextDue {
+  type: string;
+  action: ServiceAction | null;
+  label: string;
+  rule: 'schedule';
+  overdue: boolean;
+  dueAt: string | null;
+  projectedDueAt: string | null;
+  daysUntilDue: number | null;
+  usageRemaining: number | null;
+  usageUnit: UsageUnit | null;
+}
+
+// ── Maintenance health rollup ─────────────────────────────────────────────────
+
+/**
+ * The API's maintenance-health rollup — served on the ITEM GET only (the collection omits it).
+ * `red` = ≥1 overdue; `amber` = due soon or a coverage gap; `green` = all tracked & current;
+ * `unknown` = nothing tracked yet → render neutral/grey, NOT as healthy.
+ */
+export interface MaintenanceHealth {
+  status: Signal | 'unknown';
+  score: number | null; // null only when status is "unknown"
+  overdue: number;
+  // due soon — within 30 days OR within ~10% of the usage interval (the §2 amber rule; composite,
+  // not day-only). Verify the exact backend rollup definition when wiring live data in Stage C.
+  dueSoon: number;
+  tracked: number; // services with a logged baseline
+  gaps: number; // recurring services with NO logged baseline
+}
+
+// ── The vehicle read-model the API serves ─────────────────────────────────────
+
+/**
+ * A garage vehicle as the API serves it (GET /garage/vehicles[/{id}]) — the same projection the MCP
+ * list_vehicles tool returns and the shape `resource` carries on a domain Mercure frame. `@id` is the
+ * dereferenceable IRI used as the vehicle handle everywhere.
+ *
+ * Field availability differs by endpoint: `health`, `facts`, and `plannedTasks` ride the ITEM GET
+ * only; the collection listing carries `nextDue` and `openTasks` but omits the rest.
  */
 export interface VehicleSummary {
-  '@id': string;
+  '@id': Iri;
   make: string;
   model: string;
   year?: number | null;
@@ -245,43 +230,80 @@ export interface VehicleSummary {
   factCount: number;
   openTasks?: number;
   facts?: VehicleFact[];
-  // The maintenance-health rollup — served on the item GET only, absent on the collection listing.
+  /** item GET only — absent on the collection listing. */
   health?: MaintenanceHealth;
-  // The compact next-due summary — carried on the collection listing for the rail line; may be null.
+  /** collection listing only — may be null. */
   nextDue?: NextDue | null;
-  // Populated on the item GET only. The API serves the task IRI as `@id`; vehicleFromSummary
-  // normalizes it to `id` for the UI.
-  plannedTasks?: Array<PlannedTask & { '@id'?: string }>;
+  /** item GET only. The API serves each task IRI as `@id`; normalize it to `id` for our model. */
+  plannedTasks?: Array<PlannedTask & { '@id'?: Iri }>;
   addedAt: string;
 }
 
-export interface Toast {
-  id: number;
-  tone: Tone;
-  message: string;
+// ── Display composition (Tier-2) ──────────────────────────────────────────────
+
+/**
+ * The three reads that compose one vehicle's full Atelier view: the item read-model, its forecast,
+ * and its past visits. The scene renders a pure function of this bundle — fixtures build it for the
+ * playground, the live orchestrator builds the identical shape from the API.
+ */
+export interface VehicleBundle {
+  vehicle: VehicleSummary;
+  forecast: VehicleForecast;
+  records: MaintenanceRecord[];
 }
 
-export interface DashboardState {
-  vehicles: Vehicle[];
-  selectedId: VehicleId;
-  factPanel: FactPanel | null; // transient agent answer surface; null when dismissed
-  cta: Cta | null; // the agent's call-to-action card; null when dismissed
-  toasts: Toast[];
-  live: string[]; // recent Mercure events (debug rail)
-  recency: string[]; // vehicle segments, most-recently-visited first (persisted to localStorage)
+// ── The headless agent → UI vocabulary (the "chat hidden" contract) ───────────
+
+/**
+ * A call-to-action button. Exactly ONE of the two payloads is present:
+ *  - `instruction`: re-runs the agent with that NL follow-up (a fresh turn).
+ *  - `patchTask`: a deterministic PATCH that merges parts onto an existing task — NO agent turn.
+ *    Wiring this path is mandatory; skipping it is the known dead-button bug class.
+ */
+export interface CtaAction {
+  label: string;
+  instruction?: string;
+  patchTask?: { id: Iri; parts: PlannedPart[] };
 }
 
 /**
- * The headless agent → UI vocabulary. The agent never returns chat; it returns these typed
- * actions and the reducer maps them to state. Starts small, converges toward AG-UI.
+ * The REAL, verified agent→UI action union — the only members that exist on the wire. The agent never
+ * returns chat; it emits these and the reducer maps them to state.
+ *
+ * NOTE: `renderSuggestions` and `patchPanel` from the docs/ui.md sketch DO NOT EXIST — never build
+ * against them. The choreography map (Stage B.0) binds each real member to an Atelier motion.
  */
 export type UIAction =
-  | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: VehicleId }
-  | { type: 'selectVehicle'; id: VehicleId }
+  | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: Iri }
+  | { type: 'selectVehicle'; id: Iri }
   | { type: 'showFact'; keys: string[]; title?: string }
   | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }
   | { type: 'toast'; tone: Tone; message: string }
-  // Transient progress narration ("Je consulte le catalogue…"), emitted per tool the agent runs.
-  // Feeds only the heartbeat line — never a toast popup — and carries no reducer state.
+  // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
+  // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.
   | { type: 'status'; message: string }
+  // Turn lifecycle — drives the busy/working state. Carries no reducer state.
   | { type: 'turn'; phase: 'start' | 'end' };
+
+// ── Mercure frames ────────────────────────────────────────────────────────────
+
+/**
+ * A garage write fanned out on the public vehicle topics. The payload CARRIES the full vehicle
+ * read-model (`resource`), so the UI renders fresh state with no follow-up fetch. The publisher fans
+ * the same payload to both the item AND the collection topic, so subscribing to the collection topic
+ * alone covers every vehicle.
+ */
+export interface DomainEvent {
+  kind: 'vehicle';
+  event: 'created' | 'updated' | 'deleted';
+  vehicle: string;
+  iri: Iri;
+  resource: VehicleSummary;
+}
+
+/**
+ * Any frame arriving on a subscribed Mercure topic: a domain event (collection topic) or an agent
+ * UIAction intent / transient cue (per-session topic). Told apart by the discriminating `kind`
+ * (DomainEvent) vs `type` (UIAction) field.
+ */
+export type MercureFrame = DomainEvent | UIAction;

@@ -1,0 +1,129 @@
+/* Le Dossier — a right-side glass drawer (mirrors the journal). Records + schedule editing. Mono,
+   dense, cyan-free (rationed to Le Noyau). Reads the --at-* tokens + .glass. */
+
+.at-dossier-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60; /* above the dock (z40) + Le Noyau (z50) */
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  justify-content: flex-end;
+}
+.at-dossier {
+  width: min(620px, 94vw);
+  height: 100%;
+  overflow-y: auto;
+  border-radius: 0;
+  padding: 0 0 var(--at-space-6);
+  display: flex;
+  flex-direction: column;
+  background: rgba(10, 11, 14, 0.96);
+  font-family: var(--at-font-ui);
+  color: var(--at-text);
+}
+.at-dossier-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--at-space-4) var(--at-space-5);
+  background: rgba(10, 11, 14, 0.98);
+  border-bottom: 1px solid var(--at-hairline);
+}
+.at-dossier-head h2 { margin: 0; font-size: 0.95rem; font-weight: 500; letter-spacing: 0.02em; }
+
+.at-dossier-btn {
+  appearance: none;
+  cursor: pointer;
+  border-radius: var(--at-radius-chip);
+  border: 1px solid var(--at-hairline);
+  background: transparent;
+  color: var(--at-text-dim);
+  font-family: var(--at-font-ui);
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.at-dossier-btn:hover:not(:disabled) { color: var(--at-text); border-color: var(--at-chrome-hi); }
+.at-dossier-btn:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
+.at-dossier-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.at-dossier-btn--sm { font-size: 11px; padding: 2px 8px; }
+.at-dossier-btn--do { color: var(--at-text); border-color: var(--at-chrome-hi); }
+
+.at-dossier-section { padding: var(--at-space-4) var(--at-space-5); border-bottom: 1px solid var(--at-hairline); }
+.at-dossier-section-head { display: flex; align-items: center; justify-content: space-between; gap: var(--at-space-3); margin-bottom: var(--at-space-3); }
+.at-dossier-section-head h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: 0.02em; }
+.at-dossier-empty { font-family: var(--at-font-mono); font-size: 12px; color: var(--at-text-dim); margin: var(--at-space-2) 0; }
+
+/* ── inputs (shared by both forms) ── */
+.at-dossier-input {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text);
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 4px 7px;
+  min-width: 0;
+  width: 11ch;
+  box-sizing: border-box;
+}
+.at-dossier-input:focus { outline: none; border-color: var(--at-chrome-hi); }
+.at-dossier-input--grow { flex: 1 1 10ch; width: auto; }
+.at-dossier-input--sm { width: 9ch; }
+.at-dossier-input--xs { width: 5ch; }
+.at-dossier-input--unit { width: 8ch; cursor: pointer; }
+textarea.at-dossier-input { width: 100%; resize: vertical; }
+
+/* ── records ── */
+.at-dossier-records, .at-dossier-rules { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--at-space-3); }
+.at-rec { border: 1px solid var(--at-hairline); border-radius: var(--at-radius-chip); padding: var(--at-space-3); }
+.at-rec-head { display: flex; align-items: baseline; gap: var(--at-space-2); }
+.at-rec-title { font-size: 13px; color: var(--at-text); flex: 1 1 auto; min-width: 0; }
+.at-rec-date { font-family: var(--at-font-mono); font-size: 11px; color: var(--at-text-dim); }
+.at-rec-actions { display: flex; gap: 4px; }
+.at-rec-act { appearance: none; background: transparent; border: 0; color: var(--at-text-dim); font-size: 13px; cursor: pointer; padding: 0 2px; }
+.at-rec-act:hover { color: var(--at-text); }
+.at-rec-act--del:hover { color: var(--at-red-hi); }
+.at-rec-meta { display: flex; flex-wrap: wrap; gap: var(--at-space-3); margin-top: 4px; font-family: var(--at-font-mono); font-size: 11px; color: var(--at-text-mono); }
+.at-rec-items { list-style: none; margin: var(--at-space-2) 0 0; padding: 0; }
+.at-rec-item { font-size: 12px; padding: 2px 0; }
+.at-rec-item-name { color: var(--at-text); }
+.at-rec-parts { list-style: none; margin: 2px 0 0; padding-left: var(--at-space-3); font-family: var(--at-font-mono); font-size: 11px; color: var(--at-text-dim); }
+.at-rec-part { padding: 1px 0; }
+.at-rec-notes { margin: var(--at-space-2) 0 0; font-size: 11px; color: var(--at-text-dim); white-space: pre-wrap; }
+.at-rec-bills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: var(--at-space-2); }
+.at-rec-bill { display: inline-flex; align-items: center; gap: 2px; border: 1px solid var(--at-hairline); border-radius: var(--at-radius-chip); padding: 1px 4px; }
+.at-rec-bill-open { appearance: none; background: transparent; border: 0; color: var(--at-text-mono); font-family: var(--at-font-mono); font-size: 11px; cursor: pointer; max-width: 24ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-rec-bill-open:hover { color: var(--at-text); }
+.at-rec-bill-del { appearance: none; background: transparent; border: 0; color: var(--at-text-dim); font-size: 12px; cursor: pointer; }
+.at-rec-bill-del:hover { color: var(--at-red-hi); }
+
+/* ── record form ── */
+.at-recform, .at-ruleform { display: flex; flex-direction: column; gap: 6px; border: 1px dashed var(--at-hairline); border-radius: var(--at-radius-chip); padding: var(--at-space-3); margin-bottom: var(--at-space-3); }
+.at-recform-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.at-recform-notes { margin-top: 0; }
+.at-recform-items { display: flex; flex-direction: column; gap: 6px; }
+.at-recform-item { border-top: 1px solid var(--at-hairline); padding-top: 6px; display: flex; flex-direction: column; gap: 5px; }
+.at-recform-part { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.at-recform-x { appearance: none; background: transparent; border: 0; color: var(--at-text-dim); font-size: 14px; line-height: 1; cursor: pointer; padding: 0 2px; }
+.at-recform-x:hover { color: var(--at-red-hi); }
+.at-recform-actions { display: flex; gap: 6px; margin-top: 2px; }
+
+/* ── schedule rules ── */
+.at-rule { display: grid; grid-template-columns: 1fr auto auto; gap: var(--at-space-2); align-items: center; padding: var(--at-space-2) 0; border-top: 1px solid var(--at-hairline); }
+.at-rule-main { appearance: none; background: transparent; border: 0; text-align: left; cursor: pointer; display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0; }
+.at-rule-main:hover .at-rule-title { color: var(--at-text); }
+.at-rule-title { font-size: 12px; color: var(--at-text-mono); }
+.at-rule-cadence { font-family: var(--at-font-mono); font-size: 11px; color: var(--at-text-dim); }
+.at-rule-source { font-family: var(--at-font-ui); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--at-text-dim); border: 1px solid var(--at-hairline); border-radius: var(--at-radius-chip); padding: 1px 5px; white-space: nowrap; }
+.at-rule-source--verified { color: var(--at-green-hi); border-color: rgba(74, 222, 128, 0.35); }
+.at-rule-link { text-decoration: none; }
+.at-rule-del { appearance: none; background: transparent; border: 0; color: var(--at-text-dim); font-size: 14px; cursor: pointer; padding: 0 2px; }
+.at-rule-del:hover { color: var(--at-red-hi); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .at-dossier { animation: at-dossier-slide 240ms var(--at-ease-sine); }
+  @keyframes at-dossier-slide { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+}

@@ -1,74 +1,51 @@
 import { describe, expect, it } from 'vitest';
-import { formatCadence, ruleTitle } from './schedule';
+import { NBSP, THIN } from './format';
+import { actionVerb, formatCadence, ruleTitle } from './schedule';
 import type { ServiceRule } from './types';
 
-function rule(over: Partial<ServiceRule> = {}): ServiceRule {
-  return {
-    id: '01J',
-    vehicleId: 'v1',
-    type: 'oil_change',
-    action: 'change',
-    component: null,
-    everyUsage: null,
-    everyMonths: null,
-    firstUsageValue: null,
-    source: 'user',
-    verified: false,
-    url: null,
-    ...over,
-  };
-}
+// Pure formatting for the service-schedule editor (#11). The recurring rules behind the forecast:
+// a title (service · verb — component) and a cadence line. French via format.ts. Rebuilt fresh.
+
+const rule = (over: Partial<ServiceRule>): ServiceRule => ({ id: '01R', vehicleId: '/garage/vehicles/x', type: 'oil_change', action: 'change', source: 'user', verified: false, ...over });
+
+describe('actionVerb', () => {
+  it('maps the service actions to French verbs', () => {
+    expect(actionVerb('change')).toBe('changer');
+    expect(actionVerb('replace')).toBe('remplacer');
+    expect(actionVerb('clean')).toBe('nettoyer');
+    expect(actionVerb('inspect')).toBe('inspecter');
+  });
+  it('null action → empty', () => {
+    expect(actionVerb(null)).toBe('');
+  });
+});
 
 describe('ruleTitle', () => {
-  it('joins the service label with its action verb', () => {
+  it('is "<service> · <verb>"', () => {
     expect(ruleTitle(rule({ type: 'oil_change', action: 'change' }))).toBe('Vidange · changer');
   });
-
-  it('appends the component when present', () => {
-    expect(ruleTitle(rule({ type: 'air_filter', action: 'replace', component: 'paper cartridge' }))).toBe(
-      'Filtre à air · remplacer — paper cartridge',
-    );
-  });
-
-  it('falls back to the raw type for unknown services', () => {
-    expect(ruleTitle(rule({ type: 'widget', action: 'inspect' }))).toBe('widget · contrôler');
+  it('appends a component after an em-dash', () => {
+    expect(ruleTitle(rule({ type: 'brake_pads', action: 'replace', component: 'avant' }))).toBe('Plaquettes de frein · remplacer — avant');
   });
 });
 
 describe('formatCadence', () => {
-  it('formats a usage cadence with the French "h" abbreviation', () => {
-    expect(formatCadence(rule({ everyUsage: { value: 50, unit: 'hours' } }))).toBe('tous les 50 h');
+  it('a usage cadence reads "tous les <reading>"', () => {
+    expect(formatCadence(rule({ everyUsage: { value: 10000, unit: 'km' } }))).toBe(`tous les 10${THIN}000${NBSP}km`);
   });
-
-  it('keeps km verbatim and groups the reading', () => {
-    expect(formatCadence(rule({ everyUsage: { value: 15000, unit: 'km' } }))).toBe('tous les 15 000 km');
+  it('engine-hours cadence shows the short "h" (not the maintenance-side "hours")', () => {
+    expect(formatCadence(rule({ everyUsage: { value: 50, unit: 'hours' } }))).toBe(`tous les 50${NBSP}h`);
   });
-
-  it('formats a time cadence in months', () => {
-    expect(formatCadence(rule({ everyMonths: 12 }))).toBe('tous les 12 mois');
+  it('a month cadence reads "tous les N mois"', () => {
+    expect(formatCadence(rule({ everyMonths: 12 }))).toBe(`tous les 12${NBSP}mois`);
   });
-
-  it('formats a single month without an "s"', () => {
-    expect(formatCadence(rule({ everyMonths: 1 }))).toBe('tous les 1 mois');
+  it('combines usage + months with a middot', () => {
+    expect(formatCadence(rule({ everyUsage: { value: 10000, unit: 'km' }, everyMonths: 12 }))).toBe(`tous les 10${THIN}000${NBSP}km · tous les 12${NBSP}mois`);
   });
-
-  it('joins a usage and time cadence with a middot', () => {
-    expect(formatCadence(rule({ everyUsage: { value: 15000, unit: 'km' }, everyMonths: 12 }))).toBe(
-      'tous les 15 000 km · tous les 12 mois',
-    );
+  it('a break-in first interval is appended', () => {
+    expect(formatCadence(rule({ everyUsage: { value: 50, unit: 'hours' }, firstUsageValue: 5 }))).toBe(`tous les 50${NBSP}h · d’abord à 5${NBSP}h`);
   });
-
-  it('appends the break-in first interval', () => {
-    expect(formatCadence(rule({ everyUsage: { value: 50, unit: 'hours' }, firstUsageValue: 5 }))).toBe(
-      'tous les 50 h · 1ʳᵉ à 5',
-    );
-  });
-
-  it('shows the first interval alone when it is the only cadence', () => {
-    expect(formatCadence(rule({ firstUsageValue: 5 }))).toBe('1ʳᵉ à 5');
-  });
-
-  it('falls back to a dash when no cadence is set', () => {
-    expect(formatCadence(rule())).toBe('—');
+  it('no cadence → an honest placeholder', () => {
+    expect(formatCadence(rule({}))).toBe('cadence non définie');
   });
 });

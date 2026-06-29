@@ -1,0 +1,242 @@
+/* The Atelier scene shell. Z-order (DESIGN-VISION §3): WebGL canvas (back) → glass panels (mid) →
+   composer tray (front) → Le Noyau (highest). The glass sits BESIDE the Plateau, never over the car. */
+
+.at-scene {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(130% 100% at 50% 0%, #1a1813 0%, #131210 55%, #0c0b09 100%);
+  color: var(--at-text);
+  font-family: var(--at-font-ui);
+}
+
+/* ── top controls ── */
+/* the car is full-bleed; controls float over it */
+.at-scene-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 20px;
+  background: linear-gradient(180deg, rgba(12, 11, 9, 0.85) 0%, rgba(12, 11, 9, 0) 100%);
+}
+.at-scene-back { color: var(--at-text-dim); text-decoration: none; font-family: var(--at-font-mono); font-size: 12px; }
+.at-scene-switch { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.at-scene-rungs-label { font-size: 9px; letter-spacing: 0.12em; color: var(--at-text-dim); margin-right: 2px; }
+.at-sbtn {
+  background: #1c1e22;
+  border: 1px solid var(--at-hairline);
+  border-radius: 5px;
+  color: var(--at-text-mono);
+  font: inherit;
+  font-size: 11px;
+  padding: 5px 9px;
+  cursor: pointer;
+}
+/* dev chrome stays neutral — cyan is rationed to Le Noyau only (§4), never the selector/sim buttons */
+.at-sbtn--on { border: 1px solid var(--at-chrome-hi); color: var(--at-text); }
+.at-sbtn:disabled { opacity: 0.4; cursor: not-allowed; }
+.at-scene-toggle { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--at-text-dim); margin-left: 8px; }
+
+/* ── hero: full-bleed car + floating glass ── */
+.at-scene-stage-full {
+  position: absolute;
+  inset: 0;
+  z-index: 0; /* the car owns the whole frame, behind everything */
+}
+.at-scene-float {
+  position: absolute;
+  top: 78px;
+  right: 26px;
+  z-index: 10;
+  width: 360px;
+  max-width: calc(100vw - 52px);
+  max-height: calc(100vh - 78px - 260px); /* clear of the dock */
+  overflow: auto;
+}
+/* the floating slab is more transparent than a docked panel, so the turning car reads behind it */
+.at-scene-float .glass { background: rgba(12, 13, 16, 0.62); }
+
+/* cardinal readouts ring the DISC, not the screen edges — a band that clears the top controls and the
+   bottom dock (the leaf positions its 4 cells at the band's N/E/S/W). pointer-events stay off. */
+.at-scene-cardinals {
+  position: absolute;
+  /* a symmetric central band: top/bottom cells stay centred on the car, while the left/right cells are
+     pulled inboard of the floating truth-panel (right) and the établi (left) so nothing is occluded. */
+  inset: 100px 392px 230px 392px;
+  z-index: 5;
+  pointer-events: none;
+}
+
+/* hotspot cards portal into this layer so they sit ABOVE the glass panels (z10) yet below the dock
+   (z40) — the stage canvas stays at z0, but its drei <Html> cards would otherwise be z-trapped under
+   the panels. Layer ignores pointer events; the cards themselves re-enable them. */
+.at-scene-hotspot-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
+.at-scene-hotspot-layer .at-hot { pointer-events: auto; }
+
+/* the left column — l'établi (parts as objects) over the open-checklist (#10). A floating glass stack
+   (mirror of the truth-panel). Clears the dock; the établi caps its height so the checklist can scroll. */
+.at-scene-left {
+  position: absolute;
+  top: 78px;
+  left: 26px;
+  z-index: 10;
+  width: 320px;
+  max-width: calc(100vw - 52px);
+  max-height: calc(100vh - 78px - 230px); /* clear of the dock */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+}
+.at-scene-parts {
+  flex: 0 0 auto;
+  max-height: 240px;
+  overflow: hidden;
+  padding: var(--at-space-4);
+  background: rgba(12, 13, 16, 0.62);
+}
+.at-scene-checklist {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--at-space-4);
+  background: rgba(12, 13, 16, 0.62);
+}
+
+/* ── canvas-off fallback (rung d) — the honest floor, two-up ── */
+.at-scene-floor {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 18px;
+  align-content: start;
+  padding: 84px 24px 300px;
+  max-width: 900px;
+}
+.at-scene-planglass { padding: var(--at-space-4); }
+.at-scene-floor-right { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+
+.at-scene-main { flex: 1; display: grid; place-items: center; padding: 84px 24px 300px; }
+.at-scene-empty {
+  display: grid;
+  place-items: center;
+  padding: 3rem;
+  border: 1px dashed var(--at-hairline);
+  border-radius: var(--at-radius-glass);
+  color: var(--at-text-dim);
+}
+
+/* ── Le Plateau ── */
+.at-plateau { position: absolute; inset: 0; }
+.at-plateau canvas { display: block; border-radius: var(--at-radius-glass); }
+.at-plateau--list { position: relative; display: grid; place-items: center; }
+.at-plateau-note { color: var(--at-text-dim); font-family: var(--at-font-mono); font-size: 13px; }
+.at-silhouette { width: 100%; max-width: 560px; height: auto; display: block; margin: auto; filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.5)); }
+
+/* ── dock: composer + Le Noyau (highest) ── */
+.at-scene-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 18px;
+  pointer-events: none; /* let the empty area pass clicks through to the canvas (orbit the car) */
+}
+.at-scene-noyau { pointer-events: auto; z-index: 50; transform: scale(0.86); transform-origin: bottom center; }
+.at-scene-composer {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(560px, 84vw);
+  margin-top: 6px;
+}
+.at-scene-sim {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--at-hairline);
+  background: rgba(20, 21, 24, 0.92);
+  color: var(--at-text-mono);
+  font-size: 13px;
+  cursor: pointer;
+}
+/* the §9 crossing trigger — a dev/demo stand-in for the live Mercure overdue event */
+.at-scene-cross { color: var(--at-amber-hi); }
+.at-scene-cross:disabled { opacity: 0.4; cursor: not-allowed; }
+.at-scene-cross--on { color: var(--at-red-hi); border-color: rgba(252, 165, 165, 0.5); text-shadow: var(--at-glow-red); }
+
+.at-scene-input {
+  flex: 1;
+  background: rgba(20, 21, 24, 0.92);
+  border: 1px solid var(--at-hairline);
+  border-radius: 12px;
+  color: var(--at-text-mono);
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  padding: 11px 16px;
+  outline: none;
+}
+
+/* ── CTA: a proposeActions card RISING from Le Noyau's cradle (above the composer, never over it).
+   Cyan-free (rationed to the orb itself); the deterministic action reads brighter, decline is dimmed. */
+.at-cta {
+  pointer-events: auto;
+  width: min(560px, 84vw);
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transform-origin: bottom center;
+  animation: at-cta-rise 360ms var(--at-ease-spring) both;
+}
+.at-cta[data-reduced='true'] {
+  animation: none;
+}
+@keyframes at-cta-rise {
+  from { opacity: 0; transform: translateY(22px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.at-cta-headline { margin: 0; font-size: 14px; font-weight: 500; color: var(--at-text); }
+.at-cta-finding { margin: 0; font-size: 12px; line-height: 1.5; color: var(--at-text-dim); }
+.at-cta-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.at-cta-btn {
+  appearance: none;
+  cursor: pointer;
+  padding: 7px 13px;
+  border-radius: var(--at-radius-chip);
+  border: 1px solid var(--at-hairline);
+  background: transparent;
+  color: var(--at-text);
+  font-family: var(--at-font-ui);
+  font-size: 12px;
+  transition: border-color 140ms var(--at-ease-sine), background 140ms var(--at-ease-sine);
+}
+.at-cta-btn:hover { border-color: var(--at-chrome-hi); background: rgba(255, 255, 255, 0.03); }
+.at-cta-btn:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
+.at-cta-btn--do { border-color: var(--at-chrome-hi); color: var(--at-text); font-weight: 500; }
+.at-cta-btn--decline { color: var(--at-text-dim); border-color: transparent; margin-left: auto; }
+
+/* below ~860px the 392px band insets would collapse the cardinal band to zero/negative width and the
+   E/W cells would invert; drop them there (redundant echo — every value still lives in the panel).
+   Between ~860 and ~1100 they read as a tight central cluster rather than ringing the disc edges. */
+@media (max-width: 860px) {
+  .at-scene-cardinals { display: none; }
+}
+
+@media (max-width: 720px) {
+  .at-scene-main { grid-template-columns: 1fr; }
+}

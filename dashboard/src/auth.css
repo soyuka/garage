@@ -1,0 +1,83 @@
+/* Auth surfaces — the boot splash and the signed-out bounce screen. The night void of the atelier
+   with Le Noyau's cyan rationed to the single mark + sign-in affordance. */
+
+.at-auth-splash,
+.at-auth-screen {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--at-void);
+  color: var(--at-text);
+  font-family: var(--at-font-ui);
+}
+
+.at-auth-splash {
+  font-family: var(--at-font-mono);
+  color: var(--at-text-dim);
+  letter-spacing: var(--at-label-tracking);
+  font-size: 0.85rem;
+}
+
+.at-auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--at-space-4);
+  padding: var(--at-space-6);
+  max-width: 22rem;
+  text-align: center;
+}
+
+.at-auth-mark {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 1px solid var(--at-cyan);
+  color: var(--at-cyan-hi);
+  box-shadow: var(--at-glow-cyan);
+  font-family: var(--at-font-mono);
+  font-size: 1.4rem;
+}
+
+.at-auth-card h1 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+}
+
+.at-auth-card p {
+  margin: 0;
+  color: var(--at-text-dim);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.at-auth-button {
+  appearance: none;
+  cursor: pointer;
+  padding: var(--at-space-3) var(--at-space-5);
+  border-radius: var(--at-radius-chip);
+  border: 1px solid var(--at-cyan);
+  background: transparent;
+  color: var(--at-cyan-hi);
+  font-family: var(--at-font-ui);
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+  transition: background 160ms var(--at-ease-sine), box-shadow 160ms var(--at-ease-sine);
+}
+
+.at-auth-button:hover {
+  background: rgba(34, 211, 238, 0.08);
+  box-shadow: var(--at-glow-cyan);
+}
+
+/* The single most important control on the gate — give it a perceptible, theme-aware focus ring on
+   the near-black surface rather than the inconsistent UA default. */
+.at-auth-button:focus-visible {
+  outline: 2px solid var(--at-cyan-hi);
+  outline-offset: 2px;
+}

@@ -1,8 +1,0 @@
-/* mon-parc-auto · Atelier Design System
-   Single global entry point. Consumers link THIS file.
-   Keep this file as @import lines only — every token + font is reached from here. */
-@import "tokens/fonts.css";
-@import "tokens/colors.css";
-@import "tokens/typography.css";
-@import "tokens/spacing.css";
-@import "tokens/effects.css";

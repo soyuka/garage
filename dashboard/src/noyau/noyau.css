@@ -1,0 +1,300 @@
+/* Le Noyau — Stage A (CSS/SVG, no WebGL). The agent as a diagnostic INSTRUMENT: a machined lens/iris
+   that reads the car. State is driven entirely by data-phase / data-result on .noyau-stage; the
+   APERTURE (pupil radius) differs per state, so the four states are legible by SHAPE, not color alone.
+
+   STAGE-A-LOCAL TOKENS: provisional values re-derived from DESIGN-VISION §4, scoped to this file.
+   Superseded by the canonical --at-* layer frozen in Stage B.0 — not the token source. */
+
+/* Registered color drivers so they TWEEN between phases (a plain custom prop can't transition). This
+   is what makes the pupil *ignite* cyan→amber and the done color *cool in* rather than snap. */
+@property --nx-fil-core { syntax: '<color>'; inherits: true; initial-value: #67e8f9; }
+@property --nx-fil-edge { syntax: '<color>'; inherits: true; initial-value: #22d3ee; }
+@property --nx-emissive { syntax: '<color>'; inherits: true; initial-value: #22d3ee; }
+@property --nx-seam { syntax: '<color>'; inherits: true; initial-value: rgba(180, 196, 210, 0.35); }
+
+.noyau-stage {
+  transition: --nx-fil-core 600ms ease, --nx-fil-edge 600ms ease, --nx-emissive 600ms ease, --nx-seam 500ms ease;
+  --nx-void: #131210;
+  --nx-chrome: #2a2d33;
+  --nx-chrome-hi: #767b85;
+  --nx-seam: rgba(180, 196, 210, 0.35);
+
+  --nx-cyan: #22d3ee; /* l'intelligence — rationed to the agent */
+  --nx-cyan-hi: #67e8f9;
+  --nx-amber: #b45309;
+  --nx-amber-hi: #fcd34d;
+  --nx-green: #16a34a;
+  --nx-green-hi: #4ade80;
+  --nx-red: #9b1c1c;
+  --nx-red-hi: #fca5a5;
+  --nx-mono: #c9c5bc;
+
+  --nx-fil-core: var(--nx-cyan-hi);
+  --nx-fil-edge: var(--nx-cyan);
+  --nx-emissive: var(--nx-cyan);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 240px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  user-select: none;
+}
+
+/* ── phase → emissive color ─────────────────────────────────────────────── */
+.noyau-stage[data-phase='working'] {
+  --nx-fil-core: var(--nx-cyan-hi);
+  --nx-fil-edge: var(--nx-amber-hi); /* the exertion gradient — the one sanctioned gradient */
+  --nx-emissive: var(--nx-amber-hi);
+  --nx-seam: rgba(252, 211, 153, 0.55); /* ticks/seams brighten under load */
+}
+.noyau-stage[data-phase='done'] { --nx-seam: rgba(220, 226, 232, 0.5); }
+.noyau-stage[data-phase='done'][data-result='green'] {
+  --nx-fil-core: var(--nx-green-hi);
+  --nx-fil-edge: var(--nx-green);
+  --nx-emissive: var(--nx-green-hi);
+}
+.noyau-stage[data-phase='done'][data-result='amber'] {
+  --nx-fil-core: var(--nx-amber-hi);
+  --nx-fil-edge: var(--nx-amber);
+  --nx-emissive: var(--nx-amber-hi);
+}
+.noyau-stage[data-phase='done'][data-result='red'] {
+  --nx-fil-core: var(--nx-red-hi);
+  --nx-fil-edge: var(--nx-red);
+  --nx-emissive: var(--nx-red-hi);
+}
+
+/* ── the instrument body ────────────────────────────────────────────────── */
+.noyau-orb {
+  position: relative;
+  width: 138px;
+  height: 138px;
+  transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
+}
+.noyau-stage[data-phase='working'] .noyau-orb { transform: translateY(-12px); }
+.noyau-stage[data-phase='done'] .noyau-orb { animation: nx-settle 520ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes nx-settle {
+  0% { transform: translateY(-12px); }
+  60% { transform: translateY(2px); }
+  100% { transform: translateY(0); }
+}
+
+/* Idle = the Apple sleep-LED breathe: a slow sine ease-in-out luminous breath (scale + glow). */
+.noyau-stage[data-phase='idle'] .noyau-orb,
+.noyau-stage[data-phase='listening'] .noyau-orb {
+  animation: nx-breathe 4s cubic-bezier(0.37, 0, 0.63, 1) infinite;
+}
+.noyau-stage[data-phase='listening'] .noyau-orb { animation-duration: 2.4s; }
+@keyframes nx-breathe {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+
+.noyau-lens { width: 100%; height: 100%; }
+
+/* ── the iris aperture + pupil (dilate/contract = the state shape-cue) ───── */
+.noyau-pupil,
+.noyau-iris {
+  transition: r 480ms cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+.noyau-pupil {
+  animation: nx-breathe-glow 4s cubic-bezier(0.37, 0, 0.63, 1) infinite; /* idle glow breath */
+}
+.noyau-stage[data-phase='listening'] .noyau-pupil { animation: none; opacity: 0.92; } /* glow holds steady */
+.noyau-stage[data-phase='working'] .noyau-pupil,
+.noyau-stage[data-phase='done'] .noyau-pupil { animation: none; opacity: 0.95; }
+@keyframes nx-breathe-glow {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 0.92; }
+}
+
+/* aperture sizes: rest → dilated (listening) → focused point (working) → relaxed (done) */
+.noyau-stage[data-phase='listening'] .noyau-pupil { r: 22px; }
+.noyau-stage[data-phase='listening'] .noyau-iris { r: 28px; }
+.noyau-stage[data-phase='working'] .noyau-pupil { r: 9px; }
+.noyau-stage[data-phase='working'] .noyau-iris { r: 14px; }
+.noyau-stage[data-phase='done'] .noyau-pupil { r: 14px; }
+.noyau-stage[data-phase='done'] .noyau-iris { r: 19px; }
+
+/* ── gauge ticks, lens rings, reticle crosshair ─────────────────────────── */
+.noyau-tick { stroke: var(--nx-seam); stroke-width: 0.6; }
+.noyau-tick--major { stroke-width: 1.1; }
+.noyau-lens-ring { stroke: var(--nx-seam); stroke-width: 0.5; opacity: 0.5; }
+.noyau-cross { stroke: var(--nx-seam); stroke-width: 0.4; opacity: 0.3; }
+
+/* scanning reticle — drifts at rest, locks/spins fast while working */
+.noyau-scan {
+  stroke: var(--nx-emissive);
+  stroke-width: 1;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.noyau-stage[data-phase='idle'] .noyau-scan { opacity: 0.12; animation: nx-scan 18s linear infinite; }
+.noyau-stage[data-phase='listening'] .noyau-scan { opacity: 0.2; animation: nx-scan 10s linear infinite; }
+.noyau-stage[data-phase='working'] .noyau-scan { opacity: 0.7; animation: nx-scan 2s linear infinite; }
+.noyau-stage[data-phase='done'] .noyau-scan { opacity: 0.3; }
+@keyframes nx-scan { to { transform: rotate(360deg); } }
+
+/* idle specular glint crossing the glass */
+.noyau-glint { opacity: 0; transform-box: fill-box; transform-origin: center; }
+.noyau-stage[data-phase='idle'] .noyau-glint { animation: nx-glint 7s ease-in-out infinite; }
+@keyframes nx-glint {
+  0%, 100% { opacity: 0; transform: translateX(-24px); }
+  50% { opacity: 0.4; transform: translateX(24px); }
+}
+
+/* listening: the inner ring traces the circumference (a signal being received) */
+.noyau-rim { opacity: 0; transition: opacity 200ms; }
+.noyau-stage[data-phase='listening'] .noyau-rim {
+  opacity: 0.85;
+  animation: nx-trace 1.4s linear infinite;
+}
+@keyframes nx-trace { to { stroke-dashoffset: -160; } }
+
+/* red done: the reticle flares as a fault lamp */
+.noyau-fault { opacity: 0; }
+.noyau-stage[data-phase='done'][data-result='red'] .noyau-fault { animation: nx-fault 0.9s ease-in-out infinite; }
+@keyframes nx-fault {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 0.9; }
+}
+
+/* ── pulse rings (one per narrated status step, fired sparsely) ─────────── */
+.noyau-pulse-layer { position: absolute; inset: 0; pointer-events: none; }
+.noyau-pulse-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 96px;
+  height: 96px;
+  margin: -48px 0 0 -48px;
+  border-radius: 50%;
+  border: 2px solid var(--nx-emissive);
+  transform: scale(0.5);
+  opacity: 0.7;
+  animation: nx-pulse 900ms ease-out forwards;
+}
+@keyframes nx-pulse { to { transform: scale(2); opacity: 0; } }
+.noyau-exhale {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  border: 2px solid var(--nx-emissive);
+  transform: scale(0.55);
+  opacity: 0.9;
+  animation: nx-pulse 720ms ease-out forwards;
+}
+
+/* ── ember (alarm notifications dock here) ──────────────────────────────── */
+.noyau-ember {
+  position: absolute;
+  right: 14px;
+  bottom: 16px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: var(--nx-red);
+  color: var(--nx-red-hi);
+  font-size: 11px;
+  line-height: 20px;
+  text-align: center;
+  box-shadow: 0 0 10px rgba(155, 28, 28, 0.8);
+  animation: nx-ember-in 300ms ease-out;
+  cursor: pointer;
+}
+@keyframes nx-ember-in {
+  from { transform: scale(0); }
+  to { transform: scale(1); }
+}
+
+/* ── cradle ─────────────────────────────────────────────────────────────── */
+.noyau-cradle { margin-top: -6px; width: 120px; height: 26px; }
+
+/* ── narration ticker (etches from the cradle base, one line at a time) ─── */
+.noyau-narration {
+  margin-top: 10px;
+  min-height: 18px;
+  font-size: 12px;
+  letter-spacing: 0.01em;
+  color: var(--nx-mono);
+  text-align: center;
+  max-width: 240px;
+}
+.noyau-narration span { display: inline-block; animation: nx-etch 360ms ease-out; }
+@keyframes nx-etch {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 0.92; transform: translateY(0); }
+}
+
+/* ── journal drawer ─────────────────────────────────────────────────────── */
+.noyau-journal-toggle {
+  margin-top: 8px;
+  background: none;
+  border: 1px solid rgba(180, 196, 210, 0.2);
+  border-radius: 4px;
+  color: var(--nx-mono);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.noyau-journal {
+  margin-top: 8px;
+  width: 240px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid rgba(180, 196, 210, 0.16);
+  border-radius: 8px;
+  background: rgba(10, 11, 14, 0.78);
+  backdrop-filter: blur(8px);
+  padding: 8px 10px;
+  font-size: 11px;
+  color: var(--nx-mono);
+}
+.noyau-journal-row { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; line-height: 1.4; }
+.noyau-journal-glyph { width: 12px; text-align: center; opacity: 0.85; }
+.noyau-journal-glyph[data-kind='pulse'] { color: var(--nx-cyan-hi); }
+.noyau-journal-glyph[data-kind='alarm'] { color: var(--nx-red-hi); }
+.noyau-journal-glyph[data-kind='done'] { color: var(--nx-emissive); }
+.noyau-journal-msg { flex: 1; }
+.noyau-journal-sig { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
+.noyau-journal-elapsed { opacity: 0.5; font-variant-numeric: tabular-nums; }
+.noyau-journal-empty { opacity: 0.5; }
+
+/* ── reduced motion — animations collapse to instant; aperture stays a static SHAPE cue ── */
+@media (prefers-reduced-motion: reduce) {
+  .noyau-orb, .noyau-pupil, .noyau-iris, .noyau-scan, .noyau-glint, .noyau-rim, .noyau-fault,
+  .noyau-narration span, .noyau-ember { animation: none !important; }
+  .noyau-pupil, .noyau-iris { transition: none; }
+  .noyau-stage[data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
+  .noyau-stage[data-phase='listening'] .noyau-scan,
+  .noyau-stage[data-phase='idle'] .noyau-scan { opacity: 0.15; }
+  .noyau-pulse-ring, .noyau-exhale { display: none; }
+}
+.noyau-stage[data-reduced='true'] .noyau-orb,
+.noyau-stage[data-reduced='true'] .noyau-pupil,
+.noyau-stage[data-reduced='true'] .noyau-iris,
+.noyau-stage[data-reduced='true'] .noyau-scan,
+.noyau-stage[data-reduced='true'] .noyau-glint,
+.noyau-stage[data-reduced='true'] .noyau-rim,
+.noyau-stage[data-reduced='true'] .noyau-fault,
+.noyau-stage[data-reduced='true'] .noyau-narration span,
+.noyau-stage[data-reduced='true'] .noyau-ember { animation: none !important; }
+.noyau-stage[data-reduced='true'] .noyau-pupil,
+.noyau-stage[data-reduced='true'] .noyau-iris { transition: none; }
+.noyau-stage[data-reduced='true'][data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
+.noyau-stage[data-reduced='true'] .noyau-scan { opacity: 0.15; }
+.noyau-stage[data-reduced='true'] .noyau-pulse-ring,
+.noyau-stage[data-reduced='true'] .noyau-exhale { display: none; }

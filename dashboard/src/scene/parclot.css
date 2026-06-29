@@ -1,0 +1,215 @@
+/* §6 "Le Parc" — a grid of baked-render-style cards (flat SVG silhouette, no WebGL). Reads the --at-*
+   tokens + the established .glass / .at-tag / .at-dot / .at-label classes. Each card's base-ring is
+   tinted the signal colour (resolved via data-signal → --at-sig-hi) but is ALWAYS paired with the
+   text health tag, so the signal survives grayscale (§8). */
+
+.at-parc {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--at-space-5);
+  font-family: var(--at-font-ui);
+  color: var(--at-text);
+}
+
+.at-parc-empty {
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  color: var(--at-text-dim);
+  text-align: center;
+  margin: var(--at-space-6) 0;
+}
+
+.at-parc-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--at-space-4);
+}
+.at-parc-grid > li {
+  min-width: 0;
+}
+
+/* ── card (a <button>) ──────────────────────────────────────────────────── */
+.at-parc-card {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--at-space-3);
+  padding: var(--at-space-4);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+  transition: transform 200ms var(--at-ease-spring), border-color 200ms var(--at-ease-sine);
+}
+.at-parc-card:hover {
+  transform: translateY(-3px);
+  border-top-color: var(--at-sig-hi, var(--at-glass-edge));
+}
+.at-parc-card:focus-visible {
+  outline: 2px solid var(--at-sig-hi, var(--at-chrome-hi));
+  outline-offset: 2px;
+}
+
+/* ── baked stage: the silhouette over a signal-tinted under-glow ring ─────── */
+.at-parc-stage {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--at-space-2);
+  isolation: isolate;
+}
+.at-parc-ring {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 78%;
+  height: 18px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  /* under-glow tinted the signal colour; never the sole cue (paired with the tag below) */
+  background: radial-gradient(ellipse at center, var(--at-sig-hi, var(--at-unknown)) 0%, transparent 70%);
+  opacity: 0.5;
+  filter: blur(3px);
+  z-index: -1;
+}
+.at-parc-stage .at-silhouette {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  display: block;
+}
+
+/* ── header: plate chip (EU-blue band) + make/model + sub ─────────────────── */
+.at-parc-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.at-parc-plate {
+  align-self: flex-start;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: #dfe6ee;
+  background: #11161f;
+  border: 1px solid var(--at-hairline);
+  border-left: 5px solid #1b3fae;
+  border-radius: 4px;
+  padding: 2px 7px 2px 8px;
+}
+.at-parc-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--at-text);
+}
+.at-parc-sub {
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  color: var(--at-text-dim);
+}
+
+/* ── mileage ──────────────────────────────────────────────────────────────── */
+.at-parc-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.at-parc-meta-label {
+  margin-bottom: 0;
+}
+.at-parc-mileage {
+  font-family: var(--at-font-mono);
+  font-size: 16px;
+  color: var(--at-text-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── next-due one-liner: dot + label/horizon + text tag ───────────────────── */
+.at-parc-due {
+  display: flex;
+  align-items: center;
+  gap: var(--at-space-2);
+  padding-top: var(--at-space-2);
+  border-top: 1px solid var(--at-hairline);
+}
+.at-parc-dot {
+  align-self: center;
+}
+.at-parc-due-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.at-parc-due-label {
+  font-family: var(--at-font-ui);
+  font-size: 12px;
+  color: var(--at-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.at-parc-due-horizon {
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  color: var(--at-text-dim);
+}
+.at-parc-due-none {
+  color: var(--at-text-dim);
+}
+
+/* ── #9 "+ Ajouter" card: a dashed-outline tile that creates a blank vehicle then drives into its
+   hero to fill it in. Neutral chrome — no signal colour (it has no health). ───────────────────────── */
+.at-parc-add {
+  align-items: center;
+  justify-content: center;
+  gap: var(--at-space-2);
+  min-height: 180px;
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--at-hairline);
+  color: var(--at-text-dim);
+}
+.at-parc-add:hover {
+  transform: translateY(-3px);
+  border-color: var(--at-chrome-hi);
+  color: var(--at-text);
+}
+.at-parc-add:focus-visible {
+  outline: 2px solid var(--at-chrome-hi);
+  outline-offset: 2px;
+}
+.at-parc-add-glyph {
+  font-family: var(--at-font-mono);
+  font-size: 32px;
+  line-height: 1;
+  font-weight: 300;
+}
+.at-parc-add-label {
+  font-family: var(--at-font-ui);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* ── reduced-motion: no hover-lift, instant state ─────────────────────────── */
+.at-parc[data-reduced='true'] .at-parc-card {
+  transition: none;
+}
+.at-parc[data-reduced='true'] .at-parc-card:hover {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-parc-card {
+    transition: none;
+  }
+  .at-parc-card:hover {
+    transform: none;
+  }
+}

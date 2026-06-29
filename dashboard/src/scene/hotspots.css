@@ -1,0 +1,137 @@
+/* Hotspots — hex annotation pins anchored per body-class on the blueprint car (DESIGN-VISION §2).
+   State = colour (--at-sig) + SHAPE (solid vs doubled-outline hex) + GLYPH (✓ / ! / ‼) + the mono
+   region tab + the card's text tags — never colour alone (§8). Card layers above the pins. */
+
+.at-hot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--at-font-ui);
+}
+
+.at-hot-pin {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: none;
+  cursor: pointer;
+  background: var(--at-sig, var(--at-unknown));
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(var(--at-glow-sig, none));
+  outline-offset: 3px;
+}
+
+/* doubled-outline hex (rouge) — a SHAPE difference, legible in grayscale */
+.at-hot-pin--double {
+  background: transparent;
+  box-shadow: inset 0 0 0 2px var(--at-sig-hi, var(--at-red-hi)), inset 0 0 0 5px var(--at-void);
+}
+
+.at-hot-glyph {
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--at-void);
+}
+.at-hot-pin--double .at-hot-glyph { color: var(--at-sig-hi, var(--at-red-hi)); }
+
+.at-hot-tab {
+  font-family: var(--at-font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--at-text-mono);
+  white-space: nowrap;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+/* gentle 2s opacity breathe on due/overdue pins (§2). reduced or prefers-reduced-motion → static. */
+@keyframes at-hot-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.at-hot[data-signal='amber'] .at-hot-pin,
+.at-hot[data-signal='red'] .at-hot-pin {
+  animation: at-hot-breathe 2s var(--at-ease-sine) infinite;
+}
+.at-hot-pin--still,
+.at-hot[data-signal='amber'] .at-hot-pin--still,
+.at-hot[data-signal='red'] .at-hot-pin--still {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-hot-pin { animation: none !important; }
+}
+
+/* ── the frosted card (dwell / focus / tap) ─────────────────────────────────── */
+.at-hot-card {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 20; /* layers above sibling pins */
+  width: 280px;
+  max-width: 78vw;
+  padding: var(--at-space-4);
+  box-sizing: border-box;
+}
+.at-hot-card-head { margin-bottom: var(--at-space-2); }
+
+.at-hot-rows { list-style: none; margin: 0; padding: 0; }
+.at-hot-row {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  gap: 6px 8px;
+  align-items: baseline;
+  padding: var(--at-space-2) 0;
+  border-top: 1px solid var(--at-hairline);
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+}
+.at-hot-row:first-child { border-top: none; }
+.at-hot-row .at-dot { align-self: center; }
+.at-hot-row-name { color: var(--at-text); grid-column: 2; }
+.at-hot-row-pct { color: var(--at-text-mono); font-variant-numeric: tabular-nums; text-align: right; }
+.at-hot-row-when {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  color: var(--at-text-dim);
+  font-size: 11px;
+}
+.at-hot-row-horizon { color: var(--at-text-mono); }
+.at-hot-row-horizon--late { color: var(--at-red-hi); text-shadow: var(--at-glow-red); }
+.at-hot-row-until { color: var(--at-text-dim); font-variant-numeric: tabular-nums; }
+.at-hot-row-last {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-direction: column;
+}
+.at-hot-row-last-label {
+  font-family: var(--at-font-ui);
+  font-size: 9px;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+  color: var(--at-label);
+}
+.at-hot-row-last-date { color: var(--at-text-dim); font-size: 11px; }
+
+.at-hot-plan {
+  grid-column: 2 / -1;
+  justify-self: start;
+  margin-top: var(--at-space-1);
+  font-family: var(--at-font-ui);
+  font-size: 11px;
+  color: var(--at-text-mono);
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 4px 9px;
+  cursor: pointer;
+}
+.at-hot-plan:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }

@@ -1,0 +1,93 @@
+import type { BodyClass } from './CarProxy';
+import { DIMS } from './CarProxy';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The shared geometry seam for every 3D Plateau leaf (Hotspots, BodyGlow, RimGauge).
+//
+// DESIGN-VISION §2 / BUILD-NOTE 2: "Hotspot anchors are defined per body-class, not per exact mesh,
+// so they map onto the proxy." This module is that single source: it maps a backend service `type`
+// to the body region you read it off, and gives each region a 3D anchor derived from the SAME
+// CarProxy DIMS the blueprint renders from — so pin / glow / arc never drift from the car.
+//
+// Coordinate space = the car group's local frame (turntable origin), +x = front of the vehicle,
+// +y = up, the floor at y≈0. Approximate (the proxy is a crude blueprint by design); precise
+// per-mesh anchoring waits for the real .glb in Stage D.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type BodyRegion = 'hood' | 'windshield' | 'frontAxle' | 'rearAxle' | 'bay';
+
+/** Every region key, in head-to-tail reading order. */
+export const BODY_REGIONS: BodyRegion[] = ['hood', 'windshield', 'frontAxle', 'rearAxle', 'bay'];
+
+/** A French region heading for the grouped hotspot card (the per-service rows carry the real names). */
+export const REGION_LABEL: Record<BodyRegion, string> = {
+  hood: 'Moteur',
+  windshield: 'Contrôle',
+  frontAxle: 'Freins · Pneus',
+  rearAxle: 'Transmission',
+  bay: 'Filtration',
+};
+
+// snake_case service type → the body region it is read off. Unmapped types default to the hood.
+const TYPE_REGION: Record<string, BodyRegion> = {
+  oil_change: 'hood',
+  oil_filter: 'hood',
+  timing_belt: 'hood',
+  coolant: 'hood',
+  spark_plugs: 'hood',
+  air_filter: 'bay',
+  cabin_filter: 'bay',
+  fuel_filter: 'bay',
+  battery: 'bay',
+  brake_fluid: 'frontAxle',
+  brake_pads: 'frontAxle',
+  brake_discs: 'frontAxle',
+  tyres: 'frontAxle',
+  technical_inspection: 'windshield',
+  chain: 'rearAxle',
+};
+
+/** Where on the car you read a given service type. Total + never throws (unmapped → hood). */
+export function regionForType(type: string): BodyRegion {
+  return TYPE_REGION[type] ?? 'hood';
+}
+
+export type Anchor = [number, number, number];
+
+/**
+ * Per-body-class 3D anchor for each region, derived from CarProxy DIMS (cars) or the Moto layout.
+ * The numbers track CarProxy's own body/cabin/wheel math so a pin sits over the part it names.
+ */
+export function regionAnchors(bodyClass: BodyClass): Record<BodyRegion, Anchor> {
+  if (bodyClass === 'moto') {
+    const r = 0.32;
+    const axleX = 0.72;
+    const seatY = r + 0.34; // matches Moto's frame box centre
+    return {
+      hood: [0.05, seatY + 0.32, 0], // the engine/tank mass
+      windshield: [0.55, seatY + 0.46, 0],
+      frontAxle: [axleX, r + 0.06, 0.05],
+      rearAxle: [-axleX, r + 0.06, 0.05],
+      bay: [0.0, seatY + 0.12, 0],
+    };
+  }
+  const d = DIMS[bodyClass];
+  const axleX = d.len / 2 - d.wheelR - 0.1; // CarProxy axle placement
+  const axleZ = d.wid / 2 - 0.02;
+  const bodyTop = d.wheelR + d.bodyH; // top face of the lower body box
+  const cabinTop = bodyTop + d.cabinH - 0.06; // top of the greenhouse box
+  return {
+    hood: [d.len * 0.32, bodyTop + 0.14, 0], // front-top of the body, ahead of the cabin
+    bay: [d.len * 0.16, bodyTop + 0.1, 0], // engine bay, just behind the hood line
+    windshield: [d.cabinOff + d.cabinLen * 0.42, cabinTop + 0.04, 0], // front of the greenhouse
+    frontAxle: [axleX, d.wheelR + 0.06, axleZ + 0.06], // near-side front wheel
+    rearAxle: [-axleX, d.wheelR + 0.06, axleZ + 0.06], // near-side rear wheel
+  };
+}
+
+/**
+ * The turntable rim-gauge annulus (RimGauge §2 "the rim is the global gauge"). A thin flat ring just
+ * above the disc top (CarProxy's disc is 0.12 tall centred at y=-0.04 → top ≈ y=0.02; the inlaid
+ * light-ring spans r=3.0–3.18). The gauge arcs sit fractionally above/over it.
+ */
+export const RIM = { inner: 3.02, outer: 3.2, y: 0.05, segments: 64 } as const;

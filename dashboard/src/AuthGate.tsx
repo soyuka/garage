@@ -1,41 +1,49 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import './auth.css';
 import { completeLoginIfCallback, isAuthenticated, login } from './auth';
 
-type Phase = 'checking' | 'anon' | 'authed';
+// The React glue over the pure auth core. AuthBoot resolves the OAuth callback before the app paints
+// (so a held token is ready for the first read); RequireAuth bounces a signed-out visitor to Casdoor.
+// Public dev playgrounds mount under AuthBoot but NOT RequireAuth — only the live garage surface is
+// gated (every write + the agent turn need a Bearer; reads are public but show nothing pre-sign-in).
+
+type BootPhase = 'checking' | 'ready';
 
 /**
- * Gates the app behind a Casdoor login. On mount it first completes the OAuth callback if the page
- * loaded on /callback (exchanging the code for a token), then renders the app when a token is held
- * or a sign-in screen when not. The whole dashboard is behind auth because every write + the agent
- * turn now require a Bearer; reads are public but there is nothing to show before sign-in anyway.
+ * Completes the `/callback` token exchange (a no-op on any other path) before rendering children. A
+ * failed exchange is swallowed — the visitor simply lands signed-out. Shows a terse splash meanwhile.
  */
-export function AuthGate({ children }: { children: ReactNode }) {
-  const [phase, setPhase] = useState<Phase>('checking');
-
+export function AuthBoot({ children }: { children: ReactNode }) {
+  const [phase, setPhase] = useState<BootPhase>('checking');
   useEffect(() => {
     completeLoginIfCallback()
       .catch(() => undefined)
-      .finally(() => setPhase(isAuthenticated() ? 'authed' : 'anon'));
+      .finally(() => setPhase('ready'));
   }, []);
-
-  if (phase === 'checking') {
-    return <div className="auth-screen">Connexion…</div>;
-  }
-
-  if (phase === 'anon') {
+  if (phase === 'checking')
     return (
-      <div className="auth-screen">
-        <div className="auth-card">
-          <div className="mark">M</div>
-          <h1>mon-parc-auto · Atelier</h1>
-          <p>Connectez-vous pour accéder à votre garage.</p>
-          <button type="button" className="auth-button" onClick={() => void login()}>
-            Se connecter
-          </button>
-        </div>
+      <div className="at-auth-splash" role="status" aria-live="polite">
+        Connexion…
       </div>
     );
-  }
-
   return <>{children}</>;
+}
+
+/** Gate the live app: signed out → a Casdoor sign-in bounce; signed in → the children. */
+export function RequireAuth({ children }: { children: ReactNode }) {
+  if (isAuthenticated()) return <>{children}</>;
+  return (
+    <div className="at-auth-screen">
+      <div className="at-auth-card">
+        <div className="at-auth-mark" aria-hidden="true">
+          ◉
+        </div>
+        <h1>mon-parc-auto · l’Atelier</h1>
+        <p>Connectez-vous pour ouvrir votre garage.</p>
+        <button type="button" className="at-auth-button" onClick={() => void login()}>
+          Se connecter
+        </button>
+      </div>
+    </div>
+  );
 }

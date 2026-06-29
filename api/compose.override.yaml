@@ -23,7 +23,7 @@ services:
       FRANKENPHP_WORKER_CONFIG: ""
       FRANKENPHP_SITE_CONFIG: hot_reload
       MERCURE_EXTRA_DIRECTIVES: demo
-      # Caddy reverse-proxies @frontend requests here (the dashboard service on the compose network).
+      # Caddy reverse-proxies @frontend requests here (the Atelier dev server on the compose network).
       FRONTEND_UPSTREAM: dashboard:5173
       # See https://xdebug.org/docs/all_settings#mode
       XDEBUG_MODE: "${XDEBUG_MODE:-develop}"
@@ -51,10 +51,10 @@ services:
       APP_ENV: "${APP_ENV:-dev}"
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
 
-  # Dashboard — Vite/React dev server, served same-origin behind Caddy at https://localhost.
-  # Dev-only (lives in the override): prod builds the SPA to static assets instead of proxying.
-  # Context is ../dashboard (sibling of api/); node_modules is an anonymous volume so the host
-  # tree never shadows the in-container install (arch-specific esbuild binary).
+  # Dashboard (Atelier) — Vite/React dev server, served same-origin behind Caddy at https://localhost.
+  # Caddy's @frontend upstream. Dev-only (lives in the override): prod builds the SPA to static assets
+  # instead of proxying. Context is ../dashboard (sibling of api/); node_modules is an anonymous volume
+  # so the host tree never shadows the in-container install (arch-specific esbuild).
   dashboard:
     image: node:22-alpine
     working_dir: /app
