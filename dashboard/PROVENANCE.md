@@ -496,3 +496,51 @@ Toro Wheel Horse → groundscare mesh (small, real-scale) + hotspots render; all
 clean on the happy path. Fallback: a 404'd asset falls back to `CarProxy` (boxes), stage never blank — the
 load-failure console errors are the genuine missing-asset signal, only on that path. Vehicle switch clean,
 single canvas (no leak). Credits panel: 5 CC-BY lines + working links. tsc clean · 248 tests · anti-reuse 0.
+
+---
+
+## Stage D.2 — live blueprint thumbnails on Le Parc
+
+Replaces the flat SVG `SilhouetteCar` on each parc card with a small spinning blueprint mesh, rendered
+through ONE shared WebGL canvas via drei `<View>` (never N canvases — that blows the browser context cap).
+Reuses Stage D end-to-end. All Tier-2 / browser-verified (R3F leaves aren't unit-tested; pure resolver is).
+
+- **`vehicleMesh.ts`** — `MeshSpec` gains `thumbUrl` (pure `-web.glb`→`-thumb.glb`, falls back to `url`
+  when no `-web` suffix). 3 new unit tests.
+- **`blueprintBuild.ts`** (new) — the clone/recenter/per-mesh-edges/**dispose-safe** logic extracted from
+  `VehicleMesh.tsx` so the hero leaf and the thumb share ONE copy (incl. the "never dispose cached glb
+  geometry" rule). `VehicleMesh` now calls it. **Session edges cache** (keyed `url|edgeAngle`): the
+  O(triangles) `EdgesGeometry` is computed once per mesh — the deterministic recentre lets the world
+  transform be BAKED into the geometry, so it is shared read-only across remounts AND concurrent parc
+  cards. Killed the parc↔hero navigation lag (was rebuilding 185k-tri edges on every mount).
+- **`ParcThumb.tsx`** (new) — loads `spec.thumbUrl`, builds the blueprint, **normalizes each vehicle to a
+  unit box centred at the origin** (unlike the hero, which keeps real-metre scale — a thumb should fill its
+  own card) and spins via `useFrame`, gated by `active` (IntersectionObserver) and `reduced` (static, no
+  spin) and tab visibility. Edges stay steel-blue `#a8c4dc` (signal is carried by the ring + tag).
+- **`ParcLot.tsx`** — mounts one `<Canvas frameloop="always" …><View.Port/></Canvas>` (fixed, transparent,
+  `pointer-events:none` so card-button clicks pass through), each card renders `<View className>` (drei
+  HtmlView tracks its OWN div — do NOT pass `track` from outside a Canvas; that was the bug that left the
+  grid blank) wrapping `MeshErrorBoundary`+`Suspense`(fallback `CarProxy`)+`ParcThumb`. Per-card
+  `IntersectionObserver` + `visibilitychange` gating. WebGL-unavailable → whole grid degrades to the SVG.
+- **Thumb assets** (`public/*-thumb.glb` ×5) — gltf-transform draco decimation; see BLUEPRINT-PIPELINE.
+
+### Key gotchas (verified live)
+- drei `<View>` OUTSIDE a Canvas = HtmlView: it renders + tracks its OWN div; the `track` prop is for the
+  in-canvas variant. Pass `className`/`style` to the `<View>` and let it be the stage element.
+- The shared canvas is `pointer-events:none` (clicks reach the card `<button>`) and one context for the
+  whole grid (verified: 1 `<canvas>` for 6 cards). The `favicon.ico` 404 is pre-existing, not a thumb.
+- `frameloop="always"` (not `demand` under reduced): demand risked a blank thumb (no frame after the async
+  glb resolves); `reduced` only stops the spin (static re-render isn't motion).
+
+### Hero progressive low→high reveal (landed)
+- **`VehicleBody.ThumbThenFull`** — nested Suspense: the `-thumb.glb` renders first (inner fallback) while
+  the full `-web.glb` streams in on demand, then swaps. Both go through VehicleMesh/buildBlueprint at real
+  scale → in-place swap (edges densify, no jump). Collapses to one load when `thumbUrl === url`.
+- **`VehicleMesh` now preloads the THUMBS, not the full glbs** — eager full-preload would decode the full
+  mesh before the hero mounts, so the thumb stage would never show. Now: thumb instant (preloaded), full
+  on-demand per vehicle. Lighter initial warm (~850 KB of thumbs vs ~7 MB of fulls) too.
+
+Verified live (admin owner): each card shows its mesh (Espace→specific, Peugeots/Mazda→car default,
+Toro→groundscare tractor), normalized + spinning over the signal ring; click → hero; leaving `#/` releases
+the parc canvas. Hero progressive load verified in the network (5 thumbs preloaded → espace full glb
+fetched on demand → dense full mesh swapped in). tsc clean · 251 tests · anti-reuse 0.

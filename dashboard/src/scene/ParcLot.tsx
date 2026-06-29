@@ -1,13 +1,56 @@
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { View } from '@react-three/drei';
 import { SilhouetteCar } from './SilhouetteCar';
-import { bodyClassFor } from './CarProxy';
+import { bodyClassFor, CarProxy } from './CarProxy';
+import { resolveMesh } from './vehicleMesh';
+import { ParcThumb } from './ParcThumb';
+import { MeshErrorBoundary } from './VehicleBody';
 import { formatHorizon, formatOverdue, formatReading } from '../format';
 import { serviceLabel } from '../labels';
 import type { Iri, NextDue, Signal, VehicleSummary } from '../types';
 import './parclot.css';
 
-// §6 "Le Parc" — the fleet as a grid of baked-render-style cards (NOT live 3D: the flat SVG
-// silhouette). Each card carries a base-ring in the car's health colour, ALWAYS paired with a text
-// health tag (§8: signal is never colour alone). Most-recent-first. Own route #/parc.
+// §6 "Le Parc" — the fleet as a grid of cards. Each card's stage shows a small SPINNING blueprint mesh
+// (the low-poly thumb) rendered through ONE shared WebGL canvas via drei <View> (never N canvases — that
+// blows the browser context cap). Each card keeps its signal base-ring, ALWAYS paired with a text health
+// tag (§8: signal is never colour alone). Most-recent-first. WebGL-unavailable devices degrade to the
+// flat SVG silhouette. Own route #/parc.
+
+// One-shot WebGL capability probe (the whole grid degrades to the SVG silhouette when false).
+function detectWebgl(): boolean {
+  try {
+    const c = document.createElement('canvas');
+    return !!(window.WebGLRenderingContext && (c.getContext('webgl') || c.getContext('experimental-webgl')));
+  } catch {
+    return false;
+  }
+}
+
+// Per-card visibility — only on-screen cards spin (drei culls the GPU draw of an offscreen View, but NOT
+// our useFrame spin; the IntersectionObserver gates that).
+function useInView<T extends Element>(ref: React.RefObject<T | null>): boolean {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { rootMargin: '120px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [ref]);
+  return inView;
+}
+
+// Pause every spin while the tab is hidden.
+function usePageVisible(): boolean {
+  const [visible, setVisible] = useState(() => (typeof document === 'undefined' ? true : !document.hidden));
+  useEffect(() => {
+    const on = () => setVisible(!document.hidden);
+    document.addEventListener('visibilitychange', on);
+    return () => document.removeEventListener('visibilitychange', on);
+  }, []);
+  return visible;
+}
 
 interface ParcLotProps {
   vehicles: VehicleSummary[];
@@ -80,17 +123,35 @@ export function horizonFor(n: NextDue): string {
   return '';
 }
 
-function ParcCard({ vehicle, onSelect }: { vehicle: VehicleSummary; onSelect?: (iri: Iri) => void }) {
+function ParcCard({
+  vehicle,
+  onSelect,
+  live,
+  reduced,
+  paused,
+}: {
+  vehicle: VehicleSummary;
+  onSelect?: (iri: Iri) => void;
+  live: boolean;
+  reduced: boolean;
+  paused: boolean;
+}) {
   const v = vehicle;
   const signal = parcSignal(v);
   const tag = tagFor(signal);
   const bodyClass = bodyClassFor(v.vehicleType);
+  const paint = paintFor(v.make);
   const sub = [v.year, v.engineVariant].filter(Boolean).join(' · ');
   const horizon = v.nextDue ? horizonFor(v.nextDue) : null;
   const activate = onSelect ? () => onSelect(v['@id']) : undefined;
   // A blank just-created vehicle has empty make/model — degrade the name (and the button's accessible
   // name) to a readable fallback instead of bare whitespace.
   const name = [v.make, v.model].filter(Boolean).join(' ') || 'Véhicule sans nom';
+
+  const stageRef = useRef<HTMLDivElement>(null);
+  const inView = useInView(stageRef);
+  const spec = resolveMesh(v);
+  const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
 
   return (
     <button
@@ -100,9 +161,20 @@ function ParcCard({ vehicle, onSelect }: { vehicle: VehicleSummary; onSelect?: (
       onClick={activate}
       aria-label={`${name}${v.plate ? `, ${v.plate}` : ''} — ${tag.text}`}
     >
-      <div className="at-parc-stage">
+      <div className="at-parc-stage" ref={stageRef}>
         <span className="at-parc-ring" aria-hidden="true" />
-        <SilhouetteCar bodyClass={bodyClass} paint={paintFor(v.make)} />
+        {live ? (
+          // drei <View> (outside a Canvas) renders + tracks ITS OWN div — style it to fill the stage.
+          <View className="at-parc-view">
+            <MeshErrorBoundary key={spec.thumbUrl} fallback={proxy}>
+              <Suspense fallback={proxy}>
+                <ParcThumb spec={spec} paint={paint} active={inView && !paused} reduced={reduced} />
+              </Suspense>
+            </MeshErrorBoundary>
+          </View>
+        ) : (
+          <SilhouetteCar bodyClass={bodyClass} paint={paint} />
+        )}
       </div>
 
       <div className="at-parc-head">
@@ -152,6 +224,12 @@ function AddCard({ onAdd }: { onAdd: () => void }) {
 
 export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotProps) {
   const ordered = byRecency(vehicles);
+  // WebGL probed once on mount (SSR-safe: false until mounted, then the real capability).
+  const [live, setLive] = useState(false);
+  useEffect(() => setLive(detectWebgl()), []);
+  const pageVisible = usePageVisible();
+  const paused = !pageVisible;
+
   if (ordered.length === 0 && !onAddVehicle) {
     return (
       <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label="Le parc">
@@ -161,10 +239,25 @@ export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotPr
   }
   return (
     <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label="Le parc">
+      {live && (
+        // ONE shared canvas for every card's <View>. Fixed + transparent + pointer-events:none so it
+        // overlays the stages (drei tracks each rect per frame) without blocking the card buttons.
+        <Canvas
+          className="at-parc-canvas"
+          frameloop="always"
+          dpr={[1, 1.5]}
+          gl={{ antialias: true, alpha: true }}
+          camera={{ position: [2.0, 1.3, 2.6], fov: 32, near: 0.1, far: 100 }}
+          onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
+          style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}
+        >
+          <View.Port />
+        </Canvas>
+      )}
       <ul className="at-parc-grid">
         {ordered.map((v) => (
           <li key={v['@id']}>
-            <ParcCard vehicle={v} onSelect={onSelect} />
+            <ParcCard vehicle={v} onSelect={onSelect} live={live} reduced={!!reduced} paused={paused} />
           </li>
         ))}
         {onAddVehicle && (

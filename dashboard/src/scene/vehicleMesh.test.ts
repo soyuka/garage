@@ -69,3 +69,26 @@ describe('resolveMesh — edge angle + invariants', () => {
     }
   });
 });
+
+describe('resolveMesh — thumbUrl (low-poly parc-grid variant)', () => {
+  it('derives -thumb.glb from the -web.glb url, same-origin absolute', () => {
+    expect(resolveMesh(v('car', 'Renault', 'Espace V')).thumbUrl).toBe('/renault-espace-iv-thumb.glb');
+    expect(resolveMesh(v('car', 'Mazda', '6')).thumbUrl).toBe('/mazda6-gh-thumb.glb');
+    expect(resolveMesh(v('moto')).thumbUrl).toBe('/moto-default-thumb.glb');
+    expect(resolveMesh(v('cv')).thumbUrl).toBe('/cv-default-thumb.glb');
+    expect(resolveMesh(v('groundscare')).thumbUrl).toBe('/groundscare-default-thumb.glb');
+    expect(resolveMesh(v('car')).thumbUrl).toBe('/mazda6-gh-thumb.glb');
+  });
+  it('thumbUrl honours make/model specificity exactly like url', () => {
+    const espaceTypedCv = resolveMesh(v('cv', 'Renault', 'Espace V'));
+    expect(espaceTypedCv.thumbUrl).toBe('/renault-espace-iv-thumb.glb');
+  });
+  it('every thumbUrl is a same-origin absolute .glb (falls back to url if no -web suffix)', () => {
+    for (const t of ['car', 'moto', 'cv', 'groundscare', 'spaceship', '']) {
+      const { url, thumbUrl } = resolveMesh(v(t));
+      expect(thumbUrl.startsWith('/')).toBe(true);
+      expect(thumbUrl.endsWith('.glb')).toBe(true);
+      expect(thumbUrl === url || thumbUrl === url.replace(/-web\.glb$/, '-thumb.glb')).toBe(true);
+    }
+  });
+});

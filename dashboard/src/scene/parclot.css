@@ -55,9 +55,17 @@
   outline-offset: 2px;
 }
 
-/* ── baked stage: the silhouette over a signal-tinted under-glow ring ─────── */
+/* ── shared WebGL canvas: one context, overlays every card's stage via drei <View> ─────── */
+.at-parc-canvas {
+  /* position/inset/pointer-events set inline (see ParcLot); z above the card glass so thumbs show,
+     transparent elsewhere so the rest of the page reads through. */
+  z-index: 2;
+}
+
+/* ── stage: the spinning blueprint thumb (or SVG fallback) over a signal-tinted under-glow ring ── */
 .at-parc-stage {
   position: relative;
+  height: 132px;
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -83,6 +91,11 @@
   max-width: 200px;
   height: auto;
   display: block;
+}
+/* the drei <View> div: fills the stage, the shared canvas paints the thumb into this rect */
+.at-parc-view {
+  position: absolute;
+  inset: 0;
 }
 
 /* ── header: plate chip (EU-blue band) + make/model + sub ─────────────────── */

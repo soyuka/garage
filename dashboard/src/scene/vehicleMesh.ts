@@ -7,10 +7,18 @@ import type { VehicleSummary } from '../types';
 export interface MeshSpec {
   /** Same-origin absolute path under public/. */
   url: string;
+  /** Low-poly variant for the parc grid (drei <View> thumbnails). Falls back to `url` if no `-web` suffix. */
+  thumbUrl: string;
   /** EdgesGeometry threshold (degrees) — moto's spoke/fin clutter needs a coarser 45°. */
   edgeAngle: number;
   /** Yaw correction so the mesh reads +x=front (anchors require it). Omitted = already aligned. */
   rotationY?: number;
+}
+
+// Every shipped asset is `<base>-web.glb` with a decimated `<base>-thumb.glb` sibling (BLUEPRINT-PIPELINE
+// "Thumb variants"). A url without the `-web` suffix has no thumb → reuse the full mesh (never a 404).
+function thumbFor(url: string): string {
+  return url.replace(/-web\.glb$/, '-thumb.glb');
 }
 
 type DefaultType = 'car' | 'moto' | 'cv' | 'groundscare';
@@ -55,6 +63,7 @@ function specificUrl(make: string, model: string): string | null {
 export function resolveMesh(v: Pick<VehicleSummary, 'vehicleType' | 'make' | 'model'>): MeshSpec {
   const url = specificUrl(v.make ?? '', v.model ?? '') ?? DEFAULT_URL[normalizeType(v.vehicleType ?? '')];
   const edgeAngle = normalizeType(v.vehicleType ?? '') === 'moto' ? 45 : 30;
+  const thumbUrl = thumbFor(url);
   const rotationY = ROTATION_Y[url];
-  return rotationY === undefined ? { url, edgeAngle } : { url, edgeAngle, rotationY };
+  return rotationY === undefined ? { url, thumbUrl, edgeAngle } : { url, thumbUrl, edgeAngle, rotationY };
 }

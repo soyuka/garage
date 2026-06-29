@@ -1,7 +1,6 @@
 import { useMemo, useEffect } from 'react';
 import { useGLTF } from '@react-three/drei';
-import * as THREE from 'three';
-import { EDGE, FILL_OPACITY } from './CarProxy';
+import { buildBlueprint } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
 
 // Stage D body leaf — the real optimized glb rendered AS A BLUEPRINT: a faint paint-tinted volume under
@@ -13,57 +12,24 @@ import type { MeshSpec } from './vehicleMesh';
 // Same-origin vendored DRACO decoder (no CDN); must be set before any useGLTF resolves.
 useGLTF.setDecoderPath('/draco/');
 
-const URLS = [
-  '/mazda6-gh-web.glb',
-  '/moto-default-web.glb',
-  '/cv-default-web.glb',
-  '/groundscare-default-web.glb',
-  '/renault-espace-iv-web.glb',
-];
-URLS.forEach((u) => useGLTF.preload(u));
+// Warm the small THUMB variants (not the heavy full glbs): the hero shows the thumb instantly while the
+// full mesh streams in on demand (progressive low→high reveal, see VehicleBody.ThumbThenFull). Eagerly
+// preloading the full glbs would defeat that — they'd be decoded before the hero mounts.
+[
+  '/mazda6-gh-thumb.glb',
+  '/moto-default-thumb.glb',
+  '/cv-default-thumb.glb',
+  '/groundscare-default-thumb.glb',
+  '/renault-espace-iv-thumb.glb',
+].forEach((u) => useGLTF.preload(u));
 
 export function VehicleMesh({ spec, paint }: { spec: MeshSpec; paint: string }) {
   const { scene } = useGLTF(spec.url);
-
-  const built = useMemo(() => {
-    // Clone before mutating — the drei cache hands back a shared object.
-    const clone = scene.clone(true);
-    if (spec.rotationY) clone.rotation.y = spec.rotationY;
-
-    // Re-centre to the turntable origin + floor (viewer.html:119-123), measured AFTER any yaw.
-    clone.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(clone);
-    const center = box.getCenter(new THREE.Vector3());
-    clone.position.x -= center.x;
-    clone.position.z -= center.z;
-    clone.position.y -= box.min.y;
-    clone.updateMatrixWorld(true);
-
-    const fillMat = new THREE.MeshBasicMaterial({ color: paint, transparent: true, opacity: FILL_OPACITY, depthWrite: false });
-    const edgeMat = new THREE.LineBasicMaterial({ color: EDGE });
-    const edges = new THREE.Group();
-    clone.traverse((o) => {
-      if ((o as THREE.Mesh).isMesh) {
-        const mesh = o as THREE.Mesh;
-        mesh.material = fillMat;
-        const seg = new THREE.LineSegments(new THREE.EdgesGeometry(mesh.geometry, spec.edgeAngle), edgeMat);
-        seg.applyMatrix4(mesh.matrixWorld);
-        edges.add(seg);
-      }
-    });
-    return { clone, edges, fillMat, edgeMat };
-  }, [scene, spec.edgeAngle, spec.rotationY, paint]);
-
-  // Dispose only what we created (per-instance edge geometries + the two materials). The source glb
-  // geometries/textures belong to the drei cache and are reused across mounts — never dispose them.
-  useEffect(() => {
-    const { edges, fillMat, edgeMat } = built;
-    return () => {
-      edges.children.forEach((c) => (c as THREE.LineSegments).geometry.dispose());
-      fillMat.dispose();
-      edgeMat.dispose();
-    };
-  }, [built]);
+  const built = useMemo(
+    () => buildBlueprint(scene, { edgeAngle: spec.edgeAngle, rotationY: spec.rotationY, paint, cacheKey: spec.url }),
+    [scene, spec.url, spec.edgeAngle, spec.rotationY, paint],
+  );
+  useEffect(() => built.dispose, [built]);
 
   return (
     <>

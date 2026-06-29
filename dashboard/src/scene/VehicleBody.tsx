@@ -8,10 +8,15 @@ import { VehicleMesh } from './VehicleMesh';
 // loads (showing the matching-body proxy so the stage never blanks), and catches any load/decode failure
 // to fall back to the same proxy. So CarProxy serves double duty — loading placeholder AND error
 // fallback — and the real mesh swaps in once decoded.
+//
+// Progressive low→high reveal: the small `-thumb.glb` (preloaded, see VehicleMesh) renders first as the
+// inner Suspense fallback while the full `-web.glb` streams in on demand; on a cold cache that bubbles to
+// the outer Suspense (→ proxy) until the thumb resolves. Sequence: proxy → thumb → full. Both go through
+// the same VehicleMesh/buildBlueprint at real scale, so the swap is in-place (edges densify, no jump).
 
 // useGLTF throws during suspended render on 404/decode error; only an error boundary catches a
 // render-phase throw, and there is none elsewhere in the app. Keep it tiny and scene-local.
-class MeshErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
+export class MeshErrorBoundary extends Component<{ fallback: ReactNode; children: ReactNode }, { failed: boolean }> {
   state = { failed: false };
   static getDerivedStateFromError() {
     return { failed: true };
@@ -21,6 +26,18 @@ class MeshErrorBoundary extends Component<{ fallback: ReactNode; children: React
   }
 }
 
+// Render the thumb first, swap to the full mesh once it loads. When thumbUrl === url (a mesh with no
+// thumb), the two collapse to one load (no double-fetch).
+function ThumbThenFull({ spec, paint }: { spec: ReturnType<typeof resolveMesh>; paint: string }) {
+  const thumbSpec = { ...spec, url: spec.thumbUrl };
+  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} />;
+  return (
+    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} />}>
+      <VehicleMesh spec={spec} paint={paint} />
+    </Suspense>
+  );
+}
+
 export function VehicleBody({ vehicle, bodyClass, paint }: { vehicle: VehicleSummary; bodyClass: BodyClass; paint: string }) {
   const spec = resolveMesh(vehicle);
   const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
@@ -28,7 +45,7 @@ export function VehicleBody({ vehicle, bodyClass, paint }: { vehicle: VehicleSum
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>
       <Suspense fallback={proxy}>
-        <VehicleMesh spec={spec} paint={paint} />
+        <ThumbThenFull spec={spec} paint={paint} />
       </Suspense>
     </MeshErrorBoundary>
   );
