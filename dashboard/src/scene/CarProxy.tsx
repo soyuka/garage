@@ -8,13 +8,27 @@ import { Edges } from '@react-three/drei';
 
 export type BodyClass = 'hatchback' | 'berline' | 'suv' | 'utilitaire' | 'moto';
 
-const EDGE = '#a8c4dc'; // blueprint line — cool, distinct from Le Noyau's cyan
-const FILL_OPACITY = 0.07; // a ghost of volume; the lines carry the form
+export const EDGE = '#a8c4dc'; // blueprint line — cool, distinct from Le Noyau's cyan
+export const FILL_OPACITY = 0.07; // a ghost of volume; the lines carry the form
 
+// Two VehicleType spellings reach this at runtime: legacy fixtures (car/motorcycle) and the API enum
+// App\Garage\VehicleType (car/moto/cv/groundscare). groundscare has no dedicated body shape — utilitaire
+// is the least-wrong fallback (only rendered when its real glb fails to load); a precise mower proxy is
+// a tracked follow-up. The returned value is always a DIMS/regionAnchors key.
 export function bodyClassFor(vehicleType: string): BodyClass {
-  if (vehicleType === 'motorcycle') return 'moto';
-  if (vehicleType === 'truck') return 'utilitaire';
-  return 'berline';
+  switch (vehicleType.trim().toLowerCase()) {
+    case 'moto':
+    case 'motorcycle':
+      return 'moto';
+    case 'cv':
+    case 'truck':
+    case 'van':
+    case 'groundscare':
+    case 'mower':
+      return 'utilitaire';
+    default:
+      return 'berline';
+  }
 }
 
 interface Dims {

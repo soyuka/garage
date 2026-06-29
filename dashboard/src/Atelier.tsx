@@ -42,6 +42,7 @@ import type { Cta } from './scene/CtaCard';
 import { firstNewlyOverdue } from './scene/crossing';
 import { useNoyau } from './noyau/useNoyau';
 import { useReducedMotion } from './scene/useReducedMotion';
+import { Credits } from './scene/Attribution';
 import { serviceLabel } from './labels';
 import type { Iri, MercureFrame, PlannedPart, PlannedTask, VehicleBundle, VehicleSummary } from './types';
 
@@ -537,6 +538,7 @@ function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?:
       <button type="button" onClick={onJournal} style={chip} title="Journal de l'agent" aria-label="Ouvrir le journal de l'agent">
         🪵 journal
       </button>
+      <Credits />
       <button type="button" onClick={() => logout()} style={chip}>
         Déconnexion
       </button>

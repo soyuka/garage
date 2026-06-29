@@ -453,3 +453,46 @@ pulse while the drawer was open (+ no out-of-order guard). **Fixed**: `onError` 
 guard drops a stale/overlapping resolve. Verified live: dossier open → records (14) + schedule (10) load
 once; schedule add `POST 201` + delete `204` with correct bodies; record create/delete + bill upload
 `201`/delete all work; console clean. tsc clean, 229 tests, anti-reuse 0.
+
+---
+
+## Stage D — real Draco .glb vehicle meshes (blueprint overlay)
+
+Replaces the procedural `CarProxy` boxes with real optimized glbs (pipeline: `theming/BLUEPRINT-PIPELINE.md`),
+overlaying the same steel-blue `EdgesGeometry` look. All Tier-2 (fresh; the old `dashboard/` never had glb
+code — nothing lifted).
+
+- **`scene/vehicleMesh.ts`** — pure `resolveMesh(vehicle) → {url, edgeAngle, rotationY?}`. Make/model map
+  (espace, mazda6) wins over a per-`VehicleType` `DEFAULT_URL` table; both spellings (`car/motorcycle`
+  fixtures, `car/moto/cv/groundscare` API) normalize. `ROTATION_Y` per-asset yaw override table is **empty**
+  — every shipped glb verified +x=front in-browser, none needed correction. 10 unit tests.
+- **`scene/CarProxy.tsx`** — `bodyClassFor` rewritten to accept both spellings (fixed live bug: `moto`
+  rendered as berline). `groundscare→utilitaire` (no dedicated mower body class — keeps `BodyClass`/`DIMS`/
+  `SilhouetteCar`/anchors unchanged; precise mower proxy is a tracked follow-up). Exports `EDGE`/`FILL_OPACITY`.
+  5 unit tests (tie `regionAnchors(bodyClassFor(t))` finite for every input).
+- **`scene/VehicleMesh.tsx`** — `useGLTF` (decoder `/draco/`, all 5 preloaded) → `scene.clone(true)` →
+  re-centre to origin+floor (per `viewer.html`) → faint blueprint fill (shared CarProxy recipe) + per-mesh
+  `EdgesGeometry(geom, edgeAngle)` LineSegments (drei `<Edges>` is single-mesh; glb is multi). Disposes only
+  per-instance edge geometries + the 2 materials we create (never the cached glb geometry).
+- **`scene/VehicleBody.tsx`** — resolver + `<Suspense fallback={CarProxy}>` + a minimal `MeshErrorBoundary`
+  class (first boundary in the app) catching `useGLTF`'s render-phase throw. CarProxy doubles as loading
+  placeholder AND error fallback → never blank, never wrong-body flash. `key={spec.url}` resets a failed
+  boundary on switch. Mounted at `Plateau.tsx:75` (replaces CarProxy; `BodyGlow`/`Hotspots` siblings unchanged).
+- **`scene/Attribution.tsx`** — `Credits` chip in the `Identity` chrome → CC-BY panel for the 5 Sketchfab
+  sources (model-page link where the full UID is known, title-search otherwise; `safeHref`). Espace author
+  `tonielpro520` confirmed via the Sketchfab data API. 4 unit tests.
+- **Assets**: 5 glbs + the three-0.169 DRACO decoder tree vendored to `dashboard/public/` (no CDN).
+
+### Verified infra divergence (NOT an API/backend change)
+
+`api/frankenphp/Caddyfile` `@frontend` matcher forwarded to Vite only on `Accept: text/html` navigations or
+Vite-internal path prefixes — so `.glb`/`/draco/*` fetches (GLTFLoader sends `Accept: */*`) fell through to
+PHP → 404. Added `'*.glb', '/draco/*'` to the matcher's `path()` branch so frontend static assets reach the
+Vite dev server same-origin. (In prod the SPA ships these as built static assets.) Caddy caches upstream DNS:
+after a `dashboard` container restart, restart `php` so Caddy re-resolves the new IP (else root 502).
+
+Verified live (chrome-devtools, admin owner): Espace → make/model mesh; Peugeot 206 → mazda6 car default;
+Toro Wheel Horse → groundscare mesh (small, real-scale) + hotspots render; all glb+`/draco/` 200, console
+clean on the happy path. Fallback: a 404'd asset falls back to `CarProxy` (boxes), stage never blank — the
+load-failure console errors are the genuine missing-asset signal, only on that path. Vehicle switch clean,
+single canvas (no leak). Credits panel: 5 CC-BY lines + working links. tsc clean · 248 tests · anti-reuse 0.

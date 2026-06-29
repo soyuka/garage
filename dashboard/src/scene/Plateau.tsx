@@ -2,7 +2,8 @@ import { Suspense, type RefObject } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { ForecastDue, VehicleSummary } from '../types';
-import { bodyClassFor, CarProxy } from './CarProxy';
+import { bodyClassFor } from './CarProxy';
+import { VehicleBody } from './VehicleBody';
 import { SilhouetteCar } from './SilhouetteCar';
 import { Hotspots } from './Hotspots';
 import { BodyGlow } from './BodyGlow';
@@ -72,7 +73,7 @@ function Plateau3D({
       <SceneLights />
       <Suspense fallback={null}>
         <group position={[0, 0.04, 0]}>
-          <CarProxy bodyClass={bodyClass} paint={paintFor(vehicle)} />
+          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} />
           {/* additive sick-region glow + hex hotspots share the car-local frame (B.2 step 2 leaves) */}
           <BodyGlow bodyClass={bodyClass} due={due} reduced={reduced} />
           <Hotspots bodyClass={bodyClass} due={due} reduced={reduced} portalTarget={portalTarget} onPlan={onPlan} />
