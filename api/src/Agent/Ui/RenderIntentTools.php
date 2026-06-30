@@ -25,6 +25,7 @@ use Webmozart\Assert\Assert;
 #[AsTool('select_vehicle', 'Focus the dashboard on one vehicle, by its @id (the IRI returned by list_vehicles, e.g. /garage/vehicles/01J...).', 'selectVehicle')]
 #[AsTool('toast', 'Show a transient toast to the user. tone is one of: info, ok, warn, alarm.', 'toast')]
 #[AsTool('show_fact', 'Surface a focused panel showing ONLY the requested fact(s) of the selected vehicle — use it to answer a spec question like "capacité huile moteur" without dumping the whole list. keys are vehicle-fact keys (e.g. oil_capacity, oil_type, spark_plug_ref). Pass a short title for the panel header.', 'showFact')]
+#[AsTool('focus_view', 'After answering, point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?") or "specs" (the spec/échéance panel — use for spec questions and manufacturer recommendations). keys are service-type or fact keys to spotlight (e.g. oil_change, timing_belt, air_filter); each lights its body region red on the car (moteur, filtration, freins…) and etches the matching panel rows. Omit keys to just raise the panel.', 'focusView')]
 #[AsTool('propose_actions', 'Render a call-to-action card: a headline, an optional one-line finding (e.g. "Trouvé en ligne : vidange + courroie"), and a few next-step buttons. Each button is ONE of two kinds. (1) NL follow-up: set "instruction" — clicking re-runs you with that text. (2) Deterministic write: set "taskId" (an open task id from the turn context) + "parts" [{ref, brand, label}] — clicking merges those parts onto that task via a direct PATCH, NO new turn, and the shopping list re-renders. ALWAYS prefer kind (2) for "add this reference" choices, and include one button that adds the recommended refs at once. Never offer a dead-end "see all options" button.', 'proposeActions')]
 final class RenderIntentTools
 {
@@ -107,6 +108,27 @@ final class RenderIntentTools
         $action = ['type' => 'showFact', 'keys' => array_values($keys)];
         if (null !== $title && '' !== trim($title)) {
             $action['title'] = $title;
+        }
+        $this->publish($action);
+
+        return 'ok';
+    }
+
+    /**
+     * Raises one panel into the centre slot and spotlights the given service/fact keys (each key
+     * lights its body region on the car and etches the matching panel rows). The dashboard maps a
+     * key to a region via its service-type table, so spotlighting is meaningful for service types
+     * (oil_change → moteur, air_filter → filtration); fact-only keys just etch the row.
+     *
+     * @param list<string> $keys service-type or fact keys to spotlight (empty → raise the panel only)
+     */
+    public function focusView(string $panel, array $keys = []): string
+    {
+        Assert::inArray($panel, ['specs', 'tasks']);
+        Assert::allStringNotEmpty($keys);
+        $action = ['type' => 'focusView', 'panel' => $panel];
+        if ([] !== $keys) {
+            $action['keys'] = array_values($keys);
         }
         $this->publish($action);
 

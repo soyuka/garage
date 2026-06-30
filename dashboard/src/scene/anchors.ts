@@ -52,6 +52,27 @@ export function regionForType(type: string): BodyRegion {
   return TYPE_REGION[type] ?? 'hood';
 }
 
+/**
+ * The car regions a spotlight should light for the given keys, deduped in head-to-tail order. Only
+ * KNOWN service types light a region — a pure fact key (oil_capacity) maps to nothing, so a spec
+ * question never glows the hood by the unmapped-→hood fallback.
+ */
+export function regionsForKeys(keys: string[]): BodyRegion[] {
+  const set = new Set<BodyRegion>();
+  for (const k of keys) {
+    const region = TYPE_REGION[k];
+    if (region) set.add(region);
+  }
+  return BODY_REGIONS.filter((r) => set.has(r));
+}
+
+/** The service types read off a region — the inverse of {@see regionForType} (for a pin → tasks focus). */
+export function typesForRegion(region: BodyRegion): string[] {
+  return Object.entries(TYPE_REGION)
+    .filter(([, r]) => r === region)
+    .map(([type]) => type);
+}
+
 export type Anchor = [number, number, number];
 
 /**

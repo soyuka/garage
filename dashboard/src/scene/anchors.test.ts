@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { regionForType, regionAnchors, RIM, BODY_REGIONS, type BodyRegion } from './anchors';
+import { regionForType, regionAnchors, regionsForKeys, typesForRegion, RIM, BODY_REGIONS, type BodyRegion } from './anchors';
 
 // The shared geometry seam every 3D leaf (Hotspots, BodyGlow, RimGauge) reads. Pin positions derive
 // from CarProxy DIMS so the blueprint car and its annotations never drift apart.
@@ -46,6 +46,29 @@ describe('regionAnchors — per-body-class 3D pin positions derived from CarProx
     const a = regionAnchors('berline');
     expect(a.hood[0]).toBeGreaterThan(a.rearAxle[0]);
     expect(a.frontAxle[0]).toBeGreaterThan(a.rearAxle[0]);
+  });
+});
+
+describe('regionsForKeys — which car regions a spotlight lights (service-type keys only)', () => {
+  it('maps service-type keys to their regions, deduped in head-to-tail order', () => {
+    expect(regionsForKeys(['oil_change', 'timing_belt'])).toEqual(['hood']);
+    expect(regionsForKeys(['brake_pads', 'oil_change'])).toEqual(['hood', 'frontAxle']);
+  });
+  it('ignores fact-only keys (a pure spec question lights nothing — no false hood glow)', () => {
+    expect(regionsForKeys(['oil_capacity', 'oil_type'])).toEqual([]);
+  });
+  it('is empty for no keys', () => {
+    expect(regionsForKeys([])).toEqual([]);
+  });
+});
+
+describe('typesForRegion — the service types read off a region (inverse of regionForType)', () => {
+  it('lists every type mapped to the region', () => {
+    expect(new Set(typesForRegion('bay'))).toEqual(new Set(['air_filter', 'cabin_filter', 'fuel_filter', 'battery']));
+    expect(typesForRegion('windshield')).toEqual(['technical_inspection']);
+  });
+  it('round-trips: every returned type reads back to the same region', () => {
+    for (const r of BODY_REGIONS) for (const t of typesForRegion(r)) expect(regionForType(t)).toBe(r);
   });
 });
 

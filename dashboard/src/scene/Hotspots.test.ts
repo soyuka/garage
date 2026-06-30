@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { groupByRegion, worstSignal } from './Hotspots';
+import { groupByRegion, worstSignal, pinGroups, pinSignal } from './Hotspots';
 import type { ForecastDue } from '../types';
 
 // Pure-logic guards for the Hotspots leaf: one pin PER OCCUPIED region (services sharing a region must
@@ -64,5 +64,39 @@ describe('worstSignal — red beats amber beats green over a region', () => {
 
   it('an empty region is green (never invents urgency)', () => {
     expect(worstSignal([])).toBe('green');
+  });
+});
+
+describe('pinGroups — the pins shown = due regions ∪ spotlit regions', () => {
+  it('matches groupByRegion when nothing is spotlit', () => {
+    const forecast = [due('oil_change'), due('tyres')];
+    expect(pinGroups(forecast).map((g) => g.region)).toEqual(['hood', 'frontAxle']);
+    expect(pinGroups(forecast).every((g) => !g.forced)).toBe(true);
+  });
+
+  it('adds a forced pin for a spotlit region with no due (head-to-tail order)', () => {
+    const groups = pinGroups([due('oil_change')], ['bay']);
+    expect(groups.map((g) => g.region)).toEqual(['hood', 'bay']);
+    const bay = groups.find((g) => g.region === 'bay')!;
+    expect(bay.forced).toBe(true);
+    expect(bay.dues).toEqual([]);
+  });
+
+  it('marks an existing due region forced when it is also spotlit (no duplicate pin)', () => {
+    const groups = pinGroups([due('oil_change')], ['hood']);
+    expect(groups.map((g) => g.region)).toEqual(['hood']);
+    expect(groups[0].forced).toBe(true);
+    expect(groups[0].dues.map((d) => d.type)).toEqual(['oil_change']);
+  });
+});
+
+describe('pinSignal — a forced (spotlit) pin reads red, else its worst due signal', () => {
+  it('forces red regardless of due signal', () => {
+    expect(pinSignal({ region: 'bay', dues: [], forced: true })).toBe('red');
+    expect(pinSignal({ region: 'hood', dues: [due('oil_change')], forced: true })).toBe('red');
+  });
+  it('falls back to the region worst signal when not forced', () => {
+    expect(pinSignal({ region: 'hood', dues: [due('oil_change', { overdue: true })], forced: false })).toBe('red');
+    expect(pinSignal({ region: 'hood', dues: [due('oil_change')], forced: false })).toBe('green');
   });
 });

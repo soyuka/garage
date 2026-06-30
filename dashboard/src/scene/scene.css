@@ -50,7 +50,10 @@
   inset: 0;
   z-index: 0; /* the car owns the whole frame, behind everything */
 }
-.at-scene-float {
+/* The single swappable slot (right). Default = the specs truth-panel (self-glassed); tasks = the
+   checklist (the slot supplies the glass it lacks). A focus lifts the slot toward the operator and
+   recedes the stage — the spotlight. */
+.at-scene-slot {
   position: absolute;
   top: 78px;
   right: 26px;
@@ -59,16 +62,30 @@
   max-width: calc(100vw - 52px);
   max-height: calc(100vh - 78px - 260px); /* clear of the dock */
   overflow: auto;
+  transition: transform 240ms ease, box-shadow 240ms ease;
 }
 /* the floating slab is more transparent than a docked panel, so the turning car reads behind it */
-.at-scene-float .glass { background: rgba(12, 13, 16, 0.62); }
+.at-scene-slot .glass { background: rgba(12, 13, 16, 0.62); }
+/* tasks mode: the checklist carries no glass of its own, so the slot supplies it */
+.at-scene-slot[data-panel='tasks'] {
+  padding: var(--at-space-4);
+  background: rgba(12, 13, 16, 0.62);
+  border-radius: var(--at-radius-glass);
+}
+.at-scene-slot[data-focused] { transform: scale(1.04); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+.at-scene-stage-full[data-dim],
+.at-scene-cardinals[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+@media (prefers-reduced-motion: reduce) {
+  .at-scene-slot { transition: none; }
+  .at-scene-slot[data-focused] { transform: none; }
+}
 
 /* cardinal readouts ring the DISC, not the screen edges — a band that clears the top controls and the
    bottom dock (the leaf positions its 4 cells at the band's N/E/S/W). pointer-events stay off. */
 .at-scene-cardinals {
   position: absolute;
   /* a symmetric central band: top/bottom cells stay centred on the car, while the left/right cells are
-     pulled inboard of the floating truth-panel (right) and the établi (left) so nothing is occluded. */
+     pulled inboard of the swappable slot (right) so nothing is occluded. */
   inset: 100px 392px 230px 392px;
   z-index: 5;
   pointer-events: none;
@@ -79,29 +96,6 @@
    the panels. Layer ignores pointer events; the cards themselves re-enable them. */
 .at-scene-hotspot-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .at-scene-hotspot-layer .at-hot { pointer-events: auto; }
-
-/* the left column — the open-checklist (#10). A floating glass stack (mirror of the truth-panel).
-   Clears the dock; the checklist scrolls inside. */
-.at-scene-left {
-  position: absolute;
-  top: 78px;
-  left: 26px;
-  z-index: 10;
-  width: 320px;
-  max-width: calc(100vw - 52px);
-  max-height: calc(100vh - 78px - 230px); /* clear of the dock */
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  overflow: hidden;
-}
-.at-scene-checklist {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow: auto;
-  padding: var(--at-space-4);
-  background: rgba(12, 13, 16, 0.62);
-}
 
 /* ── canvas-off fallback (rung d) — the honest floor, two-up ── */
 .at-scene-floor {

@@ -2,6 +2,7 @@ import { Suspense, type RefObject } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import type { ForecastDue, VehicleSummary } from '../types';
+import type { BodyRegion } from './anchors';
 import { bodyClassFor } from './CarProxy';
 import { VehicleBody } from './VehicleBody';
 import { SilhouetteCar } from './SilhouetteCar';
@@ -58,13 +59,15 @@ function Plateau3D({
   due,
   reduced,
   portalTarget,
-  onPlan,
+  highlight,
+  onFocusRegion,
 }: {
   vehicle: VehicleSummary;
   due: ForecastDue[];
   reduced: boolean;
   portalTarget?: RefObject<HTMLDivElement | null>;
-  onPlan?: (due: ForecastDue) => void;
+  highlight?: BodyRegion[];
+  onFocusRegion?: (r: BodyRegion) => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
   return (
@@ -75,8 +78,8 @@ function Plateau3D({
         <group position={[0, 0.04, 0]}>
           <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} />
           {/* additive sick-region glow + hex hotspots share the car-local frame (B.2 step 2 leaves) */}
-          <BodyGlow bodyClass={bodyClass} due={due} reduced={reduced} />
-          <Hotspots bodyClass={bodyClass} due={due} reduced={reduced} portalTarget={portalTarget} onPlan={onPlan} />
+          <BodyGlow bodyClass={bodyClass} due={due} reduced={reduced} highlight={highlight} />
+          <Hotspots bodyClass={bodyClass} due={due} reduced={reduced} portalTarget={portalTarget} highlight={highlight} onFocusRegion={onFocusRegion} />
         </group>
         <Turntable />
         {/* the rim is the global gauge — one arc per tracked system, lit by signal (world space) */}
@@ -102,14 +105,16 @@ export function Plateau({
   due,
   reduced = false,
   portalTarget,
-  onPlan,
+  highlight,
+  onFocusRegion,
 }: {
   vehicle: VehicleSummary;
   rung: Rung;
   due: ForecastDue[];
   reduced?: boolean;
   portalTarget?: RefObject<HTMLDivElement | null>;
-  onPlan?: (due: ForecastDue) => void;
+  highlight?: BodyRegion[];
+  onFocusRegion?: (r: BodyRegion) => void;
 }) {
   if (rung === 'd') {
     return (
@@ -128,7 +133,7 @@ export function Plateau({
   // a (no .glb yet → proxy) and b
   return (
     <div className="at-plateau">
-      <Plateau3D vehicle={vehicle} due={due} reduced={reduced} portalTarget={portalTarget} onPlan={onPlan} />
+      <Plateau3D vehicle={vehicle} due={due} reduced={reduced} portalTarget={portalTarget} highlight={highlight} onFocusRegion={onFocusRegion} />
     </div>
   );
 }

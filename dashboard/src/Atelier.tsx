@@ -40,10 +40,12 @@ import { DossierPanel } from './DossierPanel';
 import { maintUnitFor } from './records';
 import type { Cta } from './scene/CtaCard';
 import { firstNewlyOverdue } from './scene/crossing';
+import { typesForRegion, type BodyRegion } from './scene/anchors';
 import { useNoyau } from './noyau/useNoyau';
 import { useReducedMotion } from './scene/useReducedMotion';
 import { Credits } from './scene/Attribution';
 import { serviceLabel } from './labels';
+import { focusForAction, type Focus } from './focus';
 import type { Iri, MercureFrame, PlannedPart, PlannedTask, VehicleBundle, VehicleSummary } from './types';
 
 // The LIVE Atelier orchestrator (Stage C). Parc-first: the fleet grid at #/, selecting a car drives
@@ -62,10 +64,11 @@ export function Atelier() {
   const reduced = useReducedMotion();
   // One session per tab — scopes the agent's render-intent topic (slice 5 posts turns onto it).
   const [sessionId] = useState(() => crypto.randomUUID());
-  // Turn-scoped agent surfaces: a `proposeActions` card + a `showFact` row focus. Cleared on a new turn
-  // (its context is captured in pendingContext first) and on manual navigation.
+  // Turn-scoped agent surfaces: a `proposeActions` card + the unified slot focus (which panel is in the
+  // centre slot + which keys are spotlit on the car/panel). Driven by `focusView`/`showFact` intents and
+  // by car-pin clicks. Cleared on a new turn (its context is captured in pendingContext first) and on nav.
   const [cta, setCta] = useState<Cta | null>(null);
-  const [factFocus, setFactFocus] = useState<{ keys: string[]; title?: string } | null>(null);
+  const [focus, setFocus] = useState<Focus | null>(null);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   // #10 checklist: "voir les tâches retirées" pulls a includeDismissed list (the bundle carries open+done).
@@ -90,7 +93,7 @@ export function Atelier() {
   useEffect(() => {
     setError(null); // a fresh selection recovers from a prior vehicle's load failure
     setCta(null); // the prior vehicle's transient agent surfaces don't linger across navigation
-    setFactFocus(null);
+    setFocus(null);
     setShowDismissed(false); // each vehicle's checklist starts collapsed (open+done only)
     setDismissedTasks([]);
     setDossierOpen(false); // the dossier is per-vehicle — close it on navigation
@@ -203,8 +206,9 @@ export function Atelier() {
         armWatchdog();
       } else if (frame.type === 'selectVehicle') {
         window.location.hash = hashForVehicle(frame.id); // drive-forward into the named car
-      } else if (frame.type === 'showFact') {
-        setFactFocus({ keys: frame.keys, title: frame.title });
+      } else if (frame.type === 'focusView' || frame.type === 'showFact') {
+        // Both raise the single slot. showFact is the specs-only subset (see focusForAction).
+        setFocus(focusForAction(frame));
       } else if (frame.type === 'proposeActions') {
         setCta({ headline: frame.headline, finding: frame.finding, actions: frame.actions });
       } else if (frame.type === 'setVehicles') {
@@ -230,7 +234,7 @@ export function Atelier() {
           .join(' — ')
       : undefined;
     setCta(null);
-    setFactFocus(null);
+    setFocus(null);
     dispatch({ type: 'turn', phase: 'start' });
     armWatchdog();
     const v = heroBundle?.vehicle;
@@ -248,6 +252,9 @@ export function Atelier() {
   // CTA action paths. `instruction` re-runs the agent (a fresh turn, supersedes the card). `patchTask`
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
   // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
+  // Click a car pin → spotlight that region's tasks in the slot (the local twin of the agent's focusView).
+  const onFocusRegion = (region: BodyRegion) => setFocus({ panel: 'tasks', keys: typesForRegion(region) });
+
   const onCtaInstruction = (instruction: string) => send(instruction);
   const onCtaPatch = (patch: { id: Iri; parts: PlannedPart[] }) => {
     setCta(null);
@@ -470,7 +477,8 @@ export function Atelier() {
             onCtaInstruction={onCtaInstruction}
             onCtaPatch={onCtaPatch}
             onCtaDismiss={() => setCta(null)}
-            focusKeys={factFocus?.keys}
+            focus={focus}
+            onFocusRegion={onFocusRegion}
             edit={edit}
             checklist={{
               ...checklist,

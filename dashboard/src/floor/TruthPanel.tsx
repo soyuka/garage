@@ -3,7 +3,7 @@ import { dueDescriptor, latestPerformedAt, signalTag } from '../derive';
 import { coerceInt, defaultUsageUnit, emptyToNull, VEHICLE_USAGE_UNITS } from '../edit';
 import { formatDate, formatHealthPct, formatReading, groupThousands, NBSP } from '../format';
 import { HEALTH_LABEL, serviceLabel } from '../labels';
-import type { VehicleFact, VehicleForecast, VehicleSummary } from '../types';
+import type { ForecastDue, VehicleFact, VehicleForecast, VehicleSummary } from '../types';
 import type { VehiclePatch } from '../garage';
 import { FactsSection, type FactsEdit } from './FactsSection';
 import { InlineEdit } from './InlineEdit';
@@ -32,11 +32,14 @@ export function TruthPanel({
   forecast,
   focusKeys,
   edit,
+  onPlan,
 }: {
   vehicle: VehicleSummary;
   forecast: VehicleForecast;
   focusKeys?: string[];
   edit?: TruthPanelEdit;
+  /** Plan a concrete task pegged to a forecast row's predicted-due reading. Absent → no plan button. */
+  onPlan?: (due: ForecastDue) => void;
 }) {
   const v = vehicle;
   const focus = new Set(focusKeys ?? []);
@@ -140,6 +143,13 @@ export function TruthPanel({
                   {date && <span className="at-truth-system-date">{date}</span>}
                 </span>
                 <span className={`at-tag at-tag--${tag.tone}`}>{tag.text}</span>
+                {/* #10: plan a concrete task pegged to this predicted-due service (moved off the old
+                    floating hotspot card into the stable panel row). */}
+                {onPlan && (
+                  <button type="button" className="at-truth-plan" onClick={() => onPlan(due)}>
+                    Planifier {serviceLabel(due.type)} →
+                  </button>
+                )}
               </li>
             );
           })}

@@ -8,6 +8,8 @@ import { CardinalReadouts } from './CardinalReadouts';
 import { Checklist, type ChecklistHandlers } from './Checklist';
 import { CtaCard, type Cta } from './CtaCard';
 import { daysSince, latestPerformedAt } from '../derive';
+import { regionsForKeys, type BodyRegion } from './anchors';
+import { slotPanel, type Focus } from '../focus';
 import type { ForecastDue, Iri, PlannedPart, VehicleBundle } from '../types';
 
 // The PURE presentational scene — the main region (empty / honest-floor / hero) + the dock (Le Noyau
@@ -37,12 +39,15 @@ interface SceneViewProps {
   onCtaInstruction?: (instruction: string) => void;
   onCtaPatch?: (patch: { id: Iri; parts: PlannedPart[] }) => void;
   onCtaDismiss?: () => void;
-  /** `showFact` keys — the truth-panel etches the matching échéance rows. */
-  focusKeys?: string[];
+  /** The unified slot focus: which panel fills the centre slot + which keys are spotlit (truth-panel
+   * etches matching rows, the car lights matching regions). Null/absent → the specs panel at rest. */
+  focus?: Focus | null;
   /** Live-hero editing seam (#9): makes the truth-panel scalars/facts interactive. Absent → read-only. */
   edit?: TruthPanelEdit;
   /** Live-hero open-checklist (#10): the interactive task list. Absent → no checklist panel (playground). */
   checklist?: ChecklistHandlers;
+  /** Click a car pin → focus the slot on that region's tasks. Absent → pins are inert (playground). */
+  onFocusRegion?: (region: BodyRegion) => void;
 }
 
 export function SceneView({
@@ -58,11 +63,16 @@ export function SceneView({
   onCtaInstruction,
   onCtaPatch,
   onCtaDismiss,
-  focusKeys,
+  focus,
   edit,
   checklist,
+  onFocusRegion,
 }: SceneViewProps) {
   const hotspotLayer = useRef<HTMLDivElement>(null);
+  const focusKeys = focus?.keys;
+  const panel = slotPanel(focus ?? null);
+  // The car regions the focus lights — only real service-type keys glow (a fact key etches the row only).
+  const highlight: BodyRegion[] | undefined = focusKeys ? regionsForKeys(focusKeys) : undefined;
 
   // Cardinal derivations — pure functions of the bundle (the leaves stay dumb).
   const v = bundle?.vehicle;
@@ -105,7 +115,7 @@ export function SceneView({
       ) : rung === 'd' ? (
         // canvas-off fallback (weak GPU) — the honest floor.
         <div className="at-scene-floor">
-          <TruthPanel vehicle={bundle.vehicle} forecast={bundle.forecast} focusKeys={focusKeys} edit={edit} />
+          <TruthPanel vehicle={bundle.vehicle} forecast={bundle.forecast} focusKeys={focusKeys} edit={edit} onPlan={onPlan} />
           <div className="at-scene-floor-right">
             <div className="glass at-scene-planglass">
               <FlatPlanList forecast={bundle.forecast} />
@@ -115,25 +125,25 @@ export function SceneView({
       ) : (
         // hero: the car is full-bleed; the truth-panel floats over it (car reads behind/around it)
         <>
-          <div className="at-scene-stage-full">
-            <Plateau vehicle={bundle.vehicle} rung={rung} due={bundle.forecast.due} reduced={reduced} portalTarget={hotspotLayer} onPlan={onPlan} />
+          <div className="at-scene-stage-full" data-dim={focus ? 'true' : undefined}>
+            <Plateau vehicle={bundle.vehicle} rung={rung} due={bundle.forecast.due} reduced={reduced} portalTarget={hotspotLayer} highlight={highlight} onFocusRegion={onFocusRegion} />
           </div>
           {/* hotspot cards portal HERE — above the glass (z10) but below the dock (z40). */}
           <div className="at-scene-hotspot-layer" ref={hotspotLayer} />
           {cardinals && (
-            <div className="at-scene-cardinals">
+            <div className="at-scene-cardinals" data-dim={focus ? 'true' : undefined}>
               <CardinalReadouts {...cardinals} reduced={reduced} />
             </div>
           )}
-          {checklist && (
-            <div className="at-scene-left">
-              <aside className="at-scene-checklist glass">
-                <Checklist {...checklist} />
-              </aside>
-            </div>
-          )}
-          <aside className="at-scene-float">
-            <TruthPanel vehicle={bundle.vehicle} forecast={bundle.forecast} focusKeys={focusKeys} edit={edit} />
+          {/* The single swappable slot (#9/#10). Default = the specs at-a-glance panel; the agent (or a
+              car-pin click) swaps it to the task list and lights the car. A focus scales it + dims the
+              stage (the spotlight). `tasks` falls back to specs when no checklist handlers (playground). */}
+          <aside className="at-scene-slot" data-panel={panel} data-focused={focus ? 'true' : undefined}>
+            {panel === 'tasks' && checklist ? (
+              <Checklist {...checklist} />
+            ) : (
+              <TruthPanel vehicle={bundle.vehicle} forecast={bundle.forecast} focusKeys={focusKeys} edit={edit} onPlan={onPlan} />
+            )}
           </aside>
         </>
       )}

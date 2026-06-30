@@ -134,6 +134,58 @@ final class RenderIntentToolsTest extends TestCase
         ], json_decode($published->getData(), true));
     }
 
+    public function testFocusViewPublishesPanelAndSpotlightKeys(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->focusView('tasks', ['oil_change', 'timing_belt']);
+
+        $this->assertNotNull($published);
+        $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
+        $this->assertSame(
+            ['type' => 'focusView', 'panel' => 'tasks', 'keys' => ['oil_change', 'timing_belt']],
+            json_decode($published->getData(), true),
+        );
+    }
+
+    public function testFocusViewOmitsKeysWhenNoneGiven(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->focusView('specs');
+
+        $this->assertNotNull($published);
+        // No keys → the spotlight raises the panel but lights no rows/regions (no empty `keys` array).
+        $this->assertSame(['type' => 'focusView', 'panel' => 'specs'], json_decode($published->getData(), true));
+    }
+
+    public function testFocusViewRejectsUnknownPanel(): void
+    {
+        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class));
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $this->expectException(\InvalidArgumentException::class);
+        $tools->focusView('engine');
+    }
+
     public function testProposeActionsRejectsAButtonThatNeitherInstructsNorWrites(): void
     {
         $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class));

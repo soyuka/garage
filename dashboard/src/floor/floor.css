@@ -190,6 +190,22 @@
   color: var(--at-red-hi);
   text-shadow: var(--at-glow-red);
 }
+/* #10 plan button — moved off the old floating hotspot card into the échéance row; spans its own line
+   under the row metrics so it never fights the 5-column grid. */
+.at-truth-plan {
+  grid-column: 2 / -1;
+  justify-self: start;
+  margin-top: var(--at-space-1);
+  font-family: var(--at-font-ui);
+  font-size: 11px;
+  color: var(--at-text-mono);
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 4px 9px;
+  cursor: pointer;
+}
+.at-truth-plan:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
 .at-truth-last-date {
   font-family: var(--at-font-mono);
   font-size: 13px;

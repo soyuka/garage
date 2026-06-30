@@ -273,10 +273,16 @@ export interface CtaAction {
  * NOTE: `renderSuggestions` and `patchPanel` from the docs/ui.md sketch DO NOT EXIST — never build
  * against them. The choreography map (Stage B.0) binds each real member to an Atelier motion.
  */
+/** The single swappable slot's content: the spec/échéance panel or the maintenance to-do list. */
+export type PanelKind = 'specs' | 'tasks';
+
 export type UIAction =
   | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: Iri }
   | { type: 'selectVehicle'; id: Iri }
   | { type: 'showFact'; keys: string[]; title?: string }
+  // Point the operator at what matters: raise one panel into the centre slot + spotlight `keys`
+  // (each lights its car region and etches matching rows). showFact is the specs-only subset.
+  | { type: 'focusView'; panel: PanelKind; keys?: string[] }
   | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }
   | { type: 'toast'; tone: Tone; message: string }
   // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the

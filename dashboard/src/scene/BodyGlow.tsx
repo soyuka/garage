@@ -21,8 +21,12 @@ export interface BodyGlowSpec {
   pos: Anchor;
 }
 
-/** amber/red dues only, one halo per region carrying the worst signal, anchored on CarProxy DIMS. */
-export function sickGlows(bodyClass: BodyClass, due: ForecastDue[]): BodyGlowSpec[] {
+/**
+ * amber/red dues only, one halo per region carrying the worst signal, anchored on CarProxy DIMS.
+ * `highlight` regions are force-glowed red (the agent/click spotlight) even with no due, and upgrade
+ * an amber due to red — the operator's attention always reads as urgent.
+ */
+export function sickGlows(bodyClass: BodyClass, due: ForecastDue[], highlight: BodyRegion[] = []): BodyGlowSpec[] {
   const anchors = regionAnchors(bodyClass);
   const worst = new Map<BodyRegion, Signal>();
   for (const d of due) {
@@ -32,6 +36,7 @@ export function sickGlows(bodyClass: BodyClass, due: ForecastDue[]): BodyGlowSpe
     const prev = worst.get(region);
     if (!prev || SIGNAL_RANK[signal] > SIGNAL_RANK[prev]) worst.set(region, signal);
   }
+  for (const region of highlight) worst.set(region, 'red');
   return [...worst].map(([region, signal]) => ({ region, signal, pos: anchors[region] }));
 }
 
@@ -88,10 +93,12 @@ export interface BodyGlowProps {
   bodyClass: BodyClass;
   due: ForecastDue[];
   reduced?: boolean;
+  /** spotlit regions (focus) — force-glowed red even when not due. */
+  highlight?: BodyRegion[];
 }
 
-export function BodyGlow({ bodyClass, due, reduced = false }: BodyGlowProps) {
-  const glows = useMemo(() => sickGlows(bodyClass, due), [bodyClass, due]);
+export function BodyGlow({ bodyClass, due, reduced = false, highlight }: BodyGlowProps) {
+  const glows = useMemo(() => sickGlows(bodyClass, due, highlight ?? []), [bodyClass, due, highlight]);
   return (
     <group>
       {glows.map((spec) => (

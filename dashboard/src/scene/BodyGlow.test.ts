@@ -79,4 +79,26 @@ describe('sickGlows — which regions of the car glow, and how badly', () => {
   it('returns nothing for an empty forecast', () => {
     expect(sickGlows('berline', [])).toEqual([]);
   });
+
+  it('force-glows a highlighted region red even with no due (the spotlight)', () => {
+    const out = sickGlows('berline', [], ['bay']);
+    expect(out).toHaveLength(1);
+    expect(out[0].region).toBe('bay');
+    expect(out[0].signal).toBe('red');
+  });
+
+  it('upgrades a highlighted region to red even when it is only amber-due', () => {
+    const out = sickGlows('berline', [due('oil_change', false, 12)], ['hood']);
+    expect(out).toHaveLength(1);
+    expect(out[0].region).toBe('hood');
+    expect(out[0].signal).toBe('red');
+  });
+
+  it('leaves non-highlighted sick regions as they are', () => {
+    const out = sickGlows('berline', [due('oil_change', false, 12), due('brake_pads', true, null)], ['bay']);
+    const byRegion = Object.fromEntries(out.map((g) => [g.region, g.signal]));
+    expect(byRegion.hood).toBe('amber');
+    expect(byRegion.frontAxle).toBe('red');
+    expect(byRegion.bay).toBe('red');
+  });
 });
