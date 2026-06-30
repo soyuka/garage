@@ -80,8 +80,8 @@
 .at-scene-hotspot-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
 .at-scene-hotspot-layer .at-hot { pointer-events: auto; }
 
-/* the left column — l'établi (parts as objects) over the open-checklist (#10). A floating glass stack
-   (mirror of the truth-panel). Clears the dock; the établi caps its height so the checklist can scroll. */
+/* the left column — the open-checklist (#10). A floating glass stack (mirror of the truth-panel).
+   Clears the dock; the checklist scrolls inside. */
 .at-scene-left {
   position: absolute;
   top: 78px;
@@ -94,13 +94,6 @@
   flex-direction: column;
   gap: 14px;
   overflow: hidden;
-}
-.at-scene-parts {
-  flex: 0 0 auto;
-  max-height: 240px;
-  overflow: hidden;
-  padding: var(--at-space-4);
-  background: rgba(12, 13, 16, 0.62);
 }
 .at-scene-checklist {
   flex: 1 1 auto;

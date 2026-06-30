@@ -5,7 +5,6 @@ import { Noyau } from '../noyau/Noyau';
 import type { NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
 import { CardinalReadouts } from './CardinalReadouts';
-import { PartsShelf } from './PartsShelf';
 import { Checklist, type ChecklistHandlers } from './Checklist';
 import { CtaCard, type Cta } from './CtaCard';
 import { daysSince, latestPerformedAt } from '../derive';
@@ -65,16 +64,10 @@ export function SceneView({
 }: SceneViewProps) {
   const hotspotLayer = useRef<HTMLDivElement>(null);
 
-  // Cardinal + établi derivations — pure functions of the bundle (the leaves stay dumb).
+  // Cardinal derivations — pure functions of the bundle (the leaves stay dumb).
   const v = bundle?.vehicle;
   const due = bundle?.forecast.due ?? [];
   const today = new Date().toISOString().slice(0, 10);
-  const parts: PlannedPart[] = bundle
-    ? [
-        ...(v?.plannedTasks ?? []).flatMap((t) => t.parts),
-        ...bundle.records.flatMap((r) => r.items.flatMap((i) => i.parts)),
-      ]
-    : [];
   const cardinals = v
     ? {
         mileage: v.usageValue ?? null,
@@ -110,19 +103,13 @@ export function SceneView({
           <div className="at-scene-empty">Parc vide — ajoutez un véhicule.</div>
         </div>
       ) : rung === 'd' ? (
-        // canvas-off fallback (weak GPU) — the honest floor. The établi rides here too so its part data
-        // survives canvas-off (§8: hide the canvas → lose nothing).
+        // canvas-off fallback (weak GPU) — the honest floor.
         <div className="at-scene-floor">
           <TruthPanel vehicle={bundle.vehicle} forecast={bundle.forecast} focusKeys={focusKeys} edit={edit} />
           <div className="at-scene-floor-right">
             <div className="glass at-scene-planglass">
               <FlatPlanList forecast={bundle.forecast} />
             </div>
-            {parts.length > 0 && (
-              <div className="glass at-scene-planglass">
-                <PartsShelf parts={parts} />
-              </div>
-            )}
           </div>
         </div>
       ) : (
@@ -138,18 +125,11 @@ export function SceneView({
               <CardinalReadouts {...cardinals} reduced={reduced} />
             </div>
           )}
-          {(parts.length > 0 || checklist) && (
+          {checklist && (
             <div className="at-scene-left">
-              {parts.length > 0 && (
-                <aside className="at-scene-parts glass">
-                  <PartsShelf parts={parts} />
-                </aside>
-              )}
-              {checklist && (
-                <aside className="at-scene-checklist glass">
-                  <Checklist {...checklist} />
-                </aside>
-              )}
+              <aside className="at-scene-checklist glass">
+                <Checklist {...checklist} />
+              </aside>
             </div>
           )}
           <aside className="at-scene-float">
