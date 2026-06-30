@@ -1,0 +1,11 @@
+# Theming workshop — source assets + staging. The runtime web glb the app loads
+# are tracked under dashboard/public/; everything here is Blender/SketchUp source,
+# raw exports, reference images, and design scratch — kept out of git (138M+).
+/theming/
+
+# Working scratch prompts (not fixtures, not referenced in code).
+/NEXT_PROMPT.md
+/prompt.md
+
+# Sample/working invoice PDFs (not referenced in code).
+/api/tondeuse/
