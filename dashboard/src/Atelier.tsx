@@ -53,6 +53,26 @@ import type { Iri, MercureFrame, PlannedPart, PlannedTask, VehicleBundle, Vehicl
 // renders the SAME pure SceneView the fixture playground does — only the data source differs. Mercure
 // (slice 4) and the agent turn (slice 5) feed this orchestrator next; today the composer only listens.
 
+// Pinned fact keys — per-vehicle, like the parc's `mpa.recency` rail (see ParcLot.tsx). Best-effort:
+// a private-mode / quota failure just means pins don't survive a reload, never a thrown error.
+const pinsKey = (iri: string) => `mpa.pins:${iri}`;
+function loadPins(iri: string): string[] {
+  try {
+    const raw = localStorage.getItem(pinsKey(iri));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+function savePins(iri: string, keys: string[]) {
+  try {
+    localStorage.setItem(pinsKey(iri), JSON.stringify(keys));
+  } catch {
+    // quota / private mode — pins just won't persist across reloads
+  }
+}
+
 export function Atelier() {
   const path = useHashPath();
   const seg = vehicleSegFromHash(path);
@@ -71,9 +91,22 @@ export function Atelier() {
   const [focus, setFocus] = useState<Focus | null>(null);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
+  const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
+  const [historyOpen, setHistoryOpen] = useState(false); // #7 "Historique" carnet popup (per-vehicle)
+  // Pinned fact keys — persisted per-vehicle (localStorage keyed by IRI, like mpa.recency), so the
+  // resting spec constellation still shows something meaningful after the drawer closes.
+  const [pinnedKeys, setPinnedKeys] = useState<string[]>([]);
   // #10 checklist: "voir les tâches retirées" pulls a includeDismissed list (the bundle carries open+done).
   const [showDismissed, setShowDismissed] = useState(false);
   const [dismissedTasks, setDismissedTasks] = useState<PlannedTask[]>([]);
+  // Pending deterministic-answer timers (the quick-action choreography) — cleared on nav + unmount so a
+  // chip's narration can never land on a different vehicle.
+  const detTimers = useRef<number[]>([]);
+  const clearDet = useCallback(() => {
+    detTimers.current.forEach((t) => window.clearTimeout(t));
+    detTimers.current = [];
+  }, []);
+  useEffect(() => clearDet, [clearDet]);
 
   // The parc collection — loaded once on mount; Mercure (slice 4) keeps it fresh thereafter.
   useEffect(() => {
@@ -92,11 +125,15 @@ export function Atelier() {
   const selectedIri = seg ? (vehicles.find((v) => segForIri(v['@id']) === seg)?.['@id'] ?? null) : null;
   useEffect(() => {
     setError(null); // a fresh selection recovers from a prior vehicle's load failure
+    clearDet(); // drop any in-flight deterministic-answer timers from the prior vehicle
     setCta(null); // the prior vehicle's transient agent surfaces don't linger across navigation
     setFocus(null);
     setShowDismissed(false); // each vehicle's checklist starts collapsed (open+done only)
     setDismissedTasks([]);
     setDossierOpen(false); // the dossier is per-vehicle — close it on navigation
+    setFactsDrawerOpen(false); // the facts drawer is per-vehicle too — close it on navigation
+    setHistoryOpen(false); // the carnet is per-vehicle too — close it on navigation
+    setPinnedKeys(selectedIri ? loadPins(selectedIri) : []);
     if (!selectedIri) {
       setBundle(null);
       return;
@@ -252,8 +289,9 @@ export function Atelier() {
   // CTA action paths. `instruction` re-runs the agent (a fresh turn, supersedes the card). `patchTask`
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
   // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
-  // Click a car pin → spotlight that region's tasks in the slot (the local twin of the agent's focusView).
-  const onFocusRegion = (region: BodyRegion) => setFocus({ panel: 'tasks', keys: typesForRegion(region) });
+  // Click a car callout header → spotlight that region on the car (lights the region + brightens its
+  // callout via the focus keys → highlight seam). The specs focus fans the constellation instead.
+  const onFocusRegion = (region: BodyRegion) => setFocus({ panel: 'specs', keys: typesForRegion(region) });
 
   const onCtaInstruction = (instruction: string) => send(instruction);
   const onCtaPatch = (patch: { id: Iri; parts: PlannedPart[] }) => {
@@ -350,6 +388,17 @@ export function Atelier() {
     facts: { onAdd: onAddFact, onRemove: onRemoveFact, onEditValue: onEditFact },
   };
 
+  // #5 facts drawer + pinning — client-side only (no garage write): pins persist per-vehicle.
+  const onTogglePin = (key: string) => {
+    const iri = selectedIri;
+    if (!iri) return;
+    setPinnedKeys((prev) => {
+      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
+      savePins(iri, next);
+      return next;
+    });
+  };
+
   // ── #10 Task checklist. Task writes hit the /planned-tasks subresource; the domain frame OMITS
   // plannedTasks (see PROVENANCE), so each write re-reads the bundle explicitly (guarded post-await),
   // plus the includeDismissed list when the "voir les retirées" view is open.
@@ -430,14 +479,8 @@ export function Atelier() {
       <div className="at-scene">
         <div className="at-scene-top">
           <a href="#/" className="at-scene-back">← Le Parc</a>
-          {heroBundle && (
-            <span className="at-scene-back" style={{ color: 'var(--at-text)' }}>
-              {heroBundle.vehicle.make} {heroBundle.vehicle.model}
-              {heroBundle.vehicle.plate ? ` · ${heroBundle.vehicle.plate}` : ''}
-            </span>
-          )}
-          <span style={{ flex: 1 }} />
           <Identity onJournal={() => setJournalOpen(true)} onDossier={heroBundle ? () => setDossierOpen(true) : undefined} />
+          <span style={{ flex: 1 }} />
         </div>
 
         <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
@@ -479,6 +522,30 @@ export function Atelier() {
             onCtaDismiss={() => setCta(null)}
             focus={focus}
             onFocusRegion={onFocusRegion}
+            quickActions={[
+              {
+                // opens the full fact sheet (drawer) — no agent turn. Opening it closes the carnet
+                // (only one full surface at a time).
+                label: 'Données',
+                disabled: state.phase === 'working',
+                onClick: () => { setHistoryOpen(false); setFactsDrawerOpen(true); },
+              },
+              {
+                // opens the read-only carnet (Le Carnet) — closes the données drawer.
+                label: 'Historique',
+                disabled: state.phase === 'working',
+                onClick: () => { setFactsDrawerOpen(false); setHistoryOpen(true); },
+              },
+            ]}
+            pinnedKeys={pinnedKeys}
+            onTogglePin={onTogglePin}
+            factsDrawerOpen={factsDrawerOpen}
+            onOpenFacts={() => { setHistoryOpen(false); setFactsDrawerOpen(true); }}
+            onCloseFacts={() => setFactsDrawerOpen(false)}
+            records={heroBundle.records}
+            historyOpen={historyOpen}
+            onOpenHistory={() => { setFactsDrawerOpen(false); setHistoryOpen(true); }}
+            onCloseHistory={() => setHistoryOpen(false)}
             edit={edit}
             checklist={{
               ...checklist,
@@ -522,7 +589,7 @@ export function Atelier() {
   );
 }
 
-/** The signed-in identity + the dossier (📁, hero only) + the journal (🪵) + sign-out (top-right chrome). */
+/** The signed-in identity + the dossier (hero only) + the journal + sign-out (top-right chrome). */
 function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?: () => void }) {
   const id = getIdentity();
   const chip: React.CSSProperties = {
@@ -539,12 +606,31 @@ function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?:
     <span className="at-scene-back" style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}>
       <span>{id.name ?? id.email ?? 'connecté'}</span>
       {onDossier && (
-        <button type="button" onClick={onDossier} style={chip} title="Dossier du véhicule" aria-label="Ouvrir le dossier du véhicule">
-          📁 dossier
+        <button type="button" onClick={onDossier} className="at-identity-chip" title="Dossier du véhicule" aria-label="Ouvrir le dossier du véhicule">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+            <path
+              d="M2 4.5c0-.55.45-1 1-1h3.2l1.1 1.4h5.7c.55 0 1 .45 1 1v6.6c0 .55-.45 1-1 1H3c-.55 0-1-.45-1-1V4.5z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          dossier
         </button>
       )}
-      <button type="button" onClick={onJournal} style={chip} title="Journal de l'agent" aria-label="Ouvrir le journal de l'agent">
-        🪵 journal
+      <button type="button" onClick={onJournal} className="at-identity-chip" title="Journal de l'agent" aria-label="Ouvrir le journal de l'agent">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <path
+            d="M3 2.8c0-.44.36-.8.8-.8h7.9c.44 0 .8.36.8.8v10.9l-1.9-1.1-1.9 1.1-1.9-1.1-1.9 1.1-1.9-1.1V2.8z"
+            stroke="currentColor"
+            strokeWidth="1.3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          <path d="M5.3 5.4h5.4M5.3 7.8h5.4M5.3 10.2h3.2" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+        </svg>
+        journal
       </button>
       <Credits />
       <button type="button" onClick={() => logout()} style={chip}>

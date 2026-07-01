@@ -1,0 +1,188 @@
+/* Facts drawer — the on-demand FULL fact sheet, glowing glass docked to the bottom edge (VR-ready).
+   Replaces the old always-on MOTEUR cards: this stays unmounted until requested, then slides up over
+   a dim scrim. Neutral data only — no signal colours, no cyan (rationed to Le Noyau). */
+
+.at-facts-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 8, 7, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  animation: at-facts-scrim-in 220ms var(--at-ease-sine) both;
+}
+
+.at-facts-drawer {
+  position: relative;
+  z-index: 61;
+  width: 100%;
+  max-height: 40vh;
+  display: flex;
+  flex-direction: column;
+  /* amped glowing glass (VR-ready): a cool steel sheen off the top edge over the glass fill, deeper blur,
+     a luminous outer halo + an inset top highlight so the panel reads as lit glass, not a flat sheet. */
+  background: radial-gradient(140% 150% at 50% 0%, rgba(150, 175, 210, 0.11), rgba(0, 0, 0, 0) 58%), var(--at-glass-fill);
+  backdrop-filter: blur(calc(var(--at-glass-blur) * 1.4));
+  border-top: 1px solid var(--at-glass-edge);
+  border-radius: var(--at-radius-glass) var(--at-radius-glass) 0 0;
+  box-shadow:
+    0 -1px 0 var(--at-glass-edge),
+    0 -14px 32px rgba(0, 0, 0, 0.45),
+    0 -44px 96px rgba(0, 0, 0, 0.6),
+    0 0 64px rgba(150, 175, 210, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  animation: at-facts-rise 280ms var(--at-ease-sine) both;
+}
+
+.at-facts-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: var(--at-space-4) var(--at-space-5) var(--at-space-3);
+  border-bottom: 1px solid var(--at-hairline);
+}
+.at-facts-head h2 {
+  margin: 0;
+  font-family: var(--at-font-ui);
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--at-text);
+}
+.at-facts-close {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+  color: var(--at-text-dim);
+  background: transparent;
+  border: 1px solid var(--at-hairline);
+  border-radius: 999px;
+  transition: color 140ms var(--at-ease-sine), border-color 140ms var(--at-ease-sine);
+}
+.at-facts-close:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
+.at-facts-close:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+
+.at-facts-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--at-space-3) var(--at-space-5) var(--at-space-5);
+}
+.at-facts-empty {
+  margin: var(--at-space-4) 0;
+  color: var(--at-text-dim);
+  font-size: 13px;
+}
+
+.at-facts-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 4px var(--at-space-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.at-facts-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--at-space-2);
+  padding: 9px 0;
+  border-bottom: 1px solid var(--at-hairline);
+}
+
+.at-facts-label {
+  grid-column: 1 / -1;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+}
+.at-facts-value {
+  font-size: 15.5px;
+  font-weight: 500;
+  color: var(--at-text);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.at-facts-value .at-inline,
+.at-facts-value .at-inline-input {
+  font-size: inherit;
+  color: inherit;
+}
+/* discoverability: every editable value wears a faint dashed underline at rest so it reads as editable
+   (not plain text) — brightens on hover/focus. The input keeps a solid underline while editing. */
+.at-facts-value .at-inline {
+  cursor: text;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--at-hairline);
+  padding: 0 1px 1px;
+  font-family: inherit;
+  text-align: left;
+  transition: border-color 120ms var(--at-ease-sine), color 120ms var(--at-ease-sine);
+}
+.at-facts-value .at-inline:hover,
+.at-facts-value .at-inline:focus-visible {
+  border-bottom-color: var(--at-chrome-hi);
+  color: var(--at-text);
+  outline: none;
+}
+.at-facts-value .at-inline-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--at-chrome-hi);
+  padding: 0 1px 1px;
+  font-family: inherit;
+  outline: none;
+}
+.at-facts-status {
+  font-size: 10.5px;
+  white-space: nowrap;
+}
+.at-facts-ok { color: var(--at-green-hi); }
+.at-facts-unver { font-style: italic; color: var(--at-text-dim); }
+
+.at-facts-pin,
+.at-facts-remove {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  color: var(--at-text-dim);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+}
+.at-facts-pin:hover,
+.at-facts-remove:hover { color: var(--at-text); background: rgba(255, 255, 255, 0.06); }
+.at-facts-pin[data-pinned='true'] { color: var(--at-orange-hi); }
+.at-facts-pin:focus-visible,
+.at-facts-remove:focus-visible,
+.at-facts-close:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+
+@keyframes at-facts-scrim-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes at-facts-rise {
+  from { transform: translateY(100%); }
+  to { transform: none; }
+}
+
+.at-facts-overlay[data-reduced='true'],
+.at-facts-overlay[data-reduced='true'] .at-facts-drawer {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-facts-overlay,
+  .at-facts-drawer {
+    animation: none !important;
+  }
+}

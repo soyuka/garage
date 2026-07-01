@@ -35,6 +35,7 @@ const TYPE_REGION: Record<string, BodyRegion> = {
   timing_belt: 'hood',
   coolant: 'hood',
   spark_plugs: 'hood',
+  spark_plug: 'hood', // backend's singular key (labels.ts) — same region as spark_plugs
   air_filter: 'bay',
   cabin_filter: 'bay',
   fuel_filter: 'bay',
@@ -43,7 +44,9 @@ const TYPE_REGION: Record<string, BodyRegion> = {
   brake_pads: 'frontAxle',
   brake_discs: 'frontAxle',
   tyres: 'frontAxle',
+  tires: 'frontAxle', // backend spelling variant
   technical_inspection: 'windshield',
+  inspection: 'windshield', // the backend's live periodic-inspection key (labels.ts) — was defaulting to hood
   chain: 'rearAxle',
 };
 
@@ -105,10 +108,3 @@ export function regionAnchors(bodyClass: BodyClass): Record<BodyRegion, Anchor> 
     rearAxle: [-axleX, d.wheelR + 0.06, axleZ + 0.06], // near-side rear wheel
   };
 }
-
-/**
- * The turntable rim-gauge annulus (RimGauge §2 "the rim is the global gauge"). A thin flat ring just
- * above the disc top (CarProxy's disc is 0.12 tall centred at y=-0.04 → top ≈ y=0.02; the inlaid
- * light-ring spans r=3.0–3.18). The gauge arcs sit fractionally above/over it.
- */
-export const RIM = { inner: 3.02, outer: 3.2, y: 0.05, segments: 64 } as const;

@@ -9,11 +9,24 @@ Stage-B/C component animates against THIS map; no agent invents a different mapp
 | Real frame | Atelier motion | Owner layer |
 |---|---|---|
 | `selectVehicle {id}` | the car **drives forward** into Le Plateau; previous car recedes into the lot (~350ms cross-fade) | scene assembler |
-| `showFact {keys, title?}` | the truth-panel **focuses** the named fact keys — a light-sweep **etch-in** across the glass text | truth-panel |
-| `proposeActions {headline, finding?, actions}` | a CTA card **rises from Le Noyau's cradle** (rises from *behind* the composer, never over it); decline → sinks back. `actions[].patchTask` → deterministic PATCH, **no agent turn**; `actions[].instruction` → new turn | CTA layer |
+| `showFact {keys, title?}` / `focusView {panel:'specs', keys?}` | the **spec constellation** fans the matching `vehicle.facts` to the car's LEFT (staggered **etch-in**), a hair leader per node pointing at the car; clears when the focus clears. Empty `keys` ⇒ the whole sheet | scene overlay (`SpecConstellation`) |
+| `focusView {panel:'tasks', keys}` | **spotlights** the keyed regions ON the car — the region glows + its échéance callout brightens (forced). No docked panel (tasks live on the body as callouts) | scene overlay (`Hotspots` callouts) |
+| `proposeActions {headline, finding?, actions}` | a plain proposal → a CTA card **rises from Le Noyau's cradle** (behind the composer, never over it); a **parts-bearing** proposal (an `actions[].patchTask` with `parts`) projects instead as the **parts manifest** at the car's RIGHT (rows **unfurl** staggered) with the primary **Ajouter** = that deterministic PATCH. `patchTask` → **no agent turn**; `instruction` → new turn | CTA layer / `PartsManifest` |
 | `toast {tone, message}` | non-alarm → narration line (Noyau heartbeat); **alarm** → ember docks to the Noyau + a real toast popup | Le Noyau |
 | `status {message}` | one **Noyau pulse** (per narrated step, sparse) + the narration line etches | Le Noyau |
-| `turn {phase}` | `start` → Noyau busy/working (aperture focuses, scan locks); `end` → settle → green/amber/red | Le Noyau |
+| `turn {phase}` | `start` → Noyau busy/working (aperture focuses, scan locks) + a **cyan scan-sweep** slides across the car; `end` → settle → green/amber/red | Le Noyau + scene overlay |
+
+## Data around the turning car (option 2a)
+
+The car IS the interface — no docked slot. Data is either **true of a body region** (échéances, which
+orbit WITH the region as indexed callouts on the car) or **fetched on demand** (specs / parts, which
+project around the car and clear). The three concentric **HUD rings** (health arc + projection + odometer)
+are centred on the car in screen space.
+
+**Deterministic-first.** The quick-action chips above the composer resolve **client-side — no `postTurn`,
+no tokens**: they replay the SAME choreography (`turn:start` → two `status` narration steps ≈ +950ms →
+answer + `turn:end` ≈ +1900ms) and set the same `focus`/`cta` the agent would. Only the composer free-text
+opens an LLM turn. The user sees no difference.
 
 ## Domain frames (collection topic)
 

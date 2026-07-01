@@ -14,13 +14,53 @@ import { EDGE, FILL_OPACITY } from './CarProxy';
 
 const EDGES_CACHE = new Map<string, THREE.BufferGeometry[]>();
 
+/** The holo scan band: a cyan brightening that a driver (ScanRunner) sweeps along the car's x axis while
+ * Le Noyau works. Uniforms are shared by the fill + edge materials of ONE blueprint instance; `halfLen`
+ * is the object-space x half-extent so the driver ping-pongs `uScanX` across the whole body. */
+export interface ScanControl {
+  uniforms: {
+    uScanX: { value: number }; // band centre, in object space along the swept axis
+    uScanOn: { value: number }; // 0..1 intensity (eased on/off by the driver)
+    uScanWidth: { value: number }; // half-width of the bright band
+    uScanAxis: { value: number }; // 0 = sweep along x, 1 = sweep along z (the longer horizontal axis)
+    uScanColor: { value: THREE.Color };
+  };
+  halfLen: number; // sweep amplitude: the swept axis' half-extent
+}
+
 export interface Blueprint {
   /** The cloned, re-centred, fill-overridden mesh group. Render via <primitive>. */
   clone: THREE.Object3D;
   /** Steel-blue edge LineSegments (geometry world-baked). Render via <primitive>. */
   edges: THREE.Group;
+  /** The scan-band control (uniforms + extent) — animate via ScanRunner; inert at uScanOn=0. */
+  scan: ScanControl;
   /** Free per-instance resources on unmount. Never the cached edge geometry or the drei-cached glb. */
   dispose: () => void;
+}
+
+// Inject a moving cyan band into the EDGE material (LineBasicMaterial, `basic` shader). The edge geometry
+// is world-baked to car-local space (see below), so `position` IS the car frame — a band along the swept
+// axis reads as a holo wave travelling the length of the body. NOT applied to the fill mesh: its geometry
+// keeps per-mesh LOCAL coords, which don't line up with the baked edges (would glow uniformly). Inert at
+// uScanOn≈0, so parc thumbs (never animated) look unchanged.
+function patchScan(mat: THREE.Material, u: ScanControl['uniforms']): void {
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uScanX = u.uScanX;
+    shader.uniforms.uScanOn = u.uScanOn;
+    shader.uniforms.uScanWidth = u.uScanWidth;
+    shader.uniforms.uScanAxis = u.uScanAxis;
+    shader.uniforms.uScanColor = u.uScanColor;
+    shader.vertexShader = `uniform float uScanAxis;\nvarying float vScanC;\n${shader.vertexShader}`.replace(
+      '#include <begin_vertex>',
+      '#include <begin_vertex>\n\tvScanC = mix(position.x, position.z, uScanAxis);',
+    );
+    shader.fragmentShader = `uniform float uScanX;\nuniform float uScanOn;\nuniform float uScanWidth;\nuniform vec3 uScanColor;\nvarying float vScanC;\n${shader.fragmentShader}`.replace(
+      '#include <dithering_fragment>',
+      '#include <dithering_fragment>\n\tfloat _band = smoothstep(uScanWidth, 0.0, abs(vScanC - uScanX)) * uScanOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uScanColor, _band * 0.85) + uScanColor * _band * 0.9;',
+    );
+  };
+  mat.needsUpdate = true;
 }
 
 export function buildBlueprint(
@@ -41,6 +81,23 @@ export function buildBlueprint(
 
   const fillMat = new THREE.MeshBasicMaterial({ color: paint, transparent: true, opacity: FILL_OPACITY, depthWrite: false });
   const edgeMat = new THREE.LineBasicMaterial({ color: EDGE });
+
+  // Scan-band uniforms: sweep the LONGER horizontal axis (a glb may lie along x or z), band ≈ 15% of it.
+  const extentX = box.max.x - box.min.x;
+  const extentZ = box.max.z - box.min.z;
+  const sweepZ = extentZ > extentX;
+  const halfLen = Math.max(0.5, (sweepZ ? extentZ : extentX) / 2);
+  const scan: ScanControl = {
+    uniforms: {
+      uScanX: { value: 0 },
+      uScanOn: { value: 0 },
+      uScanWidth: { value: Math.max(0.35, halfLen * 0.3) },
+      uScanAxis: { value: sweepZ ? 1 : 0 },
+      uScanColor: { value: new THREE.Color('#5fe0d9') }, // holo cyan (the agent's scanning light)
+    },
+    halfLen,
+  };
+  patchScan(edgeMat, scan.uniforms); // edges only — world-baked coords; the faint fill would misalign
 
   const key = cacheKey ? `${cacheKey}|${edgeAngle}` : undefined;
   const cached = key ? EDGES_CACHE.get(key) : undefined;
@@ -71,5 +128,5 @@ export function buildBlueprint(
     // Only free edge geometries we built AND did not cache (uncached one-offs).
     if (!key) geoms.forEach((g) => g.dispose());
   };
-  return { clone, edges, dispose };
+  return { clone, edges, scan, dispose };
 }

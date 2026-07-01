@@ -46,12 +46,17 @@ export function Credits() {
     <>
       <button
         type="button"
-        style={chip}
+        className="at-identity-chip"
         title="Crédits des modèles 3D"
         aria-label="Crédits des modèles 3D"
         onClick={() => setOpen((o) => !o)}
       >
-        ℹ crédits
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+          <circle cx="8" cy="8" r="6.3" stroke="currentColor" strokeWidth="1.3" />
+          <path d="M8 7.2v4.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+          <circle cx="8" cy="4.9" r="0.15" fill="currentColor" stroke="currentColor" strokeWidth="1.1" />
+        </svg>
+        crédits
       </button>
       {open && (
         <div

@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
 import { dueDescriptor, latestPerformedAt, signalTag } from '../derive';
-import { coerceInt, defaultUsageUnit, emptyToNull, VEHICLE_USAGE_UNITS } from '../edit';
-import { formatDate, formatHealthPct, formatReading, groupThousands, NBSP } from '../format';
+import { coerceInt, emptyToNull } from '../edit';
+import { formatDate, formatHealthPct, formatReading, NBSP } from '../format';
 import { HEALTH_LABEL, serviceLabel } from '../labels';
 import type { ForecastDue, VehicleFact, VehicleForecast, VehicleSummary } from '../types';
 import type { VehiclePatch } from '../garage';
 import { FactsSection, type FactsEdit } from './FactsSection';
 import { InlineEdit } from './InlineEdit';
+import { UsageEdit } from './UsageEdit';
 import './floor.css';
 
 // The glass truth-panel — the AUTHORITATIVE surface (DESIGN-VISION §8). Identity, mileage, overall
@@ -178,44 +178,5 @@ export function TruthPanel({
         </div>
       )}
     </section>
-  );
-}
-
-// The usage reading editor: a click-to-edit value paired with a unit select. The Vehicle resource
-// binds App\Garage\UsageUnit (km|mi|h), so the select offers those — sending the maintenance-side
-// "hours" would be rejected. Value + unit are always written together (the backend requires the pair);
-// changing the unit re-stamps an existing reading immediately, a value commit carries the held unit.
-function UsageEdit({ value, unit, vehicleType, onCommit }: { value: number | null; unit: string | null; vehicleType: string; onCommit: (value: number, unit: string) => void }) {
-  const [u, setU] = useState<string>(unit ?? defaultUsageUnit(vehicleType));
-  useEffect(() => {
-    if (unit) setU(unit);
-  }, [unit]);
-
-  const commitValue = (raw: string) => {
-    const n = coerceInt(raw);
-    if (n != null) onCommit(n, u); // empty/non-numeric is a no-op — a reading can't be cleared to null
-  };
-  const changeUnit = (next: string) => {
-    setU(next);
-    if (value != null) onCommit(value, next); // re-stamp the existing reading with the new unit
-  };
-
-  return (
-    <span className="at-usage-edit">
-      <InlineEdit
-        value={value != null ? groupThousands(value) : ''}
-        placeholder="+ relevé"
-        ariaLabel="Modifier le kilométrage"
-        className="at-usage-edit-val"
-        onCommit={commitValue}
-      />
-      <select className="at-usage-edit-unit" aria-label="Unité du relevé" value={u} onChange={(e) => changeUnit(e.target.value)}>
-        {VEHICLE_USAGE_UNITS.map((opt) => (
-          <option key={opt} value={opt}>
-            {opt}
-          </option>
-        ))}
-      </select>
-    </span>
   );
 }

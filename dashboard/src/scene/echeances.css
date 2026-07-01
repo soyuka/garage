@@ -1,0 +1,120 @@
+/* Échéances as a vertical list at the top of the persistent task dock (Option A) — flush rows inside the
+   dock's own glass box (no nested card). State = signal colour (--at-sig) on the dot + horizon + the ○/✓
+   mark shape (never colour alone, §8). The [data-signal] → --at-sig resolution is global (tokens/atelier.css),
+   so it reaches .at-ech-row directly. */
+
+.at-ech-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--at-space-2);
+  padding-bottom: var(--at-space-3);
+  margin-bottom: var(--at-space-3);
+  border-bottom: 1px solid var(--at-hairline);
+}
+
+.at-ech-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--at-space-3);
+}
+
+.at-ech-list-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+  color: var(--at-text);
+}
+
+.at-ech-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--at-space-2);
+}
+
+.at-ech-mark {
+  flex: 0 0 auto;
+  width: 17px;
+  height: 17px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 50%;
+  border: 1.5px solid var(--at-sig, var(--at-unknown));
+  background: rgba(13, 14, 16, 0.7);
+  color: var(--at-sig, var(--at-unknown));
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 0 10px -2px var(--at-sig, transparent);
+}
+.at-ech-mark:disabled {
+  cursor: default;
+  box-shadow: none;
+}
+.at-ech-mark:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: 2px;
+}
+.at-ech-mark--done {
+  background: var(--at-green);
+  border-color: var(--at-green);
+  color: var(--at-void);
+}
+.at-ech-mark--gap {
+  border-style: dashed;
+  cursor: default;
+  box-shadow: none;
+}
+
+.at-ech-label {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  align-items: flex-start;
+  text-align: left;
+  padding: 2px 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+.at-ech-label:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: 2px;
+}
+
+.at-ech-svc {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--at-text);
+}
+.at-ech-svc[data-done='true'] {
+  color: var(--at-text-dim);
+  text-decoration: line-through;
+}
+.at-ech-horizon {
+  font-size: 11px;
+  color: var(--at-sig, var(--at-text-dim));
+}
+.at-ech-horizon--gap {
+  color: var(--at-text-dim);
+  font-style: italic;
+}
+
+/* red/amber marks breathe (motion cue, not colour alone). Green/gap steady. */
+@keyframes at-ech-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.at-ech-row[data-signal='red'] .at-ech-mark,
+.at-ech-row[data-signal='amber'] .at-ech-mark {
+  animation: at-ech-breathe 2s var(--at-ease-sine) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at-ech-row .at-ech-mark {
+    animation: none !important;
+  }
+}

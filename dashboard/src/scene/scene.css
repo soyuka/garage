@@ -1,9 +1,20 @@
 /* The Atelier scene shell. Z-order (DESIGN-VISION §3): WebGL canvas (back) → glass panels (mid) →
    composer tray (front) → Le Noyau (highest). The glass sits BESIDE the Plateau, never over the car. */
 
+/* kill the default 8px <body> margin — it was letting the light html canvas show as a thin frame around
+   the app (and pushing content 8px past the viewport → a stray scrollbar). The app owns the whole frame. */
+html,
+body {
+  margin: 0;
+}
+body {
+  background: var(--at-void);
+}
+
 .at-scene {
   position: relative;
   min-height: 100vh;
+  overflow-x: clip; /* ring labels near the edges must never push a horizontal scrollbar */
   display: flex;
   flex-direction: column;
   background: radial-gradient(130% 100% at 50% 0%, #1a1813 0%, #131210 55%, #0c0b09 100%);
@@ -27,6 +38,25 @@
   background: linear-gradient(180deg, rgba(12, 11, 9, 0.85) 0%, rgba(12, 11, 9, 0) 100%);
 }
 .at-scene-back { color: var(--at-text-dim); text-decoration: none; font-family: var(--at-font-mono); font-size: 12px; }
+
+/* identity-row chips (dossier / journal / crédits / déconnexion) — neutral chrome, no signal or operator hues */
+.at-identity-chip {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid var(--at-hairline);
+  color: var(--at-text-dim);
+  border-radius: 5px;
+  padding: 2px 8px;
+  cursor: pointer;
+  font: inherit;
+  transition: color 140ms var(--at-ease-sine), border-color 140ms var(--at-ease-sine);
+}
+.at-identity-chip svg { flex-shrink: 0; }
+.at-identity-chip:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
+.at-identity-chip:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
 .at-scene-switch { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .at-scene-rungs-label { font-size: 9px; letter-spacing: 0.12em; color: var(--at-text-dim); margin-right: 2px; }
 .at-sbtn {
@@ -50,52 +80,118 @@
   inset: 0;
   z-index: 0; /* the car owns the whole frame, behind everything */
 }
-/* The single swappable slot (right). Default = the specs truth-panel (self-glassed); tasks = the
-   checklist (the slot supplies the glass it lacks). A focus lifts the slot toward the operator and
-   recedes the stage — the spotlight. */
-.at-scene-slot {
-  position: absolute;
-  top: 78px;
-  right: 26px;
-  z-index: 10;
-  width: 360px;
-  max-width: calc(100vw - 52px);
-  max-height: calc(100vh - 78px - 260px); /* clear of the dock */
-  overflow: auto;
-  transition: transform 240ms ease, box-shadow 240ms ease;
-}
-/* the floating slab is more transparent than a docked panel, so the turning car reads behind it */
-.at-scene-slot .glass { background: rgba(12, 13, 16, 0.62); }
-/* tasks mode: the checklist carries no glass of its own, so the slot supplies it */
-.at-scene-slot[data-panel='tasks'] {
-  padding: var(--at-space-4);
-  background: rgba(12, 13, 16, 0.62);
-  border-radius: var(--at-radius-glass);
-}
-.at-scene-slot[data-focused] { transform: scale(1.04); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55); }
+/* the docked slot is GONE (option 2a): data lives ON the car (callouts) or is PROJECTED around it (the
+   spec constellation / parts manifest). The stage + cardinals recede when a surface projects. */
 .at-scene-stage-full[data-dim],
 .at-scene-cardinals[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
-@media (prefers-reduced-motion: reduce) {
-  .at-scene-slot { transition: none; }
-  .at-scene-slot[data-focused] { transform: none; }
-}
 
-/* cardinal readouts ring the DISC, not the screen edges — a band that clears the top controls and the
-   bottom dock (the leaf positions its 4 cells at the band's N/E/S/W). pointer-events stay off. */
+/* the always-on cockpit — a full-width band across the top of the stage, below the top controls
+   (.at-scene-top, which sits at top:0) — and the persistent task dock (right edge): both interactive
+   chrome over the car, so pointer-events stay on unlike the inert cardinal band. Both dim (not etch
+   out) when an on-demand surface takes focus, same cue as the stage/cardinals. `right` clears the task
+   dock's reserved column (300px + 20px gutter = 320px, same reservation the cardinal band already
+   uses) so the row ends before that chrome rather than running under it. */
+.at-scene-cockpit {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  right: 0;
+  z-index: 15;
+  display: flex;
+  justify-content: center;
+  pointer-events: none; /* the centered band is mostly empty air over the car — only the card takes clicks */
+}
+.at-scene-cockpit > * {
+  pointer-events: auto;
+}
+/* the task dock now reads as a working NOTEPAD clipped to the car's right edge, not a rigid data panel:
+   a warmer/lighter fill (--at-void-lift, not the near-opaque glass-black used by the telemetry panels),
+   a faint baseline-rule texture standing in for ruled paper, and a looser corner radius. Still glass
+   (blur + hairline), still mono labels — the material shifts, the vocabulary doesn't. */
+.at-scene-taskdock {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 320px;
+  z-index: 16;
+  pointer-events: auto;
+  /* a pull-out right drawer: slides fully off the right edge when collapsed (the tab, which juts out to
+     its left, rides along and stays on screen). Body scrolls; the panel itself keeps overflow visible so
+     the tab is never clipped. */
+  transform: translateX(0);
+  transition: transform 320ms var(--at-ease-sine);
+}
+.at-scene-taskdock[data-open='false'] {
+  transform: translateX(100%);
+}
+.at-scene-taskdock-body {
+  height: 100%;
+  overflow: auto;
+  padding: 64px var(--at-space-5) var(--at-space-5);
+  /* clean frosted glass (the ruled-paper gradient was fighting the text baselines) — a soft top sheen
+     over a translucent void fill, same idiom as the facts/history glass. */
+  background: linear-gradient(180deg, rgba(150, 175, 210, 0.05), rgba(0, 0, 0, 0) 140px), rgba(20, 19, 15, 0.82);
+  border-left: 1px solid var(--at-glass-edge);
+  backdrop-filter: blur(var(--at-glass-blur));
+}
+/* the pull tab — juts out from the drawer's left edge; the one control that stays reachable when closed */
+.at-scene-taskdock-tab {
+  position: absolute;
+  left: -30px;
+  top: 84px;
+  width: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 0 12px;
+  cursor: pointer;
+  color: var(--at-text-dim);
+  background: rgba(24, 22, 17, 0.72);
+  border: 1px solid var(--at-hairline);
+  border-right: none;
+  border-radius: 8px 0 0 8px;
+  backdrop-filter: blur(var(--at-glass-blur));
+  transition: color 140ms var(--at-ease-sine);
+}
+.at-scene-taskdock-tab:hover { color: var(--at-text); }
+.at-scene-taskdock-tab:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+.at-scene-taskdock-tab-glyph { font-size: 13px; line-height: 1; }
+.at-scene-taskdock-tab-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.at-scene-cockpit[data-dim],
+.at-scene-taskdock[data-dim] { opacity: 0.45; transition: opacity 240ms ease, transform 320ms var(--at-ease-sine); }
+
+/* échéance panels float around the disc's left/bottom-left arc — the wrapper spans the whole stage
+   (so EcheancePanels' % positioning is relative to the disc centre, matching .at-cardinals' convention)
+   but stays click-through except where EcheancePanels re-enables pointer-events on its own chrome. */
+.at-scene-echeances {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+}
+.at-scene-echeances[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+
+/* the "agent scanning" cue is now a 3D holo band sweeping THROUGH the car (VehicleMesh ScanRunner),
+   not a flat DOM bar — see scene/blueprintBuild.ts patchScan + scene/VehicleMesh.tsx. */
+
+/* SANTÉ is the sole cardinal now — a big, VR-scale readout parked on the right, clear of the task dock
+   (right edge, 320px). The leaf positions it via .at-card--right; the wrapper just spans the stage. */
 .at-scene-cardinals {
   position: absolute;
-  /* a symmetric central band: top/bottom cells stay centred on the car, while the left/right cells are
-     pulled inboard of the swappable slot (right) so nothing is occluded. */
-  inset: 100px 392px 230px 392px;
+  inset: 0;
   z-index: 5;
   pointer-events: none;
 }
 
-/* hotspot cards portal into this layer so they sit ABOVE the glass panels (z10) yet below the dock
-   (z40) — the stage canvas stays at z0, but its drei <Html> cards would otherwise be z-trapped under
-   the panels. Layer ignores pointer events; the cards themselves re-enable them. */
-.at-scene-hotspot-layer { position: absolute; inset: 0; z-index: 30; pointer-events: none; }
-.at-scene-hotspot-layer .at-hot { pointer-events: auto; }
 
 /* ── canvas-off fallback (rung d) — the honest floor, two-up ── */
 .at-scene-floor {
@@ -133,21 +229,81 @@
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 40;
+  /* above the facts drawer / history popup (scrim 60, panel 61) so Le Noyau + its narration + the
+     composer stay visible and usable while a surface is open — the operator is never cut off from the
+     agent. */
+  z-index: 70;
   display: flex;
   flex-direction: column;
   align-items: center;
   padding-bottom: 18px;
   pointer-events: none; /* let the empty area pass clicks through to the canvas (orbit the car) */
+  transition: transform 280ms var(--at-ease-sine);
+}
+/* when a full surface (Données / Le Carnet) is open, the dock leaves the bottom and becomes a LEFT
+   column — Le Noyau + its narration + the composer sit in the free space beside the surface (the carnet
+   is centred, the données drawer fills the bottom; the left column clears both). */
+/* Données drawer fills the bottom ~40vh — float the orb + composer CENTERED in the free upper band,
+   with clear air above the drawer edge (the composer must not sit flush against it). */
+.at-scene-dock--top {
+  bottom: calc(40vh + 40px);
+  justify-content: center;
+  padding-bottom: 0;
+}
+/* Le Carnet is a centred card — the orb + composer take the LEFT column beside it. */
+.at-scene-dock--side {
+  right: auto;
+  top: 0;
+  width: min(360px, 32vw);
+  /* anchor to the UPPER-left: clears the bottom données drawer (fills the lower ~40vh) AND sits beside
+     the centred carnet — one placement that is free for both surfaces. */
+  justify-content: flex-start;
+  padding: 96px 0 18px 20px;
+  align-items: flex-start;
+  gap: 14px;
+}
+.at-scene-dock--side .at-scene-composer,
+.at-scene-dock--side .at-scene-chips {
+  width: min(320px, 30vw);
+  max-width: none;
+  justify-content: flex-start;
 }
 .at-scene-noyau { pointer-events: auto; z-index: 50; transform: scale(0.86); transform-origin: bottom center; }
+.at-scene-dock--side .at-scene-noyau { transform-origin: left center; }
+/* deterministic quick-action chips (above the composer) — resolve client-side, never a postTurn. Orange
+   hover marks the operator-focus role; cyan stays rationed to Le Noyau. */
+.at-scene-chips {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+  max-width: min(620px, 88vw);
+  margin-top: 8px;
+}
+.at-scene-chip {
+  cursor: pointer;
+  font-family: var(--at-font-mono);
+  font-size: 14px;
+  color: var(--at-text);
+  border: 1px solid var(--at-hairline);
+  border-radius: 999px;
+  padding: 10px 18px;
+  background: rgba(13, 14, 16, 0.6);
+  transition: border-color 140ms var(--at-ease-sine), background 140ms var(--at-ease-sine);
+}
+.at-scene-chip:hover:not(:disabled) { border-color: var(--at-orange); background: rgba(238, 67, 34, 0.08); }
+.at-scene-chip:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+.at-scene-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
 .at-scene-composer {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  width: min(560px, 84vw);
-  margin-top: 6px;
+  gap: 10px;
+  width: min(680px, 86vw);
+  margin-top: 10px;
 }
 .at-scene-sim {
   flex: 0 0 auto;
@@ -169,11 +325,11 @@
   flex: 1;
   background: rgba(20, 21, 24, 0.92);
   border: 1px solid var(--at-hairline);
-  border-radius: 12px;
+  border-radius: 14px;
   color: var(--at-text-mono);
   font-family: var(--at-font-mono);
-  font-size: 13px;
-  padding: 11px 16px;
+  font-size: 16px;
+  padding: 15px 20px;
   outline: none;
 }
 
@@ -217,11 +373,17 @@
 .at-cta-btn--do { border-color: var(--at-chrome-hi); color: var(--at-text); font-weight: 500; }
 .at-cta-btn--decline { color: var(--at-text-dim); border-color: transparent; margin-left: auto; }
 
-/* below ~860px the 392px band insets would collapse the cardinal band to zero/negative width and the
+/* below ~860px the 360px band insets would collapse the cardinal band to zero/negative width and the
    E/W cells would invert; drop them there (redundant echo — every value still lives in the panel).
    Between ~860 and ~1100 they read as a tight central cluster rather than ringing the disc edges. */
 @media (max-width: 860px) {
   .at-scene-cardinals { display: none; }
+}
+
+/* desktop-first app: below ~900px the task dock has no room beside the car without occluding it. Hide it
+   there — every task still lives in the rung-d floor's FlatPlanList + the Dossier drawer. */
+@media (max-width: 900px) {
+  .at-scene-taskdock { display: none; }
 }
 
 @media (max-width: 720px) {

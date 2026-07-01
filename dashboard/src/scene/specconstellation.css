@@ -1,0 +1,114 @@
+/* Spec constellation — a fan of fact cards projected to the car's LEFT (option 2a). Etches in staggered,
+   each node a small self-glassed card with a hair leader toward the car. Cyan only on the header tick
+   mark echoes the agent's provenance; values stay ink; verified/unverified read in text, not colour. */
+
+.at-spec {
+  position: absolute;
+  /* a left rail BELOW the always-on cockpit (identity+km, ~64→155px): same left offset, dropped down so
+     the moteur fluids never overlap the km readout. Grows downward as the specs focus expands it. */
+  left: 20px;
+  top: 210px;
+  z-index: 6;
+  width: min(300px, 34vw);
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* dim mono, NOT cyan — cyan is rationed to Le Noyau (orb + scan sweep) only (binding colour rule). */
+.at-spec-head {
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+  animation: at-etchin 0.45s var(--at-ease-sine) both;
+}
+
+.at-spec-nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.at-spec-node {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  align-self: flex-start;
+  max-width: 100%;
+  padding: 11px 15px;
+  background: rgba(13, 14, 16, 0.85);
+  border: 1px solid var(--at-hairline);
+  border-radius: 9px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
+  animation: at-etchin 0.5s var(--at-ease-sine) both;
+}
+
+.at-spec-label {
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+}
+.at-spec-value {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--at-text);
+}
+/* .at-spec has pointer-events:none (never blocks orbiting the car) — re-enable clicks on the editable
+   value control only, so leaders/labels stay pass-through. Inherit size/colour so it reads as the value. */
+.at-spec-value .at-inline,
+.at-spec-value .at-inline-input {
+  pointer-events: auto;
+  font-size: inherit;
+  color: inherit;
+}
+.at-spec-ok {
+  color: var(--at-green-hi);
+}
+.at-spec-unver {
+  font-style: italic;
+  font-size: 10px;
+  color: var(--at-text-dim);
+}
+
+/* a hair leader stubbing off the card's right edge, toward the turning car */
+.at-spec-lead {
+  position: absolute;
+  right: -58px;
+  top: 55%;
+  width: 58px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--at-hairline), transparent);
+}
+
+@keyframes at-etchin {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+.at-spec[data-reduced='true'] .at-spec-head,
+.at-spec[data-reduced='true'] .at-spec-node {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-spec-head,
+  .at-spec-node {
+    animation: none !important;
+  }
+}

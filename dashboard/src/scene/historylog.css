@@ -1,0 +1,190 @@
+/* Le Carnet — a centered glass popup (garage-log idiom), NOT a side drawer. Ledger/timeline: full-width
+   hairline separators between visits, mono for dates/readings/cost, tabular-nums throughout. No cyan
+   (rationed to Le Noyau); no side-stripe accents. z-index mirrors the facts drawer (scrim 60 / card 61). */
+
+.at-hlog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--at-space-5);
+  animation: at-hlog-scrim 220ms var(--at-ease-sine) both;
+}
+
+.at-hlog {
+  position: relative;
+  z-index: 61;
+  width: min(640px, 92vw);
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  /* amped glowing glass (VR-ready): a cool steel sheen from the top over the glass fill, deeper blur, a
+     luminous outer halo + inset top highlight so the carnet reads as a lit pane hovering over the scene. */
+  background: radial-gradient(130% 100% at 50% 0%, rgba(150, 175, 210, 0.11), rgba(0, 0, 0, 0) 55%), var(--at-glass-fill);
+  backdrop-filter: blur(calc(var(--at-glass-blur) * 1.4));
+  border: 1px solid var(--at-glass-edge);
+  border-radius: var(--at-radius-glass);
+  box-shadow:
+    0 24px 72px rgba(0, 0, 0, 0.6),
+    0 0 72px rgba(150, 175, 210, 0.17),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  font-family: var(--at-font-ui);
+  color: var(--at-text);
+  animation: at-hlog-card 260ms var(--at-ease-sine) both;
+}
+
+.at-hlog-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--at-space-3);
+  padding: var(--at-space-4) var(--at-space-5);
+  background: rgba(10, 11, 14, 0.96);
+  border-bottom: 1px solid var(--at-hairline);
+}
+.at-hlog-head h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+.at-hlog-close {
+  appearance: none;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--at-radius-chip);
+  border: 1px solid var(--at-hairline);
+  background: transparent;
+  color: var(--at-text-dim);
+}
+.at-hlog-close:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
+.at-hlog-close:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
+
+.at-hlog-empty {
+  margin: 0;
+  padding: var(--at-space-6) var(--at-space-5);
+  text-align: center;
+  font-family: var(--at-font-mono);
+  font-size: 12.5px;
+  color: var(--at-text-dim);
+}
+
+.at-hlog-entries {
+  list-style: none;
+  margin: 0;
+  padding: 0 var(--at-space-5) var(--at-space-4);
+}
+
+/* the ledger rule: a full-width hairline between entries — never a side-stripe accent */
+.at-hlog-entry {
+  padding: var(--at-space-4) 0;
+  border-bottom: 1px solid var(--at-hairline);
+  animation: at-hlog-etchin 0.4s var(--at-ease-sine) both;
+}
+.at-hlog-entry:last-child { border-bottom: none; }
+
+.at-hlog-entry-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--at-space-3);
+}
+.at-hlog-date {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--at-text-dim);
+  white-space: nowrap;
+}
+.at-hlog-title {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--at-text);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.at-hlog-cost {
+  font-family: var(--at-font-mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--at-text-mono);
+  white-space: nowrap;
+}
+
+.at-hlog-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--at-space-3);
+  margin-top: 4px;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--at-text-dim);
+}
+
+.at-hlog-items {
+  list-style: none;
+  margin: var(--at-space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.at-hlog-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 12px;
+}
+.at-hlog-item-name { color: var(--at-text); }
+.at-hlog-parts {
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  color: var(--at-text-dim);
+}
+
+.at-hlog-notes {
+  margin: var(--at-space-2) 0 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--at-text-dim);
+  white-space: pre-wrap;
+}
+
+@keyframes at-hlog-scrim {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes at-hlog-card {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes at-hlog-etchin {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.at-hlog-overlay[data-reduced='true'],
+.at-hlog-overlay[data-reduced='true'] .at-hlog,
+.at-hlog-overlay[data-reduced='true'] .at-hlog-entry {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-hlog-overlay,
+  .at-hlog,
+  .at-hlog-entry {
+    animation: none !important;
+  }
+}

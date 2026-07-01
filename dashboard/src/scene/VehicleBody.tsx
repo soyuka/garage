@@ -28,24 +28,36 @@ export class MeshErrorBoundary extends Component<{ fallback: ReactNode; children
 
 // Render the thumb first, swap to the full mesh once it loads. When thumbUrl === url (a mesh with no
 // thumb), the two collapse to one load (no double-fetch).
-function ThumbThenFull({ spec, paint }: { spec: ReturnType<typeof resolveMesh>; paint: string }) {
+function ThumbThenFull({ spec, paint, scanning, reduced }: { spec: ReturnType<typeof resolveMesh>; paint: string; scanning: boolean; reduced: boolean }) {
   const thumbSpec = { ...spec, url: spec.thumbUrl };
-  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} />;
+  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} />;
   return (
-    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} />}>
-      <VehicleMesh spec={spec} paint={paint} />
+    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} />}>
+      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} />
     </Suspense>
   );
 }
 
-export function VehicleBody({ vehicle, bodyClass, paint }: { vehicle: VehicleSummary; bodyClass: BodyClass; paint: string }) {
+export function VehicleBody({
+  vehicle,
+  bodyClass,
+  paint,
+  scanning = false,
+  reduced = false,
+}: {
+  vehicle: VehicleSummary;
+  bodyClass: BodyClass;
+  paint: string;
+  scanning?: boolean;
+  reduced?: boolean;
+}) {
   const spec = resolveMesh(vehicle);
   const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
   // key on the resolved url so switching to a different mesh resets a previously-failed boundary.
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>
       <Suspense fallback={proxy}>
-        <ThumbThenFull spec={spec} paint={paint} />
+        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} />
       </Suspense>
     </MeshErrorBoundary>
   );

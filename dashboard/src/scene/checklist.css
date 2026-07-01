@@ -1,6 +1,8 @@
-/* "Entretien en cours" — the interactive open-checklist (#10). Reads the --at-* tokens + .glass.
-   Crisp, mono telemetry; a task is NOT a signal, so no signal colour and NO cyan (rationed to Le Noyau).
-   Done reads dimmed + struck; dismissed reads faint. */
+/* "Entretien en cours" — the interactive open-checklist (#10). Sole occupant of the right dock, styled
+   as a working SCRATCHPAD (the dock's ruled-paper background lives in scene.css) rather than a rigid
+   telemetry panel: dashed rules between rows, a small mono uppercase header instead of a heavy title.
+   Reads the --at-* tokens + .glass. A task is NOT a signal, so no signal colour and NO cyan (rationed to
+   Le Noyau). Done reads dimmed + struck; dismissed reads faint. */
 
 .at-check {
   width: 100%;
@@ -15,9 +17,12 @@
   gap: var(--at-space-3);
 }
 .at-check-title {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+  color: var(--at-label);
   margin: 0;
 }
 .at-check-count {
@@ -93,8 +98,8 @@
   grid-template-columns: 22px minmax(0, 1fr) 22px;
   gap: 8px;
   align-items: start;
-  padding: 7px 0;
-  border-top: 1px solid var(--at-hairline);
+  padding: 8px 0;
+  border-top: 1px dashed var(--at-hairline); /* dashed, not solid — a ruled line, not a rigid table row */
 }
 .at-task--done .at-task-title {
   color: var(--at-text-dim);
@@ -268,5 +273,5 @@
 .at-check-foot {
   margin-top: var(--at-space-3);
   padding-top: var(--at-space-2);
-  border-top: 1px solid var(--at-hairline);
+  border-top: 1px dashed var(--at-hairline);
 }

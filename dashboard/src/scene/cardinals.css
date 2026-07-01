@@ -21,18 +21,21 @@
 /* the readouts float on the bare scene (no glass), so a dark scrim keeps mono telemetry legible even
    when a key-lit / specular car body rotates behind them — WCAG holds over the body, not just the void. */
 .at-card-label {
-  margin-bottom: 0;
+  margin-bottom: 2px;
+  font-size: 12px;
+  letter-spacing: 0.16em;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
 }
 
 .at-card-value {
   font-family: var(--at-font-mono);
-  font-size: 17px;
+  font-size: 46px;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
-  color: var(--at-text-mono);
+  color: var(--at-text);
   white-space: nowrap;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.9);
 }
 
 /* overdue: colour AND a heavier shape, never colour alone (§8). The "EN RETARD" label already names
@@ -44,11 +47,6 @@
 }
 
 /* ── cardinal placement around the disc; values lean outward, away from the car ── */
-.at-card--top {
-  top: 6%;
-  left: 50%;
-  transform: translateX(-50%);
-}
 .at-card--bottom {
   bottom: 6%;
   left: 50%;
@@ -60,11 +58,18 @@
   transform: translateY(-50%);
   text-align: left;
 }
+/* SANTÉ = top-right HUD stat. It hugs the right edge; when the task dock is OPEN it insets to clear the
+   dock's 320px column, otherwise it sits flush at the edge. */
 .at-card--right {
-  right: 4%;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 58px;
+  right: 28px;
   text-align: right;
+}
+.at-cardinals[data-dock-open='true'] .at-card--right {
+  right: 372px;
+}
+@media (max-width: 900px) {
+  .at-cardinals[data-dock-open='true'] .at-card--right { right: 24px; } /* dock hides < 900px → reclaim the edge */
 }
 
 /* reduced-motion: values are already static (count-up is Stage D); drop the glow's implied liveness so

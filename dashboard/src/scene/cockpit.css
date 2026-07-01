@@ -1,0 +1,81 @@
+/* Cockpit chrome — the always-on identity/engine/km readout over the 3D stage, laid out as a horizontal
+   band. Internal element styling only: the parent (SceneView / scene.css) owns position + z-index +
+   the band's own padding/backdrop. This is interactive chrome, not a narrated overlay, so nothing here
+   gates on etch-in — reduced only silences the inline-edit affordances' own transitions (kept minimal by
+   design; see InlineEdit/UsageEdit for the edit motion itself). */
+
+.at-cockpit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 3px;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.at-cockpit-identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+
+.at-cockpit-name {
+  margin: 0;
+  font-family: var(--at-font-ui);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: 0.01em;
+  color: var(--at-text);
+}
+
+.at-cockpit-sub {
+  margin: 0;
+  font-family: var(--at-font-mono);
+  font-size: 16px;
+  letter-spacing: 0.02em;
+  color: var(--at-text-dim);
+}
+
+.at-cockpit-sep {
+  color: var(--at-text-dim);
+}
+
+.at-cockpit-km {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.at-cockpit-km-value {
+  font-family: var(--at-font-mono);
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.05;
+  color: var(--at-text);
+  font-variant-numeric: tabular-nums;
+}
+/* live cockpit is in edit mode → the km is a UsageEdit (InlineEdit + unit select); size it to match the
+   read-only value above so the kilométrage reads big on the VR-scale screen. */
+.at-cockpit-km .at-usage-edit-val,
+.at-cockpit-km .at-usage-edit-val.at-inline,
+.at-cockpit-km .at-usage-edit-val.at-inline-input {
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.05;
+}
+.at-cockpit-km .at-usage-edit { align-items: baseline; gap: 6px; }
+.at-cockpit-km .at-usage-edit-unit { font-size: 16px; }
+
+/* edit mode: fields are `.at-inline` (floor.css) inheriting this row's type sizes — its own dashed
+   hover/focus underline (--at-chrome-hi) is the sole affordance, quiet until hovered. Name/sub sizing
+   only needs `font: inherit` from the wrapping <p>, already covered by `.at-inline`. */
+.at-cockpit-name--edit,
+.at-cockpit-sub--edit {
+  min-width: 1.5ch;
+}

@@ -30,6 +30,11 @@
   /* cyan = l'intelligence — RATIONED to Le Noyau (filament, narration, glass edge). Never a fill. */
   --at-cyan: #22d3ee;
   --at-cyan-hi: #67e8f9;
+  /* orange = Les-Tilleuls brand — RATIONED to the OPERATOR's focus + the primary action only (added in
+     the "data around the turn" phase; never a signal colour, never mixed with cyan's agent role). */
+  --at-orange: #ee4322;
+  --at-orange-hi: #ff7a5c;
+  --at-glow-orange: 0 0 10px rgba(238, 67, 34, 0.5);
   /* unknown / not-tracked — neutral grey, NOT a healthy state */
   --at-unknown: #5b5f66;
 
