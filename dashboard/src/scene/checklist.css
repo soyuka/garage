@@ -24,11 +24,13 @@
   text-transform: uppercase;
   color: var(--at-label);
   margin: 0;
+  opacity: var(--at-vib-2); /* secondary: the section header, not the tasks themselves */
 }
 .at-check-count {
   font-family: var(--at-font-mono);
   font-size: 13px;
   color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
 }
 
 .at-check-actions {
@@ -68,6 +70,7 @@
   font-size: 14px;
   color: var(--at-text-dim);
   margin: var(--at-space-3) 0;
+  opacity: var(--at-vib-2);
 }
 
 .at-check-milestones {
@@ -83,6 +86,7 @@
   text-transform: uppercase;
   color: var(--at-label);
   margin: 0 0 4px;
+  opacity: var(--at-vib-3);
 }
 .at-check-tasks {
   list-style: none;
@@ -144,6 +148,7 @@
   color: var(--at-text);
   min-width: 0;
   overflow-wrap: anywhere;
+  opacity: var(--at-vib-1); /* primary: the task itself */
 }
 .at-task-edit-toggle,
 .at-task-dismiss {
@@ -175,6 +180,7 @@
   font-family: var(--at-font-mono);
   font-size: 13px;
   color: var(--at-text-mono);
+  opacity: var(--at-vib-3); /* tertiary: supporting parts detail under the task title */
 }
 .at-task-part {
   display: flex;

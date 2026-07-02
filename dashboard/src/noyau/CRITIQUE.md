@@ -46,8 +46,10 @@ CONTRACT.md rule, or `file:line`. Run via the `noyau-stage-a-critique` workflow.
 
 ## Deferred (logged, not blocking — stylistic nits)
 
-- **Narration exit animation** (minor): the ticker animates its entrance but the outgoing line is
-  not faded up-and-out. Acceptable for v1; revisit with a crossfade/view-transition.
+- **Narration exit animation** (minor) — **done**: the outgoing line is staged in a
+  `.noyau-narration-exit` span (absolutely positioned, `aria-hidden`) that fades up-and-out on the
+  same `nx-etch`/`nx-etch-out` grammar as the incoming line's etch-in, so one motion rule governs
+  both; the aria-live div only ever announces the incoming span. (Noyau.tsx, noyau.css)
 - **Pulse ring origin** (nit): rings expand concentrically from center rather than "off the equator."
   Accepted as stylization for v1.
 

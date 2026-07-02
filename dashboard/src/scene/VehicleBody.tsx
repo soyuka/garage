@@ -2,7 +2,7 @@ import { Component, Suspense, type ReactNode } from 'react';
 import type { VehicleSummary } from '../types';
 import { CarProxy, type BodyClass } from './CarProxy';
 import { resolveMesh } from './vehicleMesh';
-import { VehicleMesh } from './VehicleMesh';
+import { VehicleMesh, type PulseRegion } from './VehicleMesh';
 
 // The single body element that replaces CarProxy on the 3D path. It resolves the glb, suspends while it
 // loads (showing the matching-body proxy so the stage never blanks), and catches any load/decode failure
@@ -28,12 +28,12 @@ export class MeshErrorBoundary extends Component<{ fallback: ReactNode; children
 
 // Render the thumb first, swap to the full mesh once it loads. When thumbUrl === url (a mesh with no
 // thumb), the two collapse to one load (no double-fetch).
-function ThumbThenFull({ spec, paint, scanning, reduced }: { spec: ReturnType<typeof resolveMesh>; paint: string; scanning: boolean; reduced: boolean }) {
+function ThumbThenFull({ spec, paint, scanning, reduced, pulseRegion }: { spec: ReturnType<typeof resolveMesh>; paint: string; scanning: boolean; reduced: boolean; pulseRegion: PulseRegion | null }) {
   const thumbSpec = { ...spec, url: spec.thumbUrl };
-  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} />;
+  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />;
   return (
-    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} />}>
-      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} />
+    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />}>
+      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
     </Suspense>
   );
 }
@@ -44,12 +44,14 @@ export function VehicleBody({
   paint,
   scanning = false,
   reduced = false,
+  pulseRegion = null,
 }: {
   vehicle: VehicleSummary;
   bodyClass: BodyClass;
   paint: string;
   scanning?: boolean;
   reduced?: boolean;
+  pulseRegion?: PulseRegion | null;
 }) {
   const spec = resolveMesh(vehicle);
   const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
@@ -57,7 +59,7 @@ export function VehicleBody({
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>
       <Suspense fallback={proxy}>
-        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} />
+        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
       </Suspense>
     </MeshErrorBoundary>
   );

@@ -24,7 +24,10 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--at-text-dim);
-  animation: at-etchin 0.45s var(--at-ease-sine) both;
+  opacity: var(--at-vib-3); /* tertiary section header — reduced-motion resting value */
+  /* own keyframes (not the shared at-etchin below, which several leaves reuse and lands at opacity:1):
+     the etch-in must settle AT the tier, not fight it back up to full opacity once the animation ends. */
+  animation: at-spec-head-in 0.45s var(--at-ease-sine) both;
 }
 
 .at-spec-nodes {
@@ -41,7 +44,7 @@
   align-self: flex-start;
   max-width: 100%;
   padding: 11px 15px;
-  background: rgba(13, 14, 16, 0.85);
+  background: rgba(13, 14, 16, 0.88); /* scrim law: >= .86 */
   border: 1px solid var(--at-hairline);
   border-radius: 9px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
@@ -55,12 +58,14 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--at-text-dim);
+  opacity: var(--at-vib-3); /* tertiary: field label */
 }
 .at-spec-value {
   font-size: 16px;
   font-weight: 500;
   line-height: 1.2;
   color: var(--at-text);
+  opacity: var(--at-vib-1); /* primary: the value itself */
 }
 /* .at-spec has pointer-events:none (never blocks orbiting the car) — re-enable clicks on the editable
    value control only, so leaders/labels stay pass-through. Inherit size/colour so it reads as the value. */
@@ -77,6 +82,7 @@
   font-style: italic;
   font-size: 10px;
   color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
 }
 
 /* a hair leader stubbing off the card's right edge, toward the turning car */
@@ -97,6 +103,22 @@
   }
   to {
     opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+/* same etch-in, but settles at the tertiary vibrancy tier rather than opacity:1 — kept separate from the
+   shared at-etchin above (reused as-is by .at-spec-node and other leaves) so this one leaf's tier target
+   can't be clobbered by that shared keyframe's opacity:1 end state. */
+@keyframes at-spec-head-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: var(--at-vib-3);
     transform: none;
     filter: none;
   }

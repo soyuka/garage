@@ -30,6 +30,7 @@
   line-height: 1.12;
   letter-spacing: 0.01em;
   color: var(--at-text);
+  opacity: var(--at-vib-1); /* primary: the identity this band exists to show */
 }
 
 .at-cockpit-sub {
@@ -38,6 +39,7 @@
   font-size: 16px;
   letter-spacing: 0.02em;
   color: var(--at-text-dim);
+  opacity: var(--at-vib-2); /* secondary: plate + engine badge */
 }
 
 .at-cockpit-sep {
@@ -75,6 +77,7 @@
   font-variant-numeric: tabular-nums;
   color: var(--at-sig-hi, var(--at-text));
   text-shadow: var(--at-glow-sig, none);
+  opacity: var(--at-vib-1); /* primary signal readout — the glow already carries urgency, keep it full-strength */
 }
 
 .at-cockpit-stat-label {
@@ -82,6 +85,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--at-text-dim);
+  opacity: var(--at-vib-3); /* tertiary: the uppercase caption under the value */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -97,6 +101,7 @@
   line-height: 1.05;
   color: var(--at-text);
   font-variant-numeric: tabular-nums;
+  opacity: var(--at-vib-1); /* primary: the odometer reading */
 }
 /* live cockpit is in edit mode → the km is a UsageEdit (InlineEdit + unit select); size it to match the
    read-only value above so the kilométrage reads big on the VR-scale screen. */

@@ -1,8 +1,43 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { buildBlueprint, type ScanControl } from './blueprintBuild';
+import { buildBlueprint, type PulseControl, type ScanControl } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
+import type { BodyRegion } from './anchors';
+import { PULSE_DURATION, pulseEnvelope, regionAxisFraction } from './holo';
+
+/** A one-shot region flare (PULSE verb): when `region`+`key` change, play the eased cyan envelope ONCE on
+ * that region's slice, then rest. Idempotent per key — even if the prop lingers, it fires once. No-op
+ * under reduced motion (attention, not state → nothing static). A useFrame side-effect; renders nothing. */
+export interface PulseRegion {
+  region: BodyRegion;
+  key: number;
+}
+
+function PulseRunner({ pulse, pulseRegion, reduced }: { pulse: PulseControl; pulseRegion: PulseRegion | null; reduced: boolean }) {
+  const elapsed = useRef(Infinity); // at rest = past the end of the window
+  const lastKey = useRef(pulseRegion?.key ?? -1); // seed so a mount does not replay a stale pulse
+  const centerFrac = useRef(0);
+  useFrame((_, delta) => {
+    if (reduced) {
+      pulse.uniforms.uPulseOn.value = 0;
+      return;
+    }
+    if (pulseRegion && pulseRegion.key !== lastKey.current) {
+      lastKey.current = pulseRegion.key;
+      elapsed.current = 0;
+      centerFrac.current = regionAxisFraction(pulseRegion.region);
+      pulse.uniforms.uPulseCenter.value = centerFrac.current * pulse.halfLen;
+    }
+    if (elapsed.current >= PULSE_DURATION) {
+      pulse.uniforms.uPulseOn.value = 0;
+      return;
+    }
+    elapsed.current += Math.min(delta, 0.05); // clamp a tab-restore hitch
+    pulse.uniforms.uPulseOn.value = pulseEnvelope(elapsed.current);
+  });
+  return null;
+}
 
 // Stage D body leaf — the real optimized glb rendered AS A BLUEPRINT: a faint paint-tinted volume under
 // glowing steel-blue edges (the same recipe CarProxy draws on primitives, so the look is identical
@@ -52,11 +87,13 @@ export function VehicleMesh({
   paint,
   scanning = false,
   reduced = false,
+  pulseRegion = null,
 }: {
   spec: MeshSpec;
   paint: string;
   scanning?: boolean;
   reduced?: boolean;
+  pulseRegion?: PulseRegion | null;
 }) {
   const { scene } = useGLTF(spec.url);
   const built = useMemo(
@@ -70,6 +107,7 @@ export function VehicleMesh({
       <primitive object={built.clone} />
       <primitive object={built.edges} />
       <ScanRunner scan={built.scan} active={scanning} reduced={reduced} />
+      <PulseRunner pulse={built.pulse} pulseRegion={pulseRegion} reduced={reduced} />
     </>
   );
 }

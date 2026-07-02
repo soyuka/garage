@@ -222,6 +222,7 @@
 
 /* ── narration ticker (etches from the cradle base, one line at a time) ─── */
 .noyau-narration {
+  position: relative;
   margin-top: 10px;
   min-height: 18px;
   font-size: 12px;
@@ -234,6 +235,20 @@
 @keyframes nx-etch {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 0.92; transform: translateY(0); }
+}
+/* the outgoing line crossfades: same upward drift as the entrance, continued past the frame and
+   faded out, so one motion grammar rules both entrance and exit. Absolutely positioned over the
+   line box so the two never stack — the incoming line alone holds layout. */
+.noyau-narration-exit {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: inline-block;
+  animation: nx-etch-out 360ms ease-in forwards;
+}
+@keyframes nx-etch-out {
+  from { opacity: 0.92; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-6px); }
 }
 
 /* ── journal drawer ─────────────────────────────────────────────────────── */
@@ -281,7 +296,7 @@
   .noyau-stage[data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
   .noyau-stage[data-phase='listening'] .noyau-scan,
   .noyau-stage[data-phase='idle'] .noyau-scan { opacity: 0.15; }
-  .noyau-pulse-ring, .noyau-exhale { display: none; }
+  .noyau-pulse-ring, .noyau-exhale, .noyau-narration-exit { display: none; }
 }
 .noyau-stage[data-reduced='true'] .noyau-orb,
 .noyau-stage[data-reduced='true'] .noyau-pupil,
@@ -297,4 +312,5 @@
 .noyau-stage[data-reduced='true'][data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
 .noyau-stage[data-reduced='true'] .noyau-scan { opacity: 0.15; }
 .noyau-stage[data-reduced='true'] .noyau-pulse-ring,
-.noyau-stage[data-reduced='true'] .noyau-exhale { display: none; }
+.noyau-stage[data-reduced='true'] .noyau-exhale,
+.noyau-stage[data-reduced='true'] .noyau-narration-exit { display: none; }

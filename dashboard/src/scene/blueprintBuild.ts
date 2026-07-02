@@ -28,6 +28,20 @@ export interface ScanControl {
   halfLen: number; // sweep amplitude: the swept axis' half-extent
 }
 
+/** The region PULSE: a stationary cyan flare centred at one region's slice along the SAME swept axis the
+ * scan uses (so it works for a glb along x or z, and for the proxy). Driven by PulseRunner: `uPulseCenter`
+ * is the region's object-space position on that axis, `uPulseOn` the eased one-shot envelope. Inert at
+ * uPulseOn=0. Shares the scan's `halfLen` (same axis) so a region fraction maps to a position. */
+export interface PulseControl {
+  uniforms: {
+    uPulseCenter: { value: number }; // flare centre on the swept axis, object space
+    uPulseOn: { value: number }; // 0..1 one-shot amplitude (pulseEnvelope)
+    uPulseWidth: { value: number }; // half-width of the flared slice
+    uPulseColor: { value: THREE.Color };
+  };
+  halfLen: number;
+}
+
 export interface Blueprint {
   /** The cloned, re-centred, fill-overridden mesh group. Render via <primitive>. */
   clone: THREE.Object3D;
@@ -35,29 +49,38 @@ export interface Blueprint {
   edges: THREE.Group;
   /** The scan-band control (uniforms + extent) — animate via ScanRunner; inert at uScanOn=0. */
   scan: ScanControl;
+  /** The region-pulse control — animate via PulseRunner; inert at uPulseOn=0. */
+  pulse: PulseControl;
   /** Free per-instance resources on unmount. Never the cached edge geometry or the drei-cached glb. */
   dispose: () => void;
 }
 
-// Inject a moving cyan band into the EDGE material (LineBasicMaterial, `basic` shader). The edge geometry
-// is world-baked to car-local space (see below), so `position` IS the car frame — a band along the swept
-// axis reads as a holo wave travelling the length of the body. NOT applied to the fill mesh: its geometry
-// keeps per-mesh LOCAL coords, which don't line up with the baked edges (would glow uniformly). Inert at
-// uScanOn≈0, so parc thumbs (never animated) look unchanged.
-function patchScan(mat: THREE.Material, u: ScanControl['uniforms']): void {
+// Inject the two cyan holo verbs into the EDGE material (LineBasicMaterial, `basic` shader): the moving
+// scan WAVE and the localized region PULSE. The edge geometry is world-baked to car-local space (see
+// below), so `position` IS the car frame — a band along the swept axis reads as a holo wave travelling
+// the length of the body; a stationary band at a region's slice reads as that region flaring. Both share
+// ONE varying (vScanC, the swept-axis coord) and ONE onBeforeCompile (a material has only one). NOT
+// applied to the fill mesh: its geometry keeps per-mesh LOCAL coords, which don't line up with the baked
+// edges (would glow uniformly). Inert at uScanOn≈0 AND uPulseOn≈0, so parc thumbs (never animated) look
+// unchanged.
+function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseControl['uniforms']): void {
   mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uScanX = u.uScanX;
-    shader.uniforms.uScanOn = u.uScanOn;
-    shader.uniforms.uScanWidth = u.uScanWidth;
-    shader.uniforms.uScanAxis = u.uScanAxis;
-    shader.uniforms.uScanColor = u.uScanColor;
+    shader.uniforms.uScanX = s.uScanX;
+    shader.uniforms.uScanOn = s.uScanOn;
+    shader.uniforms.uScanWidth = s.uScanWidth;
+    shader.uniforms.uScanAxis = s.uScanAxis;
+    shader.uniforms.uScanColor = s.uScanColor;
+    shader.uniforms.uPulseCenter = p.uPulseCenter;
+    shader.uniforms.uPulseOn = p.uPulseOn;
+    shader.uniforms.uPulseWidth = p.uPulseWidth;
+    shader.uniforms.uPulseColor = p.uPulseColor;
     shader.vertexShader = `uniform float uScanAxis;\nvarying float vScanC;\n${shader.vertexShader}`.replace(
       '#include <begin_vertex>',
       '#include <begin_vertex>\n\tvScanC = mix(position.x, position.z, uScanAxis);',
     );
-    shader.fragmentShader = `uniform float uScanX;\nuniform float uScanOn;\nuniform float uScanWidth;\nuniform vec3 uScanColor;\nvarying float vScanC;\n${shader.fragmentShader}`.replace(
+    shader.fragmentShader = `uniform float uScanX;\nuniform float uScanOn;\nuniform float uScanWidth;\nuniform vec3 uScanColor;\nuniform float uPulseCenter;\nuniform float uPulseOn;\nuniform float uPulseWidth;\nuniform vec3 uPulseColor;\nvarying float vScanC;\n${shader.fragmentShader}`.replace(
       '#include <dithering_fragment>',
-      '#include <dithering_fragment>\n\tfloat _band = smoothstep(uScanWidth, 0.0, abs(vScanC - uScanX)) * uScanOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uScanColor, _band * 0.85) + uScanColor * _band * 0.9;',
+      '#include <dithering_fragment>\n\tfloat _band = smoothstep(uScanWidth, 0.0, abs(vScanC - uScanX)) * uScanOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uScanColor, _band * 0.85) + uScanColor * _band * 0.9;\n\tfloat _pulse = smoothstep(uPulseWidth, 0.0, abs(vScanC - uPulseCenter)) * uPulseOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uPulseColor, _pulse * 0.85) + uPulseColor * _pulse * 0.9;',
     );
   };
   mat.needsUpdate = true;
@@ -100,7 +123,18 @@ export function buildBlueprint(
     },
     halfLen,
   };
-  patchScan(edgeMat, scan.uniforms); // edges only — world-baked coords; the faint fill would misalign
+  // Region pulse: a stationary flare on the SAME swept axis (shares halfLen). A touch wider than the scan
+  // band so a region reads as a zone, not a hairline; still a slice, never the whole body.
+  const pulse: PulseControl = {
+    uniforms: {
+      uPulseCenter: { value: 0 },
+      uPulseOn: { value: 0 },
+      uPulseWidth: { value: Math.max(0.5, halfLen * 0.32) },
+      uPulseColor: { value: new THREE.Color('#5fe0d9') }, // holo cyan — the agent acting (same as the scan)
+    },
+    halfLen,
+  };
+  patchHolo(edgeMat, scan.uniforms, pulse.uniforms); // edges only — world-baked coords; the faint fill would misalign
 
   const key = cacheKey ? `${cacheKey}|${edgeAngle}` : undefined;
   const cached = key ? EDGES_CACHE.get(key) : undefined;
@@ -131,5 +165,5 @@ export function buildBlueprint(
     // Only free edge geometries we built AND did not cache (uncached one-offs).
     if (!key) geoms.forEach((g) => g.dispose());
   };
-  return { clone, edges, scan, dispose };
+  return { clone, edges, scan, pulse, dispose };
 }

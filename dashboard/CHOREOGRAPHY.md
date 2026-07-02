@@ -45,3 +45,12 @@ opens an LLM turn. The user sees no difference.
   in the truth-panel / flat plan list at full precision. Hide the WebGL canvas → no value lost.
 - **`prefers-reduced-motion`:** drives/etches/pulses/cascade collapse to instant state changes; the
   overdue wow becomes a static red state + the narration line.
+- **Vibrancy tiers.** HUD hierarchy over the car is expressed as **opacity tiers** (`--at-vib-1/2/3` in
+  tokens/atelier.css — 1 / .72 / .5), not another font-size jump: the same visionOS-style vocabulary as
+  the colour-ration rule (cyan/orange are rationed by ROLE; vibrancy tiers ration EMPHASIS). A surface
+  keeps mono text at one constant size; primary/secondary/tertiary read off tier + weight instead.
+- **Scrim law.** Any DOM text container painted above the WebGL canvas (cockpit band, échéance cards,
+  constellation nodes, parts manifest, CTA card, composer) MUST sit on a fill of **>= .86 opacity** dark
+  ground (glass panels: `--at-glass-fill`) OR gain a local radial scrim behind it (cockpit band — no
+  card, so a fixed-size radial gradient in the `--at-void` family stands in). A light translucent fill
+  over the rotating, bloomed car is unreadable — never ship one under .86 without a scrim.

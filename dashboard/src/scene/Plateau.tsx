@@ -10,6 +10,7 @@ import { computeRingSegments } from './ringSegments';
 import { breathe01, podiumGlow } from './holo';
 import { HoloPodium } from './HoloPodium';
 import { VehicleBody } from './VehicleBody';
+import type { PulseRegion } from './VehicleMesh';
 import { SilhouetteCar } from './SilhouetteCar';
 import './scene.css';
 
@@ -100,11 +101,13 @@ function Plateau3D({
   due,
   reduced,
   scanning,
+  pulseRegion,
 }: {
   vehicle: VehicleSummary;
   due: ForecastDue[];
   reduced: boolean;
   scanning: boolean;
+  pulseRegion: PulseRegion | null;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
   return (
@@ -113,7 +116,7 @@ function Plateau3D({
       <SceneLights />
       <Suspense fallback={null}>
         <group position={[0, 0.04, 0]}>
-          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} scanning={scanning} reduced={reduced} />
+          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
           {/* on-car sick-region orbs removed — health now reads on the segmented base ring + the échéance
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
         </group>
@@ -148,12 +151,14 @@ export function Plateau({
   due,
   reduced = false,
   scanning = false,
+  pulseRegion = null,
 }: {
   vehicle: VehicleSummary;
   rung: Rung;
   due: ForecastDue[];
   reduced?: boolean;
   scanning?: boolean;
+  pulseRegion?: PulseRegion | null;
 }) {
   if (rung === 'd') {
     return (
@@ -172,7 +177,7 @@ export function Plateau({
   // a (no .glb yet → proxy) and b
   return (
     <div className="at-plateau">
-      <Plateau3D vehicle={vehicle} due={due} reduced={reduced} scanning={scanning} />
+      <Plateau3D vehicle={vehicle} due={due} reduced={reduced} scanning={scanning} pulseRegion={pulseRegion} />
     </div>
   );
 }

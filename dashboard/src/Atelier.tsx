@@ -40,7 +40,9 @@ import { DossierPanel } from './DossierPanel';
 import { maintUnitFor } from './records';
 import type { Cta } from './scene/CtaCard';
 import { firstNewlyOverdue } from './scene/crossing';
-import { typesForRegion, type BodyRegion } from './scene/anchors';
+import { regionForFrame, typesForRegion, type BodyRegion } from './scene/anchors';
+import { PULSE_DURATION } from './scene/holo';
+import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
 import { useReducedMotion } from './scene/useReducedMotion';
 import { Credits } from './scene/Attribution';
@@ -89,6 +91,12 @@ export function Atelier() {
   // by car-pin clicks. Cleared on a new turn (its context is captured in pendingContext first) and on nav.
   const [cta, setCta] = useState<Cta | null>(null);
   const [focus, setFocus] = useState<Focus | null>(null);
+  // PULSE verb: the region the agent is currently acting on — a one-shot cyan flare on the car's edges.
+  // A monotonic `key` re-triggers the flare even when two consecutive intents target the SAME region; the
+  // flare auto-clears back to rest after the envelope plays. Derived best-effort from agent frames.
+  const [pulseRegion, setPulseRegion] = useState<PulseRegion | null>(null);
+  const pulseKey = useRef(0);
+  const pulseTimer = useRef<number | null>(null);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
@@ -188,6 +196,7 @@ export function Atelier() {
   }, [clearWatchdog, dispatch]);
   useEffect(() => clearWatchdog, [clearWatchdog]); // clear on unmount
   useEffect(() => () => { if (crossTimer.current != null) window.clearTimeout(crossTimer.current); }, []);
+  useEffect(() => () => { if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current); }, []);
 
   const onFrame = useCallback(
     (frame: MercureFrame) => {
@@ -231,6 +240,16 @@ export function Atelier() {
       // settles + clears it). turn/status/toast drive Le Noyau; the reducer-state members drive the
       // choreography per CHOREOGRAPHY.md (selectVehicle → drive-forward, showFact → truth-panel etch,
       // proposeActions → CTA rises from the cradle). Hidden chat — never a transcript.
+      // PULSE verb: if this frame targets a car region (the agent focusing/acting on a service type), flare
+      // that region's edges cyan once. Best-effort — a frame that maps to no region (status prose, a spec
+      // question, a toast) returns null and pulses nothing. The bumped key re-fires a repeat region.
+      const pulsed = regionForFrame(frame);
+      if (pulsed) {
+        pulseKey.current += 1;
+        setPulseRegion({ region: pulsed, key: pulseKey.current });
+        if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
+        pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
+      }
       if (frame.type === 'turn') {
         dispatch({ type: 'turn', phase: frame.phase });
         if (frame.phase === 'end') clearWatchdog();
@@ -513,6 +532,7 @@ export function Atelier() {
             rung="b"
             reduced={reduced}
             noyau={state}
+            pulseRegion={pulseRegion}
             onClearEmber={() => dispatch({ type: 'clearEmber' })}
             onComposerFocus={(active) => dispatch({ type: 'typing', active })}
             onSubmit={send}

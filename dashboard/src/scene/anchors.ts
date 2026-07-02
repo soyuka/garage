@@ -1,5 +1,6 @@
 import type { BodyClass } from './CarProxy';
 import { DIMS } from './CarProxy';
+import type { MercureFrame } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // The shared geometry seam for every 3D Plateau leaf (Hotspots, BodyGlow, RimGauge).
@@ -74,6 +75,23 @@ export function typesForRegion(region: BodyRegion): string[] {
   return Object.entries(TYPE_REGION)
     .filter(([, r]) => r === region)
     .map(([type]) => type);
+}
+
+/**
+ * The car region an incoming agent Mercure frame acts on, or null — the trigger for the PULSE verb.
+ * Only a session frame that carries service-type keys (focusView / showFact) targets a region: the first
+ * KNOWN service region those keys read off ({@see regionsForKeys} already drops fact-only keys like
+ * oil_capacity, so a spec question pulses nothing). Everything else — domain writes, status prose,
+ * toasts, keyless focus — yields null. Best-effort by design: an unknown tool/type simply does not pulse.
+ *
+ * NOTE: the wire carries no structured tool name/arguments to the client (the narrator publishes prose-
+ * only `status` frames), so these keys are the sole structured service-type signal available.
+ */
+export function regionForFrame(frame: MercureFrame): BodyRegion | null {
+  if (!('type' in frame)) return null; // a DomainEvent (garage write), not a targeted intent
+  const keys = frame.type === 'focusView' || frame.type === 'showFact' ? frame.keys : undefined;
+  if (!keys || keys.length === 0) return null;
+  return regionsForKeys(keys)[0] ?? null;
 }
 
 export type Anchor = [number, number, number];

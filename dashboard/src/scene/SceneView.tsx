@@ -4,6 +4,7 @@ import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
 import type { NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
+import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
 import { Checklist, type ChecklistHandlers } from './Checklist';
@@ -41,6 +42,9 @@ interface SceneViewProps {
   rung: Rung;
   reduced: boolean;
   noyau: NoyauState;
+  /** PULSE verb: the region the agent is currently acting on (one-shot cyan flare on the car). The
+   * `key` re-triggers the flare even for a repeat region; null = at rest. Absent → playground (no pulse). */
+  pulseRegion?: PulseRegion | null;
   onClearEmber: () => void;
   /** Composer focus toggles Le Noyau's listening cue (a local UI event, not a wire frame). */
   onComposerFocus?: (active: boolean) => void;
@@ -84,6 +88,7 @@ export function SceneView({
   rung,
   reduced,
   noyau,
+  pulseRegion = null,
   onClearEmber,
   onComposerFocus,
   onSubmit,
@@ -198,6 +203,7 @@ export function SceneView({
               due={bundle.forecast.due}
               reduced={reduced}
               scanning={noyau.phase === 'working'}
+              pulseRegion={pulseRegion}
             />
           </div>
           {/* health now reads as the glowing base halo on Le Plateau's rim (Plateau → Turntable), colour =

@@ -25,6 +25,7 @@
   letter-spacing: 0.02em;
   margin: 0;
   color: var(--at-text);
+  opacity: var(--at-vib-2); /* secondary: section header, not the échéances themselves */
 }
 
 .at-ech-row {
@@ -89,6 +90,7 @@
   font-size: 12px;
   font-weight: 500;
   color: var(--at-text);
+  opacity: var(--at-vib-1); /* primary: which service */
 }
 .at-ech-svc[data-done='true'] {
   color: var(--at-text-dim);
@@ -97,6 +99,7 @@
 .at-ech-horizon {
   font-size: 11px;
   color: var(--at-sig, var(--at-text-dim));
+  opacity: var(--at-vib-2); /* secondary: the horizon caption */
 }
 .at-ech-horizon--gap {
   color: var(--at-text-dim);

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { regionForType, regionAnchors, regionsForKeys, typesForRegion, BODY_REGIONS, type BodyRegion } from './anchors';
+import { regionForType, regionAnchors, regionsForKeys, typesForRegion, regionForFrame, BODY_REGIONS, type BodyRegion } from './anchors';
+import type { MercureFrame } from '../types';
 
 // The shared geometry seam every 3D leaf (Hotspots, BodyGlow, RimGauge) reads. Pin positions derive
 // from CarProxy DIMS so the blueprint car and its annotations never drift apart.
@@ -70,6 +71,32 @@ describe('typesForRegion — the service types read off a region (inverse of reg
   });
   it('round-trips: every returned type reads back to the same region', () => {
     for (const r of BODY_REGIONS) for (const t of typesForRegion(r)) expect(regionForType(t)).toBe(r);
+  });
+});
+
+describe('regionForFrame — which car region an agent frame pulses (best-effort, service-type keys only)', () => {
+  it('maps a focusView frame carrying a service-type key to that region', () => {
+    const frame: MercureFrame = { type: 'focusView', panel: 'tasks', keys: ['brake_pads'] };
+    expect(regionForFrame(frame)).toBe('frontAxle');
+  });
+  it('takes the first known region when several keys are present (head-to-tail order)', () => {
+    const frame: MercureFrame = { type: 'focusView', panel: 'tasks', keys: ['brake_pads', 'oil_change'] };
+    expect(regionForFrame(frame)).toBe('hood'); // hood precedes frontAxle in BODY_REGIONS order
+  });
+  it('does not pulse for a spec question (fact-only keys map to no region)', () => {
+    expect(regionForFrame({ type: 'showFact', keys: ['oil_capacity', 'oil_type'] })).toBeNull();
+  });
+  it('does not pulse for a focusView with no keys', () => {
+    expect(regionForFrame({ type: 'focusView', panel: 'tasks' })).toBeNull();
+  });
+  it('ignores frames that carry no service-type keys', () => {
+    expect(regionForFrame({ type: 'status', message: "J'enregistre l'intervention…" })).toBeNull();
+    expect(regionForFrame({ type: 'turn', phase: 'start' })).toBeNull();
+    expect(regionForFrame({ type: 'toast', tone: 'info', message: 'ok' })).toBeNull();
+  });
+  it('ignores domain events (a garage write is not a targeted pulse)', () => {
+    const frame = { kind: 'vehicle', event: 'updated', vehicle: 'x', iri: '/v/1', resource: { '@id': '/v/1' } } as unknown as MercureFrame;
+    expect(regionForFrame(frame)).toBeNull();
   });
 });
 

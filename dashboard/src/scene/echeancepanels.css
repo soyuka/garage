@@ -63,12 +63,14 @@
   font-size: 15px;
   font-weight: 600;
   color: var(--at-text);
+  opacity: var(--at-vib-1); /* primary: which service is due */
 }
 .at-echp-horizon {
   font-size: 13px;
   font-weight: 500;
   /* the LIGHT signal shade (--at-sig-hi), never the dark --at-sig (#9b1c1c red = unreadable on dark) */
   color: var(--at-sig-hi, var(--at-text-dim));
+  opacity: var(--at-vib-2); /* secondary: the horizon caption under the service name */
 }
 
 .at-echp-plan {
