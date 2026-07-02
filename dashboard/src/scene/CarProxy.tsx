@@ -13,13 +13,16 @@ export type BodyClass = 'hatchback' | 'berline' | 'suv' | 'utilitaire' | 'moto';
 export const EDGE = BLUEPRINT_EDGE; // blueprint line — single source in signalColors
 export const FILL_OPACITY = 0.14; // tinted night glass: enough body for the edges to contrast against
 
-// PROTOTYPE (stageVariant 'mat', see stageVariant.ts) — a warm off-white matte shell (clay/maquette
+// Under stageVariant 'mat' (see stageVariant.ts) the fill is a warm off-white matte shell (clay/maquette
 // automotive-viz register) instead of the tinted night-glass fill: non-emissive, lit + toneMapped like
 // any ordinary surface (no bloom contribution from the shell itself). The blueprint edges are untouched
 // by this swap — they stay the same electric-blue lines over either fill. Wheels sit a shade darker so
-// the silhouette still reads under the flat clay body.
-const PORCELAIN_BODY = '#f1ece2';
-const PORCELAIN_WHEEL = '#cdc6b9';
+// the silhouette still reads under the flat clay body. Exported: blueprintBuild.ts reuses the same body
+// tint (single source) for the real .glb path, so rung-a matches this proxy under 'mat'.
+export const PORCELAIN_BODY = '#f1ece2';
+export const PORCELAIN_ROUGHNESS = 0.52;
+export const PORCELAIN_METALNESS = 0.02;
+const PORCELAIN_WHEEL = '#cdc6b9'; // wheel-only tint — the shared-material glb path has no wheel/body split
 
 // Two VehicleType spellings reach this at runtime: legacy fixtures (car/motorcycle) and the API enum
 // App\Garage\VehicleType (car/moto/cv/groundscare). groundscare has no dedicated body shape — utilitaire
@@ -134,11 +137,11 @@ function Moto({ paint, stageVariant }: { paint: string; stageVariant: StageVaria
 export function CarProxy({
   bodyClass,
   paint,
-  stageVariant = 'night',
+  stageVariant = 'mat',
 }: {
   bodyClass: BodyClass;
   paint: string;
-  /** Prototype A/B look (stageVariant.ts). Absent → today's night-glass fill, unchanged. */
+  /** Stage look (stageVariant.ts). Absent → the shipped default (porcelain fill), matching readStageVariant. */
   stageVariant?: StageVariant;
 }) {
   if (bodyClass === 'moto') return <Moto paint={paint} stageVariant={stageVariant} />;

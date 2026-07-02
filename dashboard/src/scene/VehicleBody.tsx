@@ -29,12 +29,26 @@ export class MeshErrorBoundary extends Component<{ fallback: ReactNode; children
 
 // Render the thumb first, swap to the full mesh once it loads. When thumbUrl === url (a mesh with no
 // thumb), the two collapse to one load (no double-fetch).
-function ThumbThenFull({ spec, paint, scanning, reduced, pulseRegion }: { spec: ReturnType<typeof resolveMesh>; paint: string; scanning: boolean; reduced: boolean; pulseRegion: PulseRegion | null }) {
+function ThumbThenFull({
+  spec,
+  paint,
+  scanning,
+  reduced,
+  pulseRegion,
+  stageVariant,
+}: {
+  spec: ReturnType<typeof resolveMesh>;
+  paint: string;
+  scanning: boolean;
+  reduced: boolean;
+  pulseRegion: PulseRegion | null;
+  stageVariant: StageVariant;
+}) {
   const thumbSpec = { ...spec, url: spec.thumbUrl };
-  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />;
+  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} stageVariant={stageVariant} />;
   return (
-    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />}>
-      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
+    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} stageVariant={stageVariant} />}>
+      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} stageVariant={stageVariant} />
     </Suspense>
   );
 }
@@ -46,7 +60,7 @@ export function VehicleBody({
   scanning = false,
   reduced = false,
   pulseRegion = null,
-  stageVariant = 'night',
+  stageVariant = 'mat',
 }: {
   vehicle: VehicleSummary;
   bodyClass: BodyClass;
@@ -54,9 +68,8 @@ export function VehicleBody({
   scanning?: boolean;
   reduced?: boolean;
   pulseRegion?: PulseRegion | null;
-  /** Prototype A/B look (stageVariant.ts). Only reaches the proxy fill today — the real .glb path
-   * (ThumbThenFull/VehicleMesh/buildBlueprint) still renders the night-glass blueprint regardless.
-   * TODO: reuse the same porcelain fill swap in buildBlueprint's fillMat if cheap. */
+  /** Stage look (stageVariant.ts). Reaches BOTH the proxy fallback AND the real .glb path
+   * (ThumbThenFull/VehicleMesh/buildBlueprint), so rung-a matches the rung-b proxy under 'mat'. */
   stageVariant?: StageVariant;
 }) {
   const spec = resolveMesh(vehicle);
@@ -65,7 +78,7 @@ export function VehicleBody({
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>
       <Suspense fallback={proxy}>
-        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
+        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} stageVariant={stageVariant} />
       </Suspense>
     </MeshErrorBoundary>
   );

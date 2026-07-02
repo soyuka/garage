@@ -4,12 +4,16 @@ import { useGLTF } from '@react-three/drei';
 import * as THREE from 'three';
 import { buildBlueprint } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
+import type { StageVariant } from './stageVariant';
 
 // Parc-grid thumbnail leaf — the low-poly blueprint spinning in its own drei <View>. Same look as the
 // hero (buildBlueprint: steel-blue edges over a faint fill), but loads the `-thumb.glb` and, unlike the
 // hero, NORMALIZES each vehicle to a unit box centred at the origin so one shared Canvas camera frames
 // every card identically (a moto and a van each fill their own card). Spins via useFrame; skips the spin
-// when off-screen (`active`) or reduced-motion (still renders, static). Fill+edges are unlit → no lights.
+// when off-screen (`active`) or reduced-motion (still renders, static). Edges are always unlit. The fill
+// is unlit too under 'night' (the original translucent glass); under 'mat' it is buildBlueprint's lit
+// porcelain MeshStandardMaterial, so ParcLot's shared Canvas carries one ambientLight for it — harmless
+// to 'night' (MeshBasicMaterial ignores lights entirely).
 
 // Warm the drei cache for the parc grid (small thumbs; the cache dedups across same-type cards).
 ['/mazda6-gh-thumb.glb', '/moto-default-thumb.glb', '/cv-default-thumb.glb', '/groundscare-default-thumb.glb', '/renault-espace-iv-thumb.glb'].forEach(
@@ -19,11 +23,23 @@ import type { MeshSpec } from './vehicleMesh';
 const SPIN = 0.5; // rad/s — slow turntable
 const FIT = 2.2; // target max-dimension after normalization (matches the shared camera framing)
 
-export function ParcThumb({ spec, paint, active, reduced }: { spec: MeshSpec; paint: string; active: boolean; reduced: boolean }) {
+export function ParcThumb({
+  spec,
+  paint,
+  active,
+  reduced,
+  stageVariant = 'mat',
+}: {
+  spec: MeshSpec;
+  paint: string;
+  active: boolean;
+  reduced: boolean;
+  stageVariant?: StageVariant;
+}) {
   const { scene } = useGLTF(spec.thumbUrl);
   const built = useMemo(
-    () => buildBlueprint(scene, { edgeAngle: spec.edgeAngle, rotationY: spec.rotationY, paint, cacheKey: spec.thumbUrl }),
-    [scene, spec.thumbUrl, spec.edgeAngle, spec.rotationY, paint],
+    () => buildBlueprint(scene, { edgeAngle: spec.edgeAngle, rotationY: spec.rotationY, paint, cacheKey: spec.thumbUrl, stageVariant }),
+    [scene, spec.thumbUrl, spec.edgeAngle, spec.rotationY, paint, stageVariant],
   );
   useEffect(() => built.dispose, [built]);
 

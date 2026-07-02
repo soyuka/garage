@@ -4,6 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { buildBlueprint, type PulseControl, type ScanControl } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
 import type { BodyRegion } from './anchors';
+import type { StageVariant } from './stageVariant';
 import { PULSE_DURATION, pulseEnvelope, regionAxisFraction } from './holo';
 
 /** A one-shot region flare (PULSE verb): when `region`+`key` change, play the eased cyan envelope ONCE on
@@ -88,17 +89,20 @@ export function VehicleMesh({
   scanning = false,
   reduced = false,
   pulseRegion = null,
+  stageVariant = 'mat',
 }: {
   spec: MeshSpec;
   paint: string;
   scanning?: boolean;
   reduced?: boolean;
   pulseRegion?: PulseRegion | null;
+  /** Stage look (stageVariant.ts) — closes the .glb gap: reuses CarProxy's porcelain fill under 'mat'. */
+  stageVariant?: StageVariant;
 }) {
   const { scene } = useGLTF(spec.url);
   const built = useMemo(
-    () => buildBlueprint(scene, { edgeAngle: spec.edgeAngle, rotationY: spec.rotationY, paint, cacheKey: spec.url }),
-    [scene, spec.url, spec.edgeAngle, spec.rotationY, paint],
+    () => buildBlueprint(scene, { edgeAngle: spec.edgeAngle, rotationY: spec.rotationY, paint, cacheKey: spec.url, stageVariant }),
+    [scene, spec.url, spec.edgeAngle, spec.rotationY, paint, stageVariant],
   );
   useEffect(() => built.dispose, [built]);
 

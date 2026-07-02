@@ -54,6 +54,20 @@ no tokens**: they replay the SAME choreography (`turn:start` → two `status` na
 answer + `turn:end` ≈ +1900ms) and set the same `focus`/`cta` the agent would. Only the composer free-text
 opens an LLM turn. The user sees no difference.
 
+## Stage look (stageVariant)
+
+Le Plateau ships in one of two looks, picked by `scene/stageVariant.ts`'s `readStageVariant()` (a
+localStorage flag, read once at mount): **'mat'** — a lit cutting-mat workbench floor + a matte porcelain
+car shell — is the **shipped default**; **'night'** — the original tinted night-glass car over a dark
+void — is the explicit opt-out, stored under the same key (`mpa.stage`). Both apply identically across
+every rung/consumer that renders the car body or floor: the rung-b proxy (`CarProxy.tsx`), the rung-a real
+`.glb` (`blueprintBuild.ts`'s `fillParamsFor`, so a loaded mesh matches the proxy it replaces), and the
+parc-grid spinning thumbnails (`ParcThumb`/`ParcLot.tsx`). The floor itself (`CuttingMat.tsx`) only mounts
+under 'mat' — it reads graphite/blue-grey, **never green**: green is reserved for the health signal
+(PRODUCT.md "light is meaning"), so a floor material can never be mistaken for a status read. Blueprint
+edges, the holo scan/pulse verbs, and the podium's rim/glow are untouched by the swap either way — they
+carry the signals this map defines; only the inert body/floor fill changes register.
+
 ## Domain frames (collection topic)
 
 | Frame | Atelier motion | Owner layer |

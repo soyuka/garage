@@ -178,9 +178,9 @@ const RING_SEGMENTS = 96;
 const CALM = { base: 1.4, amp: 0.9 };
 const URGENT = { base: 2.6, amp: 2.0 }; // red: much brighter floor + a bigger heartbeat swing
 
-// PROTOTYPE (stageVariant 'mat') — the rim + podium's additive glow was tuned to read against a dark
-// void; under the cutting mat it must read as a reflection ON the mat, not fog flooding a lit floor.
-// 1 = today's night look, byte-for-byte unchanged (multiplying by 1 is a no-op).
+// The rim + podium's additive glow was tuned to read against a dark void (stageVariant 'night'); under
+// the cutting mat (the shipped default) it must read as a reflection ON the mat, not fog flooding a lit
+// floor. 1 = the night look, byte-for-byte unchanged (multiplying by 1 is a no-op).
 const PODIUM_INTENSITY: Record<StageVariant, number> = { night: 1, mat: 0.55 };
 
 function RingSegment({
@@ -317,9 +317,9 @@ export function Plateau({
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
-  // PROTOTYPE A/B flag (stageVariant.ts): read ONCE at mount, so flipping localStorage mid-session never
+  // Stage look (stageVariant.ts): read ONCE at mount, so flipping localStorage mid-session never
   // ripples through a running Plateau — the toggle in AtelierScene reloads the page instead. Default
-  // (key absent) is 'night', today's look, untouched.
+  // (key absent) is 'mat', the shipped look; 'night' is the explicit opt-out.
   const [stageVariant] = useState<StageVariant>(() => readStageVariant());
   if (rung === 'd') {
     return (

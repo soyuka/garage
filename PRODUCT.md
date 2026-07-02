@@ -16,6 +16,8 @@ AI-native vehicle-maintenance tracker (GMAO-leaning, not a DMS): forecast what's
 
 A lit garage at night. Warm, calm, alive. The interface is a *place* (floor, turntable, workbench, a presence that moves), not a dashboard. Cinematic but honest — every glow encodes a real value.
 
+The shipped stage reads this as a lit **workbench**, not a void: a cutting-mat floor and a matte porcelain car under warm light, turntable and glow unchanged — the same place, seen with the shop lights on (`scene/stageVariant.ts`, default `'mat'`; the original tinted-glass/void look survives as `'night'`, an explicit opt-out).
+
 ## Anti-references
 
 - Neon arcade / candy-saturated configurators (CARBO): staging yes, saturation no.
