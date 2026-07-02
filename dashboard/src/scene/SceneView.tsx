@@ -155,17 +155,24 @@ export function SceneView({
     inboxWasOpen.current = inboxOpen;
   }, [inboxOpen]);
 
-  // D1: the region the view is dollied to — the active pin/rail-row cue (orange = operator focus) lights
-  // its twin(s). Escape releases the hold (reversible in one input), same as the "vue libre" affordance.
+  // D1: the region the view is dollied to — the active rail-row cue (orange = operator focus) lights it.
+  // ONE Escape = ONE step back, innermost first: a projected surface (fiche technique / carnet / specs)
+  // closes before a camera hold releases. (The Données/Carnet drawers own Escape themselves while open —
+  // this handler never sees it first there because they render above and also close on Escape.)
   const cameraRegion = cameraFocus?.region ?? null;
+  const focusOpen = !!focus;
+  const drawerOwnsEscape = factsDrawerOpen || historyOpen;
   useEffect(() => {
-    if (!cameraFocus || !onCameraRelease) return;
+    if (drawerOwnsEscape) return; // an open Données/Carnet drawer is the innermost layer — it handles Escape
+    if (!(focusOpen && onDismissFocus) && !(cameraFocus && onCameraRelease)) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCameraRelease();
+      if (e.key !== 'Escape') return;
+      if (focusOpen && onDismissFocus) onDismissFocus();
+      else onCameraRelease?.();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [cameraFocus, onCameraRelease]);
+  }, [drawerOwnsEscape, focusOpen, onDismissFocus, cameraFocus, onCameraRelease]);
   const focusKeys = focus?.keys;
   // At rest (no specs focus) the constellation shows PINNED facts only — an empty pin set renders
   // nothing (selectFacts treats an empty `keys` as "show everything", so the empty case is gated here

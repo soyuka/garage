@@ -215,9 +215,10 @@ body {
   border: 0;
   background: transparent;
   cursor: pointer;
-  color: var(--at-text-dim);
+  /* legible at rest — a hidden close is a trapped panel (Escape also dismisses, but the ✕ must read) */
+  color: var(--at-text-mono);
   font-family: var(--at-font-mono);
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1;
   pointer-events: auto;
   transition: color 140ms var(--at-ease-sine);
