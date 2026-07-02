@@ -135,11 +135,21 @@ export function Atelier() {
   // Monotonic run token: nav + a superseding chip bump it so an in-flight GET/timer from a prior replay
   // can't land its answer on a newer selection (the timers are also cleared, but a pending fetch is not).
   const detToken = useRef(0);
+  // True while a DETERMINISTIC replay (a wayfinder chip) holds Le Noyau in 'working'. A replay settles
+  // itself via a 1900ms timer → turn/end; but navigation clears that timer WITHOUT settling, which would
+  // strand the orb in 'working' forever (no server turn to cancel, watchdog not armed for chips) and dead-
+  // lock the composer + chips. So clearDet settles the orb when it drops a still-working replay. A LIVE
+  // agent turn (send) never sets this flag — its lifecycle is owned by the watchdog + server frames.
+  const detWorking = useRef(false);
   const clearDet = useCallback(() => {
     detToken.current += 1;
     detTimers.current.forEach((t) => window.clearTimeout(t));
     detTimers.current = [];
-  }, []);
+    if (detWorking.current) {
+      detWorking.current = false;
+      dispatch({ type: 'settle' }); // return to veille — a dropped replay never delivers its own turn/end
+    }
+  }, [dispatch]);
   useEffect(() => clearDet, [clearDet]);
 
   // The parc collection — loaded once on mount; Mercure (slice 4) keeps it fresh thereafter.
@@ -374,11 +384,13 @@ export function Atelier() {
       const live = () => detToken.current === token && selectedIriRef.current === iri;
       setCta(null);
       setFocus(null);
+      detWorking.current = true; // this replay now owns the orb; clearDet settles it if nav supersedes us
       dispatch({ type: 'turn', phase: 'start' });
       const outcome = opts.resolve();
 
       const apply = (o: { focus?: Focus | null; cta?: Cta | null } | null) => {
-        if (!live()) return;
+        if (!live()) return; // superseded by nav/newer replay — clearDet already settled the orb
+        detWorking.current = false; // we deliver our own turn/end below, so clearDet must not re-settle
         if (o?.focus !== undefined) setFocus(o.focus ?? null);
         if (o?.cta !== undefined) setCta(o.cta ?? null);
         dispatch({ type: 'turn', phase: 'end', failed: !o });

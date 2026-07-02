@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
@@ -142,6 +142,22 @@ export function SceneView({
   useEffect(() => {
     if (queueLen === 0) setInboxOpen(false);
   }, [queueLen]);
+  // Focus management for the inbox dialog (WCAG 2.4.3): the leaf focuses itself on open and unmounts on
+  // close, so without restoration a keyboard/AT user is dumped onto <body>. Save the opener at open time,
+  // and on close return focus to it if still connected, else to a stable Le Noyau anchor (the muted ember
+  // re-entry chip if the queue survives, otherwise the orb) — never nothing.
+  const noyauWrapRef = useRef<HTMLDivElement>(null);
+  const inboxOpenerRef = useRef<HTMLElement | null>(null);
+  const inboxWasOpen = useRef(false);
+  useEffect(() => {
+    if (inboxWasOpen.current && !inboxOpen) {
+      const opener = inboxOpenerRef.current;
+      if (opener && opener.isConnected) opener.focus();
+      else noyauWrapRef.current?.querySelector<HTMLElement>('.noyau-ember, .noyau-orb')?.focus();
+      inboxOpenerRef.current = null;
+    }
+    inboxWasOpen.current = inboxOpen;
+  }, [inboxOpen]);
 
   // D1: the region the view is dollied to — the active pin/rail-row cue (orange = operator focus) lights
   // its twin(s). Escape releases the hold (reversible in one input), same as the "vue libre" affordance.
@@ -319,12 +335,14 @@ export function SceneView({
         {cta && !showManifest && onCtaInstruction && onCtaPatch && onCtaDismiss && (
           <CtaCard cta={cta} onInstruction={onCtaInstruction} onPatch={onCtaPatch} onDismiss={onCtaDismiss} reduced={reduced} />
         )}
-        <div className="at-scene-noyau">
+        <div className="at-scene-noyau" ref={noyauWrapRef}>
           <Noyau
             state={noyau}
             reduced={reduced}
             onClearEmber={onClearEmber}
             onEmberActivate={() => {
+              // Capture the opener BEFORE the state mutation so focus can return here on close.
+              inboxOpenerRef.current = document.activeElement as HTMLElement | null;
               setInboxOpen(true);
               onClearEmber(); // opening the inbox mutes the badge (but keeps the queue)
             }}

@@ -219,6 +219,15 @@
   animation: nx-ember-in 300ms ease-out;
   cursor: pointer;
 }
+/* acknowledged (the inbox was opened, decisions remain): a quiet re-entry chip, no alarm glow — the
+   badge no longer clamours, it just stays reachable until the queue drains. */
+.noyau-ember[data-muted='true'] {
+  background: var(--nx-chrome);
+  color: var(--nx-chrome-hi);
+  border: 1px solid var(--nx-seam);
+  box-shadow: none;
+  animation: none;
+}
 .noyau-ember:focus-visible { outline: 2px solid var(--nx-cyan-hi); outline-offset: 2px; }
 @keyframes nx-ember-in {
   from { transform: scale(0); }

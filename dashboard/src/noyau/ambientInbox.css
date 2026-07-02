@@ -71,8 +71,10 @@
 }
 .at-inbox-row + .at-inbox-row { border-top: 1px solid var(--at-hairline); }
 .at-inbox-glyph { color: var(--at-text-dim); padding-top: 1px; }
-/* the glyph shape carries the kind; a faint tone shift reinforces without being colour-only */
-.at-inbox-row[data-kind='notify'] .at-inbox-glyph { color: var(--at-amber-hi); opacity: var(--at-vib-2); }
+/* the glyph SHAPE carries the kind; a faint NEUTRAL tone shift (dim vs mono) reinforces without being
+   colour-only. Health-signal amber is reserved for health state (rail/pins) — a notify CATEGORY must
+   never borrow it, or it collides with the 'bientôt / EN RETARD' amber the operator reads in the same view. */
+.at-inbox-row[data-kind='notify'] .at-inbox-glyph { color: var(--at-text-dim); opacity: var(--at-vib-2); }
 .at-inbox-row[data-kind='review'] .at-inbox-glyph { color: var(--at-text-mono); }
 
 .at-inbox-main { min-width: 0; }

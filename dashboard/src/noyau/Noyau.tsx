@@ -206,18 +206,23 @@ export function Noyau({
         </div>
       </div>
 
-        {state.ember > 0 && (
+        {/* The re-entry affordance is gated on the QUEUE, not the ember badge: once the inbox is opened the
+            badge mutes (ember → 0, emberSeen) but the decisions remain, so closing it (Escape/blur) without
+            resolving everything must NOT strand the queue. A muted variant reads as acknowledged (no alarm
+            glow); a new decision un-mutes it (emberSeen → false). It unmounts only when the queue drains. */}
+        {state.queue.length > 0 && (
           <button
             type="button"
             className="noyau-ember"
-            aria-label={`${state.ember} décision(s) en attente — ouvrir « à décider »`}
+            data-muted={state.emberSeen ? 'true' : undefined}
+            aria-label={`${state.queue.length} décision(s) en attente — ouvrir « à décider »`}
             aria-live="polite"
             onClick={(e) => {
               e.stopPropagation();
               (onEmberActivate ?? onClearEmber)?.();
             }}
           >
-            {state.ember}
+            {state.queue.length}
           </button>
         )}
       </div>

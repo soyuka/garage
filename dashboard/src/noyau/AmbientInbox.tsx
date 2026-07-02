@@ -90,6 +90,27 @@ export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onRevie
         if (e.key === 'Escape') {
           e.stopPropagation();
           onClose();
+          return;
+        }
+        // Focus trap: the leaf closes on blur-to-outside (below), so a plain Tab/Shift+Tab would leak focus
+        // to a sibling (Le Noyau's controls) and self-dismiss the dialog before its rows can be reverse-
+        // traversed. Cycle Tab within the leaf's own buttons instead; genuine outside clicks still close it.
+        if (e.key === 'Tab') {
+          const focusables = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not([disabled])') ?? []);
+          if (focusables.length === 0) {
+            e.preventDefault(); // empty leaf (draining) — keep focus on the container, don't leak out
+            return;
+          }
+          const first = focusables[0];
+          const last = focusables[focusables.length - 1];
+          const active = document.activeElement;
+          if (e.shiftKey && (active === first || active === ref.current)) {
+            e.preventDefault();
+            last.focus();
+          } else if (!e.shiftKey && active === last) {
+            e.preventDefault();
+            first.focus();
+          }
         }
       }}
       onBlur={(e) => {

@@ -48,19 +48,37 @@ blocker. Every blocker + confirmed major fixed before closing B.2.
 ## Deferred — tracked, NOT silent (Stage C / polish)
 
 - **Rung-c on-body overlay.** Hotspots/glow/rim ride rungs a/b (the R3F Canvas) only. On the silhouette
-  rung the telemetry lives in the truth-panel + cardinals; a 2D anchors-projected signal grid on the
-  SVG is a follow-up. The false "carries the hotspot grid" claim in SilhouetteCar.tsx was struck.
+  rung the telemetry lives in the truth-panel; a 2D anchors-projected signal grid on the SVG is a
+  follow-up. The false "carries the hotspot grid" claim in SilhouetteCar.tsx was struck. (The
+  `SilhouetteCar.tsx` comment still says "truth-panel + cardinals" — stale reference, cardinals are gone;
+  the panel alone carries it now.)
 - **Parc amber-by-usage under-report** — the collection `NextDue` lacks the interval, so the §2
   usage-10% amber branch is uncomputable client-side (overdue/red + unknown stay faithful). Raised as
   a Stage-C backend task (server-provided collection signal) in PROVENANCE.md — no fabricated threshold.
-- **Cardinals are a screen HUD, not on-disc 3D** (deliberate: axis-aligned mono stays legible). Hidden
-  below 1024px to avoid colliding with the fixed-width side panels. Recorded as a divergence.
-- **Portaled hotspot pins can overlap the truth-panel** at rotations where a pin projects onto it
-  (cosmetic; the interactive card being un-occluded is the priority). Polish item.
-- **Stage-C / Stage-D:** mpa.recency rail + Noyau-over-lot on the parc; large-fleet (50-card) parc perf
-  (blur/virtualisation); the full §7 800 ms data cascade (delta-sweep / KPI count).
+- **Stage-C / Stage-D:** mpa.recency rail on the parc (still addedAt-desc — see `ParcLot.tsx`) +
+  Noyau-over-lot on the parc; large-fleet (50-card) parc perf (virtualisation — the IntersectionObserver
+  spin-gate is not a substitute at real scale); the full §7 800 ms data cascade (delta-sweep / KPI count
+  — the domain-frame table's "hotspots cross-fade color (400ms)" in CHOREOGRAPHY.md is the same
+  not-yet-built claim, tracked here not there).
+
+## Resolved by the rail/pins + camera rework (was tracked here, now dead)
+
+- ~~Cardinals are a screen HUD, not on-disc 3D~~ — the cardinal readouts component was **removed**
+  outright (not just re-scoped): `CardinalReadouts.tsx`/`cardinals.css` are deleted; the odometer/health
+  facts it carried live in the cockpit band (`Cockpit.tsx` → `HealthStat`) and the Entretien rail now.
+- ~~Portaled hotspot pins can overlap the truth-panel~~ — moot: the échéance pins (`EcheancePins.tsx`)
+  are a plain absolutely-positioned DOM layer (`.at-echpin-layer`, z6), not an R3F `<Html>` portal into
+  the canvas stacking context, and the hero no longer renders the truth-panel alongside them (rung d
+  only). The old `.at-scene-hotspot-layer` z30 portal is gone.
+- **taskdock / `EcheancePanels.tsx` / `Checklist.tsx` / `EcheanceList.tsx`** — the right-docked échéance
+  panels and the établi checklist were replaced wholesale by the split ring: `EcheancePins.tsx` (spatial
+  index on the disc) + `EntretienRail.tsx` (the persistent left prose rail, renamed from `Checklist.tsx`).
+  Any doc or comment still naming the old files is stale.
 
 ## Verified live (chrome-devtools, all 6 scenarios + rungs c/d + #/parc + crossing + reset)
+
+Snapshot as of B.2; the établi shelf and the cardinal readouts named below were both later removed
+(see "Resolved" above) — read this as a historical record, not the current surface.
 
 healthy → green rim, 2 pins, établi, cardinals, panel + "Dernière intervention"; ambre → gold rim, dual
 amber glow+pins, gap; overdue → red glow + thicker red rim arc + red ‼ pin + panel "DÉPASSÉ de 3 200 km";
