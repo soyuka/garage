@@ -327,6 +327,7 @@
   white-space: nowrap;
 }
 .at-fact-source--verified { color: var(--at-green-hi); border-color: rgba(74, 222, 128, 0.35); }
+.at-fact-source-wrap { display: inline-flex; align-items: center; min-width: 0; }
 .at-fact-link { text-decoration: none; }
 .at-fact-del {
   appearance: none;

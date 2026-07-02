@@ -1,8 +1,9 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
-import type { NoyauState } from '../noyau/state';
+import { AmbientInbox } from '../noyau/AmbientInbox';
+import type { DecisionItem, NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
 import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
@@ -45,6 +46,10 @@ interface SceneViewProps {
    * `key` re-triggers the flare even for a repeat region; null = at rest. Absent → playground (no pulse). */
   pulseRegion?: PulseRegion | null;
   onClearEmber: () => void;
+  /** C2 à-décider inbox: remove a decided queue item (backs "vu" + follows every action). */
+  onResolveDecision?: (id: string) => void;
+  /** C2: promote a notify item (a due service) to a planned task on its own vehicle. */
+  onScheduleDecision?: (item: DecisionItem) => void;
   /** Composer focus toggles Le Noyau's listening cue (a local UI event, not a wire frame). */
   onComposerFocus?: (active: boolean) => void;
   /** Submit an instruction (Enter). Live → posts an agent turn; absent → input is inert (pre-agent). */
@@ -92,6 +97,8 @@ export function SceneView({
   noyau,
   pulseRegion = null,
   onClearEmber,
+  onResolveDecision,
+  onScheduleDecision,
   onComposerFocus,
   onSubmit,
   composerExtras,
@@ -119,6 +126,12 @@ export function SceneView({
   // Ephemeral view state (NOT data): the index of the pin/row pair currently hovered or focused — shared
   // by the ring pins and the left rail so brightening either half lights its twin. Resets on unmount.
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+  // C2: the à-décider inbox opens from the ember. Auto-closes once the queue drains (last item resolved).
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const queueLen = noyau.queue.length;
+  useEffect(() => {
+    if (queueLen === 0) setInboxOpen(false);
+  }, [queueLen]);
   const focusKeys = focus?.keys;
   // At rest (no specs focus) the constellation shows PINNED facts only — an empty pin set renders
   // nothing (selectFacts treats an empty `keys` as "show everything", so the empty case is gated here
@@ -264,7 +277,25 @@ export function SceneView({
           <CtaCard cta={cta} onInstruction={onCtaInstruction} onPatch={onCtaPatch} onDismiss={onCtaDismiss} reduced={reduced} />
         )}
         <div className="at-scene-noyau">
-          <Noyau state={noyau} reduced={reduced} onClearEmber={onClearEmber} />
+          <Noyau
+            state={noyau}
+            reduced={reduced}
+            onClearEmber={onClearEmber}
+            onEmberActivate={() => {
+              setInboxOpen(true);
+              onClearEmber(); // opening the inbox mutes the badge (but keeps the queue)
+            }}
+          />
+          <AmbientInbox
+            open={inboxOpen}
+            queue={noyau.queue}
+            reduced={reduced}
+            onClose={() => setInboxOpen(false)}
+            onResolve={(id) => onResolveDecision?.(id)}
+            onReviewInstruction={onCtaInstruction}
+            onReviewPatch={onCtaPatch}
+            onSchedule={onScheduleDecision}
+          />
         </div>
         {overlayOpen ? (
           <div className="at-scene-chips">

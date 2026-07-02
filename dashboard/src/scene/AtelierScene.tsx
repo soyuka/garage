@@ -182,6 +182,7 @@ export function AtelierScene() {
           { label: 'Historique', onClick: () => { setFactsDrawerOpen(false); setHistoryOpen(true); } },
         ]}
         onClearEmber={() => dispatch({ type: 'clearEmber' })}
+        onResolveDecision={(id) => dispatch({ type: 'resolve', id })}
         onComposerFocus={(active) => dispatch({ type: 'typing', active })}
         composerExtras={
           <>

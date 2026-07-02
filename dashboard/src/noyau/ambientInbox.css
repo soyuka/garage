@@ -1,0 +1,132 @@
+/* ── the "à décider" ambient inbox leaf (C2) ─────────────────────────────────
+   Opens UPWARD from Le Noyau (anchored in .at-scene-noyau, the positioned/scaled dock slot). Not a modal,
+   not a drawer — a compact queue leaf. Scrim law: glass fill >= .86 so the mono rows stay legible over the
+   bloomed rotating car. Cyan is rationed to the head hairline ONLY (the Noyau's attribution). */
+.at-inbox {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  z-index: 60;
+  width: min(340px, 86vw);
+  max-height: 60vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-glass);
+  background: var(--at-glass-fill); /* >= .86 dark ground — scrim law */
+  backdrop-filter: blur(var(--at-glass-blur));
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55), var(--at-glass-inner-shadow);
+  color: var(--at-text-mono);
+  font-family: var(--at-font-mono);
+  text-align: left;
+  animation: at-inbox-rise 220ms var(--at-ease-sine, ease-out);
+  outline: none;
+}
+@keyframes at-inbox-rise {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+.at-inbox:focus-visible { outline: none; }
+
+/* head — the cyan hairline attribution (Le Noyau surfaced these). Cyan only here, never a fill. */
+.at-inbox-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding-bottom: 7px;
+  margin-bottom: 6px;
+  border-bottom: 1px solid rgba(34, 211, 238, 0.45); /* --at-cyan hairline */
+}
+.at-inbox-title {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--at-cyan-hi);
+  opacity: var(--at-vib-2);
+}
+.at-inbox-count {
+  font-size: 10px;
+  color: var(--at-text-dim);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+.at-inbox-empty {
+  margin: 4px 2px;
+  font-size: 12px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+}
+
+.at-inbox-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.at-inbox-row {
+  display: grid;
+  grid-template-columns: 18px 1fr auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 2px;
+}
+.at-inbox-row + .at-inbox-row { border-top: 1px solid var(--at-hairline); }
+.at-inbox-glyph { color: var(--at-text-dim); padding-top: 1px; }
+/* the glyph shape carries the kind; a faint tone shift reinforces without being colour-only */
+.at-inbox-row[data-kind='notify'] .at-inbox-glyph { color: var(--at-amber-hi); opacity: var(--at-vib-2); }
+.at-inbox-row[data-kind='review'] .at-inbox-glyph { color: var(--at-text-mono); }
+
+.at-inbox-main { min-width: 0; }
+.at-inbox-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: var(--at-text);
+  opacity: var(--at-vib-1);
+}
+.at-inbox-kind {
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+.at-inbox-finding {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: var(--at-text-mono);
+  opacity: var(--at-vib-2);
+}
+.at-inbox-when {
+  font-size: 9.5px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  white-space: nowrap;
+  padding-top: 2px;
+}
+
+.at-inbox-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.at-inbox-btn {
+  cursor: pointer;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  line-height: 1;
+  color: var(--at-text-mono);
+  border: 1px solid var(--at-hairline);
+  border-radius: 999px;
+  padding: 7px 12px; /* generous hit target while staying a compact pill */
+  background: rgba(13, 14, 16, 0.6);
+  transition: border-color 140ms var(--at-ease-sine, ease), background 140ms var(--at-ease-sine, ease);
+}
+/* the primary deterministic action reads as operator focus — orange, rationed to the primary button */
+.at-inbox-btn--do { color: var(--at-text); border-color: rgba(238, 67, 34, 0.5); }
+.at-inbox-btn:hover { border-color: var(--at-orange); background: linear-gradient(rgba(238, 67, 34, 0.1), rgba(238, 67, 34, 0.1)), rgba(13, 14, 16, 0.6); }
+.at-inbox-btn--dismiss { color: var(--at-text-dim); }
+.at-inbox-btn--dismiss:hover { border-color: var(--at-hairline); background: rgba(255, 255, 255, 0.04); color: var(--at-text-mono); }
+.at-inbox-btn:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .at-inbox { animation: none; }
+}
+.at-inbox[data-reduced='true'] { animation: none; }

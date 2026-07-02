@@ -1,0 +1,11 @@
+/* the agent-authorship mark (C3, Shape-of-AI "Identifier") — a hairline cyan glyph, never a border,
+   fill or glow, sitting next to a value's source badge wherever the agent itself wrote that value
+   (source llm/web — see isAgentAuthored in provenance.ts). Cyan stays licensed here: cyan IS the
+   agent's signature (PRODUCT.md ration rule), never decor. */
+.at-agent-mark {
+  color: var(--at-cyan);
+  font-size: 8px;
+  line-height: 1;
+  margin-left: 3px;
+  vertical-align: middle;
+}

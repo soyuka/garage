@@ -44,6 +44,7 @@ import { regionForFrame, typesForRegion, type BodyRegion } from './scene/anchors
 import { PULSE_DURATION } from './scene/holo';
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
+import type { DecisionItem } from './noyau/state';
 import { useReducedMotion } from './scene/useReducedMotion';
 import { Credits } from './scene/Attribution';
 import { serviceLabel } from './labels';
@@ -90,6 +91,10 @@ export function Atelier() {
   // centre slot + which keys are spotlit on the car/panel). Driven by `focusView`/`showFact` intents and
   // by car-pin clicks. Cleared on a new turn (its context is captured in pendingContext first) and on nav.
   const [cta, setCta] = useState<Cta | null>(null);
+  // The live cta seen inside the memoized Mercure callback (its closure would otherwise capture a stale
+  // value) — used to defer a still-pending proposal to the à-décider inbox when a newer one supersedes it.
+  const ctaRef = useRef<Cta | null>(cta);
+  ctaRef.current = cta;
   const [focus, setFocus] = useState<Focus | null>(null);
   // PULSE verb: the region the agent is currently acting on — a one-shot cyan flare on the car's edges.
   // A monotonic `key` re-triggers the flare even when two consecutive intents target the SAME region; the
@@ -191,7 +196,7 @@ export function Atelier() {
     watchdog.current = window.setTimeout(() => {
       // toast BEFORE turn/end so the done filament settles amber (worstTone), not a false green.
       dispatch({ type: 'toast', tone: 'warn', message: "Le tour ne répond plus — réessayez." });
-      dispatch({ type: 'turn', phase: 'end' });
+      dispatch({ type: 'turn', phase: 'end', failed: true });
     }, 90_000);
   }, [clearWatchdog, dispatch]);
   useEffect(() => clearWatchdog, [clearWatchdog]); // clear on unmount
@@ -225,7 +230,8 @@ export function Atelier() {
               const crossed = firstNewlyOverdue(prevDue, b.forecast.due);
               setBundle(b);
               if (crossed) {
-                dispatch({ type: 'concern', message: `${serviceLabel(crossed)} en retard` });
+                // carry the raw type + vehicle so the à-décider notify row can offer "planifier ○"
+                dispatch({ type: 'concern', message: `${serviceLabel(crossed)} en retard`, serviceType: crossed, vehicleIri: iri });
                 if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
                 crossTimer.current = window.setTimeout(() => {
                   if (phaseRef.current !== 'working') dispatch({ type: 'settle' }); // don't cut a live turn
@@ -266,7 +272,13 @@ export function Atelier() {
         // Both raise the single slot. showFact is the specs-only subset (see focusForAction).
         setFocus(focusForAction(frame));
       } else if (frame.type === 'proposeActions') {
-        setCta({ headline: frame.headline, finding: frame.finding, actions: frame.actions });
+        const next: Cta = { headline: frame.headline, finding: frame.finding, actions: frame.actions };
+        const defer = (c: Cta) => dispatch({ type: 'defer', id: `review:${c.headline}`, text: c.headline, finding: c.finding, actions: c.actions });
+        // a still-pending prior proposal is SUPERSEDED by this one → park it in the à-décider inbox.
+        if (ctaRef.current) defer(ctaRef.current);
+        // no hero open (the operator is on the parc — no cradle to raise the card) → straight to the inbox.
+        if (!selectedIriRef.current) defer(next);
+        else setCta(next);
       } else if (frame.type === 'setVehicles') {
         setVehicles(frame.vehicles);
         if (frame.preferredId) window.location.hash = hashForVehicle(frame.preferredId);
@@ -301,7 +313,7 @@ export function Atelier() {
       clearWatchdog();
       // toast BEFORE turn/end so the done filament settles red (worstTone), not a false green.
       dispatch({ type: 'toast', tone: 'alarm', message: `Échec de la requête : ${(e as Error).message}` });
-      dispatch({ type: 'turn', phase: 'end' });
+      dispatch({ type: 'turn', phase: 'end', failed: true });
     });
   };
 
@@ -322,6 +334,22 @@ export function Atelier() {
       // Guard POST-await so a re-read landing after navigation can't overwrite the now-open vehicle.
       .then((b) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? b : prev)))
       .catch((e) => dispatch({ type: 'toast', tone: 'alarm', message: `Échec de l’ajout : ${(e as Error).message}` }));
+  };
+
+  // ── C2 à-décider inbox handlers. `resolve` drops a decided item from the queue (a "vu" dismiss or the
+  // tail of any action). `schedule` promotes a notify item (a due service) to a planned task on ITS OWN
+  // vehicle — createTask targets the item's vehicleIri directly, so it is correct even if the operator has
+  // since navigated to another car (the concern persists across nav). Only refresh the open bundle if it
+  // matches. Review actions reuse the CTA paths (onCtaInstruction / onCtaPatch) unchanged.
+  const onResolveDecision = (id: string) => dispatch({ type: 'resolve', id });
+  const onScheduleDecision = (item: DecisionItem) => {
+    if (!item.serviceType || !item.vehicleIri) return;
+    const vIri = item.vehicleIri;
+    createTask(vIri, { type: item.serviceType })
+      .then(() => {
+        if (selectedIriRef.current === vIri) afterTaskWrite(vIri);
+      })
+      .catch((e) => alarm(`Échec de la planification : ${(e as Error).message}`));
   };
 
   // ── #9 Vehicle CRUD + facts (the manual surfaces; the agent does the same via NL). Every write also
@@ -534,6 +562,8 @@ export function Atelier() {
             noyau={state}
             pulseRegion={pulseRegion}
             onClearEmber={() => dispatch({ type: 'clearEmber' })}
+            onResolveDecision={onResolveDecision}
+            onScheduleDecision={onScheduleDecision}
             onComposerFocus={(active) => dispatch({ type: 'typing', active })}
             onSubmit={send}
             cta={cta}

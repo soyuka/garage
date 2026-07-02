@@ -1,5 +1,7 @@
 /* Le Dossier — a right-side glass drawer (mirrors the journal). Records + schedule editing. Mono,
-   dense, cyan-free (rationed to Le Noyau). Reads the --at-* tokens + .glass. */
+   dense, cyan-free (rationed to Le Noyau) except the per-row agent-provenance mark (.at-agent-mark,
+   provenance.css) — cyan IS the agent's signature, so it is licensed there. Reads the --at-* tokens
+   + .glass. */
 
 .at-dossier-overlay {
   position: fixed;
@@ -119,6 +121,7 @@ textarea.at-dossier-input { width: 100%; resize: vertical; }
 .at-rule-cadence { font-family: var(--at-font-mono); font-size: 11px; color: var(--at-text-dim); }
 .at-rule-source { font-family: var(--at-font-ui); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--at-text-dim); border: 1px solid var(--at-hairline); border-radius: var(--at-radius-chip); padding: 1px 5px; white-space: nowrap; }
 .at-rule-source--verified { color: var(--at-green-hi); border-color: rgba(74, 222, 128, 0.35); }
+.at-rule-source-wrap { display: inline-flex; align-items: center; min-width: 0; }
 .at-rule-link { text-decoration: none; }
 .at-rule-del { appearance: none; background: transparent; border: 0; color: var(--at-text-dim); font-size: 14px; cursor: pointer; padding: 0 2px; }
 .at-rule-del:hover { color: var(--at-red-hi); }

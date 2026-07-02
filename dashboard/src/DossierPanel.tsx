@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { AgentMark } from './AgentMark';
 import './dossier.css';
 import { coerceInt } from './edit';
 import { formatDate, formatEuros, formatReading } from './format';
 import { serviceLabel, SERVICE_TYPES } from './labels';
+import { isAgentAuthored } from './provenance';
 import { centsToEurosInput, MAINT_USAGE_UNITS, parseEuros, visitTitle } from './records';
 import { formatCadence, ruleTitle } from './schedule';
 import { safeHref } from './safeHref';
@@ -160,6 +162,7 @@ function RecordCard({
     <div className="at-rec">
       <div className="at-rec-head">
         <span className="at-rec-title">{visitTitle(record)}</span>
+        {isAgentAuthored(record.source) && <AgentMark />}
         <span className="at-rec-date">{formatDate(record.performedAt)}</span>
         <span className="at-rec-actions">
           <button type="button" className="at-rec-act" aria-label="Modifier l’entretien" title="Modifier" onClick={onEdit}>✎</button>
@@ -447,7 +450,12 @@ function RuleSource({ rule }: { rule: ServiceRule }) {
       {rule.source}
     </span>
   );
-  return href ? <a className="at-rule-link" href={href} target="_blank" rel="noreferrer" title={href}>{badge}</a> : badge;
+  return (
+    <span className="at-rule-source-wrap">
+      {href ? <a className="at-rule-link" href={href} target="_blank" rel="noreferrer" title={href}>{badge}</a> : badge}
+      {isAgentAuthored(rule.source) && <AgentMark />}
+    </span>
+  );
 }
 
 const ACTIONS: ServiceAction[] = ['change', 'replace', 'clean', 'inspect'];

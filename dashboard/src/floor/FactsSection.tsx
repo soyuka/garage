@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { AgentMark } from '../AgentMark';
 import { factLabel } from '../labels';
+import { isAgentAuthored } from '../provenance';
 import { safeHref } from '../safeHref';
 import type { VehicleFact } from '../types';
 import { InlineEdit } from './InlineEdit';
@@ -53,14 +55,17 @@ function FactRow({ fact, edit }: { fact: VehicleFact; edit?: FactsEdit }) {
         )}
         {fact.unit ? <span className="at-fact-unit">{fact.unit}</span> : null}
       </span>
-      {href ? (
-        // A web-sourced fact links to the page it was cited from; safeHref permits only http(s).
-        <a className="at-fact-link" href={href} target="_blank" rel="noreferrer" title={href}>
-          {badge}
-        </a>
-      ) : (
-        badge
-      )}
+      <span className="at-fact-source-wrap">
+        {href ? (
+          // A web-sourced fact links to the page it was cited from; safeHref permits only http(s).
+          <a className="at-fact-link" href={href} target="_blank" rel="noreferrer" title={href}>
+            {badge}
+          </a>
+        ) : (
+          badge
+        )}
+        {isAgentAuthored(fact.source) && <AgentMark />}
+      </span>
       {edit && (
         <button type="button" className="at-fact-del" aria-label={`Retirer ${factLabel(fact.key)}`} title="Retirer" onClick={() => edit.onRemove(fact.key)}>
           ×

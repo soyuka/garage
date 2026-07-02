@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { tickMarks } from './gauge';
 import type { NoyauState } from './state';
 import './noyau.css';
@@ -7,6 +7,66 @@ const VIEW = 132;
 const C = VIEW / 2;
 
 const GLYPH: Record<string, string> = { pulse: '●', narration: '·', alarm: '▲', done: '◆' };
+
+// Per-tool chip glyphs — each differs by SHAPE (not colour alone): a nut, a clock, a notebook, a
+// pennant, a plate, a droplet, a pencil, a save-mark, a fleet grid, a globe. Unknown → a diamond.
+// All stroke `currentColor` (inherits the chip's mono/amber tone) at a hairline weight.
+function StepGlyph({ tool }: { tool: string }) {
+  const paths: Record<string, ReactNode> = {
+    get_service_parts: <path d="M6 1.3 10.2 3.7v4.6L6 10.7 1.8 8.3V3.7z" />, // hexagonal nut
+    list_due_maintenance: (
+      <>
+        <circle cx="6" cy="6" r="4.4" />
+        <path d="M6 3.4V6l1.9 1.2" />
+      </>
+    ), // forecast clock
+    get_history: (
+      <>
+        <rect x="2.6" y="1.8" width="6.8" height="8.4" rx="1" />
+        <path d="M4.4 4.2h3.4M4.4 6h3.4M4.4 7.8h2.2" />
+      </>
+    ), // carnet
+    plan_maintenance: (
+      <>
+        <path d="M3.2 1.6v8.8" />
+        <path d="M3.2 2.2h5.4L7.2 4l1.4 1.8H3.2z" />
+      </>
+    ), // planning pennant
+    lookup_plate: (
+      <>
+        <rect x="1.6" y="3.6" width="8.8" height="4.8" rx="1" />
+        <path d="M3.4 6h5.2" />
+      </>
+    ), // plate
+    get_motul_oil: <path d="M6 1.4c2 2.5 3 4.1 3 5.5a3 3 0 0 1-6 0c0-1.4 1-3 3-5.5z" />, // droplet
+    update_vehicle: <path d="M8.3 2.1 9.9 3.7 4.4 9.2H2.8V7.6z" />, // pencil
+    log_maintenance: (
+      <>
+        <circle cx="6" cy="6" r="4.4" />
+        <path d="M6 3.9v4.2M3.9 6h4.2" />
+      </>
+    ), // record / plus
+    list_vehicles: (
+      <>
+        <rect x="1.9" y="1.9" width="3.4" height="3.4" rx="0.7" />
+        <rect x="6.7" y="1.9" width="3.4" height="3.4" rx="0.7" />
+        <rect x="1.9" y="6.7" width="3.4" height="3.4" rx="0.7" />
+        <rect x="6.7" y="6.7" width="3.4" height="3.4" rx="0.7" />
+      </>
+    ), // fleet grid
+    web_search: (
+      <>
+        <circle cx="6" cy="6" r="4.4" />
+        <path d="M1.6 6h8.8M6 1.6c1.6 1.7 1.6 7.1 0 8.8M6 1.6c-1.6 1.7-1.6 7.1 0 8.8" />
+      </>
+    ), // globe
+  };
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {paths[tool] ?? <path d="M6 1.8 10.2 6 6 10.2 1.8 6z" />}
+    </svg>
+  );
+}
 const SIGNAL_FR: Record<string, string> = { green: 'vert', amber: 'ambre', red: 'rouge' };
 
 /**
@@ -20,10 +80,14 @@ export function Noyau({
   state,
   reduced = false,
   onClearEmber,
+  onEmberActivate,
 }: {
   state: NoyauState;
   reduced?: boolean;
   onClearEmber?: () => void;
+  /** C2: clicking the ember OPENS the à-décider inbox (which also mutes the badge). When absent (the
+   *  Stage-A playground has no inbox) the click falls back to a bare badge acknowledge. */
+  onEmberActivate?: () => void;
 }) {
   const ticks = useMemo(() => tickMarks(60, C, C, 53, 59, 5), []);
   const [rings, setRings] = useState<number[]>([]);
@@ -64,6 +128,9 @@ export function Noyau({
       data-result={state.result ?? undefined}
       data-reduced={reduced ? 'true' : undefined}
     >
+      {/* orb + ember are SIBLINGS in a positioned wrap: the ember is a real <button> (keyboard-reachable,
+          opens the à-décider inbox) and must NOT nest inside the role="button" orb (an ARIA violation). */}
+      <div className="noyau-orb-wrap">
       <div
         className="noyau-orb"
         role="button"
@@ -137,19 +204,21 @@ export function Noyau({
           ))}
           {state.phase === 'done' && <span className="noyau-exhale" />}
         </div>
+      </div>
 
         {state.ember > 0 && (
-          <span
+          <button
+            type="button"
             className="noyau-ember"
-            role="status"
-            aria-label={`${state.ember} notification(s)`}
+            aria-label={`${state.ember} décision(s) en attente — ouvrir « à décider »`}
+            aria-live="polite"
             onClick={(e) => {
               e.stopPropagation();
-              onClearEmber?.();
+              (onEmberActivate ?? onClearEmber)?.();
             }}
           >
             {state.ember}
-          </span>
+          </button>
         )}
       </div>
 
@@ -167,6 +236,20 @@ export function Noyau({
         )}
         {state.narration && <span key={state.narration}>{state.narration}</span>}
       </div>
+
+      {/* Typed tool-step chips: one per tool call as the frames arrive, then they collapse toward the
+          journal on turn end (the data is already in the 🪵 drawer). aria-hidden — the narration line
+          above already voices each step on the aria-live region, so the chips never double-announce. */}
+      {state.steps.length > 0 && (
+        <div className="noyau-steps" aria-hidden="true">
+          {state.steps.map((s) => (
+            <span className="noyau-step" key={s.id} data-state={s.state}>
+              <StepGlyph tool={s.tool} />
+              <span className="noyau-step-label">{s.state === 'error' ? 'échec' : s.label}</span>
+            </span>
+          ))}
+        </div>
+      )}
 
       <button className="noyau-journal-toggle" aria-expanded={journalOpen} onClick={() => setJournalOpen((o) => !o)}>
         {journalOpen ? 'fermer le journal' : 'journal'}

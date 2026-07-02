@@ -1,7 +1,9 @@
 import './specconstellation.css';
+import { AgentMark } from '../AgentMark';
 import { NBSP } from '../format';
 import { factLabel } from '../labels';
 import { InlineEdit } from '../floor/InlineEdit';
+import { isAgentAuthored } from '../provenance';
 import type { VehicleFact } from '../types';
 
 // The spec constellation (option 2a) — an on-demand agent surface. A `focus.panel === 'specs'` frame
@@ -88,7 +90,10 @@ export function SpecConstellation({
                   ✓
                 </span>
               ) : (
-                <span className="at-spec-unver">· non vérifié</span>
+                <>
+                  <span className="at-spec-unver">· non vérifié</span>
+                  {isAgentAuthored(f.source) && <AgentMark />}
+                </>
               )}
             </span>
             <span className="at-spec-lead" aria-hidden="true" />
