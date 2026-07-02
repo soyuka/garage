@@ -33,9 +33,9 @@ export function EtchedRings() {
 }
 
 /** Thin echo rings on the floor beyond the disc, fading outward — the podium's light spilling out.
- * `intensity` re-tunes these for stageVariant 'mat' (Plateau's PODIUM_INTENSITY): the additive halo was
- * tuned to read as glow against a dark void; under the cutting mat it must read as a reflection on the
- * mat instead, so the caller passes a lower multiplier. 1 (default/night) is today's untouched values. */
+ * `intensity` lets the caller re-tune the additive halo (Plateau passes its PODIUM_INTENSITY constant):
+ * the halo was originally tuned to read as glow against a dark void; on the cutting-mat floor it must
+ * read as a reflection on the mat instead, hence the lower multiplier. Defaults to 1 (untouched). */
 export function EchoRings({ glow, reduced, intensity = 1 }: { glow: string; reduced: boolean; intensity?: number }) {
   const near = useRef<THREE.MeshBasicMaterial>(null);
   const far = useRef<THREE.MeshBasicMaterial>(null);
@@ -85,8 +85,8 @@ const SHAFT_FRAG = /* glsl */ `
   }
 `;
 
-/** `intensity` re-tunes the shaft brightness for stageVariant 'mat' — see EchoRings' doc above; same
- * default-1/untouched-at-night contract. */
+/** `intensity` re-tunes the shaft brightness for the cutting-mat floor — see EchoRings' doc above; same
+ * default-1/untouched contract. */
 export function LightShafts({ glow, reduced, intensity = 1 }: { glow: string; reduced: boolean; intensity?: number }) {
   const mat = useRef<THREE.ShaderMaterial>(null);
   const uniforms = useMemo(
@@ -126,8 +126,8 @@ export function LightShafts({ glow, reduced, intensity = 1 }: { glow: string; re
   );
 }
 
-/** `intensity` (default 1 = today's night look, untouched) re-tunes the additive echo/shaft brightness —
- * see EchoRings' doc comment. Plateau passes it down from stageVariant.ts's flag. */
+/** `intensity` (default 1 = untouched) re-tunes the additive echo/shaft brightness — see EchoRings' doc
+ * comment. Plateau passes down its PODIUM_INTENSITY constant. */
 export function HoloPodium({ glow, reduced, intensity = 1 }: { glow: string; reduced: boolean; intensity?: number }) {
   return (
     <group>

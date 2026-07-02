@@ -6,7 +6,6 @@ import { bodyClassFor, CarProxy } from './CarProxy';
 import { resolveMesh } from './vehicleMesh';
 import { ParcThumb } from './ParcThumb';
 import { MeshErrorBoundary } from './VehicleBody';
-import { readStageVariant, type StageVariant } from './stageVariant';
 import { formatHorizon, formatOverdue, formatReading } from '../format';
 import { serviceLabel } from '../labels';
 import type { Iri, NextDue, Signal, VehicleSummary } from '../types';
@@ -130,14 +129,12 @@ function ParcCard({
   live,
   reduced,
   paused,
-  stageVariant,
 }: {
   vehicle: VehicleSummary;
   onSelect?: (iri: Iri) => void;
   live: boolean;
   reduced: boolean;
   paused: boolean;
-  stageVariant: StageVariant;
 }) {
   const v = vehicle;
   const signal = parcSignal(v);
@@ -154,7 +151,7 @@ function ParcCard({
   const stageRef = useRef<HTMLDivElement>(null);
   const inView = useInView(stageRef);
   const spec = resolveMesh(v);
-  const proxy = <CarProxy bodyClass={bodyClass} paint={paint} stageVariant={stageVariant} />;
+  const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
 
   return (
     <button
@@ -171,7 +168,7 @@ function ParcCard({
           <View className="at-parc-view">
             <MeshErrorBoundary key={spec.thumbUrl} fallback={proxy}>
               <Suspense fallback={proxy}>
-                <ParcThumb spec={spec} paint={paint} active={inView && !paused} reduced={reduced} stageVariant={stageVariant} />
+                <ParcThumb spec={spec} paint={paint} active={inView && !paused} reduced={reduced} />
               </Suspense>
             </MeshErrorBoundary>
           </View>
@@ -232,9 +229,6 @@ export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotPr
   useEffect(() => setLive(detectWebgl()), []);
   const pageVisible = usePageVisible();
   const paused = !pageVisible;
-  // Stage look (stageVariant.ts), read once like Plateau's — the parc grid shares the same porcelain/
-  // night-glass fill as the hero (see ParcThumb's doc comment for the ambientLight this needs under 'mat').
-  const [stageVariant] = useState<StageVariant>(() => readStageVariant());
 
   if (ordered.length === 0 && !onAddVehicle) {
     return (
@@ -257,16 +251,13 @@ export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotPr
           onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
           style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}
         >
-          {/* Only needed by 'mat' porcelain (lit MeshStandardMaterial); 'night' fill+edges stay unlit
-              basic/line materials and ignore it entirely — safe to always mount. */}
-          <ambientLight intensity={1.1} />
           <View.Port />
         </Canvas>
       )}
       <ul className="at-parc-grid">
         {ordered.map((v) => (
           <li key={v['@id']}>
-            <ParcCard vehicle={v} onSelect={onSelect} live={live} reduced={!!reduced} paused={paused} stageVariant={stageVariant} />
+            <ParcCard vehicle={v} onSelect={onSelect} live={live} reduced={!!reduced} paused={paused} />
           </li>
         ))}
         {onAddVehicle && (

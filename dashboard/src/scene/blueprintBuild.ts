@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { EDGE, FILL_OPACITY, PORCELAIN_BODY, PORCELAIN_METALNESS, PORCELAIN_ROUGHNESS } from './CarProxy';
-import type { StageVariant } from './stageVariant';
+import { EDGE, FILL_OPACITY } from './CarProxy';
 
 // Shared blueprint builder for any loaded glb scene — the faint paint-tinted volume under glowing
 // steel-blue edges. Extracted from VehicleMesh so the hero leaf and the parc-grid thumb share ONE copy
@@ -87,30 +86,9 @@ function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseCont
   mat.needsUpdate = true;
 }
 
-export interface FillParams {
-  color: string;
-  opacity: number; // 1 = opaque
-  standard: boolean; // true = lit MeshStandardMaterial (mat porcelain); false = unlit MeshBasicMaterial (night glass)
-}
-
-/** Pure selection of the real-mesh fill under each stageVariant — closes the .glb gap left at 7d0a60f
- * (the .glb path always rendered the night-glass fill regardless of the flag). 'mat' reuses CarProxy's
- * porcelain constants (single source) so rung-a matches the rung-b proxy; the per-make paint is only
- * used at 'night'. */
-export function fillParamsFor(stageVariant: StageVariant, paint: string): FillParams {
-  if (stageVariant === 'mat') return { color: PORCELAIN_BODY, opacity: 1, standard: true };
-  return { color: paint, opacity: FILL_OPACITY, standard: false };
-}
-
 export function buildBlueprint(
   scene: THREE.Object3D,
-  {
-    edgeAngle,
-    paint,
-    rotationY,
-    cacheKey,
-    stageVariant = 'mat',
-  }: { edgeAngle: number; paint: string; rotationY?: number; cacheKey?: string; stageVariant?: StageVariant },
+  { edgeAngle, paint, rotationY, cacheKey }: { edgeAngle: number; paint: string; rotationY?: number; cacheKey?: string },
 ): Blueprint {
   const clone = scene.clone(true);
   if (rotationY) clone.rotation.y = rotationY;
@@ -124,12 +102,7 @@ export function buildBlueprint(
   clone.position.y -= box.min.y;
   clone.updateMatrixWorld(true);
 
-  // Same porcelain fill swap as CarProxy's Box under 'mat' — lit + toneMapped like an ordinary surface,
-  // no bloom contribution from the shell itself. 'night' keeps the original unlit paint-tinted glass.
-  const fp = fillParamsFor(stageVariant, paint);
-  const fillMat: THREE.Material = fp.standard
-    ? new THREE.MeshStandardMaterial({ color: fp.color, roughness: PORCELAIN_ROUGHNESS, metalness: PORCELAIN_METALNESS })
-    : new THREE.MeshBasicMaterial({ color: fp.color, transparent: fp.opacity < 1, opacity: fp.opacity, depthWrite: false });
+  const fillMat = new THREE.MeshBasicMaterial({ color: paint, transparent: true, opacity: FILL_OPACITY, depthWrite: false });
   // HDR-boosted edge color (>1 channels, toneMapped off): in the hero's half-float composer this is
   // what feeds the bloom pass — the neon-tube core. Parc thumbs have no composer and just clamp to a
   // slightly brighter line, which is fine.

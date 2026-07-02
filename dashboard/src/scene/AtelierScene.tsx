@@ -10,7 +10,6 @@ import { useReducedMotion } from './useReducedMotion';
 import { serviceLabel } from '../labels';
 import { formatReading } from '../format';
 import type { MaintenanceRecord } from '../types';
-import { readStageVariant, STAGE_VARIANT_KEY } from './stageVariant';
 
 // Fixture visits for the "Historique" quick action offline (/scene has no backend) — enough shape to
 // exercise HistoryLog's ledger (multi-item visit, parts, cost, notes) without wiring a real bundle.
@@ -159,22 +158,6 @@ export function AtelierScene() {
             />{' '}
             reduced-motion{osReduced ? ' (OS)' : ''}
           </label>
-          {/* Stage-look toggle (stageVariant.ts): 'mat' is the shipped default, 'night' the explicit
-              opt-out — stored under the SAME key, so opting out must write 'night' rather than clear the
-              key (clearing it now falls back to 'mat'). Read-once-at-mount flag → flipping it needs a
-              reload, same as any other localStorage-gated dev toggle. Playground-only; the live hero has
-              no equivalent control. */}
-          <button
-            className="at-sbtn"
-            title="Bascule mat/nuit — relance la page"
-            onClick={() => {
-              if (readStageVariant() === 'night') window.localStorage.removeItem(STAGE_VARIANT_KEY);
-              else window.localStorage.setItem(STAGE_VARIANT_KEY, 'night');
-              window.location.reload();
-            }}
-          >
-            plateau: {readStageVariant() === 'mat' ? 'mat' : 'nuit'}
-          </button>
         </div>
       </div>
 

@@ -1,9 +1,9 @@
 import { useEffect, useMemo } from 'react';
 import * as THREE from 'three';
 
-// The stageVariant 'mat' floor (see stageVariant.ts, the shipped default) — a procedural cutting-mat: no
-// textures, the grid + heavier 5-cell lines + faint 45° guides + a self-healing-mat noise variation are
-// all computed in GLSL from the plane's own local xy, injected via onBeforeCompile — the same recipe blueprintBuild's
+// Le Plateau's floor — a procedural cutting-mat: no textures, the grid + heavier 5-cell lines + faint 45°
+// guides + a self-healing-mat noise variation are all computed in GLSL from the plane's own local xy,
+// injected via onBeforeCompile — the same recipe blueprintBuild's
 // patchHolo uses to extend a stock material rather than hand-roll lighting. Grafting onto
 // MeshStandardMaterial (lit by the existing SceneLights) means tonemapping/colorspace are the stock PBR
 // output path; we only nudge diffuseColor before that, so nothing here can out-bloom the HUD.

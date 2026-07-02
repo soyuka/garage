@@ -54,19 +54,18 @@ no tokens**: they replay the SAME choreography (`turn:start` → two `status` na
 answer + `turn:end` ≈ +1900ms) and set the same `focus`/`cta` the agent would. Only the composer free-text
 opens an LLM turn. The user sees no difference.
 
-## Stage look (stageVariant)
+## Stage look
 
-Le Plateau ships in one of two looks, picked by `scene/stageVariant.ts`'s `readStageVariant()` (a
-localStorage flag, read once at mount): **'mat'** — a lit cutting-mat workbench floor + a matte porcelain
-car shell — is the **shipped default**; **'night'** — the original tinted night-glass car over a dark
-void — is the explicit opt-out, stored under the same key (`mpa.stage`). Both apply identically across
-every rung/consumer that renders the car body or floor: the rung-b proxy (`CarProxy.tsx`), the rung-a real
-`.glb` (`blueprintBuild.ts`'s `fillParamsFor`, so a loaded mesh matches the proxy it replaces), and the
-parc-grid spinning thumbnails (`ParcThumb`/`ParcLot.tsx`). The floor itself (`CuttingMat.tsx`) only mounts
-under 'mat' — it reads graphite/blue-grey, **never green**: green is reserved for the health signal
-(PRODUCT.md "light is meaning"), so a floor material can never be mistaken for a status read. Blueprint
-edges, the holo scan/pulse verbs, and the podium's rim/glow are untouched by the swap either way — they
-carry the signals this map defines; only the inert body/floor fill changes register.
+Le Plateau has one look — there is no mode/variant to pick. The floor is always the procedural
+cutting-mat workbench (`CuttingMat.tsx`, always mounted): a lit, graphite/blue-grey surface, **never
+green** — green is reserved for the health signal (PRODUCT.md "light is meaning"), so the floor material
+can never be mistaken for a status read. The car itself keeps its original blueprint look everywhere it
+renders — the rung-b proxy (`CarProxy.tsx`), the rung-a real `.glb` (`blueprintBuild.ts`), and the
+parc-grid spinning thumbnails (`ParcThumb`/`ParcLot.tsx`): a faint paint-tinted unlit night-glass fill
+under glowing HDR-boosted electric-blue edges. Blueprint edges, the holo scan/pulse verbs, and the
+podium's rim/glow all carry the signals this map defines; the rim/podium additive glow is tuned to read
+as a reflection on the lit mat floor rather than fog in a void (`Plateau.tsx`'s `PODIUM_INTENSITY`
+constant, 0.55) — that tuning is the only thing the mat floor changed.
 
 ## Domain frames (collection topic)
 
