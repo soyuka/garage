@@ -9,7 +9,6 @@ import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
 import { EntretienRail, type ChecklistHandlers } from './EntretienRail';
-import { EcheancePins } from './EcheancePins';
 import { buildRail } from './rail';
 import { CtaCard, type Cta } from './CtaCard';
 import { PartsManifest } from './PartsManifest';
@@ -133,9 +132,6 @@ export function SceneView({
   onOpenHistory,
   onCloseHistory,
 }: SceneViewProps) {
-  // Ephemeral view state (NOT data): the index of the pin/row pair currently hovered or focused — shared
-  // by the ring pins and the left rail so brightening either half lights its twin. Resets on unmount.
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   // C2: the à-décider inbox opens from the ember. Auto-closes once the queue drains (last item resolved).
   const [inboxOpen, setInboxOpen] = useState(false);
   const queueLen = noyau.queue.length;
@@ -194,11 +190,9 @@ export function SceneView({
       }
     : undefined;
 
-  // The split ring (B1): ONE severity-sorted, indexed model drives BOTH the minimal ring pins (spatial
-  // index on the disc) and the persistent left rail (its prose). Pin NN and rail row NN share the index.
-  const rail = bundle
-    ? buildRail(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? [])
-    : [];
+  // The rail model: todo ("À faire" — late, red-tagged row by row) / planned / gaps. The rail is the ONE
+  // reading surface for échéances (the ring pins were removed — the disc stays clean; zoom via the rows).
+  const rail = bundle ? buildRail(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? []) : null;
 
   // When a full surface (Données drawer / Le Carnet) is open, the dock slides to the LEFT free column so
   // Le Noyau + its narration + the composer stay visible beside it, and the chips swap to that surface's
@@ -280,12 +274,6 @@ export function SceneView({
           </div>
           {/* SANTÉ moved off the top-right HUD into the cockpit slab (Cockpit → HealthStat) — the %
               now captions the rim gauge from the identity band instead of floating alone. */}
-          {/* the split ring: minimal échéance PINS on the disc (index + signal dot + hair leader), no prose.
-              The wrapper spans the whole stage so the pins' angle layout is relative to the disc centre;
-              their readable rows live in the left rail below, paired by the shared index. */}
-          <div className="at-scene-pins" data-dim={focus ? 'true' : undefined}>
-            <EcheancePins items={rail} hoveredIdx={hoveredIdx} onHoverIdx={setHoveredIdx} onActivate={onFocusRegion} cameraRegion={cameraRegion} reduced={reduced} />
-          </div>
           {/* the PROJECTION COLUMN (B2): the ONE right-edge slot for everything Le Noyau projects — so the
               operator learns a single glance direction for "the agent answered" (the left "Entretien" rail
               never moves). A specs focus fans the facts as the constellation (agent-placed → cyan tick + ✕);
@@ -307,22 +295,22 @@ export function SceneView({
                   nodes={specsFocused ? focus?.nodes : undefined}
                 />
               )}
-              {showCarnet && carnet && <CarnetProjection model={carnet} reduced={reduced} onDismiss={onDismissFocus} />}
+              {showCarnet && carnet && (
+                <CarnetProjection model={carnet} reduced={reduced} onDismiss={onDismissFocus} onOpenAll={onOpenHistory} />
+              )}
               {showManifest && manifest && onCtaPatch && onCtaDismiss && (
                 <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
               )}
             </div>
           )}
-          {/* the persistent left rail ("Entretien"): the reading half of the split ring — every échéance's
-              prose (checkable tasks, plannable predictions, non-suivi gaps), severity-sorted to mirror the
-              pin order. Screen-locked on the hero's left edge. Absent `checklist` (playground) → no rail. */}
-          {checklist && (
+          {/* the persistent left rail ("Entretien"): À faire (late, red-tagged) / Planifié / non suivi —
+              checkable tasks, plannable predictions. Screen-locked on the hero's left edge. Clicking a
+              row's empty area dollies to its region (again = release). Absent `checklist` → no rail. */}
+          {checklist && rail && (
             <EntretienRail
-              items={rail}
+              model={rail}
               checklist={checklist}
               onPlan={onPlan!}
-              hoveredIdx={hoveredIdx}
-              onHoverIdx={setHoveredIdx}
               onActivateRegion={onFocusRegion}
               cameraRegion={cameraRegion}
               dimmed={!!focus || overlayOpen}

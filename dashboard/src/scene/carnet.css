@@ -73,10 +73,33 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 10px;
   margin-top: 12px;
   padding-top: 11px;
   border-top: 1px solid var(--at-hairline);
+}
+/* the summary is only the roll-up — the full history stays one step away (Le Carnet drawer) */
+.at-carnet-all {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  cursor: pointer;
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+  pointer-events: auto;
+}
+.at-carnet-all:hover {
+  color: var(--at-text);
+  opacity: var(--at-vib-1);
+}
+.at-carnet-all:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 .at-carnet-total {
   font-family: var(--at-font-mono);

@@ -11,10 +11,13 @@ export function CarnetProjection({
   model,
   reduced = false,
   onDismiss,
+  onOpenAll,
 }: {
   model: CarnetRollup;
   reduced?: boolean;
   onDismiss?: () => void;
+  /** opens Le Carnet drawer (the FULL visit history) — the projection is only the spend summary. */
+  onOpenAll?: () => void;
 }) {
   if (model.count === 0) return null;
   return (
@@ -47,6 +50,11 @@ export function CarnetProjection({
         <span className="at-carnet-count">
           {model.count} visite{model.count > 1 ? 's' : ''}
         </span>
+        {onOpenAll && (
+          <button type="button" className="at-carnet-all" onClick={onOpenAll}>
+            tout l’historique →
+          </button>
+        )}
       </div>
       <span className="at-carnet-lead" aria-hidden="true" />
     </aside>

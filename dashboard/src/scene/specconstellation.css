@@ -43,6 +43,19 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* a long fetched sheet (fluides / carte grise) scrolls INSIDE the surface — never a page-height column */
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+  pointer-events: auto;
+}
+.at-spec-nodes::-webkit-scrollbar {
+  width: 6px;
+}
+.at-spec-nodes::-webkit-scrollbar-thumb {
+  background: var(--at-hairline);
+  border-radius: 3px;
 }
 
 .at-spec-node {

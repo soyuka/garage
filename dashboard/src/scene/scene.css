@@ -323,15 +323,23 @@ body {
 }
 .at-scene-chip {
   cursor: pointer;
+  position: relative;
   font-family: var(--at-font-mono);
-  font-size: 14px;
+  font-size: 12px;
   color: var(--at-text);
   border: 1px solid var(--at-hairline);
   border-radius: 999px;
-  padding: 13px 18px; /* ~44px min hit target (§ hit zones) while the pill stays visually compact */
+  padding: 7px 13px; /* visually compact pill … */
   /* scrim law: these pills float directly on the canvas above the composer — was 0.6, well under .86 */
   background: rgba(13, 14, 16, 0.86);
   transition: border-color 140ms var(--at-ease-sine), background 140ms var(--at-ease-sine);
+}
+/* … while an invisible halo keeps the ~44px hit target (§ hit zones) */
+.at-scene-chip::after {
+  content: '';
+  position: absolute;
+  inset: -7px;
+  border-radius: inherit;
 }
 /* orange tint layered OVER the opaque base (not replacing it) — hover must not fall back under the scrim floor */
 .at-scene-chip:hover:not(:disabled) {

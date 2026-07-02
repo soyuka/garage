@@ -6,20 +6,21 @@ import { taskTitle } from '../tasks';
 import { dueDescriptor, signalTag } from '../derive';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
-import type { RailItem } from './rail';
+import type { RailItem, RailModel } from './rail';
 import type { BodyRegion } from './anchors';
 import './checklist.css';
 import './rail.css';
 
-// "Entretien" — the PERSISTENT LEFT RAIL (B1). The reading half of the split ring: the pins index the
-// échéances spatially on the disc, this rail carries their prose, screen-locked on the hero's left edge.
-// One severity-sorted list (the rail model), one row per item, three shapes:
-//  · open/done PlannedTask → a checkable, editable task row (checklist handlers, optimistic).
-//  · unplanned ForecastDue → a prediction: NO checkbox, a "planifier ○" that promotes it to a task.
-//  · coverage gap → a dashed "· non suivi" row, no affordance.
-// A row shares its index NN with its ring pin; hovering/focusing either half brightens the pair. The
-// task-row machinery below was lifted verbatim from the old right-dock Checklist (milestone grouping
-// dropped — the rail is severity-ordered). NO cyan (rationed to Le Noyau); a task is not a signal.
+// "Entretien" — the PERSISTENT LEFT RAIL, screen-locked on the hero's left edge. Two workload buckets
+// (the operator's own cut — status, not a severity gradient) + the untracked tail:
+//  · "À faire" — anything actually LATE, whether planned as a task or still a bare prediction. EVERY row
+//    here carries its red/amber text tag (a late task is still late — the tag never hides behind the
+//    checkbox shape).
+//  · "Planifié" — upcoming dues (planifier ○ promotes), open tasks without a late forecast, done tasks.
+//  · gaps — dashed "· non suivi" rows, no affordance.
+// Row shapes: a task row is checkable/editable (checklist handlers, optimistic); a due row is a
+// prediction. Clicking a row's empty area dollies the camera to its body region (click again = release).
+// NO cyan (rationed to Le Noyau); a task is not a signal.
 
 export interface ChecklistHandlers {
   /** open + done (and dismissed when showDismissed) — the source for counts + the retirées section. */
@@ -45,10 +46,6 @@ function taskCaption(horizon: string | null, task: PlannedTask | undefined): str
   return null;
 }
 
-function pad2(n: number): string {
-  return String(n).padStart(2, '0');
-}
-
 /** A guarded row-click → dolly to the row's region, WITHOUT hijacking the row's own controls (checkbox,
  * planifier, edit/dismiss, inputs). Shared by every row shape (due / gap / task). Absent handler → inert. */
 function rowActivate(region: BodyRegion, onActivateRegion?: (region: BodyRegion) => void) {
@@ -63,58 +60,96 @@ function rowActivate(region: BodyRegion, onActivateRegion?: (region: BodyRegion)
 }
 
 export function EntretienRail({
-  items,
+  model,
   checklist,
   onPlan,
-  hoveredIdx,
-  onHoverIdx,
   onActivateRegion,
   cameraRegion = null,
   dimmed = false,
 }: {
-  items: RailItem[];
+  model: RailModel;
   checklist: ChecklistHandlers;
   onPlan: (due: ForecastDue) => void;
-  hoveredIdx: number | null;
-  onHoverIdx: (idx: number | null) => void;
-  /** D1: activating a row (click on its non-control area) dollies the view TO its region. Absent → inert. */
+  /** D1: activating a row (click on its non-control area) dollies the view TO its region; clicking the
+   * row of the already-held region releases (the driver toggles). Absent → inert. */
   onActivateRegion?: (region: BodyRegion) => void;
   /** The region the camera is dollied to — its row(s) show the orange operator-focus cue. */
   cameraRegion?: BodyRegion | null;
-  /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage/pins. */
+  /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage. */
   dimmed?: boolean;
 }) {
   const [adding, setAdding] = useState(false);
   const { tasks, showDismissed, onToggleDismissed, defaultUnit } = checklist;
-  const openCount = tasks.filter((t) => t.status === 'open').length;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const dismissed = tasks.filter((t) => t.status === 'dismissed');
 
-  // A row is highlighted when the shared index is the one hovered/focused (on either half). Focus moving
-  // BETWEEN a row's own controls must not clear it — guard blur against a related target still inside.
-  const hoverProps = (idx: number | null) =>
-    idx == null
-      ? {}
-      : {
-          'data-idx': idx,
-          'data-active': hoveredIdx === idx ? 'true' : undefined,
-          onMouseEnter: () => onHoverIdx(idx),
-          onMouseLeave: () => onHoverIdx(null),
-          onFocus: () => onHoverIdx(idx),
-          onBlur: (e: React.FocusEvent) => {
-            if (!e.currentTarget.contains(e.relatedTarget as Node)) onHoverIdx(null);
-          },
-        };
+  const empty = model.todo.length === 0 && model.planned.length === 0 && model.gaps.length === 0 && dismissed.length === 0;
 
-  const empty = items.length === 0 && dismissed.length === 0;
+  const renderItem = (item: RailItem, inTodo: boolean) => {
+    if (item.kind === 'due') {
+      const desc = dueDescriptor(item.due!);
+      const tag = signalTag(desc.overdue, desc.signal);
+      const date = formatDate(item.due!.dueAt ?? item.due!.projectedDueAt);
+      return (
+        <li
+          key={item.id}
+          className="at-rail-row at-rail-row--due"
+          data-signal={item.signal}
+          data-camera={cameraRegion === item.region ? 'true' : undefined}
+          {...rowActivate(item.region, onActivateRegion)}
+        >
+          <button
+            type="button"
+            className="at-rail-plan"
+            aria-label={`${item.label} — planifier`}
+            title="Planifier cette échéance"
+            onClick={() => onPlan(item.due!)}
+          >
+            <span className="at-rail-plan-glyph" aria-hidden="true">○</span>
+          </button>
+          <span className="at-rail-body">
+            <span className="at-rail-svc">{item.label}</span>
+            <span className="at-rail-meta">
+              {item.horizon && <span className="at-rail-horizon">{item.horizon}</span>}
+              {date && <span className="at-rail-date">{date}</span>}
+            </span>
+          </span>
+          <span className={`at-rail-tag at-rail-tag--${tag.tone}`}>{tag.text}</span>
+        </li>
+      );
+    }
+    // A task row keeps its text tag whenever a forecast binds it — a late task is still late (the "À
+    // faire" bucket must read red row by row, not only by its section header).
+    const tag = item.due ? signalTag(item.due.overdue && !item.done, item.done ? 'green' : item.signal) : null;
+    return (
+      <TaskRow
+        key={item.id}
+        caption={taskCaption(item.horizon, item.task)}
+        tag={inTodo || (tag && tag.tone !== 'ok') ? tag : null}
+        task={item.task!}
+        defaultUnit={defaultUnit}
+        activateProps={rowActivate(item.region, onActivateRegion)}
+        cameraActive={cameraRegion === item.region}
+        onToggle={() => checklist.onSetStatus(item.task!.id, item.done ? 'open' : 'done')}
+        onDismiss={() => checklist.onSetStatus(item.task!.id, 'dismissed')}
+        onRestore={() => checklist.onSetStatus(item.task!.id, 'open')}
+        onEdit={(fields) => checklist.onEditTask(item.task!.id, fields)}
+        onAddPart={(p) => checklist.onAddPart(item.task!.id, p)}
+        onEditPart={(pid, f) => checklist.onEditPart(item.task!.id, pid, f)}
+        onRemovePart={(pid) => checklist.onRemovePart(item.task!.id, pid)}
+      />
+    );
+  };
 
   return (
     <aside className="at-rail" aria-label="Entretien" data-dim={dimmed ? 'true' : undefined}>
       <div className="at-rail-head">
         <h2 className="at-rail-title">Entretien</h2>
-        <span className="at-rail-count">
-          {openCount} ouverte{openCount > 1 ? 's' : ''}
-        </span>
+        {model.todo.length > 0 && (
+          <span className="at-rail-count at-rail-count--late">
+            {model.todo.length} en retard
+          </span>
+        )}
       </div>
 
       <div className="at-rail-actions">
@@ -141,78 +176,39 @@ export function EntretienRail({
       {empty ? (
         <p className="at-check-empty">Rien à suivre pour l’instant.</p>
       ) : (
-        <ul className="at-rail-rows" role="list">
-          {items.map((item) => {
-            if (item.kind === 'gap') {
-              return (
+        <>
+          {model.todo.length > 0 && (
+            <section className="at-rail-section" aria-label="À faire">
+              <h3 className="at-rail-section-title at-rail-section-title--late">À faire</h3>
+              <ul className="at-rail-rows" role="list">
+                {model.todo.map((item) => renderItem(item, true))}
+              </ul>
+            </section>
+          )}
+          {model.planned.length > 0 && (
+            <section className="at-rail-section" aria-label="Planifié">
+              <h3 className="at-rail-section-title">Planifié</h3>
+              <ul className="at-rail-rows" role="list">
+                {model.planned.map((item) => renderItem(item, false))}
+              </ul>
+            </section>
+          )}
+          {model.gaps.length > 0 && (
+            <ul className="at-rail-rows at-rail-rows--gaps" role="list">
+              {model.gaps.map((item) => (
                 <li
                   key={item.id}
                   className="at-rail-row at-rail-row--gap"
                   data-signal="unknown"
-                  data-camera={cameraRegion === item.region ? 'true' : undefined}
                   {...rowActivate(item.region, onActivateRegion)}
                 >
-                  <span className="at-rail-idx at-rail-idx--gap" aria-hidden="true">·</span>
                   <span className="at-rail-svc">{item.label}</span>
                   <span className="at-rail-tag at-rail-tag--gap">non suivi</span>
                 </li>
-              );
-            }
-            if (item.kind === 'due') {
-              const desc = dueDescriptor(item.due!);
-              const tag = signalTag(desc.overdue, desc.signal);
-              const date = formatDate(item.due!.dueAt ?? item.due!.projectedDueAt);
-              return (
-                <li
-                  key={item.id}
-                  className="at-rail-row at-rail-row--due"
-                  data-signal={item.signal}
-                  data-camera={cameraRegion === item.region ? 'true' : undefined}
-                  {...hoverProps(item.index)}
-                  {...rowActivate(item.region, onActivateRegion)}
-                >
-                  <button
-                    type="button"
-                    className="at-rail-plan"
-                    aria-label={`${item.label} — planifier`}
-                    title="Planifier cette échéance"
-                    onClick={() => onPlan(item.due!)}
-                  >
-                    <span className="at-rail-idx" aria-hidden="true">{pad2(item.index!)}</span>
-                    <span className="at-rail-plan-glyph" aria-hidden="true">○</span>
-                  </button>
-                  <span className="at-rail-body">
-                    <span className="at-rail-svc">{item.label}</span>
-                    <span className="at-rail-meta">
-                      {item.horizon && <span className="at-rail-horizon">{item.horizon}</span>}
-                      {date && <span className="at-rail-date">{date}</span>}
-                    </span>
-                  </span>
-                  <span className={`at-rail-tag at-rail-tag--${tag.tone}`}>{tag.text}</span>
-                </li>
-              );
-            }
-            return (
-              <TaskRow
-                key={item.id}
-                index={item.index}
-                caption={taskCaption(item.horizon, item.task)}
-                task={item.task!}
-                defaultUnit={defaultUnit}
-                hoverProps={hoverProps(item.index)}
-                activateProps={rowActivate(item.region, onActivateRegion)}
-                cameraActive={cameraRegion === item.region}
-                onToggle={() => checklist.onSetStatus(item.task!.id, item.done ? 'open' : 'done')}
-                onDismiss={() => checklist.onSetStatus(item.task!.id, 'dismissed')}
-                onRestore={() => checklist.onSetStatus(item.task!.id, 'open')}
-                onEdit={(fields) => checklist.onEditTask(item.task!.id, fields)}
-                onAddPart={(p) => checklist.onAddPart(item.task!.id, p)}
-                onEditPart={(pid, f) => checklist.onEditPart(item.task!.id, pid, f)}
-                onRemovePart={(pid) => checklist.onRemovePart(item.task!.id, pid)}
-              />
-            );
-          })}
-        </ul>
+              ))}
+            </ul>
+          )}
+        </>
       )}
 
       <div className="at-rail-foot">
@@ -224,11 +220,9 @@ export function EntretienRail({
             {dismissed.map((t) => (
               <TaskRow
                 key={t.id}
-                index={null}
                 caption={taskCaption(null, t)}
                 task={t}
                 defaultUnit={defaultUnit}
-                hoverProps={{}}
                 onToggle={() => checklist.onSetStatus(t.id, 'open')}
                 onDismiss={() => checklist.onSetStatus(t.id, 'open')}
                 onRestore={() => checklist.onSetStatus(t.id, 'open')}
@@ -248,11 +242,10 @@ export function EntretienRail({
 // ── task row + inline forms (lifted from the old Checklist; the rail is their only consumer now) ────────
 
 function TaskRow({
-  index,
   caption,
+  tag = null,
   task,
   defaultUnit,
-  hoverProps,
   activateProps = {},
   cameraActive = false,
   onToggle,
@@ -263,11 +256,11 @@ function TaskRow({
   onEditPart,
   onRemovePart,
 }: {
-  index: number | null;
   caption: string | null;
+  /** the forecast text tag (EN RETARD / BIENTÔT) when the task binds a due — null hides it. */
+  tag?: { text: string; tone: string } | null;
   task: PlannedTask;
   defaultUnit: string;
-  hoverProps: Record<string, unknown>;
   activateProps?: Record<string, unknown>;
   cameraActive?: boolean;
   onToggle: () => void;
@@ -284,12 +277,7 @@ function TaskRow({
   const cls = `at-task at-rail-row${dismissed ? ' at-task--dismissed' : done ? ' at-task--done' : ''}`;
 
   return (
-    <li className={cls} data-camera={cameraActive ? 'true' : undefined} {...hoverProps} {...activateProps}>
-      {index != null ? (
-        <span className="at-rail-idx" aria-hidden="true">{pad2(index)}</span>
-      ) : (
-        <span className="at-rail-idx at-rail-idx--gap" aria-hidden="true" />
-      )}
+    <li className={cls} data-camera={cameraActive ? 'true' : undefined} {...activateProps}>
       <button
         type="button"
         className="at-task-check"
@@ -303,6 +291,7 @@ function TaskRow({
       <div className="at-task-body">
         <div className="at-task-head">
           <span className="at-task-title">{taskTitle(task)}</span>
+          {tag && <span className={`at-rail-tag at-rail-tag--${tag.tone}`}>{tag.text}</span>}
           {!dismissed && (
             <button type="button" className="at-task-edit-toggle" aria-label="Modifier la tâche" aria-expanded={editing} title="Modifier" onClick={() => setEditing((e) => !e)}>
               ✎

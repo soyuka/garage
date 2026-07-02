@@ -1,8 +1,9 @@
-/* "Entretien" — the persistent LEFT rail (B1). Screen-locked column on the hero's left edge, the reading
-   half of the split ring (pins index spatially, the rail carries prose). Scrim law: an opaque (>= .86)
-   frosted-void ground so the mono rows read over the rotating, bloomed car. One severity-sorted list;
-   task rows reuse .at-task* (checklist.css), due/gap rows are defined here. Vibrancy tiers carry hierarchy
-   at ONE mono size. NO cyan (rationed to Le Noyau); signal colour only on the paired TEXT tag. */
+/* "Entretien" — the persistent LEFT rail. Screen-locked column on the hero's left edge, THE reading
+   surface for échéances (the ring pins were removed — the disc stays clean). Two workload sections:
+   "À faire" (late, every row red/amber-tagged) and "Planifié", plus the untracked tail. Scrim law: an
+   opaque (>= .86) frosted-void ground so the mono rows read over the rotating, bloomed car. Task rows
+   reuse .at-task* (checklist.css), due/gap rows are defined here. Vibrancy tiers carry hierarchy at ONE
+   mono size. NO cyan (rationed to Le Noyau); signal colour only on the paired TEXT tag. */
 
 .at-rail {
   position: absolute;
@@ -49,6 +50,34 @@
   color: var(--at-text-dim);
   opacity: var(--at-vib-3);
 }
+/* the head count carries the workload alarm: it names the late count, so it wears the signal (with text) */
+.at-rail-count--late {
+  color: var(--at-red-hi);
+  opacity: var(--at-vib-1);
+}
+
+/* ── the two workload sections ── */
+.at-rail-section {
+  margin-top: var(--at-space-4);
+}
+.at-rail-section-title {
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+  color: var(--at-label);
+  opacity: var(--at-vib-3);
+  margin: 0;
+}
+.at-rail-section-title--late {
+  color: var(--at-red-hi);
+  opacity: var(--at-vib-2);
+}
+.at-rail-rows--gaps {
+  margin-top: var(--at-space-4);
+  opacity: 0.8;
+}
 
 .at-rail-actions {
   display: flex;
@@ -74,13 +103,8 @@
   border-top: 1px dashed var(--at-hairline); /* a ruled line, not a rigid table row */
   transition: background 140ms var(--at-ease-sine);
 }
-/* bidirectional hover: the row whose index the pin (or the row itself) is over lifts + its index brightens */
-.at-rail-row[data-active='true'] {
+.at-rail-row:hover {
   background: var(--at-void-lift);
-}
-.at-rail-row[data-active='true'] .at-rail-idx {
-  opacity: 1;
-  color: var(--at-text);
 }
 /* D1 earned camera: a row activates the dolly to its region (its non-control area is clickable), and the
    row whose region the camera is framing wears the ORANGE operator-focus cue — an inset left bar (orange
@@ -92,32 +116,19 @@
   background: var(--at-void-lift);
   box-shadow: inset 2px 0 0 0 var(--at-orange);
 }
-.at-rail-row[data-camera='true'] .at-rail-idx {
-  color: var(--at-orange-hi);
-  opacity: 1;
-}
-
-/* the shared index NN — mono, tier-2 (a positional index, not the headline). Fixed width so rows align. */
-.at-rail-idx {
-  font-family: var(--at-font-mono);
-  font-size: 12px;
-  line-height: 1;
-  color: var(--at-text-mono);
-  opacity: var(--at-vib-2);
-  text-align: right;
-}
-.at-rail-idx--gap {
-  opacity: var(--at-vib-3);
-}
 
 /* ── due row (a forecast prediction — no checkbox; a planifier ○ promotes it) ── */
 .at-rail-row--due,
 .at-rail-row--gap {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) auto;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: start;
   padding: 8px 0;
+}
+.at-rail-row--gap {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-left: 28px; /* aligns the untracked tail with the row bodies above */
 }
 .at-rail-plan {
   appearance: none;
@@ -223,13 +234,13 @@
   }
 }
 
-/* ── task row: prepend the shared index column to the reused .at-task grid ── */
+/* ── task row: the reused .at-task grid, no index column ── */
 .at-task.at-rail-row {
-  grid-template-columns: 24px 20px minmax(0, 1fr) 20px;
+  grid-template-columns: 20px minmax(0, 1fr) 20px;
 }
-.at-task.at-rail-row .at-rail-idx {
-  align-self: start;
-  padding-top: 3px;
+/* the task head's forecast tag sits beside the title (the edit ✎ hugs the right edge) */
+.at-task-head .at-rail-tag {
+  margin-left: auto;
 }
 
 /* the rail scrolls; hide the scrollbar chrome noise but keep it operable */

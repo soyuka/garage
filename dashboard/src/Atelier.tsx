@@ -115,9 +115,14 @@ export function Atelier() {
   // re-triggers a dolly even for a repeat region. Held until released (unlike the one-shot pulse).
   const [cameraFocus, setCameraFocus] = useState<CameraFocus | null>(null);
   const cameraKey = useRef(0);
+  // Toggle: activating the already-held region releases the hold — "click again to go back" (vue libre
+  // and Escape remain; re-clicking the thing you zoomed on is the path an operator rediscovers unaided).
   const dollyToRegion = useCallback((region: BodyRegion) => {
-    cameraKey.current += 1;
-    setCameraFocus({ region, key: cameraKey.current });
+    setCameraFocus((prev) => {
+      if (prev?.region === region) return null;
+      cameraKey.current += 1;
+      return { region, key: cameraKey.current };
+    });
   }, []);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
@@ -376,7 +381,9 @@ export function Atelier() {
   // same focus/cta. A rejection narrates honestly (the thrown French line) and lands NO surface — never a
   // fake. `resolve`'s latency overlaps the narration beats; the answer lands at the later of ~1900ms / GET.
   const runLocalAnswer = useCallback(
-    (opts: { steps: [string, string]; failMessage: string; resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null }> }) => {
+    // `effect` runs at the answer beat (never `then` — a thenable return would recurse the promise chain):
+    // the seam for answers that OPEN a surface (Données / Le Carnet) instead of projecting a focus/cta.
+    (opts: { steps: [string, string]; failMessage: string; resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null; effect?: () => void }> }) => {
       if (phaseRef.current === 'working') return; // one turn per session — composer + chips share the rule
       clearDet(); // supersede any in-flight replay (bumps detToken → drops a pending fetch's late apply)
       const token = detToken.current;
@@ -388,11 +395,12 @@ export function Atelier() {
       dispatch({ type: 'turn', phase: 'start' });
       const outcome = opts.resolve();
 
-      const apply = (o: { focus?: Focus | null; cta?: Cta | null } | null) => {
+      const apply = (o: { focus?: Focus | null; cta?: Cta | null; effect?: () => void } | null) => {
         if (!live()) return; // superseded by nav/newer replay — clearDet already settled the orb
         detWorking.current = false; // we deliver our own turn/end below, so clearDet must not re-settle
         if (o?.focus !== undefined) setFocus(o.focus ?? null);
         if (o?.cta !== undefined) setCta(o.cta ?? null);
+        o?.effect?.();
         dispatch({ type: 'turn', phase: 'end', failed: !o });
       };
       const settle = () =>
@@ -420,23 +428,33 @@ export function Atelier() {
     [clearDet, dispatch, reduced],
   );
 
-  // The five deterministic wayfinder chips (above the composer). Each replays the choreography via
-  // runLocalAnswer and projects into the SAME column the agent uses; a chip is hidden when its data
-  // prerequisite is absent (never a dead control). Order: the two client-side reads, then the fetched
-  // catalog reads, then the client-side carnet. Built only when a hero bundle is open (see the hero route).
+  // The deterministic wayfinder chips (above the composer). Each replays the choreography via
+  // runLocalAnswer; a chip is hidden when its data prerequisite is absent (never a dead control).
+  // Two families: the OWNED-data surfaces open as full editable popups (Données = the car's database of
+  // facts — read/edit/delete everything; Historique = every visit), the FETCHED external reads project
+  // into the agent's right column. Built only when a hero bundle is open (see the hero route).
   const buildQuickActions = (b: VehicleBundle): { label: string; disabled?: boolean; onClick: () => void }[] => {
     const busy = state.phase === 'working';
     const chips: { label: string; disabled?: boolean; onClick: () => void }[] = [];
-    const hasFacts = (b.vehicle.facts?.length ?? b.vehicle.factCount ?? 0) > 0;
-    if (hasFacts) {
+    chips.push({
+      label: 'Données',
+      disabled: busy,
+      onClick: () =>
+        runLocalAnswer({
+          steps: ['ouverture du dossier…', 'lecture des données véhicule…'],
+          failMessage: 'données indisponibles',
+          resolve: async () => ({ effect: () => { setHistoryOpen(false); setFactsDrawerOpen(true); } }),
+        }),
+    });
+    if (b.records.length > 0) {
       chips.push({
-        label: 'Infos moteur',
+        label: 'Historique',
         disabled: busy,
         onClick: () =>
           runLocalAnswer({
-            steps: ['lecture de la fiche moteur…', 'mise en évidence des spécifications…'],
-            failMessage: 'spécifications indisponibles',
-            resolve: async () => ({ focus: { panel: 'specs', keys: [], title: 'Infos moteur' } }),
+            steps: ['ouverture du carnet…', 'relecture des visites…'],
+            failMessage: 'carnet indisponible',
+            resolve: async () => ({ effect: () => { setFactsDrawerOpen(false); setHistoryOpen(true); } }),
           }),
       });
     }
