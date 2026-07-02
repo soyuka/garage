@@ -10,7 +10,7 @@ Stage-B/C component animates against THIS map; no agent invents a different mapp
 |---|---|---|
 | `selectVehicle {id}` | the car **drives forward** into Le Plateau; previous car recedes into the lot (~350ms cross-fade) | scene assembler |
 | `showFact {keys, title?}` / `focusView {panel:'specs', keys?}` | the **spec constellation** fans the matching `vehicle.facts` into the RIGHT **projection column** (staggered **etch-in**). Empty `keys` ⇒ the whole sheet | scene overlay (`SpecConstellation`) |
-| `focusView {panel:'tasks', keys}` | resolves the first key to a body region (`regionForFrame`) and **spotlights it by dollying the earned camera there** (D1) + a one-shot cyan pulse on the region's edges — the move itself is the spotlight, no separate glow/callout layer. The region's ring pin AND its Entretien-rail row light in lock-step (`data-camera`) | scene assembler (`cameraFocus`) + `EcheancePins`/`EntretienRail` |
+| `focusView {panel:'tasks', keys}` | resolves the first key to a body region (`regionForFrame`) and **spotlights it by dollying the earned camera there** (D1) + a one-shot cyan pulse on the region's edges — the move itself is the spotlight, no separate glow/callout layer. The region's Entretien-rail row(s) light with the orange operator cue (`data-camera`) | scene assembler (`cameraFocus`) + `EntretienRail` |
 | `focusRegion {region}` | same earned-camera dolly + pulse as above, addressed directly by region. **Client-synthesized today** (a contract seed — the client already dollies for a `focusView`/`showFact` that resolves to a region, so handling both is idempotent; not yet emitted by the live agent) | scene assembler (`cameraRig`) |
 | `showParts {service, taskId, parts?}` | projects the **parts manifest** into the RIGHT projection column (rows **unfurl** staggered), primary **Ajouter** = a deterministic `patchTask` merge. **Client-synthesized today** by the "Pièces dispo" wayfinder chip — the identical shape a real parts-bearing `proposeActions` produces (see below), so chip and agent answer are visually indistinguishable | scene overlay (`PartsManifest`) |
 | `showHistory` | raises the **carnet projection** (past visits + spend) into the same RIGHT column. **Client-synthesized today** by the "Carnet · dépenses" chip | scene overlay (`CarnetProjection`) |
@@ -33,20 +33,21 @@ row replays its `patchTask`/`instruction`; a notify row offers "vu" or "planifie
 
 ## Data around the turning car (option 2a)
 
-The car IS the interface — no docked slot. Data is either **true of a body region** (échéances — a
-severity-sorted **ring of index pins** on the disc for the spatial read, paired 1:1 with the persistent
-LEFT "Entretien" rail for the prose; hovering/activating either half brightens the pair) or **fetched on
+The car IS the interface — no docked slot. Data is either **true of a body region** (échéances — the
+persistent LEFT "Entretien" rail, two workload buckets: **À faire** = anything late, every row wearing its
+red/amber TEXT tag, and **Planifié**, plus the untracked "non suivi" tail; the disc itself stays clean —
+the ring pins were removed, indices read as a classification they weren't) or **fetched on
 demand** (specs / parts / carnet, which project into the RIGHT **projection column** — one right-edge slot
 so the operator learns a single glance direction for "the agent answered" — and clear on dismiss).
 
-**Earned camera (D1).** A region spotlight (a task focus, `focusRegion`, or clicking a pin/rail row)
+**Earned camera (D1).** A region spotlight (a task focus, `focusRegion`, or clicking a rail row)
 **dollies the camera** to that region's anchor instead of dimming the stage — the move itself is the
-attention cue, and the camera never drifts from the part it names (the same `regionAnchors` the pins/glow
-read off). It fires only on explicit intent: never mid-drag (a request during a user drag queues until
+attention cue, and the camera never drifts from the part it names (the same `regionAnchors` the glow
+reads off). It fires only on explicit intent: never mid-drag (a request during a user drag queues until
 release), and grabbing the camera always wins — it drops the hold outright. Eases over ~900ms sine
-in/out; released by the **"vue libre"** button, `Escape`, or the drag itself. While a region is held, or
-the projection column is open, the stage/cockpit/pins/rail dim (`data-dim`) to cue that a projected answer
-is the current subject.
+in/out; released by re-activating the SAME row (a toggle — "click again to go back"), the **"vue libre"**
+button, `Escape`, or the drag itself. While a region is held, or the projection column is open, the
+stage/cockpit/rail dim (`data-dim`) to cue that a projected answer is the current subject.
 
 **Deterministic-first.** The quick-action chips above the composer resolve **client-side — no `postTurn`,
 no tokens**: they replay the SAME choreography (`turn:start` → two `status` narration steps ≈ +950ms →
