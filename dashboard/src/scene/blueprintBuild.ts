@@ -80,7 +80,10 @@ export function buildBlueprint(
   clone.updateMatrixWorld(true);
 
   const fillMat = new THREE.MeshBasicMaterial({ color: paint, transparent: true, opacity: FILL_OPACITY, depthWrite: false });
-  const edgeMat = new THREE.LineBasicMaterial({ color: EDGE });
+  // HDR-boosted edge color (>1 channels, toneMapped off): in the hero's half-float composer this is
+  // what feeds the bloom pass — the neon-tube core. Parc thumbs have no composer and just clamp to a
+  // slightly brighter line, which is fine.
+  const edgeMat = new THREE.LineBasicMaterial({ color: new THREE.Color(EDGE).multiplyScalar(1.7), toneMapped: false });
 
   // Scan-band uniforms: sweep the LONGER horizontal axis (a glb may lie along x or z), band ≈ 15% of it.
   const extentX = box.max.x - box.min.x;

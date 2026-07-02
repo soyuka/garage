@@ -81,16 +81,14 @@ body {
   z-index: 0; /* the car owns the whole frame, behind everything */
 }
 /* the docked slot is GONE (option 2a): data lives ON the car (callouts) or is PROJECTED around it (the
-   spec constellation / parts manifest). The stage + cardinals recede when a surface projects. */
-.at-scene-stage-full[data-dim],
-.at-scene-cardinals[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+   spec constellation / parts manifest). The stage recedes when a surface projects. */
+.at-scene-stage-full[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
 
 /* the always-on cockpit — a full-width band across the top of the stage, below the top controls
    (.at-scene-top, which sits at top:0) — and the persistent task dock (right edge): both interactive
-   chrome over the car, so pointer-events stay on unlike the inert cardinal band. Both dim (not etch
-   out) when an on-demand surface takes focus, same cue as the stage/cardinals. `right` clears the task
-   dock's reserved column (300px + 20px gutter = 320px, same reservation the cardinal band already
-   uses) so the row ends before that chrome rather than running under it. */
+   chrome over the car, so pointer-events stay on. Both dim (not etch out) when an on-demand surface
+   takes focus, same cue as the stage. `right` clears the task dock's reserved column (300px + 20px
+   gutter = 320px) so the row ends before that chrome rather than running under it. */
 .at-scene-cockpit {
   position: absolute;
   top: 52px;
@@ -170,7 +168,7 @@ body {
 .at-scene-taskdock[data-dim] { opacity: 0.45; transition: opacity 240ms ease, transform 320ms var(--at-ease-sine); }
 
 /* échéance panels float around the disc's left/bottom-left arc — the wrapper spans the whole stage
-   (so EcheancePanels' % positioning is relative to the disc centre, matching .at-cardinals' convention)
+   (so EcheancePanels' % positioning is relative to the disc centre)
    but stays click-through except where EcheancePanels re-enables pointer-events on its own chrome. */
 .at-scene-echeances {
   position: absolute;
@@ -182,16 +180,6 @@ body {
 
 /* the "agent scanning" cue is now a 3D holo band sweeping THROUGH the car (VehicleMesh ScanRunner),
    not a flat DOM bar — see scene/blueprintBuild.ts patchScan + scene/VehicleMesh.tsx. */
-
-/* SANTÉ is the sole cardinal now — a big, VR-scale readout parked on the right, clear of the task dock
-   (right edge, 320px). The leaf positions it via .at-card--right; the wrapper just spans the stage. */
-.at-scene-cardinals {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-}
-
 
 /* ── canvas-off fallback (rung d) — the honest floor, two-up ── */
 .at-scene-floor {
@@ -372,13 +360,6 @@ body {
 .at-cta-btn:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
 .at-cta-btn--do { border-color: var(--at-chrome-hi); color: var(--at-text); font-weight: 500; }
 .at-cta-btn--decline { color: var(--at-text-dim); border-color: transparent; margin-left: auto; }
-
-/* below ~860px the 360px band insets would collapse the cardinal band to zero/negative width and the
-   E/W cells would invert; drop them there (redundant echo — every value still lives in the panel).
-   Between ~860 and ~1100 they read as a tight central cluster rather than ringing the disc edges. */
-@media (max-width: 860px) {
-  .at-scene-cardinals { display: none; }
-}
 
 /* desktop-first app: below ~900px the task dock has no room beside the car without occluding it. Hide it
    there — every task still lives in the rung-d floor's FlatPlanList + the Dossier drawer. */

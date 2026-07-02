@@ -44,12 +44,50 @@
   color: var(--at-text-dim);
 }
 
+/* the telemetry pair: kilométrage + santé side by side, baseline-aligned, the santé captioning the rim
+   gauge below it. Both are mono readouts; santé wears its signal color + glow ("light is meaning"). */
+.at-cockpit-stats {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 28px;
+}
+
 .at-cockpit-km {
   flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 1px;
+}
+
+.at-cockpit-sante {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.at-cockpit-sante-value {
+  font-family: var(--at-font-mono);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  color: var(--at-sig-hi, var(--at-text));
+  text-shadow: var(--at-glow-sig, none);
+}
+
+.at-cockpit-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .at-cockpit-sante-value {
+    text-shadow: none; /* keep the color, drop the lit-from-within liveness */
+  }
 }
 
 .at-cockpit-km-value {

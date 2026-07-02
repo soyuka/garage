@@ -1,11 +1,14 @@
 import { Suspense, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
+import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
 import type { MeshStandardMaterial } from 'three';
 import type { ForecastDue, Signal, VehicleSummary } from '../types';
 import { bodyClassFor } from './CarProxy';
-import { SIGNAL_HEX, NEUTRAL_HEX } from './signalColors';
+import { SIGNAL_HEX, NEUTRAL_HEX, NEON_RED } from './signalColors';
 import { computeRingSegments } from './ringSegments';
+import { breathe01, podiumGlow } from './holo';
+import { HoloPodium } from './HoloPodium';
 import { VehicleBody } from './VehicleBody';
 import { SilhouetteCar } from './SilhouetteCar';
 import './scene.css';
@@ -17,14 +20,16 @@ import './scene.css';
 export type Rung = 'a' | 'b' | 'c' | 'd';
 
 // A tasteful default paint per make (the backend has no paint color yet — Stage C/D may resolve one).
+// The family is deep blues: under the electric-blue edges the fill must read as tinted night glass,
+// not a grey ghost — per-make variation is a hue lean, not a different color.
 const PAINT: Record<string, string> = {
-  Renault: '#3b4a5a',
-  Peugeot: '#5a3b3b',
-  Citroën: '#46524a',
-  Yamaha: '#243447',
+  Renault: '#1d3a5c',
+  Peugeot: '#2c3060',
+  Citroën: '#1f4550',
+  Yamaha: '#16294d',
 };
 function paintFor(v: VehicleSummary): string {
-  return PAINT[v.make] ?? '#3a4654';
+  return PAINT[v.make] ?? '#20334f';
 }
 
 function SceneLights() {
@@ -43,15 +48,12 @@ const RING_IN = 3.11;
 const RING_OUT = 3.16;
 const RING_SEGMENTS = 96;
 
-// Apple sleep-LED breathe: a slow sine ease-in-out (~4s period) on emissive — the same idle heartbeat as
-// Le Noyau's veille. NOT a hard blink. Overdue (red) arcs run HOTTER and pulse HARDER than the healthy
-// rim so a late car reads as urgent/alive at a glance; a green rim is a calm, faint swell.
-const BREATHE_HZ = 0.25; // 1 / 4s
+// Apple sleep-LED breathe (breathe01, shared with the whole HoloPodium so the stage inhales in phase) on
+// emissive — the same idle heartbeat as Le Noyau's veille. NOT a hard blink. Overdue (red) arcs run
+// HOTTER and pulse HARDER than the healthy rim so a late car reads as urgent/alive at a glance; a green
+// rim is a calm, faint swell.
 const CALM = { base: 1.4, amp: 0.9 };
 const URGENT = { base: 2.6, amp: 2.0 }; // red: much brighter floor + a bigger heartbeat swing
-// SIGNAL_HEX.red is a pale pink (#fca5a5 — tuned for text) that glows weakly as emissive. The ring wants
-// a saturated neon red so an overdue arc reads as a hot alarm, not a blush. Green stays the signal token.
-const NEON_RED = '#ff2418';
 
 function RingSegment({ color, overdue, thetaStart, thetaLength, reduced }: { color: string; overdue: boolean; thetaStart: number; thetaLength: number; reduced: boolean }) {
   const mat = useRef<MeshStandardMaterial>(null);
@@ -62,8 +64,7 @@ function RingSegment({ color, overdue, thetaStart, thetaLength, reduced }: { col
       mat.current.emissiveIntensity = b.base + b.amp * 0.5;
       return;
     }
-    const phase = (Math.sin(state.clock.elapsedTime * BREATHE_HZ * Math.PI * 2) + 1) / 2; // 0..1 ease-in-out
-    mat.current.emissiveIntensity = b.base + phase * b.amp;
+    mat.current.emissiveIntensity = b.base + breathe01(state.clock.elapsedTime) * b.amp;
   });
   return (
     <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -83,12 +84,13 @@ function Turntable({ status, due, reduced }: { status: Signal | 'unknown'; due: 
   return (
     <group>
       <mesh receiveShadow position={[0, -0.04, 0]}>
-        <cylinderGeometry args={[3.2, 3.2, 0.12, 64]} />
-        <meshStandardMaterial color="#23272d" metalness={0.7} roughness={0.45} />
+        <cylinderGeometry args={[3.2, 3.2, 0.12, 96]} />
+        <meshStandardMaterial color="#1a1f26" metalness={0.78} roughness={0.38} />
       </mesh>
       {segments.map((seg, i) => (
         <RingSegment key={i} color={seg.overdue ? NEON_RED : rest} overdue={seg.overdue} thetaStart={seg.thetaStart} thetaLength={seg.thetaLength} reduced={reduced} />
       ))}
+      <HoloPodium glow={podiumGlow(status, due)} reduced={reduced} />
     </group>
   );
 }
@@ -117,6 +119,15 @@ function Plateau3D({
         </group>
         <Turntable status={vehicle.health?.status ?? 'unknown'} due={due} reduced={reduced} />
       </Suspense>
+      {/* Bloom is what makes "light is meaning" physical: emissive arcs, the electric-blue edges and
+          the shaft cage all bleed into the void, and the shared breathe reads as a visible glow swell
+          (bare emissiveIntensity clamps invisibly without it). Threshold keeps the dim disc/fill out.
+          multisampling MUST stay 0: the MSAA resolve path renders black on this stack (r169 +
+          postprocessing 6.39) — SMAA stands in for line anti-aliasing instead. */}
+      <EffectComposer multisampling={0}>
+        <SMAA />
+        <Bloom mipmapBlur intensity={1.05} luminanceThreshold={0.5} luminanceSmoothing={0.25} radius={0.72} />
+      </EffectComposer>
       <OrbitControls
         makeDefault
         enablePan={false}

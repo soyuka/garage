@@ -12,5 +12,10 @@ export const SIGNAL_HEX: Record<Signal, string> = {
 /** Neutral / not-tracked — matches --at-unknown. NOT a healthy state. */
 export const NEUTRAL_HEX = '#5b5f66';
 
-/** The blueprint edge steel-blue (locked decision: distinct from the agent's rationed cyan). */
-export const BLUEPRINT_EDGE = '#a8c4dc';
+/** Saturated neon red for 3D emissive alarms (rim arcs, podium glow). SIGNAL_HEX.red is a pale pink
+ * tuned for text that glows weakly as emissive; an overdue arc wants a hot alarm, not a blush. */
+export const NEON_RED = '#ff2418';
+
+/** The blueprint edge — electric blue, saturated (hue ~220°, deliberately bluer than Le Noyau's
+ * rationed cyan ~190° so "cyan = the agent thinking" stays unambiguous). */
+export const BLUEPRINT_EDGE = '#6d9eff';

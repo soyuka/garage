@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { engineBadge } from './Cockpit';
+import { engineBadge, healthStat } from './Cockpit';
 
 // The engine badge — variant + code joined " · ", either alone standing on its own, null when the
 // vehicle has neither (never an empty string that would render a stray label).
@@ -24,5 +24,24 @@ describe('engineBadge — join variant + code, either alone, null when neither',
 
   it('treats an empty/blank string the same as absent', () => {
     expect(engineBadge({ engineVariant: '', engineCode: '  ' })).toBeNull();
+  });
+});
+
+// The SANTÉ stat moved off the top-right HUD INTO the cockpit slab, beside the kilométrage: value =
+// rounded % (no false precision, §5), status = the signal driving its glow. Null when the rollup is
+// absent or unknown-without-score — the cockpit renders no stat rather than a dash.
+
+describe('healthStat — the cockpit health readout', () => {
+  it('rounds the score to the nearest 5 with a non-breaking-space percent', () => {
+    expect(healthStat({ status: 'green', score: 72, overdue: 0, dueSoon: 0, tracked: 3, gaps: 0 })).toEqual({ text: '70 %', status: 'green' });
+  });
+
+  it('carries the signal status through for the glow', () => {
+    expect(healthStat({ status: 'red', score: 45, overdue: 2, dueSoon: 0, tracked: 3, gaps: 0 })?.status).toBe('red');
+  });
+
+  it('is null when the rollup is missing or has no score', () => {
+    expect(healthStat(undefined)).toBeNull();
+    expect(healthStat({ status: 'unknown', score: null, overdue: 0, dueSoon: 0, tracked: 0, gaps: 0 })).toBeNull();
   });
 });

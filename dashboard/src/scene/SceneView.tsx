@@ -4,7 +4,6 @@ import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
 import type { NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
-import { CardinalReadouts } from './CardinalReadouts';
 import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
 import { Checklist, type ChecklistHandlers } from './Checklist';
@@ -121,9 +120,6 @@ export function SceneView({
   const constellationTitle = focus?.panel === 'specs' ? focus.title : 'Épinglés';
   const showConstellation = focus?.panel === 'specs' ? true : pinnedKeys.length > 0;
 
-  // Cardinal derivation — SANTÉ only now (the leaf stays dumb).
-  const healthPct = bundle ? bundle.vehicle.health?.score ?? null : null;
-
   // "Planifier" (#10): a hotspot forecast row → a concrete planned task pegged to the predicted-due
   // reading. Uses the checklist's add path (so it re-reads), and the vehicle's garage-spelling axis unit
   // (NOT the forecast's maintenance-side spelling) for the target. Absent checklist → no planning.
@@ -211,9 +207,8 @@ export function SceneView({
           <div className="at-scene-cockpit" data-dim={focus ? 'true' : undefined}>
             <Cockpit vehicle={bundle.vehicle} edit={edit} />
           </div>
-          <div className="at-scene-cardinals" data-dock-open={checklist && dockOpen ? 'true' : 'false'} data-dim={focus ? 'true' : undefined}>
-            <CardinalReadouts healthPct={healthPct} />
-          </div>
+          {/* SANTÉ moved off the top-right HUD into the cockpit slab (Cockpit → HealthStat) — the %
+              now captions the rim gauge from the identity band instead of floating alone. */}
           {/* échéances float around the ring's left/bottom-left arc (never rotating with the car) — the
               wrapper spans the whole stage so EcheancePanels' angle layout is relative to the disc centre. */}
           <div className="at-scene-echeances" data-dim={focus ? 'true' : undefined}>

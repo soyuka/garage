@@ -11,8 +11,8 @@ describe('SIGNAL_HEX', () => {
       expect(SIGNAL_HEX[s], s).toMatch(/^#[0-9a-f]{6}$/i);
     });
   });
-  it('pins the blueprint edge to the locked steel-blue (NOT the agent cyan)', () => {
-    expect(BLUEPRINT_EDGE).toBe('#a8c4dc');
+  it('pins the blueprint edge to the locked electric blue (NOT the agent cyan)', () => {
+    expect(BLUEPRINT_EDGE).toBe('#6d9eff');
     expect(NEUTRAL_HEX).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });

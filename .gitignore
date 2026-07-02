@@ -9,3 +9,9 @@
 
 # Sample/working invoice PDFs (not referenced in code).
 /api/tondeuse/
+
+# Claude Code local state (settings, agent memory, worktrees).
+/.claude/
+
+# Design source archive (raw export; the usable handoff docs are tracked).
+/Car page design Claude.zip

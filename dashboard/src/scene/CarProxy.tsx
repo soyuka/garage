@@ -1,15 +1,16 @@
 import { Edges } from '@react-three/drei';
+import { BLUEPRINT_EDGE } from './signalColors';
 
-// The body-class PROXY car (degradation rung b), rendered as a BLUEPRINT: glowing edges over a near-
-// invisible paint-tinted volume — a futuristic technical-drawing / hologram look. Edges hide the
+// The body-class PROXY car (degradation rung b), rendered as a BLUEPRINT: glowing edges over a
+// paint-tinted night-glass volume — a futuristic technical-drawing / hologram look. Edges hide the
 // low-poly crudeness, so a simple primitive mesh reads as intentional (the real hyperreal .glb is
-// Stage D). Edge color is a cool steel-blue, NOT the agent's rationed cyan. Hotspot anchors are per
+// Stage D). Edge color is an electric blue, NOT the agent's rationed cyan. Hotspot anchors are per
 // body-class, not per mesh (BUILD-NOTE 2).
 
 export type BodyClass = 'hatchback' | 'berline' | 'suv' | 'utilitaire' | 'moto';
 
-export const EDGE = '#a8c4dc'; // blueprint line — cool, distinct from Le Noyau's cyan
-export const FILL_OPACITY = 0.07; // a ghost of volume; the lines carry the form
+export const EDGE = BLUEPRINT_EDGE; // blueprint line — single source in signalColors
+export const FILL_OPACITY = 0.14; // tinted night glass: enough body for the edges to contrast against
 
 // Two VehicleType spellings reach this at runtime: legacy fixtures (car/motorcycle) and the API enum
 // App\Garage\VehicleType (car/moto/cv/groundscare). groundscare has no dedicated body shape — utilitaire
