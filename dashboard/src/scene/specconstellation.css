@@ -1,23 +1,24 @@
-/* Spec constellation — a fan of fact cards projected to the car's LEFT (option 2a). Etches in staggered,
-   each node a small self-glassed card with a hair leader toward the car. Cyan only on the header tick
-   mark echoes the agent's provenance; values stay ink; verified/unverified read in text, not colour. */
+/* Spec constellation — a fan of fact cards projected to the car's RIGHT (B2: flipped from the left, which
+   the persistent "Entretien" rail now owns). Lives INSIDE the shared projection column (.at-projection),
+   so it flows there rather than positioning itself. Etches in staggered, each node a small self-glassed
+   card that hugs the column's right edge with a hair leader stubbing LEFT toward the car. An agent-placed
+   focus wears the cyan attribution tick + a ✕ dismiss (.at-proj-* in scene.css); resting pinned facts do
+   not (they are the operator's own pins, not an agent projection). Values stay ink; verified/unverified
+   read in text, not colour. */
 
 .at-spec {
-  position: absolute;
-  /* a left rail BELOW the always-on cockpit (identity+km, ~64→155px): same left offset, dropped down so
-     the moteur fluids never overlap the km readout. Grows downward as the specs focus expands it. */
-  left: 20px;
-  top: 210px;
-  z-index: 6;
-  width: min(300px, 34vw);
+  /* flows in the projection column — no self-positioning. pointer-events stay OFF so the leaders/labels
+     never block orbiting the car; the ✕ dismiss + the editable value re-enable clicks on themselves. */
   pointer-events: none;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-/* dim mono, NOT cyan — cyan is rationed to Le Noyau (orb + scan sweep) only (binding colour rule). */
+/* dim mono, NOT cyan — cyan is rationed to Le Noyau (orb + scan sweep) + the header attribution tick only. */
 .at-spec-head {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--at-font-mono);
   font-size: 11px;
   font-weight: 700;
@@ -28,6 +29,14 @@
   /* own keyframes (not the shared at-etchin below, which several leaves reuse and lands at opacity:1):
      the etch-in must settle AT the tier, not fight it back up to full opacity once the animation ends. */
   animation: at-spec-head-in 0.45s var(--at-ease-sine) both;
+}
+/* the resting (non-agent) marker — a dim diamond in place of the cyan attribution tick */
+.at-spec-glyph {
+  flex: 0 0 auto;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  font-size: 11px;
+  line-height: 1;
 }
 
 .at-spec-nodes {
@@ -41,7 +50,7 @@
   display: inline-flex;
   flex-direction: column;
   gap: 4px;
-  align-self: flex-start;
+  align-self: flex-end; /* hug the column's RIGHT edge (flipped); the ragged left edge reads as the fan */
   max-width: 100%;
   padding: 11px 15px;
   background: rgba(13, 14, 16, 0.88); /* scrim law: >= .86 */
@@ -85,14 +94,14 @@
   opacity: var(--at-vib-3);
 }
 
-/* a hair leader stubbing off the card's right edge, toward the turning car */
+/* a hair leader stubbing off the card's LEFT edge (flipped to the right column), toward the turning car */
 .at-spec-lead {
   position: absolute;
-  right: -58px;
+  left: -58px;
   top: 55%;
   width: 58px;
   height: 1px;
-  background: linear-gradient(90deg, var(--at-hairline), transparent);
+  background: linear-gradient(-90deg, var(--at-hairline), transparent);
 }
 
 @keyframes at-etchin {

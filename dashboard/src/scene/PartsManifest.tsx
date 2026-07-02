@@ -22,7 +22,13 @@ export function PartsManifest({
   const total = manifestTotal(model.parts);
   return (
     <aside className="at-parts" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={`Pièces — ${model.service}`}>
-      <div className="at-parts-head">◇ PIÈCES · {model.service}</div>
+      <div className="at-proj-head">
+        <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
+        <div className="at-parts-head">PIÈCES · {model.service}</div>
+        <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer les pièces">
+          ✕
+        </button>
+      </div>
       {model.finding && <div className="at-parts-finding">{model.finding}</div>}
       <div className="at-parts-rows">
         {model.parts.map((p, i) => {
@@ -51,9 +57,6 @@ export function PartsManifest({
       <div className="at-parts-foot">
         <span className="at-parts-total">{formatEuros(total)}</span>
         <div className="at-parts-actions">
-          <button type="button" className="at-parts-later" onClick={onDismiss}>
-            Plus tard
-          </button>
           <button
             type="button"
             className="at-parts-add"

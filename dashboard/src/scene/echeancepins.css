@@ -1,0 +1,119 @@
+/* Ring pins — the minimal spatial index on the turning disc (B1). NO prose: a hair leader (toward the
+   rail), a signal dot, and the shared index NN. The layer spans the whole stage but is click-through; each
+   pin re-enables pointer-events so it can be hovered/focused (which brightens its rail row via SceneView).
+   State = signal colour on the dot + the pin's own breathe (red/amber) — never colour alone, since the pin
+   only indexes: the OK/BIENTÔT/EN RETARD word lives on the paired rail row. */
+
+.at-echpin-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.at-echpin {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: row-reverse; /* index nearest the car, leader trailing out toward the rail (left) */
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  pointer-events: auto;
+  cursor: default;
+  border-radius: 999px;
+  /* scrim law: the index is DOM text over the bloomed car — a small fixed radial ground sits behind it */
+  background: radial-gradient(ellipse 70% 90% at 60% 50%, rgba(9, 10, 12, 0.9) 0%, rgba(9, 10, 12, 0) 100%);
+  animation: at-echpin-in 0.4s var(--at-ease-sine) both;
+  transition: transform 140ms var(--at-ease-sine);
+}
+/* invisible hit zone (§ hit zones): the pin stays visually tiny (index + dot) but hovers/focuses over a
+   ~44px target. Vertical bias keeps neighbouring pins around the disc from stealing each other's hover. */
+.at-echpin::before {
+  content: '';
+  position: absolute;
+  inset: -16px -8px;
+  border-radius: 999px;
+}
+
+.at-echpin-idx {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  color: var(--at-text-mono);
+  opacity: var(--at-vib-2); /* tier-2 — a positional index, not the headline value */
+}
+
+.at-echpin-dot {
+  flex: 0 0 auto;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--at-sig-hi, var(--at-unknown));
+  box-shadow: 0 0 8px -1px var(--at-sig-hi, transparent);
+}
+
+/* the hair leader — a short hairline trailing toward the rail; grows + brightens with the dot on hover */
+.at-echpin-leader {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(to left, var(--at-sig-hi, var(--at-hairline)), transparent);
+  opacity: 0.55;
+}
+
+.at-echpin[data-done='true'] .at-echpin-dot {
+  background: var(--at-green);
+  box-shadow: none;
+  opacity: 0.55;
+}
+.at-echpin[data-done='true'] .at-echpin-idx {
+  opacity: var(--at-vib-3);
+}
+
+/* red/amber pins breathe (a motion cue paired with the colour, never colour alone) */
+.at-echpin[data-signal='red'] .at-echpin-dot,
+.at-echpin[data-signal='amber'] .at-echpin-dot {
+  animation: at-echpin-breathe 2s var(--at-ease-sine) infinite;
+}
+
+/* bidirectional hover: SceneView sets data-active on the pin whose index is hovered on either half */
+.at-echpin[data-active='true'] {
+  transform: translate(-50%, -50%) scale(1.18);
+}
+.at-echpin[data-active='true'] .at-echpin-idx {
+  opacity: 1;
+  color: var(--at-text);
+}
+.at-echpin[data-active='true'] .at-echpin-leader {
+  width: 24px;
+  opacity: 1;
+}
+.at-echpin[data-active='true'] .at-echpin-dot {
+  box-shadow: 0 0 12px 0 var(--at-sig-hi, transparent);
+}
+.at-echpin:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: 3px;
+}
+
+@keyframes at-echpin-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+@keyframes at-echpin-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.at-echpin-layer[data-reduced='true'] .at-echpin,
+.at-echpin-layer[data-reduced='true'] .at-echpin-dot {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-echpin,
+  .at-echpin-dot {
+    animation: none !important;
+  }
+}

@@ -1,13 +1,13 @@
-/* Parts manifest — a projected readout column at the car's RIGHT (option 2a). Rows unfurl staggered; the
-   primary "Ajouter" is the operator/primary-action orange (rationed). Header is dim mono (cyan stays on
-   Le Noyau only). A hair leader stubs toward the car on the left edge. */
+/* Parts manifest — a projected surface in the shared projection column at the car's RIGHT (B2: aligned
+   into .at-projection alongside the spec constellation; stacks below it when both show). Always agent-placed
+   (it renders a proposeActions' parts), so it wears the cyan attribution tick + a ✕ dismiss (.at-proj-* in
+   scene.css). Rows unfurl staggered; the primary "Ajouter" is the operator/primary-action orange (rationed).
+   A hair leader stubs toward the car on the left edge. */
 
 .at-parts {
-  position: absolute;
-  right: max(3vw, 40px);
-  top: 18%;
-  z-index: 6;
-  width: min(268px, 34vw);
+  /* flows in the projection column — no self-positioning. Interactive form → pointer-events on.
+     position:relative anchors the hair leader (which stubs left toward the car). */
+  position: relative;
   pointer-events: auto;
   padding: 14px 15px;
   background: rgba(13, 14, 16, 0.86);
@@ -19,6 +19,8 @@
 }
 
 .at-parts-head {
+  flex: 1 1 auto;
+  min-width: 0;
   font-family: var(--at-font-mono);
   font-size: 9.5px;
   font-weight: 700;
@@ -94,19 +96,13 @@
   align-items: center;
   gap: 8px;
 }
-.at-parts-later {
-  cursor: pointer;
-  font-family: var(--at-font-ui);
-  font-size: 11.5px;
-  color: var(--at-text-dim);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 7px 10px;
-}
-.at-parts-later:hover { color: var(--at-text); }
+/* the single primary action (dismiss lives in the header ✕ now). Orange = the rationed operator/primary
+   action. inline-flex + min-height gives a >=44px hit target (§ hit zones) while the pill stays compact. */
 .at-parts-add {
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   font-family: var(--at-font-ui);
   font-size: 11.5px;
   font-weight: 500;
@@ -114,12 +110,11 @@
   background: var(--at-orange);
   border: none;
   border-radius: 999px;
-  padding: 8px 13px;
+  padding: 0 15px;
   transition: filter 140ms var(--at-ease-sine);
 }
 .at-parts-add:hover { filter: brightness(1.08); }
-.at-parts-add:focus-visible,
-.at-parts-later:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+.at-parts-add:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
 
 .at-parts-lead {
   position: absolute;

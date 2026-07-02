@@ -7,16 +7,15 @@ import { Plateau, type Rung } from './Plateau';
 import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
-import { Checklist, type ChecklistHandlers } from './Checklist';
+import { EntretienRail, type ChecklistHandlers } from './EntretienRail';
+import { EcheancePins } from './EcheancePins';
+import { buildRail } from './rail';
 import { CtaCard, type Cta } from './CtaCard';
 import { PartsManifest } from './PartsManifest';
 import { manifestFromCta } from './parts';
 import type { BodyRegion } from './anchors';
 import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
-import { EcheancePanels } from './EcheancePanels';
-import { buildEcheances } from './echeances';
-import { splitEcheances } from './ringEcheances';
 import type { Focus } from '../focus';
 import type { ForecastDue, Iri, MaintenanceRecord, PlannedPart, VehicleBundle } from '../types';
 
@@ -66,6 +65,9 @@ interface SceneViewProps {
   checklist?: ChecklistHandlers;
   /** Click a car pin → focus the slot on that region's tasks. Absent → pins are inert (playground). */
   onFocusRegion?: (region: BodyRegion) => void;
+  /** Dismiss an agent-placed specs focus (clears it). Absent → the projected constellation shows no ✕
+   * (playground / resting pins are persistent, never dismissed here). */
+  onDismissFocus?: () => void;
   /** Deterministic quick-action chips shown above the composer (client-side, no agent turn). */
   quickActions?: QuickAction[];
   /** Pinned fact keys (persisted per-vehicle by the driver) — what the resting constellation shows. */
@@ -98,6 +100,7 @@ export function SceneView({
   onCtaPatch,
   onCtaDismiss,
   focus,
+  onDismissFocus,
   edit,
   checklist,
   quickActions,
@@ -113,17 +116,17 @@ export function SceneView({
   onOpenHistory,
   onCloseHistory,
 }: SceneViewProps) {
-  // Ephemeral view state (NOT data): which échéance set the ring panels show, and whether the right
-  // task dock is pulled open. Both reset naturally on unmount; the driver owns no part of them.
-  const [showUpcoming, setShowUpcoming] = useState(false);
-  const [dockOpen, setDockOpen] = useState(true);
+  // Ephemeral view state (NOT data): the index of the pin/row pair currently hovered or focused — shared
+  // by the ring pins and the left rail so brightening either half lights its twin. Resets on unmount.
+  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
   const focusKeys = focus?.keys;
   // At rest (no specs focus) the constellation shows PINNED facts only — an empty pin set renders
   // nothing (selectFacts treats an empty `keys` as "show everything", so the empty case is gated here
   // rather than passed through).
-  const constellationKeys = focus?.panel === 'specs' ? focusKeys ?? [] : pinnedKeys;
-  const constellationTitle = focus?.panel === 'specs' ? focus.title : 'Épinglés';
-  const showConstellation = focus?.panel === 'specs' ? true : pinnedKeys.length > 0;
+  const specsFocused = focus?.panel === 'specs';
+  const constellationKeys = specsFocused ? focusKeys ?? [] : pinnedKeys;
+  const constellationTitle = specsFocused ? focus.title : 'Épinglés';
+  const showConstellation = specsFocused ? true : pinnedKeys.length > 0;
 
   // "Planifier" (#10): a hotspot forecast row → a concrete planned task pegged to the predicted-due
   // reading. Uses the checklist's add path (so it re-reads), and the vehicle's garage-spelling axis unit
@@ -135,16 +138,11 @@ export function SceneView({
       }
     : undefined;
 
-  // The échéances: no longer in the dock (Checklist-only now) — they float around the ring as fixed
-  // panels (EcheancePanels). Split into the DUE (overdue) vs UPCOMING sets; a bottom chip toggles which
-  // set is shown. Default = dues, falling back to upcoming when nothing is overdue.
-  const echeances = bundle
-    ? buildEcheances(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? [])
+  // The split ring (B1): ONE severity-sorted, indexed model drives BOTH the minimal ring pins (spatial
+  // index on the disc) and the persistent left rail (its prose). Pin NN and rail row NN share the index.
+  const rail = bundle
+    ? buildRail(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? [])
     : [];
-  const { dues, upcoming } = splitEcheances(echeances);
-  const showUpcomingEch = showUpcoming || dues.length === 0;
-  const activeEch = showUpcomingEch ? upcoming : dues;
-  const canToggleEch = dues.length > 0 && upcoming.length > 0;
 
   // When a full surface (Données drawer / Le Carnet) is open, the dock slides to the LEFT free column so
   // Le Noyau + its narration + the composer stay visible beside it, and the chips swap to that surface's
@@ -215,47 +213,48 @@ export function SceneView({
           </div>
           {/* SANTÉ moved off the top-right HUD into the cockpit slab (Cockpit → HealthStat) — the %
               now captions the rim gauge from the identity band instead of floating alone. */}
-          {/* échéances float around the ring's left/bottom-left arc (never rotating with the car) — the
-              wrapper spans the whole stage so EcheancePanels' angle layout is relative to the disc centre. */}
-          <div className="at-scene-echeances" data-dim={focus ? 'true' : undefined}>
-            <EcheancePanels items={activeEch} onPlan={onPlan} reduced={reduced} />
+          {/* the split ring: minimal échéance PINS on the disc (index + signal dot + hair leader), no prose.
+              The wrapper spans the whole stage so the pins' angle layout is relative to the disc centre;
+              their readable rows live in the left rail below, paired by the shared index. */}
+          <div className="at-scene-pins" data-dim={focus ? 'true' : undefined}>
+            <EcheancePins items={rail} hoveredIdx={hoveredIdx} onHoverIdx={setHoveredIdx} reduced={reduced} />
           </div>
-          {/* on-demand agent surface: a specs focus fans the vehicle's facts to the car's LEFT as a
-              constellation (never a docked panel). At rest, PINNED facts (from the facts drawer) take
-              over the same slot — empty pins render nothing, so no duplicate of the cockpit's row. */}
-          {showConstellation && (
-            <SpecConstellation
-              facts={bundle.vehicle.facts ?? []}
-              keys={constellationKeys}
-              title={constellationTitle}
-              reduced={reduced}
-              edit={edit?.facts}
-            />
-          )}
-          {/* the cyan scan is now a 3D holo band sweeping THROUGH the car (Plateau `scanning`) — no DOM bar */}
-          {/* parts manifest — the rich right-side form of a parts-bearing proposal (contract-free option a) */}
-          {showManifest && manifest && onCtaPatch && onCtaDismiss && (
-            <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
-          )}
-          {/* persistent task dock (#F): the open-checklist lives ON the hero, right edge, styled as a
-              working scratchpad — échéances moved off the dock onto the ring/panels. Absent `checklist`
-              (playground) → no dock. */}
-          {checklist && (
-            <div className="at-scene-taskdock" data-open={dockOpen ? 'true' : 'false'} data-dim={focus ? 'true' : undefined}>
-              <button
-                type="button"
-                className="at-scene-taskdock-tab"
-                aria-label={dockOpen ? "Replier l'entretien en cours" : "Ouvrir l'entretien en cours"}
-                aria-expanded={dockOpen}
-                onClick={() => setDockOpen((o) => !o)}
-              >
-                <span className="at-scene-taskdock-tab-glyph" aria-hidden="true">{dockOpen ? '›' : '‹'}</span>
-                <span className="at-scene-taskdock-tab-label">Entretien</span>
-              </button>
-              <div className="at-scene-taskdock-body">
-                <Checklist {...checklist} />
-              </div>
+          {/* the PROJECTION COLUMN (B2): the ONE right-edge slot for everything Le Noyau projects — so the
+              operator learns a single glance direction for "the agent answered" (the left "Entretien" rail
+              never moves). A specs focus fans the facts as the constellation (agent-placed → cyan tick + ✕);
+              at rest, PINNED facts take the same column (operator's own pins → no tick, no ✕). A parts-bearing
+              proposal stacks the manifest below. Empty → nothing renders. (The cyan scan is a 3D holo band
+              sweeping THROUGH the car via Plateau `scanning`, not a DOM bar.) */}
+          {(showConstellation || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
+            <div className="at-projection">
+              {showConstellation && (
+                <SpecConstellation
+                  facts={bundle.vehicle.facts ?? []}
+                  keys={constellationKeys}
+                  title={constellationTitle}
+                  reduced={reduced}
+                  edit={edit?.facts}
+                  agentPlaced={specsFocused}
+                  onDismiss={specsFocused ? onDismissFocus : undefined}
+                />
+              )}
+              {showManifest && manifest && onCtaPatch && onCtaDismiss && (
+                <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
+              )}
             </div>
+          )}
+          {/* the persistent left rail ("Entretien"): the reading half of the split ring — every échéance's
+              prose (checkable tasks, plannable predictions, non-suivi gaps), severity-sorted to mirror the
+              pin order. Screen-locked on the hero's left edge. Absent `checklist` (playground) → no rail. */}
+          {checklist && (
+            <EntretienRail
+              items={rail}
+              checklist={checklist}
+              onPlan={onPlan!}
+              hoveredIdx={hoveredIdx}
+              onHoverIdx={setHoveredIdx}
+              dimmed={!!focus || overlayOpen}
+            />
           )}
         </>
       )}
@@ -276,18 +275,13 @@ export function SceneView({
             ))}
           </div>
         ) : (
-          ((quickActions && quickActions.length > 0) || canToggleEch) && (
+          quickActions && quickActions.length > 0 && (
             <div className="at-scene-chips">
-              {quickActions?.map((qa, i) => (
+              {quickActions.map((qa, i) => (
                 <button key={i} type="button" className="at-scene-chip" onClick={qa.onClick} disabled={qa.disabled}>
                   {qa.label}
                 </button>
               ))}
-              {canToggleEch && (
-                <button type="button" className="at-scene-chip" onClick={() => setShowUpcoming((s) => !s)}>
-                  {showUpcomingEch ? `Voir échéances dues (${dues.length})` : `Voir prochaines échéances (${upcoming.length})`}
-                </button>
-              )}
             </div>
           )
         )}

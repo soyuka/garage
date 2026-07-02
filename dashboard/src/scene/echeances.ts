@@ -5,8 +5,8 @@ import type { ForecastDue, PlannedTask, Signal } from '../types';
 
 // The échéances as a FLAT, severity-sorted list — one item per service, NOT grouped by body region (the
 // grouping buried the urgency). A due binds to its open/done task to become checkable; an unplanned due is
-// a prediction (plan it); a coverage gap is a dashed "non suivi". Rendered as a vertical list at the top
-// of the persistent task dock (Option A) by EcheanceList — layout lives there, this module stays pure data.
+// a prediction (plan it); a coverage gap is a dashed "non suivi". This is the shared ordering both the
+// ring pins and the left rail render; `rail.ts` wraps it to stamp the pin/row index. Stays pure data.
 
 export interface Echeance {
   id: string;

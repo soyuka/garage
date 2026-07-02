@@ -87,10 +87,9 @@ body {
 .at-scene-stage-full[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
 
 /* the always-on cockpit — a full-width band across the top of the stage, below the top controls
-   (.at-scene-top, which sits at top:0) — and the persistent task dock (right edge): both interactive
-   chrome over the car, so pointer-events stay on. Both dim (not etch out) when an on-demand surface
-   takes focus, same cue as the stage. `right` clears the task dock's reserved column (300px + 20px
-   gutter = 320px) so the row ends before that chrome rather than running under it. */
+   (.at-scene-top, which sits at top:0): interactive chrome over the car, so pointer-events stay on. It
+   dims (not etches out) when an on-demand surface takes focus, same cue as the stage. Left:0/right:0 keeps
+   the identity band centred on the car; the left rail (320px) overlaps only the empty far-left air. */
 .at-scene-cockpit {
   position: absolute;
   top: 52px;
@@ -108,84 +107,89 @@ body {
 .at-scene-cockpit > * {
   pointer-events: auto;
 }
-/* the task dock now reads as a working NOTEPAD clipped to the car's right edge, not a rigid data panel:
-   a warmer/lighter fill (--at-void-lift, not the near-opaque glass-black used by the telemetry panels),
-   a faint baseline-rule texture standing in for ruled paper, and a looser corner radius. Still glass
-   (blur + hairline), still mono labels — the material shifts, the vocabulary doesn't. */
-.at-scene-taskdock {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  right: 0;
-  width: 320px;
-  z-index: 16;
-  pointer-events: auto;
-  /* a pull-out right drawer: slides fully off the right edge when collapsed (the tab, which juts out to
-     its left, rides along and stays on screen). Body scrolls; the panel itself keeps overflow visible so
-     the tab is never clipped. */
-  transform: translateX(0);
-  transition: transform 320ms var(--at-ease-sine);
-}
-.at-scene-taskdock[data-open='false'] {
-  transform: translateX(100%);
-}
-.at-scene-taskdock-body {
-  height: 100%;
-  overflow: auto;
-  padding: 64px var(--at-space-5) var(--at-space-5);
-  /* clean frosted glass (the ruled-paper gradient was fighting the text baselines) — a soft top sheen
-     over a translucent void fill, same idiom as the facts/history glass. Scrim law: fill >= .86. */
-  background: linear-gradient(180deg, rgba(150, 175, 210, 0.05), rgba(0, 0, 0, 0) 140px), rgba(20, 19, 15, 0.88);
-  border-left: 1px solid var(--at-glass-edge);
-  backdrop-filter: blur(var(--at-glass-blur));
-}
-/* the pull tab — juts out from the drawer's left edge; the one control that stays reachable when closed */
-.at-scene-taskdock-tab {
-  position: absolute;
-  left: -30px;
-  top: 84px;
-  width: 30px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 0 12px;
-  cursor: pointer;
-  color: var(--at-text-dim);
-  background: rgba(24, 22, 17, 0.88); /* scrim law: >= .86 — the vertical label sits directly on the canvas */
-  border: 1px solid var(--at-hairline);
-  border-right: none;
-  border-radius: 8px 0 0 8px;
-  backdrop-filter: blur(var(--at-glass-blur));
-  transition: color 140ms var(--at-ease-sine);
-}
-.at-scene-taskdock-tab:hover { color: var(--at-text); }
-.at-scene-taskdock-tab:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
-.at-scene-taskdock-tab-glyph { font-size: 13px; line-height: 1; }
-.at-scene-taskdock-tab-label {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
-  font-family: var(--at-font-mono);
-  font-size: 10px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-.at-scene-cockpit[data-dim],
-.at-scene-taskdock[data-dim] { opacity: 0.45; transition: opacity 240ms ease, transform 320ms var(--at-ease-sine); }
+.at-scene-cockpit[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
 
-/* échéance panels float around the disc's left/bottom-left arc — the wrapper spans the whole stage
-   (so EcheancePanels' % positioning is relative to the disc centre)
-   but stays click-through except where EcheancePanels re-enables pointer-events on its own chrome. */
-.at-scene-echeances {
+/* the split-ring PINS float around the disc — the wrapper spans the whole stage (so the pins' % positioning
+   is relative to the disc centre) and stays click-through except where each pin re-enables pointer-events
+   so it can be hovered/focused (which brightens its paired rail row). */
+.at-scene-pins {
   position: absolute;
   inset: 0;
   z-index: 12;
   pointer-events: none;
 }
-.at-scene-echeances[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+.at-scene-pins[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
 
 /* the "agent scanning" cue is now a 3D holo band sweeping THROUGH the car (VehicleMesh ScanRunner),
    not a flat DOM bar — see scene/blueprintBuild.ts patchScan + scene/VehicleMesh.tsx. */
+
+/* ── the PROJECTION COLUMN (B2): the ONE right-edge slot where everything Le Noyau projects lands ──
+   The left rail ("Entretien") never moves; the agent's answers all etch in HERE, so the operator learns a
+   single glance direction. Empty by default; the spec constellation (a specs focus / resting pins) and the
+   parts manifest (a parts-bearing proposal) flow inside it — stacked, manifest below, one glance. The
+   column is click-through (orbit the car through the gaps); each surface re-enables pointer-events itself. */
+.at-projection {
+  position: absolute;
+  top: 116px; /* clears the centred cockpit band (identity + km + santé) above */
+  right: max(3vw, 40px);
+  z-index: 6;
+  width: min(300px, 32vw);
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
+  /* overflow stays VISIBLE (both axes): the hair leaders stub LEFT out of each surface toward the car, and
+     forcing a scroll axis would collapse the other to auto and clip them. The projections are transient +
+     curated (engine keys / a short parts list), so the column grows to content like the old surfaces did. */
+  pointer-events: none;
+}
+
+/* shared projection-surface chrome: a header row carrying the agent-attribution CYAN TICK (cyan is
+   licensed here ONLY as a 1px hairline accent tying the surface to Le Noyau — never a fill) and a ✕
+   dismiss. Both the constellation and the manifest compose their own title into this row. */
+.at-proj-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+/* the 1px cyan attribution tick — a hairline that says "Le Noyau placed this". Minimal, never a fill. */
+.at-proj-tick {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--at-cyan);
+  box-shadow: var(--at-glow-cyan);
+}
+/* ✕ dismiss — visually a bare glyph, but a >=44px keyboard/pointer hit zone (negative margin absorbs the
+   oversized target so the header stays tight). A close is NOT the operator's primary action → neutral
+   focus ring (orange stays rationed to focus/primary actions like Ajouter / planifier / chips). */
+.at-proj-dismiss {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  margin: -13px -13px -13px 0;
+  appearance: none;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  color: var(--at-text-dim);
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  line-height: 1;
+  pointer-events: auto;
+  transition: color 140ms var(--at-ease-sine);
+}
+.at-proj-dismiss:hover { color: var(--at-text); }
+.at-proj-dismiss:focus-visible {
+  outline: 2px solid var(--at-chrome-hi);
+  outline-offset: -8px;
+  border-radius: 12px;
+}
 
 /* ── canvas-off fallback (rung d) — the honest floor, two-up ── */
 .at-scene-floor {
@@ -217,20 +221,23 @@ body {
 .at-plateau-note { color: var(--at-text-dim); font-family: var(--at-font-mono); font-size: 13px; }
 .at-silhouette { width: 100%; max-width: 560px; height: auto; display: block; margin: auto; filter: drop-shadow(0 18px 22px rgba(0, 0, 0, 0.5)); }
 
-/* ── dock: composer + Le Noyau (highest) ── */
+/* ── dock: composer + Le Noyau — the operator ORNAMENT (highest) ──
+   visionOS ornament pattern (B2): the dock is NOT a panel sitting fully inside the stage nor a bar docked
+   fully outside it — it STRADDLES the stage's bottom edge. The canvas is full-bleed (`.at-scene-stage-full`
+   inset:0 → the stage's bottom edge IS the viewport edge), so the ornament clings to that edge: its lower
+   ~8px rests ON the edge while the noyau + composer overlap upward ~20px into the stage above it. Z-order
+   (canvas z0 → glass/projection z6 → pins z12 → cockpit z15 → rail z16 → dock ornament z70 [over the facts
+   drawer scrim z60 / panel z61 too, so Le Noyau is never cut off while a surface is open]). */
 .at-scene-dock {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-  /* above the facts drawer / history popup (scrim 60, panel 61) so Le Noyau + its narration + the
-     composer stay visible and usable while a surface is open — the operator is never cut off from the
-     agent. */
   z-index: 70;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: 18px;
+  padding-bottom: 8px; /* cling to the edge (ornament), not float 18px inside it */
   pointer-events: none; /* let the empty area pass clicks through to the canvas (orbit the car) */
   transition: transform 280ms var(--at-ease-sine);
 }
@@ -283,7 +290,7 @@ body {
   color: var(--at-text);
   border: 1px solid var(--at-hairline);
   border-radius: 999px;
-  padding: 10px 18px;
+  padding: 13px 18px; /* ~44px min hit target (§ hit zones) while the pill stays visually compact */
   /* scrim law: these pills float directly on the canvas above the composer — was 0.6, well under .86 */
   background: rgba(13, 14, 16, 0.86);
   transition: border-color 140ms var(--at-ease-sine), background 140ms var(--at-ease-sine);
@@ -372,12 +379,3 @@ body {
 .at-cta-btn--do { border-color: var(--at-chrome-hi); color: var(--at-text); font-weight: 500; }
 .at-cta-btn--decline { color: var(--at-text-dim); border-color: transparent; margin-left: auto; }
 
-/* desktop-first app: below ~900px the task dock has no room beside the car without occluding it. Hide it
-   there — every task still lives in the rung-d floor's FlatPlanList + the Dossier drawer. */
-@media (max-width: 900px) {
-  .at-scene-taskdock { display: none; }
-}
-
-@media (max-width: 720px) {
-  .at-scene-main { grid-template-columns: 1fr; }
-}

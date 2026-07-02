@@ -542,6 +542,7 @@ export function Atelier() {
             onCtaDismiss={() => setCta(null)}
             focus={focus}
             onFocusRegion={onFocusRegion}
+            onDismissFocus={() => setFocus(null)}
             quickActions={[
               {
                 // opens the full fact sheet (drawer) — no agent turn. Opening it closes the carnet

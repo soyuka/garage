@@ -1,0 +1,228 @@
+/* "Entretien" — the persistent LEFT rail (B1). Screen-locked column on the hero's left edge, the reading
+   half of the split ring (pins index spatially, the rail carries prose). Scrim law: an opaque (>= .86)
+   frosted-void ground so the mono rows read over the rotating, bloomed car. One severity-sorted list;
+   task rows reuse .at-task* (checklist.css), due/gap rows are defined here. Vibrancy tiers carry hierarchy
+   at ONE mono size. NO cyan (rationed to Le Noyau); signal colour only on the paired TEXT tag. */
+
+.at-rail {
+  position: absolute;
+  top: 52px;
+  left: 0;
+  bottom: 0;
+  width: 320px;
+  z-index: 16;
+  box-sizing: border-box;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 20px var(--at-space-5) 132px; /* bottom pad clears the centred composer band */
+  font-family: var(--at-font-ui);
+  color: var(--at-text);
+  /* frosted-void fill — same idiom as the facts/history glass, held opaque through the content band */
+  background: linear-gradient(180deg, rgba(150, 175, 210, 0.05), rgba(0, 0, 0, 0) 160px), rgba(20, 19, 15, 0.9);
+  border-right: 1px solid var(--at-glass-edge);
+  backdrop-filter: blur(var(--at-glass-blur));
+  transition: opacity 240ms ease;
+}
+.at-rail[data-dim] {
+  opacity: 0.45;
+}
+
+.at-rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--at-space-3);
+}
+.at-rail-title {
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+  color: var(--at-label);
+  margin: 0;
+  opacity: var(--at-vib-2);
+}
+.at-rail-count {
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+.at-rail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--at-space-2);
+}
+
+.at-rail-rows {
+  list-style: none;
+  margin: var(--at-space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.at-rail-rows--dismissed {
+  margin-top: var(--at-space-2);
+  opacity: 0.85;
+}
+
+/* ── shared row chrome ── */
+.at-rail-row {
+  border-top: 1px dashed var(--at-hairline); /* a ruled line, not a rigid table row */
+  transition: background 140ms var(--at-ease-sine);
+}
+/* bidirectional hover: the row whose index the pin (or the row itself) is over lifts + its index brightens */
+.at-rail-row[data-active='true'] {
+  background: var(--at-void-lift);
+}
+.at-rail-row[data-active='true'] .at-rail-idx {
+  opacity: 1;
+  color: var(--at-text);
+}
+
+/* the shared index NN — mono, tier-2 (a positional index, not the headline). Fixed width so rows align. */
+.at-rail-idx {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--at-text-mono);
+  opacity: var(--at-vib-2);
+  text-align: right;
+}
+.at-rail-idx--gap {
+  opacity: var(--at-vib-3);
+}
+
+/* ── due row (a forecast prediction — no checkbox; a planifier ○ promotes it) ── */
+.at-rail-row--due,
+.at-rail-row--gap {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 8px 0;
+}
+.at-rail-plan {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  cursor: pointer;
+  color: var(--at-text-mono);
+}
+.at-rail-plan-glyph {
+  font-size: 15px;
+  line-height: 1;
+  color: var(--at-orange-hi); /* planifier is an operator action → the rationed operator hue */
+}
+.at-rail-plan:hover .at-rail-plan-glyph {
+  color: var(--at-orange);
+}
+.at-rail-plan:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.at-rail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.at-rail-svc {
+  font-size: 14px;
+  color: var(--at-text);
+  opacity: var(--at-vib-1); /* primary: which service */
+  overflow-wrap: anywhere;
+}
+.at-rail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+}
+.at-rail-horizon {
+  color: var(--at-sig-hi, var(--at-text-dim));
+  opacity: var(--at-vib-2); /* secondary: the rounded horizon */
+}
+.at-rail-date {
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3); /* tertiary: the exact projected date */
+}
+/* a task row's single-line caption (bound horizon / target / date), same tier as the due meta */
+.at-rail-caption {
+  display: block;
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+  margin-top: 2px;
+}
+
+/* ── the grayscale-legible TEXT tag (never colour alone, §8) ── */
+.at-rail-tag {
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  line-height: 1.4;
+  white-space: nowrap;
+  align-self: start;
+}
+.at-rail-tag--late {
+  color: var(--at-red-hi);
+}
+.at-rail-tag--soon {
+  color: var(--at-amber-hi);
+}
+.at-rail-tag--ok {
+  color: var(--at-green-hi);
+  opacity: var(--at-vib-2);
+}
+.at-rail-tag--gap {
+  color: var(--at-text-dim);
+  font-style: italic;
+  opacity: var(--at-vib-3);
+}
+
+/* red/amber tags breathe (motion cue paired with the word) */
+@keyframes at-rail-tag-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+.at-rail-tag--late,
+.at-rail-tag--soon {
+  animation: at-rail-tag-breathe 2s var(--at-ease-sine) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-rail-tag--late,
+  .at-rail-tag--soon {
+    animation: none !important;
+  }
+}
+
+/* ── task row: prepend the shared index column to the reused .at-task grid ── */
+.at-task.at-rail-row {
+  grid-template-columns: 24px 20px minmax(0, 1fr) 20px;
+}
+.at-task.at-rail-row .at-rail-idx {
+  align-self: start;
+  padding-top: 3px;
+}
+
+/* the rail scrolls; hide the scrollbar chrome noise but keep it operable */
+.at-rail::-webkit-scrollbar {
+  width: 8px;
+}
+.at-rail::-webkit-scrollbar-thumb {
+  background: var(--at-hairline);
+  border-radius: 4px;
+}

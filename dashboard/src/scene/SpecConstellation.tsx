@@ -32,6 +32,8 @@ export function SpecConstellation({
   title,
   reduced = false,
   edit,
+  agentPlaced = false,
+  onDismiss,
 }: {
   facts: VehicleFact[];
   keys: string[];
@@ -39,12 +41,29 @@ export function SpecConstellation({
   reduced?: boolean;
   /** Live-hero editing seam: present → each node's value is click-to-edit. Absent → plain text (playground/read-only). */
   edit?: { onEditValue: (key: string, value: string, unit?: string | null) => void };
+  /** The agent placed this (a specs focus) vs. the operator's own resting pins — drives the cyan
+   * attribution tick + the ✕ dismiss (both absent for resting pins). */
+  agentPlaced?: boolean;
+  /** Dismiss the agent-placed focus (clears it). Absent → no ✕ (resting pins are persistent). */
+  onDismiss?: () => void;
 }) {
   const nodes = selectFacts(facts, keys);
   if (nodes.length === 0) return null;
   return (
     <div className="at-spec" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={title ?? 'Spécifications'}>
-      <div className="at-spec-head">◇ {title ?? 'Spécifications'}</div>
+      <div className="at-proj-head">
+        {agentPlaced ? (
+          <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
+        ) : (
+          <span className="at-spec-glyph" aria-hidden="true">◇</span>
+        )}
+        <div className="at-spec-head">{title ?? 'Spécifications'}</div>
+        {onDismiss && (
+          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer les spécifications">
+            ✕
+          </button>
+        )}
+      </div>
       <div className="at-spec-nodes">
         {nodes.map((f, i) => (
           <div

@@ -1,36 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { splitEcheances, layoutSlots } from './ringEcheances';
+import { layoutSlots } from './ringEcheances';
 import type { Echeance } from './echeances';
 
 function ech(over: Partial<Echeance> = {}): Echeance {
   return { id: 'oil_change', kind: 'due', type: 'oil_change', label: 'Vidange', horizon: null, signal: 'green', region: 'hood', ...over };
 }
-
-describe('splitEcheances — red/overdue vs everything else, gaps dropped', () => {
-  it('routes a red, non-gap item to dues', () => {
-    const { dues, upcoming } = splitEcheances([ech({ signal: 'red' })]);
-    expect(dues).toHaveLength(1);
-    expect(upcoming).toHaveLength(0);
-  });
-
-  it('routes amber and green items to upcoming', () => {
-    const { dues, upcoming } = splitEcheances([ech({ id: 'a', signal: 'amber' }), ech({ id: 'b', signal: 'green' })]);
-    expect(dues).toHaveLength(0);
-    expect(upcoming).toHaveLength(2);
-  });
-
-  it('drops gaps entirely (neither set)', () => {
-    const { dues, upcoming } = splitEcheances([ech({ kind: 'gap', signal: 'green' }), ech({ id: 'due', signal: 'red' })]);
-    expect(upcoming).toHaveLength(0);
-    expect(dues).toHaveLength(1);
-  });
-
-  it('a red gap is still dropped (kind check wins over signal)', () => {
-    const { dues, upcoming } = splitEcheances([ech({ kind: 'gap', signal: 'red' })]);
-    expect(dues).toHaveLength(0);
-    expect(upcoming).toHaveLength(0);
-  });
-});
 
 describe('layoutSlots — spread around both flanks, skipping top/bottom dead zones', () => {
   const inFlank = (a: number) => (a >= 212 && a <= 328) || (a >= 32 && a <= 148);
