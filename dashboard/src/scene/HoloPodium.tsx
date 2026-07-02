@@ -32,24 +32,27 @@ export function EtchedRings() {
   );
 }
 
-/** Thin echo rings on the floor beyond the disc, fading outward — the podium's light spilling out. */
-export function EchoRings({ glow, reduced }: { glow: string; reduced: boolean }) {
+/** Thin echo rings on the floor beyond the disc, fading outward — the podium's light spilling out.
+ * `intensity` re-tunes these for stageVariant 'mat' (Plateau's PODIUM_INTENSITY): the additive halo was
+ * tuned to read as glow against a dark void; under the cutting mat it must read as a reflection on the
+ * mat instead, so the caller passes a lower multiplier. 1 (default/night) is today's untouched values. */
+export function EchoRings({ glow, reduced, intensity = 1 }: { glow: string; reduced: boolean; intensity?: number }) {
   const near = useRef<THREE.MeshBasicMaterial>(null);
   const far = useRef<THREE.MeshBasicMaterial>(null);
   useFrame((state) => {
     const b = reduced ? 0.5 : breathe01(state.clock.elapsedTime);
-    if (near.current) near.current.opacity = 0.22 + 0.3 * b;
-    if (far.current) far.current.opacity = 0.08 + 0.16 * b;
+    if (near.current) near.current.opacity = (0.22 + 0.3 * b) * intensity;
+    if (far.current) far.current.opacity = (0.08 + 0.16 * b) * intensity;
   });
   return (
     <group>
       <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[3.42, 3.47, 128]} />
-        <meshBasicMaterial ref={near} color={glow} transparent opacity={0.37} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={near} color={glow} transparent opacity={0.37 * intensity} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
       </mesh>
       <mesh position={[0, 0.001, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[3.74, 3.765, 128]} />
-        <meshBasicMaterial ref={far} color={glow} transparent opacity={0.16} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
+        <meshBasicMaterial ref={far} color={glow} transparent opacity={0.16 * intensity} blending={THREE.AdditiveBlending} depthWrite={false} toneMapped={false} />
       </mesh>
     </group>
   );
@@ -69,6 +72,7 @@ const SHAFT_FRAG = /* glsl */ `
   uniform vec3 uColor;
   uniform float uBreathe;
   uniform float uTime;
+  uniform float uIntensity;
   varying vec2 vUv;
   void main() {
     float fall = pow(1.0 - vUv.y, 2.2);
@@ -76,20 +80,23 @@ const SHAFT_FRAG = /* glsl */ `
     float a2 = sin(vUv.x * 42.0 - uTime * 0.13 + 1.7);
     float rays = 0.42 + 0.36 * a1 + 0.24 * a2;
     rays = clamp(rays, 0.0, 1.0);
-    float alpha = fall * rays * (0.14 + 0.2 * uBreathe);
+    float alpha = fall * rays * (0.14 + 0.2 * uBreathe) * uIntensity;
     gl_FragColor = vec4(uColor * (1.1 + 0.9 * uBreathe) * alpha, alpha);
   }
 `;
 
-export function LightShafts({ glow, reduced }: { glow: string; reduced: boolean }) {
+/** `intensity` re-tunes the shaft brightness for stageVariant 'mat' — see EchoRings' doc above; same
+ * default-1/untouched-at-night contract. */
+export function LightShafts({ glow, reduced, intensity = 1 }: { glow: string; reduced: boolean; intensity?: number }) {
   const mat = useRef<THREE.ShaderMaterial>(null);
   const uniforms = useMemo(
     () => ({
       uColor: { value: new THREE.Color(glow) },
       uBreathe: { value: 0.5 },
       uTime: { value: 0 },
+      uIntensity: { value: intensity },
     }),
-    [],
+    [intensity],
   );
   uniforms.uColor.value.set(glow);
   useFrame((state) => {
@@ -119,12 +126,14 @@ export function LightShafts({ glow, reduced }: { glow: string; reduced: boolean 
   );
 }
 
-export function HoloPodium({ glow, reduced }: { glow: string; reduced: boolean }) {
+/** `intensity` (default 1 = today's night look, untouched) re-tunes the additive echo/shaft brightness —
+ * see EchoRings' doc comment. Plateau passes it down from stageVariant.ts's flag. */
+export function HoloPodium({ glow, reduced, intensity = 1 }: { glow: string; reduced: boolean; intensity?: number }) {
   return (
     <group>
       <EtchedRings />
-      <EchoRings glow={glow} reduced={reduced} />
-      <LightShafts glow={glow} reduced={reduced} />
+      <EchoRings glow={glow} reduced={reduced} intensity={intensity} />
+      <LightShafts glow={glow} reduced={reduced} intensity={intensity} />
     </group>
   );
 }

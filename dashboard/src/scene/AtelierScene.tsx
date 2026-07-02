@@ -10,6 +10,7 @@ import { useReducedMotion } from './useReducedMotion';
 import { serviceLabel } from '../labels';
 import { formatReading } from '../format';
 import type { MaintenanceRecord } from '../types';
+import { readStageVariant, STAGE_VARIANT_KEY, type StageVariant } from './stageVariant';
 
 // Fixture visits for the "Historique" quick action offline (/scene has no backend) — enough shape to
 // exercise HistoryLog's ledger (multi-item visit, parts, cost, notes) without wiring a real bundle.
@@ -158,6 +159,21 @@ export function AtelierScene() {
             />{' '}
             reduced-motion{osReduced ? ' (OS)' : ''}
           </label>
+          {/* PROTOTYPE A/B stage look (stageVariant.ts). Read-once-at-mount flag → flipping it needs a
+              reload, same as any other localStorage-gated dev toggle. Playground-only; the live hero has
+              no equivalent control. */}
+          <button
+            className="at-sbtn"
+            title="Bascule cutting-mat/porcelaine — relance la page"
+            onClick={() => {
+              const next: StageVariant = readStageVariant() === 'mat' ? 'night' : 'mat';
+              if (next === 'mat') window.localStorage.setItem(STAGE_VARIANT_KEY, 'mat');
+              else window.localStorage.removeItem(STAGE_VARIANT_KEY);
+              window.location.reload();
+            }}
+          >
+            plateau: {readStageVariant() === 'mat' ? 'mat' : 'nuit'}
+          </button>
         </div>
       </div>
 

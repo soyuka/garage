@@ -1,5 +1,6 @@
 import { Edges } from '@react-three/drei';
 import { BLUEPRINT_EDGE } from './signalColors';
+import type { StageVariant } from './stageVariant';
 
 // The body-class PROXY car (degradation rung b), rendered as a BLUEPRINT: glowing edges over a
 // paint-tinted night-glass volume — a futuristic technical-drawing / hologram look. Edges hide the
@@ -11,6 +12,14 @@ export type BodyClass = 'hatchback' | 'berline' | 'suv' | 'utilitaire' | 'moto';
 
 export const EDGE = BLUEPRINT_EDGE; // blueprint line — single source in signalColors
 export const FILL_OPACITY = 0.14; // tinted night glass: enough body for the edges to contrast against
+
+// PROTOTYPE (stageVariant 'mat', see stageVariant.ts) — a warm off-white matte shell (clay/maquette
+// automotive-viz register) instead of the tinted night-glass fill: non-emissive, lit + toneMapped like
+// any ordinary surface (no bloom contribution from the shell itself). The blueprint edges are untouched
+// by this swap — they stay the same electric-blue lines over either fill. Wheels sit a shade darker so
+// the silhouette still reads under the flat clay body.
+const PORCELAIN_BODY = '#f1ece2';
+const PORCELAIN_WHEEL = '#cdc6b9';
 
 // Two VehicleType spellings reach this at runtime: legacy fixtures (car/motorcycle) and the API enum
 // App\Garage\VehicleType (car/moto/cv/groundscare). groundscare has no dedicated body shape — utilitaire
@@ -51,59 +60,87 @@ export const DIMS: Record<Exclude<BodyClass, 'moto'>, Dims> = {
   utilitaire: { len: 5.0, wid: 1.95, bodyH: 1.15, cabinLen: 1.3, cabinH: 0.85, cabinOff: -1.55, wheelR: 0.38 },
 };
 
-/** A blueprint box: faint paint-tinted fill + glowing edge lines. */
-function Box({ args, position, paint }: { args: [number, number, number]; position: [number, number, number]; paint: string }) {
+/** A blueprint box: faint paint-tinted fill (or, under stageVariant 'mat', a matte porcelain fill) +
+ * glowing edge lines. */
+function Box({
+  args,
+  position,
+  paint,
+  stageVariant,
+}: {
+  args: [number, number, number];
+  position: [number, number, number];
+  paint: string;
+  stageVariant: StageVariant;
+}) {
   return (
     <mesh position={position}>
       <boxGeometry args={args} />
-      <meshBasicMaterial color={paint} transparent opacity={FILL_OPACITY} depthWrite={false} />
+      {stageVariant === 'mat' ? (
+        <meshStandardMaterial color={PORCELAIN_BODY} roughness={0.52} metalness={0.02} />
+      ) : (
+        <meshBasicMaterial color={paint} transparent opacity={FILL_OPACITY} depthWrite={false} />
+      )}
       <Edges threshold={20} color={EDGE} />
     </mesh>
   );
 }
 
-function Wheel({ x, z, r }: { x: number; z: number; r: number }) {
+function Wheel({ x, z, r, stageVariant }: { x: number; z: number; r: number; stageVariant: StageVariant }) {
   return (
     <mesh position={[x, r, z]} rotation={[Math.PI / 2, 0, 0]}>
       <cylinderGeometry args={[r, r, 0.2, 24]} />
-      <meshBasicMaterial color="#0e1318" transparent opacity={FILL_OPACITY} depthWrite={false} />
+      {stageVariant === 'mat' ? (
+        <meshStandardMaterial color={PORCELAIN_WHEEL} roughness={0.62} metalness={0.02} />
+      ) : (
+        <meshBasicMaterial color="#0e1318" transparent opacity={FILL_OPACITY} depthWrite={false} />
+      )}
       <Edges threshold={18} color={EDGE} />
     </mesh>
   );
 }
 
-function Car({ d, paint }: { d: Dims; paint: string }) {
+function Car({ d, paint, stageVariant }: { d: Dims; paint: string; stageVariant: StageVariant }) {
   const axleX = d.len / 2 - d.wheelR - 0.1;
   const axleZ = d.wid / 2 - 0.02;
   const bodyY = d.wheelR + d.bodyH / 2;
   const cabinY = bodyY + d.bodyH / 2 + d.cabinH / 2 - 0.06;
   return (
     <group>
-      <Box args={[d.len, d.bodyH, d.wid]} position={[0, bodyY, 0]} paint={paint} />
-      <Box args={[d.cabinLen, d.cabinH, d.wid - 0.16]} position={[d.cabinOff, cabinY, 0]} paint={paint} />
-      <Wheel x={axleX} z={axleZ} r={d.wheelR} />
-      <Wheel x={axleX} z={-axleZ} r={d.wheelR} />
-      <Wheel x={-axleX} z={axleZ} r={d.wheelR} />
-      <Wheel x={-axleX} z={-axleZ} r={d.wheelR} />
+      <Box args={[d.len, d.bodyH, d.wid]} position={[0, bodyY, 0]} paint={paint} stageVariant={stageVariant} />
+      <Box args={[d.cabinLen, d.cabinH, d.wid - 0.16]} position={[d.cabinOff, cabinY, 0]} paint={paint} stageVariant={stageVariant} />
+      <Wheel x={axleX} z={axleZ} r={d.wheelR} stageVariant={stageVariant} />
+      <Wheel x={axleX} z={-axleZ} r={d.wheelR} stageVariant={stageVariant} />
+      <Wheel x={-axleX} z={axleZ} r={d.wheelR} stageVariant={stageVariant} />
+      <Wheel x={-axleX} z={-axleZ} r={d.wheelR} stageVariant={stageVariant} />
     </group>
   );
 }
 
-function Moto({ paint }: { paint: string }) {
+function Moto({ paint, stageVariant }: { paint: string; stageVariant: StageVariant }) {
   const r = 0.32;
   const axleX = 0.72;
   return (
     <group>
-      <Wheel x={axleX} z={0} r={r} />
-      <Wheel x={-axleX} z={0} r={r} />
-      <Box args={[1.5, 0.18, 0.22]} position={[0, r + 0.34, 0]} paint={paint} />
-      <Box args={[0.7, 0.34, 0.32]} position={[0.05, r + 0.56, 0]} paint={paint} />
-      <Box args={[0.7, 0.12, 0.26]} position={[-0.55, r + 0.52, 0]} paint={paint} />
+      <Wheel x={axleX} z={0} r={r} stageVariant={stageVariant} />
+      <Wheel x={-axleX} z={0} r={r} stageVariant={stageVariant} />
+      <Box args={[1.5, 0.18, 0.22]} position={[0, r + 0.34, 0]} paint={paint} stageVariant={stageVariant} />
+      <Box args={[0.7, 0.34, 0.32]} position={[0.05, r + 0.56, 0]} paint={paint} stageVariant={stageVariant} />
+      <Box args={[0.7, 0.12, 0.26]} position={[-0.55, r + 0.52, 0]} paint={paint} stageVariant={stageVariant} />
     </group>
   );
 }
 
-export function CarProxy({ bodyClass, paint }: { bodyClass: BodyClass; paint: string }) {
-  if (bodyClass === 'moto') return <Moto paint={paint} />;
-  return <Car d={DIMS[bodyClass]} paint={paint} />;
+export function CarProxy({
+  bodyClass,
+  paint,
+  stageVariant = 'night',
+}: {
+  bodyClass: BodyClass;
+  paint: string;
+  /** Prototype A/B look (stageVariant.ts). Absent → today's night-glass fill, unchanged. */
+  stageVariant?: StageVariant;
+}) {
+  if (bodyClass === 'moto') return <Moto paint={paint} stageVariant={stageVariant} />;
+  return <Car d={DIMS[bodyClass]} paint={paint} stageVariant={stageVariant} />;
 }

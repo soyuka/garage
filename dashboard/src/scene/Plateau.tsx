@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
@@ -9,8 +9,10 @@ import { SIGNAL_HEX, NEUTRAL_HEX, NEON_RED } from './signalColors';
 import { computeRingSegments } from './ringSegments';
 import { breathe01, podiumGlow } from './holo';
 import { HoloPodium } from './HoloPodium';
+import { CuttingMat } from './CuttingMat';
 import { VehicleBody } from './VehicleBody';
 import type { PulseRegion } from './VehicleMesh';
+import { readStageVariant, type StageVariant } from './stageVariant';
 import {
   HOME,
   DOLLY_SECONDS,
@@ -176,32 +178,52 @@ const RING_SEGMENTS = 96;
 const CALM = { base: 1.4, amp: 0.9 };
 const URGENT = { base: 2.6, amp: 2.0 }; // red: much brighter floor + a bigger heartbeat swing
 
-function RingSegment({ color, overdue, thetaStart, thetaLength, reduced }: { color: string; overdue: boolean; thetaStart: number; thetaLength: number; reduced: boolean }) {
+// PROTOTYPE (stageVariant 'mat') — the rim + podium's additive glow was tuned to read against a dark
+// void; under the cutting mat it must read as a reflection ON the mat, not fog flooding a lit floor.
+// 1 = today's night look, byte-for-byte unchanged (multiplying by 1 is a no-op).
+const PODIUM_INTENSITY: Record<StageVariant, number> = { night: 1, mat: 0.55 };
+
+function RingSegment({
+  color,
+  overdue,
+  thetaStart,
+  thetaLength,
+  reduced,
+  intensity,
+}: {
+  color: string;
+  overdue: boolean;
+  thetaStart: number;
+  thetaLength: number;
+  reduced: boolean;
+  intensity: number;
+}) {
   const mat = useRef<MeshStandardMaterial>(null);
   const b = overdue ? URGENT : CALM;
   useFrame((state) => {
     if (!mat.current) return;
     if (reduced) {
-      mat.current.emissiveIntensity = b.base + b.amp * 0.5;
+      mat.current.emissiveIntensity = (b.base + b.amp * 0.5) * intensity;
       return;
     }
-    mat.current.emissiveIntensity = b.base + breathe01(state.clock.elapsedTime) * b.amp;
+    mat.current.emissiveIntensity = (b.base + breathe01(state.clock.elapsedTime) * b.amp) * intensity;
   });
   return (
     <mesh position={[0, 0.03, 0]} rotation={[-Math.PI / 2, 0, 0]}>
       <ringGeometry args={[RING_IN, RING_OUT, RING_SEGMENTS, 1, thetaStart, thetaLength]} />
-      <meshStandardMaterial ref={mat} color={color} emissive={color} emissiveIntensity={b.base} toneMapped={false} />
+      <meshStandardMaterial ref={mat} color={color} emissive={color} emissiveIntensity={b.base * intensity} toneMapped={false} />
     </mesh>
   );
 }
 
-function Turntable({ status, due, reduced }: { status: Signal | 'unknown'; due: ForecastDue[]; reduced: boolean }) {
+function Turntable({ status, due, reduced, stageVariant }: { status: Signal | 'unknown'; due: ForecastDue[]; reduced: boolean; stageVariant: StageVariant }) {
   // A single thin neon rim, divided into arcs by computeRingSegments so the red proportion matches how
   // much of the due work is overdue. Each arc is coloured PER ITEM, not by the car's overall status: an
   // overdue item = hot neon red, an on-track item = calm green, unknown = grey. So the ring reads as a
   // gauge (how much is red) rather than one flat status colour. Red arcs breathe harder.
   const rest = status === 'unknown' ? NEUTRAL_HEX : SIGNAL_HEX.green;
   const segments = computeRingSegments(due);
+  const intensity = PODIUM_INTENSITY[stageVariant];
   return (
     <group>
       <mesh receiveShadow position={[0, -0.04, 0]}>
@@ -209,9 +231,9 @@ function Turntable({ status, due, reduced }: { status: Signal | 'unknown'; due: 
         <meshStandardMaterial color="#1a1f26" metalness={0.78} roughness={0.38} />
       </mesh>
       {segments.map((seg, i) => (
-        <RingSegment key={i} color={seg.overdue ? NEON_RED : rest} overdue={seg.overdue} thetaStart={seg.thetaStart} thetaLength={seg.thetaLength} reduced={reduced} />
+        <RingSegment key={i} color={seg.overdue ? NEON_RED : rest} overdue={seg.overdue} thetaStart={seg.thetaStart} thetaLength={seg.thetaLength} reduced={reduced} intensity={intensity} />
       ))}
-      <HoloPodium glow={podiumGlow(status, due)} reduced={reduced} />
+      <HoloPodium glow={podiumGlow(status, due)} reduced={reduced} intensity={intensity} />
     </group>
   );
 }
@@ -224,6 +246,7 @@ function Plateau3D({
   pulseRegion,
   cameraFocus,
   onCameraRelease,
+  stageVariant,
 }: {
   vehicle: VehicleSummary;
   due: ForecastDue[];
@@ -232,19 +255,21 @@ function Plateau3D({
   pulseRegion: PulseRegion | null;
   cameraFocus: CameraFocus | null;
   onCameraRelease: () => void;
+  stageVariant: StageVariant;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
   return (
     <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.position, fov: 33 }} gl={{ antialias: true }}>
       <color attach="background" args={['#131210']} />
       <SceneLights />
+      {stageVariant === 'mat' && <CuttingMat />}
       <Suspense fallback={null}>
         <group position={[0, 0.04, 0]}>
-          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
+          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} stageVariant={stageVariant} />
           {/* on-car sick-region orbs removed — health now reads on the segmented base ring + the échéance
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
         </group>
-        <Turntable status={vehicle.health?.status ?? 'unknown'} due={due} reduced={reduced} />
+        <Turntable status={vehicle.health?.status ?? 'unknown'} due={due} reduced={reduced} stageVariant={stageVariant} />
       </Suspense>
       {/* Bloom is what makes "light is meaning" physical: emissive arcs, the electric-blue edges and
           the shaft cage all bleed into the void, and the shared breathe reads as a visible glow swell
@@ -292,6 +317,10 @@ export function Plateau({
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
+  // PROTOTYPE A/B flag (stageVariant.ts): read ONCE at mount, so flipping localStorage mid-session never
+  // ripples through a running Plateau — the toggle in AtelierScene reloads the page instead. Default
+  // (key absent) is 'night', today's look, untouched.
+  const [stageVariant] = useState<StageVariant>(() => readStageVariant());
   if (rung === 'd') {
     return (
       <div className="at-plateau at-plateau--list">
@@ -317,6 +346,7 @@ export function Plateau({
         pulseRegion={pulseRegion}
         cameraFocus={cameraFocus}
         onCameraRelease={onCameraRelease ?? (() => {})}
+        stageVariant={stageVariant}
       />
     </div>
   );

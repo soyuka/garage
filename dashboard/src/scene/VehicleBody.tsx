@@ -3,6 +3,7 @@ import type { VehicleSummary } from '../types';
 import { CarProxy, type BodyClass } from './CarProxy';
 import { resolveMesh } from './vehicleMesh';
 import { VehicleMesh, type PulseRegion } from './VehicleMesh';
+import type { StageVariant } from './stageVariant';
 
 // The single body element that replaces CarProxy on the 3D path. It resolves the glb, suspends while it
 // loads (showing the matching-body proxy so the stage never blanks), and catches any load/decode failure
@@ -45,6 +46,7 @@ export function VehicleBody({
   scanning = false,
   reduced = false,
   pulseRegion = null,
+  stageVariant = 'night',
 }: {
   vehicle: VehicleSummary;
   bodyClass: BodyClass;
@@ -52,9 +54,13 @@ export function VehicleBody({
   scanning?: boolean;
   reduced?: boolean;
   pulseRegion?: PulseRegion | null;
+  /** Prototype A/B look (stageVariant.ts). Only reaches the proxy fill today — the real .glb path
+   * (ThumbThenFull/VehicleMesh/buildBlueprint) still renders the night-glass blueprint regardless.
+   * TODO: reuse the same porcelain fill swap in buildBlueprint's fillMat if cheap. */
+  stageVariant?: StageVariant;
 }) {
   const spec = resolveMesh(vehicle);
-  const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
+  const proxy = <CarProxy bodyClass={bodyClass} paint={paint} stageVariant={stageVariant} />;
   // key on the resolved url so switching to a different mesh resets a previously-failed boundary.
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>

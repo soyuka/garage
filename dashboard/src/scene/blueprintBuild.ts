@@ -102,6 +102,8 @@ export function buildBlueprint(
   clone.position.y -= box.min.y;
   clone.updateMatrixWorld(true);
 
+  // TODO(stageVariant 'mat' prototype): reuse CarProxy's porcelain fill swap here if cheap — the .glb
+  // path still always renders the night-glass fill regardless of the flag (see VehicleBody.tsx).
   const fillMat = new THREE.MeshBasicMaterial({ color: paint, transparent: true, opacity: FILL_OPACITY, depthWrite: false });
   // HDR-boosted edge color (>1 channels, toneMapped off): in the hero's half-float composer this is
   // what feeds the bloom pass — the neon-tube core. Parc thumbs have no composer and just clamp to a
