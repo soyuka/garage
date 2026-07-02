@@ -126,6 +126,7 @@ export function EntretienRail({
         key={item.id}
         caption={taskCaption(item.horizon, item.task)}
         tag={inTodo || (tag && tag.tone !== 'ok') ? tag : null}
+        signal={item.due && !item.done ? item.signal : undefined}
         task={item.task!}
         defaultUnit={defaultUnit}
         activateProps={rowActivate(item.region, onActivateRegion)}
@@ -244,6 +245,7 @@ export function EntretienRail({
 function TaskRow({
   caption,
   tag = null,
+  signal,
   task,
   defaultUnit,
   activateProps = {},
@@ -259,6 +261,9 @@ function TaskRow({
   caption: string | null;
   /** the forecast text tag (EN RETARD / BIENTÔT) when the task binds a due — null hides it. */
   tag?: { text: string; tone: string } | null;
+  /** the bound forecast's signal — colours the caption horizon exactly like a due row's (a late task's
+   * "DÉPASSÉ de…" must read as red as an unplanned one's). Absent → neutral caption. */
+  signal?: string;
   task: PlannedTask;
   defaultUnit: string;
   activateProps?: Record<string, unknown>;
@@ -277,7 +282,7 @@ function TaskRow({
   const cls = `at-task at-rail-row${dismissed ? ' at-task--dismissed' : done ? ' at-task--done' : ''}`;
 
   return (
-    <li className={cls} data-camera={cameraActive ? 'true' : undefined} {...activateProps}>
+    <li className={cls} data-signal={signal} data-camera={cameraActive ? 'true' : undefined} {...activateProps}>
       <button
         type="button"
         className="at-task-check"

@@ -183,12 +183,14 @@
   color: var(--at-text-dim);
   opacity: var(--at-vib-3); /* tertiary: the exact projected date */
 }
-/* a task row's single-line caption (bound horizon / target / date), same tier as the due meta */
+/* a task row's single-line caption (bound horizon / target / date), same tier as the due meta. Signal
+   colour resolves off the row's data-signal exactly like a due row's horizon — a late task's "DÉPASSÉ
+   de…" reads as red as an unplanned one's; no bound forecast → the dim fallback. */
 .at-rail-caption {
   display: block;
   font-family: var(--at-font-mono);
   font-size: 12px;
-  color: var(--at-text-dim);
+  color: var(--at-sig-hi, var(--at-text-dim));
   opacity: var(--at-vib-2);
   margin-top: 2px;
 }
