@@ -12,6 +12,8 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { API, authFetch } from './auth';
+import type { FillVolume } from './fluids';
+import type { SivVehicle } from './siv';
 import type {
   MaintenanceAttachment,
   MaintenanceRecord,
@@ -104,6 +106,28 @@ export async function getVehicleBundle(iri: string): Promise<VehicleBundle> {
     getVehicleTasks(iri),
   ]);
   return { vehicle: { ...vehicle, plannedTasks }, forecast, records };
+}
+
+// ── Catalog / SIV reads (net-new §5.1 + §5.8 — feed the deterministic wayfinder chips) ─────────────
+
+/**
+ * GET a car's fluid capacities + specs (§5.8 FillVolume ★) — engine oil / gearbox / brake fluid /
+ * coolant / A-C refrigerant. Keyed by kType (the TecDoc carId). Hydra collection. Backs "Capacités fluides".
+ */
+export async function getFillVolumes(kType: number): Promise<FillVolume[]> {
+  const res = await authFetch(`${API}/cars/${kType}/fill-volumes`, { headers: { Accept: LD } });
+  if (!res.ok) throw new Error(`fill-volumes fetch failed: ${res.status}`);
+  return hydraMembers<FillVolume>(await res.json());
+}
+
+/**
+ * GET the SIV registration identity for a plate (§5.1 Vehicle ★) — power / displacement / gearbox /
+ * weight / first registration… The rich "carte grise". Item read (not a collection). Backs "Fiche technique".
+ */
+export async function getSivVehicle(plate: string): Promise<SivVehicle> {
+  const res = await authFetch(`${API}/vehicles/${encodeURIComponent(plate)}`, { headers: { Accept: LD } });
+  if (!res.ok) throw new Error(`plate lookup failed: ${res.status}`);
+  return res.json() as Promise<SivVehicle>;
 }
 
 // ── Writes ────────────────────────────────────────────────────────────────────

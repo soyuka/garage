@@ -1,0 +1,121 @@
+/* Carnet projection — a projected surface in the shared projection column at the car's RIGHT (D2: aligned
+   into .at-projection alongside the spec constellation / parts manifest). Focus-placed, so it wears the cyan
+   attribution tick + a ✕ dismiss (.at-proj-* in scene.css). Read-only rows unfurl staggered; a hair leader
+   stubs toward the car on the left edge. Values mirror Le Carnet drawer / the truth panel at full precision. */
+
+.at-carnet {
+  position: relative;
+  pointer-events: auto;
+  padding: 14px 15px;
+  background: rgba(13, 14, 16, 0.86); /* scrim law: >= .86 over the bloomed car */
+  border: 1px solid var(--at-hairline);
+  border-radius: 13px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+  animation: at-etchin 0.4s var(--at-ease-sine) both;
+}
+
+.at-carnet-head {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--at-font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+}
+
+.at-carnet-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 10px;
+}
+.at-carnet-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--at-hairline);
+  animation: at-unfurl 0.4s var(--at-ease-sine) both;
+}
+.at-carnet-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.at-carnet-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+.at-carnet-date {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text);
+  opacity: var(--at-vib-1);
+}
+.at-carnet-cost {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text);
+  white-space: nowrap;
+}
+.at-carnet-meta {
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+.at-carnet-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--at-hairline);
+}
+.at-carnet-total {
+  font-family: var(--at-font-mono);
+  font-size: 14px;
+  color: var(--at-text);
+}
+.at-carnet-count {
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+.at-carnet-lead {
+  position: absolute;
+  left: -52px;
+  top: 60px;
+  width: 52px;
+  height: 1px;
+  background: linear-gradient(-90deg, var(--at-hairline), transparent);
+}
+
+@keyframes at-carnet-unfurl {
+  from { opacity: 0; transform: translateX(16px); }
+  to { opacity: 1; transform: none; }
+}
+.at-carnet-row {
+  animation-name: at-carnet-unfurl;
+}
+
+.at-carnet[data-reduced='true'],
+.at-carnet[data-reduced='true'] .at-carnet-row {
+  animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-carnet,
+  .at-carnet-row {
+    animation: none !important;
+  }
+}

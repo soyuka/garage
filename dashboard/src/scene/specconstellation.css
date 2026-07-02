@@ -87,6 +87,15 @@
 .at-spec-ok {
   color: var(--at-green-hi);
 }
+/* a secondary spec line under a projected value (e.g. a fluid standard "ACEA E3|E4|E5", "DOT 4") — mono,
+   tertiary tier: the norm caption below the capacity, never competing with the value itself. */
+.at-spec-info {
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
 .at-spec-unver {
   font-style: italic;
   font-size: 10px;

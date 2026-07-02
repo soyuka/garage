@@ -82,6 +82,20 @@
   opacity: 1;
   color: var(--at-text);
 }
+/* D1 earned camera: a row activates the dolly to its region (its non-control area is clickable), and the
+   row whose region the camera is framing wears the ORANGE operator-focus cue — an inset left bar (orange
+   is rationed to operator focus; the row's signal tag keeps carrying health). */
+.at-rail-row[data-activatable] {
+  cursor: pointer;
+}
+.at-rail-row[data-camera='true'] {
+  background: var(--at-void-lift);
+  box-shadow: inset 2px 0 0 0 var(--at-orange);
+}
+.at-rail-row[data-camera='true'] .at-rail-idx {
+  color: var(--at-orange-hi);
+  opacity: 1;
+}
 
 /* the shared index NN — mono, tier-2 (a positional index, not the headline). Fixed width so rows align. */
 .at-rail-idx {

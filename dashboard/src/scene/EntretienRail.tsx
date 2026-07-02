@@ -7,6 +7,7 @@ import { dueDescriptor, signalTag } from '../derive';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
 import type { RailItem } from './rail';
+import type { BodyRegion } from './anchors';
 import './checklist.css';
 import './rail.css';
 
@@ -48,12 +49,27 @@ function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+/** A guarded row-click → dolly to the row's region, WITHOUT hijacking the row's own controls (checkbox,
+ * planifier, edit/dismiss, inputs). Shared by every row shape (due / gap / task). Absent handler → inert. */
+function rowActivate(region: BodyRegion, onActivateRegion?: (region: BodyRegion) => void) {
+  if (!onActivateRegion) return {};
+  return {
+    'data-activatable': 'true',
+    onClick: (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest('button, input, a, form, label')) return;
+      onActivateRegion(region);
+    },
+  };
+}
+
 export function EntretienRail({
   items,
   checklist,
   onPlan,
   hoveredIdx,
   onHoverIdx,
+  onActivateRegion,
+  cameraRegion = null,
   dimmed = false,
 }: {
   items: RailItem[];
@@ -61,6 +77,10 @@ export function EntretienRail({
   onPlan: (due: ForecastDue) => void;
   hoveredIdx: number | null;
   onHoverIdx: (idx: number | null) => void;
+  /** D1: activating a row (click on its non-control area) dollies the view TO its region. Absent → inert. */
+  onActivateRegion?: (region: BodyRegion) => void;
+  /** The region the camera is dollied to — its row(s) show the orange operator-focus cue. */
+  cameraRegion?: BodyRegion | null;
   /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage/pins. */
   dimmed?: boolean;
 }) {
@@ -125,7 +145,13 @@ export function EntretienRail({
           {items.map((item) => {
             if (item.kind === 'gap') {
               return (
-                <li key={item.id} className="at-rail-row at-rail-row--gap" data-signal="unknown">
+                <li
+                  key={item.id}
+                  className="at-rail-row at-rail-row--gap"
+                  data-signal="unknown"
+                  data-camera={cameraRegion === item.region ? 'true' : undefined}
+                  {...rowActivate(item.region, onActivateRegion)}
+                >
                   <span className="at-rail-idx at-rail-idx--gap" aria-hidden="true">·</span>
                   <span className="at-rail-svc">{item.label}</span>
                   <span className="at-rail-tag at-rail-tag--gap">non suivi</span>
@@ -141,7 +167,9 @@ export function EntretienRail({
                   key={item.id}
                   className="at-rail-row at-rail-row--due"
                   data-signal={item.signal}
+                  data-camera={cameraRegion === item.region ? 'true' : undefined}
                   {...hoverProps(item.index)}
+                  {...rowActivate(item.region, onActivateRegion)}
                 >
                   <button
                     type="button"
@@ -172,6 +200,8 @@ export function EntretienRail({
                 task={item.task!}
                 defaultUnit={defaultUnit}
                 hoverProps={hoverProps(item.index)}
+                activateProps={rowActivate(item.region, onActivateRegion)}
+                cameraActive={cameraRegion === item.region}
                 onToggle={() => checklist.onSetStatus(item.task!.id, item.done ? 'open' : 'done')}
                 onDismiss={() => checklist.onSetStatus(item.task!.id, 'dismissed')}
                 onRestore={() => checklist.onSetStatus(item.task!.id, 'open')}
@@ -223,6 +253,8 @@ function TaskRow({
   task,
   defaultUnit,
   hoverProps,
+  activateProps = {},
+  cameraActive = false,
   onToggle,
   onDismiss,
   onRestore,
@@ -236,6 +268,8 @@ function TaskRow({
   task: PlannedTask;
   defaultUnit: string;
   hoverProps: Record<string, unknown>;
+  activateProps?: Record<string, unknown>;
+  cameraActive?: boolean;
   onToggle: () => void;
   onDismiss: () => void;
   onRestore: () => void;
@@ -250,7 +284,7 @@ function TaskRow({
   const cls = `at-task at-rail-row${dismissed ? ' at-task--dismissed' : done ? ' at-task--done' : ''}`;
 
   return (
-    <li className={cls} {...hoverProps}>
+    <li className={cls} data-camera={cameraActive ? 'true' : undefined} {...hoverProps} {...activateProps}>
       {index != null ? (
         <span className="at-rail-idx" aria-hidden="true">{pad2(index)}</span>
       ) : (

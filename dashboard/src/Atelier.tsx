@@ -13,6 +13,8 @@ import {
   createVehicle,
   deleteVehicle,
   deleteVehicleFact,
+  getFillVolumes,
+  getSivVehicle,
   getVehicle,
   getVehicleBundle,
   getVehicles,
@@ -29,6 +31,8 @@ import {
   type TaskPartInput,
   type VehiclePatch,
 } from './garage';
+import { fluidNodes } from './fluids';
+import { carteGriseNodes } from './siv';
 import { defaultUsageUnit } from './edit';
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from './router';
 import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from './useMercure';
@@ -39,9 +43,11 @@ import { JournalPanel } from './JournalPanel';
 import { DossierPanel } from './DossierPanel';
 import { maintUnitFor } from './records';
 import type { Cta } from './scene/CtaCard';
+import { partsCtaFor, pickPartsTask } from './scene/parts';
 import { firstNewlyOverdue } from './scene/crossing';
-import { regionForFrame, typesForRegion, type BodyRegion } from './scene/anchors';
+import { regionForFrame, type BodyRegion } from './scene/anchors';
 import { PULSE_DURATION } from './scene/holo';
+import type { CameraFocus } from './scene/cameraRig';
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
 import type { DecisionItem } from './noyau/state';
@@ -102,6 +108,17 @@ export function Atelier() {
   const [pulseRegion, setPulseRegion] = useState<PulseRegion | null>(null);
   const pulseKey = useRef(0);
   const pulseTimer = useRef<number | null>(null);
+  // D1 earned camera: the region the view is dollied to (null = home framing). Set by operator intent (a
+  // pin/rail-row activation) or an attributable agent frame (a focusView/showFact that resolves to a
+  // region — the Noyau narrates the same turn — or an explicit focusRegion). Cleared on nav, on the
+  // "vue libre" reset / Escape, or when a user drag breaks the hold (their input wins). A monotonic key
+  // re-triggers a dolly even for a repeat region. Held until released (unlike the one-shot pulse).
+  const [cameraFocus, setCameraFocus] = useState<CameraFocus | null>(null);
+  const cameraKey = useRef(0);
+  const dollyToRegion = useCallback((region: BodyRegion) => {
+    cameraKey.current += 1;
+    setCameraFocus({ region, key: cameraKey.current });
+  }, []);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
@@ -115,7 +132,11 @@ export function Atelier() {
   // Pending deterministic-answer timers (the quick-action choreography) — cleared on nav + unmount so a
   // chip's narration can never land on a different vehicle.
   const detTimers = useRef<number[]>([]);
+  // Monotonic run token: nav + a superseding chip bump it so an in-flight GET/timer from a prior replay
+  // can't land its answer on a newer selection (the timers are also cleared, but a pending fetch is not).
+  const detToken = useRef(0);
   const clearDet = useCallback(() => {
+    detToken.current += 1;
     detTimers.current.forEach((t) => window.clearTimeout(t));
     detTimers.current = [];
   }, []);
@@ -141,6 +162,7 @@ export function Atelier() {
     clearDet(); // drop any in-flight deterministic-answer timers from the prior vehicle
     setCta(null); // the prior vehicle's transient agent surfaces don't linger across navigation
     setFocus(null);
+    setCameraFocus(null); // a fresh car starts at the home framing
     setShowDismissed(false); // each vehicle's checklist starts collapsed (open+done only)
     setDismissedTasks([]);
     setDossierOpen(false); // the dossier is per-vehicle — close it on navigation
@@ -255,6 +277,10 @@ export function Atelier() {
         setPulseRegion({ region: pulsed, key: pulseKey.current });
         if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
         pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
+        // D1: dolly the view TO that region. Attributable (the Noyau narrates the same turn) + announced
+        // by the co-firing cyan pulse, so the camera move is earned, not a surprise. Held until released.
+        cameraKey.current += 1;
+        setCameraFocus({ region: pulsed, key: cameraKey.current });
       }
       if (frame.type === 'turn') {
         dispatch({ type: 'turn', phase: frame.phase });
@@ -268,9 +294,26 @@ export function Atelier() {
         armWatchdog();
       } else if (frame.type === 'selectVehicle') {
         window.location.hash = hashForVehicle(frame.id); // drive-forward into the named car
-      } else if (frame.type === 'focusView' || frame.type === 'showFact') {
-        // Both raise the single slot. showFact is the specs-only subset (see focusForAction).
+      } else if (frame.type === 'focusView' || frame.type === 'showFact' || frame.type === 'showHistory') {
+        // All raise the single slot. showFact is the specs-only subset; showHistory raises the carnet
+        // projection — the SAME surfaces the "Carnet"/"Infos moteur" wayfinder chips use (see focusForAction).
+        // The dolly (if the keys resolve to a region) already fired above via regionForFrame + the pulse.
         setFocus(focusForAction(frame));
+      } else if (frame.type === 'showParts') {
+        // The agent's parts manifest → the SAME deterministic surface the "Pièces dispo" chip projects.
+        // Absent `parts` → itemise the target task's own planned parts (option a); the "Ajouter" merge is
+        // idempotent (server dedups by ref). No parts anywhere → nothing to project.
+        const parts = frame.parts ?? (bundleRef.current?.vehicle.plannedTasks ?? []).find((t) => t.id === frame.taskId)?.parts ?? [];
+        if (parts.length > 0) setCta(partsCtaFor(frame.service, frame.taskId, parts));
+      } else if (frame.type === 'focusRegion') {
+        // D1 explicit camera intent (contract seed — the server may not emit it yet): dolly to the region
+        // + flare the pulse so the move is announced, matching the focusView-derived path above.
+        pulseKey.current += 1;
+        setPulseRegion({ region: frame.region, key: pulseKey.current });
+        if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
+        pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
+        cameraKey.current += 1;
+        setCameraFocus({ region: frame.region, key: cameraKey.current });
       } else if (frame.type === 'proposeActions') {
         const next: Cta = { headline: frame.headline, finding: frame.finding, actions: frame.actions };
         const defer = (c: Cta) => dispatch({ type: 'defer', id: `review:${c.headline}`, text: c.headline, finding: c.finding, actions: c.actions });
@@ -317,12 +360,155 @@ export function Atelier() {
     });
   };
 
+  // ── Deterministic wayfinders (CHOREOGRAPHY "Deterministic-first"). A quick-action chip resolves
+  // client-side or via a plain GET — NO postTurn, NO tokens — and replays the SAME Noyau choreography the
+  // agent would (turn:start → two status steps ≈ +950ms → answer + turn:end ≈ +1900ms), then applies the
+  // same focus/cta. A rejection narrates honestly (the thrown French line) and lands NO surface — never a
+  // fake. `resolve`'s latency overlaps the narration beats; the answer lands at the later of ~1900ms / GET.
+  const runLocalAnswer = useCallback(
+    (opts: { steps: [string, string]; failMessage: string; resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null }> }) => {
+      if (phaseRef.current === 'working') return; // one turn per session — composer + chips share the rule
+      clearDet(); // supersede any in-flight replay (bumps detToken → drops a pending fetch's late apply)
+      const token = detToken.current;
+      const iri = selectedIriRef.current;
+      const live = () => detToken.current === token && selectedIriRef.current === iri;
+      setCta(null);
+      setFocus(null);
+      dispatch({ type: 'turn', phase: 'start' });
+      const outcome = opts.resolve();
+
+      const apply = (o: { focus?: Focus | null; cta?: Cta | null } | null) => {
+        if (!live()) return;
+        if (o?.focus !== undefined) setFocus(o.focus ?? null);
+        if (o?.cta !== undefined) setCta(o.cta ?? null);
+        dispatch({ type: 'turn', phase: 'end', failed: !o });
+      };
+      const settle = () =>
+        outcome.then(
+          (o) => apply(o),
+          (e) => {
+            if (!live()) return;
+            const msg = e instanceof Error && e.message ? e.message : opts.failMessage;
+            dispatch({ type: 'toast', tone: 'warn', message: msg }); // honest, transient narration
+            detTimers.current.push(window.setTimeout(() => apply(null), 1100)); // let it paint, then settle — no surface
+          },
+        );
+
+      if (reduced) {
+        // reduced motion: instant states — narrate the step content (not the timing), then settle at once.
+        dispatch({ type: 'status', message: opts.steps[0] });
+        dispatch({ type: 'status', message: opts.steps[1] });
+        void settle();
+        return;
+      }
+      detTimers.current.push(window.setTimeout(() => { if (live()) dispatch({ type: 'status', message: opts.steps[0] }); }, 320));
+      detTimers.current.push(window.setTimeout(() => { if (live()) dispatch({ type: 'status', message: opts.steps[1] }); }, 950));
+      detTimers.current.push(window.setTimeout(() => void settle(), 1900));
+    },
+    [clearDet, dispatch, reduced],
+  );
+
+  // The five deterministic wayfinder chips (above the composer). Each replays the choreography via
+  // runLocalAnswer and projects into the SAME column the agent uses; a chip is hidden when its data
+  // prerequisite is absent (never a dead control). Order: the two client-side reads, then the fetched
+  // catalog reads, then the client-side carnet. Built only when a hero bundle is open (see the hero route).
+  const buildQuickActions = (b: VehicleBundle): { label: string; disabled?: boolean; onClick: () => void }[] => {
+    const busy = state.phase === 'working';
+    const chips: { label: string; disabled?: boolean; onClick: () => void }[] = [];
+    const hasFacts = (b.vehicle.facts?.length ?? b.vehicle.factCount ?? 0) > 0;
+    if (hasFacts) {
+      chips.push({
+        label: 'Infos moteur',
+        disabled: busy,
+        onClick: () =>
+          runLocalAnswer({
+            steps: ['lecture de la fiche moteur…', 'mise en évidence des spécifications…'],
+            failMessage: 'spécifications indisponibles',
+            resolve: async () => ({ focus: { panel: 'specs', keys: [], title: 'Infos moteur' } }),
+          }),
+      });
+    }
+    if (b.vehicle.kType != null) {
+      const kType = b.vehicle.kType;
+      chips.push({
+        label: 'Capacités fluides',
+        disabled: busy,
+        onClick: () =>
+          runLocalAnswer({
+            steps: ['consultation des capacités…', 'lecture des specs fluides…'],
+            failMessage: 'le catalogue ne répond pas',
+            resolve: async () => {
+              let vols;
+              try {
+                vols = await getFillVolumes(kType);
+              } catch {
+                throw new Error('le catalogue ne répond pas');
+              }
+              const nodes = fluidNodes(vols);
+              if (nodes.length === 0) throw new Error('aucune capacité fluide connue pour ce véhicule');
+              return { focus: { panel: 'specs', keys: [], title: 'Capacités fluides', nodes } };
+            },
+          }),
+      });
+    }
+    const partsTask = pickPartsTask(b);
+    if (partsTask) {
+      chips.push({
+        label: `Pièces dispo · ${serviceLabel(partsTask.type)}`,
+        disabled: busy,
+        onClick: () =>
+          runLocalAnswer({
+            steps: ['ouverture de la tâche…', 'liste des pièces…'],
+            failMessage: 'pièces indisponibles',
+            resolve: async () => ({ cta: partsCtaFor(serviceLabel(partsTask.type), partsTask.id, partsTask.parts) }),
+          }),
+      });
+    }
+    if (b.vehicle.plate) {
+      const plate = b.vehicle.plate;
+      chips.push({
+        label: 'Fiche technique',
+        disabled: busy,
+        onClick: () =>
+          runLocalAnswer({
+            steps: ['lecture de la carte grise…', 'préparation de la fiche technique…'],
+            failMessage: "l'immatriculation ne répond pas",
+            resolve: async () => {
+              let siv;
+              try {
+                siv = await getSivVehicle(plate);
+              } catch {
+                throw new Error("l'immatriculation ne répond pas");
+              }
+              const nodes = carteGriseNodes(siv);
+              if (nodes.length === 0) throw new Error('aucune donnée SIV pour cette plaque');
+              return { focus: { panel: 'specs', keys: [], title: 'Fiche technique', nodes } };
+            },
+          }),
+      });
+    }
+    if (b.records.length > 0) {
+      chips.push({
+        label: 'Carnet · dépenses',
+        disabled: busy,
+        onClick: () =>
+          runLocalAnswer({
+            steps: ['lecture du carnet…', 'calcul des dépenses…'],
+            failMessage: 'carnet indisponible',
+            resolve: async () => ({ focus: { panel: 'carnet', keys: [] } }),
+          }),
+      });
+    }
+    return chips;
+  };
+
   // CTA action paths. `instruction` re-runs the agent (a fresh turn, supersedes the card). `patchTask`
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
   // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
-  // Click a car callout header → spotlight that region on the car (lights the region + brightens its
-  // callout via the focus keys → highlight seam). The specs focus fans the constellation instead.
-  const onFocusRegion = (region: BodyRegion) => setFocus({ panel: 'specs', keys: typesForRegion(region) });
+  // D1: operator intent — activating a rail row / ring pin dollies the view TO that region (the earned
+  // camera replaces the old stage-dim). Orange is the operator's focus colour on the active pin/row cue.
+  const onFocusRegion = (region: BodyRegion) => dollyToRegion(region);
+  const onCameraRelease = () => setCameraFocus(null);
 
   const onCtaInstruction = (instruction: string) => send(instruction);
   const onCtaPatch = (patch: { id: Iri; parts: PlannedPart[] }) => {
@@ -561,6 +747,8 @@ export function Atelier() {
             reduced={reduced}
             noyau={state}
             pulseRegion={pulseRegion}
+            cameraFocus={cameraFocus}
+            onCameraRelease={onCameraRelease}
             onClearEmber={() => dispatch({ type: 'clearEmber' })}
             onResolveDecision={onResolveDecision}
             onScheduleDecision={onScheduleDecision}
@@ -573,21 +761,7 @@ export function Atelier() {
             focus={focus}
             onFocusRegion={onFocusRegion}
             onDismissFocus={() => setFocus(null)}
-            quickActions={[
-              {
-                // opens the full fact sheet (drawer) — no agent turn. Opening it closes the carnet
-                // (only one full surface at a time).
-                label: 'Données',
-                disabled: state.phase === 'working',
-                onClick: () => { setHistoryOpen(false); setFactsDrawerOpen(true); },
-              },
-              {
-                // opens the read-only carnet (Le Carnet) — closes the données drawer.
-                label: 'Historique',
-                disabled: state.phase === 'working',
-                onClick: () => { setFactsDrawerOpen(false); setHistoryOpen(true); },
-              },
-            ]}
+            quickActions={buildQuickActions(heroBundle)}
             pinnedKeys={pinnedKeys}
             onTogglePin={onTogglePin}
             factsDrawerOpen={factsDrawerOpen}

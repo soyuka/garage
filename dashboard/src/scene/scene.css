@@ -109,6 +109,44 @@ body {
 }
 .at-scene-cockpit[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
 
+/* D1 "vue libre" — release the earned-camera hold back to the home framing (one click; Escape does the
+   same). Appears only while the view is dollied to a region. Centred just under the cockpit band; orange
+   outline = operator action (rationed to focus); >=44px hit zone; scrim-law opaque ground over the car. */
+.at-vuelibre {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 17; /* above the cockpit band (15), below the dock (40) */
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--at-orange);
+  background: rgba(13, 14, 16, 0.86);
+  color: var(--at-orange-hi);
+  font-family: var(--at-font-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  animation: at-vuelibre-in 0.24s var(--at-ease-sine) both;
+  transition: background 140ms var(--at-ease-sine);
+}
+.at-vuelibre:hover {
+  background: linear-gradient(rgba(238, 67, 34, 0.12), rgba(238, 67, 34, 0.12)), rgba(13, 14, 16, 0.86);
+}
+.at-vuelibre:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
+.at-vuelibre-glyph { font-size: 14px; line-height: 1; }
+@keyframes at-vuelibre-in {
+  from { opacity: 0; transform: translate(-50%, -4px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-vuelibre { animation: none; }
+}
+
 /* the split-ring PINS float around the disc — the wrapper spans the whole stage (so the pins' % positioning
    is relative to the disc centre) and stays click-through except where each pin re-enables pointer-events
    so it can be hovered/focused (which brightens its paired rail row). */

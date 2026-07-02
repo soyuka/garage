@@ -4,6 +4,7 @@ import { NBSP } from '../format';
 import { factLabel } from '../labels';
 import { InlineEdit } from '../floor/InlineEdit';
 import { isAgentAuthored } from '../provenance';
+import type { SpecNode } from '../focus';
 import type { VehicleFact } from '../types';
 
 // The spec constellation (option 2a) — an on-demand agent surface. A `focus.panel === 'specs'` frame
@@ -36,6 +37,7 @@ export function SpecConstellation({
   edit,
   agentPlaced = false,
   onDismiss,
+  nodes,
 }: {
   facts: VehicleFact[];
   keys: string[];
@@ -48,9 +50,14 @@ export function SpecConstellation({
   agentPlaced?: boolean;
   /** Dismiss the agent-placed focus (clears it). Absent → no ✕ (resting pins are persistent). */
   onDismiss?: () => void;
+  /** Projected, already-formatted nodes (a fetched surface: fluid capacities, the SIV carte grise). When
+   * set, these ARE the content — read-only, with an optional secondary spec line — bypassing facts/keys. */
+  nodes?: SpecNode[];
 }) {
-  const nodes = selectFacts(facts, keys);
-  if (nodes.length === 0) return null;
+  const factNodes = selectFacts(facts, keys);
+  const count = nodes ? nodes.length : factNodes.length;
+  if (count === 0) return null;
+  const delay = (i: number) => (reduced ? undefined : { animationDelay: `${Math.min(i, MAX_STAGGER) * STAGGER_MS}ms` });
   return (
     <div className="at-spec" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={title ?? 'Spécifications'}>
       <div className="at-proj-head">
@@ -67,38 +74,46 @@ export function SpecConstellation({
         )}
       </div>
       <div className="at-spec-nodes">
-        {nodes.map((f, i) => (
-          <div
-            key={f.key}
-            className="at-spec-node"
-            style={reduced ? undefined : { animationDelay: `${Math.min(i, MAX_STAGGER) * STAGGER_MS}ms` }}
-          >
-            <span className="at-spec-label">{factLabel(f.key)}</span>
-            <span className="at-spec-value">
-              {edit ? (
-                <InlineEdit
-                  value={f.value}
-                  ariaLabel={`Modifier ${factLabel(f.key)}`}
-                  onCommit={(next) => edit.onEditValue(f.key, next, f.unit)}
-                />
-              ) : (
-                f.value
-              )}
-              {f.unit ? `${NBSP}${f.unit}` : ''}{' '}
-              {f.verified ? (
-                <span className="at-spec-ok" aria-label="vérifié">
-                  ✓
+        {nodes
+          ? nodes.map((n, i) => (
+              <div key={n.key} className="at-spec-node" style={delay(i)}>
+                <span className="at-spec-label">{n.label}</span>
+                <span className="at-spec-value">
+                  {n.value}{' '}
+                  {n.verified && (
+                    <span className="at-spec-ok" aria-label="vérifié">
+                      ✓
+                    </span>
+                  )}
                 </span>
-              ) : (
-                <>
-                  <span className="at-spec-unver">· non vérifié</span>
-                  {isAgentAuthored(f.source) && <AgentMark />}
-                </>
-              )}
-            </span>
-            <span className="at-spec-lead" aria-hidden="true" />
-          </div>
-        ))}
+                {n.info && <span className="at-spec-info">{n.info}</span>}
+                <span className="at-spec-lead" aria-hidden="true" />
+              </div>
+            ))
+          : factNodes.map((f, i) => (
+              <div key={f.key} className="at-spec-node" style={delay(i)}>
+                <span className="at-spec-label">{factLabel(f.key)}</span>
+                <span className="at-spec-value">
+                  {edit ? (
+                    <InlineEdit value={f.value} ariaLabel={`Modifier ${factLabel(f.key)}`} onCommit={(next) => edit.onEditValue(f.key, next, f.unit)} />
+                  ) : (
+                    f.value
+                  )}
+                  {f.unit ? `${NBSP}${f.unit}` : ''}{' '}
+                  {f.verified ? (
+                    <span className="at-spec-ok" aria-label="vérifié">
+                      ✓
+                    </span>
+                  ) : (
+                    <>
+                      <span className="at-spec-unver">· non vérifié</span>
+                      {isAgentAuthored(f.source) && <AgentMark />}
+                    </>
+                  )}
+                </span>
+                <span className="at-spec-lead" aria-hidden="true" />
+              </div>
+            ))}
       </div>
     </div>
   );

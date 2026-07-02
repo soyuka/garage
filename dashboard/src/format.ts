@@ -24,6 +24,26 @@ export function formatReading(value: number, unit?: string | null): string {
   return unit ? `${n}${NBSP}${unit}` : n;
 }
 
+/** A decimal amount, French-formatted: 4.3 → "4,3", 1200.5 → "1 200,5", 5 → "5" (up to 3 decimals, trimmed). */
+export function formatAmount(value: number): string {
+  const neg = value < 0;
+  const abs = Math.abs(value);
+  const int = Math.trunc(abs);
+  const intStr = groupThousands(int);
+  const frac = abs - int;
+  if (frac < 5e-4) return neg ? `-${intStr}` : intStr; // whole (within a 3-decimal rounding margin)
+  const fracStr = frac.toFixed(3).slice(2).replace(/0+$/, '');
+  return `${neg ? '-' : ''}${intStr},${fracStr}`;
+}
+
+/** Engine power, both axes middot-joined: (75, 102) → "75 kW · 102 ch". Empty when neither is known. */
+export function formatPower(kw?: number | null, hp?: number | null): string {
+  const parts: string[] = [];
+  if (kw != null) parts.push(`${groupThousands(kw)}${NBSP}kW`);
+  if (hp != null) parts.push(`${groupThousands(hp)}${NBSP}ch`);
+  return parts.join(' · ');
+}
+
 const MONTHS_FR = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
 /** French abbreviated date: "2026-01-15" → "15 janv. 2026". Returns "" for null/empty. */

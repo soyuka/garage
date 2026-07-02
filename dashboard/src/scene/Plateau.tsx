@@ -1,18 +1,136 @@
-import { Suspense, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Suspense, useEffect, useRef } from 'react';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
-import type { MeshStandardMaterial } from 'three';
+import { Vector3, type MeshStandardMaterial } from 'three';
 import type { ForecastDue, Signal, VehicleSummary } from '../types';
-import { bodyClassFor } from './CarProxy';
+import { bodyClassFor, type BodyClass } from './CarProxy';
 import { SIGNAL_HEX, NEUTRAL_HEX, NEON_RED } from './signalColors';
 import { computeRingSegments } from './ringSegments';
 import { breathe01, podiumGlow } from './holo';
 import { HoloPodium } from './HoloPodium';
 import { VehicleBody } from './VehicleBody';
 import type { PulseRegion } from './VehicleMesh';
+import {
+  HOME,
+  DOLLY_SECONDS,
+  GATE_INIT,
+  gateReduce,
+  dragBreaksHold,
+  presetForRegion,
+  sineEaseInOut,
+  type CameraFocus,
+  type GateState,
+} from './cameraRig';
 import { SilhouetteCar } from './SilhouetteCar';
 import './scene.css';
+
+// The minimal imperative surface of the default OrbitControls (registered via makeDefault → r3f
+// state.controls). CameraRig drives target + autoRotate and lerps the camera along the eased dolly.
+interface OrbitLike {
+  target: Vector3;
+  autoRotate: boolean;
+  update: () => void;
+  addEventListener: (type: string, fn: () => void) => void;
+  removeEventListener: (type: string, fn: () => void) => void;
+}
+
+// The earned camera (D1): dolly TO the focused region instead of dimming the stage. A held cameraFocus
+// eases the camera + controls.target onto that region's preset (~900ms sine) and pauses autoRotate;
+// release eases back to HOME and resumes it. Intent gates (cameraRig.gateReduce): a request arriving
+// mid-drag is queued to pointerup; a user drag during a hold breaks it (onRelease clears the parent's
+// focus, their input wins). Reduced motion CUTS (instant set). Renders nothing — a useFrame side-effect.
+function CameraRig({
+  bodyClass,
+  cameraFocus,
+  reduced,
+  onRelease,
+}: {
+  bodyClass: BodyClass;
+  cameraFocus: CameraFocus | null;
+  reduced: boolean;
+  onRelease: () => void;
+}) {
+  const controls = useThree((s) => s.controls) as unknown as OrbitLike | null;
+  const camera = useThree((s) => s.camera);
+  const gate = useRef<GateState>(GATE_INIT);
+  const onReleaseRef = useRef(onRelease);
+  onReleaseRef.current = onRelease;
+
+  const startPos = useRef(new Vector3());
+  const startTgt = useRef(new Vector3());
+  const goalPos = useRef(new Vector3());
+  const goalTgt = useRef(new Vector3());
+  const progress = useRef(1); // [0,1] along the current dolly; 1 = settled
+  const sig = useRef('home'); // the current destination signature — a change re-captures + re-eases
+
+  // Reconcile the incoming focus into the gate (queued while dragging, adopted otherwise).
+  useEffect(() => {
+    gate.current = gateReduce(gate.current, { type: 'request', focus: cameraFocus });
+  }, [cameraFocus]);
+
+  // OrbitControls drag lifecycle. A drag that interrupts a hold clears the parent's cameraFocus first
+  // (their input wins), then the gate drops the hold; a plain orbit just pauses/resumes autoRotate.
+  useEffect(() => {
+    if (!controls) return;
+    const onStart = () => {
+      if (dragBreaksHold(gate.current)) onReleaseRef.current();
+      gate.current = gateReduce(gate.current, { type: 'dragStart' });
+    };
+    const onEnd = () => {
+      gate.current = gateReduce(gate.current, { type: 'dragEnd' });
+      // No queued follow-up → leave the camera where the user left it (don't yank it home); just let
+      // autoRotate resume from here. A queued request instead dollies on the next frame (sig differs).
+      if (gate.current.held == null) {
+        sig.current = 'home';
+        progress.current = 1;
+      }
+    };
+    controls.addEventListener('start', onStart);
+    controls.addEventListener('end', onEnd);
+    return () => {
+      controls.removeEventListener('start', onStart);
+      controls.removeEventListener('end', onEnd);
+    };
+  }, [controls]);
+
+  useFrame((_, delta) => {
+    if (!controls) return;
+    const g = gate.current;
+    // autoRotate spins only at rest: no hold, not mid-drag, not reduced-motion.
+    controls.autoRotate = !reduced && g.held == null && !g.dragging;
+    if (g.dragging) {
+      sig.current = '__drag__'; // the user owns the camera — re-arm so the next settle re-captures
+      return;
+    }
+    const held = g.held;
+    const pose = held ? presetForRegion(bodyClass, held.region) : HOME;
+    const nextSig = held ? `${held.region}:${held.key}` : 'home';
+    if (nextSig !== sig.current) {
+      sig.current = nextSig;
+      goalPos.current.set(pose.position[0], pose.position[1], pose.position[2]);
+      goalTgt.current.set(pose.target[0], pose.target[1], pose.target[2]);
+      if (reduced) {
+        camera.position.copy(goalPos.current);
+        controls.target.copy(goalTgt.current);
+        controls.update();
+        progress.current = 1;
+        return;
+      }
+      startPos.current.copy(camera.position);
+      startTgt.current.copy(controls.target);
+      progress.current = 0;
+    }
+    if (progress.current >= 1) return;
+    progress.current = Math.min(1, progress.current + delta / DOLLY_SECONDS);
+    const e = sineEaseInOut(progress.current);
+    camera.position.lerpVectors(startPos.current, goalPos.current, e);
+    controls.target.lerpVectors(startTgt.current, goalTgt.current, e);
+    controls.update();
+  });
+
+  return null;
+}
 
 // Le Plateau — the hero stage. The degradation ladder lives behind a manual `rung` prop (the seam
 // Stage D's auto-detector plugs into): a=real .glb (Stage D; falls back to the proxy here) · b=R3F
@@ -102,16 +220,20 @@ function Plateau3D({
   reduced,
   scanning,
   pulseRegion,
+  cameraFocus,
+  onCameraRelease,
 }: {
   vehicle: VehicleSummary;
   due: ForecastDue[];
   reduced: boolean;
   scanning: boolean;
   pulseRegion: PulseRegion | null;
+  cameraFocus: CameraFocus | null;
+  onCameraRelease: () => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
   return (
-    <Canvas shadows dpr={[1, 1.75]} camera={{ position: [6.2, 4.3, 9.2], fov: 33 }} gl={{ antialias: true }}>
+    <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.position, fov: 33 }} gl={{ antialias: true }}>
       <color attach="background" args={['#131210']} />
       <SceneLights />
       <Suspense fallback={null}>
@@ -135,12 +257,14 @@ function Plateau3D({
         makeDefault
         enablePan={false}
         enableZoom={false}
-        autoRotate={!reduced}
         autoRotateSpeed={0.55}
         minPolarAngle={Math.PI * 0.16}
         maxPolarAngle={Math.PI * 0.49}
-        target={[0, 0.45, 0]}
+        target={HOME.target}
       />
+      {/* autoRotate is owned by CameraRig (it pauses during a dolly/hold, resumes at home) — a single
+          owner avoids the prop fighting the imperative override each render. */}
+      <CameraRig bodyClass={bodyClass} cameraFocus={cameraFocus} reduced={reduced} onRelease={onCameraRelease} />
     </Canvas>
   );
 }
@@ -152,6 +276,8 @@ export function Plateau({
   reduced = false,
   scanning = false,
   pulseRegion = null,
+  cameraFocus = null,
+  onCameraRelease,
 }: {
   vehicle: VehicleSummary;
   rung: Rung;
@@ -159,6 +285,10 @@ export function Plateau({
   reduced?: boolean;
   scanning?: boolean;
   pulseRegion?: PulseRegion | null;
+  /** D1 earned camera: the region the view is dollied to (null = home framing). Absent → no dolly (playground). */
+  cameraFocus?: CameraFocus | null;
+  /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
+  onCameraRelease?: () => void;
 }) {
   if (rung === 'd') {
     return (
@@ -177,7 +307,15 @@ export function Plateau({
   // a (no .glb yet → proxy) and b
   return (
     <div className="at-plateau">
-      <Plateau3D vehicle={vehicle} due={due} reduced={reduced} scanning={scanning} pulseRegion={pulseRegion} />
+      <Plateau3D
+        vehicle={vehicle}
+        due={due}
+        reduced={reduced}
+        scanning={scanning}
+        pulseRegion={pulseRegion}
+        cameraFocus={cameraFocus}
+        onCameraRelease={onCameraRelease ?? (() => {})}
+      />
     </div>
   );
 }

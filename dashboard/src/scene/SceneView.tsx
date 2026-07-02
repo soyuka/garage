@@ -13,8 +13,11 @@ import { EcheancePins } from './EcheancePins';
 import { buildRail } from './rail';
 import { CtaCard, type Cta } from './CtaCard';
 import { PartsManifest } from './PartsManifest';
+import { CarnetProjection } from './CarnetProjection';
 import { manifestFromCta } from './parts';
+import { rollupCarnet } from '../carnet';
 import type { BodyRegion } from './anchors';
+import type { CameraFocus } from './cameraRig';
 import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
 import type { Focus } from '../focus';
@@ -45,6 +48,10 @@ interface SceneViewProps {
   /** PULSE verb: the region the agent is currently acting on (one-shot cyan flare on the car). The
    * `key` re-triggers the flare even for a repeat region; null = at rest. Absent → playground (no pulse). */
   pulseRegion?: PulseRegion | null;
+  /** D1 earned camera: the region the view is dollied to (null/absent = home framing / playground). */
+  cameraFocus?: CameraFocus | null;
+  /** Clears cameraFocus — the "vue libre" reset, Escape, or a user drag breaking the hold (via Plateau). */
+  onCameraRelease?: () => void;
   onClearEmber: () => void;
   /** C2 à-décider inbox: remove a decided queue item (backs "vu" + follows every action). */
   onResolveDecision?: (id: string) => void;
@@ -96,6 +103,9 @@ export function SceneView({
   reduced,
   noyau,
   pulseRegion = null,
+  cameraFocus = null,
+  onCameraRelease,
+  onFocusRegion,
   onClearEmber,
   onResolveDecision,
   onScheduleDecision,
@@ -132,6 +142,18 @@ export function SceneView({
   useEffect(() => {
     if (queueLen === 0) setInboxOpen(false);
   }, [queueLen]);
+
+  // D1: the region the view is dollied to — the active pin/rail-row cue (orange = operator focus) lights
+  // its twin(s). Escape releases the hold (reversible in one input), same as the "vue libre" affordance.
+  const cameraRegion = cameraFocus?.region ?? null;
+  useEffect(() => {
+    if (!cameraFocus || !onCameraRelease) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCameraRelease();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [cameraFocus, onCameraRelease]);
   const focusKeys = focus?.keys;
   // At rest (no specs focus) the constellation shows PINNED facts only — an empty pin set renders
   // nothing (selectFacts treats an empty `keys` as "show everything", so the empty case is gated here
@@ -140,6 +162,11 @@ export function SceneView({
   const constellationKeys = specsFocused ? focusKeys ?? [] : pinnedKeys;
   const constellationTitle = specsFocused ? focus.title : 'Épinglés';
   const showConstellation = specsFocused ? true : pinnedKeys.length > 0;
+  // A carnet focus (the "Carnet · dépenses" wayfinder / the agent's showHistory) rolls the client-held
+  // records into the same projection column. Empty history → nothing (the chip is hidden upstream anyway).
+  const carnetFocused = focus?.panel === 'carnet';
+  const carnet = carnetFocused ? rollupCarnet(records) : null;
+  const showCarnet = !!carnet && carnet.count > 0;
 
   // "Planifier" (#10): a hotspot forecast row → a concrete planned task pegged to the predicted-due
   // reading. Uses the checklist's add path (so it re-reads), and the vehicle's garage-spelling axis unit
@@ -215,8 +242,19 @@ export function SceneView({
               reduced={reduced}
               scanning={noyau.phase === 'working'}
               pulseRegion={pulseRegion}
+              cameraFocus={cameraFocus}
+              onCameraRelease={onCameraRelease}
             />
           </div>
+          {/* D1 "vue libre": while the view is dollied to a region, one click (or Escape) eases back to the
+              home framing. Orange outline = operator action; ~44px hit zone. Reduced motion: the dolly was
+              a cut, so this is an instant return. */}
+          {cameraFocus && onCameraRelease && (
+            <button type="button" className="at-vuelibre" onClick={onCameraRelease} aria-label="Vue libre — revenir à la vue d’ensemble">
+              <span className="at-vuelibre-glyph" aria-hidden="true">⤢</span>
+              vue libre
+            </button>
+          )}
           {/* health now reads as the glowing base halo on Le Plateau's rim (Plateau → Turntable), colour =
               signal status — the over-car HUD ring was moved down to surround the car's base. */}
           {/* the always-on cockpit: identity nameplate + engine badge + editable kilométrage — never etches
@@ -230,7 +268,7 @@ export function SceneView({
               The wrapper spans the whole stage so the pins' angle layout is relative to the disc centre;
               their readable rows live in the left rail below, paired by the shared index. */}
           <div className="at-scene-pins" data-dim={focus ? 'true' : undefined}>
-            <EcheancePins items={rail} hoveredIdx={hoveredIdx} onHoverIdx={setHoveredIdx} reduced={reduced} />
+            <EcheancePins items={rail} hoveredIdx={hoveredIdx} onHoverIdx={setHoveredIdx} onActivate={onFocusRegion} cameraRegion={cameraRegion} reduced={reduced} />
           </div>
           {/* the PROJECTION COLUMN (B2): the ONE right-edge slot for everything Le Noyau projects — so the
               operator learns a single glance direction for "the agent answered" (the left "Entretien" rail
@@ -238,7 +276,7 @@ export function SceneView({
               at rest, PINNED facts take the same column (operator's own pins → no tick, no ✕). A parts-bearing
               proposal stacks the manifest below. Empty → nothing renders. (The cyan scan is a 3D holo band
               sweeping THROUGH the car via Plateau `scanning`, not a DOM bar.) */}
-          {(showConstellation || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
+          {(showConstellation || showCarnet || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
             <div className="at-projection">
               {showConstellation && (
                 <SpecConstellation
@@ -246,11 +284,14 @@ export function SceneView({
                   keys={constellationKeys}
                   title={constellationTitle}
                   reduced={reduced}
-                  edit={edit?.facts}
+                  // fetched surfaces (fluids / carte grise) carry their OWN formatted nodes → read-only, no edit.
+                  edit={specsFocused && focus?.nodes ? undefined : edit?.facts}
                   agentPlaced={specsFocused}
                   onDismiss={specsFocused ? onDismissFocus : undefined}
+                  nodes={specsFocused ? focus?.nodes : undefined}
                 />
               )}
+              {showCarnet && carnet && <CarnetProjection model={carnet} reduced={reduced} onDismiss={onDismissFocus} />}
               {showManifest && manifest && onCtaPatch && onCtaDismiss && (
                 <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
               )}
@@ -266,6 +307,8 @@ export function SceneView({
               onPlan={onPlan!}
               hoveredIdx={hoveredIdx}
               onHoverIdx={setHoveredIdx}
+              onActivateRegion={onFocusRegion}
+              cameraRegion={cameraRegion}
               dimmed={!!focus || overlayOpen}
             />
           )}

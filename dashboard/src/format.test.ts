@@ -1,11 +1,13 @@
 import { describe, it, expect } from 'vitest';
 import {
+  formatAmount,
   formatDate,
   formatDaysAgo,
   formatEuros,
   formatHealthPct,
   formatHorizon,
   formatOverdue,
+  formatPower,
   formatReading,
   groupThousands,
   roundHealth,
@@ -93,5 +95,39 @@ describe('formatOverdue (precise §5 exception)', () => {
   });
   it('uses the absolute value (a negative remaining is overdue)', () => {
     expect(formatOverdue(-3200, 'km')).toBe(`DÉPASSÉ de 3${THIN}200${NBSP}km`);
+  });
+});
+
+describe('formatAmount (decimal capacity — French comma, thin-space groups, trimmed)', () => {
+  it('renders a one-decimal fluid capacity with a comma', () => {
+    expect(formatAmount(4.3)).toBe('4,3');
+  });
+  it('trims trailing zeros and a whole number has no decimal part', () => {
+    expect(formatAmount(1)).toBe('1');
+    expect(formatAmount(5.0)).toBe('5');
+  });
+  it('groups the integer part with a thin space', () => {
+    expect(formatAmount(1200.5)).toBe(`1${THIN}200,5`);
+  });
+  it('keeps up to three decimals and handles a sub-unit amount', () => {
+    expect(formatAmount(0.47)).toBe('0,47');
+  });
+  it('handles zero and negatives', () => {
+    expect(formatAmount(0)).toBe('0');
+    expect(formatAmount(-2.5)).toBe('-2,5');
+  });
+});
+
+describe('formatPower (kW · ch — SIV carte grise)', () => {
+  it('joins both readings with a middot, each unit no-break bound', () => {
+    expect(formatPower(75, 102)).toBe(`75${NBSP}kW · 102${NBSP}ch`);
+  });
+  it('groups large values and tolerates a single reading', () => {
+    expect(formatPower(1103, null)).toBe(`1${THIN}103${NBSP}kW`);
+    expect(formatPower(null, 150)).toBe(`150${NBSP}ch`);
+  });
+  it('is empty when neither is known', () => {
+    expect(formatPower(null, null)).toBe('');
+    expect(formatPower(undefined, undefined)).toBe('');
   });
 });

@@ -12,6 +12,8 @@
 // "/garage/vehicles/01J…"), never a bare ULID.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { BodyRegion } from './scene/anchors';
+
 /** An IRI string, e.g. "/garage/vehicles/01JABC…" or "/garage/planned-tasks/01J…". */
 export type Iri = string;
 
@@ -273,8 +275,9 @@ export interface CtaAction {
  * NOTE: `renderSuggestions` and `patchPanel` from the docs/ui.md sketch DO NOT EXIST — never build
  * against them. The choreography map (Stage B.0) binds each real member to an Atelier motion.
  */
-/** The single swappable slot's content: the spec/échéance panel or the maintenance to-do list. */
-export type PanelKind = 'specs' | 'tasks';
+/** The single swappable slot's content: the spec panel, the maintenance to-do list, or the carnet
+ *  (past-visits + spend) projection. */
+export type PanelKind = 'specs' | 'tasks' | 'carnet';
 
 export type UIAction =
   | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: Iri }
@@ -284,6 +287,16 @@ export type UIAction =
   // (each lights its car region and etches matching rows). showFact is the specs-only subset.
   | { type: 'focusView'; panel: PanelKind; keys?: string[] }
   | { type: 'proposeActions'; headline: string; finding?: string; actions: CtaAction[] }
+  // Project the parts manifest for a service onto a task (the "Pièces dispo" wayfinder + the agent's
+  // equivalent converge here). `parts` optional: absent → the client itemises the task's own parts
+  // (deterministic option-a); present → real catalog refs the operator can merge (deterministic patchTask).
+  | { type: 'showParts'; service: string; taskId: Iri; parts?: PlannedPart[] }
+  // Raise the carnet (past-visits + spend) projection — the "Carnet · dépenses" wayfinder + agent equivalent.
+  | { type: 'showHistory' }
+  // Earned-camera intent (D1 seed): dolly the view TO a body region (no dim). `region` is a BodyRegion
+  // key. Client support is the contract seed — the server may not emit it yet; the client already dollies
+  // to the region a focusView/showFact resolves to (see Atelier.onFrame). Handling both is idempotent.
+  | { type: 'focusRegion'; region: BodyRegion }
   | { type: 'toast'; tone: Tone; message: string }
   // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
   // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.

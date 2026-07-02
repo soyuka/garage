@@ -98,6 +98,26 @@
   outline-offset: 3px;
 }
 
+/* D1 earned camera: a pin activates the dolly (operator intent) → it reads as clickable, and the pin
+   whose region the camera is currently framing wears the ORANGE operator-focus cue (rationed to focus;
+   the signal dot stays its health colour — orange is only the "you are looking here" ring). */
+.at-echpin[role='button'] {
+  cursor: pointer;
+}
+.at-echpin[data-camera='true'] .at-echpin-idx {
+  color: var(--at-orange-hi);
+  opacity: 1;
+  text-shadow: var(--at-glow-orange);
+}
+.at-echpin[data-camera='true'] .at-echpin-dot {
+  box-shadow: 0 0 0 2px var(--at-orange), 0 0 12px 0 var(--at-orange);
+}
+.at-echpin[data-camera='true'] .at-echpin-leader {
+  background: var(--at-orange);
+  opacity: 1;
+  width: 24px;
+}
+
 @keyframes at-echpin-in {
   from { opacity: 0; transform: translate(-50%, calc(-50% + 6px)); }
   to { opacity: 1; transform: translate(-50%, -50%); }
