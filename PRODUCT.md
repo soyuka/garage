@@ -30,6 +30,8 @@ A lit garage at night. Warm, calm, alive. The interface is a *place* (floor, tur
 - **No false precision.** Health rounds to 5, forecasts say `dans environ 2 mois` — except overdue, which is exact.
 - **Honesty survives degradation.** Every value must exist outside its glow; the flat "plan" list is always reachable.
 - **Mono is data.** Plates, km, dates, refs render in JetBrains Mono, French-formatted (thin-space `142 000 km`).
+- **Desktop-only.** The garage is a workbench view, not a pocket one: the layout targets a desktop/laptop
+  viewport and makes no sub-900px accommodation — no responsive collapse, no mobile nav.
 
 ## Accessibility & Inclusion
 

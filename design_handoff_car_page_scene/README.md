@@ -1,5 +1,16 @@
 # Handoff — Car page: "data around the turning car" (option 2a)
 
+> **Status: 2a shipped, then evolved past this doc.** The PR sequence below landed (`HudRings`,
+> spec constellation, deterministic chip strategy, parts manifest), but the on-car échéance
+> callouts / `Hotspots.tsx` and the `CardinalReadouts` cardinals described in this handoff are gone
+> — replaced by a split model: minimal **ring pins** (index + signal dot, `scene/EcheancePins.tsx`)
+> paired with a **persistent left "Entretien" rail** carrying the prose (`scene/EntretienRail.tsx`,
+> the renamed former `Checklist`), and santé folded into the `Cockpit` identity band. The spec
+> constellation also flipped from the car's left to a single right-edge **projection column**
+> shared with the carnet and parts manifest. See `EXPERIMENTS_AND_DATA.md` (§1 experiments log,
+> E8+) for what replaced what and why. This body is kept as the historical design record — read
+> it for the interaction model and tokens, not for the current component names.
+
 ## Overview
 Reimagine the vehicle hero (`#/v/<seg>`) so the **turning car is the interface**: the floating
 right-hand slot panel (`.at-scene-slot`) is removed. Data lives in two layers:

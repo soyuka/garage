@@ -84,14 +84,25 @@ major-unit euros the client converts.
   - `{type:'status', message}` → narration line + Noyau pulse
   - `{type:'toast', tone, message}` → ember / toast
 
-## The REAL `UIAction` union (verified — the only members that exist)
+## The REAL `UIAction` union (verified — the only members the agent tool surface emits)
 
-`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `showFact` `{keys[], title?}` · `proposeActions`
-`{headline, finding?, actions: CtaAction[]}` · `toast` `{tone, message}` · `status` `{message}` ·
-`turn` `{phase}`.
+`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `showFact` `{keys[], title?}` · `focusView`
+`{panel: "specs"|"tasks", keys?[]}` (raises one panel into the centre slot + spotlights the car
+region for each key) · `proposeActions` `{headline, finding?, actions: CtaAction[]}` · `toast`
+`{tone, message}` · `status` `{message}` · `turn` `{phase}`.
+
+`PanelKind` (`src/types.ts`) also has a third value, `'carnet'`, but `focus_view` only accepts
+`specs`/`tasks` server-side — the carnet panel is raised client-only (see next paragraph).
 
 ⚠️ **`renderSuggestions` and `patchPanel` DO NOT EXIST** (a `docs/ui.md` sketch artifact). Never build
 against them.
+
+**Client-synthesized, not on the wire:** `showParts` `{service, taskId, parts?}` and `showHistory`
+(the carnet projection) are never emitted by the agent — they're produced locally by the
+deterministic wayfinder chips (`runLocalAnswer` in `Atelier.tsx`) so a chip click never costs a
+turn. `focusRegion` `{region}` (earned-camera dolly) is likewise client-only today — the type is a
+seed for a future server emission, and the client already dollies to the region a `focusView`/
+`showFact` resolves to, so handling both is idempotent.
 
 **`CtaAction` is dual-shape — exactly one payload:**
 - `{label, instruction}` → re-runs the agent with that NL instruction (a fresh turn), **or**

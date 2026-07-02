@@ -46,7 +46,13 @@ but **no Symfony Scheduler and no Notifier/Mailer** (verified 2026-06-21 — non
 - Symfony Scheduler → periodic sweep message (daily) → per-vehicle `DueMaintenanceCalculator`
   → emit alert when a service crosses due/overdue (and de-dupe so one alert per (vehicle, type)
   transition, not every sweep).
-- Surface: dashboard badge first (cheapest, already have the UI seam); email / web-push later.
+- Surface: the landing zone already exists — Le Noyau's "à-décider" ambient inbox
+  (`dashboard/src/noyau/state.ts` `DecisionItem` kind `'notify'` + `AmbientInbox.tsx`) queues
+  concerns behind the ember badge with a `planifier` affordance keyed by `serviceType`/`vehicleIri`.
+  Today it's fed only by a live, in-session Mercure health-crossing (the existing §9 "overdue
+  crossing" `concern` event) — still reactive, not a push, and gone once the tab closes. The sweep's
+  job is to feed this same queue for real: cross-session, from the scheduler, not from a live write.
+  Email / web-push later.
 - Respect owner tenancy (`owner` seam) so alerts route to the right user once multi-tenancy
   lands — single shared garage for now.
 - Reuses existing forecaster untouched; only adds the trigger + delivery + alert state.
