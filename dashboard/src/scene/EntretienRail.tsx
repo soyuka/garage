@@ -7,7 +7,6 @@ import { dueDescriptor, signalTag } from '../derive';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
 import type { RailItem, RailModel } from './rail';
-import type { BodyRegion } from './anchors';
 import './checklist.css';
 import './rail.css';
 
@@ -19,8 +18,7 @@ import './rail.css';
 //  · "Planifié" — upcoming dues (planifier ○ promotes), open tasks without a late forecast, done tasks.
 //  · gaps — dashed "· non suivi" rows, no affordance.
 // Row shapes: a task row is checkable/editable (checklist handlers, optimistic); a due row is a
-// prediction. Clicking a row's empty area dollies the camera to its body region (click again = release).
-// NO cyan (rationed to Le Noyau); a task is not a signal.
+// prediction. NO cyan (rationed to Le Noyau); a task is not a signal.
 
 export interface ChecklistHandlers {
   /** open + done (and dismissed when showDismissed) — the source for counts + the retirées section. */
@@ -46,35 +44,15 @@ function taskCaption(horizon: string | null, task: PlannedTask | undefined): str
   return null;
 }
 
-/** A guarded row-click → dolly to the row's region, WITHOUT hijacking the row's own controls (checkbox,
- * planifier, edit/dismiss, inputs). Shared by every row shape (due / gap / task). Absent handler → inert. */
-function rowActivate(region: BodyRegion, onActivateRegion?: (region: BodyRegion) => void) {
-  if (!onActivateRegion) return {};
-  return {
-    'data-activatable': 'true',
-    onClick: (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest('button, input, a, form, label')) return;
-      onActivateRegion(region);
-    },
-  };
-}
-
 export function EntretienRail({
   model,
   checklist,
   onPlan,
-  onActivateRegion,
-  cameraRegion = null,
   dimmed = false,
 }: {
   model: RailModel;
   checklist: ChecklistHandlers;
   onPlan: (due: ForecastDue) => void;
-  /** D1: activating a row (click on its non-control area) dollies the view TO its region; clicking the
-   * row of the already-held region releases (the driver toggles). Absent → inert. */
-  onActivateRegion?: (region: BodyRegion) => void;
-  /** The region the camera is dollied to — its row(s) show the orange operator-focus cue. */
-  cameraRegion?: BodyRegion | null;
   /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage. */
   dimmed?: boolean;
 }) {
@@ -95,8 +73,6 @@ export function EntretienRail({
           key={item.id}
           className="at-rail-row at-rail-row--due"
           data-signal={item.signal}
-          data-camera={cameraRegion === item.region ? 'true' : undefined}
-          {...rowActivate(item.region, onActivateRegion)}
         >
           <button
             type="button"
@@ -129,8 +105,6 @@ export function EntretienRail({
         signal={item.due && !item.done ? item.signal : undefined}
         task={item.task!}
         defaultUnit={defaultUnit}
-        activateProps={rowActivate(item.region, onActivateRegion)}
-        cameraActive={cameraRegion === item.region}
         onToggle={() => checklist.onSetStatus(item.task!.id, item.done ? 'open' : 'done')}
         onDismiss={() => checklist.onSetStatus(item.task!.id, 'dismissed')}
         onRestore={() => checklist.onSetStatus(item.task!.id, 'open')}
@@ -201,7 +175,6 @@ export function EntretienRail({
                   key={item.id}
                   className="at-rail-row at-rail-row--gap"
                   data-signal="unknown"
-                  {...rowActivate(item.region, onActivateRegion)}
                 >
                   <span className="at-rail-svc">{item.label}</span>
                   <span className="at-rail-tag at-rail-tag--gap">non suivi</span>
@@ -248,8 +221,6 @@ function TaskRow({
   signal,
   task,
   defaultUnit,
-  activateProps = {},
-  cameraActive = false,
   onToggle,
   onDismiss,
   onRestore,
@@ -266,8 +237,6 @@ function TaskRow({
   signal?: string;
   task: PlannedTask;
   defaultUnit: string;
-  activateProps?: Record<string, unknown>;
-  cameraActive?: boolean;
   onToggle: () => void;
   onDismiss: () => void;
   onRestore: () => void;
@@ -282,7 +251,7 @@ function TaskRow({
   const cls = `at-task at-rail-row${dismissed ? ' at-task--dismissed' : done ? ' at-task--done' : ''}`;
 
   return (
-    <li className={cls} data-signal={signal} data-camera={cameraActive ? 'true' : undefined} {...activateProps}>
+    <li className={cls} data-signal={signal}>
       <button
         type="button"
         className="at-task-check"

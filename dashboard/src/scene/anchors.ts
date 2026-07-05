@@ -70,13 +70,6 @@ export function regionsForKeys(keys: string[]): BodyRegion[] {
   return BODY_REGIONS.filter((r) => set.has(r));
 }
 
-/** The service types read off a region — the inverse of {@see regionForType} (for a pin → tasks focus). */
-export function typesForRegion(region: BodyRegion): string[] {
-  return Object.entries(TYPE_REGION)
-    .filter(([, r]) => r === region)
-    .map(([type]) => type);
-}
-
 /**
  * The car region an incoming agent Mercure frame acts on, or null — the trigger for the PULSE verb.
  * Only a session frame that carries service-type keys (focusView / showFact) targets a region: the first

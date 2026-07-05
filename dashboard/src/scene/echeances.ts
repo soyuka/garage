@@ -1,4 +1,3 @@
-import { regionForType, type BodyRegion } from './anchors';
 import { dueDescriptor } from '../derive';
 import { serviceLabel } from '../labels';
 import type { ForecastDue, PlannedTask, Signal } from '../types';
@@ -15,7 +14,6 @@ export interface Echeance {
   label: string;
   horizon: string | null;
   signal: Signal;
-  region: BodyRegion; // kept for lighting the car region on hover/focus (not for grouping)
   taskId?: string;
   done?: boolean;
   due?: ForecastDue;
@@ -45,13 +43,12 @@ export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: P
   for (const d of due) {
     const desc = dueDescriptor(d);
     const label = serviceLabel(d.type);
-    const region = regionForType(d.type);
     const t = taskFor(d.type);
     if (t) {
       emitted.add(d.type);
-      out.push({ id: t.id, kind: 'task', type: d.type, label, horizon: desc.horizon, signal: desc.signal, region, taskId: t.id, done: t.status === 'done', due: d });
+      out.push({ id: t.id, kind: 'task', type: d.type, label, horizon: desc.horizon, signal: desc.signal, taskId: t.id, done: t.status === 'done', due: d });
     } else {
-      out.push({ id: `due:${d.type}`, kind: 'due', type: d.type, label, horizon: desc.horizon, signal: desc.signal, region, due: d });
+      out.push({ id: `due:${d.type}`, kind: 'due', type: d.type, label, horizon: desc.horizon, signal: desc.signal, due: d });
     }
   }
   // open/done tasks with no forecast due — a manually-planned service still shows.
@@ -59,12 +56,12 @@ export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: P
     if (t.status === 'dismissed' || dueTypes.has(t.type) || emitted.has(t.type)) continue;
     if (taskFor(t.type)?.id !== t.id) continue;
     emitted.add(t.type);
-    out.push({ id: t.id, kind: 'task', type: t.type, label: serviceLabel(t.type), horizon: null, signal: 'green', region: regionForType(t.type), taskId: t.id, done: t.status === 'done' });
+    out.push({ id: t.id, kind: 'task', type: t.type, label: serviceLabel(t.type), horizon: null, signal: 'green', taskId: t.id, done: t.status === 'done' });
   }
   // coverage gaps not carried by a due.
   for (const g of gaps) {
     if (dueTypes.has(g)) continue;
-    out.push({ id: `gap:${g}`, kind: 'gap', type: g, label: serviceLabel(g), horizon: null, signal: 'green', region: regionForType(g) });
+    out.push({ id: `gap:${g}`, kind: 'gap', type: g, label: serviceLabel(g), horizon: null, signal: 'green' });
   }
 
   // stable sort, worst-first (JS sort is stable → equal-weight items keep soonest-first forecast order).

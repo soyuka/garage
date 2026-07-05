@@ -106,17 +106,6 @@
 .at-rail-row:hover {
   background: var(--at-void-lift);
 }
-/* D1 earned camera: a row activates the dolly to its region (its non-control area is clickable), and the
-   row whose region the camera is framing wears the ORANGE operator-focus cue — an inset left bar (orange
-   is rationed to operator focus; the row's signal tag keeps carrying health). */
-.at-rail-row[data-activatable] {
-  cursor: pointer;
-}
-.at-rail-row[data-camera='true'] {
-  background: var(--at-void-lift);
-  box-shadow: inset 2px 0 0 0 var(--at-orange);
-}
-
 /* ── due row (a forecast prediction — no checkbox; a planifier ○ promotes it) ── */
 .at-rail-row--due,
 .at-rail-row--gap {

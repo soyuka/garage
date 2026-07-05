@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { regionForType, regionAnchors, regionsForKeys, typesForRegion, regionForFrame, BODY_REGIONS, type BodyRegion } from './anchors';
+import { regionForType, regionAnchors, regionsForKeys, regionForFrame, BODY_REGIONS, type BodyRegion } from './anchors';
 import type { MercureFrame } from '../types';
 
 // The shared geometry seam every 3D leaf (Hotspots, BodyGlow, RimGauge) reads. Pin positions derive
@@ -60,17 +60,6 @@ describe('regionsForKeys — which car regions a spotlight lights (service-type 
   });
   it('is empty for no keys', () => {
     expect(regionsForKeys([])).toEqual([]);
-  });
-});
-
-describe('typesForRegion — the service types read off a region (inverse of regionForType)', () => {
-  it('lists every type mapped to the region', () => {
-    expect(new Set(typesForRegion('bay'))).toEqual(new Set(['air_filter', 'cabin_filter', 'fuel_filter', 'battery']));
-    // both the canonical + the backend's live 'inspection' key read off the windshield badge
-    expect(new Set(typesForRegion('windshield'))).toEqual(new Set(['technical_inspection', 'inspection']));
-  });
-  it('round-trips: every returned type reads back to the same region', () => {
-    for (const r of BODY_REGIONS) for (const t of typesForRegion(r)) expect(regionForType(t)).toBe(r);
   });
 });
 

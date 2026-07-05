@@ -45,7 +45,7 @@ import { maintUnitFor } from './records';
 import type { Cta } from './scene/CtaCard';
 import { partsCtaFor, pickPartsTask } from './scene/parts';
 import { firstNewlyOverdue } from './scene/crossing';
-import { regionForFrame, type BodyRegion } from './scene/anchors';
+import { regionForFrame } from './scene/anchors';
 import { PULSE_DURATION } from './scene/holo';
 import type { CameraFocus } from './scene/cameraRig';
 import type { PulseRegion } from './scene/VehicleMesh';
@@ -108,22 +108,13 @@ export function Atelier() {
   const [pulseRegion, setPulseRegion] = useState<PulseRegion | null>(null);
   const pulseKey = useRef(0);
   const pulseTimer = useRef<number | null>(null);
-  // D1 earned camera: the region the view is dollied to (null = home framing). Set by operator intent (a
-  // pin/rail-row activation) or an attributable agent frame (a focusView/showFact that resolves to a
-  // region — the Noyau narrates the same turn — or an explicit focusRegion). Cleared on nav, on the
-  // "vue libre" reset / Escape, or when a user drag breaks the hold (their input wins). A monotonic key
-  // re-triggers a dolly even for a repeat region. Held until released (unlike the one-shot pulse).
+  // D1 earned camera: the region the view is dollied to (null = home framing). Set only by an attributable
+  // agent frame (a focusView/showFact that resolves to a region — the Noyau narrates the same turn — or an
+  // explicit focusRegion). Cleared on nav, on the "vue libre" reset / Escape, or when a user drag breaks
+  // the hold (their input wins). A monotonic key re-triggers a dolly even for a repeat region. Held until
+  // released (unlike the one-shot pulse).
   const [cameraFocus, setCameraFocus] = useState<CameraFocus | null>(null);
   const cameraKey = useRef(0);
-  // Toggle: activating the already-held region releases the hold — "click again to go back" (vue libre
-  // and Escape remain; re-clicking the thing you zoomed on is the path an operator rediscovers unaided).
-  const dollyToRegion = useCallback((region: BodyRegion) => {
-    setCameraFocus((prev) => {
-      if (prev?.region === region) return null;
-      cameraKey.current += 1;
-      return { region, key: cameraKey.current };
-    });
-  }, []);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
@@ -535,9 +526,6 @@ export function Atelier() {
   // CTA action paths. `instruction` re-runs the agent (a fresh turn, supersedes the card). `patchTask`
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
   // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
-  // D1: operator intent — activating a rail row / ring pin dollies the view TO that region (the earned
-  // camera replaces the old stage-dim). Orange is the operator's focus colour on the active pin/row cue.
-  const onFocusRegion = (region: BodyRegion) => dollyToRegion(region);
   const onCameraRelease = () => setCameraFocus(null);
 
   const onCtaInstruction = (instruction: string) => send(instruction);
@@ -789,7 +777,6 @@ export function Atelier() {
             onCtaPatch={onCtaPatch}
             onCtaDismiss={() => setCta(null)}
             focus={focus}
-            onFocusRegion={onFocusRegion}
             onDismissFocus={() => setFocus(null)}
             quickActions={buildQuickActions(heroBundle)}
             pinnedKeys={pinnedKeys}

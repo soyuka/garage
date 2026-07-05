@@ -15,7 +15,6 @@ import { PartsManifest } from './PartsManifest';
 import { CarnetProjection } from './CarnetProjection';
 import { manifestFromCta } from './parts';
 import { rollupCarnet } from '../carnet';
-import type { BodyRegion } from './anchors';
 import type { CameraFocus } from './cameraRig';
 import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
@@ -74,8 +73,6 @@ interface SceneViewProps {
   edit?: TruthPanelEdit;
   /** Live-hero open-checklist (#10): the interactive task list. Absent → no checklist panel (playground). */
   checklist?: ChecklistHandlers;
-  /** Click a car pin → focus the slot on that region's tasks. Absent → pins are inert (playground). */
-  onFocusRegion?: (region: BodyRegion) => void;
   /** Dismiss an agent-placed specs focus (clears it). Absent → the projected constellation shows no ✕
    * (playground / resting pins are persistent, never dismissed here). */
   onDismissFocus?: () => void;
@@ -104,7 +101,6 @@ export function SceneView({
   pulseRegion = null,
   cameraFocus = null,
   onCameraRelease,
-  onFocusRegion,
   onClearEmber,
   onResolveDecision,
   onScheduleDecision,
@@ -155,11 +151,9 @@ export function SceneView({
     inboxWasOpen.current = inboxOpen;
   }, [inboxOpen]);
 
-  // D1: the region the view is dollied to — the active rail-row cue (orange = operator focus) lights it.
   // ONE Escape = ONE step back, innermost first: a projected surface (fiche technique / carnet / specs)
   // closes before a camera hold releases. (The Données/Carnet drawers own Escape themselves while open —
   // this handler never sees it first there because they render above and also close on Escape.)
-  const cameraRegion = cameraFocus?.region ?? null;
   const focusOpen = !!focus;
   const drawerOwnsEscape = factsDrawerOpen || historyOpen;
   useEffect(() => {
@@ -311,15 +305,13 @@ export function SceneView({
             </div>
           )}
           {/* the persistent left rail ("Entretien"): À faire (late, red-tagged) / Planifié / non suivi —
-              checkable tasks, plannable predictions. Screen-locked on the hero's left edge. Clicking a
-              row's empty area dollies to its region (again = release). Absent `checklist` → no rail. */}
+              checkable tasks, plannable predictions. Screen-locked on the hero's left edge.
+              Absent `checklist` → no rail. */}
           {checklist && rail && (
             <EntretienRail
               model={rail}
               checklist={checklist}
               onPlan={onPlan!}
-              onActivateRegion={onFocusRegion}
-              cameraRegion={cameraRegion}
               dimmed={!!focus || overlayOpen}
             />
           )}
