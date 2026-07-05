@@ -42,16 +42,6 @@ export interface VehicleFact {
   url?: string | null;
 }
 
-/** Derived fluid spec for a ref-less fluid line ("which oil, how much"), projected from the facts. */
-export interface FluidSpec {
-  /** true when the standard (manufacturer spec) is catalog-sourced. */
-  verified: boolean;
-  viscosity?: string; // "5W-30"
-  standard?: string; // "ACEA A3/B3|ACEA A5/B5"  ("|" separates alternatives)
-  capacity?: string; // "4.3"
-  unit?: string; // "L"
-}
-
 // ── Parts ──────────────────────────────────────────────────────────────────--
 
 /** A part line on a task's shopping list — or a derived fluid line (carries `spec`, no `id`/`ref`). */
@@ -64,8 +54,6 @@ export interface PlannedPart {
   qty?: number;
   /** unit price, integer minor units (cents). */
   priceCents?: number;
-  /** present only on a server-computed fluid line; never written back. */
-  spec?: FluidSpec;
 }
 
 // ── Planned tasks (the open checklist) ────────────────────────────────────────

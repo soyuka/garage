@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import '../tokens/atelier.css';
 import './scene.css';
 import { FIXTURES, SCENARIOS, type Scenario } from '../fixtures/vehicles';
@@ -80,7 +80,9 @@ export function AtelierScene() {
   const bundle = FIXTURES[scenario];
   // §9 crossing: when armed, the displayed bundle is the tipped-overdue one so every leaf reacts red.
   const shown = crossed && bundle ? crossOverdue(bundle) : bundle;
-  const crossable = !!bundle && firstCrossable(bundle.forecast.due) !== -1;
+  // one scan of the fixture's due[] feeds both the "arm" affordance and the trigger handler below.
+  const crossableIdx = useMemo(() => (bundle ? firstCrossable(bundle.forecast.due) : -1), [bundle]);
+  const crossable = crossableIdx !== -1;
 
   // Fixture edit/checklist seams so the playground exercises the FULL cockpit row (editable make/model/
   // plate/engine/km), échéances + task dock exactly as the live orchestrator does — writes are no-ops
@@ -107,7 +109,7 @@ export function AtelierScene() {
   // concern line, then settles back to veille. The scene's red state (glow/rim/panel) carries the rest.
   const triggerCrossing = () => {
     if (!bundle) return;
-    const idx = firstCrossable(bundle.forecast.due);
+    const idx = crossableIdx;
     if (idx === -1) return;
     const u = bundle.vehicle;
     const reading = u.usageValue != null ? ` · ${formatReading(u.usageValue, u.usageUnit)}` : '';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { daysSince, dueDescriptor, dueSignal, latestPerformedAt, systemHealthPct } from './derive';
+import { dueDescriptor, dueSignal, latestPerformedAt, systemHealthPct } from './derive';
 import type { ForecastDue } from './types';
 
 const THIN = ' ';
@@ -83,20 +83,6 @@ describe('dueDescriptor (honest, render-ready — same values for panel + flat l
     const d = dueDescriptor(due({ daysUntilDue: 75, dueAt: '2026-09-12' }));
     expect(d.until).toBeNull();
     expect(d.horizon).toBe(`dans environ 3${NBSP}mois`); // rounded, never "75 j"
-  });
-});
-
-describe('daysSince — whole days between an ISO date and an explicit "today" (cardinal readout)', () => {
-  it('counts whole days within a month', () => {
-    expect(daysSince('2026-06-01', '2026-06-29')).toBe(28);
-  });
-  it('spans a full year', () => {
-    expect(daysSince('2025-06-29', '2026-06-29')).toBe(365);
-  });
-  it('is null for null / empty / unparseable input', () => {
-    expect(daysSince(null, '2026-06-29')).toBeNull();
-    expect(daysSince('', '2026-06-29')).toBeNull();
-    expect(daysSince('pas-une-date', '2026-06-29')).toBeNull();
   });
 });
 

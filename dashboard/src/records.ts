@@ -23,17 +23,6 @@ export function centsToEurosInput(cents: number | null | undefined): string {
   return (cents / 100).toFixed(2).replace('.', ',');
 }
 
-/**
- * The maintenance-side usage units. CRITICAL: records + the service-schedule bind the MAINTENANCE
- * UsageUnit (km|mi|hours) — hours is `hours` here, NOT the garage `h` the vehicle PATCH uses. See PROVENANCE.
- */
-export const MAINT_USAGE_UNITS = ['km', 'mi', 'hours'] as const;
-
-/** Map a vehicle's garage-side usageUnit (`h`) to the maintenance spelling (`hours`) for the record/schedule forms. */
-export function maintUnitFor(vehicleUsageUnit: string | null | undefined): string {
-  return vehicleUsageUnit === 'h' ? 'hours' : vehicleUsageUnit === 'mi' ? 'mi' : 'km';
-}
-
 /** A visit's headline: its label, else a single service's label, else a generic word, else a dash. */
 export function visitTitle(record: MaintenanceRecord): string {
   if (record.label && record.label.trim()) return record.label.trim();

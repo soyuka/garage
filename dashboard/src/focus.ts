@@ -25,11 +25,6 @@ export interface Focus {
   nodes?: SpecNode[];
 }
 
-/** Which content the single swappable slot shows. Default (no focus) = the specs at-a-glance panel. */
-export function slotPanel(focus: Focus | null): PanelKind {
-  return focus?.panel ?? 'specs';
-}
-
 /** Maps an agent UIAction to a focus state, or null when the action does not change focus. */
 export function focusForAction(action: UIAction): Focus | null {
   if (action.type === 'focusView') {

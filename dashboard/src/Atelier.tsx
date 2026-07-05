@@ -41,7 +41,7 @@ import { SceneView } from './scene/SceneView';
 import type { TruthPanelEdit } from './floor/TruthPanel';
 import { JournalPanel } from './JournalPanel';
 import { DossierPanel } from './DossierPanel';
-import { maintUnitFor } from './records';
+import { maintUnitFor } from './units';
 import type { Cta } from './scene/CtaCard';
 import { partsCtaFor, pickPartsTask } from './scene/parts';
 import { firstNewlyOverdue } from './scene/crossing';

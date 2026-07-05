@@ -47,20 +47,31 @@ export function normalizeIri<T extends { id?: string }>(raw: T & { '@id'?: strin
   return { ...(rest as T), id: iri ?? raw.id };
 }
 
+// ── Response guards ────────────────────────────────────────────────────────────
+// One error-message format (`<label> failed: <status>`) for every verb. `res.ok` is already the
+// 200–299 range (204 included), so a "no content" write needs no special-casing here.
+
+async function okJson<T>(res: Response, label: string): Promise<T> {
+  if (!res.ok) throw new Error(`${label} failed: ${res.status}`);
+  return res.json() as Promise<T>;
+}
+
+function okVoid(res: Response, label: string): void {
+  if (!res.ok) throw new Error(`${label} failed: ${res.status}`);
+}
+
 // ── Reads ─────────────────────────────────────────────────────────────────────
 
 /** GET the parc listing. Each member carries `nextDue`/`openTasks`; `health`/`facts`/`plannedTasks` ride the item GET only. */
 export async function getVehicles(): Promise<VehicleSummary[]> {
   const res = await authFetch(`${API}/garage/vehicles`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`vehicles fetch failed: ${res.status}`);
-  return hydraMembers(await res.json());
+  return hydraMembers(await okJson(res, 'vehicles fetch'));
 }
 
 /** GET one vehicle by its IRI — the item read inlines `facts`, `health`, `plannedTasks`. */
 export async function getVehicle(iri: string): Promise<VehicleSummary> {
   const res = await authFetch(`${API}${iri}`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`vehicle fetch failed: ${res.status}`);
-  const v = (await res.json()) as VehicleSummary & { plannedTasks?: Array<PlannedTask & { '@id'?: string }> };
+  const v = await okJson<VehicleSummary & { plannedTasks?: Array<PlannedTask & { '@id'?: string }> }>(res, 'vehicle fetch');
   // The vehicle handle stays `@id`; only its inlined planned tasks need the id normalization.
   if (v.plannedTasks) v.plannedTasks = v.plannedTasks.map((t) => normalizeIri(t));
   return v;
@@ -69,16 +80,14 @@ export async function getVehicle(iri: string): Promise<VehicleSummary> {
 /** GET a vehicle's forecast (due[] soonest-first + coverage gaps). Value objects — no @id normalization. */
 export async function getForecast(iri: string): Promise<VehicleForecast> {
   const res = await authFetch(`${API}${iri}/forecast`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`forecast fetch failed: ${res.status}`);
-  const data = (await res.json()) as VehicleForecast;
+  const data = await okJson<VehicleForecast>(res, 'forecast fetch');
   return { vehicle: data.vehicle ?? iri, due: data.due ?? [], gaps: data.gaps ?? [] };
 }
 
 /** GET a vehicle's past maintenance (newest first). Each record serves its IRI as `@id` → normalize to `id`. */
 export async function getMaintenanceRecords(iri: string): Promise<MaintenanceRecord[]> {
   const res = await authFetch(`${API}${iri}/maintenance-records`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`records fetch failed: ${res.status}`);
-  return hydraMembers<MaintenanceRecord & { '@id'?: string }>(await res.json()).map((r) => normalizeIri(r));
+  return hydraMembers<MaintenanceRecord & { '@id'?: string }>(await okJson(res, 'records fetch')).map((r) => normalizeIri(r));
 }
 
 /**
@@ -89,8 +98,7 @@ export async function getMaintenanceRecords(iri: string): Promise<MaintenanceRec
 export async function getVehicleTasks(iri: string, includeDismissed = false): Promise<PlannedTask[]> {
   const query = includeDismissed ? '?includeDismissed=true' : '';
   const res = await authFetch(`${API}${iri}/planned-tasks${query}`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`tasks fetch failed: ${res.status}`);
-  return hydraMembers<PlannedTask & { '@id'?: string }>(await res.json()).map((t) => normalizeIri(t));
+  return hydraMembers<PlannedTask & { '@id'?: string }>(await okJson(res, 'tasks fetch')).map((t) => normalizeIri(t));
 }
 
 /**
@@ -116,8 +124,7 @@ export async function getVehicleBundle(iri: string): Promise<VehicleBundle> {
  */
 export async function getFillVolumes(kType: number): Promise<FillVolume[]> {
   const res = await authFetch(`${API}/cars/${kType}/fill-volumes`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`fill-volumes fetch failed: ${res.status}`);
-  return hydraMembers<FillVolume>(await res.json());
+  return hydraMembers<FillVolume>(await okJson(res, 'fill-volumes fetch'));
 }
 
 /**
@@ -126,8 +133,7 @@ export async function getFillVolumes(kType: number): Promise<FillVolume[]> {
  */
 export async function getSivVehicle(plate: string): Promise<SivVehicle> {
   const res = await authFetch(`${API}/vehicles/${encodeURIComponent(plate)}`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`plate lookup failed: ${res.status}`);
-  return res.json() as Promise<SivVehicle>;
+  return okJson<SivVehicle>(res, 'plate lookup');
 }
 
 // ── Writes ────────────────────────────────────────────────────────────────────
@@ -143,7 +149,7 @@ export async function mergeTaskParts(taskIri: string, parts: PlannedPart[]): Pro
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify({ parts }),
   });
-  if (!res.ok) throw new Error(`task parts merge failed: ${res.status}`);
+  okVoid(res, 'task parts merge');
 }
 
 // ── Vehicle CRUD + facts ──────────────────────────────────────────────────────
@@ -169,8 +175,7 @@ export async function patchVehicle(iri: string, patch: VehiclePatch): Promise<Ve
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(patch),
   });
-  if (!res.ok) throw new Error(`vehicle update failed: ${res.status}`);
-  return res.json() as Promise<VehicleSummary>;
+  return okJson<VehicleSummary>(res, 'vehicle update');
 }
 
 /** Create a blank vehicle (the parc "+ Ajouter"); returns the fresh read-model to select. */
@@ -180,14 +185,13 @@ export async function createVehicle(): Promise<VehicleSummary> {
     headers: { 'Content-Type': LD, Accept: LD },
     body: '{}',
   });
-  if (!res.ok) throw new Error(`vehicle create failed: ${res.status}`);
-  return res.json() as Promise<VehicleSummary>;
+  return okJson<VehicleSummary>(res, 'vehicle create');
 }
 
 /** Soft-delete a vehicle: it drops off the parc, its history survives. */
 export async function deleteVehicle(iri: string): Promise<void> {
   const res = await authFetch(`${API}${iri}`, { method: 'DELETE', headers: { Accept: LD } });
-  if (!res.ok && res.status !== 204) throw new Error(`vehicle delete failed: ${res.status}`);
+  okVoid(res, 'vehicle delete');
 }
 
 /** Record a manual spec (POST one {key,value,unit?} fact). Lands as source "user" (unverified). */
@@ -197,14 +201,13 @@ export async function postVehicleFact(iri: string, fact: { key: string; value: s
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(fact),
   });
-  if (!res.ok) throw new Error(`fact write failed: ${res.status}`);
-  return res.json() as Promise<VehicleSummary>;
+  return okJson<VehicleSummary>(res, 'fact write');
 }
 
 /** Remove a fact by key (soft-delete; re-POST the key to bring it back). */
 export async function deleteVehicleFact(iri: string, key: string): Promise<void> {
   const res = await authFetch(`${API}${iri}/facts/${encodeURIComponent(key)}`, { method: 'DELETE', headers: { Accept: LD } });
-  if (!res.ok && res.status !== 204) throw new Error(`fact delete failed: ${res.status}`);
+  okVoid(res, 'fact delete');
 }
 
 // ── Planned tasks ──────────────────────────────────────────────────────────────
@@ -224,8 +227,7 @@ export async function createTask(vehicleIri: string, input: PlannedTaskInput): P
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`task create failed: ${res.status}`);
-  return normalizeIri((await res.json()) as PlannedTask & { '@id'?: string });
+  return normalizeIri(await okJson<PlannedTask & { '@id'?: string }>(res, 'task create'));
 }
 
 /** Tick / dismiss a task: PATCH its status. */
@@ -235,7 +237,7 @@ export async function patchTaskStatus(taskIri: string, status: 'open' | 'done' |
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify({ status }),
   });
-  if (!res.ok) throw new Error(`task status update failed: ${res.status}`);
+  okVoid(res, 'task status update');
 }
 
 /** Editable task definition (merge-patch: omitted keeps, a sent null clears). Leaves status + parts intact. */
@@ -252,7 +254,7 @@ export async function updateTask(taskIri: string, fields: TaskEdit): Promise<voi
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(fields),
   });
-  if (!res.ok) throw new Error(`task update failed: ${res.status}`);
+  okVoid(res, 'task update');
 }
 
 /** File every done task into the past-maintenance log. Idempotent → {archived:n}. */
@@ -262,8 +264,7 @@ export async function archiveTasks(vehicleIri: string): Promise<{ archived: numb
     headers: { 'Content-Type': LD, Accept: LD },
     body: '{}',
   });
-  if (!res.ok) throw new Error(`archive failed: ${res.status}`);
-  const data = (await res.json()) as { archived?: number };
+  const data = await okJson<{ archived?: number }>(res, 'archive');
   return { archived: data.archived ?? 0 };
 }
 
@@ -283,7 +284,7 @@ export async function addTaskPart(taskIri: string, part: TaskPartInput): Promise
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(part),
   });
-  if (!res.ok) throw new Error(`part add failed: ${res.status}`);
+  okVoid(res, 'part add');
 }
 
 /** Merge-edit one part line by its ULID (PATCH the parts subresource). */
@@ -293,13 +294,13 @@ export async function updateTaskPart(taskIri: string, partId: string, fields: Ta
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(fields),
   });
-  if (!res.ok) throw new Error(`part update failed: ${res.status}`);
+  okVoid(res, 'part update');
 }
 
 /** Remove one part line by its ULID (DELETE the parts subresource). */
 export async function removeTaskPart(taskIri: string, partId: string): Promise<void> {
   const res = await authFetch(`${API}${taskIri}/parts/${partId}`, { method: 'DELETE', headers: { Accept: LD } });
-  if (!res.ok && res.status !== 204) throw new Error(`part remove failed: ${res.status}`);
+  okVoid(res, 'part remove');
 }
 
 // ── Service schedule (recurring rules) ──────────────────────────────────────────
@@ -309,8 +310,7 @@ type RawRule = ServiceRule & { '@id'?: string };
 /** GET the recurring schedule (the rule's `id` is already the bare ULID we DELETE by — no @id norm). */
 export async function getServiceSchedule(iri: string): Promise<ServiceRule[]> {
   const res = await authFetch(`${API}${iri}/service-schedule`, { headers: { Accept: LD } });
-  if (!res.ok) throw new Error(`schedule fetch failed: ${res.status}`);
-  return hydraMembers<RawRule>(await res.json());
+  return hydraMembers<RawRule>(await okJson(res, 'schedule fetch'));
 }
 
 export interface ServiceRuleInput {
@@ -347,7 +347,7 @@ export async function saveServiceRule(iri: string, input: ServiceRuleInput): Pro
 /** Remove a recurring rule by its ULID (soft-delete → drops off). */
 export async function deleteServiceRule(iri: string, ruleId: string): Promise<void> {
   const res = await authFetch(`${API}${iri}/service-schedule/${encodeURIComponent(ruleId)}`, { method: 'DELETE', headers: { Accept: LD } });
-  if (!res.ok && res.status !== 204) throw new Error(`schedule delete failed: ${res.status}`);
+  okVoid(res, 'schedule delete');
 }
 
 // ── Maintenance records + bill attachments ──────────────────────────────────────
@@ -393,7 +393,7 @@ export async function createMaintenanceRecord(vehicleIri: string, input: Mainten
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`record create failed: ${res.status}`);
+  okVoid(res, 'record create');
 }
 
 /** Edit a logged visit (PATCH /garage/maintenance-records/{id} — the body replaces the whole visit). */
@@ -403,13 +403,13 @@ export async function updateMaintenanceRecord(recordIri: string, input: Maintena
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(input),
   });
-  if (!res.ok) throw new Error(`record update failed: ${res.status}`);
+  okVoid(res, 'record update');
 }
 
 /** Remove a logged visit. */
 export async function deleteMaintenanceRecord(recordIri: string): Promise<void> {
   const res = await authFetch(`${API}${recordIri}`, { method: 'DELETE', headers: { Accept: LD } });
-  if (!res.ok && res.status !== 204) throw new Error(`record delete failed: ${res.status}`);
+  okVoid(res, 'record delete');
 }
 
 /**
@@ -420,14 +420,13 @@ export async function uploadMaintenanceAttachment(recordIri: string, file: File)
   const body = new FormData();
   body.append('file', file);
   const res = await authFetch(`${API}${recordIri}/attachments`, { method: 'POST', body });
-  if (!res.ok) throw new Error(`attachment upload failed: ${res.status}`);
-  return res.json() as Promise<MaintenanceAttachment>;
+  return okJson<MaintenanceAttachment>(res, 'attachment upload');
 }
 
 /** Remove one bill (DELETE the attachment IRI). */
 export async function deleteMaintenanceAttachment(attachmentUrl: string): Promise<void> {
   const res = await authFetch(`${API}${attachmentUrl}`, { method: 'DELETE', headers: { Accept: LD } });
-  if (!res.ok && res.status !== 204) throw new Error(`attachment delete failed: ${res.status}`);
+  okVoid(res, 'attachment delete');
 }
 
 /**
@@ -436,6 +435,6 @@ export async function deleteMaintenanceAttachment(attachmentUrl: string): Promis
  */
 export async function fetchAttachmentObjectUrl(attachmentUrl: string): Promise<string> {
   const res = await authFetch(`${API}${attachmentUrl}`);
-  if (!res.ok) throw new Error(`attachment fetch failed: ${res.status}`);
+  okVoid(res, 'attachment fetch');
   return URL.createObjectURL(await res.blob());
 }

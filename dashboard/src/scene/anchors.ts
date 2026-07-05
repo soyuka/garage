@@ -1,5 +1,6 @@
 import type { BodyClass } from './CarProxy';
 import { DIMS } from './CarProxy';
+import { canonicalService } from '../labels';
 import type { MercureFrame } from '../types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -20,23 +21,14 @@ export type BodyRegion = 'hood' | 'windshield' | 'frontAxle' | 'rearAxle' | 'bay
 /** Every region key, in head-to-tail reading order. */
 export const BODY_REGIONS: BodyRegion[] = ['hood', 'windshield', 'frontAxle', 'rearAxle', 'bay'];
 
-/** A French region heading for the grouped hotspot card (the per-service rows carry the real names). */
-export const REGION_LABEL: Record<BodyRegion, string> = {
-  hood: 'Moteur',
-  windshield: 'Contrôle',
-  frontAxle: 'Freins · Pneus',
-  rearAxle: 'Transmission',
-  bay: 'Filtration',
-};
-
-// snake_case service type → the body region it is read off. Unmapped types default to the hood.
+// Canonical service type → the body region it is read off. Keyed by canonical spelling only (spelling
+// variants fold through {@see canonicalService} at lookup); unmapped types default to the hood.
 const TYPE_REGION: Record<string, BodyRegion> = {
   oil_change: 'hood',
   oil_filter: 'hood',
   timing_belt: 'hood',
   coolant: 'hood',
-  spark_plugs: 'hood',
-  spark_plug: 'hood', // backend's singular key (labels.ts) — same region as spark_plugs
+  spark_plug: 'hood',
   air_filter: 'bay',
   cabin_filter: 'bay',
   fuel_filter: 'bay',
@@ -45,15 +37,13 @@ const TYPE_REGION: Record<string, BodyRegion> = {
   brake_pads: 'frontAxle',
   brake_discs: 'frontAxle',
   tyres: 'frontAxle',
-  tires: 'frontAxle', // backend spelling variant
-  technical_inspection: 'windshield',
-  inspection: 'windshield', // the backend's live periodic-inspection key (labels.ts) — was defaulting to hood
+  inspection: 'windshield',
   chain: 'rearAxle',
 };
 
 /** Where on the car you read a given service type. Total + never throws (unmapped → hood). */
 export function regionForType(type: string): BodyRegion {
-  return TYPE_REGION[type] ?? 'hood';
+  return TYPE_REGION[canonicalService(type)] ?? 'hood';
 }
 
 /**
@@ -64,7 +54,7 @@ export function regionForType(type: string): BodyRegion {
 export function regionsForKeys(keys: string[]): BodyRegion[] {
   const set = new Set<BodyRegion>();
   for (const k of keys) {
-    const region = TYPE_REGION[k];
+    const region = TYPE_REGION[canonicalService(k)];
     if (region) set.add(region);
   }
   return BODY_REGIONS.filter((r) => set.has(r));

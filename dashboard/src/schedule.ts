@@ -1,5 +1,6 @@
 import { formatReading, NBSP } from './format';
 import { serviceLabel } from './labels';
+import { cadenceUnit } from './units';
 import type { ServiceAction, ServiceRule } from './types';
 
 // Pure formatting for the service-schedule editor (#11) — the recurring rules behind the forecast.
@@ -21,11 +22,6 @@ export function ruleTitle(rule: ServiceRule): string {
   const verb = actionVerb(rule.action);
   const head = verb ? `${serviceLabel(rule.type)} · ${verb}` : serviceLabel(rule.type);
   return rule.component ? `${head} — ${rule.component}` : head;
-}
-
-// Engine-hours is spelled `hours` on the maintenance axis but reads better as the short `h` in a cadence.
-function cadenceUnit(unit: string): string {
-  return unit === 'hours' ? 'h' : unit;
 }
 
 /** "tous les 10 000 km · tous les 12 mois · d'abord à 5 h" — the parts the rule actually carries. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centsToEurosInput, maintUnitFor, MAINT_USAGE_UNITS, parseEuros, visitTitle } from './records';
+import { centsToEurosInput, parseEuros, visitTitle } from './records';
 import type { MaintenanceRecord } from './types';
 
 // Pure helpers for the maintenance-records surface (#11). Money is integer minor units on the wire
@@ -43,23 +43,6 @@ describe('centsToEurosInput', () => {
   });
   it('round-trips a stored amount back to euros via parseEuros', () => {
     expect(parseEuros(centsToEurosInput(18900))).toBe(189);
-  });
-});
-
-describe('maintUnitFor', () => {
-  it('maps the garage hours spelling h → the maintenance hours', () => {
-    expect(maintUnitFor('h')).toBe('hours');
-  });
-  it('keeps mi', () => {
-    expect(maintUnitFor('mi')).toBe('mi');
-  });
-  it('km / null / unknown → km', () => {
-    expect(maintUnitFor('km')).toBe('km');
-    expect(maintUnitFor(null)).toBe('km');
-    expect(maintUnitFor(undefined)).toBe('km');
-  });
-  it('MAINT_USAGE_UNITS is the maintenance spelling (hours, not h)', () => {
-    expect([...MAINT_USAGE_UNITS]).toEqual(['km', 'mi', 'hours']);
   });
 });
 

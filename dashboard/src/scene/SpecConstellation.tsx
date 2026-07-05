@@ -20,11 +20,6 @@ export function selectFacts(facts: VehicleFact[], keys: string[]): VehicleFact[]
   return facts.filter((f) => wanted.has(f.key));
 }
 
-// Identity-level fluids only (not the full sheet) — what stays legible with no focus active, so the
-// car's core moteur facts are never hidden behind a chip. SceneView passes these as the resting `keys`
-// (SpecConstellation runs them through selectFacts internally — one path, no duplicate helper).
-export const MOTEUR_REST_KEYS: string[] = ['oil_viscosity', 'oil_type', 'oil_capacity', 'coolant_type'];
-
 // Staggered etch-in delays (§ motion): .08 / .16 / .24 … capped so a long sheet still settles quickly.
 const STAGGER_MS = 80;
 const MAX_STAGGER = 6;

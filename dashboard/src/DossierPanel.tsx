@@ -5,7 +5,8 @@ import { coerceInt } from './edit';
 import { formatDate, formatEuros, formatReading } from './format';
 import { serviceLabel, SERVICE_TYPES } from './labels';
 import { isAgentAuthored } from './provenance';
-import { centsToEurosInput, MAINT_USAGE_UNITS, parseEuros, visitTitle } from './records';
+import { centsToEurosInput, parseEuros, visitTitle } from './records';
+import { MAINT_USAGE_UNITS } from './units';
 import { formatCadence, ruleTitle } from './schedule';
 import { safeHref } from './safeHref';
 import {

@@ -50,19 +50,6 @@ export function signalTag(overdue: boolean, signal: Signal): { text: string; ton
   return { text: 'OK', tone: 'ok' };
 }
 
-/**
- * Whole days between an ISO `YYYY-MM-DD` date and an explicit `today` (passed in — never reads the
- * clock here, so it stays pure/testable). Powers the cardinal "depuis l'entretien" readout. Null on
- * null/empty/unparseable input. A past date is a known fact, so this stays precise (unlike forecasts).
- */
-export function daysSince(iso: string | null | undefined, today: string): number | null {
-  if (!iso) return null;
-  const a = Date.parse(`${iso}T00:00:00Z`);
-  const b = Date.parse(`${today}T00:00:00Z`);
-  if (Number.isNaN(a) || Number.isNaN(b)) return null;
-  return Math.round((b - a) / 86_400_000);
-}
-
 /** The newest `lastPerformedAt` across forecast dues (ISO sorts chronologically), or null if none. */
 export function latestPerformedAt(due: ForecastDue[]): string | null {
   const dates = due.map((d) => d.lastPerformedAt).filter((d): d is string => !!d);

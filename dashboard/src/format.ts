@@ -87,11 +87,6 @@ export function formatEuros(cents: number): string {
   return `${sign}${groupThousands(Math.trunc(abs / 100))},${frac}${NBSP}€`;
 }
 
-/** A "days ago" count for the cardinal readout: 393 → "393 j". Past fact → precise, grouped. */
-export function formatDaysAgo(days: number): string {
-  return `${groupThousands(days)}${NBSP}j`;
-}
-
 /** Precise overdue amount (§5 exception): (3200, "km") → "DÉPASSÉ de 3 200 km". */
 export function formatOverdue(value: number, unit?: string | null): string {
   return `DÉPASSÉ de ${formatReading(Math.abs(value), unit)}`;

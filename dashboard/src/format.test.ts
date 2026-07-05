@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   formatAmount,
   formatDate,
-  formatDaysAgo,
   formatEuros,
   formatHealthPct,
   formatHorizon,
@@ -79,13 +78,6 @@ describe('formatEuros (French money — comma decimal, thin-space grouping, NBSP
   it('zero-pads the centime part', () => {
     expect(formatEuros(500)).toBe(`5,00${NBSP}€`);
     expect(formatEuros(509)).toBe(`5,09${NBSP}€`);
-  });
-});
-
-describe('formatDaysAgo (cardinal "depuis l\'entretien" — past fact, precise, grouped)', () => {
-  it('groups the day count and binds the "j" unit with a no-break space', () => {
-    expect(formatDaysAgo(393)).toBe(`393${NBSP}j`);
-    expect(formatDaysAgo(1200)).toBe(`1${THIN}200${NBSP}j`);
   });
 });
 

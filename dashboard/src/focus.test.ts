@@ -1,17 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { focusForAction, slotPanel } from './focus';
+import { focusForAction } from './focus';
 import type { UIAction } from './types';
-
-describe('slotPanel', () => {
-  it('defaults to the specs panel when nothing is focused', () => {
-    expect(slotPanel(null)).toBe('specs');
-  });
-
-  it('follows the focused panel', () => {
-    expect(slotPanel({ panel: 'tasks', keys: [] })).toBe('tasks');
-    expect(slotPanel({ panel: 'specs', keys: ['oil_capacity'] })).toBe('specs');
-  });
-});
 
 describe('focusForAction', () => {
   it('maps focusView to the unified focus state, keys default to empty', () => {
@@ -45,11 +34,5 @@ describe('focusForAction', () => {
       { type: 'selectVehicle', id: '/garage/vehicles/01J' },
     ];
     for (const a of others) expect(focusForAction(a)).toBeNull();
-  });
-});
-
-describe('slotPanel — carnet', () => {
-  it('follows a carnet focus', () => {
-    expect(slotPanel({ panel: 'carnet', keys: [] })).toBe('carnet');
   });
 });
