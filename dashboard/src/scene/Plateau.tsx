@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useRef } from 'react';
+import { memo, Suspense, useEffect, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
@@ -291,7 +291,11 @@ function Plateau3D({
   );
 }
 
-export function Plateau({
+// memo'd: the R3F <Canvas> subtree is expensive to reconcile, and the live orchestrator re-renders on
+// every composer keystroke (a `typing` dispatch) with the SAME vehicle/due/camera props. Skipping those
+// renders keeps the scene idle unless a prop that concerns it actually changes. Requires the parent to
+// pass a stable onCameraRelease (Atelier wraps it in useCallback).
+function PlateauImpl({
   vehicle,
   rung,
   due,
@@ -341,3 +345,5 @@ export function Plateau({
     </div>
   );
 }
+
+export const Plateau = memo(PlateauImpl);

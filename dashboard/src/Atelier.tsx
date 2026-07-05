@@ -45,7 +45,7 @@ import { maintUnitFor } from './units';
 import type { Cta } from './scene/CtaCard';
 import { partsCtaFor, pickPartsTask } from './scene/parts';
 import { firstNewlyOverdue } from './scene/crossing';
-import { regionForFrame } from './scene/anchors';
+import { regionForFrame, type BodyRegion } from './scene/anchors';
 import { PULSE_DURATION } from './scene/holo';
 import type { CameraFocus } from './scene/cameraRig';
 import type { PulseRegion } from './scene/VehicleMesh';
@@ -228,8 +228,35 @@ export function Atelier() {
     }, 90_000);
   }, [clearWatchdog, dispatch]);
   useEffect(() => clearWatchdog, [clearWatchdog]); // clear on unmount
-  useEffect(() => () => { if (crossTimer.current != null) window.clearTimeout(crossTimer.current); }, []);
-  useEffect(() => () => { if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current); }, []);
+  useEffect(
+    () => () => {
+      if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
+      if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
+    },
+    [],
+  );
+
+  // Apply an updater to the open bundle ONLY while it still belongs to `iri` — the guard every async
+  // reconcile shares, so a GET/write result landing after navigation can't overwrite the now-open vehicle.
+  const patchCurrentBundle = useCallback((iri: string, updater: (b: VehicleBundle) => VehicleBundle) => {
+    setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? updater(prev) : prev));
+  }, []);
+
+  // PULSE + D1 earned camera in one gesture: flare the region's edges cyan (one-shot, monotonic key
+  // re-fires a repeat region) and dolly the view to it (held until released). Shared by the region an
+  // agent frame resolves to and an explicit focusRegion intent.
+  const flareRegion = useCallback((region: BodyRegion) => {
+    pulseKey.current += 1;
+    setPulseRegion({ region, key: pulseKey.current });
+    if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
+    pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
+    cameraKey.current += 1;
+    setCameraFocus({ region, key: cameraKey.current });
+  }, []);
+
+  // The two on-demand surfaces are mutually exclusive — opening one closes the other.
+  const openFacts = useCallback(() => { setHistoryOpen(false); setFactsDrawerOpen(true); }, []);
+  const openHistory = useCallback(() => { setFactsDrawerOpen(false); setHistoryOpen(true); }, []);
 
   const onFrame = useCallback(
     (frame: MercureFrame) => {
@@ -277,17 +304,10 @@ export function Atelier() {
       // PULSE verb: if this frame targets a car region (the agent focusing/acting on a service type), flare
       // that region's edges cyan once. Best-effort — a frame that maps to no region (status prose, a spec
       // question, a toast) returns null and pulses nothing. The bumped key re-fires a repeat region.
+      // D1: dolly the view TO that region. Attributable (the Noyau narrates the same turn) + announced
+      // by the co-firing cyan pulse, so the camera move is earned, not a surprise. Held until released.
       const pulsed = regionForFrame(frame);
-      if (pulsed) {
-        pulseKey.current += 1;
-        setPulseRegion({ region: pulsed, key: pulseKey.current });
-        if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
-        pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
-        // D1: dolly the view TO that region. Attributable (the Noyau narrates the same turn) + announced
-        // by the co-firing cyan pulse, so the camera move is earned, not a surprise. Held until released.
-        cameraKey.current += 1;
-        setCameraFocus({ region: pulsed, key: cameraKey.current });
-      }
+      if (pulsed) flareRegion(pulsed);
       if (frame.type === 'turn') {
         dispatch({ type: 'turn', phase: frame.phase });
         if (frame.phase === 'end') clearWatchdog();
@@ -314,12 +334,7 @@ export function Atelier() {
       } else if (frame.type === 'focusRegion') {
         // D1 explicit camera intent (contract seed — the server may not emit it yet): dolly to the region
         // + flare the pulse so the move is announced, matching the focusView-derived path above.
-        pulseKey.current += 1;
-        setPulseRegion({ region: frame.region, key: pulseKey.current });
-        if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
-        pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
-        cameraKey.current += 1;
-        setCameraFocus({ region: frame.region, key: cameraKey.current });
+        flareRegion(frame.region);
       } else if (frame.type === 'proposeActions') {
         const next: Cta = { headline: frame.headline, finding: frame.finding, actions: frame.actions };
         const defer = (c: Cta) => dispatch({ type: 'defer', id: `review:${c.headline}`, text: c.headline, finding: c.finding, actions: c.actions });
@@ -333,7 +348,7 @@ export function Atelier() {
         if (frame.preferredId) window.location.hash = hashForVehicle(frame.preferredId);
       }
     },
-    [dispatch, armWatchdog, clearWatchdog],
+    [dispatch, armWatchdog, clearWatchdog, flareRegion],
   );
   useMercure([`${API}/garage/vehicles`, `${API}/agent/sessions/${sessionId}`], onFrame);
 
@@ -434,7 +449,7 @@ export function Atelier() {
         runLocalAnswer({
           steps: ['ouverture du dossier…', 'lecture des données véhicule…'],
           failMessage: 'données indisponibles',
-          resolve: async () => ({ effect: () => { setHistoryOpen(false); setFactsDrawerOpen(true); } }),
+          resolve: async () => ({ effect: openFacts }),
         }),
     });
     if (b.records.length > 0) {
@@ -445,7 +460,7 @@ export function Atelier() {
           runLocalAnswer({
             steps: ['ouverture du carnet…', 'relecture des visites…'],
             failMessage: 'carnet indisponible',
-            resolve: async () => ({ effect: () => { setFactsDrawerOpen(false); setHistoryOpen(true); } }),
+            resolve: async () => ({ effect: openHistory }),
           }),
       });
     }
@@ -526,7 +541,7 @@ export function Atelier() {
   // CTA action paths. `instruction` re-runs the agent (a fresh turn, supersedes the card). `patchTask`
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
   // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
-  const onCameraRelease = () => setCameraFocus(null);
+  const onCameraRelease = useCallback(() => setCameraFocus(null), []); // stable → keeps the memo'd Plateau idle on typing renders
 
   const onCtaInstruction = (instruction: string) => send(instruction);
   const onCtaPatch = (patch: { id: Iri; parts: PlannedPart[] }) => {
@@ -536,7 +551,7 @@ export function Atelier() {
     mergeTaskParts(patch.id, patch.parts)
       .then(() => getVehicleBundle(iri))
       // Guard POST-await so a re-read landing after navigation can't overwrite the now-open vehicle.
-      .then((b) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? b : prev)))
+      .then((b) => patchCurrentBundle(iri, () => b))
       .catch((e) => dispatch({ type: 'toast', tone: 'alarm', message: `Échec de l’ajout : ${(e as Error).message}` }));
   };
 
@@ -574,16 +589,16 @@ export function Atelier() {
   const onPatchVehicle = (patch: VehiclePatch) => {
     const iri = selectedIri;
     if (!iri) return;
-    setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? { ...prev, vehicle: { ...prev.vehicle, ...patch } } : prev)); // optimistic
+    patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, ...patch } })); // optimistic
     patchVehicle(iri, patch)
       .then(() => getVehicleBundle(iri)) // re-read: a usage change shifts the forecast
       // Guard POST-await (the updater pattern, like the facts re-reads): a bundle that resolves after a
       // nav must NOT overwrite the now-open vehicle (defeats the heroBundle @id gate → stuck loading).
-      .then((b) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? b : prev)))
+      .then((b) => patchCurrentBundle(iri, () => b))
       .catch((e) => {
         alarm(`Échec de la mise à jour : ${(e as Error).message}`);
         getVehicleBundle(iri)
-          .then((b) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? b : prev))) // reconcile the optimistic merge
+          .then((b) => patchCurrentBundle(iri, () => b)) // reconcile the optimistic merge
           .catch(() => undefined);
       });
   };
@@ -604,29 +619,25 @@ export function Atelier() {
     const iri = selectedIri;
     if (!iri) return;
     postVehicleFact(iri, fact)
-      .then((fresh) =>
-        setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? { ...prev, vehicle: { ...prev.vehicle, facts: fresh.facts, factCount: fresh.factCount } } : prev)),
-      )
+      .then((fresh) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: fresh.facts, factCount: fresh.factCount } })))
       .catch((e) => alarm(`Échec de l’ajout : ${(e as Error).message}`));
   };
 
   const onRemoveFact = (key: string) => {
     const iri = selectedIri;
     if (!iri) return;
-    setBundle((prev) =>
-      prev && prev.vehicle['@id'] === iri ? { ...prev, vehicle: { ...prev.vehicle, facts: (prev.vehicle.facts ?? []).filter((f) => f.key !== key) } } : prev,
-    ); // optimistic
+    patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: (prev.vehicle.facts ?? []).filter((f) => f.key !== key) } })); // optimistic
     deleteVehicleFact(iri, key)
       // Re-read: a deleted user fact may unmask a projected (part-derived/catalog) value for the same key.
       .then(() =>
         selectedIriRef.current === iri
-          ? getVehicle(iri).then((v) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? { ...prev, vehicle: { ...prev.vehicle, facts: v.facts, factCount: v.factCount } } : prev)))
+          ? getVehicle(iri).then((v) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: v.facts, factCount: v.factCount } })))
           : undefined,
       )
       .catch((e) => {
         alarm(`Échec de la suppression : ${(e as Error).message}`);
         if (selectedIriRef.current === iri)
-          getVehicle(iri).then((v) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? { ...prev, vehicle: { ...prev.vehicle, facts: v.facts } } : prev))).catch(() => undefined);
+          getVehicle(iri).then((v) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: v.facts } }))).catch(() => undefined);
       });
   };
 
@@ -658,7 +669,7 @@ export function Atelier() {
 
   const afterTaskWrite = (iri: string) => {
     getVehicleBundle(iri)
-      .then((b) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? b : prev)))
+      .then((b) => patchCurrentBundle(iri, () => b))
       .catch(() => undefined);
     if (showDismissedRef.current)
       getVehicleTasks(iri, true)
@@ -744,7 +755,7 @@ export function Atelier() {
             defaultUnit={maintUnitFor(heroBundle.vehicle.usageUnit)}
             onChanged={() => {
               const iri = selectedIriRef.current;
-              if (iri) getVehicleBundle(iri).then((b) => setBundle((prev) => (prev && prev.vehicle['@id'] === iri ? b : prev))).catch(() => undefined);
+              if (iri) getVehicleBundle(iri).then((b) => patchCurrentBundle(iri, () => b)).catch(() => undefined);
             }}
             onError={alarm}
           />
@@ -782,11 +793,11 @@ export function Atelier() {
             pinnedKeys={pinnedKeys}
             onTogglePin={onTogglePin}
             factsDrawerOpen={factsDrawerOpen}
-            onOpenFacts={() => { setHistoryOpen(false); setFactsDrawerOpen(true); }}
+            onOpenFacts={openFacts}
             onCloseFacts={() => setFactsDrawerOpen(false)}
             records={heroBundle.records}
             historyOpen={historyOpen}
-            onOpenHistory={() => { setFactsDrawerOpen(false); setHistoryOpen(true); }}
+            onOpenHistory={openHistory}
             onCloseHistory={() => setHistoryOpen(false)}
             edit={edit}
             checklist={{
