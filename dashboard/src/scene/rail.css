@@ -106,6 +106,10 @@
 .at-rail-row:hover {
   background: var(--at-void-lift);
 }
+/* a task row toggles done on a body click (its checkbox/edit/dismiss controls still own theirs) */
+.at-rail-row[data-activatable] {
+  cursor: pointer;
+}
 /* ── due row (a forecast prediction — no checkbox; a planifier ○ promotes it) ── */
 .at-rail-row--due,
 .at-rail-row--gap {

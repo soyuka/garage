@@ -250,8 +250,17 @@ function TaskRow({
   const [editing, setEditing] = useState(false);
   const cls = `at-task at-rail-row${dismissed ? ' at-task--dismissed' : done ? ' at-task--done' : ''}`;
 
+  // Clicking the row body toggles the task (the same act as its checkbox) — but let its own controls
+  // (checkbox, ✎ edit, × dismiss, and every input while the editor is open) own their clicks, and never
+  // toggle mid-edit (a stray body click must not collapse the form the operator is filling in).
+  const onRowClick = (e: React.MouseEvent) => {
+    if (editing) return;
+    if ((e.target as HTMLElement).closest('button, input, a, form, label')) return;
+    (dismissed ? onRestore : onToggle)();
+  };
+
   return (
-    <li className={cls} data-signal={signal}>
+    <li className={cls} data-signal={signal} data-activatable="true" onClick={onRowClick}>
       <button
         type="button"
         className="at-task-check"
