@@ -4,13 +4,13 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Garage\ToolResult;
+use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
 use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\RecordView;
@@ -29,6 +29,7 @@ final class GetMaintenanceHistoryProcessor implements ProcessorInterface
         private readonly MaintenanceRecorder $recorder,
         private readonly RecordView $recordView,
         private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleIriResolver $iriResolver,
     ) {
     }
 
@@ -45,12 +46,9 @@ final class GetMaintenanceHistoryProcessor implements ProcessorInterface
         // Addressed by @id (e.g. the dashboard's selected vehicle): dereference the handle and take
         // its identity from the row, so make/model are optional.
         if (null !== $data->vehicle) {
-            try {
-                $resource = $this->iriConverter->getResourceFromIri($data->vehicle);
-            } catch (ItemNotFoundException) {
-                return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle)]);
-            } catch (\Throwable) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $data->vehicle)]);
+            $resource = $this->iriResolver->resolveResource($data->vehicle);
+            if ($resource instanceof CallToolResult) {
+                return $resource;
             }
             $vehicleId = $resource->id;
             $identity = [
@@ -59,11 +57,11 @@ final class GetMaintenanceHistoryProcessor implements ProcessorInterface
                 'year' => $resource->year,
                 'vehicleType' => $resource->vehicleType,
             ];
-        } elseif (null === $data->make || null === $data->model) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
-            ]);
+        } else {
+            $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
+            if (null !== $guard) {
+                return $guard;
+            }
         }
 
         $records = $this->recorder->history(

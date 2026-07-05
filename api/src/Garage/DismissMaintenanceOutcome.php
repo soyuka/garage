@@ -20,8 +20,10 @@ use App\Entity\Vehicle;
  * Mirrors {@see PlanMaintenanceOutcome}; the extra taskNotFound state is what plan (an upsert that
  * creates on miss) has no need for but dismiss (which can only act on an existing task) does.
  */
-final readonly class DismissMaintenanceOutcome
+final readonly class DismissMaintenanceOutcome implements WriteOutcome
 {
+    use WriteOutcomeToolResult;
+
     /**
      * @param list<Vehicle> $candidates
      */

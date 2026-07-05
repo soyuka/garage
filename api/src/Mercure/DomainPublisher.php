@@ -17,12 +17,15 @@ use Symfony\Component\Mercure\Update;
  * Pushes the full vehicle read-model to the dashboard on a write, called explicitly from the write
  * processors after they flush. Replaces the implicit Doctrine postFlush listener (DomainEventPublisher):
  * a write path now opts in by calling {@see self::publishVehicle()}, and the payload CARRIES the
- * vehicle (scalars + facts + open checklist) instead of a bare "something changed" notification — so
- * the dashboard renders the fresh state directly, with no follow-up GET and no refetch race.
+ * vehicle read-model (scalars + projected facts + the composed health badge — see
+ * {@see GarageVehicleView::toArray()}) instead of a bare "something changed" notification, so the
+ * dashboard renders the fresh state directly, with no follow-up GET and no refetch race.
  *
- * Publishing the WHOLE vehicle (not a per-entity delta) keeps the client trivially consistent and
- * absorbs cascades for free: logging a service that auto-closes a planned task ships the updated
- * checklist in the same frame. Cost is one small JSON payload per write — vehicles are tiny.
+ * Publishing the WHOLE read-model (not a per-entity delta) keeps the client trivially consistent and
+ * absorbs cascades for free: a write that shifts the forecast ships the recomputed health badge in the
+ * same frame. The open checklist is NOT part of this frame — it is its own subresource
+ * (GET /garage/vehicles/{id}/planned-tasks), which the dashboard refetches on select. Cost is one small
+ * JSON payload per write — vehicles are tiny.
  *
  * Two topics per change, matching the frontend's subscriptions:
  *   - the item topic       ({origin}/garage/vehicles/{ulid}) — the open detail card;

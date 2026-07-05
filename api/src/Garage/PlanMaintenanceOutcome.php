@@ -16,8 +16,10 @@ use App\Entity\Vehicle;
  *
  * Mirrors {@see UpdateVehicleOutcome}; no "refused" — planning carries no fact-precedence rule.
  */
-final readonly class PlanMaintenanceOutcome
+final readonly class PlanMaintenanceOutcome implements WriteOutcome
 {
+    use WriteOutcomeToolResult;
+
     /**
      * @param list<Vehicle> $candidates
      */

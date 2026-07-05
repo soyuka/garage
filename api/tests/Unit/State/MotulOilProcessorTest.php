@@ -6,9 +6,11 @@ namespace App\Tests\Unit\State;
 
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
+use App\ApiResource\GarageVehicle;
 use App\Dto\MotulOilInput;
 use App\Entity\Vehicle;
 use App\Garage\GarageResolver;
+use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
 use App\Motul\MotulClient;
 use App\Motul\MotulOilAdvisor;
@@ -19,7 +21,6 @@ use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Component\Uid\Ulid;
 
 /**
  * `get_motul_oil` addressed by a vehicle @id (option A): the variant must be pinned from data the
@@ -59,15 +60,9 @@ final class MotulOilProcessorTest extends TestCase
         $resolver->method('resolveById')->willReturn($vehicle);
 
         $iriConverter = $this->createStub(IriConverterInterface::class);
-        $iriConverter->method('getResourceFromIri')->willReturn(
-            new class($vehicle->getId()) {
-                public function __construct(public readonly Ulid $id)
-                {
-                }
-            },
-        );
+        $iriConverter->method('getResourceFromIri')->willReturn(GarageVehicle::fromEntity($vehicle));
 
-        $processor = new MotulOilProcessor($advisor, $iriConverter, $resolver, $siv);
+        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter), $resolver, $siv);
 
         $input = new MotulOilInput();
         $input->vehicle = '/garage/vehicles/'.$vehicle->getId();
@@ -101,7 +96,7 @@ final class MotulOilProcessorTest extends TestCase
 
         $processor = new MotulOilProcessor(
             $advisor,
-            $this->createStub(IriConverterInterface::class),
+            new VehicleIriResolver($this->createStub(IriConverterInterface::class)),
             $this->createStub(GarageResolver::class),
             $siv,
         );
@@ -144,15 +139,9 @@ final class MotulOilProcessorTest extends TestCase
         $resolver->method('resolveById')->willReturn($vehicle);
 
         $iriConverter = $this->createStub(IriConverterInterface::class);
-        $iriConverter->method('getResourceFromIri')->willReturn(
-            new class($vehicle->getId()) {
-                public function __construct(public readonly Ulid $id)
-                {
-                }
-            },
-        );
+        $iriConverter->method('getResourceFromIri')->willReturn(GarageVehicle::fromEntity($vehicle));
 
-        $processor = new MotulOilProcessor($advisor, $iriConverter, $resolver, $siv);
+        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter), $resolver, $siv);
 
         $input = new MotulOilInput();
         $input->vehicle = '/garage/vehicles/'.$vehicle->getId();

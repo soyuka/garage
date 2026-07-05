@@ -43,11 +43,6 @@ class GarageResolver
     }
 
     /**
-     * Resolve a vehicle from the shared garage, falling back to a write-through of upstream
-     * fill volumes when a carId is supplied. Returns null on a total miss (no garage row and
-     * no usable upstream data) — the caller turns that into the not_in_catalog contract.
-     */
-    /**
      * Resolve a vehicle straight from its ULID — the read counterpart of addressing a write by @id.
      * Used when the caller already holds the dereferenceable handle (e.g. the dashboard's selected
      * vehicle) and need not re-match on make/model. Returns null when no such row exists.
@@ -57,6 +52,11 @@ class GarageResolver
         return $this->vehicles->find($id);
     }
 
+    /**
+     * Resolve a vehicle from the shared garage, falling back to a write-through of upstream
+     * fill volumes when a carId is supplied. Returns null on a total miss (no garage row and
+     * no usable upstream data) — the caller turns that into the not_in_catalog contract.
+     */
     public function resolve(string $make, string $model, ?int $year, VehicleType $vehicleType, ?int $carId): ?Vehicle
     {
         $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
@@ -95,23 +95,10 @@ class GarageResolver
             }
         }
 
-        // Best-effort enrichment on a plain read: an upstream hiccup (partsapi quota 401, timeout,
-        // missing key) must never 500 the vehicle GET. Swallow it — the card still renders, facts
-        // just stay un-backfilled until the next read finds the catalog reachable.
-        try {
-            $volumes = $this->catalog->fillVolumes($carId);
-        } catch (UpstreamException|BudgetExhaustedException|MissingApiKeyException $e) {
-            $this->logger->warning('catalog spec backfill skipped: {reason}', [
-                'reason' => $e->getMessage(),
-                'kType' => $carId,
-                'exception' => $e,
-            ]);
-
-            return false;
-        }
-
-        $facts = $this->fillVolumeFactMapper->toFacts($volumes);
-        if ([] === $facts) {
+        // Best-effort enrichment on a plain read: an upstream hiccup must never 500 the vehicle GET.
+        // A null facts result (upstream down or empty) leaves the card un-backfilled until the next read.
+        $facts = $this->fetchCatalogFacts($carId, 'catalog spec backfill skipped: {reason}');
+        if (null === $facts) {
             return false;
         }
 
@@ -179,23 +166,10 @@ class GarageResolver
 
     private function writeThroughFillVolumes(string $make, string $model, ?int $year, VehicleType $vehicleType, int $carId): ?Vehicle
     {
-        // Same contract as backfillCatalogSpecs: an upstream hiccup (partsapi quota 401, timeout,
-        // missing key) is a catalog MISS, not a 500. Return null → the caller maps it to
-        // not_in_catalog, exactly as a genuine empty fill-volume response would.
-        try {
-            $volumes = $this->catalog->fillVolumes($carId);
-        } catch (UpstreamException|BudgetExhaustedException|MissingApiKeyException $e) {
-            $this->logger->warning('fill-volume write-through skipped: {reason}', [
-                'reason' => $e->getMessage(),
-                'kType' => $carId,
-                'exception' => $e,
-            ]);
-
-            return null;
-        }
-
-        $facts = $this->fillVolumeFactMapper->toFacts($volumes);
-        if ([] === $facts) {
+        // Same contract as backfillCatalogSpecs: an upstream hiccup is a catalog MISS, not a 500.
+        // A null facts result → the caller maps it to not_in_catalog, like a genuine empty response.
+        $facts = $this->fetchCatalogFacts($carId, 'fill-volume write-through skipped: {reason}');
+        if (null === $facts) {
             return null;
         }
 
@@ -206,6 +180,33 @@ class GarageResolver
         $this->entityManager->flush();
 
         return $vehicle;
+    }
+
+    /**
+     * Fetch the catalog fluid specs for a kType and map them to facts. The shared body of the
+     * create-time write-through and the read-time backfill: an upstream hiccup (partsapi quota 401,
+     * timeout, missing key) is swallowed as a MISS — logged under $skipReason (a message template with
+     * a {reason} placeholder) and returned as null, never thrown. An empty spec sheet is also null.
+     *
+     * @return list<array{key: string, value: string, unit: string|null}>|null
+     */
+    private function fetchCatalogFacts(int $carId, string $skipReason): ?array
+    {
+        try {
+            $volumes = $this->catalog->fillVolumes($carId);
+        } catch (UpstreamException|BudgetExhaustedException|MissingApiKeyException $e) {
+            $this->logger->warning($skipReason, [
+                'reason' => $e->getMessage(),
+                'kType' => $carId,
+                'exception' => $e,
+            ]);
+
+            return null;
+        }
+
+        $facts = $this->fillVolumeFactMapper->toFacts($volumes);
+
+        return [] === $facts ? null : $facts;
     }
 
     /**

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use ApiPlatform\Metadata\Exception\ItemNotFoundException;
-use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\MotulOilInput;
@@ -13,6 +11,7 @@ use App\Entity\Vehicle;
 use App\Exception\UpstreamException;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
+use App\Garage\VehicleIriResolver;
 use App\Motul\MotulOilAdvisor;
 use App\Siv\SivClient;
 use Mcp\Schema\Result\CallToolResult;
@@ -34,7 +33,7 @@ final class MotulOilProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly MotulOilAdvisor $advisor,
-        private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleIriResolver $iriResolver,
         private readonly GarageResolver $resolver,
         private readonly SivClient $siv,
     ) {
@@ -53,11 +52,7 @@ final class MotulOilProcessor implements ProcessorInterface
             try {
                 return ToolResult::of($this->advisor->adviseVariant($motulId));
             } catch (UpstreamException $e) {
-                return ToolResult::of([
-                    'status' => 'upstream_error',
-                    'query' => $motulId,
-                    'reason' => $e->getMessage(),
-                ]);
+                return $this->upstreamError($motulId, $e);
             }
         }
 
@@ -89,21 +84,23 @@ final class MotulOilProcessor implements ProcessorInterface
         try {
             return ToolResult::of($this->advisor->advise($search, $year, $engine));
         } catch (UpstreamException $e) {
-            return ToolResult::of([
-                'status' => 'upstream_error',
-                'query' => $search,
-                'reason' => $e->getMessage(),
-            ]);
+            return $this->upstreamError($search, $e);
         }
+    }
+
+    private function upstreamError(string $query, UpstreamException $e): CallToolResult
+    {
+        return ToolResult::of([
+            'status' => 'upstream_error',
+            'query' => $query,
+            'reason' => $e->getMessage(),
+        ]);
     }
 
     private function resolveVehicle(string $iri): ?Vehicle
     {
-        try {
-            $resource = $this->iriConverter->getResourceFromIri($iri);
-        } catch (ItemNotFoundException) {
-            return null;
-        } catch (\Throwable) {
+        $resource = $this->iriResolver->resolveResource($iri);
+        if ($resource instanceof CallToolResult) {
             return null;
         }
 

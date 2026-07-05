@@ -16,8 +16,10 @@ use App\Entity\Vehicle;
  *
  * No "refused" status: patching a vehicle's own columns carries no fact-precedence rule.
  */
-final readonly class UpdateVehicleOutcome
+final readonly class UpdateVehicleOutcome implements WriteOutcome
 {
+    use WriteOutcomeToolResult;
+
     /**
      * @param list<Vehicle> $candidates
      */

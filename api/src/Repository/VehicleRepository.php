@@ -34,12 +34,10 @@ final class VehicleRepository extends ServiceDocumentRepository
      */
     public function findByIdentity(string $make, string $model, VehicleType $vehicleType, ?int $year = null): ?Vehicle
     {
-        $qb = $this->createQueryBuilder()
+        $qb = $this->baseQuery()
             ->field('make')->equals($make)
             ->field('model')->equals($model)
             ->field('vehicleType')->equals($vehicleType->value)
-            ->field('owner')->equals($this->owner->current())
-            ->field('deletedAt')->equals(null)
             ->limit(1);
 
         if (null !== $year) {
@@ -61,10 +59,8 @@ final class VehicleRepository extends ServiceDocumentRepository
      */
     public function findCandidates(string $make, string $model, VehicleType $vehicleType, ?int $carId, ?string $plate, ?string $vin): array
     {
-        $qb = $this->createQueryBuilder()
-            ->field('owner')->equals($this->owner->current())
+        $qb = $this->baseQuery()
             ->field('vehicleType')->equals($vehicleType->value)
-            ->field('deletedAt')->equals(null)
             ->sort('addedAt', 'desc');
 
         $match = [$qb->expr()->field('model')->equals($model)];
@@ -93,10 +89,8 @@ final class VehicleRepository extends ServiceDocumentRepository
      */
     public function findByKType(int $kType): array
     {
-        return array_values($this->createQueryBuilder()
-            ->field('owner')->equals($this->owner->current())
+        return array_values($this->baseQuery()
             ->field('kType')->equals($kType)
-            ->field('deletedAt')->equals(null)
             ->sort('addedAt', 'desc')
             ->getQuery()->execute()->toArray());
     }
@@ -136,9 +130,7 @@ final class VehicleRepository extends ServiceDocumentRepository
 
     private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType): Builder
     {
-        $qb = $this->createQueryBuilder()
-            ->field('owner')->equals($this->owner->current())
-            ->field('deletedAt')->equals(null);
+        $qb = $this->baseQuery();
 
         if (null !== $make) {
             $qb->field('make')->equals($make);
@@ -153,5 +145,16 @@ final class VehicleRepository extends ServiceDocumentRepository
         }
 
         return $qb;
+    }
+
+    /**
+     * The tenancy floor every lookup shares: scoped to the current owner and excluding soft-deleted
+     * rows. Callers layer their own fields/sort/limit on top.
+     */
+    private function baseQuery(): Builder
+    {
+        return $this->createQueryBuilder()
+            ->field('owner')->equals($this->owner->current())
+            ->field('deletedAt')->equals(null);
     }
 }

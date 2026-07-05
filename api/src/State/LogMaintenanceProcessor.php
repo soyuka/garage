@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use ApiPlatform\Metadata\Exception\ItemNotFoundException;
-use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\LogMaintenanceInput;
 use App\Entity\MaintenanceRecord;
 use App\Garage\ToolResult;
+use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
 use App\Maintenance\MaintenanceRecorder;
@@ -31,7 +30,7 @@ final class LogMaintenanceProcessor implements ProcessorInterface
 {
     public function __construct(
         private readonly MaintenanceRecorder $recorder,
-        private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleIriResolver $iriResolver,
         private readonly VehicleSummaryView $summaryView,
         private readonly RecordView $recordView,
         private readonly DomainPublisher $publisher,
@@ -40,11 +39,11 @@ final class LogMaintenanceProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        if (null === $data->vehicle && (null === $data->make || null === $data->model)) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
-            ]);
+        if (null === $data->vehicle) {
+            $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
+            if (null !== $guard) {
+                return $guard;
+            }
         }
 
         if ([] === $data->items) {
@@ -56,19 +55,11 @@ final class LogMaintenanceProcessor implements ProcessorInterface
 
         $vehicleId = null;
         if (null !== $data->vehicle) {
-            try {
-                $vehicleId = $this->iriConverter->getResourceFromIri($data->vehicle)->id;
-            } catch (ItemNotFoundException) {
-                return ToolResult::of([
-                    'status' => 'not_found',
-                    'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle),
-                ]);
-            } catch (\Throwable) {
-                return ToolResult::of([
-                    'status' => 'invalid_input',
-                    'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $data->vehicle),
-                ]);
+            $resolved = $this->iriResolver->resolve($data->vehicle);
+            if ($resolved instanceof CallToolResult) {
+                return $resolved;
             }
+            $vehicleId = $resolved;
         }
 
         $outcome = $this->recorder->log(
@@ -94,24 +85,22 @@ final class LogMaintenanceProcessor implements ProcessorInterface
             addedBy: $data->addedBy,
         );
 
-        return match ($outcome->status) {
-            'ambiguous' => ToolResult::of([
-                'status' => 'ambiguous_match',
-                'reason' => 'One or more stored vehicles may be the same one. Re-call log_maintenance with vehicle set to the matching candidate\'s @id, or pass confirmNew:true to log against a new vehicle.',
-                'candidates' => array_map($this->summaryView->toArray(...), $outcome->candidates),
-            ]),
-            'not_found' => ToolResult::of([
-                'status' => 'not_found',
-                'reason' => sprintf('No vehicle %s in the garage.', $outcome->vehicleId),
-            ]),
-            default => $this->publishedRecord($outcome->record),
-        };
+        $error = $outcome->toToolResult(
+            $this->summaryView,
+            'One or more stored vehicles may be the same one. Re-call log_maintenance with vehicle set to the matching candidate\'s @id, or pass confirmNew:true to log against a new vehicle.',
+        );
+        if (null !== $error) {
+            return $error;
+        }
+
+        return $this->publishedRecord($outcome->record);
     }
 
     private function publishedRecord(MaintenanceRecord $record): CallToolResult
     {
-        // Logging a service can auto-close a matching open task; publishing the whole vehicle ships
-        // that updated checklist alongside the new history entry in one frame.
+        // Logging a service can auto-close a matching open task and shift the forecast; publishing the
+        // vehicle ships the recomputed facts/health badge. The checklist itself is a separate
+        // subresource (GET /garage/vehicles/{id}/planned-tasks) the dashboard refetches, not in this frame.
         $this->publisher->publishVehicle($record->getVehicle());
 
         return ToolResult::of([

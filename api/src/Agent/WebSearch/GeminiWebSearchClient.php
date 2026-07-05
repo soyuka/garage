@@ -20,15 +20,8 @@ use Symfony\AI\Platform\PlatformInterface;
  * Wired against the plain `ai.platform.gemini` (no decorator): the per-turn search cap is enforced by
  * {@see WebSearchTool}/{@see \App\Agent\WebSearchBudget}, not by this side call.
  */
-final readonly class GeminiWebSearchClient implements WebSearchClient
+final readonly class GeminiWebSearchClient extends AbstractWebSearchClient
 {
-    private const string SYSTEM = <<<'PROMPT'
-        You are a web research assistant for a vehicle-maintenance app. Use Google Search to find
-        current, factual information answering the query, then reply with a concise factual answer
-        grounded in what you found. Prefer manufacturer/OEM and authoritative sources. Reply in French.
-        Do not ask questions and do not add caveats about being an AI — just give the grounded answer.
-        PROMPT;
-
     public function __construct(
         private PlatformInterface $platform,
         private string $model,
@@ -36,11 +29,16 @@ final readonly class GeminiWebSearchClient implements WebSearchClient
     ) {
     }
 
+    protected function searchToolPhrase(): string
+    {
+        return 'Google Search';
+    }
+
     public function search(string $query): WebSearchResult
     {
         $result = $this->platform->invoke(
             $this->model,
-            new MessageBag(Message::forSystem(self::SYSTEM), Message::ofUser($query)),
+            new MessageBag(Message::forSystem($this->systemPrompt()), Message::ofUser($query)),
             ['server_tools' => ['google_search' => true]],
         );
 
@@ -51,11 +49,8 @@ final readonly class GeminiWebSearchClient implements WebSearchClient
         // grounding) leaves no trace in the WebSearchResult, so the journal is the only place it survives.
         $this->tracer?->recordWebSearchResponse('gemini', $query, $data);
 
-        // An `error` envelope (e.g. HTTP 503 "experiencing high demand") carries no candidates — distilling
-        // it would yield a blank answer indistinguishable from "the web had nothing". Flag it unavailable so
-        // the tool tells the orchestrator the service failed, not that the search came back empty.
-        if (isset($data['error'])) {
-            return new WebSearchResult('', unavailable: true);
+        if (null !== ($unavailable = $this->errorEnvelope($data))) {
+            return $unavailable;
         }
 
         return new WebSearchResult($this->extractAnswer($data), $this->extractCitations($data));
@@ -84,17 +79,18 @@ final readonly class GeminiWebSearchClient implements WebSearchClient
      */
     private function extractCitations(array $data): array
     {
-        $seen = [];
-        $citations = [];
-        foreach ($data['candidates'][0]['groundingMetadata']['groundingChunks'] ?? [] as $chunk) {
-            $url = (string) ($chunk['web']['uri'] ?? '');
-            if ('' === $url || isset($seen[$url])) {
-                continue;
-            }
-            $seen[$url] = true;
-            $citations[] = new Citation($url, (string) ($chunk['web']['title'] ?? ''));
-        }
+        return $this->dedupeCitations($this->sources($data));
+    }
 
-        return $citations;
+    /**
+     * @param array<string, mixed> $data
+     *
+     * @return iterable<array{url: string, title: string}>
+     */
+    private function sources(array $data): iterable
+    {
+        foreach ($data['candidates'][0]['groundingMetadata']['groundingChunks'] ?? [] as $chunk) {
+            yield ['url' => (string) ($chunk['web']['uri'] ?? ''), 'title' => (string) ($chunk['web']['title'] ?? '')];
+        }
     }
 }

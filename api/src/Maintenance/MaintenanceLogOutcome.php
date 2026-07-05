@@ -6,6 +6,8 @@ namespace App\Maintenance;
 
 use App\Entity\MaintenanceRecord;
 use App\Entity\Vehicle;
+use App\Garage\WriteOutcome;
+use App\Garage\WriteOutcomeToolResult;
 
 /**
  * Result of a log_maintenance attempt:
@@ -17,8 +19,10 @@ use App\Entity\Vehicle;
  * Mirrors App\Garage\PlanMaintenanceOutcome: both share the dedup decision via VehicleWriteResolver,
  * differing only in what they write (a record here, a planned item there).
  */
-final readonly class MaintenanceLogOutcome
+final readonly class MaintenanceLogOutcome implements WriteOutcome
 {
+    use WriteOutcomeToolResult;
+
     /**
      * @param list<Vehicle> $candidates
      */

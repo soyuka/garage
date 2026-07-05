@@ -16,8 +16,10 @@ use App\Entity\Vehicle;
  *
  * Mirrors {@see PlanMaintenanceOutcome}.
  */
-final readonly class SetScheduleOutcome
+final readonly class SetScheduleOutcome implements WriteOutcome
 {
+    use WriteOutcomeToolResult;
+
     /**
      * @param list<Vehicle>         $candidates
      * @param list<ServiceInterval> $intervals

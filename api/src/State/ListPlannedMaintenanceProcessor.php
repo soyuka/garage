@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
@@ -12,6 +11,7 @@ use App\ApiResource\GarageVehicle;
 use App\Dto\ListPlannedMaintenanceInput;
 use App\Entity\Vehicle;
 use App\Garage\ToolResult;
+use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
 use App\Maintenance\PlannedTaskView;
 use App\Repository\VehicleRepository;
@@ -33,6 +33,7 @@ final class ListPlannedMaintenanceProcessor implements ProcessorInterface
         private readonly VehicleRepository $vehicles,
         private readonly PlannedTaskView $taskView,
         private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleIriResolver $iriResolver,
     ) {
     }
 
@@ -48,27 +49,22 @@ final class ListPlannedMaintenanceProcessor implements ProcessorInterface
         // Addressed by @id (e.g. the dashboard's selected vehicle): dereference the handle straight
         // to its row, so make/model are optional.
         if (null !== $data->vehicle) {
-            try {
-                $resource = $this->iriConverter->getResourceFromIri($data->vehicle);
-            } catch (ItemNotFoundException) {
-                return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle)]);
-            } catch (\Throwable) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $data->vehicle)]);
+            $resolved = $this->iriResolver->resolve($data->vehicle);
+            if ($resolved instanceof CallToolResult) {
+                return $resolved;
             }
 
-            $vehicle = $this->vehicles->find($resource->id);
+            $vehicle = $this->vehicles->find($resolved);
             if (null === $vehicle) {
-                return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $data->vehicle)]);
+                return $this->iriResolver->notFound($data->vehicle);
             }
 
             return $this->okResult($vehicle);
         }
 
-        if (null === $data->make || null === $data->model) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
-            ]);
+        $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
+        if (null !== $guard) {
+            return $guard;
         }
 
         $vehicle = $this->vehicles->findByIdentity($data->make, $data->model, VehicleType::from($data->vehicleType), $data->year);

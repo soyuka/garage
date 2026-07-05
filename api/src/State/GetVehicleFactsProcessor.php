@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
@@ -14,6 +13,7 @@ use App\Entity\Vehicle;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
+use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
 use App\Maintenance\VehicleFactsProjector;
 use Mcp\Schema\Result\CallToolResult;
@@ -31,6 +31,7 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
         private readonly GarageResolver $resolver,
         private readonly FactView $factView,
         private readonly IriConverterInterface $iriConverter,
+        private readonly VehicleIriResolver $iriResolver,
         private readonly VehicleFactsProjector $factsProjector,
     ) {
     }
@@ -43,11 +44,9 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
             return $this->factsByIri($data->vehicle, $data->keys);
         }
 
-        if (null === $data->make || null === $data->model) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.',
-            ]);
+        $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
+        if (null !== $guard) {
+            return $guard;
         }
 
         $type = VehicleType::from($data->vehicleType);
@@ -83,17 +82,14 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
      */
     private function factsByIri(string $iri, array $keys): CallToolResult
     {
-        try {
-            $resource = $this->iriConverter->getResourceFromIri($iri);
-        } catch (ItemNotFoundException) {
-            return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $iri)]);
-        } catch (\Throwable) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $iri)]);
+        $resolved = $this->iriResolver->resolve($iri);
+        if ($resolved instanceof CallToolResult) {
+            return $resolved;
         }
 
-        $vehicle = $this->resolver->resolveById($resource->id);
+        $vehicle = $this->resolver->resolveById($resolved);
         if (null === $vehicle) {
-            return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No vehicle at %s in the garage.', $iri)]);
+            return $this->iriResolver->notFound($iri);
         }
 
         return $this->okResult($vehicle, $keys, [
