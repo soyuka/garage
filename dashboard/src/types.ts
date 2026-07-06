@@ -99,6 +99,9 @@ export interface MaintenanceRecord {
   notes?: string | null;
   performedBy?: string | null;
   costCents?: number | null; // visit bill total, integer minor units
+  /** Server-derived (Option A): costCents when billed, else the parts sum as an estimate. */
+  effectiveCostCents?: number | null;
+  costSource?: 'bill' | 'estimated' | null;
   currency?: string | null;
   source: string;
 }

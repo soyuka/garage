@@ -13,6 +13,14 @@ function sortedRecords(records: MaintenanceRecord[]): MaintenanceRecord[] {
   return [...records].sort((a, b) => b.performedAt.localeCompare(a.performedAt));
 }
 
+// Effective cost mirrors carnet.ts's rollup: prefer the server-derived effectiveCostCents, fall
+// back to costCents for a record the API hasn't re-serialized with the new field yet.
+function effectiveCost(record: MaintenanceRecord): { cents: number; estimated: boolean } | null {
+  const cents = record.effectiveCostCents ?? record.costCents ?? null;
+  if (cents == null) return null;
+  return { cents, estimated: record.costSource === 'estimated' };
+}
+
 export function HistoryLog({
   open,
   onClose,
@@ -56,41 +64,49 @@ export function HistoryLog({
           <p className="at-hlog-empty">Aucun entretien enregistré.</p>
         ) : (
           <ol className="at-hlog-entries">
-            {visits.map((record, i) => (
-              <li
-                key={record.id}
-                className="at-hlog-entry"
-                style={reduced ? undefined : { animationDelay: `${Math.min(i, 8) * 45}ms` }}
-              >
-                <div className="at-hlog-entry-head">
-                  <span className="at-hlog-date">{formatDate(record.performedAt)}</span>
-                  <span className="at-hlog-title">{visitTitle(record)}</span>
-                  {record.costCents != null && <span className="at-hlog-cost">{formatEuros(record.costCents)}</span>}
-                </div>
-                <div className="at-hlog-entry-meta">
-                  {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit)}</span>}
-                  {record.performedBy && <span>{record.performedBy}</span>}
-                </div>
-                {record.items.length > 0 && (
-                  <ul className="at-hlog-items">
-                    {record.items.map((it, j) => (
-                      <li key={j} className="at-hlog-item">
-                        <span className="at-hlog-item-name">{it.label?.trim() || serviceLabel(it.type)}</span>
-                        {it.parts.length > 0 && (
-                          <span className="at-hlog-parts">
-                            {it.parts
-                              .map((p) => [p.brand, p.ref || p.label].filter(Boolean).join(' '))
-                              .filter(Boolean)
-                              .join(' · ')}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {record.notes && <p className="at-hlog-notes">{record.notes}</p>}
-              </li>
-            ))}
+            {visits.map((record, i) => {
+              const cost = effectiveCost(record);
+              return (
+                <li
+                  key={record.id}
+                  className="at-hlog-entry"
+                  style={reduced ? undefined : { animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                >
+                  <div className="at-hlog-entry-head">
+                    <span className="at-hlog-date">{formatDate(record.performedAt)}</span>
+                    <span className="at-hlog-title">{visitTitle(record)}</span>
+                    {cost && (
+                      <span className="at-hlog-cost">
+                        {cost.estimated ? '≈ ' : ''}
+                        {formatEuros(cost.cents)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="at-hlog-entry-meta">
+                    {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit)}</span>}
+                    {record.performedBy && <span>{record.performedBy}</span>}
+                  </div>
+                  {record.items.length > 0 && (
+                    <ul className="at-hlog-items">
+                      {record.items.map((it, j) => (
+                        <li key={j} className="at-hlog-item">
+                          <span className="at-hlog-item-name">{it.label?.trim() || serviceLabel(it.type)}</span>
+                          {it.parts.length > 0 && (
+                            <span className="at-hlog-parts">
+                              {it.parts
+                                .map((p) => [p.brand, p.ref || p.label].filter(Boolean).join(' '))
+                                .filter(Boolean)
+                                .join(' · ')}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  {record.notes && <p className="at-hlog-notes">{record.notes}</p>}
+                </li>
+              );
+            })}
           </ol>
         )}
       </section>

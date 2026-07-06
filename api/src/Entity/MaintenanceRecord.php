@@ -44,6 +44,9 @@ class MaintenanceRecord
      * (not constructor-promoted) so a legacy document predating this field hydrates to [] instead of
      * leaving a typed property uninitialised — newInstanceWithoutConstructor skips promoted defaults.
      *
+     * A part's `priceCents` is a UNIT price in cents; its line total is `priceCents * qty` (qty
+     * defaults to 1 when absent) — see {@see getEffectiveCostCents()}.
+     *
      * @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     #[ODM\Field(type: 'collection')]
@@ -253,6 +256,46 @@ class MaintenanceRecord
     public function getCostCents(): ?int
     {
         return $this->costCents;
+    }
+
+    /**
+     * The cost to show: the bill total when one was entered, otherwise the parts sum standing in as
+     * an estimate (never a mix of the two — a bill always supersedes the estimate it would refine).
+     * Null only when neither is known, so a caller can tell "free" apart from "unknown".
+     */
+    public function getEffectiveCostCents(): ?int
+    {
+        if (null !== $this->costCents) {
+            return $this->costCents;
+        }
+
+        $partsSum = $this->partsSumCents();
+
+        return $partsSum > 0 ? $partsSum : null;
+    }
+
+    /** Where {@see getEffectiveCostCents()} came from — drives the dashboard's "≈" estimate marker. */
+    public function getCostSource(): ?string
+    {
+        if (null !== $this->costCents) {
+            return 'bill';
+        }
+
+        return $this->partsSumCents() > 0 ? 'estimated' : null;
+    }
+
+    private function partsSumCents(): int
+    {
+        $sum = 0;
+        foreach ($this->items as $item) {
+            // A legacy item hydrated from before the parts field carries no 'parts' key (normaliseItems
+            // only runs on write, not on ODM hydration) — treat it as an unpriced visit.
+            foreach ($item['parts'] ?? [] as $part) {
+                $sum += ($part['priceCents'] ?? 0) * ($part['qty'] ?? 1);
+            }
+        }
+
+        return $sum;
     }
 
     public function getCurrency(): ?string

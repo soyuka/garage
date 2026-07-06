@@ -36,7 +36,12 @@ export function CarnetProjection({
           <div key={r.id} className="at-carnet-row" style={reduced ? undefined : { animationDelay: `${Math.min(i, 3) * 70 + 60}ms` }}>
             <div className="at-carnet-line">
               <span className="at-carnet-date">{formatDate(r.performedAt)}</span>
-              {r.costCents != null && <span className="at-carnet-cost">{formatEuros(r.costCents)}</span>}
+              {r.costCents != null && (
+                <span className="at-carnet-cost">
+                  {r.costSource === 'estimated' ? '≈ ' : ''}
+                  {formatEuros(r.costCents)}
+                </span>
+              )}
             </div>
             <div className="at-carnet-meta">
               {r.items.join(' · ') || '—'}
@@ -46,9 +51,13 @@ export function CarnetProjection({
         ))}
       </div>
       <div className="at-carnet-foot">
-        <span className="at-carnet-total">{formatEuros(model.totalCents)}</span>
+        <span className="at-carnet-total">
+          {model.hasEstimate ? '≈ ' : ''}
+          {formatEuros(model.totalCents)}
+        </span>
         <span className="at-carnet-count">
           {model.count} visite{model.count > 1 ? 's' : ''}
+          {model.unknownCount > 0 ? `, ${model.unknownCount} sans coût` : ''}
         </span>
         {onOpenAll && (
           <button type="button" className="at-carnet-all" onClick={onOpenAll}>

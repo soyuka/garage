@@ -10,14 +10,31 @@ export interface CarnetRow {
   performedAt: string; // YYYY-MM-DD
   usageValue: number | null;
   usageUnit: string | null;
-  costCents: number | null;
+  costCents: number | null; // effective cost: server's effectiveCostCents, else costCents
+  costSource: 'bill' | 'estimated' | null;
   items: string[]; // service item labels (a custom label wins over the derived service label)
 }
 
 export interface CarnetRollup {
   rows: CarnetRow[];
   totalCents: number;
-  count: number;
+  count: number; // total records
+  knownCount: number; // records with a known effective cost
+  unknownCount: number; // records with no known cost at all
+  hasEstimate: boolean; // totalCents includes at least one parts-derived (not billed) cost
+}
+
+// The server derives effectiveCostCents (bill when entered, else a parts-sum estimate — see
+// MaintenanceRecord::getEffectiveCostCents); costCents is the fallback for a record the API hasn't
+// re-serialized with the new field yet.
+function effectiveCostCents(r: MaintenanceRecord): number | null {
+  return r.effectiveCostCents ?? r.costCents ?? null;
+}
+
+// A record predating costSource carried costCents as a hand-entered bill, never an estimate — so a
+// known cost with no explicit source defaults to 'bill'.
+function costSourceOf(r: MaintenanceRecord): 'bill' | 'estimated' | null {
+  return r.costSource ?? (effectiveCostCents(r) != null ? 'bill' : null);
 }
 
 export function rollupCarnet(records: MaintenanceRecord[], limit = 3): CarnetRollup {
@@ -27,9 +44,12 @@ export function rollupCarnet(records: MaintenanceRecord[], limit = 3): CarnetRol
     performedAt: r.performedAt,
     usageValue: r.usageValue ?? null,
     usageUnit: r.usageUnit ?? null,
-    costCents: r.costCents ?? null,
+    costCents: effectiveCostCents(r),
+    costSource: costSourceOf(r),
     items: r.items.map((it) => it.label?.trim() || serviceLabel(it.type)),
   }));
-  const totalCents = records.reduce((sum, r) => sum + (r.costCents ?? 0), 0);
-  return { rows, totalCents, count: records.length };
+  const totalCents = records.reduce((sum, r) => sum + (effectiveCostCents(r) ?? 0), 0);
+  const knownCount = records.filter((r) => effectiveCostCents(r) != null).length;
+  const hasEstimate = records.some((r) => costSourceOf(r) === 'estimated');
+  return { rows, totalCents, count: records.length, knownCount, unknownCount: records.length - knownCount, hasEstimate };
 }

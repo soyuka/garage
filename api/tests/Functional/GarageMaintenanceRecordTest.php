@@ -72,6 +72,54 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         $this->assertSame('2025-06-01', $members[0]['performedAt'], 'newest service first');
     }
 
+    public function testCollectionExposesEffectiveCostAndSource(): void
+    {
+        $client = static::createClient();
+        $iri = $this->seedVehicleIri();
+
+        // Bill entered → effective cost is the bill, source "bill".
+        $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => [
+                'performedAt' => '2025-09-12',
+                'items' => [['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'price' => 12.5, 'qty' => 5]]]],
+                'cost' => 89.0,
+            ],
+        ]);
+
+        // No bill, priced parts → effective cost is the parts sum, source "estimated".
+        $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => [
+                'performedAt' => '2025-08-01',
+                'items' => [['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'price' => 12.5, 'qty' => 5]]]],
+            ],
+        ]);
+
+        // No bill, no priced parts → both fields null.
+        $client->request('POST', $iri.'/maintenance-records', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['type' => 'inspection', 'performedAt' => '2025-07-01'],
+        ]);
+
+        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $this->assertCount(3, $members);
+
+        $byDate = [];
+        foreach ($members as $member) {
+            $byDate[$member['performedAt']] = $member;
+        }
+
+        $this->assertSame(8900, $byDate['2025-09-12']['effectiveCostCents']);
+        $this->assertSame('bill', $byDate['2025-09-12']['costSource']);
+
+        $this->assertSame(6250, $byDate['2025-08-01']['effectiveCostCents']);
+        $this->assertSame('estimated', $byDate['2025-08-01']['costSource']);
+
+        $this->assertNull($byDate['2025-07-01']['effectiveCostCents']);
+        $this->assertNull($byDate['2025-07-01']['costSource']);
+    }
+
     public function testPostRejectsBlankType(): void
     {
         $client = static::createClient();

@@ -42,6 +42,10 @@ final class MaintenanceRecorder
      * task already archived is no longer returned by completedUnarchived(), so a re-run records
      * nothing. Dismissed tasks are excluded — abandoned work is never credited.
      *
+     * $costCents is an OPTIONAL bill total for the filed visit; when the caller has none (the common
+     * case today — archiving carries no bill entry), the record's cost is left null and
+     * {@see MaintenanceRecord::getEffectiveCostCents()} derives an estimate from the tasks' parts.
+     *
      * @return list<MaintenanceRecord> the records just created (empty when nothing was pending)
      */
     public function archiveCompletedTasks(
@@ -49,6 +53,7 @@ final class MaintenanceRecorder
         \DateTimeImmutable $performedAt,
         string $source = 'user',
         ?string $addedBy = null,
+        ?int $costCents = null,
     ): array {
         $tasks = $this->plannedTasks->completedUnarchived($vehicle);
         if ([] === $tasks) {
@@ -73,6 +78,7 @@ final class MaintenanceRecorder
             source: $source,
             usageValue: $usageValue,
             usageUnit: $usageUnit,
+            costCents: $costCents,
             addedBy: $addedBy,
             owner: $vehicle->getOwner(),
         );

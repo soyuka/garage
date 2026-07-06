@@ -85,6 +85,10 @@ final class GarageMaintenanceRecord
     public ?string $notes = null;
     public ?string $performedBy = null;
     public ?int $costCents = null;
+    // Derived (Option A): the bill total when entered, else the parts sum as an estimate — the value
+    // the dashboard should render instead of re-deriving it from costCents + items itself.
+    public ?int $effectiveCostCents = null;
+    public ?string $costSource = null;
     public ?string $currency = null;
     public string $source;
     public string $addedAt;
@@ -106,6 +110,8 @@ final class GarageMaintenanceRecord
         $resource->notes = $record->getNotes();
         $resource->performedBy = $record->getPerformedBy();
         $resource->costCents = $record->getCostCents();
+        $resource->effectiveCostCents = $record->getEffectiveCostCents();
+        $resource->costSource = $record->getCostSource();
         $resource->currency = $record->getCurrency();
         $resource->source = $record->getSource();
         $resource->addedAt = $record->getAddedAt()->format(\DateTimeInterface::ATOM);
