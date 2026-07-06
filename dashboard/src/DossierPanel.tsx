@@ -159,6 +159,10 @@ function RecordCard({
   onChanged: () => void;
   onError: (m: string) => void;
 }) {
+  // Effective cost mirrors the carnet: the bill when entered, else the parts-sum estimate the server
+  // derived (marked ≈). Falls back to costCents for a record the API hasn't re-serialized yet.
+  const costCents = record.effectiveCostCents ?? record.costCents ?? null;
+  const estimated = record.costSource === 'estimated';
   return (
     <div className="at-rec">
       <div className="at-rec-head">
@@ -172,7 +176,7 @@ function RecordCard({
       </div>
       <div className="at-rec-meta">
         {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit)}</span>}
-        {record.costCents != null && <span>{formatEuros(record.costCents)}</span>}
+        {costCents != null && <span>{estimated ? '≈ ' : ''}{formatEuros(costCents)}</span>}
         {record.performedBy && <span>{record.performedBy}</span>}
       </div>
       {record.items.length > 0 && (
