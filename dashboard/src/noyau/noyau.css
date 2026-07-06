@@ -76,7 +76,6 @@
   width: 138px;
   height: 138px;
   transition: transform 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  cursor: pointer;
   filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.55));
 }
 .noyau-stage[data-phase='working'] .noyau-orb { transform: translateY(-12px); }
@@ -268,95 +267,6 @@
   to { opacity: 0; transform: translateY(-6px); }
 }
 
-/* ── typed tool-step chips (C1) ──────────────────────────────────────────────
-   One chip per tool call while Le Noyau works: a SHAPE glyph + a short mono verb, cyan HAIRLINE (the
-   agent's signature — never a fill). Tier-2 vibrancy (opacity .72 = --at-vib-2) so they stay quieter
-   than the narration line above. They etch in on arrival, shimmer while running, hold steady when
-   done, and collapse toward the journal toggle on turn end (the data already lives in the drawer). */
-.noyau-steps {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 5px;
-  margin-top: 8px;
-  max-width: 240px;
-}
-.noyau-step {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 8px 2px 6px;
-  border: 1px solid rgba(34, 211, 238, 0.4); /* --at-cyan hairline — the agent signature, not a fill */
-  border-radius: 999px;
-  background: rgba(10, 11, 14, 0.9); /* scrim law: >=.86 dark ground (the cyan stays a hairline, not a fill) */
-  color: var(--nx-mono);
-  font-size: 10px;
-  letter-spacing: 0.02em;
-  line-height: 1.5;
-  opacity: 0.72; /* tier-2: chips yield to the narration line */
-  animation: nx-step-in 300ms ease-out; /* etch-in on appear */
-}
-.noyau-step svg { display: block; flex: none; }
-.noyau-step-label { white-space: nowrap; }
-@keyframes nx-step-in {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 0.72; transform: translateY(0); }
-}
-/* running: the glyph shimmers while the tool is in flight (the ellipsis in the label also says "…") */
-.noyau-step[data-state='running'] svg { animation: nx-step-shimmer 1.5s ease-in-out infinite; }
-@keyframes nx-step-shimmer { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
-/* done: steady, a touch quieter (tier-3) */
-.noyau-step[data-state='done'] { opacity: 0.55; }
-/* error: agent-lifecycle failure — amber "échec" (NOT signal red; matches the journal's failed tone) */
-.noyau-step[data-state='error'] {
-  border-color: rgba(252, 211, 77, 0.55); /* --nx-amber-hi */
-  color: var(--nx-amber-hi);
-  opacity: 0.92;
-}
-/* turn end: linger, then the whole row collapses down toward the journal toggle */
-.noyau-stage[data-phase='done'] .noyau-steps { animation: nx-steps-collapse 460ms ease 1040ms both; }
-@keyframes nx-steps-collapse {
-  from { opacity: 1; transform: translateY(0); }
-  to { opacity: 0; transform: translateY(10px); }
-}
-
-/* ── journal drawer ─────────────────────────────────────────────────────── */
-.noyau-journal-toggle {
-  margin-top: 8px;
-  background: none;
-  border: 1px solid rgba(180, 196, 210, 0.2);
-  border-radius: 4px;
-  color: var(--nx-mono);
-  font: inherit;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 3px 8px;
-  cursor: pointer;
-}
-.noyau-journal {
-  margin-top: 8px;
-  width: 240px;
-  max-height: 200px;
-  overflow-y: auto;
-  border: 1px solid rgba(180, 196, 210, 0.16);
-  border-radius: 8px;
-  background: rgba(10, 11, 14, 0.78);
-  backdrop-filter: blur(8px);
-  padding: 8px 10px;
-  font-size: 11px;
-  color: var(--nx-mono);
-}
-.noyau-journal-row { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; line-height: 1.4; }
-.noyau-journal-glyph { width: 12px; text-align: center; opacity: 0.85; }
-.noyau-journal-glyph[data-kind='pulse'] { color: var(--nx-cyan-hi); }
-.noyau-journal-glyph[data-kind='alarm'] { color: var(--nx-red-hi); }
-.noyau-journal-glyph[data-kind='done'] { color: var(--nx-emissive); }
-.noyau-journal-msg { flex: 1; }
-.noyau-journal-sig { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; opacity: 0.75; }
-.noyau-journal-elapsed { opacity: 0.5; font-variant-numeric: tabular-nums; }
-.noyau-journal-empty { opacity: 0.5; }
-
 /* ── reduced motion — animations collapse to instant; aperture stays a static SHAPE cue ── */
 @media (prefers-reduced-motion: reduce) {
   .noyau-orb, .noyau-pupil, .noyau-iris, .noyau-scan, .noyau-glint, .noyau-rim, .noyau-fault,
@@ -366,10 +276,6 @@
   .noyau-stage[data-phase='listening'] .noyau-scan,
   .noyau-stage[data-phase='idle'] .noyau-scan { opacity: 0.15; }
   .noyau-pulse-ring, .noyau-exhale, .noyau-narration-exit { display: none; }
-  /* chips: appear/disappear instantly, no shimmer, no collapse (they just vanish on settle) */
-  .noyau-step, .noyau-step svg, .noyau-steps { animation: none !important; opacity: 0.72; }
-  .noyau-step[data-state='done'] { opacity: 0.55; }
-  .noyau-step[data-state='error'] { opacity: 0.92; }
 }
 .noyau-stage[data-reduced='true'] .noyau-orb,
 .noyau-stage[data-reduced='true'] .noyau-pupil,
@@ -387,6 +293,3 @@
 .noyau-stage[data-reduced='true'] .noyau-pulse-ring,
 .noyau-stage[data-reduced='true'] .noyau-exhale,
 .noyau-stage[data-reduced='true'] .noyau-narration-exit { display: none; }
-.noyau-stage[data-reduced='true'] .noyau-step,
-.noyau-stage[data-reduced='true'] .noyau-step svg,
-.noyau-stage[data-reduced='true'] .noyau-steps { animation: none !important; }

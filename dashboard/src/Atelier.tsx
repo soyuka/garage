@@ -37,7 +37,7 @@ import { defaultUsageUnit } from './edit';
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from './router';
 import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from './useMercure';
 import { ParcLot } from './scene/ParcLot';
-import { SceneView } from './scene/SceneView';
+import { SceneView, type QuickAction } from './scene/SceneView';
 import type { TruthPanelEdit } from './floor/TruthPanel';
 import { JournalPanel } from './JournalPanel';
 import { DossierPanel } from './DossierPanel';
@@ -439,9 +439,9 @@ export function Atelier() {
   // Two families: the OWNED-data surfaces open as full editable popups (Données = the car's database of
   // facts — read/edit/delete everything; Historique = every visit), the FETCHED external reads project
   // into the agent's right column. Built only when a hero bundle is open (see the hero route).
-  const buildQuickActions = (b: VehicleBundle): { label: string; disabled?: boolean; onClick: () => void }[] => {
+  const buildQuickActions = (b: VehicleBundle): QuickAction[] => {
     const busy = state.phase === 'working';
-    const chips: { label: string; disabled?: boolean; onClick: () => void }[] = [];
+    const chips: QuickAction[] = [];
     chips.push({
       label: 'Données',
       disabled: busy,
@@ -456,6 +456,7 @@ export function Atelier() {
       chips.push({
         label: 'Historique',
         disabled: busy,
+        zone: 'centre',
         onClick: () =>
           runLocalAnswer({
             steps: ['ouverture du carnet…', 'relecture des visites…'],
@@ -469,6 +470,7 @@ export function Atelier() {
       chips.push({
         label: 'Capacités fluides',
         disabled: busy,
+        zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
             steps: ['consultation des capacités…', 'lecture des specs fluides…'],
@@ -505,6 +507,7 @@ export function Atelier() {
       chips.push({
         label: 'Fiche technique',
         disabled: busy,
+        zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
             steps: ['lecture de la carte grise…', 'préparation de la fiche technique…'],
@@ -527,6 +530,7 @@ export function Atelier() {
       chips.push({
         label: 'Carnet · dépenses',
         disabled: busy,
+        zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
             steps: ['lecture du carnet…', 'calcul des dépenses…'],

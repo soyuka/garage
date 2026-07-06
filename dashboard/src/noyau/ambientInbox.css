@@ -1,5 +1,5 @@
 /* ── the "à décider" ambient inbox leaf (C2) ─────────────────────────────────
-   Opens UPWARD from Le Noyau (anchored in .at-scene-noyau, the positioned/scaled dock slot). Not a modal,
+   Opens UPWARD from Le Noyau (anchored in .at-scene-socket, the unscaled console orb slot). Not a modal,
    not a drawer — a compact queue leaf. Scrim law: glass fill >= .86 so the mono rows stay legible over the
    bloomed rotating car. Cyan is rationed to the head hairline ONLY (the Noyau's attribution). */
 .at-inbox {

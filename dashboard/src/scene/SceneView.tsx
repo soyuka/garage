@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
+import { NoyauVoice } from '../noyau/NoyauVoice';
 import { AmbientInbox } from '../noyau/AmbientInbox';
 import type { DecisionItem, NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
@@ -35,6 +36,10 @@ export interface QuickAction {
   label: string;
   onClick: () => void;
   disabled?: boolean;
+  /** Truthful landing zone for the chip micro-map — where the chip's effect actually renders. Set this
+   * ONLY after checking the real render target (never copy a neighbor's value); omit when the
+   * destination is ambiguous or rung-dependent — a missing zone renders no map, a wrong one lies. */
+  zone?: 'rail' | 'centre' | 'colonne';
 }
 
 interface SceneViewProps {
@@ -93,6 +98,18 @@ interface SceneViewProps {
   onCloseHistory?: () => void;
 }
 
+/** The chip destination micro-map: 3 neutral cells in a fixed rail/centre/colonne order, so the eye
+ * learns the mapping positionally. Neutral grey only (brand law) — never cyan/orange/signal. */
+function ChipZoneMap({ zone }: { zone: 'rail' | 'centre' | 'colonne' }) {
+  return (
+    <span className="at-scene-chip-map" aria-hidden="true">
+      <i className="at-scene-chip-cell" data-active={zone === 'rail' || undefined} />
+      <i className="at-scene-chip-cell" data-active={zone === 'centre' || undefined} />
+      <i className="at-scene-chip-cell" data-active={zone === 'colonne' || undefined} />
+    </span>
+  );
+}
+
 export function SceneView({
   bundle,
   rung,
@@ -138,14 +155,17 @@ export function SceneView({
   // close, so without restoration a keyboard/AT user is dumped onto <body>. Save the opener at open time,
   // and on close return focus to it if still connected, else to a stable Le Noyau anchor (the muted ember
   // re-entry chip if the queue survives, otherwise the orb) — never nothing.
-  const noyauWrapRef = useRef<HTMLDivElement>(null);
+  const consoleRef = useRef<HTMLDivElement>(null);
   const inboxOpenerRef = useRef<HTMLElement | null>(null);
   const inboxWasOpen = useRef(false);
   useEffect(() => {
     if (inboxWasOpen.current && !inboxOpen) {
       const opener = inboxOpenerRef.current;
       if (opener && opener.isConnected) opener.focus();
-      else noyauWrapRef.current?.querySelector<HTMLElement>('.noyau-ember, .noyau-orb')?.focus();
+      // The orb is now `role="img"` with no `tabIndex` (Le Noyau split) — `.focus()` on it is a silent
+      // no-op. Fall back to the composer input, always present and focusable: return the operator to
+      // the thing they type into rather than stranding focus on <body> (WCAG 2.4.3, never nothing).
+      else consoleRef.current?.querySelector<HTMLElement>('.noyau-ember, .at-scene-input')?.focus();
       inboxOpenerRef.current = null;
     }
     inboxWasOpen.current = inboxOpen;
@@ -223,6 +243,17 @@ export function SceneView({
     onSubmit(value);
     e.currentTarget.value = '';
   };
+
+  // The chip rail is a single horizontal line; a mouse wheel only emits deltaY, so translate it to
+  // horizontal scroll (trackpads already scroll X). The stage is a fixed full-bleed surface with no
+  // vertical page scroll, so no preventDefault is needed.
+  const railWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (e.deltaY) e.currentTarget.scrollLeft += e.deltaY;
+  };
+
+  // While Le Noyau works, its live phrase takes the chip rail's slot (same vertical space → the console
+  // never shifts). 'done' auto-settles back to idle (useNoyau), so this reverts to the chips on its own.
+  const speaking = noyau.phase === 'working' || noyau.phase === 'done';
 
   return (
     <>
@@ -318,65 +349,88 @@ export function SceneView({
         </>
       )}
 
-      <div className={`at-scene-dock${factsDrawerOpen ? ' at-scene-dock--top' : historyOpen ? ' at-scene-dock--side' : ''}`}>
-        {cta && !showManifest && onCtaInstruction && onCtaPatch && onCtaDismiss && (
-          <CtaCard cta={cta} onInstruction={onCtaInstruction} onPatch={onCtaPatch} onDismiss={onCtaDismiss} reduced={reduced} />
-        )}
-        <div className="at-scene-noyau" ref={noyauWrapRef}>
-          <Noyau
-            state={noyau}
-            reduced={reduced}
-            onClearEmber={onClearEmber}
-            onEmberActivate={() => {
-              // Capture the opener BEFORE the state mutation so focus can return here on close.
-              inboxOpenerRef.current = document.activeElement as HTMLElement | null;
-              setInboxOpen(true);
-              onClearEmber(); // opening the inbox mutes the badge (but keeps the queue)
-            }}
-          />
-          <AmbientInbox
-            open={inboxOpen}
-            queue={noyau.queue}
-            reduced={reduced}
-            onClose={() => setInboxOpen(false)}
-            onResolve={(id) => onResolveDecision?.(id)}
-            onReviewInstruction={onCtaInstruction}
-            onReviewPatch={onCtaPatch}
-            onSchedule={onScheduleDecision}
-          />
-        </div>
-        {overlayOpen ? (
-          <div className="at-scene-chips">
-            {contextChips.map((qa, i) => (
-              <button key={i} type="button" className="at-scene-chip" onClick={qa.onClick}>
-                {qa.label}
-              </button>
-            ))}
+      {/* The dock hides while Le Carnet (a true aria-modal popup) owns the screen — relocating an
+          interactive console beside a modal is inconsistent; the modal carries its own close. The
+          bottom Données drawer is a sheet, so the dock floats above it (--top). */}
+      {!historyOpen && (
+        <div className={`at-scene-dock${factsDrawerOpen ? ' at-scene-dock--top' : ''}`}>
+          {/* 1. the rail slot — holds EITHER the chip rail OR (while the agent works) Le Noyau's live
+              phrase, in the SAME vertical space, so swapping never shifts the console below. */}
+          <div className="at-scene-rail-slot">
+            {speaking ? (
+              <NoyauVoice state={noyau} reduced={reduced} />
+            ) : overlayOpen ? (
+              <div className="at-scene-chip-rail" onWheel={railWheel}>
+                <div className="at-scene-chip-rail-track">
+                  {contextChips.map((qa, i) => (
+                    <button key={i} type="button" className="at-scene-chip" onClick={qa.onClick}>
+                      {qa.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              quickActions &&
+              quickActions.length > 0 && (
+                <div className="at-scene-chip-rail" onWheel={railWheel}>
+                  <div className="at-scene-chip-rail-track">
+                    {quickActions.map((qa, i) => (
+                      <button key={i} type="button" className="at-scene-chip" onClick={qa.onClick} disabled={qa.disabled}>
+                        {qa.label}
+                        {qa.zone && <ChipZoneMap zone={qa.zone} />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            )}
           </div>
-        ) : (
-          quickActions && quickActions.length > 0 && (
-            <div className="at-scene-chips">
-              {quickActions.map((qa, i) => (
-                <button key={i} type="button" className="at-scene-chip" onClick={qa.onClick} disabled={qa.disabled}>
-                  {qa.label}
-                </button>
-              ))}
+
+          {/* CTA rises directly above the console/orb, not above the whole dock */}
+          {cta && !showManifest && onCtaInstruction && onCtaPatch && onCtaDismiss && (
+            <CtaCard cta={cta} onInstruction={onCtaInstruction} onPatch={onCtaPatch} onDismiss={onCtaDismiss} reduced={reduced} />
+          )}
+
+          {/* 2. the console capsule — orb socket + input, one object */}
+          <div className="at-scene-console" ref={consoleRef}>
+            <div className="at-scene-socket">
+              <Noyau
+                state={noyau}
+                reduced={reduced}
+                onClearEmber={onClearEmber}
+                onEmberActivate={() => {
+                  // Capture the opener BEFORE the state mutation so focus can return here on close.
+                  inboxOpenerRef.current = document.activeElement as HTMLElement | null;
+                  setInboxOpen(true);
+                  onClearEmber(); // opening the inbox mutes the badge (but keeps the queue)
+                }}
+              />
+              <AmbientInbox
+                open={inboxOpen}
+                queue={noyau.queue}
+                reduced={reduced}
+                onClose={() => setInboxOpen(false)}
+                onResolve={(id) => onResolveDecision?.(id)}
+                onReviewInstruction={onCtaInstruction}
+                onReviewPatch={onCtaPatch}
+                onSchedule={onScheduleDecision}
+              />
             </div>
-          )
-        )}
-        <div className="at-scene-composer">
-          {composerExtras}
-          <input
-            className="at-scene-input"
-            name="composer"
-            aria-label="Parlez à l'atelier"
-            placeholder="Parlez à l'atelier…  (le focus = à l'écoute)"
-            onFocus={() => onComposerFocus?.(true)}
-            onBlur={() => onComposerFocus?.(false)}
-            onKeyDown={handleSubmit}
-          />
+            <div className="at-scene-composer">
+              {composerExtras}
+              <input
+                className="at-scene-input"
+                name="composer"
+                aria-label="Parlez à l'atelier"
+                placeholder="Parlez à l'atelier…"
+                onFocus={() => onComposerFocus?.(true)}
+                onBlur={() => onComposerFocus?.(false)}
+                onKeyDown={handleSubmit}
+              />
+            </div>
+          </div>
         </div>
-      </div>
+      )}
 
       {bundle && (
         <FactsDrawer

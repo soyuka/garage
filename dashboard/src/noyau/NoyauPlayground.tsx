@@ -1,5 +1,6 @@
 import { useRef, useState, type CSSProperties } from 'react';
 import { Noyau } from './Noyau';
+import { NoyauVoice } from './NoyauVoice';
 import { useNoyau } from './useNoyau';
 import { runMockTurn, type Scenario } from './mockStream';
 
@@ -66,6 +67,7 @@ export function NoyauPlayground() {
 
       <div style={dock}>
         <Noyau state={state} reduced={reduced} onClearEmber={() => dispatch({ type: 'clearEmber' })} />
+        <NoyauVoice state={state} reduced={reduced} />
         <div style={composer}>
           <input
             style={input}

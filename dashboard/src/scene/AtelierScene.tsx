@@ -181,7 +181,7 @@ export function AtelierScene() {
         onCloseHistory={() => setHistoryOpen(false)}
         quickActions={[
           { label: 'Données', onClick: () => { setHistoryOpen(false); setFactsDrawerOpen(true); } },
-          { label: 'Historique', onClick: () => { setFactsDrawerOpen(false); setHistoryOpen(true); } },
+          { label: 'Historique', zone: 'centre', onClick: () => { setFactsDrawerOpen(false); setHistoryOpen(true); } },
         ]}
         onClearEmber={() => dispatch({ type: 'clearEmber' })}
         onResolveDecision={(id) => dispatch({ type: 'resolve', id })}
