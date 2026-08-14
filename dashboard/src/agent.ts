@@ -50,6 +50,35 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
 }
 
 /**
+ * The topics this dashboard listens on: the public vehicle collection, its own per-tab turn session,
+ * and — once GET /agent/link has resolved it — the owner's PILOT topic, where render intents driven
+ * from an external MCP host (Claude Code, Goose…) land. The pilot topic carries the very same
+ * UIAction frames, so the same handler drives the same choreography whoever is at the controls.
+ */
+export function dashboardTopics(api: string, sessionId: string, pilotTopic: string | null): string[] {
+  const topics = [`${api}/garage/vehicles`, `${api}/agent/sessions/${sessionId}`];
+  if (pilotTopic) topics.push(pilotTopic);
+  return topics;
+}
+
+/**
+ * Resolve the owner's pilot topic. It is a keyed digest server-side (the hub takes anonymous
+ * subscribers, so the topic is the only thing scoping one owner's intents to their own dashboards),
+ * hence it can only be asked for, not derived. Null when unauthenticated or the endpoint is absent —
+ * the dashboard then simply runs without the pilot channel.
+ */
+export async function fetchPilotTopic(): Promise<string | null> {
+  try {
+    const res = await authFetch(`${API}/agent/link`);
+    if (!res.ok) return null;
+    const body = (await res.json()) as { topic?: string };
+    return body.topic ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Ask the worker to stop this session's turn. Cooperative: the endpoint acks 202 and the worker ends
  * the turn at its next tool boundary, so the busy state clears on the streamed turn-end, not this ack.
  */

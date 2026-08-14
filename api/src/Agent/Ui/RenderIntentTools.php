@@ -29,35 +29,27 @@ use Webmozart\Assert\Assert;
 #[AsTool('propose_actions', 'Render a call-to-action card: a headline, an optional one-line finding (e.g. "Trouvé en ligne : vidange + courroie"), and a few next-step buttons. Each button is ONE of two kinds. (1) NL follow-up: set "instruction" — clicking re-runs you with that text. (2) Deterministic write: set "taskId" (an open task id from the turn context) + "parts" [{ref, brand, label}] — clicking merges those parts onto that task via a direct PATCH, NO new turn, and the shopping list re-renders. ALWAYS prefer kind (2) for "add this reference" choices, and include one button that adds the recommended refs at once. Never offer a dead-end "see all options" button.', 'proposeActions')]
 final class RenderIntentTools
 {
-    private ?string $sessionTopic = null;
-
     public function __construct(
         private readonly HubInterface $hub,
         private readonly LoggerInterface $logger,
+        private readonly DashboardChannel $channel,
     ) {
     }
 
     /**
-     * Binds the per-turn session topic. Called by {@see \App\Controller\AgentTurnController} before
-     * the agent runs; a turn is one synchronous request, so there is no cross-turn bleed.
+     * Binds the per-turn session topic. Called by {@see \App\MessageHandler\RunAgentTurnHandler}
+     * before the agent runs; a turn is one message, so there is no cross-turn bleed. Unbound (an MCP
+     * pilot call), the intents go to the owner's pilot topic — see {@see DashboardChannel}.
      */
     public function bindSession(string $sessionTopic): void
     {
-        $this->sessionTopic = $sessionTopic;
+        $this->channel->bindSession($sessionTopic);
     }
 
-    /**
-     * The bound session's id — the last segment of the topic (`…/agent/sessions/<id>`). It is the
-     * key the cancel flag is stored under, so {@see \App\Agent\Ui\CancelTurnListener} can tell whether
-     * THIS turn was asked to stop. Null before a session is bound.
-     */
+    /** @see DashboardChannel::sessionId() */
     public function sessionId(): ?string
     {
-        if (null === $this->sessionTopic) {
-            return null;
-        }
-
-        return substr($this->sessionTopic, (int) strrpos($this->sessionTopic, '/') + 1);
+        return $this->channel->sessionId();
     }
 
     /**
@@ -188,17 +180,18 @@ final class RenderIntentTools
      */
     private function publish(array $action): void
     {
-        Assert::notNull($this->sessionTopic, 'No session topic bound for this turn.');
+        $topic = $this->channel->topic();
+        Assert::notNull($topic, 'No dashboard topic: neither a bound turn session nor an owner to pilot.');
 
         // A render intent is best-effort UI, like the domain live-updates in DomainPublisher:
         // a hub that is down (or untrusted TLS) must never turn the tool call into an error the
         // model then sees and tries to "recover" from. Log and move on — the tool still acks ok.
         try {
-            $this->hub->publish(new Update($this->sessionTopic, json_encode($action, \JSON_THROW_ON_ERROR)));
+            $this->hub->publish(new Update($topic, json_encode($action, \JSON_THROW_ON_ERROR)));
         } catch (\Throwable $e) {
             $this->logger->warning('Mercure publish failed for render intent {type} on {topic}: {error}', [
                 'type' => $action['type'] ?? '',
-                'topic' => $this->sessionTopic,
+                'topic' => $topic,
                 'error' => $e->getMessage(),
             ]);
         }

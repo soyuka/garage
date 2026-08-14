@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Agent\Ui;
 use App\Agent\Ui\ActionButton;
 use App\Agent\Ui\ActionPart;
 use App\Agent\Ui\RenderIntentTools;
+use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Contract\JsonSchema\Factory;
@@ -24,7 +25,7 @@ final class RenderIntentToolsTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())->method('warning');
 
-        $tools = new RenderIntentTools($hub, $logger);
+        $tools = new RenderIntentTools($hub, $logger, TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->assertSame('ok', $tools->toast('Entretien enregistré', 'ok'));
@@ -40,7 +41,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->selectVehicle('/garage/vehicles/01J');
@@ -69,7 +70,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->narrate('Je consulte le catalogue de pièces…');
@@ -110,7 +111,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         // A bare ULID is normalised to the task's tick-off IRI so the dashboard can PATCH it directly.
@@ -144,7 +145,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->focusView('tasks', ['oil_change', 'timing_belt']);
@@ -167,7 +168,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->focusView('specs');
@@ -179,7 +180,7 @@ final class RenderIntentToolsTest extends TestCase
 
     public function testFocusViewRejectsUnknownPanel(): void
     {
-        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->expectException(\InvalidArgumentException::class);
@@ -188,7 +189,7 @@ final class RenderIntentToolsTest extends TestCase
 
     public function testProposeActionsRejectsAButtonThatNeitherInstructsNorWrites(): void
     {
-        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->expectException(\InvalidArgumentException::class);
@@ -205,7 +206,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->proposeActions('Entretien à 250 000 km', [

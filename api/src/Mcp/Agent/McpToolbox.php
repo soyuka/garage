@@ -47,6 +47,17 @@ class McpToolbox implements ToolboxInterface
         'get_fill_volumes',
         'list_part_categories',
         'list_articles',
+        // The pilot channel ({@see \App\ApiResource\Dashboard}) — the dashboard render intents exposed
+        // to EXTERNAL MCP hosts. The agent already has each of them as an `#[AsTool]` bound to the
+        // asking tab's session topic; the MCP twins publish to the owner's pilot topic instead, so
+        // leaving them visible here would both duplicate the tool names and mis-route the frames.
+        'select_vehicle',
+        'toast',
+        'show_fact',
+        'focus_view',
+        'propose_actions',
+        'narrate_step',
+        'settle_dashboard',
     ];
 
     /** @var list<Tool>|null */

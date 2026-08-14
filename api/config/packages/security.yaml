@@ -28,7 +28,7 @@ security:
         # falls through as anonymous so the public GET reads still work — it is the access_control
         # rules below that force a token on the write methods and on /agent/turn.
         api:
-            pattern: ^/(garage|agent/turn)
+            pattern: ^/(garage|agent)
             stateless: true
             provider: zitadel
 
@@ -44,6 +44,9 @@ security:
         # the latent multi-tenant cluster is the next step). /agent/turn is gated wholesale.
         - { path: ^/garage, methods: [POST, PUT, PATCH, DELETE], roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/agent/turn, roles: IS_AUTHENTICATED_FULLY }
+        # The pilot topic is the only thing keeping one owner's render intents off another's
+        # EventSource (the hub takes anonymous subscribers), so handing it out needs a token.
+        - { path: ^/agent/link, roles: IS_AUTHENTICATED_FULLY }
 
 # Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC
 # handler but drops the audience check, because Casdoor sets `aud` to the (per-DCR dynamic)

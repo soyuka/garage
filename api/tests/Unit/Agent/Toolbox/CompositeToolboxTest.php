@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Agent\Toolbox;
 
 use App\Agent\Toolbox\CompositeToolbox;
 use App\Agent\Ui\RenderIntentTools;
+use App\Tests\Mock\TestDashboardChannel;
 use App\Agent\Ui\StepNarrator;
 use App\Mcp\Agent\McpToolbox;
 use PHPUnit\Framework\TestCase;
@@ -37,7 +38,7 @@ final class CompositeToolboxTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class));
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         return new CompositeToolbox($render, $mcp, new StepNarrator($tools));

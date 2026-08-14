@@ -5,7 +5,7 @@ import './scene/scene.css';
 import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
 import { API, getIdentity, logout } from './auth';
-import { cancelTurn, postTurn } from './agent';
+import { cancelTurn, dashboardTopics, fetchPilotTopic, postTurn } from './agent';
 import {
   addTaskPart,
   archiveTasks,
@@ -93,6 +93,10 @@ export function Atelier() {
   const reduced = useReducedMotion();
   // One session per tab — scopes the agent's render-intent topic (slice 5 posts turns onto it).
   const [sessionId] = useState(() => crypto.randomUUID());
+  // The owner's PILOT topic: render intents driven from an external MCP host (Claude Code, Goose…),
+  // which has no tab and therefore no session. Resolved once from GET /agent/link — until then (and
+  // when unauthenticated) the dashboard just runs without that channel.
+  const [pilotTopic, setPilotTopic] = useState<string | null>(null);
   // Turn-scoped agent surfaces: a `proposeActions` card + the unified slot focus (which panel is in the
   // centre slot + which keys are spotlit on the car/panel). Driven by `focusView`/`showFact` intents and
   // by car-pin clicks. Cleared on a new turn (its context is captured in pendingContext first) and on nav.
@@ -147,6 +151,15 @@ export function Atelier() {
     }
   }, [dispatch]);
   useEffect(() => clearDet, [clearDet]);
+
+  // The pilot topic — asked for once on mount (it is a keyed digest server-side, not derivable here).
+  useEffect(() => {
+    let live = true;
+    fetchPilotTopic().then((topic) => live && setPilotTopic(topic));
+    return () => {
+      live = false;
+    };
+  }, []);
 
   // The parc collection — loaded once on mount; Mercure (slice 4) keeps it fresh thereafter.
   useEffect(() => {
@@ -350,7 +363,7 @@ export function Atelier() {
     },
     [dispatch, armWatchdog, clearWatchdog, flareRegion],
   );
-  useMercure([`${API}/garage/vehicles`, `${API}/agent/sessions/${sessionId}`], onFrame);
+  useMercure(dashboardTopics(API, sessionId, pilotTopic), onFrame);
 
   // Post an agent turn. The worker is async (POST acks 202), so the Noyau goes to work optimistically;
   // the real turn/start frame re-confirms and turn/end settles it. A transport failure (never queued)
