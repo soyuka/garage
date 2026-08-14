@@ -157,10 +157,22 @@ export async function login(): Promise<void> {
  * If the page loaded on /callback, exchange the code for a token and scrub the URL back to "/".
  * Returns true iff a callback was handled (the gate then re-checks isAuthenticated). Throws on a
  * state mismatch or a failed exchange so the gate can fall back to the anonymous screen.
+ *
+ * Concurrent calls join the single in-flight exchange. StrictMode double-invokes the mount effect:
+ * without this, the second call would see the already-scrubbed URL, resolve `false` in a microtask
+ * and paint the signed-out screen while the token was still on the wire — making every sign-in
+ * take two rounds.
  */
-export async function completeLoginIfCallback(): Promise<boolean> {
-  if (window.location.pathname !== CALLBACK_PATH) return false;
+export function completeLoginIfCallback(): Promise<boolean> {
+  if (exchangeInFlight) return exchangeInFlight;
+  if (window.location.pathname !== CALLBACK_PATH) return Promise.resolve(false);
+  exchangeInFlight = exchangeCallback();
+  return exchangeInFlight;
+}
 
+let exchangeInFlight: Promise<boolean> | null = null;
+
+async function exchangeCallback(): Promise<boolean> {
   const url = new URL(window.location.href);
   const verifier = sessionStorage.getItem(VERIFIER_KEY);
   const expectedState = sessionStorage.getItem(STATE_KEY);

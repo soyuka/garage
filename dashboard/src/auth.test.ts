@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { base64urlEncode, decodeJwtClaims, isTokenFresh, pkceChallenge, tokenExpiryMs, validateCallback } from './auth';
 
 // Pure-core tests for the OAuth/PKCE transport. The thin window/storage/fetch glue is left untested
@@ -101,5 +101,72 @@ describe('tokenExpiryMs', () => {
   it('defaults to 3600s for a non-positive expires_in (no dead-on-arrival session)', () => {
     expect(tokenExpiryMs(0, 0)).toBe(3_600_000);
     expect(tokenExpiryMs(-5, 0)).toBe(3_600_000);
+  });
+});
+
+// StrictMode double-invokes mount effects, so completeLoginIfCallback() is called twice in the same
+// tick. The second call must join the first exchange instead of seeing the already-scrubbed URL and
+// resolving `false` before the token lands — that race is what made every sign-in take two rounds.
+describe('completeLoginIfCallback under a double invocation (StrictMode)', () => {
+  const store = (): Storage => {
+    const map = new Map<string, string>();
+    return {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => void map.set(k, v),
+      removeItem: (k: string) => void map.delete(k),
+      clear: () => map.clear(),
+      key: (i: number) => [...map.keys()][i] ?? null,
+      get length() {
+        return map.size;
+      },
+    } as Storage;
+  };
+
+  let local: Storage;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    local = store();
+    const session = store();
+    session.setItem('mpa.auth.pkce_verifier', 'verifier-1');
+    session.setItem('mpa.auth.state', 'state-1');
+
+    const location = { origin: 'https://localhost', pathname: '/callback', href: 'https://localhost/callback?code=c1&state=state-1' };
+    vi.stubGlobal('window', {
+      location,
+      history: { replaceState: (_s: unknown, _t: string, url: string) => void (location.pathname = url) },
+    });
+    vi.stubGlobal('localStorage', local);
+    vi.stubGlobal('sessionStorage', session);
+
+    fetchMock = vi.fn(
+      async () =>
+        new Promise((resolve) =>
+          setTimeout(() => resolve({ ok: true, status: 200, json: async () => ({ access_token: 'tok-1', expires_in: 3600 }) } as Response), 0),
+        ),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    vi.resetModules();
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('runs the exchange once and reports the handled callback to both callers', async () => {
+    const { completeLoginIfCallback } = await import('./auth');
+
+    const [first, second] = await Promise.all([completeLoginIfCallback(), completeLoginIfCallback()]);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first).toBe(true);
+    expect(second).toBe(true);
+    expect(local.getItem('mpa.auth.token')).toContain('tok-1');
+  });
+
+  it('still reports no callback on a plain page load', async () => {
+    (globalThis as unknown as { window: { location: { pathname: string } } }).window.location.pathname = '/';
+    const { completeLoginIfCallback } = await import('./auth');
+
+    await expect(completeLoginIfCallback()).resolves.toBe(false);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
