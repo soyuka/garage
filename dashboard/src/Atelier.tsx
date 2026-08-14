@@ -382,10 +382,10 @@ export function Atelier() {
   };
 
   // ── Deterministic wayfinders (CHOREOGRAPHY "Deterministic-first"). A quick-action chip resolves
-  // client-side or via a plain GET — NO postTurn, NO tokens — and replays the SAME Noyau choreography the
-  // agent would (turn:start → two status steps ≈ +950ms → answer + turn:end ≈ +1900ms), then applies the
-  // same focus/cta. A rejection narrates honestly (the thrown French line) and lands NO surface — never a
-  // fake. `resolve`'s latency overlaps the narration beats; the answer lands at the later of ~1900ms / GET.
+  // client-side or via a plain GET — NO postTurn, NO tokens — and replays the Noyau choreography the agent
+  // would (turn:start → the two status steps → answer + turn:end), then applies the same focus/cta. It runs
+  // at DATA speed: the steps narrate immediately and the answer lands the moment `resolve` settles (instant
+  // for a local read). A rejection narrates honestly (the thrown French line) and lands NO surface.
   const runLocalAnswer = useCallback(
     // `effect` runs at the answer beat (never `then` — a thenable return would recurse the promise chain):
     // the seam for answers that OPEN a surface (Données / Le Carnet) instead of projecting a focus/cta.
@@ -416,22 +416,19 @@ export function Atelier() {
             if (!live()) return;
             const msg = e instanceof Error && e.message ? e.message : opts.failMessage;
             dispatch({ type: 'toast', tone: 'warn', message: msg }); // honest, transient narration
-            detTimers.current.push(window.setTimeout(() => apply(null), 1100)); // let it paint, then settle — no surface
+            detTimers.current.push(window.setTimeout(() => apply(null), 600)); // let the warn paint, then settle — no surface
           },
         );
 
-      if (reduced) {
-        // reduced motion: instant states — narrate the step content (not the timing), then settle at once.
-        dispatch({ type: 'status', message: opts.steps[0] });
-        dispatch({ type: 'status', message: opts.steps[1] });
-        void settle();
-        return;
-      }
-      detTimers.current.push(window.setTimeout(() => { if (live()) dispatch({ type: 'status', message: opts.steps[0] }); }, 320));
-      detTimers.current.push(window.setTimeout(() => { if (live()) dispatch({ type: 'status', message: opts.steps[1] }); }, 950));
-      detTimers.current.push(window.setTimeout(() => void settle(), 1900));
+      // No paced beats: a deterministic answer has its data already (or one GET away), so it lands as
+      // fast as it resolves — the panel's own CSS transition is the only motion. The narration steps
+      // still fire (the heartbeat says what happened) but they no longer GATE the answer: padding a
+      // local read out to ~1.9s was pure theatre and read as the app "talking" instead of opening.
+      dispatch({ type: 'status', message: opts.steps[0] });
+      dispatch({ type: 'status', message: opts.steps[1] });
+      void settle();
     },
-    [clearDet, dispatch, reduced],
+    [clearDet, dispatch],
   );
 
   // The deterministic wayfinder chips (above the composer). Each replays the choreography via
