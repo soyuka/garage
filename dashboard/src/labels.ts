@@ -32,6 +32,19 @@ const SERVICE_LABEL: Record<string, string> = {
   coolant: 'Liquide de refroidissement',
   chain: 'Chaîne',
   tyres: 'Pneus',
+  // Repairs, not scheduled services — they carry no cadence but they DO land on the checklist, and
+  // without a label here they rendered as the humanized raw key ("Engine mount").
+  engine_mount: 'Support moteur',
+  coolant_temperature_sensor: 'Sonde de température',
+  water_pump: 'Pompe à eau',
+  thermostat: 'Thermostat',
+  tensioner_pulley: 'Galet tendeur',
+  ignition_coil: "Bobine d'allumage",
+  injector: 'Injecteur',
+  brakes: 'Freins',
+  gearbox_oil: 'Huile de boîte',
+  battery: 'Batterie',
+  distribution: 'Distribution',
 };
 
 export function serviceLabel(type: string): string {

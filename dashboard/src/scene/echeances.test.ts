@@ -49,6 +49,32 @@ describe('buildEcheances — flat, severity-sorted (red → amber → green → 
     expect(items[items.length - 1].taskId).toBeUndefined();
   });
 
+  // Two open tasks of the SAME type are two distinct jobs (the Mazda's rear AND left engine mounts).
+  // Keying the merge by type collapsed them into one and the second never rendered anywhere.
+  it('emits EVERY open task, including several of the same type', () => {
+    const items = buildEcheances([], [], [
+      { id: '/t/mount-rear', type: 'engine_mount', label: 'support moteur arrière', parts: [], status: 'open' },
+      { id: '/t/mount-left', type: 'engine_mount', label: 'support moteur gauche', parts: [], status: 'open' },
+    ]);
+    expect(items.map((i) => i.taskId)).toEqual(['/t/mount-rear', '/t/mount-left']);
+  });
+
+  it('shows a task label when it carries one, so same-type jobs are distinguishable', () => {
+    const [i] = buildEcheances([], [], [
+      { id: '/t/mount-rear', type: 'engine_mount', label: 'support moteur arrière', parts: [], status: 'open' },
+    ]);
+    expect(i.label).toBe('support moteur arrière');
+  });
+
+  it('emits a second same-type task even when a due already bound the first', () => {
+    const items = buildEcheances([due('engine_mount')], [], [
+      { id: '/t/mount-rear', type: 'engine_mount', parts: [], status: 'open' },
+      { id: '/t/mount-left', type: 'engine_mount', label: 'gauche', parts: [], status: 'open' },
+    ]);
+    expect(items.map((i) => i.taskId)).toEqual(['/t/mount-rear', '/t/mount-left']);
+    expect(items[0].due?.type).toBe('engine_mount');
+  });
+
   it('a done task sinks below open work', () => {
     const items = buildEcheances([due('oil_change', { overdue: true })], [], [task('oil_change', 'done'), task('brake_pads', 'open')]);
     const done = items.find((i) => i.done);

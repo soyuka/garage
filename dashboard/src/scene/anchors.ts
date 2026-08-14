@@ -39,6 +39,18 @@ const TYPE_REGION: Record<string, BodyRegion> = {
   tyres: 'frontAxle',
   inspection: 'windshield',
   chain: 'rearAxle',
+  // Engine-bay repairs. Mapped so a spotlight on them lights the hood instead of nothing — the
+  // unmapped-→hood fallback of regionForType does NOT apply to regionsForKeys (known types only).
+  engine_mount: 'hood',
+  coolant_temperature_sensor: 'hood',
+  water_pump: 'hood',
+  thermostat: 'hood',
+  tensioner_pulley: 'hood',
+  ignition_coil: 'hood',
+  injector: 'hood',
+  distribution: 'hood',
+  gearbox_oil: 'hood',
+  brakes: 'frontAxle',
 };
 
 /** Where on the car you read a given service type. Total + never throws (unmapped → hood). */

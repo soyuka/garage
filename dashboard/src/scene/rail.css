@@ -74,6 +74,11 @@
   color: var(--at-red-hi);
   opacity: var(--at-vib-2);
 }
+/* Decided work reads brighter than the forecast below it, without borrowing the late red. */
+.at-rail-section-title--ongoing {
+  color: var(--at-text-mono);
+  opacity: var(--at-vib-2);
+}
 .at-rail-rows--gaps {
   margin-top: var(--at-space-4);
   opacity: 0.8;

@@ -25,6 +25,13 @@ describe('regionForType — service type → body region (where you read it off 
   it('a chain reads off the rear axle (moto)', () => {
     expect(regionForType('chain')).toBe('rearAxle');
   });
+  // Engine-bay repairs the garage actually records: unmapped, they lit nothing when a spotlight
+  // asked for them (regionsForKeys only lights KNOWN types).
+  it('engine-bay repairs read off the hood and DO light a region', () => {
+    expect(regionForType('engine_mount')).toBe('hood');
+    expect(regionForType('coolant_temperature_sensor')).toBe('hood');
+    expect(regionsForKeys(['engine_mount', 'coolant_temperature_sensor'])).toEqual(['hood']);
+  });
   it('an unmapped type falls back to the hood, never throws', () => {
     expect(regionForType('zorglub')).toBe('hood');
   });

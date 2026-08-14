@@ -61,7 +61,8 @@ export function EntretienRail({
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const dismissed = tasks.filter((t) => t.status === 'dismissed');
 
-  const empty = model.todo.length === 0 && model.planned.length === 0 && model.gaps.length === 0 && dismissed.length === 0;
+  const empty =
+    model.todo.length === 0 && model.ongoing.length === 0 && model.planned.length === 0 && model.gaps.length === 0 && dismissed.length === 0;
 
   const renderItem = (item: RailItem, inTodo: boolean) => {
     if (item.kind === 'due') {
@@ -157,6 +158,14 @@ export function EntretienRail({
               <h3 className="at-rail-section-title at-rail-section-title--late">À faire</h3>
               <ul className="at-rail-rows" role="list">
                 {model.todo.map((item) => renderItem(item, true))}
+              </ul>
+            </section>
+          )}
+          {model.ongoing.length > 0 && (
+            <section className="at-rail-section" aria-label="En cours">
+              <h3 className="at-rail-section-title at-rail-section-title--ongoing">En cours</h3>
+              <ul className="at-rail-rows" role="list">
+                {model.ongoing.map((item) => renderItem(item, false))}
               </ul>
             </section>
           )}

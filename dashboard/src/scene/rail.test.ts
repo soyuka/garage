@@ -41,10 +41,31 @@ describe('buildRail — todo/planned/gaps buckets', () => {
     expect(model.planned.map((i) => [i.kind, i.done])).toEqual([['task', true]]);
   });
 
-  it('a manually-planned task with no forecast lands in planned', () => {
+  // Work the operator DECIDED to do is not a prediction: it gets its own bucket, above the forecast,
+  // so a dateless task can no longer sink under items the schedule merely guesses at.
+  it('an open task with no forecast is ongoing work, not a prediction', () => {
     const model = buildRail([], [], [task('brake_pads', 'open')]);
-    expect(model.planned.map((i) => i.kind)).toEqual(['task']);
+    expect(model.ongoing.map((i) => i.kind)).toEqual(['task']);
+    expect(model.planned).toEqual([]);
     expect(model.todo).toEqual([]);
+  });
+
+  it('an open task bound to a not-yet-due forecast is ongoing too', () => {
+    const model = buildRail([due('fuel_filter')], [], [task('fuel_filter', 'open')]);
+    expect(model.ongoing.map((i) => i.type)).toEqual(['fuel_filter']);
+    expect(model.planned).toEqual([]);
+  });
+
+  it('a late task stays in todo — late outranks ongoing', () => {
+    const model = buildRail([due('oil_change', { overdue: true })], [], [task('oil_change', 'open')]);
+    expect(model.todo.map((i) => i.type)).toEqual(['oil_change']);
+    expect(model.ongoing).toEqual([]);
+  });
+
+  it('a done task is handled, never ongoing', () => {
+    const model = buildRail([due('oil_change')], [], [task('oil_change', 'done')]);
+    expect(model.ongoing).toEqual([]);
+    expect(model.planned.map((i) => i.done)).toEqual([true]);
   });
 
   it('keeps severity order within each bucket (worst first)', () => {
@@ -65,6 +86,6 @@ describe('buildRail — todo/planned/gaps buckets', () => {
   });
 
   it('empty forecast → empty model', () => {
-    expect(buildRail([])).toEqual({ todo: [], planned: [], gaps: [] });
+    expect(buildRail([])).toEqual({ todo: [], ongoing: [], planned: [], gaps: [] });
   });
 });

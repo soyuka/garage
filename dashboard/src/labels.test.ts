@@ -34,6 +34,15 @@ describe('canonicalService + alias-folded labels', () => {
     expect(canonicalService('oil_change')).toBe('oil_change');
     expect(canonicalService('custom_thing')).toBe('custom_thing');
   });
+  // Types the garage actually holds beyond the service catalogue — they were falling through to the
+  // humanized-key fallback ("Engine mount") and lit no body region on the car.
+  it('labels the mechanical repair types in French', () => {
+    expect(serviceLabel('engine_mount')).toBe('Support moteur');
+    expect(serviceLabel('coolant_temperature_sensor')).toBe('Sonde de température');
+    expect(serviceLabel('water_pump')).toBe('Pompe à eau');
+    expect(serviceLabel('ignition_coil')).toBe("Bobine d'allumage");
+  });
+
   it('labels a variant the same as its canonical key', () => {
     expect(serviceLabel('technical_inspection')).toBe('Contrôle technique');
     expect(serviceLabel('spark_plugs')).toBe('Bougies');

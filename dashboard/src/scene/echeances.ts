@@ -27,6 +27,13 @@ function weight(e: Echeance): number {
   return RANK[e.signal];
 }
 
+/** A task's own words when it has them ("support moteur gauche"), else the service label — the only
+ *  thing telling two same-type jobs apart. */
+function taskLabel(t: PlannedTask): string {
+  const own = t.label?.trim();
+  return own ? own : serviceLabel(t.type);
+}
+
 export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: PlannedTask[] = []): Echeance[] {
   const openByType = new Map<string, PlannedTask>();
   const doneByType = new Map<string, PlannedTask>();
@@ -37,26 +44,28 @@ export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: P
   const taskFor = (type: string) => openByType.get(type) ?? doneByType.get(type);
 
   const out: Echeance[] = [];
+  // Emitted TASKS are tracked by id, never by type: two open tasks can share a type and still be two
+  // distinct jobs (a rear engine mount and a left one). Keying this by type dropped the second job
+  // from every surface — it existed in the garage and appeared nowhere.
+  const emittedTasks = new Set<string>();
   const dueTypes = new Set(due.map((d) => d.type));
-  const emitted = new Set<string>();
 
   for (const d of due) {
     const desc = dueDescriptor(d);
-    const label = serviceLabel(d.type);
     const t = taskFor(d.type);
     if (t) {
-      emitted.add(d.type);
-      out.push({ id: t.id, kind: 'task', type: d.type, label, horizon: desc.horizon, signal: desc.signal, taskId: t.id, done: t.status === 'done', due: d });
+      emittedTasks.add(t.id);
+      out.push({ id: t.id, kind: 'task', type: d.type, label: taskLabel(t), horizon: desc.horizon, signal: desc.signal, taskId: t.id, done: t.status === 'done', due: d });
     } else {
-      out.push({ id: `due:${d.type}`, kind: 'due', type: d.type, label, horizon: desc.horizon, signal: desc.signal, due: d });
+      out.push({ id: `due:${d.type}`, kind: 'due', type: d.type, label: serviceLabel(d.type), horizon: desc.horizon, signal: desc.signal, due: d });
     }
   }
-  // open/done tasks with no forecast due — a manually-planned service still shows.
+  // Every remaining task — a manually-planned service with no forecast, and any SIBLING of a task a
+  // due already bound above.
   for (const t of tasks) {
-    if (t.status === 'dismissed' || dueTypes.has(t.type) || emitted.has(t.type)) continue;
-    if (taskFor(t.type)?.id !== t.id) continue;
-    emitted.add(t.type);
-    out.push({ id: t.id, kind: 'task', type: t.type, label: serviceLabel(t.type), horizon: null, signal: 'green', taskId: t.id, done: t.status === 'done' });
+    if (t.status === 'dismissed' || emittedTasks.has(t.id)) continue;
+    emittedTasks.add(t.id);
+    out.push({ id: t.id, kind: 'task', type: t.type, label: taskLabel(t), horizon: null, signal: 'green', taskId: t.id, done: t.status === 'done' });
   }
   // coverage gaps not carried by a due.
   for (const g of gaps) {
