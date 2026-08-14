@@ -11,6 +11,7 @@ use App\Dto\EditMaintenanceInput;
 use App\Dto\GetMaintenanceHistoryInput;
 use App\Dto\ListDueMaintenanceInput;
 use App\Dto\ListPlannedMaintenanceInput;
+use App\Dto\ListServiceDefaultsInput;
 use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
 use App\Dto\SetMaintenanceScheduleInput;
@@ -20,6 +21,7 @@ use App\State\EditMaintenanceProcessor;
 use App\State\GetMaintenanceHistoryProcessor;
 use App\State\ListDueMaintenanceProcessor;
 use App\State\ListPlannedMaintenanceProcessor;
+use App\State\ListServiceDefaultsProcessor;
 use App\State\LogMaintenanceProcessor;
 use App\State\PlanMaintenanceProcessor;
 use App\State\SetMaintenanceScheduleProcessor;
@@ -103,6 +105,14 @@ use App\State\SetMaintenanceScheduleProcessor;
             input: ListDueMaintenanceInput::class,
             structuredContent: false,
             processor: ListDueMaintenanceProcessor::class,
+            annotations: ['readOnlyHint' => true],
+        ),
+        'list_service_defaults' => new McpTool(
+            title: 'Generic Service Baselines',
+            description: 'Look up the GENERIC service interval for a maintenance type from a reviewed in-repo catalogue of baselines (timing belt/chain, spark plugs, brake fluid, coolant, oil, fuel/air/cabin filters, groundscare engine-hour cadences). CONSULT THIS BEFORE WEB-SEARCHING a generic interval, and before proposing any cadence for a vehicle that has none: it is the vetted answer, with its source and review date. Pass a vehicle @id whenever you have one — the discriminating fact is then read from that vehicle and the baselines are scoped to its segment (a mower gets "every 50 h", not a car\'s kilometres). An interval is a function of a DISCRIMINANT, not of the service: status "ambiguous" means several baselines apply and the fact that tells them apart (`discriminantKey`, e.g. distribution_type, spark_plug_material, fuel_type, coolant_type) is unknown on this vehicle — ASK THE USER or look that fact up and record it. NEVER pick one of the candidates, never average them, never invent a number. "hasInterval": false is an ANSWER, not a gap: a timing CHAIN has no replacement interval and a petrol in-tank fuel filter is a lifetime part — say so instead of hunting for a figure. PRECEDENCE: what the user stated > the vehicle\'s own stored rule (set_maintenance_schedule) or verified fact > these baselines, which never outrank a stored rule. Read-only and advisory: it writes nothing, changes no schedule and does not feed list_due_maintenance — to act on a baseline, confirm it with the user and store it with set_maintenance_schedule. Omit `type` to list the whole catalogue.',
+            input: ListServiceDefaultsInput::class,
+            structuredContent: false,
+            processor: ListServiceDefaultsProcessor::class,
             annotations: ['readOnlyHint' => true],
         ),
         'list_planned_maintenance' => new McpTool(

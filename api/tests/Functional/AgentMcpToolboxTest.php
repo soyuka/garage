@@ -37,6 +37,9 @@ final class AgentMcpToolboxTest extends AppTestCase
         $this->assertContains('update_vehicle', $names);
         $this->assertContains('plan_maintenance', $names);
         $this->assertContains('get_service_parts', $names);
+        // The generic-baseline catalogue exists to stop the agent web-searching an interval and
+        // writing the guess onto a vehicle — withholding it from the agent would defeat the point.
+        $this->assertContains('list_service_defaults', $names);
 
         // Withheld: the make/model browse roots and the granular catalog walk (get_service_parts
         // bundles the latter in one call — fewer hops, smaller agent context).
