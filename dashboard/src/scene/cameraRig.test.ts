@@ -1,4 +1,20 @@
 import { describe, it, expect } from 'vitest';
+import { holdIntent } from './cameraRig';
+
+describe('holdIntent — the rail head is a toggle', () => {
+  it('a click at rest holds the region', () => {
+    expect(holdIntent(null, 'hood')).toBe('hold');
+  });
+
+  it('clicking the SAME region again goes back — "click again to return" (D1)', () => {
+    expect(holdIntent({ region: 'hood', key: 3 }, 'hood')).toBe('release');
+  });
+
+  it('clicking a DIFFERENT region moves the camera rather than releasing it', () => {
+    expect(holdIntent({ region: 'hood', key: 3 }, 'frontAxle')).toBe('hold');
+  });
+});
+
 import {
   HOME,
   POLAR,

@@ -37,7 +37,16 @@ function costSourceOf(r: MaintenanceRecord): 'bill' | 'estimated' | null {
   return r.costSource ?? (effectiveCostCents(r) != null ? 'bill' : null);
 }
 
-export function rollupCarnet(records: MaintenanceRecord[], limit = 3): CarnetRollup {
+/**
+ * The agent's CUT of the register. « quand la dernière vidange ? » asks about ONE service, and every
+ * visit is not its answer — the same narrowing `focusView {panel:'tasks', keys}` already does for the
+ * worklist. A visit is kept when it carries any requested type. Empty keys ⇒ the whole register.
+ */
+export function rollupCarnet(records: MaintenanceRecord[], limit = 3, keys: string[] = []): CarnetRollup {
+  if (keys.length > 0) {
+    const wanted = new Set(keys);
+    records = records.filter((r) => r.items.some((it) => wanted.has(it.type)));
+  }
   const sorted = [...records].sort((a, b) => (a.performedAt < b.performedAt ? 1 : a.performedAt > b.performedAt ? -1 : 0));
   const rows: CarnetRow[] = sorted.slice(0, limit).map((r) => ({
     id: r.id,

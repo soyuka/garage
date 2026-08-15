@@ -124,6 +124,15 @@ export function gateReduce(state: GateState, event: GateEvent): GateState {
   }
 }
 
+/**
+ * What an operator click on a region control means, given what the camera currently holds. Re-activating
+ * the SAME region goes back ("click again to return", D1); any other region is a new hold, not a release —
+ * the camera moves rather than snapping home and being sent out again.
+ */
+export function holdIntent(held: CameraFocus | null, region: BodyRegion): 'hold' | 'release' {
+  return held?.region === region ? 'release' : 'hold';
+}
+
 /** True when a starting drag interrupts an active or pending hold — the parent must then clear cameraFocus. */
 export function dragBreaksHold(state: GateState): boolean {
   return state.held != null || state.queued != null;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildVisits, ladder, VISIT_WINDOW_DAYS } from './visits';
+import { buildVisits, laterFrom, ladder, rowClock, visitClock, visitRegions, visitSignal, VISIT_WINDOW_DAYS } from './visits';
 import type { ForecastDue, PlannedTask } from '../types';
 
 // The visit plan: the rail's items regrouped the way a garage actually schedules them — by TRIP TO THE
@@ -124,6 +124,104 @@ describe('buildVisits — what stays out', () => {
   it('an empty forecast produces an empty plan, not an empty visit', () => {
     const plan = buildVisits([], [], []);
     expect(plan).toEqual({ now: [], next: null, later: [], gaps: [] });
+  });
+});
+
+describe('visitSignal — a card carries its worst news', () => {
+  it('is the worst signal among the visit’s items', () => {
+    const plan = buildVisits([
+      due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 }),
+      due('fuel_filter', { projectedDueAt: '2027-04-02', daysUntilDue: 20 }),
+    ]);
+    // the fuel filter is 20 days out → amber; the visit reads amber even though the CT is green.
+    expect(plan.next && visitSignal(plan.next)).toBe('amber');
+  });
+
+  it('an overdue member makes the whole visit red', () => {
+    const plan = buildVisits([], [], [task('engine_mount', 'open'), task('oil_change', 'open')]);
+    const visit = { ...plan.now[0], items: plan.now[0].items.map((i, n) => (n === 0 ? { ...i, signal: 'red' as const } : i)) };
+    expect(visitSignal(visit)).toBe('red');
+  });
+
+  it('an empty visit is green, never a false alarm', () => {
+    expect(visitSignal({ id: 'x', date: null, items: [] })).toBe('green');
+  });
+});
+
+describe('visitRegions — a card names a part of the car', () => {
+  it('a region visit names its own region', () => {
+    const plan = buildVisits([], [], [task('engine_mount', 'open')]);
+    expect(visitRegions(plan.now[0])).toEqual(['hood']);
+  });
+
+  it('a dated cluster names every region it touches, head-to-tail, deduped', () => {
+    const plan = buildVisits([
+      due('inspection', { dueAt: '2027-03-21' }), // windshield
+      due('fuel_filter', { dueAt: '2027-04-02' }), // bay
+      due('cabin_filter', { dueAt: '2027-04-10' }), // bay again
+    ]);
+    expect(plan.next && visitRegions(plan.next)).toEqual(['windshield', 'bay']);
+  });
+
+  it('an empty visit aims at nothing (the head is not a control)', () => {
+    expect(visitRegions({ id: 'x', date: null, items: [] })).toEqual([]);
+  });
+});
+
+describe('visitClock / rowClock — one clock per visit, not one per row', () => {
+  it('a dated cluster’s head owns the date AND the horizon', () => {
+    const plan = buildVisits([due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 })]);
+    const clock = visitClock(plan.next!);
+    expect(clock.date).toBe('2027-03-21');
+    expect(clock.horizon).toBeTruthy();
+  });
+
+  it('a member on the head’s own date says nothing more — the two-clock row is gone', () => {
+    // The §5 defect: « dans environ 11 mois » AND « 6 juil. 2027 » on every one of two rows that are
+    // one booking. The head says it once; the rows say nothing.
+    const plan = buildVisits([
+      due('oil_change', { dueAt: '2027-07-06', daysUntilDue: 324 }),
+      due('oil_filter', { dueAt: '2027-07-06', daysUntilDue: 324 }),
+    ]);
+    const visit = plan.next!;
+    expect(visit.items).toHaveLength(2);
+    for (const item of visit.items) expect(rowClock(visit, item)).toEqual({ date: null, horizon: null });
+  });
+
+  it('a member that lands on a DIFFERENT day still says which day — compression never hides a date', () => {
+    const plan = buildVisits([
+      due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 }),
+      due('fuel_filter', { projectedDueAt: '2027-04-02', daysUntilDue: 230 }),
+    ]);
+    const visit = plan.next!;
+    expect(rowClock(visit, visit.items[0]).date).toBeNull();
+    expect(rowClock(visit, visit.items[1]).date).toBe('2027-04-02');
+  });
+
+  it('a region visit has NO head clock, so every row keeps its own overshoot', () => {
+    const plan = buildVisits([due('oil_change', { overdue: true, dueAt: '2026-01-05', daysUntilDue: -40 })]);
+    const visit = plan.now[0];
+    expect(visitClock(visit)).toEqual({ date: null, horizon: null });
+    expect(rowClock(visit, visit.items[0]).horizon).toContain('DÉPASSÉ');
+  });
+});
+
+describe('laterFrom — far is far, and says how far', () => {
+  it('names the year the tail starts', () => {
+    const plan = buildVisits([
+      due('inspection', { dueAt: '2027-03-21' }),
+      due('oil_change', { dueAt: '2028-07-06' }),
+      due('spark_plug', { dueAt: '2030-04-28' }),
+    ]);
+    expect(laterFrom(plan.later)).toBe('2028');
+  });
+
+  it('an undated tail names nothing rather than guessing', () => {
+    expect(laterFrom([{ id: 'x', date: null, items: [] }])).toBeNull();
+  });
+
+  it('an empty tail names nothing', () => {
+    expect(laterFrom([])).toBeNull();
   });
 });
 

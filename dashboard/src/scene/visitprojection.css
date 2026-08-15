@@ -70,13 +70,28 @@
   border: 1px solid var(--at-text-dim);
 }
 
+/* a rung is the SAME object as a rail visit card, seen from further away: the date wears the card
+   caption's type (mono, uppercase, tracked, tier 1) so the operator recognises what they just
+   collapsed, and the services read as its rows. */
 .at-ladder-date {
   display: block;
   font-family: var(--at-font-mono);
   font-size: 10px;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
   color: var(--at-text);
   opacity: var(--at-vib-1);
+}
+
+/* the hair leader toward the car — the tie the carnet/worklist/constellation all wear on this edge. */
+.at-ladder-lead {
+  position: absolute;
+  top: 22px;
+  left: -18px;
+  width: 18px;
+  height: 1px;
+  background: var(--at-hairline);
 }
 
 .at-ladder-svc {

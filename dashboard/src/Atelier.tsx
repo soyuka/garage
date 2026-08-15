@@ -314,6 +314,14 @@ export function Atelier() {
     setCameraFocus({ region, key: cameraKey.current });
   }, []);
 
+  // The OPERATOR aiming a rail visit card at its region: the same D1 dolly, WITHOUT the cyan flare. Cyan
+  // says "Le Noyau is acting" and it did not — the operator moved their own camera (CHOREOGRAPHY.md
+  // § "the operator clicks a visit card's head"). Not coalesced either: one click is already one gesture.
+  const holdRegion = useCallback((region: BodyRegion) => {
+    cameraKey.current += 1;
+    setCameraFocus({ region, key: cameraKey.current });
+  }, []);
+
   // Region targets inside one burst are ONE gesture — the camera dollies once, to where the burst
   // ended (useRegionBurst / pilot.ts). Only the dolly waits for the window; the panels those same
   // frames open land immediately (hard rule 1: motion may overlap an arrival, never gate one).
@@ -898,6 +906,7 @@ export function Atelier() {
             pulseRegion={pulseRegion}
             cameraFocus={cameraFocus}
             onCameraRelease={onCameraRelease}
+            onHoldRegion={holdRegion}
             onClearEmber={() => dispatch({ type: 'clearEmber' })}
             onResolveDecision={onResolveDecision}
             onScheduleDecision={onScheduleDecision}

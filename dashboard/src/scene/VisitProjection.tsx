@@ -57,6 +57,10 @@ export function VisitProjection({
       <div className="at-ladder-foot">
         {visits.length} visite{visits.length > 1 ? 's' : ''} · {services} service{services > 1 ? 's' : ''}
       </div>
+
+      {/* the hair leader toward the car — the tie every other projection wears and this one lacked. It is
+          also what answers the rail's leaders on the opposite edge: one instrument, two columns. */}
+      <span className="at-ladder-lead" aria-hidden="true" />
     </aside>
   );
 }

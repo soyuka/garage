@@ -7,7 +7,7 @@ import { dueDescriptor, signalTag } from '../derive';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
 import type { RailItem } from './rail';
-import type { VisitPlan } from './visits';
+import { laterFrom, rowClock, visitClock, visitRegions, visitSignal, type Visit, type VisitClock, type VisitPlan } from './visits';
 import type { BodyRegion } from './anchors';
 import './checklist.css';
 import './rail.css';
@@ -26,6 +26,12 @@ import './rail.css';
 //
 // Parts are a COUNT here, never a catalogue: three brands at three prices is a decision, and the rail is
 // a status surface. The count opens the row's own editor, where the lines are editable.
+//
+// The rail is the AMBIENT layer (docs/design-inspiration.md § 2) and it is built out of the same material
+// as the summoned surfaces in the right column — card ground, hairline, radius, a hair leader toward the
+// car — so the two columns bracket the stage as one instrument instead of a sidebar beside a canvas. What
+// only this layer has: a severity spine per card, and a head that can aim the earned camera at the part
+// of the car the visit is about.
 
 export interface ChecklistHandlers {
   /** open + done (and dismissed when showDismissed) — the source for counts + the retirées section. */
@@ -52,13 +58,23 @@ const REGION_LABEL: Record<BodyRegion, string> = {
   bay: 'Périphériques',
 };
 
-/** The row caption under a task title: its bound forecast horizon, else its target reading, else its date. */
-function taskCaption(horizon: string | null, task: PlannedTask | undefined): string | null {
-  if (horizon) return horizon;
+/**
+ * The row caption under a task title. Under a card head that already carries the booking's clock the row
+ * says only what the head does NOT — nothing at all on the head's own day. Under a clockless head (the
+ * region cards of « Maintenant ») it falls back the way it always did: horizon, else target, else date.
+ */
+function taskCaption(clock: VisitClock, headHasClock: boolean, task: PlannedTask | undefined): string | null {
+  if (clock.horizon) return clock.horizon;
+  if (clock.date) return formatDate(clock.date);
+  if (headHasClock) return null;
   if (task?.target) return formatReading(task.target.value, task.target.unit ?? undefined);
   if (task?.dueDate) return formatDate(task.dueDate);
   return null;
 }
+
+/** Cards and rows assemble in order, capped so the last one is never late. Paint only — nothing waits. */
+const STAGGER_CAP = 4;
+const step = (i: number) => ({ '--at-step': Math.min(i, STAGGER_CAP) }) as React.CSSProperties;
 
 export function EntretienRail({
   plan,
@@ -67,6 +83,8 @@ export function EntretienRail({
   onShowLaterVisits,
   dimmed = false,
   spotlit,
+  heldRegion = null,
+  onAimRegion,
 }: {
   /** The rail regrouped by trip to the lift — the ONLY model this component renders. */
   plan: VisitPlan;
@@ -76,6 +94,12 @@ export function EntretienRail({
   onShowLaterVisits?: () => void;
   /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage. */
   dimmed?: boolean;
+  /** The body region the earned camera currently holds — the cards that read off it light their tie to
+   *  the car (CHOREOGRAPHY.md § "the camera is held on a region"). */
+  heldRegion?: BodyRegion | null;
+  /** Aim the earned camera at a visit's region. Absent → the card head is a plain caption, never a dead
+   *  control. The TOGGLE (re-aim vs release) is resolved by the caller, which owns `cameraFocus`. */
+  onAimRegion?: (region: BodyRegion) => void;
   /** service types the agent spotlighted (`focusView {panel:'tasks', keys}`) — those rows carry the
    *  operator cue so the projected answer and the persistent rail name the SAME rows. Documented in
    *  CHOREOGRAPHY.md since Stage B; the rows never actually lit until 2026-08-15. */
@@ -92,15 +116,19 @@ export function EntretienRail({
   const empty =
     plan.now.length === 0 && !plan.next && plan.later.length === 0 && plan.gaps.length === 0 && dismissed.length === 0;
 
-  const renderItem = (item: RailItem, inTodo: boolean) => {
+  const renderItem = (visit: Visit, item: RailItem, index: number, inTodo: boolean) => {
+    // ONE clock per booking: the card head carries the visit's date + horizon, so a member falling on
+    // that same day says nothing more. Only a member on a DIFFERENT day still names its own.
+    const clock = rowClock(visit, item);
+    const headHasClock = visitClock(visit).date !== null;
     if (item.kind === 'due') {
       const desc = dueDescriptor(item.due!);
       const tag = signalTag(desc.overdue, desc.signal);
-      const date = formatDate(item.due!.dueAt ?? item.due!.projectedDueAt);
       return (
         <li
           key={item.id}
           className="at-rail-row at-rail-row--due"
+          style={step(index)}
           data-signal={item.signal}
           data-lit={lit?.has(item.type) ? 'true' : undefined}
         >
@@ -115,10 +143,12 @@ export function EntretienRail({
           </button>
           <span className="at-rail-body">
             <span className="at-rail-svc">{item.label}</span>
-            <span className="at-rail-meta">
-              {item.horizon && <span className="at-rail-horizon">{item.horizon}</span>}
-              {date && <span className="at-rail-date">{date}</span>}
-            </span>
+            {(clock.horizon || clock.date) && (
+              <span className="at-rail-meta">
+                {clock.horizon && <span className="at-rail-horizon">{clock.horizon}</span>}
+                {clock.date && <span className="at-rail-date">{formatDate(clock.date)}</span>}
+              </span>
+            )}
           </span>
           <span className={`at-rail-tag at-rail-tag--${tag.tone}`}>{tag.text}</span>
         </li>
@@ -130,7 +160,8 @@ export function EntretienRail({
     return (
       <TaskRow
         key={item.id}
-        caption={taskCaption(item.horizon, item.task)}
+        step={step(index)}
+        caption={taskCaption(clock, headHasClock, item.task)}
         tag={inTodo || (tag && tag.tone !== 'ok') ? tag : null}
         signal={item.due && !item.done ? item.signal : undefined}
         lit={lit?.has(item.type) ?? false}
@@ -183,34 +214,42 @@ export function EntretienRail({
         <p className="at-check-empty">Rien à suivre pour l’instant.</p>
       ) : (
         <>
+          {/* The three horizons are NOT three equal headings. Emphasis is vibrancy + the card spine, never
+              another font size (CHOREOGRAPHY § Vibrancy tiers): tier 1 here, tier 2 for the next visit,
+              tier 3 for the tail. The red is spent only when something is ACTUALLY late — "Maintenant"
+              also holds decided-but-undated work, and colouring it red then is a false alarm. */}
           {plan.now.length > 0 && (
-            <section className="at-rail-section" aria-label="Maintenant">
-              <h3 className="at-rail-section-title at-rail-section-title--late">Maintenant</h3>
-              {plan.now.map((visit) => (
-                <VisitCard key={visit.id} caption={visit.region ? REGION_LABEL[visit.region] : null} count={visit.items.length}>
-                  {visit.items.map((item) => renderItem(item, true))}
+            <section className="at-rail-section at-rail-section--now" aria-label="Maintenant">
+              <h3 className="at-rail-section-title" data-late={lateCount > 0 ? 'true' : undefined}>
+                Maintenant
+              </h3>
+              {plan.now.map((visit, i) => (
+                <VisitCard key={visit.id} visit={visit} index={i} held={heldRegion} onAim={onAimRegion}>
+                  {visit.items.map((item, n) => renderItem(visit, item, n, true))}
                 </VisitCard>
               ))}
             </section>
           )}
           {plan.next && (
-            <section className="at-rail-section" aria-label="Prochaine visite">
+            <section className="at-rail-section at-rail-section--next" aria-label="Prochaine visite">
               <h3 className="at-rail-section-title">Prochaine visite</h3>
-              <VisitCard caption={plan.next.date ? formatDate(plan.next.date) : null} count={plan.next.items.length}>
-                {plan.next.items.map((item) => renderItem(item, false))}
+              <VisitCard visit={plan.next} index={0} held={heldRegion} onAim={onAimRegion}>
+                {plan.next.items.map((item, n) => renderItem(plan.next as Visit, item, n, false))}
               </VisitCard>
             </section>
           )}
           {plan.later.length > 0 && (
-            <section className="at-rail-section" aria-label="Plus tard">
+            <section className="at-rail-section at-rail-section--later" aria-label="Plus tard">
               {/* A count, not a list — and a CONTROL, because compression is only honest if there is a
-                  way to look closer. It projects the ladder into the right column. */}
+                  way to look closer. It projects the ladder into the right column. It also sits FAR from
+                  the next visit: distance is how the tail reads as far away rather than merely hidden
+                  (Gibson's rule, docs/design-inspiration.md § 4), the same language the ladder speaks. */}
               {onShowLaterVisits ? (
                 <button type="button" className="at-rail-later" onClick={onShowLaterVisits}>
                   <span className="at-rail-later-label">Plus tard</span>
                   <span className="at-rail-later-count">{plan.later.length}</span>
                   <span className="at-rail-later-meta">
-                    {laterServices} service{laterServices > 1 ? 's' : ''}
+                    {laterFrom(plan.later) ? `à partir de ${laterFrom(plan.later)}` : `${laterServices} service${laterServices > 1 ? 's' : ''}`}
                   </span>
                 </button>
               ) : (
@@ -247,7 +286,7 @@ export function EntretienRail({
             {dismissed.map((t) => (
               <TaskRow
                 key={t.id}
-                caption={taskCaption(null, t)}
+                caption={taskCaption({ date: null, horizon: null }, false, t)}
                 task={t}
                 defaultUnit={defaultUnit}
                 onToggle={() => checklist.onSetStatus(t.id, 'open')}
@@ -266,16 +305,62 @@ export function EntretienRail({
   );
 }
 
-/** One trip to the lift: a caption (the date, or the teardown for undated work) over its rows. */
-function VisitCard({ caption, count, children }: { caption: string | null; count: number; children: React.ReactNode }) {
+/**
+ * One trip to the lift, as an OBJECT — the same material as the projection surfaces on the right (dark
+ * ground, hairline, radius, a hair leader toward the car), plus one thing only the ambient layer carries:
+ * a severity spine down its gutter, coloured by the visit's worst signal. That spine is what makes
+ * « Maintenant » read louder than « Prochaine visite » without a second font size.
+ *
+ * The HEAD is the camera control (the rows tick tasks off, so they cannot also be it): it names the
+ * booking — the teardown for undated work, the date for a dated cluster — and aiming it dollies the
+ * earned camera to the part of the car the work is on. A card that says « Moteur » can show the moteur.
+ */
+function VisitCard({
+  visit,
+  index,
+  held,
+  onAim,
+  children,
+}: {
+  visit: Visit;
+  index: number;
+  held: BodyRegion | null;
+  onAim?: (region: BodyRegion) => void;
+  children: React.ReactNode;
+}) {
+  const clock = visitClock(visit);
+  const caption = visit.region ? REGION_LABEL[visit.region] : clock.date ? formatDate(clock.date) : null;
+  const regions = visitRegions(visit);
+  const aim = regions[0];
+  const isHeld = !!held && regions.includes(held);
+  const count = visit.items.length;
+
+  const head = caption && (
+    <>
+      <span className="at-rail-visit-caption">{caption}</span>
+      {count > 1 && <span className="at-rail-visit-count">{count}</span>}
+      {aim && onAim && <span className="at-rail-visit-aim" aria-hidden="true">⌖</span>}
+      {clock.horizon && <span className="at-rail-visit-horizon">{clock.horizon}</span>}
+    </>
+  );
+
   return (
-    <div className="at-rail-visit">
-      {caption && (
-        <div className="at-rail-visit-head">
-          <span className="at-rail-visit-caption">{caption}</span>
-          {count > 1 && <span className="at-rail-visit-count">{count}</span>}
-        </div>
-      )}
+    <div className="at-rail-visit" style={step(index)} data-worst={visitSignal(visit)} data-held={isHeld ? 'true' : undefined}>
+      {caption &&
+        (aim && onAim ? (
+          <button
+            type="button"
+            className="at-rail-visit-head at-rail-visit-head--aim"
+            aria-pressed={isHeld}
+            title={isHeld ? 'Revenir à la vue d’ensemble' : `Voir « ${REGION_LABEL[aim]} » sur le véhicule`}
+            aria-label={`${caption} — ${isHeld ? 'revenir à la vue d’ensemble' : `voir « ${REGION_LABEL[aim]} » sur le véhicule`}`}
+            onClick={() => onAim(aim)}
+          >
+            {head}
+          </button>
+        ) : (
+          <div className="at-rail-visit-head">{head}</div>
+        ))}
       <ul className="at-rail-rows" role="list">
         {children}
       </ul>
@@ -287,6 +372,7 @@ function VisitCard({ caption, count, children }: { caption: string | null; count
 
 function TaskRow({
   caption,
+  step: stagger,
   tag = null,
   signal,
   lit = false,
@@ -301,6 +387,8 @@ function TaskRow({
   onRemovePart,
 }: {
   caption: string | null;
+  /** the row's place in its card's assembly order (`--at-step`) — paint stagger only, absent = no delay. */
+  step?: React.CSSProperties;
   /** the forecast text tag (EN RETARD / BIENTÔT) when the task binds a due — null hides it. */
   tag?: { text: string; tone: string } | null;
   /** the bound forecast's signal — colours the caption horizon exactly like a due row's (a late task's
@@ -333,7 +421,7 @@ function TaskRow({
   };
 
   return (
-    <li className={cls} data-signal={signal} data-lit={lit ? 'true' : undefined} data-activatable="true" onClick={onRowClick}>
+    <li className={cls} style={stagger} data-signal={signal} data-lit={lit ? 'true' : undefined} data-activatable="true" onClick={onRowClick}>
       <button
         type="button"
         className="at-task-check"

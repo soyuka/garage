@@ -1,6 +1,6 @@
-import { BODY_REGIONS, regionForType, type BodyRegion } from './anchors';
+import { BODY_REGIONS, regionForType, regionsForKeys, type BodyRegion } from './anchors';
 import { buildRail, type RailItem } from './rail';
-import type { ForecastDue, PlannedTask } from '../types';
+import type { ForecastDue, PlannedTask, Signal } from '../types';
 
 // The visit plan — the rail's items regrouped by TRIP TO THE LIFT rather than one row per service.
 //
@@ -86,6 +86,61 @@ function cluster(items: RailItem[]): Visit[] {
   }
   if (current.length > 0) out.push({ id: `visit:${dateOf(current[0].due)}`, date: dateOf(current[0].due), items: current });
   return out;
+}
+
+// ── How a visit READS ─────────────────────────────────────────────────────────
+// Derivations over a built Visit — never a second grouping. They exist so the card can carry the
+// visit's worst news, the part of the car it is about, and ONE clock, without the component
+// re-deriving any of it inline.
+
+const SIGNAL_RANK: Record<Signal, number> = { green: 1, amber: 2, red: 3 };
+
+/** A visit's worst signal — what its severity spine is coloured by. Empty ⇒ green, never a false alarm. */
+export function visitSignal(visit: Visit): Signal {
+  return visit.items.reduce<Signal>((worst, i) => (SIGNAL_RANK[i.signal] > SIGNAL_RANK[worst] ? i.signal : worst), 'green');
+}
+
+/**
+ * The body regions a visit is read off, head-to-tail. A region visit already knows its own; a dated
+ * cluster resolves its members' types, and only KNOWN ones count — a visit that names no part of the
+ * car offers no camera control rather than aiming at the hood by the unmapped fallback.
+ */
+export function visitRegions(visit: Visit): BodyRegion[] {
+  if (visit.region) return [visit.region];
+  return regionsForKeys(visit.items.map((i) => i.type));
+}
+
+export interface VisitClock {
+  date: string | null;
+  horizon: string | null;
+}
+
+/**
+ * The clock the CARD HEAD carries. A dated cluster owns it once for the whole booking — « 6 juil. 2027 ·
+ * dans environ 11 mois » on the head instead of on each of its rows, which is the two-clocks-per-row
+ * defect (docs/design-inspiration.md § 5.4) charged twice over. A region visit has no head clock: its
+ * rows are late, and each one's own overshoot is the thing worth reading.
+ */
+export function visitClock(visit: Visit): VisitClock {
+  if (visit.region || !visit.date) return { date: null, horizon: null };
+  return { date: visit.date, horizon: visit.items.find((i) => dateOf(i.due) === visit.date)?.horizon ?? null };
+}
+
+/**
+ * What a ROW still has to say once its head carries the clock. On the head's own day: nothing — the
+ * whole point of grouping by visit. On a different day: that date, at full precision, because
+ * compression is only honest when nothing is hidden. Under a clockless head: its own horizon.
+ */
+export function rowClock(visit: Visit, item: RailItem): VisitClock {
+  const head = visitClock(visit);
+  if (!head.date) return { date: null, horizon: item.horizon };
+  const own = dateOf(item.due);
+  return { date: own && own !== head.date ? own : null, horizon: null };
+}
+
+/** The year the collapsed tail starts — « à partir de 2028 ». Undated ⇒ null, never a guess. */
+export function laterFrom(later: Visit[]): string | null {
+  return later.find((v) => v.date)?.date?.slice(0, 4) ?? null;
 }
 
 export interface Rung {

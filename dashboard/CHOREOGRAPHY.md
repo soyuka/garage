@@ -104,9 +104,20 @@ scheduled by different things:
 | **Prochaine visite** | the soonest dated cluster | **calendar** — within `VISIT_WINDOW_DAYS` (60), chained off the previous member, not the cluster start |
 | **Plus tard · n** | every later cluster | a COUNT, never a list |
 
+**A visit card is an object, not a bordered block** (2026-08-15, the visual pass). It wears the SAME
+material as the projection surfaces on the right — the .86 dark ground, the hairline, the 13px radius,
+the hair leader stubbing toward the car — so the two columns read as one instrument bracketing the
+stage rather than a sidebar next to a canvas. What differs is the direction the leader points (right,
+at the car) and one thing the right column has no business carrying: a **severity spine** down the
+card's gutter, coloured by the visit's worst signal. The spine is the health signal, not decoration —
+it is how *Maintenant* reads louder than *Prochaine visite* without a second font size (vibrancy tiers
++ the spine carry the hierarchy; the colour ration is unchanged).
+
 | Real frame / condition | Atelier motion | Owner layer |
 |---|---|---|
-| a visit card enters the rail | rows **unfurl** staggered inside the card, same vocabulary as the worklist/carnet projections; the card itself arrives on `--at-dur-rise` | `EntretienRail` |
+| a visit card enters the rail | rows **unfurl** staggered inside the card, same vocabulary as the worklist/carnet projections; the card itself arrives on `--at-dur-rise`. The rail **assembles** rather than appearing at once: cards stagger by index (capped at 4 steps, so the last card is never late) exactly like the ladder's rungs. The stagger delays PAINT only — no data waits on it, and nothing is gated (hard rule 1) | `EntretienRail` |
+| the operator clicks a visit card's **head** | the earned camera **dollies to that visit's body region** (`visitRegions(visit)[0]` over the same `regionAnchors` a `focusRegion` uses) — the D1 ~900 ms sine ease, toggled off by clicking the same head again, by "vue libre", `Escape`, or a drag. **No cyan pulse**: the operator moved the camera, Le Noyau did not, and cyan is rationed to the agent. This is the one thing the ambient layer may do to the stage, and it is why the rail is part of the instrument instead of a list beside it — a card named « Moteur » can put the moteur on screen | `EntretienRail` + scene assembler (`cameraRig`) |
+| the camera is held on a region | every visit card that reads off that region wears the **orange operator edge** and its hair leader lights orange toward the car. The tie between the card and the part is the held link, drawn. Static state on `--at-dur-tint`, never a loop — and it survives `prefers-reduced-motion` unchanged, because it is the information | `EntretienRail` |
 | clicking **Plus tard · n** | the later visits project into the RIGHT column as a **time ladder** (`VisitProjection`): one rung per visit, and the vertical gap between rungs is **proportional to the real calendar gap**, so 2027→2028 sits close and 2028→2030 sits far. Distance encodes when — the ladder is the only place the horizon is legible as a shape rather than read as a date. Rungs unfurl staggered; dismiss clears like every other projection. Does **not** dim the stage (it is a side projection, per the rule above) | `VisitProjection` |
 | a rail row carrying parts | the row shows a **count** (`3 réf.`), never the references. Opening it raises the row's own editor, where the lines are editable. A catalogue is a DECISION surface and the rail is a STATUS surface — three brands at three prices in the ambient layer is the summoned layer leaking into it | `EntretienRail` |
 | nothing due at all | the rail collapses to **one line**. Seven rows saying "OK" is seven rows of cost for no information; the health ring already carries "fine" | `EntretienRail` |
@@ -116,7 +127,8 @@ scheduled by different things:
 shunt into place" read, `docs/design-inspiration.md` § 3). A collapsed bucket with no way to open it would
 be hiding, which the truth-before-spectacle rule forbids as much as any fake motion.
 
-**Earned camera (D1).** A region spotlight (a task focus, `focusRegion`, or clicking a rail row)
+**Earned camera (D1).** A region spotlight (a task focus, `focusRegion`, or clicking a rail visit
+card's head — the ROW itself ticks the task off, so the head is the camera control)
 **dollies the camera** to that region's anchor instead of dimming the stage — the move itself is the
 attention cue, and the camera never drifts from the part it names (the same `regionAnchors` the glow
 reads off). It fires only on explicit intent: never mid-drag (a request during a user drag queues until

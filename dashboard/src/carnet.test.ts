@@ -107,3 +107,39 @@ describe('rollupCarnet — records → { rows, totalCents, count, knownCount, un
     expect(rollupCarnet([])).toEqual({ rows: [], totalCents: 0, count: 0, knownCount: 0, unknownCount: 0, hasEstimate: false });
   });
 });
+
+// The agent's CUT of the carnet. « quand la dernière vidange ? » is a question about ONE service, and a
+// projection of all 16 visits is not its answer — the surface has to narrow the way the worklist already
+// does for `focusView {panel:'tasks', keys}`. Keys filter by the service types a visit actually carries.
+describe('rollupCarnet — keys cut the register to one service', () => {
+  const item = (type: string) => ({ type, parts: [] });
+  const records = [
+    rec({ id: '/r/oil-2026', performedAt: '2026-07-06', items: [item('oil_change'), item('oil_filter')] }),
+    rec({ id: '/r/brakes', performedAt: '2025-06-08', items: [item('brake_pads')] }),
+    rec({ id: '/r/oil-2025', performedAt: '2025-01-08', items: [item('oil_change')] }),
+  ];
+
+  it('keeps only the visits carrying a requested service, newest first', () => {
+    const cut = rollupCarnet(records, 3, ['oil_change']);
+    expect(cut.rows.map((r) => r.id)).toEqual(['/r/oil-2026', '/r/oil-2025']);
+  });
+
+  it('counts the CUT, not the register — the footer must not claim 3 visits for a 2-visit answer', () => {
+    expect(rollupCarnet(records, 3, ['oil_change']).count).toBe(2);
+  });
+
+  it('a visit matching any one of several keys is kept', () => {
+    expect(rollupCarnet(records, 3, ['oil_change', 'brake_pads']).count).toBe(3);
+  });
+
+  it('no keys = the whole register, exactly as before', () => {
+    expect(rollupCarnet(records, 3).count).toBe(3);
+    expect(rollupCarnet(records, 3, []).count).toBe(3);
+  });
+
+  it('a key the vehicle never logged yields an empty cut, not the whole register', () => {
+    // Honesty: silence here would make "never done" and "you asked wrong" look identical, so the
+    // projection renders nothing and the caller can say so.
+    expect(rollupCarnet(records, 3, ['timing_belt']).count).toBe(0);
+  });
+});

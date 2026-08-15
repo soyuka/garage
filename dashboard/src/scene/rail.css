@@ -1,31 +1,94 @@
-/* "Entretien" — the persistent LEFT rail. Screen-locked column on the hero's left edge, THE reading
-   surface for échéances (the ring pins were removed — the disc stays clean). Two workload sections:
-   "À faire" (late, every row red/amber-tagged) and "Planifié", plus the untracked tail. Scrim law: an
-   opaque (>= .86) frosted-void ground so the mono rows read over the rotating, bloomed car. Task rows
-   reuse .at-task* (checklist.css), due/gap rows are defined here. Vibrancy tiers carry hierarchy at ONE
-   mono size. NO cyan (rationed to Le Noyau); signal colour only on the paired TEXT tag. */
+/* "Entretien" — the persistent LEFT rail, THE reading surface for échéances (the ring pins were removed —
+   the disc stays clean). Grouped by VISIT; three horizons (Maintenant / Prochaine visite / Plus tard · n).
+   Task rows reuse .at-task* (checklist.css), due/gap rows are defined here. Vibrancy tiers carry hierarchy
+   at ONE mono size. NO cyan (rationed to Le Noyau); signal colour only on the paired TEXT tag + the spine.
+
+   THE VISUAL PASS (2026-08-15). The rail used to be a 320px slab: a flat rgba(…, .9) fill running the full
+   viewport height with a hard 1px border down its right edge. That border, that rectangle and that dead
+   lower half are what made it read as a web sidebar pasted onto a 3D render rather than part of one
+   instrument. Three moves, all structural:
+
+   1. THE COLUMN IS A VEIL, NOT A WALL. No border. The ground holds full scrim-law opacity across the card
+      column and then dissolves into the stage on the right, and the column is only as TALL as what it has
+      to say — an ambient strip that compressed its content must not keep the room it no longer needs.
+   2. A VISIT IS A CARD, in the SAME material as the projection surfaces on the right (.at-worklist /
+      .at-carnet / .at-ladder): .86 dark ground, hairline, 13px radius, blur, a hair leader stubbing at the
+      car. Two columns of the same instrument bracketing the stage — the only asymmetry is which way the
+      leaders point, and that asymmetry is the ambient/summoned split (docs/design-inspiration.md § 2).
+   3. THE CARD CARRIES ITS OWN SEVERITY, as a spine down its gutter. That is what makes « Maintenant » read
+      louder than « Prochaine visite » without a second font size (CHOREOGRAPHY § Vibrancy tiers). */
 
 .at-rail {
   position: absolute;
   top: 52px;
   left: 0;
-  bottom: 0;
+  /* NOT bottom:0 — the column ends where its content ends. Bottom clearance = the composer band (132) +
+     air; past that it scrolls inside itself. A rail that just compressed seven rows into three cards and
+     still painted a full-height rectangle was advertising emptiness. */
+  max-height: calc(100% - 200px);
   width: 320px;
   z-index: 16;
   box-sizing: border-box;
   overflow-y: auto;
-  overflow-x: hidden;
-  padding: 20px var(--at-space-5) 132px; /* bottom pad clears the centred composer band */
+  overflow-x: hidden; /* the card leaders live INSIDE the column's right gutter, so nothing needs to escape */
+  padding: 20px var(--at-space-5) var(--at-space-5);
   font-family: var(--at-font-ui);
   color: var(--at-text);
-  /* frosted-void fill — same idiom as the facts/history glass, held opaque through the content band */
-  background: linear-gradient(180deg, rgba(150, 175, 210, 0.05), rgba(0, 0, 0, 0) 160px), rgba(20, 19, 15, 0.9);
-  border-right: 1px solid var(--at-glass-edge);
-  backdrop-filter: blur(var(--at-glass-blur));
+  /* ATMOSPHERE, not a panel. The column ground is a soft left-to-right falloff that dissolves into the
+     stage — it exists to keep the car from reading THROUGH the strip, not to be a surface. The scrim law
+     is met by each text-bearing thing carrying its own >= .86 ground (the cards, and the local plates
+     below), exactly as the cockpit band does with its radial scrim. A veil this light is what lets the
+     cards read as floating ON the stage instead of as darker rectangles on a darker slab. */
+  background: linear-gradient(
+    90deg,
+    rgba(13, 14, 16, 0.66) 0%,
+    rgba(13, 14, 16, 0.5) 58%,
+    rgba(13, 14, 16, 0.22) 88%,
+    rgba(13, 14, 16, 0) 100%
+  );
+  /* the bottom edge fades out over its last sliver — a strip that stops, not a panel that is cut off.
+     Short enough (28px) that no line of text ever reads through it. */
+  mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 28px), transparent 100%);
   transition: opacity var(--at-dur-swap) ease;
 }
 .at-rail[data-dim] {
   opacity: 0.45;
+}
+
+/* ONE right gutter for the whole column, carried by the rail's direct children. The 18px it leaves is
+   where the cards' hair leaders run — the only thing licensed to cross the column's edge, because it is
+   the tie to the car. (The column scrolls, so nothing can escape its box; the gutter is how the leaders
+   get their room without an overflow that would clip them.) */
+.at-rail-head,
+.at-rail-actions,
+.at-rail-section,
+.at-rail-foot,
+.at-rail-rows--gaps,
+.at-check-empty {
+  margin-right: 18px;
+}
+/* SCRIM LAW for everything that is not a card. The column veil is atmosphere (see above), so each
+   text-bearing element outside a visit card carries its own >= .86 ground. They are plates, not panels:
+   just wide enough for their words, so the column keeps its floating-object read. */
+.at-rail-head,
+.at-rail-section-title,
+.at-rail-rows--gaps,
+.at-rail-rows--dismissed,
+.at-check-empty,
+.at-rail .at-check-btn {
+  background: rgba(13, 14, 16, 0.88);
+  backdrop-filter: blur(4px);
+}
+.at-rail-head,
+.at-rail-rows--gaps,
+.at-rail-rows--dismissed,
+.at-check-empty {
+  border-radius: 10px;
+  padding: var(--at-space-2) var(--at-space-3); /* re-stated for the two --rows plates below (shorthand) */
+}
+.at-rail-section-title {
+  border-radius: 0 0 8px 8px;
+  padding: var(--at-space-2) var(--at-space-3);
 }
 
 .at-rail-head {
@@ -56,7 +119,11 @@
   opacity: var(--at-vib-1);
 }
 
-/* ── the two workload sections ── */
+/* ── the three horizons ──
+   NOT three equal headings. `Maintenant` is the read; `Plus tard` is a direction to look, not a task.
+   Hierarchy is vibrancy + weight + how much air sits above the section — never another font size (the
+   whole set stays at 11px mono). The rule above each title is the same gradient in three strengths, so
+   the eye reads the descent even with the words covered. */
 .at-rail-section {
   margin-top: var(--at-space-4);
 }
@@ -69,15 +136,30 @@
   color: var(--at-label);
   opacity: var(--at-vib-3);
   margin: 0;
+  border-top: 1px solid var(--at-hairline);
 }
-.at-rail-section-title--late {
+.at-rail-section--now .at-rail-section-title {
+  color: var(--at-text);
+  font-weight: 600;
+  opacity: var(--at-vib-1);
+  border-top-color: var(--at-chrome-hi);
+}
+/* the red is spent only when something is ACTUALLY late — « Maintenant » also holds decided-but-undated
+   work, and a red heading over a car with nothing overdue is a false alarm. */
+.at-rail-section--now .at-rail-section-title[data-late] {
   color: var(--at-red-hi);
-  opacity: var(--at-vib-2);
+  border-top-color: var(--at-red);
 }
-/* Decided work reads brighter than the forecast below it, without borrowing the late red. */
-.at-rail-section-title--ongoing {
+.at-rail-section--next .at-rail-section-title {
   color: var(--at-text-mono);
   opacity: var(--at-vib-2);
+}
+/* the tail is FAR — the distance above it is the information, the same language the ladder speaks. */
+.at-rail-section--later {
+  margin-top: var(--at-space-6);
+}
+.at-rail-section--later .at-rail-section-title {
+  opacity: var(--at-vib-3);
 }
 .at-rail-rows--gaps {
   margin-top: var(--at-space-4);
@@ -91,12 +173,30 @@
   margin-top: var(--at-space-2);
 }
 
+/* the retirées drawer closes the column. Its button hugs its own words — a plate, not a full-width bar. */
+.at-rail-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--at-space-2);
+  margin-top: var(--at-space-5);
+}
+.at-rail-foot > .at-check-btn {
+  align-self: flex-start;
+}
+
 .at-rail-rows {
   list-style: none;
   margin: var(--at-space-3) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
+}
+/* the plates outside the cards keep the column's one right gutter AND their scrim padding — the
+   `.at-rail-rows` shorthands above zero both. */
+.at-rail-rows--gaps,
+.at-rail-rows--dismissed {
+  margin-right: 18px;
+  padding: var(--at-space-2) var(--at-space-3);
 }
 .at-rail-rows--dismissed {
   margin-top: var(--at-space-2);
@@ -107,6 +207,13 @@
 .at-rail-row {
   border-top: 1px dashed var(--at-hairline); /* a ruled line, not a rigid table row */
   transition: background var(--at-dur-tint) var(--at-ease-sine);
+}
+/* rows unfurl staggered INSIDE their card (CHOREOGRAPHY § "a visit card enters the rail") — documented
+   since the regroup, only ever animated on the card until now. A delay is not a duration: the row's own
+   motion is the scale step, this only spaces the paint. */
+.at-rail-visit .at-rail-row {
+  animation: at-unfurl var(--at-dur-rise) var(--at-ease-sine) both;
+  animation-delay: calc(60ms + var(--at-step, 0) * 40ms);
 }
 .at-rail-row:hover {
   background: var(--at-void-lift);
@@ -128,7 +235,9 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: calc(var(--at-space-5) * -1);
+  /* the card's inner left edge — 12px clear of the severity spine on the card's border, so the agent's
+     orange cue and the visit's own signal never fuse into one ambiguous stripe. */
+  left: calc(var(--at-space-3) * -1);
   width: 2px;
   background: var(--at-orange);
   box-shadow: var(--at-glow-orange);
@@ -272,50 +381,170 @@
 
 /* ── visit cards (2026-08-15) — the rail groups by TRIP TO THE LIFT, not by service. A card is one
    booking: its caption is the date, or the teardown for undated work. See CHOREOGRAPHY.md
-   § "The rail is grouped by VISIT, not by service". */
+   § "The rail is grouped by VISIT, not by service". Materially the SAME object as the projection
+   surfaces on the right — that shared material is the integration. */
 
 .at-rail-visit {
+  position: relative;
   margin-top: var(--at-space-3);
-  padding-left: var(--at-space-3);
-  border-left: 1px solid var(--at-glass-edge);
+  border: 1px solid var(--at-hairline);
+  border-radius: 13px;
+  background: rgba(13, 14, 16, 0.86); /* scrim law: >= .86 over the bloomed car — the projection ground */
+  backdrop-filter: blur(4px);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.45);
   animation: at-unfurl var(--at-dur-rise) var(--at-ease-sine) both;
+  animation-delay: calc(var(--at-step, 0) * 45ms); /* the rail ASSEMBLES; paint only, nothing waits */
 }
 .at-rail-visit:first-of-type {
   margin-top: var(--at-space-2);
 }
 
+/* the SEVERITY SPINE — the visit's worst signal as a lit edge down its gutter. Information, not
+   decoration: it is how the eye ranks three cards before reading a word. Green is quiet (a healthy
+   booking must not shout), amber/red are lit. */
+.at-rail-visit::before {
+  content: '';
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: -1px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--at-spine, var(--at-unknown));
+  box-shadow: var(--at-spine-glow, none);
+}
+.at-rail-visit[data-worst='green'] { --at-spine: var(--at-green); }
+.at-rail-visit[data-worst='amber'] { --at-spine: var(--at-amber-hi); --at-spine-glow: var(--at-glow-amber); }
+.at-rail-visit[data-worst='red'] { --at-spine: var(--at-red-hi); --at-spine-glow: var(--at-glow-red); }
+
+/* the HAIR LEADER — a 1px stub toward the car, the same tie the carnet/constellation/worklist use on the
+   other side. Mirrored: theirs point LEFT at the car from the right column, this one points RIGHT. */
+.at-rail-visit::after {
+  content: '';
+  position: absolute;
+  top: 21px;
+  right: -18px;
+  width: 18px;
+  height: 1px;
+  background: var(--at-hairline);
+  transition: background var(--at-dur-tint) var(--at-ease-sine);
+}
+
+/* HELD — the earned camera is parked on this card's region. The operator cue (orange, rationed) on the
+   card edge, and the leader lights all the way to the car: the tie between the card and the part, drawn.
+   Static state, so reduced motion loses nothing. */
+.at-rail-visit[data-held] {
+  border-color: var(--at-orange);
+}
+.at-rail-visit[data-held]::after {
+  background: var(--at-orange);
+  box-shadow: var(--at-glow-orange);
+}
+
+/* the head is a BAR, not just bolder text: the grouping is the whole point of the redesign, so it reads
+   as structure (its own ground + a seam) rather than by winning a font-size contest with the rows. */
 .at-rail-visit-head {
   display: flex;
   align-items: baseline;
   gap: var(--at-space-2);
-  margin-bottom: var(--at-space-2);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 9px var(--at-space-3) 8px;
+  background: var(--at-void-lift);
+  border: 0;
+  border-bottom: 1px solid var(--at-hairline);
+  border-radius: 12px 12px 0 0;
+  text-align: left;
+  font: inherit;
+}
+.at-rail-visit-head--aim {
+  cursor: pointer;
+  transition: background var(--at-dur-tint) var(--at-ease-sine);
+}
+.at-rail-visit-head--aim:hover,
+.at-rail-visit-head--aim:focus-visible {
+  background: var(--at-chrome);
+}
+.at-rail-visit-head--aim:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: -2px;
 }
 
 .at-rail-visit-caption {
   font-family: var(--at-font-mono);
-  font-size: 10px;
+  font-size: 11.5px;
+  font-weight: 600;
   letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
   color: var(--at-text);
-  opacity: var(--at-vib-2);
+  opacity: var(--at-vib-1); /* primary: WHICH booking this is */
 }
 
 .at-rail-visit-count {
   font-family: var(--at-font-mono);
-  font-size: 9px;
+  font-size: 10px;
   color: var(--at-text-dim);
-  opacity: var(--at-vib-3);
+  opacity: var(--at-vib-2);
 }
 
-/* « Plus tard · n » — a count that OPENS the ladder, never a truncation. */
+/* the visit's horizon — said ONCE per booking, here, instead of once per row (§ 5 defect 4). */
+.at-rail-visit-horizon {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* the aim crosshair: the head's affordance for "put this part of the car on screen". Orange = operator. */
+.at-rail-visit-aim {
+  order: 9; /* always the last thing in the bar, whatever else the head carries */
+  margin-left: auto;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  transition: color var(--at-dur-tint) var(--at-ease-sine);
+}
+.at-rail-visit-head--aim:hover .at-rail-visit-aim,
+.at-rail-visit-head--aim:focus-visible .at-rail-visit-aim,
+.at-rail-visit[data-held] .at-rail-visit-aim {
+  color: var(--at-orange-hi);
+  opacity: var(--at-vib-1);
+}
+
+/* the rows sit inside the card's padding; the card's own edge replaced the first row's rule. */
+.at-rail-visit .at-rail-rows {
+  margin: 0;
+  padding: 0 var(--at-space-3) var(--at-space-2);
+}
+.at-rail-visit .at-rail-rows > :first-child {
+  border-top: 0;
+}
+
+/* « Plus tard · n » — a count that OPENS the ladder, never a truncation. Deliberately NOT a card: it is
+   the one thing in the rail that is not work in front of you, so it stays a bare control on the veil, far
+   below the last card. It reads as a door, and the ladder is what is behind it. */
 .at-rail-later {
   display: flex;
   align-items: baseline;
   gap: var(--at-space-2);
   width: 100%;
-  padding: var(--at-space-2) 0;
-  background: none;
+  box-sizing: border-box;
+  padding: var(--at-space-3) var(--at-space-3) var(--at-space-2);
+  /* its own scrim-law ground — the meta ("à partir de 2028") sits at the far right, so it holds .88 all
+     the way across rather than fading under its own text. */
+  background: rgba(13, 14, 16, 0.88);
+  backdrop-filter: blur(4px);
+  border-radius: 0 0 10px 10px;
   border: none;
-  border-top: 1px solid var(--at-glass-edge);
+  border-top: 1px dashed var(--at-hairline); /* dashed: the horizon is a boundary, not a seam */
   font-family: var(--at-font-mono);
   color: var(--at-text-dim);
   text-align: left;
@@ -325,6 +554,11 @@
 .at-rail-later:hover,
 .at-rail-later:focus-visible {
   opacity: var(--at-vib-1);
+}
+.at-rail-later:focus-visible {
+  outline: 2px solid var(--at-orange);
+  outline-offset: 3px;
+  border-radius: var(--at-radius-chip);
 }
 
 .at-rail-later-label {
@@ -338,6 +572,8 @@
   color: var(--at-text);
 }
 
+/* how far away "far" is — the tail says which year it starts, so the count is a distance and not just a
+   number of things withheld (Gibson: far, never hidden). */
 .at-rail-later-meta {
   margin-left: auto;
   font-size: 9px;
@@ -368,6 +604,30 @@
   opacity: var(--at-vib-1);
 }
 
-[data-reduced='true'] .at-rail-visit {
-  animation: none;
+/* prefers-reduced-motion: the assembly collapses to an instant state. Everything that CARRIES anything —
+   the severity spine, the held orange edge and its leader, the vibrancy tiers, every clock — is static
+   state, so nothing is lost with motion off. */
+@media (prefers-reduced-motion: reduce) {
+  .at-rail-visit,
+  .at-rail-visit .at-rail-row {
+    animation: none !important;
+  }
+}
+
+/* The column overflows by a few dozen pixels on a full parc, and `overflow-y:auto` paints an opaque
+   track down the right edge — which is the hard border this pass removed, back again as a scrollbar.
+   Keep the affordance, lose the wall: transparent track, hairline thumb. */
+.at-rail {
+  scrollbar-width: thin;
+  scrollbar-color: var(--at-hairline) transparent;
+}
+.at-rail::-webkit-scrollbar {
+  width: 6px;
+}
+.at-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+.at-rail::-webkit-scrollbar-thumb {
+  background: var(--at-hairline);
+  border-radius: 3px;
 }

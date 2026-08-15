@@ -20,7 +20,8 @@ import { VisitProjection } from './VisitProjection';
 import { buildWorklist } from './worklist';
 import { manifestFromCta } from './parts';
 import { rollupCarnet } from '../carnet';
-import type { CameraFocus } from './cameraRig';
+import { holdIntent, type CameraFocus } from './cameraRig';
+import type { BodyRegion } from './anchors';
 import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
 import type { Focus } from '../focus';
@@ -59,6 +60,10 @@ interface SceneViewProps {
   cameraFocus?: CameraFocus | null;
   /** Clears cameraFocus — the "vue libre" reset, Escape, or a user drag breaking the hold (via Plateau). */
   onCameraRelease?: () => void;
+  /** D1 from the AMBIENT layer: the operator aimed a rail visit card at its body region. Dolly only — no
+   * cyan pulse, because Le Noyau did not do this (CHOREOGRAPHY § "the operator clicks a visit card's
+   * head"). Absent → the card heads render as plain captions, never dead controls. */
+  onHoldRegion?: (region: BodyRegion) => void;
   onClearEmber: () => void;
   /** C2 à-décider inbox: remove a decided queue item (backs "vu" + follows every action). */
   onResolveDecision?: (id: string) => void;
@@ -125,6 +130,7 @@ export function SceneView({
   pulseRegion = null,
   cameraFocus = null,
   onCameraRelease,
+  onHoldRegion,
   onClearEmber,
   onResolveDecision,
   onScheduleDecision,
@@ -206,7 +212,10 @@ export function SceneView({
   // A carnet focus (the "Carnet · dépenses" wayfinder / the agent's showHistory) rolls the client-held
   // records into the same projection column. Empty history → nothing (the chip is hidden upstream anyway).
   const carnetFocused = focus?.panel === 'carnet';
-  const carnet = carnetFocused ? rollupCarnet(records) : null;
+  // Keys CUT the register to the visits carrying those services — « quand la dernière vidange ? » is a
+  // question about ONE service, and every visit is not its answer. Same narrowing the worklist already
+  // does for `focusView {panel:'tasks', keys}`.
+  const carnet = carnetFocused ? rollupCarnet(records, 3, focusKeys ?? []) : null;
   const showCarnet = !!carnet && carnet.count > 0;
   // A tasks focus (`focusView {panel:'tasks'}` — « qu'est-ce que j'ai à faire ? ») projects the
   // WORKLIST into the same column: the agent's cut of the rail, in the order it answered.
@@ -232,6 +241,14 @@ export function SceneView({
         checklist.onAddTask({ type: d.type, target, dueDate: target ? null : d.dueAt ?? d.projectedDueAt ?? null });
       }
     : undefined;
+
+  // The rail's card heads are a TOGGLE on the earned camera: re-aiming the region already held goes back
+  // ("click again to return", D1). The rail stays dumb about the camera — the decision lives in cameraRig
+  // and the two callbacks are already here.
+  const aimRegion =
+    onHoldRegion && onCameraRelease
+      ? (region: BodyRegion) => (holdIntent(cameraFocus, region) === 'release' ? onCameraRelease() : onHoldRegion(region))
+      : undefined;
 
   // The rail model: todo ("À faire" — late, red-tagged row by row) / planned / gaps. The rail is the ONE
   // reading surface for échéances (the ring pins were removed — the disc stays clean; zoom via the rows).
@@ -382,6 +399,8 @@ export function SceneView({
               onPlan={onPlan!}
               dimmed={dimScene || overlayOpen}
               spotlit={tasksFocused ? focusKeys : undefined}
+              heldRegion={cameraFocus?.region ?? null}
+              onAimRegion={aimRegion}
             />
           )}
         </>

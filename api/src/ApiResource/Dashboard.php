@@ -93,7 +93,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'focus_view' => new McpTool(
             title: 'Focus View',
-            description: 'Point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel) or "carnet" (past visits + spend — use after get_maintenance_history for "quand ai-je fait la vidange ?" or "combien ai-je dépensé cette année ?", instead of answering in prose). keys are service-type or fact keys to spotlight (oil_change, timing_belt, air_filter…); each lights its body region on the car and etches the matching panel rows. Omit keys to just raise the panel.',
+            description: 'Point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel) or "carnet" (past visits + spend — use after get_maintenance_history for "quand ai-je fait la vidange ?" or "combien ai-je dépensé cette année ?", instead of answering in prose). keys are service-type or fact keys to spotlight (oil_change, timing_belt, air_filter…); each lights its body region on the car and etches the matching panel rows. On "carnet", keys CUT the register to the visits carrying those services — pass the type you were asked about (["oil_change"] for "quand ai-je fait la vidange ?") so the answer is the top row, not every visit. Omit keys to just raise the panel.',
             input: FocusViewInput::class,
             structuredContent: false,
             processor: FocusViewProcessor::class,

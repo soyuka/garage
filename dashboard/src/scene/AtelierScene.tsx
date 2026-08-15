@@ -201,6 +201,11 @@ export function AtelierScene() {
         pulseRegion={pulseRegion}
         cameraFocus={cameraFocus}
         onCameraRelease={() => setCameraFocus(null)}
+        onHoldRegion={(region) => {
+          // the operator's own dolly — no cyan flare, the playground mirrors the live driver exactly.
+          flareKey.current += 1;
+          setCameraFocus({ region, key: flareKey.current });
+        }}
         edit={demoEdit}
         checklist={demoChecklist}
         pinnedKeys={[]}
