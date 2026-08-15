@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Prints the freshest Casdoor access token for the `claude-desktop` application.
+# The MCP client reads it as ${MPA_STAGE_TOKEN}; tokens live 168 h, so this is
+# re-run at every Atelier launch rather than cached.
+set -euo pipefail
+
+API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../api" && pwd)"
+
+token=$(cd "$API_DIR" && docker compose exec -T database \
+  psql -U app -d postgres -t -A \
+  -c "select access_token from token where application='claude-desktop' order by created_time desc limit 1;" \
+  | tr -d '\r\n ')
+
+if [ -z "$token" ]; then
+  echo "mint-token: no claude-desktop token in the database" >&2
+  exit 1
+fi
+
+printf '%s' "$token"

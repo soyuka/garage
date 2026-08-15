@@ -14,6 +14,10 @@
         <ini name="display_errors" value="1" />
         <ini name="error_reporting" value="-1" />
         <server name="APP_ENV" value="test" force="true" />
+        <!-- force="true": the stage profile promotes MCP_ALLOWED_HOSTS to a CONTAINER env var, and
+             Dotenv never overwrites one of those — so .env.test cannot win and McpAllowedHostsTest
+             would assert against whatever hosts the running stack happens to allow. -->
+        <server name="MCP_ALLOWED_HOSTS" value="localhost,127.0.0.1,[::1],mcp.example.test" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 

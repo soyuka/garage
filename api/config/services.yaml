@@ -155,6 +155,24 @@ services:
             $oidcConfigurationCacheKey: 'casdoor_oidc_config'
             $issuers: ['%env(CASDOOR_ISSUER)%']
 
+    # Replace symfony/mcp-bundle's controller so the MCP DNS-rebinding allowlist is configurable:
+    # the bundle hardcodes `middleware: null`, which pins it to localhost-only and 403s every
+    # authenticated request on a public hostname. See the class docblock.
+    mcp.server.controller:
+        class: App\Controller\Mcp\McpEndpointController
+        public: true
+        arguments:
+            - '@mcp.server'
+            - '@mcp.psr_http_factory'
+            - '@mcp.http_foundation_factory'
+            - '@mcp.psr17_factory'
+            - '@mcp.psr17_factory'
+            - '%env(csv:MCP_ALLOWED_HOSTS)%'
+            - '@logger'
+        tags:
+            - 'controller.service_arguments'
+            - { name: 'monolog.logger', channel: 'mcp' }
+
 when@test:
     services:
         App\Tests\Mock\FixtureHttpClient:

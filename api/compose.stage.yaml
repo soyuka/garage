@@ -1,0 +1,41 @@
+---
+# STAGE overlay — the conference rig. Layered ON TOP of the dev override, not instead of it:
+#
+#   docker compose --env-file .env.stage -f compose.yaml -f compose.override.yaml -f compose.stage.yaml up -d
+#
+# The dev override is kept deliberately. Its Vite dev server (`dashboard`) is what Caddy's @frontend
+# proxies to, and the tunnel means we never need a production SPA build at all — that is one of the
+# three blockers choosing the tunnel over a VPS deleted (CONFERENCE.md workstream A).
+#
+# Almost everything else is already parameterised through .env interpolation, so this file only
+# carries what interpolation cannot reach.
+services:
+  php:
+    environment:
+      # Symfony's Dotenv does not overwrite a variable that is already set in the environment, so a
+      # value living only in .env.stage would lose to the `.env` bind-mounted at /app/.env. These
+      # three must therefore be injected as container environment to actually win.
+      CASDOOR_ISSUER: ${CASDOOR_ISSUER}
+      APP_SECRET: ${APP_SECRET}
+      SYMFONY_TRUSTED_PROXIES: ${SYMFONY_TRUSTED_PROXIES:-private_ranges}
+      # Without the public host here, the MCP DNS-rebinding guard 403s every AUTHENTICATED request
+      # with "Invalid Host header." while unauthenticated ones still 401 correctly — it reads
+      # exactly like an OAuth failure. Must be container env: /app/.env's localhost-only default
+      # would otherwise win, since Dotenv never overwrites an already-set variable.
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS}
+
+  worker:
+    environment:
+      # The worker derives the same pilot topic and verifies the same tokens — if APP_SECRET differs
+      # between php and worker, the two publish to DIFFERENT topics and half the frames vanish with
+      # no error anywhere. Keep these in lockstep with php above.
+      CASDOOR_ISSUER: ${CASDOOR_ISSUER}
+      APP_SECRET: ${APP_SECRET}
+
+  casdoor:
+    volumes:
+      # Stage app.conf: real DB credentials and `origin` moved off http://casdoor:8000 to the public
+      # host. app.conf is NOT env-interpolated (see its own header), which is why this is a whole
+      # second file rather than a variable.
+      - ./docker/casdoor/app.conf.stage:/conf/app.conf:ro
+      - ./docker/casdoor/init_data.json:/init_data.json:ro

@@ -1,0 +1,39 @@
+# cloudflared NAMED tunnel — the conference rig's transport. Template; copy to config.yml
+# (gitignored, it carries the tunnel UUID) after `cloudflared tunnel create mpa-stage`.
+#
+# It MUST be a named tunnel. A quick tunnel hands out a fresh random *.trycloudflare.com hostname on
+# every restart, and that hostname is baked into three places — Casdoor's `origin`, CASDOOR_ISSUER,
+# and the connector entry in Claude Desktop — so a changing hostname means reconfiguring all three
+# before every rehearsal.
+#
+# Setup, once the interactive `cloudflared tunnel login` has written ~/.cloudflared/cert.pem:
+#
+#   cloudflared tunnel create mpa-stage
+#   cloudflared tunnel route dns mpa-stage garage.soyuka.me
+#   cloudflared tunnel route dns mpa-stage auth.soyuka.me
+#   cloudflared tunnel --config docker/cloudflared/config.yml run
+#
+# This publishes the local stack on the public internet for as long as it runs. That is the whole
+# point, and also the reason .env.stage exists — see CONFERENCE.md workstream A.1b. Stop it and the
+# exposure is gone.
+
+tunnel: CHANGEME-tunnel-uuid
+credentials-file: CHANGEME-absolute-path-to/.cloudflared/CHANGEME-tunnel-uuid.json
+
+ingress:
+  # The app + /mcp. Plain HTTP on the host's published :80 — Cloudflare terminates real TLS at the
+  # edge, and Caddy serves this hostname without auto-HTTPS (the `http://` prefix on SERVER_NAME in
+  # .env.stage is what tells it so).
+  #
+  # The Host header is deliberately NOT rewritten. McpProtectedResourceChallengeListener.php:38
+  # derives the OAuth discovery URL from the incoming request, so pointing this at localhost would
+  # make the server advertise https://localhost/.well-known/oauth-protected-resource to Claude
+  # Desktop — unreachable, and the failure surfaces at the far end where we cannot see it.
+  - hostname: garage.soyuka.me
+    service: http://localhost:80
+
+  # Casdoor, at a root origin, on the port compose already publishes.
+  - hostname: auth.soyuka.me
+    service: http://localhost:8000
+
+  - service: http_status:404

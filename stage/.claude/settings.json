@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__mon-parc-auto",
+      "Read",
+      "Glob",
+      "Grep",
+      "Bash(./bin/mint-token)",
+      "Bash(./bin/atelier:*)"
+    ],
+    "deny": [
+      "WebFetch",
+      "WebSearch",
+      "Task"
+    ]
+  },
+  "outputStyle": "Atelier",
+  "includeCoAuthoredBy": false
+}

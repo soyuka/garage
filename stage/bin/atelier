@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Launches Claude Code on the Atelier stage, bringing up everything the pilot session needs:
+# the docker stack, a freshly minted MCP token, and the cloudflared tunnel that publishes
+# garage.soyuka.me. Usage: ./bin/atelier [claude args...]
+set -euo pipefail
+
+STAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+API_DIR="$(cd "$STAGE_DIR/../api" && pwd)"
+TUNNEL_CONFIG="$API_DIR/docker/cloudflared/config.yml"
+TUNNEL_LOG="$STAGE_DIR/var/cloudflared.log"
+PUBLIC_PROBE="https://garage.soyuka.me/mcp"
+
+# The stage overlay is layered on top of the dev override, never instead of it — see the header of
+# compose.stage.yaml. Getting this list wrong yields a stack that boots but serves localhost-only
+# values for MCP_ALLOWED_HOSTS and CASDOOR_ISSUER, which reads exactly like an OAuth failure.
+compose() {
+  (cd "$API_DIR" && docker compose --env-file .env.stage \
+    -f compose.yaml -f compose.override.yaml -f compose.stage.yaml "$@")
+}
+
+say() { printf '\033[2matelier:\033[0m %s\n' "$1" >&2; }
+
+# --- 1. the stack ------------------------------------------------------------------------------
+# minio_init is a one-shot that exits after seeding the bucket, so it can never appear in the
+# running set — checking for it would make us restart a perfectly healthy stack on every launch.
+REQUIRED_SERVICES=(database mongodb php worker casdoor dashboard minio)
+
+missing_services() {
+  local running missing=()
+  running="$(compose ps --services --status running 2>/dev/null || true)"
+  for svc in "${REQUIRED_SERVICES[@]}"; do
+    grep -qx "$svc" <<<"$running" || missing+=("$svc")
+  done
+  printf '%s\n' "${missing[@]:-}"
+}
+
+missing="$(missing_services)"
+if [ -n "${missing// /}" ]; then
+  say "stack down (${missing//$'\n'/ }) — docker compose up"
+  compose up -d
+  for _ in $(seq 1 60); do
+    missing="$(missing_services)"
+    [ -z "${missing// /}" ] && break
+    sleep 1
+  done
+  if [ -n "${missing// /}" ]; then
+    echo "atelier: services never came up: ${missing//$'\n'/ }" >&2
+    exit 1
+  fi
+fi
+say "stack up"
+
+# --- 2. the tunnel -----------------------------------------------------------------------------
+# Without it garage.soyuka.me answers 530 at the Cloudflare edge and the MCP server exposes no
+# tools at all — the failure surfaces in Claude as a connector that simply has nothing in it.
+started_tunnel=0
+teardown() {
+  if [ "$started_tunnel" = 1 ]; then
+    say "closing the tunnel"
+    kill "$TUNNEL_PID" 2>/dev/null || true
+    wait "$TUNNEL_PID" 2>/dev/null || true
+  fi
+}
+trap teardown EXIT INT TERM
+
+tunnel_reachable() {
+  local code
+  code="$(curl -s -o /dev/null -m 5 -w '%{http_code}' "$PUBLIC_PROBE" || echo 000)"
+  # 401 is the healthy answer to an unauthenticated probe: the origin was reached and challenged us.
+  # 530 is Cloudflare saying it has no tunnel to hand the request to; 000 is no answer at all.
+  [ "$code" != 000 ] && [ "$code" != 530 ] && [ "$code" -lt 500 ]
+}
+
+if tunnel_reachable; then
+  say "tunnel already up"
+else
+  [ -f "$TUNNEL_CONFIG" ] || { echo "atelier: no $TUNNEL_CONFIG — see config.yml.dist" >&2; exit 1; }
+  command -v cloudflared >/dev/null || { echo "atelier: cloudflared not installed" >&2; exit 1; }
+
+  say "opening the tunnel — the stack is now on the public internet"
+  mkdir -p "$(dirname "$TUNNEL_LOG")"
+  cloudflared tunnel --config "$TUNNEL_CONFIG" run >>"$TUNNEL_LOG" 2>&1 &
+  TUNNEL_PID=$!
+  started_tunnel=1
+
+  for _ in $(seq 1 30); do
+    tunnel_reachable && break
+    kill -0 "$TUNNEL_PID" 2>/dev/null || { echo "atelier: cloudflared died, see $TUNNEL_LOG" >&2; exit 1; }
+    sleep 1
+  done
+  tunnel_reachable || { echo "atelier: tunnel never came up, see $TUNNEL_LOG" >&2; exit 1; }
+  say "tunnel up on garage.soyuka.me"
+fi
+
+# --- 3. the token ------------------------------------------------------------------------------
+# Read after the stack is confirmed up: mint-token queries the database container directly.
+MPA_STAGE_TOKEN="$("$STAGE_DIR/bin/mint-token")"
+export MPA_STAGE_TOKEN
+say "token minted"
+
+# Not `exec` — the shell has to survive Claude so the trap can close the tunnel behind us.
+cd "$STAGE_DIR"
+claude "$@"
