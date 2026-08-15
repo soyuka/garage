@@ -1,3 +1,5 @@
+import { PILOT_QUIET_MS } from '../tokens/motion';
+import type { BodyRegion } from '../scene/anchors';
 import type { NoyauEvent } from './state';
 
 // Scripted mock turns for the Stage-A playground — NO backend. Frames use the EXACT real session-frame
@@ -50,5 +52,38 @@ const SCRIPTS: Record<Scenario, { steps: { at: number; ev: NoyauEvent }[] }> = {
 /** Fire a scripted turn through `dispatch`; returns a canceller that clears any pending frames. */
 export function runMockTurn(scenario: Scenario, dispatch: (ev: NoyauEvent) => void): () => void {
   const timers = SCRIPTS[scenario].steps.map(({ at, ev }) => window.setTimeout(() => dispatch(ev), at));
+  return () => timers.forEach((t) => window.clearTimeout(t));
+}
+
+// ── A PILOT run (docs/pilot.md) ───────────────────────────────────────────────
+// Shaped like the thing itself, not like a turn: no `turn:start` (the first status IS the start), a
+// burst of intents inside a few hundred ms, then dead air. It deliberately never settles — the point
+// of the script is the state a turn cannot reach, veille pilotée, and the caller closes it by hand
+// the way `settle_dashboard` would. The regions go through the caller's coalescer, so what you watch
+// is one dolly to the LAST of them, not three.
+
+const PILOT_SCRIPT: { at: number; ev?: NoyauEvent; region?: BodyRegion }[] = [
+  { at: 0, ev: { type: 'status', message: 'Je relis le carnet…', driver: 'pilot' } },
+  { at: 260, ev: { type: 'status', message: 'Je cherche la référence du filtre…', driver: 'pilot' } },
+  // the burst: three intents naming three regions in 180ms — one gesture
+  { at: 900, region: 'hood' },
+  { at: 960, region: 'bay' },
+  { at: 1080, region: 'frontAxle' },
+  { at: 1120, ev: { type: 'toast', tone: 'ok', message: 'Filtre à huile MANN W 712/75', driver: 'pilot' } },
+  // …and then the host goes off to read code. PILOT_QUIET_MS later the console stops claiming to work.
+  { at: 1120 + PILOT_QUIET_MS, ev: { type: 'quiet' } },
+];
+
+/**
+ * Replay a pilot burst offline. `flare` receives each region target — pass the coalescer
+ * (`useRegionBurst`) so the playground shows the same single dolly the live orchestrator does.
+ */
+export function runMockPilot(dispatch: (ev: NoyauEvent) => void, flare: (region: BodyRegion) => void): () => void {
+  const timers = PILOT_SCRIPT.map(({ at, ev, region }) =>
+    window.setTimeout(() => {
+      if (ev) dispatch(ev);
+      if (region) flare(region);
+    }, at),
+  );
   return () => timers.forEach((t) => window.clearTimeout(t));
 }

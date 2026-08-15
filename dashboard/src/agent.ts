@@ -1,4 +1,5 @@
 import { API, authFetch } from './auth';
+import type { Subscription } from './useMercure';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — the agent turn (see PROVENANCE: Tier-1 transport re-authored fresh from
@@ -50,15 +51,22 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
 }
 
 /**
- * The topics this dashboard listens on: the public vehicle collection, its own per-tab turn session,
- * and — once GET /agent/link has resolved it — the owner's PILOT topic, where render intents driven
- * from an external MCP host (Claude Code, Goose…) land. The pilot topic carries the very same
- * UIAction frames, so the same handler drives the same choreography whoever is at the controls.
+ * What this dashboard listens on: the public vehicle collection, its own per-tab turn session, and —
+ * once GET /agent/link has resolved it — the owner's PILOT topic, where render intents driven from an
+ * external MCP host (Claude Code, Goose…) land. The pilot topic carries the very same UIAction
+ * frames, so the same handler drives the same choreography whoever is at the controls.
+ *
+ * The pilot topic gets its OWN subscription rather than a third `?topic=` on the shared one. Mercure
+ * delivers an update without naming the topic it matched, so a single stream cannot tell the two
+ * drivers apart — and the dashboard has to, because the two lifecycles differ (a pilot run declares
+ * no start, may go quiet for minutes, and must never trip the in-app turn's liveness watchdog; see
+ * pilot.ts). One EventSource per driver makes provenance STRUCTURAL: the stream a frame arrived on is
+ * the answer, with nothing to forget to stamp and nothing new on the wire.
  */
-export function dashboardTopics(api: string, sessionId: string, pilotTopic: string | null): string[] {
-  const topics = [`${api}/garage/vehicles`, `${api}/agent/sessions/${sessionId}`];
-  if (pilotTopic) topics.push(pilotTopic);
-  return topics;
+export function dashboardSubscriptions(api: string, sessionId: string, pilotTopic: string | null): Subscription[] {
+  const subs: Subscription[] = [{ driver: 'app', topics: [`${api}/garage/vehicles`, `${api}/agent/sessions/${sessionId}`] }];
+  if (pilotTopic) subs.push({ driver: 'pilot', topics: [pilotTopic] });
+  return subs;
 }
 
 /**

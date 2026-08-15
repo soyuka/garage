@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { Driver } from './pilot';
 import type { DomainEvent, MercureFrame, VehicleSummary } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,24 +55,37 @@ export function removeVehicle(list: VehicleSummary[], iri: string): VehicleSumma
 
 // ── Subscription hook (glue) ──────────────────────────────────────────────────
 
+/** One EventSource's worth of topics, and the driver whose frames arrive on it (see agent.ts). */
+export interface Subscription {
+  driver: Driver;
+  topics: string[];
+}
+
 /**
- * Subscribe to the given absolute-IRI topics; stream every frame into `onFrame`. The handler is held
- * in a ref so a changing callback identity does NOT tear down and re-open the EventSource — only a
- * change to the topic set (keyed by join) re-subscribes. Closes the stream on unmount.
+ * Open one EventSource per subscription and stream every frame into `onFrame`, tagged with the driver
+ * of the stream it came from — provenance without a wire change (Mercure never names the matched
+ * topic, so one stream carrying both drivers could not tell them apart). The handler is held in a ref
+ * so a changing callback identity does NOT tear the streams down — only a change to the subscription
+ * set (keyed by its serialisation) re-subscribes. Closes every stream on unmount.
  */
-export function useMercure(topics: string[], onFrame: (frame: MercureFrame) => void): void {
+export function useMercure(subscriptions: Subscription[], onFrame: (frame: MercureFrame, driver: Driver) => void): void {
   const handler = useRef(onFrame);
   handler.current = onFrame;
-  const key = topics.join('|');
+  const key = subscriptions.map((s) => `${s.driver}:${s.topics.join('|')}`).join(';');
 
   useEffect(() => {
-    if (!HUB || topics.length === 0) return;
-    const source = new EventSource(buildHubUrl(HUB, window.location.origin, topics));
-    source.onmessage = (e: MessageEvent<string>) => {
-      const frame = parseFrame(e.data);
-      if (frame) handler.current(frame);
-    };
-    return () => source.close();
+    if (!HUB) return;
+    const sources = subscriptions
+      .filter((s) => s.topics.length > 0)
+      .map(({ driver, topics }) => {
+        const source = new EventSource(buildHubUrl(HUB, window.location.origin, topics));
+        source.onmessage = (e: MessageEvent<string>) => {
+          const frame = parseFrame(e.data);
+          if (frame) handler.current(frame, driver);
+        };
+        return source;
+      });
+    return () => sources.forEach((s) => s.close());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 }

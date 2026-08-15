@@ -267,6 +267,44 @@
   to { opacity: 0; transform: translateY(-6px); }
 }
 
+/* ── veille pilotée: a PILOT run that has gone quiet (docs/pilot.md · pilot.ts isQuiet) ─────
+   A pilot session declares no start and no length: its host can narrate a step, then read code for
+   two minutes. The run is still OPEN — the orb stays lifted and the aperture stays the working point,
+   so the operator can see the console is held — but nothing is being read right now, so the
+   instrument stops pretending to work: the exertion gradient cools back to cyan (amber = under load),
+   the reticle drops from its 2s lock to the resting 18s drift, and the pupil resumes the protected
+   ~4s sleeping-Mac breath. Attached, not working. The datum is elapsed silence — read out in words
+   beside the narration, because a breathing orb alone cannot say "two minutes". */
+.noyau-stage[data-phase='working'][data-quiet='true'] {
+  --nx-fil-edge: var(--nx-cyan);
+  --nx-emissive: var(--nx-cyan);
+  --nx-seam: rgba(180, 196, 210, 0.35);
+}
+.noyau-stage[data-quiet='true'] .noyau-scan { opacity: 0.16; animation: nx-scan 18s linear infinite; }
+.noyau-stage[data-quiet='true'] .noyau-pupil { animation: nx-breathe-glow var(--at-breathe) var(--at-ease-sine) infinite; }
+/* the breath keeps the lift: a plain nx-breathe would overwrite the working translateY and drop the orb */
+.noyau-stage[data-quiet='true'] .noyau-orb { animation: nx-breathe-lifted var(--at-breathe) var(--at-ease-sine) infinite; }
+@keyframes nx-breathe-lifted {
+  0%, 100% { transform: translateY(-12px) scale(1); }
+  50% { transform: translateY(-12px) scale(1.025); }
+}
+
+/* ── who is at the controls ─────────────────────────────────────────────────
+   A persistent nameplate, not an animation: the operator has to be able to tell, from a still
+   screen, that the panels in front of them were placed by an external host and not by their own
+   last message. Text (legible in grayscale), tier-3 vibrancy, cyan because it is still the agent
+   speaking — only from somewhere else. */
+.noyau-driver {
+  margin-right: 6px;
+  font-size: 10px;
+  letter-spacing: var(--at-label-tracking, 0.08em);
+  text-transform: uppercase;
+  color: var(--nx-cyan-hi);
+  opacity: var(--at-vib-3, 0.5);
+}
+.noyau-wait { opacity: var(--at-vib-3, 0.5); }
+.noyau-wait-clock { margin-left: 4px; opacity: var(--at-vib-3, 0.5); font-variant-numeric: tabular-nums; }
+
 /* ── reduced motion — animations collapse to instant; aperture stays a static SHAPE cue ── */
 @media (prefers-reduced-motion: reduce) {
   .noyau-orb, .noyau-pupil, .noyau-iris, .noyau-scan, .noyau-glint, .noyau-rim, .noyau-fault,

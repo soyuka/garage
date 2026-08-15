@@ -1,3 +1,4 @@
+import type { Driver } from '../pilot';
 import type { CtaAction, Signal, Tone } from '../types';
 
 // The frame→state machine for Le Noyau. It speaks the REAL session-frame shapes (turn/status/toast)
@@ -58,15 +59,33 @@ export interface NoyauState {
   turnStartedAt: number | null;
   entrySeq: number;
   stepSeq: number; // monotonic id source for steps (never reset → stable React keys)
+  // ── who is at the controls (docs/pilot.md) ──
+  // The in-app turn and an external MCP pilot share ONE orb, and only one of them should be driving.
+  // `driver` is whoever last spoke: the frames are identical on the wire, so take-over is last-frame-
+  // wins by construction. Null at rest.
+  driver: Driver | null;
+  /** clock stamp of the last frame of the open run — the silence caption reads off it. Null at rest. */
+  lastFrameAt: number | null;
+  /**
+   * A PILOT run that has stopped producing frames (see `quiet` event). Still attached, no longer
+   * acting — the state an in-app turn cannot have, because a turn is bracketed and bounded while a
+   * pilot session is human-paced. Never a failure: the client cannot tell "reading code" from "gone",
+   * so it says how long it has been silent and lets the operator judge.
+   */
+  quiet: boolean;
 }
 
 export type NoyauEvent =
   // `failed` (turn/end only) marks the turn as an agent-lifecycle failure (worker died / transport
   // error) — NOT the wire frame; the two client failure paths in Atelier.tsx set it so the last
   // in-flight step chip reads "échec". A normal end (incl. an amber/red finding) omits it.
-  | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean }
-  | { type: 'status'; message: string }
-  | { type: 'toast'; tone: Tone; message: string }
+  // `driver` says who produced the frame (the subscription it arrived on — Atelier tags it). Absent
+  // → the in-app turn, so every existing dispatch keeps its meaning unchanged.
+  | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean; driver?: Driver }
+  | { type: 'status'; message: string; driver?: Driver }
+  | { type: 'toast'; tone: Tone; message: string; driver?: Driver }
+  // local: the pilot run has been silent past PILOT_QUIET_MS — stop claiming it is working
+  | { type: 'quiet' }
   | { type: 'concern'; message: string; serviceType?: string; vehicleIri?: string } // §9 overdue DOMAIN push (no turn): dock a notify + murmur, hands-off
   | { type: 'defer'; id: string; text: string; finding?: string; actions: CtaAction[] } // a proposal seen elsewhere/superseded → a REVIEW item in the inbox
   | { type: 'resolve'; id: string } // the operator decided a queue item (acted / dismissed) → remove it
@@ -88,7 +107,20 @@ export const initialNoyau: NoyauState = {
   turnStartedAt: null,
   entrySeq: 0,
   stepSeq: 0,
+  driver: null,
+  lastFrameAt: null,
+  quiet: false,
 };
+
+/**
+ * Does a driver hold the console right now? Gates the composer, the ✕ and the wayfinder chips (one
+ * turn at a time). A QUIET pilot run does not: it may stay open for minutes while its host thinks,
+ * and locking the operator out of their own dashboard for that long would be the tail wagging the
+ * dog. Typing then takes the controls back (last-frame-wins, see `driver`).
+ */
+export function busy(state: NoyauState): boolean {
+  return state.phase === 'working' && !(state.driver === 'pilot' && state.quiet);
+}
 
 // The badge shows the pending-decision count — muted to 0 while `emberSeen` (the inbox was opened) so a
 // new decision has to un-mute it. Enqueue dedups by id (same concern re-arriving is one item) and
@@ -185,6 +217,9 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
           worstTone: null,
           steps: [], // a fresh turn starts with no chips
           turnStartedAt: at,
+          driver: ev.driver ?? 'app',
+          lastFrameAt: at,
+          quiet: false,
         };
       }
       // phase === 'end'
@@ -205,6 +240,10 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
             at,
           ),
           entrySeq: state.entrySeq + 1,
+          // the done filament still belongs to whoever ran the turn; `settle` hands the controls back
+          driver: ev.driver ?? state.driver ?? 'app',
+          lastFrameAt: at,
+          quiet: false,
         };
       }
 
@@ -213,7 +252,8 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       // (not already working), it also starts the chip list — same guard as turnStartedAt.
       const fresh = state.phase !== 'working';
       const turnStartedAt = fresh ? at : state.turnStartedAt;
-      const base = { ...state, phase: 'working' as const, turnStartedAt };
+      // A pilot run has no `turn:start` at all — this IS its start (see NarrateStepProcessor).
+      const base = { ...state, phase: 'working' as const, turnStartedAt, driver: ev.driver ?? 'app', lastFrameAt: at, quiet: false };
       const { tool, label } = classifyStep(ev.message);
       // A new tool narrating means the previous one finished → close it, then push the new running step.
       const steps = [...closeRunning(fresh ? [] : state.steps, 'done'), { id: state.stepSeq, tool, label, state: 'running' as const }];
@@ -230,12 +270,16 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
 
     case 'toast': {
       const worstTone = worse(state.worstTone, ev.tone);
+      // A toast proves the run is alive, but never OPENS one: an alarm pushed between turns (the §9
+      // crossing) must not lift the orb. Only refresh liveness when a run is already open.
+      const live = 'working' === state.phase ? { driver: ev.driver ?? state.driver, lastFrameAt: at, quiet: false } : {};
       if (ev.tone === 'alarm') {
         // Real popup + a NOTIFY item in the à-décider inbox; never hijacks the heartbeat narration line.
         const queue = pushDecision(state.queue, { id: `alarm:${ev.message}`, kind: 'notify', text: ev.message, at });
         const emberSeen = queue === state.queue ? state.emberSeen : false; // a new decision un-mutes the badge
         return {
           ...state,
+          ...live,
           worstTone,
           queue,
           emberSeen,
@@ -247,6 +291,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       // Non-alarm toasts feed the narration line (matches the live narration routing).
       return {
         ...state,
+        ...live,
         worstTone,
         narration: ev.message,
         journal: append(state, { kind: 'narration', message: ev.message }, at),
@@ -297,10 +342,17 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       return { ...state, queue, ember: emberOf(queue, state.emberSeen) };
     }
 
+    case 'quiet':
+      // Only a PILOT run can go quiet: an in-app turn is bracketed and bounded, and its silence is a
+      // liveness FAULT the watchdog owns, not a resting state. Identity when it does not apply, so a
+      // stray tick costs no render.
+      if (state.phase !== 'working' || state.driver !== 'pilot' || state.quiet) return state;
+      return { ...state, quiet: true };
+
     case 'settle':
       // Clear worstTone too: a between-turn alarm push (the §9 overdue crossing — a Mercure domain
       // frame with no turn) must not carry its tone into the next idle period.
-      return { ...state, phase: 'idle', result: null, narration: null, worstTone: null, steps: [], turnStartedAt: null };
+      return { ...state, phase: 'idle', result: null, narration: null, worstTone: null, steps: [], turnStartedAt: null, driver: null, lastFrameAt: null, quiet: false };
 
     case 'clearEmber':
       // Opening the inbox MUTES the badge (acknowledges the pending decisions) but keeps the queue —

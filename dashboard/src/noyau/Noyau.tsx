@@ -49,6 +49,8 @@ export function Noyau({
       className="noyau-stage noyau-socket"
       data-phase={state.phase}
       data-result={state.result ?? undefined}
+      data-driver={state.driver ?? undefined}
+      data-quiet={state.quiet ? 'true' : undefined}
       data-reduced={reduced ? 'true' : undefined}
     >
       {/* orb + ember are SIBLINGS in a positioned wrap: the ember is a real <button> (keyboard-reachable,
@@ -57,7 +59,7 @@ export function Noyau({
       <div
         className="noyau-orb"
         role="img"
-        aria-label={`Le Noyau — ${state.phase}${state.result ? ` · ${SIGNAL_FR[state.result]}` : ''}`}
+        aria-label={`Le Noyau — ${state.phase}${state.driver === 'pilot' ? ` · pilote${state.quiet ? ' en attente' : ''}` : ''}${state.result ? ` · ${SIGNAL_FR[state.result]}` : ''}`}
       >
         <svg className="noyau-lens" viewBox={`0 0 ${VIEW} ${VIEW}`} aria-hidden="true">
           <defs>

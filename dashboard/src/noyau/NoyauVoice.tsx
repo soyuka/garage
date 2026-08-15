@@ -1,6 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
+import { formatSilence } from '../pilot';
 import type { NoyauState } from './state';
 import './noyau.css';
+
+/**
+ * The elapsed-silence read of a quiet pilot run — the datum the veille pilotée state exists to show.
+ * A leaf with its own interval so the once-a-second tick re-renders THIS and nothing else: the scene
+ * and the memoized Plateau never see it (CHOREOGRAPHY hard rule 6 — cheap idle). `aria-hidden` at the
+ * call site: the transition into waiting is announced once on the live line, the stopwatch is not.
+ */
+function PilotSilence({ since }: { since: number }) {
+  const [now, setNow] = useState(() => performance.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(performance.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return <>{formatSilence(Math.max(0, now - since))}</>;
+}
 
 /**
  * Le Noyau's voice — the single narration line that changes as the agent works. Split out of the orb
@@ -30,6 +46,8 @@ export function NoyauVoice({ state, reduced = false }: { state: NoyauState; redu
       className="noyau-stage noyau-voice"
       data-phase={state.phase}
       data-result={state.result ?? undefined}
+      data-driver={state.driver ?? undefined}
+      data-quiet={state.quiet ? 'true' : undefined}
       data-reduced={reduced ? 'true' : undefined}
     >
       <div className="noyau-narration" aria-live="polite">
@@ -38,7 +56,17 @@ export function NoyauVoice({ state, reduced = false }: { state: NoyauState; redu
             {exiting.text}
           </span>
         )}
+        {/* who is at the controls — inside the live region so a screen reader hears it once, when the
+            external host takes over, and not again on every step (the chips rule, applied here). */}
+        {state.driver === 'pilot' && <span className="noyau-driver">pilote</span>}
         {state.narration && <span key={state.narration}>{state.narration}</span>}
+        {/* the run is held but nothing is arriving; the words are announced once, the clock never is */}
+        {state.quiet && <span className="noyau-wait"> · en attente</span>}
+        {state.quiet && state.lastFrameAt !== null && (
+          <span className="noyau-wait-clock" aria-hidden="true">
+            <PilotSilence since={state.lastFrameAt} />
+          </span>
+        )}
       </div>
     </div>
   );

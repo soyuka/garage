@@ -5,7 +5,7 @@ import './scene/scene.css';
 import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
 import { API, getIdentity, logout } from './auth';
-import { cancelTurn, dashboardTopics, fetchPilotTopic, postTurn } from './agent';
+import { cancelTurn, dashboardSubscriptions, fetchPilotTopic, postTurn } from './agent';
 import {
   addTaskPart,
   archiveTasks,
@@ -50,12 +50,16 @@ import { PULSE_DURATION } from './scene/holo';
 import type { CameraFocus } from './scene/cameraRig';
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
+import { busy } from './noyau/state';
 import type { DecisionItem } from './noyau/state';
+import { ABANDON_MS, STAGE_INIT, stageReduce, type Driver, type StageState } from './pilot';
+import { DWELL, PILOT_QUIET_MS } from './tokens/motion';
+import { useRegionBurst } from './scene/useRegionBurst';
 import { useReducedMotion } from './scene/useReducedMotion';
 import { Credits } from './scene/Attribution';
 import { serviceLabel } from './labels';
 import { focusForAction, type Focus } from './focus';
-import type { Iri, MercureFrame, PlannedPart, PlannedTask, VehicleBundle, VehicleSummary } from './types';
+import type { Iri, MercureFrame, PlannedPart, PlannedTask, UIAction, VehicleBundle, VehicleSummary } from './types';
 
 // The LIVE Atelier orchestrator (Stage C). Parc-first: the fleet grid at #/, selecting a car drives
 // into the hero at #/v/<seg> (reload restores it). It owns the garage reads and Le Noyau's state, and
@@ -179,6 +183,10 @@ export function Atelier() {
   useEffect(() => {
     setError(null); // a fresh selection recovers from a prior vehicle's load failure
     clearDet(); // drop any in-flight deterministic-answer timers from the prior vehicle
+    // A navigation to some OTHER car than the one the gate is waiting for is the operator overriding
+    // the pilot: their staged answers will never be relevant, so forget them. Navigating TO the awaited
+    // car is the gate working as intended — leave it alone (the `arrived` replay is still coming).
+    if (stage.current.awaiting !== null && stage.current.awaiting !== selectedIri) stage.current = stageReduce(stage.current, { type: 'reset' }).state;
     setCta(null); // the prior vehicle's transient agent surfaces don't linger across navigation
     setFocus(null);
     setCameraFocus(null); // a fresh car starts at the home framing
@@ -219,6 +227,9 @@ export function Atelier() {
   bundleRef.current = bundle;
   const phaseRef = useRef(state.phase);
   phaseRef.current = state.phase;
+  // The console-lock read, seen from inside the memoized callbacks (a closure would capture it stale).
+  const busyRef = useRef(false);
+  busyRef.current = busy(state);
   const crossTimer = useRef<number | null>(null);
 
   // Liveness watchdog: the turn runs async on the worker, so an optimistic turn/start could otherwise
@@ -238,9 +249,45 @@ export function Atelier() {
       // toast BEFORE turn/end so the done filament settles amber (worstTone), not a false green.
       dispatch({ type: 'toast', tone: 'warn', message: "Le tour ne répond plus — réessayez." });
       dispatch({ type: 'turn', phase: 'end', failed: true });
-    }, 90_000);
+    }, DWELL.watchdog);
   }, [clearWatchdog, dispatch]);
   useEffect(() => clearWatchdog, [clearWatchdog]); // clear on unmount
+
+  // The pilot's counterpart to the watchdog — and deliberately NOT one. A pilot run is human-paced:
+  // its host can narrate a step, then read code for two minutes before the next intent. Silence there
+  // is not a fault the client can diagnose (it cannot tell "thinking" from "closed the laptop"), so
+  // saying "ne répond plus" would be a lie. Instead the console stops claiming the run is working and
+  // starts reading how long it has been silent — the operator judges. Only settle_dashboard ends it.
+  const quietTimer = useRef<number | null>(null);
+  const clearQuiet = useCallback(() => {
+    if (quietTimer.current != null) {
+      window.clearTimeout(quietTimer.current);
+      quietTimer.current = null;
+    }
+  }, []);
+  const armQuiet = useCallback(() => {
+    clearQuiet();
+    quietTimer.current = window.setTimeout(() => dispatch({ type: 'quiet' }), PILOT_QUIET_MS);
+  }, [clearQuiet, dispatch]);
+  useEffect(() => clearQuiet, [clearQuiet]);
+
+  /** A frame arrived: whoever sent it now holds the console, under that driver's liveness policy. */
+  const openRun = useCallback(
+    (driver: Driver) => {
+      if (driver === 'pilot') {
+        clearWatchdog(); // the pilot took over — the in-app turn's fault timer no longer applies
+        armQuiet();
+      } else {
+        clearQuiet();
+        armWatchdog();
+      }
+    },
+    [armQuiet, armWatchdog, clearQuiet, clearWatchdog],
+  );
+  const closeRun = useCallback(() => {
+    clearWatchdog();
+    clearQuiet();
+  }, [clearQuiet, clearWatchdog]);
   useEffect(
     () => () => {
       if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
@@ -267,12 +314,87 @@ export function Atelier() {
     setCameraFocus({ region, key: cameraKey.current });
   }, []);
 
+  // Region targets inside one burst are ONE gesture — the camera dollies once, to where the burst
+  // ended (useRegionBurst / pilot.ts). Only the dolly waits for the window; the panels those same
+  // frames open land immediately (hard rule 1: motion may overlap an arrival, never gate one).
+  const requestFlare = useRegionBurst(flareRegion);
+
+  // ── The render-intent staging gate (pilot.ts) ───────────────────────────────
+  // A `select_vehicle` + `show_fact` pair fired 300ms apart used to lose the answer: the surfaces are
+  // per-vehicle, so they were placed against the car still on screen (and a proposal fired before the
+  // hero resolved was parked in the à-décider inbox instead of rising as a card). The gate holds every
+  // surface-placing intent until the car it is about is on screen, then replays it in order.
+  const stage = useRef<StageState>(STAGE_INIT);
+  const expireTimer = useRef<number | null>(null);
+
   // The two on-demand surfaces are mutually exclusive — opening one closes the other.
   const openFacts = useCallback(() => { setHistoryOpen(false); setFactsDrawerOpen(true); }, []);
   const openHistory = useCallback(() => { setFactsDrawerOpen(false); setHistoryOpen(true); }, []);
 
+  /**
+   * Apply ONE render intent to the workshop — the choreography map made code (CHOREOGRAPHY.md). Same
+   * function whichever driver produced it: the two share a vocabulary, so they share this code path.
+   * Called either straight off the wire or replayed by the staging gate once the car has arrived.
+   */
+  const applyRender = useCallback(
+    (frame: UIAction) => {
+      // PULSE + D1 earned camera: if this frame targets a car region (the agent focusing/acting on a
+      // service type), flare that region's edges cyan once and dolly the view to it. Best-effort — a
+      // frame that maps to no region (a spec question, a toast) returns null and moves nothing. The
+      // request is coalesced over the burst window, so a burst dollies once, to its conclusion.
+      const pulsed = regionForFrame(frame);
+      if (pulsed) requestFlare(pulsed);
+      if (frame.type === 'selectVehicle') {
+        window.location.hash = hashForVehicle(frame.id); // drive-forward into the named car
+      } else if (frame.type === 'focusView' || frame.type === 'showFact' || frame.type === 'showHistory') {
+        // All raise the single slot. showFact is the specs-only subset; showHistory raises the carnet
+        // projection — the SAME surfaces the "Carnet"/"Infos moteur" wayfinder chips use (see focusForAction).
+        setFocus(focusForAction(frame));
+      } else if (frame.type === 'showParts') {
+        // The agent's parts manifest → the SAME deterministic surface the "Pièces dispo" chip projects.
+        // Absent `parts` → itemise the target task's own planned parts (option a); the "Ajouter" merge is
+        // idempotent (server dedups by ref). No parts anywhere → nothing to project.
+        const parts = frame.parts ?? (bundleRef.current?.vehicle.plannedTasks ?? []).find((t) => t.id === frame.taskId)?.parts ?? [];
+        if (parts.length > 0) setCta(partsCtaFor(frame.service, frame.taskId, parts));
+      } else if (frame.type === 'focusRegion') {
+        // D1 explicit camera intent (contract seed — the server may not emit it yet): dolly to the region
+        // + flare the pulse so the move is announced, matching the focusView-derived path above.
+        requestFlare(frame.region);
+      } else if (frame.type === 'proposeActions') {
+        const next: Cta = { headline: frame.headline, finding: frame.finding, actions: frame.actions };
+        const defer = (c: Cta) => dispatch({ type: 'defer', id: `review:${c.headline}`, text: c.headline, finding: c.finding, actions: c.actions });
+        // a still-pending prior proposal is SUPERSEDED by this one → park it in the à-décider inbox.
+        if (ctaRef.current) defer(ctaRef.current);
+        // no hero open (the operator is on the parc — no cradle to raise the card) → straight to the inbox.
+        if (!selectedIriRef.current) defer(next);
+        else setCta(next);
+      } else if (frame.type === 'setVehicles') {
+        setVehicles(frame.vehicles);
+        if (frame.preferredId) window.location.hash = hashForVehicle(frame.preferredId);
+      }
+    },
+    [dispatch, requestFlare],
+  );
+
+  /** Run the gate over an event and apply whatever it releases; narrate anything it had to drop. */
+  const runStage = useCallback(
+    (ev: Parameters<typeof stageReduce>[1]) => {
+      const out = stageReduce(stage.current, ev);
+      stage.current = out.state;
+      out.emit.forEach(applyRender);
+      if (out.dropped) {
+        // Never a silent failure: an answer about a car that never arrived is dropped, not shown over
+        // whichever car happens to be on screen — and the operator is told it happened.
+        dispatch({ type: 'toast', tone: 'warn', message: `Réponse abandonnée : le véhicule n’est pas arrivé (${out.dropped}).` });
+      }
+      if (expireTimer.current != null) window.clearTimeout(expireTimer.current);
+      if (stage.current.awaiting !== null) expireTimer.current = window.setTimeout(() => runStage({ type: 'expire', at: performance.now() }), ABANDON_MS);
+    },
+    [applyRender, dispatch],
+  );
+
   const onFrame = useCallback(
-    (frame: MercureFrame) => {
+    (frame: MercureFrame, driver: Driver) => {
       if (isDomainEvent(frame)) {
         if (frame.event === 'deleted') {
           setVehicles((prev) => removeVehicle(prev, frame.iri));
@@ -303,74 +425,58 @@ export function Atelier() {
                 if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
                 crossTimer.current = window.setTimeout(() => {
                   if (phaseRef.current !== 'working') dispatch({ type: 'settle' }); // don't cut a live turn
-                }, 2000);
+                }, DWELL.concern);
               }
             })
             .catch(() => undefined);
         }
         return;
       }
-      // Session frame (a UIAction). Any frame proves the worker is alive → re-arm the watchdog (turn/end
-      // settles + clears it). turn/status/toast drive Le Noyau; the reducer-state members drive the
-      // choreography per CHOREOGRAPHY.md (selectVehicle → drive-forward, showFact → truth-panel etch,
-      // proposeActions → CTA rises from the cradle). Hidden chat — never a transcript.
-      // PULSE verb: if this frame targets a car region (the agent focusing/acting on a service type), flare
-      // that region's edges cyan once. Best-effort — a frame that maps to no region (status prose, a spec
-      // question, a toast) returns null and pulses nothing. The bumped key re-fires a repeat region.
-      // D1: dolly the view TO that region. Attributable (the Noyau narrates the same turn) + announced
-      // by the co-firing cyan pulse, so the camera move is earned, not a surprise. Held until released.
-      const pulsed = regionForFrame(frame);
-      if (pulsed) flareRegion(pulsed);
+      // A session/pilot frame (a UIAction). `driver` is the stream it arrived on (agent.ts): the two
+      // drivers speak the SAME vocabulary and drive the same choreography, but their LIFECYCLES differ
+      // — an in-app turn is bracketed and bounded (a silent worker is a fault), a pilot run declares no
+      // start and may go quiet for minutes (silence is a resting state). `openRun` picks the policy.
+      //
+      // The heartbeat (turn/status/toast) is never staged: it is what tells the operator why the stage
+      // is moving, so it lands the instant it arrives even while a car is still driving in. Everything
+      // that PLACES a per-vehicle surface goes through the gate. Hidden chat — never a transcript.
       if (frame.type === 'turn') {
-        dispatch({ type: 'turn', phase: frame.phase });
-        if (frame.phase === 'end') clearWatchdog();
-        else armWatchdog();
+        dispatch({ type: 'turn', phase: frame.phase, driver });
+        if (frame.phase === 'end') closeRun();
+        else openRun(driver);
       } else if (frame.type === 'status') {
-        dispatch({ type: 'status', message: frame.message });
-        armWatchdog();
+        dispatch({ type: 'status', message: frame.message, driver });
+        openRun(driver);
       } else if (frame.type === 'toast') {
-        dispatch({ type: 'toast', tone: frame.tone, message: frame.message });
-        armWatchdog();
-      } else if (frame.type === 'selectVehicle') {
-        window.location.hash = hashForVehicle(frame.id); // drive-forward into the named car
-      } else if (frame.type === 'focusView' || frame.type === 'showFact' || frame.type === 'showHistory') {
-        // All raise the single slot. showFact is the specs-only subset; showHistory raises the carnet
-        // projection — the SAME surfaces the "Carnet"/"Infos moteur" wayfinder chips use (see focusForAction).
-        // The dolly (if the keys resolve to a region) already fired above via regionForFrame + the pulse.
-        setFocus(focusForAction(frame));
-      } else if (frame.type === 'showParts') {
-        // The agent's parts manifest → the SAME deterministic surface the "Pièces dispo" chip projects.
-        // Absent `parts` → itemise the target task's own planned parts (option a); the "Ajouter" merge is
-        // idempotent (server dedups by ref). No parts anywhere → nothing to project.
-        const parts = frame.parts ?? (bundleRef.current?.vehicle.plannedTasks ?? []).find((t) => t.id === frame.taskId)?.parts ?? [];
-        if (parts.length > 0) setCta(partsCtaFor(frame.service, frame.taskId, parts));
-      } else if (frame.type === 'focusRegion') {
-        // D1 explicit camera intent (contract seed — the server may not emit it yet): dolly to the region
-        // + flare the pulse so the move is announced, matching the focusView-derived path above.
-        flareRegion(frame.region);
-      } else if (frame.type === 'proposeActions') {
-        const next: Cta = { headline: frame.headline, finding: frame.finding, actions: frame.actions };
-        const defer = (c: Cta) => dispatch({ type: 'defer', id: `review:${c.headline}`, text: c.headline, finding: c.finding, actions: c.actions });
-        // a still-pending prior proposal is SUPERSEDED by this one → park it in the à-décider inbox.
-        if (ctaRef.current) defer(ctaRef.current);
-        // no hero open (the operator is on the parc — no cradle to raise the card) → straight to the inbox.
-        if (!selectedIriRef.current) defer(next);
-        else setCta(next);
-      } else if (frame.type === 'setVehicles') {
-        setVehicles(frame.vehicles);
-        if (frame.preferredId) window.location.hash = hashForVehicle(frame.preferredId);
+        dispatch({ type: 'toast', tone: frame.tone, message: frame.message, driver });
+        openRun(driver);
+      } else {
+        runStage({ type: 'frame', action: frame, shownIri: selectedIriRef.current, at: performance.now() });
       }
     },
-    [dispatch, armWatchdog, clearWatchdog, flareRegion],
+    [closeRun, dispatch, openRun, runStage],
   );
-  useMercure(dashboardTopics(API, sessionId, pilotTopic), onFrame);
+  useMercure(dashboardSubscriptions(API, sessionId, pilotTopic), onFrame);
+
+  // The car the gate was waiting for is on screen → replay what it held, in order. Guarded on the
+  // awaited IRI so the effect is inert on every other bundle change (the live cascade re-runs it).
+  const heroIri = heroBundle?.vehicle['@id'] ?? null;
+  useEffect(() => {
+    if (heroIri && stage.current.awaiting === heroIri) runStage({ type: 'arrived', iri: heroIri, at: performance.now() });
+  }, [heroIri, runStage]);
+  useEffect(
+    () => () => {
+      if (expireTimer.current != null) window.clearTimeout(expireTimer.current);
+    },
+    [],
+  );
 
   // Post an agent turn. The worker is async (POST acks 202), so the Noyau goes to work optimistically;
   // the real turn/start frame re-confirms and turn/end settles it. A transport failure (never queued)
   // clears the optimistic working state and surfaces an alarm. `summary` is a one-line on-screen state
   // (NOT a transcript); pendingContext (the CTA being replied to) is wired with the CTA layer in slice 6.
   const send = (instruction: string) => {
-    if (state.phase === 'working') return; // one turn per session — the ✕ cancels first (no concurrent turns)
+    if (busy(state)) return; // one driver at a time — the ✕ cancels first (a QUIET pilot run does not hold it)
     // Carry the CTA being replied to as one bounded line (NOT a transcript), so a terse reply lands in
     // context against the question the agent just asked. Capture BEFORE clearing the surfaces.
     const pendingContext = cta
@@ -403,7 +509,7 @@ export function Atelier() {
     // `effect` runs at the answer beat (never `then` — a thenable return would recurse the promise chain):
     // the seam for answers that OPEN a surface (Données / Le Carnet) instead of projecting a focus/cta.
     (opts: { steps: [string, string]; failMessage: string; resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null; effect?: () => void }> }) => {
-      if (phaseRef.current === 'working') return; // one turn per session — composer + chips share the rule
+      if (busyRef.current) return; // one driver at a time — composer + chips share the rule
       clearDet(); // supersede any in-flight replay (bumps detToken → drops a pending fetch's late apply)
       const token = detToken.current;
       const iri = selectedIriRef.current;
@@ -429,7 +535,7 @@ export function Atelier() {
             if (!live()) return;
             const msg = e instanceof Error && e.message ? e.message : opts.failMessage;
             dispatch({ type: 'toast', tone: 'warn', message: msg }); // honest, transient narration
-            detTimers.current.push(window.setTimeout(() => apply(null), 600)); // let the warn paint, then settle — no surface
+            detTimers.current.push(window.setTimeout(() => apply(null), DWELL.warn)); // let the warn paint, then settle — no surface
           },
         );
 
@@ -450,11 +556,11 @@ export function Atelier() {
   // facts — read/edit/delete everything; Historique = every visit), the FETCHED external reads project
   // into the agent's right column. Built only when a hero bundle is open (see the hero route).
   const buildQuickActions = (b: VehicleBundle): QuickAction[] => {
-    const busy = state.phase === 'working';
+    const locked = busy(state);
     const chips: QuickAction[] = [];
     chips.push({
       label: 'Données',
-      disabled: busy,
+      disabled: locked,
       onClick: () =>
         runLocalAnswer({
           steps: ['ouverture du dossier…', 'lecture des données véhicule…'],
@@ -465,7 +571,7 @@ export function Atelier() {
     if (b.records.length > 0) {
       chips.push({
         label: 'Historique',
-        disabled: busy,
+        disabled: locked,
         zone: 'centre',
         onClick: () =>
           runLocalAnswer({
@@ -479,7 +585,7 @@ export function Atelier() {
       const kType = b.vehicle.kType;
       chips.push({
         label: 'Capacités fluides',
-        disabled: busy,
+        disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
@@ -503,7 +609,7 @@ export function Atelier() {
     if (partsTask) {
       chips.push({
         label: `Pièces dispo · ${serviceLabel(partsTask.type)}`,
-        disabled: busy,
+        disabled: locked,
         onClick: () =>
           runLocalAnswer({
             steps: ['ouverture de la tâche…', 'liste des pièces…'],
@@ -516,7 +622,7 @@ export function Atelier() {
       const plate = b.vehicle.plate;
       chips.push({
         label: 'Fiche technique',
-        disabled: busy,
+        disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
@@ -539,7 +645,7 @@ export function Atelier() {
     if (b.records.length > 0) {
       chips.push({
         label: 'Carnet · dépenses',
-        disabled: busy,
+        disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
@@ -820,7 +926,7 @@ export function Atelier() {
               defaultUnit: heroBundle.vehicle.usageUnit ?? defaultUsageUnit(heroBundle.vehicle.vehicleType),
             }}
             composerExtras={
-              state.phase === 'working' ? (
+              busy(state) && state.driver !== 'pilot' ? (
                 <button
                   type="button"
                   className="at-scene-sim"

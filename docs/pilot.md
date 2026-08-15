@@ -59,3 +59,96 @@ Functional coverage in `tests/Functional/DashboardPilotTest.php`, topic derivati
 Note: after changing MCP tool metadata, `rm -rf var/cache` is not enough — **restart the `php`
 container** (FrankenPHP worker mode holds the compiled container in memory) and the `worker` container
 (it holds the tool schemas too).
+
+## The motion of a piloted session
+
+A pilot run is human-paced, and the dashboard is built for that shape rather than for a turn's
+(`dashboard/CHOREOGRAPHY.md` § "The pilot driver" is the binding map; `dashboard/src/pilot.ts` is the
+pure core). What you will see, and the datum each thing encodes:
+
+- **No `turn:start` is needed.** The first `narrate_step` lifts the orb; the reducer treats a `status`
+  arriving at rest as the start of a run.
+- **`PILOTE`** sits beside the narration for as long as the run is yours — so a still screenshot says
+  who placed the panels on it.
+- **A burst is one gesture.** Intents fired inside 120 ms that each name a car region produce ONE
+  camera dolly, to the last of them. Panels still open the instant their frame lands: only the camera
+  waits for the burst to close.
+- **An answer lands on the car it is about.** `select_vehicle` immediately followed by `show_fact`
+  works: the fact is held until that car is on screen, then replayed. If the `@id` never resolves, the
+  held intents are dropped after 6 s with a warn toast rather than shown over the wrong car.
+- **Dead air is a state, not a fault.** Four seconds without a frame and the console enters *veille
+  pilotée*: still lifted and held, but the reticle slows, the amber exertion gradient cools back to
+  cyan, and a live `· en attente · 2 min` counts the silence. The 90 s watchdog does NOT apply to a
+  pilot run — the dashboard cannot tell "reading code" from "quit", so it never claims either. The
+  composer unlocks there too: typing takes the controls back.
+- **`settle_dashboard` is the only clean end.** It plays the done filament and returns the orb to
+  veille.
+
+Offline, with no MCP host: `https://localhost/#/scene` → the **⇄** button in the composer replays a
+pilot burst (two narrated steps, a three-region burst, a toast, then silence into veille pilotée);
+press it again for the `settle_dashboard`.
+
+## Demo script — one paste
+
+Drives a full run against the live stack. Replace `VEHICLE` with an `@id` from `list_vehicles`; the
+`show_fact` keys must exist on that vehicle or the panel comes up empty (honest, but dull).
+
+```sh
+TOKEN=$(python3 -c "import json;d=json.load(open('$HOME/.claude.json'));print(d['projects']['~/projects/mon-parc-auto.fr/mon-parc-auto.fr']['mcpServers']['mon-parc-auto']['headers']['Authorization'].split()[1])")
+SID=$(curl -sk -D- -o /dev/null -X POST https://localhost/mcp -H "Authorization: Bearer $TOKEN" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"demo","version":"1"}}}' \
+  | grep -i '^mcp-session-id' | tr -d '\r' | awk '{print $2}')
+
+call() { curl -sk -o /dev/null -X POST https://localhost/mcp \
+  -H "Authorization: Bearer $TOKEN" -H "Mcp-Session-Id: $SID" \
+  -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
+  -d "{\"jsonrpc\":\"2.0\",\"id\":9,\"method\":\"tools/call\",\"params\":{\"name\":\"$1\",\"arguments\":$2}}"; }
+
+VEHICLE=/garage/vehicles/01KVFEQA72XQMWSS3HPBD93ASR
+
+# 1. the run opens with no turn:start — the orb lifts on the first narrated step
+call narrate_step '{"message":"Je relis le carnet…"}'
+
+# 2. DEAD AIR. Watch the console enter veille pilotée at 4s and start counting.
+sleep 12
+
+# 3. THE BURST: drive the car in and answer about it in the same breath. The fact panel is held
+#    until that car is on screen — without the gate it would land on the car being replaced.
+#    ⚠ ONE curl per call is NOT a burst: a fresh process re-does the TLS handshake and each call
+#    costs ~2 s. Chain them with --next so they share the connection (~50 ms each, measured) —
+#    otherwise the calls arrive further apart than the bundle takes to load and you see nothing.
+H=(-H "Authorization: Bearer $TOKEN" -H "Mcp-Session-Id: $SID" -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream')
+body() { printf '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"%s","arguments":%s}}' "$1" "$2"; }
+curl -sk -o /dev/null -X POST https://localhost/mcp "${H[@]}" -d "$(body select_vehicle "{\"vehicle\":\"$VEHICLE\"}")" \
+  --next -sk -o /dev/null -X POST https://localhost/mcp "${H[@]}" -d "$(body show_fact '{"keys":["oil_capacity","oil_type","oil_viscosity"],"title":"Huile moteur"}')" \
+  --next -sk -o /dev/null -X POST https://localhost/mcp "${H[@]}" -d "$(body focus_view '{"panel":"tasks","keys":["oil_change"]}')"
+#    …two of those name a region: ONE dolly fires, to the last one.
+
+# 4. a decision to take, then the close — the filament takes its colour from this tone
+call propose_actions '{"headline":"Vidange à prévoir","finding":"Filtre MANN W 712/75 au catalogue","actions":[{"label":"Planifier la vidange","instruction":"planifie la vidange"}]}'
+call settle_dashboard '{"message":"Vidange préparée","tone":"ok"}'
+```
+
+To watch the frames without a browser, subscribe to the topic from `GET /agent/link`:
+`curl -sk -N "https://localhost/.well-known/mercure?topic=<url-encoded topic>"`.
+
+**If the dashboard ignores a frame the hub clearly delivered**, check the browser's EventSource before
+suspecting the topic digest: Caddy's cert is self-signed, and when Chrome drops the exception the
+streams die with `net::ERR_CERT_AUTHORITY_INVALID` and retry silently forever (DevTools → Network →
+filter `eventsource`). Reload and re-accept the certificate. Note the dashboard now holds **two**
+streams (one per driver — see `dashboardSubscriptions`), so a broken cert produces twice the reconnect
+noise it used to.
+
+## Verified (motion layer)
+
+2026-08-15, live stack, one MCP session over `/mcp`:
+
+| what | observed |
+|---|---|
+| `narrate_step` at rest | orb → working, `driver=pilot`, `PILOTE` on the console — no `turn:start` sent |
+| veille pilotée | `quiet` at **+3 999 ms**, caption counting `4 s` → `1 min` → `2 min`, **no watchdog warn at any point** |
+| the staging gate | `select_vehicle` + `show_fact` **50 ms apart**, bundle **141 ms** later → the spec panel appeared *with* the car, correct content (`4,3 L` / `ACEA A3/B3\|A5/B5` / `5W-30`) |
+| burst coalescing | 3 region targets in 180 ms → **one** camera hold established (one `.at-vuelibre` mount) |
+| `settle_dashboard` | green filament + `posé · tout est à jour`, back to veille **1 600 ms** later; the projected answer stays on screen |
+| frame budget | **59.9 fps, 0 frames > 20 ms, 0 long tasks** through the burst + dolly; 4 s of veille pilotée = **4 DOM mutations**, all on `.noyau-wait-clock` |

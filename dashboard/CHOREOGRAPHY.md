@@ -22,6 +22,54 @@ Stage-B/C component animates against THIS map; no agent invents a different mapp
 `PanelKind` also has a `'carnet'` value, but only `showHistory`/the chip raise it client-side — the server's
 `focusView` accepts `specs`/`tasks` only (CONTRACT.md).
 
+## The pilot driver — same verbs, different envelope
+
+The dashboard has TWO drivers (docs/pilot.md): the in-app turn, and an external MCP host calling the
+same render intents. **The frames are identical, so the MOTIONS are identical** — the table above is
+the whole vocabulary for both, and no verb means one thing under one driver and another under the
+other. A distinct dialect would be decoration: the operator would have two grammars to learn for one
+set of frames, and the difference would encode nothing about the car.
+
+What DOES differ is the run's **envelope**, because the data differs. An in-app turn is bracketed
+(`turn:start` … `turn:end`), bounded (4–20 s) and cancellable, and a silent worker is a fault. A pilot
+run declares no start, has no length, cannot be cancelled from here, and its silence is a person
+thinking. So the envelope gets one state a turn cannot reach, and one nameplate:
+
+| Real frame / condition | Atelier motion | Owner layer |
+|---|---|---|
+| first `status` at rest, arriving on the pilot topic | **the run opens with no `turn:start`** — the orb lifts and works exactly as it does for a turn (the reducer already treats a status at rest as the start). Nothing new to learn | Le Noyau (`state.ts`) |
+| any frame on the pilot topic | the console wears a persistent **`PILOTE` nameplate** beside the narration, tier-3, mono, uppercase. NOT an animation: it has to be true of a still screen, because the panels in front of the operator were placed by someone who is not them. Announced once on the aria-live line, then silent (the tool-step-chip rule) | Le Noyau (`NoyauVoice`) |
+| no pilot frame for `PILOT_QUIET_MS` (4 s) | **veille pilotée** — the run is still open, so the orb stays LIFTED and the aperture stays the working point, but the instrument stops claiming to read: the exertion gradient cools amber→cyan (amber = under load), the reticle drops from its 2 s lock to the resting 18 s drift, and the pupil resumes the protected ~4 s breathe. Beside the narration, a live **elapsed-silence** read (`· en attente · 2 min`) — the datum the state exists to show, because a breathing orb cannot say "two minutes". The composer UNLOCKS: a run that may hold for minutes must not hold the dashboard hostage, and typing takes the controls back | Le Noyau + the console |
+| any pilot frame after that | quiet clears, the instrument goes back under load. No animation of its own — the frame's own motion is the cue | Le Noyau |
+| `turn {phase:'end'}` from `settle_dashboard` | the existing done filament, unchanged | Le Noyau |
+| liveness | **a pilot run never trips the 90 s watchdog.** "Le tour ne répond plus" is a claim the client cannot support here — it cannot tell a host reading code from a host that quit — so it says how long it has been silent instead and lets the operator judge. Only `settle_dashboard` (or the operator taking over) ends a pilot run | Atelier |
+
+**Burstiness (both drivers, pilot-shaped).** A pilot narrates, goes quiet for two minutes, then fires
+four intents in 300 ms. Two rules keep that legible, and both are pure + unit-tested (`src/pilot.ts`):
+
+- **One dolly per gesture.** Region targets landing inside one 120 ms window coalesce to the LAST one,
+  so a burst dollies once — the operator is shown where the attention landed, not the route it took.
+  Uncoalesced, each intent re-eased the camera from wherever the previous had reached: a camera
+  whipping between regions, arriving nowhere, encoding nothing. Only the dolly waits for the window;
+  the panels those same frames open are not on that path (see hard rule 1 below).
+- **An answer lands on the car it is about.** A surface-placing intent (`showFact`, `focusView`,
+  `showParts`, `showHistory`, `focusRegion`, `proposeActions`) arriving while a `selectVehicle` is
+  still driving a car in is HELD, and replayed in order the moment that car is on screen. Heartbeat
+  frames (`status`, `toast`, `turn`) are never held — they are what says why the stage is moving. A
+  second `selectVehicle` supersedes and drops what was held (it was about the other car); a car that
+  never arrives drops it after 6 s **with a warn toast**, never silently.
+
+## Motion scale
+
+Durations are tokens, one step per INTENT: `--at-dur-tint` (140 ms, a control tints) · `--at-dur-swap`
+(240 ms, a surface dims/slides/cross-fades) · `--at-dur-rise` (280 ms, a surface arrives) ·
+`--at-dur-etch` (360 ms, a line etches / a CTA rises) · `--at-dur-fan` (480 ms, a set fans in) ·
+`--at-dur-filament` (600 ms, the done colour) · `--at-dur-cascade` (800 ms, the data cascade) — plus
+the protected `--at-breathe` (4 s). `src/tokens/motion.ts` is the twin for the motions CSS cannot
+reach (the 900 ms dolly, the 1.4 s pulse, the burst window) and for the DWELLs (settle hold, watchdog).
+`motion.test.ts` fails if the two drift, **and if any component stylesheet spells a one-shot duration
+out instead of using a step**. A loop PERIOD is a frequency, not a duration — exempt.
+
 ## Le Noyau's à-décider queue (ember)
 
 Hands-off concerns (the §9 overdue crossing), alarm toasts, and superseded/homeless `proposeActions`
@@ -85,7 +133,13 @@ constant, 0.55) — that tuning is the only thing the mat floor changed.
   in the truth-panel / flat plan list at full precision. Hide the WebGL canvas → no value lost.
 - **`prefers-reduced-motion`:** drives/etches/pulses/cascade collapse to instant state changes; the
   overdue wow becomes a static red state + the narration line; the earned-camera dolly becomes an
-  instant cut (and "vue libre" an instant return).
+  instant cut (and "vue libre" an instant return). **Veille pilotée** loses its breath the same way and
+  keeps everything that carries the information: the lifted orb, the cooled cyan, the `PILOTE`
+  nameplate and the elapsed-silence read are all static state, so nothing is lost with motion off.
+- **The pilot's silence is read, not animated.** The elapsed counter is a leaf with its own interval:
+  one second's tick re-renders that text node and nothing else (measured: 4 DOM mutations over 4 s of
+  veille pilotée, all `characterData` on `.noyau-wait-clock`). Cheap idle is a hard rule, and a state
+  that can last minutes is exactly where it would have been broken.
 - **Tool-step chips never double-announce.** They are an `aria-hidden` companion to Le Noyau's
   `aria-live` narration line — the narration is the only thing a screen reader hears per step; the
   chips are a sighted-only quiet trace, collapsing into the journal on turn end.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { classifyStep, initialNoyau, reduceNoyau, type DecisionItem } from './state';
+import { busy, classifyStep, initialNoyau, reduceNoyau, type DecisionItem } from './state';
 
 const R = reduceNoyau;
 
@@ -340,5 +340,71 @@ describe('Le Noyau — the à-décider ambient inbox queue', () => {
   it("supports a 'question' kind in the model (no live wire source feeds it yet)", () => {
     const item: DecisionItem = { id: 'q1', kind: 'question', text: 'Quel kilométrage ?', at: 0 };
     expect(item.kind).toBe('question');
+  });
+});
+
+// ── The pilot driver (docs/pilot.md): a run with no declared start and no bounded length ──────────
+describe('who is at the controls', () => {
+  it('a status frame at rest lifts the orb and records the driver — a pilot run declares no start', () => {
+    const s = R(initialNoyau, { type: 'status', message: 'Je relis le carnet…', driver: 'pilot' }, 500);
+    expect(s.phase).toBe('working');
+    expect(s.driver).toBe('pilot');
+    expect(s.lastFrameAt).toBe(500);
+  });
+
+  it('defaults to the in-app driver when a frame does not say (the turn-bracketed path is unchanged)', () => {
+    const s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    expect(s.driver).toBe('app');
+  });
+
+  it('goes quiet when a pilot run stops producing frames, and un-quiets on the next one', () => {
+    let s = R(initialNoyau, { type: 'status', message: 'a', driver: 'pilot' }, 0);
+    expect(s.quiet).toBe(false);
+    s = R(s, { type: 'quiet' }, 4000);
+    expect(s.quiet).toBe(true);
+    expect(s.phase).toBe('working'); // still attached — the run is open, just not acting
+    s = R(s, { type: 'status', message: 'b', driver: 'pilot' }, 120_000);
+    expect(s.quiet).toBe(false);
+    expect(s.lastFrameAt).toBe(120_000);
+  });
+
+  it('never goes quiet under the in-app driver — that turn is bounded and its watchdog owns silence', () => {
+    let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    const before = s;
+    s = R(s, { type: 'quiet' }, 9000);
+    expect(s).toBe(before); // identity: nothing to re-render
+  });
+
+  it('settling hands the controls back — no driver, no silence to read', () => {
+    let s = R(initialNoyau, { type: 'status', message: 'a', driver: 'pilot' }, 0);
+    s = R(s, { type: 'quiet' }, 4000);
+    s = R(s, { type: 'turn', phase: 'end', driver: 'pilot' }, 5000);
+    expect(s.quiet).toBe(false);
+    expect(s.driver).toBe('pilot'); // the done filament still belongs to the pilot
+    s = R(s, { type: 'settle' }, 6600);
+    expect(s.driver).toBeNull();
+    expect(s.lastFrameAt).toBeNull();
+  });
+
+  it('a toast refreshes the liveness of an open run but never opens one on its own', () => {
+    const idle = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 300);
+    expect(idle.phase).toBe('idle');
+    expect(idle.lastFrameAt).toBeNull();
+
+    let s = R(initialNoyau, { type: 'status', message: 'a', driver: 'pilot' }, 0);
+    s = R(s, { type: 'quiet' }, 4000);
+    s = R(s, { type: 'toast', tone: 'ok', message: 'Référence trouvée', driver: 'pilot' }, 5000);
+    expect(s.quiet).toBe(false);
+    expect(s.lastFrameAt).toBe(5000);
+  });
+
+  it('the composer is locked while a driver is actually working, and unlocked once a pilot goes quiet', () => {
+    expect(busy(initialNoyau)).toBe(false);
+    let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    expect(busy(s)).toBe(true); // an in-app turn holds the console for its bounded length
+    s = R(initialNoyau, { type: 'status', message: 'a', driver: 'pilot' }, 0);
+    expect(busy(s)).toBe(true);
+    s = R(s, { type: 'quiet' }, 4000);
+    expect(busy(s)).toBe(false); // a quiet pilot never holds the dashboard hostage
   });
 });

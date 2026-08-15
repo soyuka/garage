@@ -3,12 +3,16 @@ import '../tokens/atelier.css';
 import './scene.css';
 import { FIXTURES, SCENARIOS, type Scenario } from '../fixtures/vehicles';
 import { useNoyau } from '../noyau/useNoyau';
-import { runMockTurn } from '../noyau/mockStream';
+import { runMockPilot, runMockTurn } from '../noyau/mockStream';
 import { SceneView, type Rung } from './SceneView';
 import { crossOverdue, firstCrossable } from './crossing';
+import { useRegionBurst } from './useRegionBurst';
 import { useReducedMotion } from './useReducedMotion';
 import { serviceLabel } from '../labels';
 import { formatReading } from '../format';
+import { PULSE_DURATION } from './holo';
+import type { CameraFocus } from './cameraRig';
+import type { PulseRegion } from './VehicleMesh';
 import type { MaintenanceRecord } from '../types';
 
 // Fixture visits for the "Historique" quick action offline (/scene has no backend) — enough shape to
@@ -71,6 +75,32 @@ export function AtelierScene() {
   const { state, dispatch } = useNoyau();
   const cancel = useRef<null | (() => void)>(null);
   const crossTimer = useRef<number | null>(null);
+
+  // The pilot sim (⇄): the same flare + coalescer the live orchestrator runs, so the playground shows
+  // ONE dolly for the script's three-region burst — the coalescing is visible, not just tested.
+  const [pulseRegion, setPulseRegion] = useState<PulseRegion | null>(null);
+  const [cameraFocus, setCameraFocus] = useState<CameraFocus | null>(null);
+  const flareKey = useRef(0);
+  const pulseTimer = useRef<number | null>(null);
+  const requestFlare = useRegionBurst((region) => {
+    flareKey.current += 1;
+    setPulseRegion({ region, key: flareKey.current });
+    if (pulseTimer.current != null) window.clearTimeout(pulseTimer.current);
+    pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
+    setCameraFocus({ region, key: flareKey.current });
+  });
+  const piloted = state.driver === 'pilot';
+  const runPilot = () => {
+    cancel.current?.();
+    // A second press is the settle_dashboard the script deliberately never sends.
+    if (piloted) {
+      dispatch({ type: 'toast', tone: 'ok', message: 'Pilote débranché', driver: 'pilot' });
+      dispatch({ type: 'turn', phase: 'end', driver: 'pilot' });
+      setCameraFocus(null);
+      return;
+    }
+    cancel.current = runMockPilot(dispatch, requestFlare);
+  };
 
   // Effective reduced-motion = the manual dev toggle OR the OS prefers-reduced-motion flag (the OS
   // signal must reach the WebGL useFrame loops, which no CSS @media can touch).
@@ -168,6 +198,9 @@ export function AtelierScene() {
         rung={rung}
         reduced={reduced}
         noyau={state}
+        pulseRegion={pulseRegion}
+        cameraFocus={cameraFocus}
+        onCameraRelease={() => setCameraFocus(null)}
         edit={demoEdit}
         checklist={demoChecklist}
         pinnedKeys={[]}
@@ -207,6 +240,14 @@ export function AtelierScene() {
               onClick={() => (crossed ? resetCrossing() : triggerCrossing())}
             >
               {crossed ? '↺' : '⚠'}
+            </button>
+            <button
+              className={`at-scene-sim${piloted ? ' at-scene-cross--on' : ''}`}
+              title={piloted ? 'Poser le tableau de bord (settle_dashboard)' : 'Simuler une rafale pilote (hôte MCP externe)'}
+              aria-label={piloted ? 'Poser le tableau de bord' : 'Simuler une rafale pilote'}
+              onClick={runPilot}
+            >
+              ⇄
             </button>
           </>
         }
