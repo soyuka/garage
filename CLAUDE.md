@@ -1,0 +1,121 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## « démarre projet »
+
+Means: bring the full stack up, in stage profile, and confirm it answers. Run, in order:
+
+```bash
+cd api && docker compose --env-file .env.stage \
+  -f compose.yaml -f compose.override.yaml -f compose.stage.yaml up -d
+```
+
+Then the tunnel (only if `curl -s -o /dev/null -w '%{http_code}' https://garage.soyuka.me/mcp`
+returns `000` or `530` — `401` means it is already up and healthy):
+
+```bash
+cloudflared tunnel --config api/docker/cloudflared/config.yml run >> stage/var/cloudflared.log 2>&1 &
+```
+
+Then report: `https://localhost` (Atelier, self-signed cert), `https://garage.soyuka.me/mcp` (public
+MCP), Casdoor on `:8000`. Mint an MCP token with `stage/bin/mint-token` when one is needed.
+
+`stage/bin/atelier` does all three **and then launches a fresh `claude` inside `stage/`** with the
+Atelier output style — that is the presenter's entry point, run from a terminal, not from inside an
+existing session.
+
+Dev-only (no tunnel, no stage overlay): `cd api && docker compose up -d`.
+
+The three compose files layer, never replace: dropping `compose.override.yaml` from a stage launch
+yields a stack that boots but serves localhost-only `MCP_ALLOWED_HOSTS` / `CASDOOR_ISSUER`, which
+reads exactly like an OAuth failure.
+
+## Surfaces
+
+Four, and a task rarely touches only one:
+
+| surface | what it is | read first |
+| --- | --- | --- |
+| `api/` | Symfony 7 / API Platform. Domain in MongoDB (Doctrine ODM); Postgres backs HTTP caches + Casdoor; MinIO holds maintenance bills; Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
+| `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `dashboard/CHOREOGRAPHY.md`, `dashboard/PROVENANCE.md` |
+| `stage/` | The pilot harness — **current workstream**. Its own `CLAUDE.md` is the operator protocol (not repo guidance), `.mcp.json` points the session at the public MCP server, `bin/atelier` is the launcher. | `stage/CLAUDE.md`, `docs/pilot.md`, `CONFERENCE.md` |
+| `admin/` | Vite SPA, largely dormant. | — |
+
+Further entry docs by topic: `api/` maintenance domain → `FUTURE.md` § GMAO core (the anti-rebuild
+section: it lists what already ships); `dashboard/` motion → `docs/prompt-pilot-motion.md`;
+conference → `CONFERENCE.md` § "the one rule".
+
+### Splitting a multi-surface ask
+
+Split **by surface, not by finding.** One agent per surface, sequential within a surface, parallel
+across surfaces — `api/` and `dashboard/` genuinely parallelise (different languages, different test
+runners). Most dashboard findings collide: three separate bugs all landed in
+`dashboard/src/scene/SceneView.tsx` + `scene.css` on the same day, so fanning them out produces three
+conflicting edits to one file, and worktree isolation only moves the collision to merge time.
+
+A finding that crosses surfaces (a new `UIAction` = `api/` publisher + `dashboard/` reducer) is **one**
+item, owned by whoever holds the contract (`dashboard/src/types.ts`) — never two.
+
+Findings that are not the task at hand go into `FUTURE.md`, not into chat where they evaporate.
+Every dispatched worker inherits the conventions at the bottom of this file.
+
+## Commands
+
+```bash
+# api — no php-cs-fixer in this repo, phpunit only
+cd api && docker compose exec php vendor/bin/phpunit
+docker compose exec php vendor/bin/phpunit tests/Functional/McpOpenVehicleTest.php
+docker compose exec php vendor/bin/phpunit --filter testOpensByQuery
+docker compose exec php php -d memory_limit=1G vendor/bin/phpunit   # full suite needs this
+
+# dashboard
+cd dashboard && npm test            # vitest, run once
+npm test -- src/scene/worklist.test.ts
+npm run build                       # tsc + vite build
+```
+
+Test DB safety: `MONGODB_DB=app` from compose once overrode `.env.test` and the suite dropped the
+live database. `tests/bootstrap.php` + `AppTestCase` now guard it — do not weaken those.
+
+After changing code the worker keeps serving from memory: `rm -rf api/var/cache` and
+`docker compose restart worker php`, or MCP clients get the old tool schema. `cache:clear` alone is
+not enough for API Platform metadata — only `rm -rf var/cache` is.
+
+## Architecture, the parts that need several files to see
+
+**One render pipeline, two drivers.** Render intents are declared once as `#[AsTool]` methods
+(`api/src/ApiResource/Dashboard.php`) and reach the browser as Mercure frames. `src/Agent/Ui/DashboardChannel.php`
+chooses the topic: the *turn session* topic when an in-app agent turn asked, otherwise the owner's
+**pilot topic** `…/agent/pilots/<hmac_sha256(owner_sub, APP_SECRET)>`. The digest is the access
+control — the hub accepts anonymous subscribers. The dashboard learns its pilot topic from
+`GET /agent/link` and subscribes to both (`dashboard/src/agent.ts`). Pilot tools sit on
+`McpToolbox::EXCLUDED` so the in-app agent never double-sees them.
+
+**Agent turns are async.** `/agent/turn` enqueues; the `worker` container consumes under CLI SAPI so
+the tool loop is unbounded (the in-request version died at 180 s). The pilot path skips this entirely
+— that is its whole point.
+
+**Maintenance domain.** A `MaintenanceRecord` is a *visit* carrying `items[]{type, parts}` and a visit
+cost — not one row per service. Forecasting walks `items[].type` against `ServiceInterval` recurring
+rules plus usage, composing a health figure; a per-vehicle schedule overrides the generic interval.
+Logging a service auto-closes the matching planned task — never also call `dismiss_maintenance`.
+
+**Auth.** Casdoor is the OIDC server, chosen because it supports anonymous RFC 7591 DCR (stock Goose
+and Claude Desktop self-register). Owner identity is the Casdoor `sub`, carried through MCP and the
+agent by `OwnerContext`; every garage read/write is owner-scoped.
+
+**Contracts are single-owner.** A change that crosses `api/` and `dashboard/` (a new `UIAction`, a new
+frame) is *one* task owned by whoever holds `dashboard/src/types.ts` — not two parallel edits.
+
+## Conventions specific to this repo
+
+- Test-first, always: failing test shown before production code.
+- A new motion gets its row in `dashboard/CHOREOGRAPHY.md` **before** it is written. That file is
+  FROZEN-but-extensible.
+- No theatre in the render path: no `sleep`, no padded pacing, no staged beat sheet. Motion may
+  overlap an arrival, never gate one (`docs/prompt-pilot-motion.md` § Hard rules 1).
+- Dashboard tests on the host need a real `dashboard/node_modules` — the host directory is a
+  root-owned empty docker anonymous volume until you `rmdir` it and `npm install`.
+- Bloom multisampling in the scene MUST stay `0`.
+- Many rapid edits can wedge Vite into a ~1 s full-reload loop; restart the `dashboard` container.

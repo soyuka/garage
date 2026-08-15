@@ -1,0 +1,72 @@
+# CLAUDE.md — `api/`
+
+Guidance for Claude Code inside the API surface. Repo-wide rules live in `../CLAUDE.md`.
+
+## Stack
+
+API Platform 4.3 on Symfony / PHP 8.4+, FrankenPHP. **MCP-first**: every capability is an
+`ApiResource` DTO carrying both HTTP operations and `mcp:` tools, backed by a thin
+`State/` provider (reads) or processor (tool calls) over a domain service. Adding a capability means
+adding a DTO + processor, not a controller — plain `#[Route]` controllers exist only where API
+Platform cannot express the thing (bill up/download, the MCP endpoint override).
+
+Persistence is split on purpose:
+
+- **MongoDB (Doctrine ODM)** — the domain: vehicles, facts, maintenance records, planned tasks, users.
+- **Postgres** — DBAL HTTP caches (`cache.siv`, `cache.partsapi`) and Casdoor's own store. Never the
+  domain model.
+- **MinIO / S3** — maintenance bill binaries; metadata stays on the Mongo record.
+- **Mercure** — render frames to the dashboard.
+
+## Commands
+
+```bash
+docker compose exec php vendor/bin/phpunit
+docker compose exec php vendor/bin/phpunit tests/Functional/McpOpenVehicleTest.php
+docker compose exec php vendor/bin/phpunit --filter testOpensByQuery
+docker compose exec php php -d memory_limit=1G vendor/bin/phpunit    # full suite
+```
+
+**No php-cs-fixer and no phpstan in this repo** — the global pre-push gate does not apply here.
+`vendor/bin/phpunit` is the whole toolchain.
+
+After touching code, the worker still holds the compiled container and the MCP tool schemas in
+memory: `rm -rf var/cache && docker compose restart php worker`. `cache:clear` is a no-op for
+API Platform resource metadata — new `ApiResource` properties get silently dropped from JSON-LD until
+`var/cache` is physically removed.
+
+## Layout
+
+| dir | role |
+| --- | --- |
+| `src/ApiResource/` | DTOs = the public surface. `Dashboard.php` holds the pilot render intents. |
+| `src/State/` | one provider/processor per operation, thin; logic belongs in the domain services |
+| `src/Garage/` | vehicle resolution + write outcomes (`VehicleWriteResolver` is the dedup brain) |
+| `src/Maintenance/` | forecast, health, recorder, schedule planner, facts projector |
+| `src/Agent/` | in-app agent: toolbox, turn context, journal, `Ui/DashboardChannel.php` |
+| `src/Mcp/` | MCP toolbox filtering, prompt loaders, MCP-Apps UI resources |
+| `src/Siv/`, `src/PartsApi/`, `src/Motul/`, `src/Catalog/` | upstreams and the catalogue domain over them |
+
+## Things that have bitten before
+
+- **Tests once dropped the live database.** Compose's `MONGODB_DB=app` outranked `.env.test`.
+  `tests/bootstrap.php` + `AppTestCase` guard it now — do not weaken them.
+- **MCP host allowlist.** The SDK's DNS-rebinding middleware is localhost-only and the bundle exposes
+  no hook, so on a public hostname authenticated `/mcp` calls 403 "Invalid Host header." while
+  unauthenticated ones still 401 — reads exactly like an OAuth failure. Fixed by overriding
+  `mcp.server.controller` with `App\Controller\Mcp\McpEndpointController` + `MCP_ALLOWED_HOSTS`.
+- **New nullable ODM fields 500 on legacy documents** when constructor-promoted: hydration uses
+  `newInstanceWithoutConstructor`, which skips promoted defaults. Declare a class-level default.
+- **Clearing a value** goes through `$set: null`, never `$unset` — `$unset` breaks hydration.
+- **A maintenance record is one visit** carrying `items[]{type, parts}`, not one row per service.
+  Logging a service auto-closes its planned task; do not also dismiss it or usage double-counts.
+- **Agent turns run async** on the `worker` container (CLI SAPI, unbounded); the in-request version
+  died at the 180 s limit.
+- Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
+  `TypeInfoDescriber`.
+
+## Docs
+
+`docs/PLAN.md` (architecture + upstream joining facts), `docs/AUTH.md` (Casdoor first-boot setup),
+`docs/PARTSAPI.md` (per-method keys, call budget), `docs/TEST.md`, `docs/AGENT_PROVIDER.md`.
+Resolved review notes live in `docs/resolved/`.

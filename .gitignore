@@ -3,15 +3,18 @@
 # raw exports, reference images, and design scratch — kept out of git (138M+).
 /theming/
 
-# Working scratch prompts (not fixtures, not referenced in code).
-/NEXT_PROMPT.md
-/prompt.md
+# Working scratch prompts (not fixtures, not referenced in code). Unanchored: they
+# turn up per-surface too (stage/NEXT_PROMPT.md is the pilot session's scratch).
+NEXT_PROMPT.md
+prompt.md
 
 # Sample/working invoice PDFs (not referenced in code).
 /api/tondeuse/
 
-# Claude Code local state (settings, agent memory, worktrees).
+# Claude Code local state (settings, agent memory, worktrees). Root state is private;
+# per-surface agent memory too — but stage/.claude/ IS tracked, it is the pilot rig.
 /.claude/
+**/.claude/agent-memory/
 
-# Design source archive (raw export; the usable handoff docs are tracked).
-/Car page design Claude.zip
+# Runtime logs of the stage rig (cloudflared).
+/stage/var/
