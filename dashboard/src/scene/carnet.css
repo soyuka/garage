@@ -12,7 +12,7 @@
   border-radius: 13px;
   backdrop-filter: blur(4px);
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
-  animation: at-etchin 0.4s var(--at-ease-sine) both;
+  animation: at-etchin var(--at-dur-etch) var(--at-ease-sine) both;
 }
 
 .at-carnet-head {
@@ -38,7 +38,7 @@
   gap: 2px;
   padding-bottom: 9px;
   border-bottom: 1px solid var(--at-hairline);
-  animation: at-unfurl 0.4s var(--at-ease-sine) both;
+  animation: at-unfurl var(--at-dur-etch) var(--at-ease-sine) both;
 }
 .at-carnet-row:last-child {
   border-bottom: none;

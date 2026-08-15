@@ -15,7 +15,7 @@
   border-radius: 13px;
   backdrop-filter: blur(4px);
   box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
-  animation: at-etchin 0.4s var(--at-ease-sine) both;
+  animation: at-etchin var(--at-dur-etch) var(--at-ease-sine) both;
 }
 
 .at-parts-head {
@@ -47,7 +47,7 @@
   gap: 2px;
   padding-bottom: 9px;
   border-bottom: 1px solid var(--at-hairline);
-  animation: at-unfurl 0.4s var(--at-ease-sine) both;
+  animation: at-unfurl var(--at-dur-etch) var(--at-ease-sine) both;
 }
 .at-parts-row:last-child {
   border-bottom: none;
@@ -111,7 +111,7 @@
   border: none;
   border-radius: 999px;
   padding: 0 15px;
-  transition: filter 140ms var(--at-ease-sine);
+  transition: filter var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-parts-add:hover { filter: brightness(1.08); }
 .at-parts-add:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }

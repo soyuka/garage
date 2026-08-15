@@ -23,7 +23,7 @@
   color: var(--at-text-mono);
   font-family: var(--at-font-mono);
   text-align: left;
-  animation: at-inbox-rise 220ms var(--at-ease-sine, ease-out);
+  animation: at-inbox-rise var(--at-dur-swap) var(--at-ease-sine, ease-out);
   outline: none;
 }
 @keyframes at-inbox-rise {
@@ -119,7 +119,7 @@
   border-radius: 999px;
   padding: 7px 12px; /* generous hit target while staying a compact pill */
   background: rgba(13, 14, 16, 0.6);
-  transition: border-color 140ms var(--at-ease-sine, ease), background 140ms var(--at-ease-sine, ease);
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine, ease), background var(--at-dur-tint) var(--at-ease-sine, ease);
 }
 /* the primary deterministic action reads as operator focus — orange, rationed to the primary button */
 .at-inbox-btn--do { color: var(--at-text); border-color: rgba(238, 67, 34, 0.5); }

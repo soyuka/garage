@@ -27,5 +27,9 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    // Vitest stubs `.css` imports to an empty string by default — including `?raw` ones. The motion
+    // scale is enforced by reading the stylesheets as text (tokens/motion.test.ts), so they have to
+    // resolve for real. Nothing else imports CSS from a test, so this costs nothing at runtime.
+    css: true,
   },
 });

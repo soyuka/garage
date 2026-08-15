@@ -137,6 +137,6 @@
 .at-journal-raw summary { cursor: pointer; font-family: var(--at-font-mono); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .at-journal { animation: at-journal-slide 240ms var(--at-ease-sine); }
+  .at-journal { animation: at-journal-slide var(--at-dur-swap) var(--at-ease-sine); }
   @keyframes at-journal-slide { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 }

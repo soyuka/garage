@@ -67,7 +67,7 @@
   font-family: var(--at-font-ui);
   font-size: 0.92rem;
   letter-spacing: 0.02em;
-  transition: background 160ms var(--at-ease-sine), box-shadow 160ms var(--at-ease-sine);
+  transition: background var(--at-dur-tint) var(--at-ease-sine), box-shadow var(--at-dur-tint) var(--at-ease-sine);
 }
 
 .at-auth-button:hover {

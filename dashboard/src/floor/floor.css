@@ -172,7 +172,7 @@
    marked (a non-colour cue, layered over the always-visible truth). */
 .at-truth-system[data-focus='true'] {
   box-shadow: inset 2px 0 0 var(--at-text-mono);
-  animation: at-truth-etch 1000ms var(--at-ease-sine) 1;
+  animation: at-truth-etch var(--at-dur-cascade) var(--at-ease-sine) 1;
 }
 @keyframes at-truth-etch {
   0% { background: linear-gradient(90deg, transparent 0%, rgba(231, 227, 218, 0.12) 50%, transparent 100%); background-size: 220% 100%; background-position: 220% 0; }

@@ -11,7 +11,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--at-space-5);
-  animation: at-hlog-scrim 220ms var(--at-ease-sine) both;
+  animation: at-hlog-scrim var(--at-dur-swap) var(--at-ease-sine) both;
 }
 
 .at-hlog {
@@ -34,7 +34,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   font-family: var(--at-font-ui);
   color: var(--at-text);
-  animation: at-hlog-card 260ms var(--at-ease-sine) both;
+  animation: at-hlog-card var(--at-dur-rise) var(--at-ease-sine) both;
 }
 
 .at-hlog-head {
@@ -90,7 +90,7 @@
 .at-hlog-entry {
   padding: var(--at-space-4) 0;
   border-bottom: 1px solid var(--at-hairline);
-  animation: at-hlog-etchin 0.4s var(--at-ease-sine) both;
+  animation: at-hlog-etchin var(--at-dur-etch) var(--at-ease-sine) both;
 }
 .at-hlog-entry:last-child { border-bottom: none; }
 

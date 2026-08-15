@@ -127,6 +127,6 @@ textarea.at-dossier-input { width: 100%; resize: vertical; }
 .at-rule-del:hover { color: var(--at-red-hi); }
 
 @media (prefers-reduced-motion: no-preference) {
-  .at-dossier { animation: at-dossier-slide 240ms var(--at-ease-sine); }
+  .at-dossier { animation: at-dossier-slide var(--at-dur-swap) var(--at-ease-sine); }
   @keyframes at-dossier-slide { from { transform: translateX(24px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 }

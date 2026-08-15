@@ -28,7 +28,7 @@
   opacity: var(--at-vib-3); /* tertiary section header — reduced-motion resting value */
   /* own keyframes (not the shared at-etchin below, which several leaves reuse and lands at opacity:1):
      the etch-in must settle AT the tier, not fight it back up to full opacity once the animation ends. */
-  animation: at-spec-head-in 0.45s var(--at-ease-sine) both;
+  animation: at-spec-head-in var(--at-dur-fan) var(--at-ease-sine) both;
 }
 /* the resting (non-agent) marker — a dim diamond in place of the cyan attribution tick */
 .at-spec-glyph {
@@ -70,7 +70,7 @@
   border: 1px solid var(--at-hairline);
   border-radius: 9px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
-  animation: at-etchin 0.5s var(--at-ease-sine) both;
+  animation: at-etchin var(--at-dur-fan) var(--at-ease-sine) both;
 }
 
 .at-spec-label {

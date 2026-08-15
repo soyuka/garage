@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useReducer } from 'react';
+import { DWELL } from '../tokens/motion';
 import { initialNoyau, reduceNoyau, type NoyauEvent, type NoyauState } from './state';
 
 // React binding for the pure frame→state machine. Supplies the monotonic clock (performance.now) the
@@ -13,7 +14,7 @@ export function useNoyau(): { state: NoyauState; dispatch: (ev: NoyauEvent) => v
 
   useEffect(() => {
     if (state.phase !== 'done') return;
-    const t = window.setTimeout(() => dispatch({ type: 'settle' }), 1600);
+    const t = window.setTimeout(() => dispatch({ type: 'settle' }), DWELL.settle);
     return () => window.clearTimeout(t);
   }, [state.phase, dispatch]);
 

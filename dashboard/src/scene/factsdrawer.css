@@ -10,7 +10,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  animation: at-facts-scrim-in 220ms var(--at-ease-sine) both;
+  animation: at-facts-scrim-in var(--at-dur-swap) var(--at-ease-sine) both;
 }
 
 .at-facts-drawer {
@@ -32,7 +32,7 @@
     0 -44px 96px rgba(0, 0, 0, 0.6),
     0 0 64px rgba(150, 175, 210, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  animation: at-facts-rise 280ms var(--at-ease-sine) both;
+  animation: at-facts-rise var(--at-dur-rise) var(--at-ease-sine) both;
 }
 
 .at-facts-head {
@@ -61,7 +61,7 @@
   background: transparent;
   border: 1px solid var(--at-hairline);
   border-radius: 999px;
-  transition: color 140ms var(--at-ease-sine), border-color 140ms var(--at-ease-sine);
+  transition: color var(--at-dur-tint) var(--at-ease-sine), border-color var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-facts-close:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
 .at-facts-close:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
@@ -125,7 +125,7 @@
   padding: 0 1px 1px;
   font-family: inherit;
   text-align: left;
-  transition: border-color 120ms var(--at-ease-sine), color 120ms var(--at-ease-sine);
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine), color var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-facts-value .at-inline:hover,
 .at-facts-value .at-inline:focus-visible {

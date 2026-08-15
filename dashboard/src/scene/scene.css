@@ -54,7 +54,7 @@ body {
   padding: 2px 8px;
   cursor: pointer;
   font: inherit;
-  transition: color 140ms var(--at-ease-sine), border-color 140ms var(--at-ease-sine);
+  transition: color var(--at-dur-tint) var(--at-ease-sine), border-color var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-identity-chip svg { flex-shrink: 0; }
 .at-identity-chip:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
@@ -84,7 +84,7 @@ body {
 }
 /* the docked slot is GONE (option 2a): data lives ON the car (callouts) or is PROJECTED around it (the
    spec constellation / parts manifest). The stage recedes when a surface projects. */
-.at-scene-stage-full[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+.at-scene-stage-full[data-dim] { opacity: 0.45; transition: opacity var(--at-dur-swap) ease; }
 
 /* the always-on cockpit — a full-width band across the top of the stage, below the top controls
    (.at-scene-top, which sits at top:0): interactive chrome over the car, so pointer-events stay on. It
@@ -107,7 +107,7 @@ body {
 .at-scene-cockpit > * {
   pointer-events: auto;
 }
-.at-scene-cockpit[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+.at-scene-cockpit[data-dim] { opacity: 0.45; transition: opacity var(--at-dur-swap) ease; }
 
 /* D1 "vue libre" — release the earned-camera hold back to the home framing (one click; Escape does the
    same). Appears only while the view is dollied to a region. Centred just under the cockpit band; orange
@@ -131,8 +131,8 @@ body {
   font-size: 13px;
   letter-spacing: 0.02em;
   cursor: pointer;
-  animation: at-vuelibre-in 0.24s var(--at-ease-sine) both;
-  transition: background 140ms var(--at-ease-sine);
+  animation: at-vuelibre-in var(--at-dur-swap) var(--at-ease-sine) both;
+  transition: background var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-vuelibre:hover {
   background: linear-gradient(rgba(238, 67, 34, 0.12), rgba(238, 67, 34, 0.12)), rgba(13, 14, 16, 0.86);
@@ -156,7 +156,7 @@ body {
   z-index: 12;
   pointer-events: none;
 }
-.at-scene-pins[data-dim] { opacity: 0.45; transition: opacity 240ms ease; }
+.at-scene-pins[data-dim] { opacity: 0.45; transition: opacity var(--at-dur-swap) ease; }
 
 /* the "agent scanning" cue is now a 3D holo band sweeping THROUGH the car (VehicleMesh ScanRunner),
    not a flat DOM bar — see scene/blueprintBuild.ts patchScan + scene/VehicleMesh.tsx. */
@@ -221,7 +221,7 @@ body {
   font-size: 14px;
   line-height: 1;
   pointer-events: auto;
-  transition: color 140ms var(--at-ease-sine);
+  transition: color var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-proj-dismiss:hover { color: var(--at-text); }
 .at-proj-dismiss:focus-visible {
@@ -278,7 +278,7 @@ body {
   align-items: center;
   padding-bottom: 8px; /* cling to the edge (ornament), not float 18px inside it */
   pointer-events: none; /* let the empty area pass clicks through to the canvas (orbit the car) */
-  transition: transform 280ms var(--at-ease-sine);
+  transition: transform var(--at-dur-rise) var(--at-ease-sine);
 }
 /* Données drawer fills the bottom ~40vh — float the orb + composer CENTERED in the free upper band,
    with clear air above the drawer edge (the composer must not sit flush against it). Le Carnet is a
@@ -386,7 +386,7 @@ body {
   padding: 7px 13px; /* visually compact pill … */
   /* scrim law: these pills float directly on the canvas above the composer — was 0.6, well under .86 */
   background: rgba(13, 14, 16, 0.86);
-  transition: border-color 140ms var(--at-ease-sine), background 140ms var(--at-ease-sine);
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine), background var(--at-dur-tint) var(--at-ease-sine);
 }
 /* … while an invisible halo keeps the ~44px hit target (§ hit zones) */
 .at-scene-chip::after {
@@ -456,7 +456,7 @@ body {
   flex-direction: column;
   gap: 10px;
   transform-origin: bottom center;
-  animation: at-cta-rise 360ms var(--at-ease-spring) both;
+  animation: at-cta-rise var(--at-dur-etch) var(--at-ease-spring) both;
 }
 .at-cta[data-reduced='true'] {
   animation: none;
@@ -478,7 +478,7 @@ body {
   color: var(--at-text);
   font-family: var(--at-font-ui);
   font-size: 12px;
-  transition: border-color 140ms var(--at-ease-sine), background 140ms var(--at-ease-sine);
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine), background var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-cta-btn:hover { border-color: var(--at-chrome-hi); background: rgba(255, 255, 255, 0.03); }
 .at-cta-btn:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }

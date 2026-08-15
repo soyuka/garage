@@ -66,10 +66,23 @@
   --at-space-5: 24px;
   --at-space-6: 32px;
 
-  /* ── motion (data cascade ~800ms; everything yields to Le Noyau) ── */
+  /* ── motion: easings + the DURATION SCALE (everything yields to Le Noyau) ──
+     One step per INTENT, not per taste — pick by what the motion means. The twin of this block is
+     src/tokens/motion.ts (which also owns the useFrame-side motions CSS cannot reach: the dolly, the
+     region pulse, the pilot burst window); `motion.test.ts` fails if the two drift, and also fails on
+     any component stylesheet that spells a one-shot duration out instead of using a step here.
+     A loop PERIOD is a frequency, not a duration — exempt, except the protected breathe below. */
   --at-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
   --at-ease-sine: cubic-bezier(0.37, 0, 0.63, 1);
-  --at-cascade: 800ms;
+  --at-dur-tint: 140ms; /* a control tints: hover / focus / disabled */
+  --at-dur-swap: 240ms; /* a surface dims, slides, cross-fades in place */
+  --at-dur-rise: 280ms; /* a surface arrives: sheet, popup, projection panel */
+  --at-dur-etch: 360ms; /* a line etches; a CTA rises from the cradle */
+  --at-dur-fan: 480ms; /* a set fans in: constellation nodes, manifest rows */
+  --at-dur-filament: 600ms; /* the done filament cross-fades to its result colour */
+  --at-dur-cascade: 800ms; /* the domain data cascade — health bars, cardinals, hotspots */
+  --at-cascade: var(--at-dur-cascade); /* pre-scale name, kept: components still read it */
+  --at-breathe: 4s; /* PROTECTED: Le Noyau's sleeping-Mac breathe period (hard rule 4) */
 
   /* ── spatial-hierarchy vibrancy tiers (visionOS-style HUD hierarchy: opacity, not size) — apply as
      `opacity` on ink/mono text (--at-text / --at-text-mono / --at-label) to express primary/secondary/

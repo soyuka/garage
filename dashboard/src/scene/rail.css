@@ -22,7 +22,7 @@
   background: linear-gradient(180deg, rgba(150, 175, 210, 0.05), rgba(0, 0, 0, 0) 160px), rgba(20, 19, 15, 0.9);
   border-right: 1px solid var(--at-glass-edge);
   backdrop-filter: blur(var(--at-glass-blur));
-  transition: opacity 240ms ease;
+  transition: opacity var(--at-dur-swap) ease;
 }
 .at-rail[data-dim] {
   opacity: 0.45;
@@ -106,7 +106,7 @@
 /* ── shared row chrome ── */
 .at-rail-row {
   border-top: 1px dashed var(--at-hairline); /* a ruled line, not a rigid table row */
-  transition: background 140ms var(--at-ease-sine);
+  transition: background var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-rail-row:hover {
   background: var(--at-void-lift);

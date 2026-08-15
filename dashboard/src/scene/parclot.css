@@ -44,7 +44,7 @@
   cursor: pointer;
   color: inherit;
   font: inherit;
-  transition: transform 200ms var(--at-ease-spring), border-color 200ms var(--at-ease-sine);
+  transition: transform var(--at-dur-swap) var(--at-ease-spring), border-color var(--at-dur-swap) var(--at-ease-sine);
 }
 .at-parc-card:hover {
   transform: translateY(-3px);
