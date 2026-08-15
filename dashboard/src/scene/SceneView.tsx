@@ -200,6 +200,9 @@ export function SceneView({
   const carnetFocused = focus?.panel === 'carnet';
   const carnet = carnetFocused ? rollupCarnet(records) : null;
   const showCarnet = !!carnet && carnet.count > 0;
+  // The carnet and the fiche technique (specs) are side-column projections, not blocking surfaces — they
+  // read as integrated with the scene, so neither dims it. Each closes on its own ✕ + Escape.
+  const dimScene = !!focus && !carnetFocused && !specsFocused;
 
   // "Planifier" (#10): a hotspot forecast row → a concrete planned task pegged to the predicted-due
   // reading. Uses the checklist's add path (so it re-reads), and the vehicle's garage-spelling axis unit
@@ -276,7 +279,7 @@ export function SceneView({
         // moteur constellation left, HUD rings, cardinals, échéances+checklist dock right); on-demand
         // agent surfaces project over it (parts manifest right, spec focus). (option 2a, cockpit revision)
         <>
-          <div className="at-scene-stage-full" data-dim={focus ? 'true' : undefined}>
+          <div className="at-scene-stage-full" data-dim={dimScene ? 'true' : undefined}>
             <Plateau
               vehicle={bundle.vehicle}
               rung={rung}
@@ -301,7 +304,7 @@ export function SceneView({
               signal status — the over-car HUD ring was moved down to surround the car's base. */}
           {/* the always-on cockpit: identity nameplate + engine badge + editable kilométrage — never etches
               out (unlike the on-demand overlays below), the operator's at-a-glance facts on every visit. */}
-          <div className="at-scene-cockpit" data-dim={focus ? 'true' : undefined}>
+          <div className="at-scene-cockpit" data-dim={dimScene ? 'true' : undefined}>
             <Cockpit vehicle={bundle.vehicle} edit={edit} />
           </div>
           {/* SANTÉ moved off the top-right HUD into the cockpit slab (Cockpit → HealthStat) — the %
@@ -343,7 +346,7 @@ export function SceneView({
               model={rail}
               checklist={checklist}
               onPlan={onPlan!}
-              dimmed={!!focus || overlayOpen}
+              dimmed={dimScene || overlayOpen}
             />
           )}
         </>
