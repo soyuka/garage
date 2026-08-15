@@ -1,24 +1,31 @@
 import { useId, useState } from 'react';
 import { coerceInt } from '../edit';
-import { formatDate, formatEuros, formatReading } from '../format';
+import { formatDate, formatReading } from '../format';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import { taskTitle } from '../tasks';
 import { dueDescriptor, signalTag } from '../derive';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
-import type { RailItem, RailModel } from './rail';
+import type { RailItem } from './rail';
+import type { VisitPlan } from './visits';
+import type { BodyRegion } from './anchors';
 import './checklist.css';
 import './rail.css';
 
-// "Entretien" — the PERSISTENT LEFT RAIL, screen-locked on the hero's left edge. Two workload buckets
-// (the operator's own cut — status, not a severity gradient) + the untracked tail:
-//  · "À faire" — anything actually LATE, whether planned as a task or still a bare prediction. EVERY row
-//    here carries its red/amber text tag (a late task is still late — the tag never hides behind the
-//    checkbox shape).
-//  · "Planifié" — upcoming dues (planifier ○ promotes), open tasks without a late forecast, done tasks.
+// "Entretien" — the PERSISTENT LEFT RAIL, screen-locked on the hero's left edge. Grouped by VISIT —
+// the trip to the lift — because that is the unit a garage books (CHOREOGRAPHY.md § "The rail is
+// grouped by VISIT"). Three horizons:
+//  · "Maintenant" — late work + decided-but-undated tasks, one card per BODY REGION (what shares a
+//    teardown). Every late row keeps its red/amber text tag.
+//  · "Prochaine visite" — the soonest dated cluster, one card.
+//  · "Plus tard · n" — a COUNT that projects the ladder into the right column. Never a list: seven rows
+//    saying "OK" is seven rows of cost for no information.
 //  · gaps — dashed "· non suivi" rows, no affordance.
 // Row shapes: a task row is checkable/editable (checklist handlers, optimistic); a due row is a
 // prediction. NO cyan (rationed to Le Noyau); a task is not a signal.
+//
+// Parts are a COUNT here, never a catalogue: three brands at three prices is a decision, and the rail is
+// a status surface. The count opens the row's own editor, where the lines are editable.
 
 export interface ChecklistHandlers {
   /** open + done (and dismissed when showDismissed) — the source for counts + the retirées section. */
@@ -36,6 +43,15 @@ export interface ChecklistHandlers {
   defaultUnit: string;
 }
 
+/** What a region-grouped visit is called — the teardown it shares, in the operator's words. */
+const REGION_LABEL: Record<BodyRegion, string> = {
+  hood: 'Moteur',
+  windshield: 'Poste de conduite',
+  frontAxle: 'Train avant',
+  rearAxle: 'Train arrière',
+  bay: 'Périphériques',
+};
+
 /** The row caption under a task title: its bound forecast horizon, else its target reading, else its date. */
 function taskCaption(horizon: string | null, task: PlannedTask | undefined): string | null {
   if (horizon) return horizon;
@@ -45,15 +61,19 @@ function taskCaption(horizon: string | null, task: PlannedTask | undefined): str
 }
 
 export function EntretienRail({
-  model,
+  plan,
   checklist,
   onPlan,
+  onShowLaterVisits,
   dimmed = false,
   spotlit,
 }: {
-  model: RailModel;
+  /** The rail regrouped by trip to the lift — the ONLY model this component renders. */
+  plan: VisitPlan;
   checklist: ChecklistHandlers;
   onPlan: (due: ForecastDue) => void;
+  /** Projects `plan.later` as the ladder. Absent → the count renders as text, never a dead control. */
+  onShowLaterVisits?: () => void;
   /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage. */
   dimmed?: boolean;
   /** service types the agent spotlighted (`focusView {panel:'tasks', keys}`) — those rows carry the
@@ -65,10 +85,12 @@ export function EntretienRail({
   const [adding, setAdding] = useState(false);
   const { tasks, showDismissed, onToggleDismissed, defaultUnit } = checklist;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
+  const lateCount = plan.now.reduce((n, v) => n + v.items.filter((i) => i.due?.overdue).length, 0);
   const dismissed = tasks.filter((t) => t.status === 'dismissed');
 
+  const laterServices = plan.later.reduce((n, v) => n + v.items.length, 0);
   const empty =
-    model.todo.length === 0 && model.ongoing.length === 0 && model.planned.length === 0 && model.gaps.length === 0 && dismissed.length === 0;
+    plan.now.length === 0 && !plan.next && plan.later.length === 0 && plan.gaps.length === 0 && dismissed.length === 0;
 
   const renderItem = (item: RailItem, inTodo: boolean) => {
     if (item.kind === 'due') {
@@ -129,9 +151,9 @@ export function EntretienRail({
     <aside className="at-rail" aria-label="Entretien" data-dim={dimmed ? 'true' : undefined}>
       <div className="at-rail-head">
         <h2 className="at-rail-title">Entretien</h2>
-        {model.todo.length > 0 && (
+        {lateCount > 0 && (
           <span className="at-rail-count at-rail-count--late">
-            {model.todo.length} en retard
+            {lateCount} en retard
           </span>
         )}
       </div>
@@ -161,33 +183,46 @@ export function EntretienRail({
         <p className="at-check-empty">Rien à suivre pour l’instant.</p>
       ) : (
         <>
-          {model.todo.length > 0 && (
-            <section className="at-rail-section" aria-label="À faire">
-              <h3 className="at-rail-section-title at-rail-section-title--late">À faire</h3>
-              <ul className="at-rail-rows" role="list">
-                {model.todo.map((item) => renderItem(item, true))}
-              </ul>
+          {plan.now.length > 0 && (
+            <section className="at-rail-section" aria-label="Maintenant">
+              <h3 className="at-rail-section-title at-rail-section-title--late">Maintenant</h3>
+              {plan.now.map((visit) => (
+                <VisitCard key={visit.id} caption={visit.region ? REGION_LABEL[visit.region] : null} count={visit.items.length}>
+                  {visit.items.map((item) => renderItem(item, true))}
+                </VisitCard>
+              ))}
             </section>
           )}
-          {model.ongoing.length > 0 && (
-            <section className="at-rail-section" aria-label="En cours">
-              <h3 className="at-rail-section-title at-rail-section-title--ongoing">En cours</h3>
-              <ul className="at-rail-rows" role="list">
-                {model.ongoing.map((item) => renderItem(item, false))}
-              </ul>
+          {plan.next && (
+            <section className="at-rail-section" aria-label="Prochaine visite">
+              <h3 className="at-rail-section-title">Prochaine visite</h3>
+              <VisitCard caption={plan.next.date ? formatDate(plan.next.date) : null} count={plan.next.items.length}>
+                {plan.next.items.map((item) => renderItem(item, false))}
+              </VisitCard>
             </section>
           )}
-          {model.planned.length > 0 && (
-            <section className="at-rail-section" aria-label="Planifié">
-              <h3 className="at-rail-section-title">Planifié</h3>
-              <ul className="at-rail-rows" role="list">
-                {model.planned.map((item) => renderItem(item, false))}
-              </ul>
+          {plan.later.length > 0 && (
+            <section className="at-rail-section" aria-label="Plus tard">
+              {/* A count, not a list — and a CONTROL, because compression is only honest if there is a
+                  way to look closer. It projects the ladder into the right column. */}
+              {onShowLaterVisits ? (
+                <button type="button" className="at-rail-later" onClick={onShowLaterVisits}>
+                  <span className="at-rail-later-label">Plus tard</span>
+                  <span className="at-rail-later-count">{plan.later.length}</span>
+                  <span className="at-rail-later-meta">
+                    {laterServices} service{laterServices > 1 ? 's' : ''}
+                  </span>
+                </button>
+              ) : (
+                <p className="at-rail-later at-rail-later--static">
+                  Plus tard · {plan.later.length}
+                </p>
+              )}
             </section>
           )}
-          {model.gaps.length > 0 && (
+          {plan.gaps.length > 0 && (
             <ul className="at-rail-rows at-rail-rows--gaps" role="list">
-              {model.gaps.map((item) => (
+              {plan.gaps.map((item) => (
                 <li
                   key={item.id}
                   className="at-rail-row at-rail-row--gap"
@@ -228,6 +263,23 @@ export function EntretienRail({
         )}
       </div>
     </aside>
+  );
+}
+
+/** One trip to the lift: a caption (the date, or the teardown for undated work) over its rows. */
+function VisitCard({ caption, count, children }: { caption: string | null; count: number; children: React.ReactNode }) {
+  return (
+    <div className="at-rail-visit">
+      {caption && (
+        <div className="at-rail-visit-head">
+          <span className="at-rail-visit-caption">{caption}</span>
+          {count > 1 && <span className="at-rail-visit-count">{count}</span>}
+        </div>
+      )}
+      <ul className="at-rail-rows" role="list">
+        {children}
+      </ul>
+    </div>
   );
 }
 
@@ -318,19 +370,18 @@ function TaskRow({
         ) : (
           <>
             {caption && <span className="at-rail-caption">{caption}</span>}
-            {task.parts.length > 0 ? (
-              <ul className="at-task-parts">
-                {task.parts.map((p, i) => (
-                  <li className="at-task-part" key={p.id ?? `${p.ref}-${i}`}>
-                    {p.ref && <span className="at-task-part-ref">{p.ref}</span>}
-                    {p.brand && <span className="at-task-part-brand">{p.brand}</span>}
-                    {p.label && <span className="at-task-part-label">{p.label}</span>}
-                    {p.priceCents != null && <span className="at-task-part-price">{formatEuros(p.priceCents)}</span>}
-                    {p.qty != null && p.qty > 1 && <span className="at-task-part-qty">×{p.qty}</span>}
-                  </li>
-                ))}
-              </ul>
-            ) : null}
+            {task.parts.length > 0 && (
+              // A COUNT, not the catalogue: brands and prices are a decision, and the rail states. The
+              // control opens this row's own editor, where the lines are readable AND editable.
+              <button
+                type="button"
+                className="at-task-parts-count"
+                onClick={() => setEditing(true)}
+                aria-label={`Voir les ${task.parts.length} références de « ${taskTitle(task)} »`}
+              >
+                {task.parts.length} réf.
+              </button>
+            )}
           </>
         )}
       </div>

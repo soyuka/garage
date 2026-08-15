@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Agent\Ui;
 use App\Agent\Ui\ActionButton;
 use App\Agent\Ui\ActionPart;
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\Ui\SpecNode;
 use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -101,6 +102,19 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertSame('string', $part['properties']['ref']['type']);
     }
 
+    public function testShowFactSchemaDescribesEachProjectedNodeAsTypedObject(): void
+    {
+        $schema = (new Factory())->buildParameters(RenderIntentTools::class, 'showFact');
+
+        $node = $schema['properties']['nodes']['items'];
+        $this->assertSame('object', $node['type']);
+        foreach (['key', 'label', 'value'] as $field) {
+            $this->assertSame('string', $node['properties'][$field]['type']);
+        }
+        $this->assertSame('boolean', $node['properties']['verified']['type']);
+        $this->assertContains('null', (array) $node['properties']['info']['type']);
+    }
+
     public function testProposeActionsPublishesAStructuredPatchTaskWrite(): void
     {
         $published = null;
@@ -176,6 +190,71 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertNotNull($published);
         // No keys → the spotlight raises the panel but lights no rows/regions (no empty `keys` array).
         $this->assertSame(['type' => 'focusView', 'panel' => 'specs'], json_decode($published->getData(), true));
+    }
+
+    public function testFocusViewRaisesTheCarnetPanel(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->focusView('carnet');
+
+        $this->assertNotNull($published);
+        $this->assertSame(['type' => 'focusView', 'panel' => 'carnet'], json_decode($published->getData(), true));
+    }
+
+    public function testShowFactProjectsFetchedNodesAlongsideTheSpotlightKeys(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        // The nodes ARE the panel; the key only lights the moteur region (the client contract).
+        $tools->showFact(['oil_change'], 'Capacités fluides', [
+            new SpecNode('oil_capacity', 'Huile moteur', '4,3 l', true, 'ACEA E3|E4|E5'),
+        ]);
+
+        $this->assertNotNull($published);
+        $this->assertSame([
+            'type' => 'showFact',
+            'keys' => ['oil_change'],
+            'title' => 'Capacités fluides',
+            'nodes' => [['key' => 'oil_capacity', 'label' => 'Huile moteur', 'value' => '4,3 l', 'verified' => true, 'info' => 'ACEA E3|E4|E5']],
+        ], json_decode($published->getData(), true));
+    }
+
+    public function testShowFactWithoutNodesStaysTheStoredFactFilter(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->showFact(['oil_capacity']);
+
+        $this->assertNotNull($published);
+        $this->assertSame(['type' => 'showFact', 'keys' => ['oil_capacity']], json_decode($published->getData(), true));
     }
 
     public function testFocusViewRejectsUnknownPanel(): void

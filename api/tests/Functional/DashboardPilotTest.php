@@ -30,6 +30,131 @@ final class DashboardPilotTest extends AppTestCase
         }
     }
 
+    public function testTheAdvertisedSchemasCarryTheCarnetPanelAndTheProjectedNodes(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $schemas = array_column($tools, 'inputSchema', 'name');
+
+        $this->assertSame(
+            ['tasks', 'specs', 'carnet'],
+            $schemas['focus_view']['properties']['panel']['enum'] ?? null,
+            'focus_view must advertise the carnet panel — otherwise the agent cannot raise the history/spend projection.',
+        );
+        $this->assertArrayHasKey(
+            'nodes',
+            $schemas['show_fact']['properties'] ?? [],
+            'show_fact must advertise nodes — otherwise fetched (non-stored) data has nowhere to land.',
+        );
+    }
+
+    public function testFocusViewRaisesTheCarnetPanel(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'focus_view',
+            'arguments' => ['panel' => 'carnet'],
+        ], 3);
+
+        $this->assertSame(['type' => 'focusView', 'panel' => 'carnet'], $this->lastPilotFrame());
+    }
+
+    public function testFocusViewStillRejectsAPanelTheDashboardCannotRaise(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'focus_view',
+            'arguments' => ['panel' => 'parc'],
+        ], 3);
+
+        $this->assertStringContainsString('invalid_input', json_encode($result));
+        $this->assertNull($this->lastPilotFrame());
+    }
+
+    public function testShowFactProjectsFetchedNodesWithNoStoredFactKeys(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'show_fact',
+            'arguments' => [
+                'title' => 'Capacités fluides',
+                'nodes' => [
+                    ['key' => 'oil_capacity', 'label' => 'Huile moteur', 'value' => '4,3 l', 'verified' => true, 'info' => 'ACEA E3|E4|E5'],
+                    ['key' => 'coolant_capacity', 'label' => 'Liquide de refroidissement', 'value' => '6,5 l'],
+                ],
+            ],
+        ], 3);
+
+        $this->assertSame([
+            'type' => 'showFact',
+            'keys' => [],
+            'title' => 'Capacités fluides',
+            'nodes' => [
+                ['key' => 'oil_capacity', 'label' => 'Huile moteur', 'value' => '4,3 l', 'verified' => true, 'info' => 'ACEA E3|E4|E5'],
+                ['key' => 'coolant_capacity', 'label' => 'Liquide de refroidissement', 'value' => '6,5 l', 'verified' => false],
+            ],
+        ], $this->lastPilotFrame());
+    }
+
+    public function testShowFactKeepsFilteringStoredFactsWhenNoNodesAreGiven(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'show_fact',
+            'arguments' => ['keys' => ['oil_capacity', 'oil_type'], 'title' => 'Huile moteur'],
+        ], 3);
+
+        $this->assertSame([
+            'type' => 'showFact',
+            'keys' => ['oil_capacity', 'oil_type'],
+            'title' => 'Huile moteur',
+        ], $this->lastPilotFrame());
+    }
+
+    public function testShowFactRejectsACallCarryingNeitherKeysNorNodes(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'show_fact',
+            'arguments' => ['title' => 'Huile moteur'],
+        ], 3);
+
+        $this->assertStringContainsString('invalid_input', json_encode($result));
+        $this->assertNull($this->lastPilotFrame());
+    }
+
+    public function testShowFactDropsANodeWithNoValueRatherThanProjectingAnEmptyRow(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'show_fact',
+            'arguments' => [
+                'nodes' => [
+                    ['key' => 'oil_capacity', 'label' => 'Huile moteur', 'value' => '4,3 l'],
+                    ['key' => 'gearbox_capacity', 'label' => 'Boîte', 'value' => '  '],
+                ],
+            ],
+        ], 3);
+
+        $this->assertSame([
+            ['key' => 'oil_capacity', 'label' => 'Huile moteur', 'value' => '4,3 l', 'verified' => false],
+        ], $this->lastPilotFrame()['nodes'] ?? null);
+    }
+
     public function testSelectVehiclePublishesTheRenderIntentOnTheOwnerPilotTopic(): void
     {
         $client = static::createClient();

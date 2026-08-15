@@ -10,17 +10,19 @@ Stage-B/C component animates against THIS map; no agent invents a different mapp
 |---|---|---|
 | `selectVehicle {id}` | the car **drives forward** into Le Plateau; previous car recedes into the lot (~350ms cross-fade) | scene assembler |
 | `showFact {keys, title?}` / `focusView {panel:'specs', keys?}` | the **spec constellation** fans the matching `vehicle.facts` into the RIGHT **projection column** (staggered **etch-in**). Empty `keys` ⇒ the whole sheet | scene overlay (`SpecConstellation`) |
+| `showFact {nodes, title?}` | the SAME constellation, same etch-in — but the nodes ARE the content: an already-formatted surface the agent FETCHED (fill volumes, an oil grade, the SIV carte grise), which no `keys` filter over stored facts could ever select. Read-only (no inline edit — a fetched value is not the operator's), and it wears the same agent-placed cyan tick as any projection. Not a new motion: the identical surface the "Capacités fluides" / "Fiche technique" chips already project, now reachable **on the wire** | scene overlay (`SpecConstellation`) |
 | `focusView {panel:'tasks', keys}` | projects the **worklist** — the agent's cut of the rail — into the RIGHT projection column (rows **unfurl** staggered, same vocabulary as the carnet), AND resolves the first key to a body region (`regionForFrame`) to **spotlight it by dollying the earned camera there** (D1) + a one-shot cyan pulse on the region's edges. The spotlighted services' Entretien-rail row(s) light with the orange operator cue (`data-lit`: a 2px left edge in the gutter + a lift), so the projected answer and the editable rail name visibly the same rows. **Never dims the stage** — like the specs/carnet projections it reads as integrated, not blocking | scene overlay (`WorklistProjection`) + scene assembler (`cameraFocus`) + `EntretienRail` |
 | `focusRegion {region}` | same earned-camera dolly + pulse as above, addressed directly by region. **Client-synthesized today** (a contract seed — the client already dollies for a `focusView`/`showFact` that resolves to a region, so handling both is idempotent; not yet emitted by the live agent) | scene assembler (`cameraRig`) |
 | `showParts {service, taskId, parts?}` | projects the **parts manifest** into the RIGHT projection column (rows **unfurl** staggered), primary **Ajouter** = a deterministic `patchTask` merge. **Client-synthesized today** by the "Pièces dispo" wayfinder chip — the identical shape a real parts-bearing `proposeActions` produces (see below), so chip and agent answer are visually indistinguishable | scene overlay (`PartsManifest`) |
-| `showHistory` | raises the **carnet projection** (past visits + spend) into the same RIGHT column. **Client-synthesized today** by the "Carnet · dépenses" chip | scene overlay (`CarnetProjection`) |
+| `showHistory` / `focusView {panel:'carnet'}` | raises the **carnet projection** (past visits + spend) into the same RIGHT column. The `showHistory` FRAME stays client-synthesized (the "Carnet · dépenses" chip), but the SURFACE is now a real server emission: the agent raises it with `focusView {panel:'carnet'}` after reading the history, instead of degrading to a prose toast. Both funnel through `focusForAction` into one focus state, so chip and agent answer are indistinguishable | scene overlay (`CarnetProjection`) |
 | `proposeActions {headline, finding?, actions}` | a plain proposal → a CTA card **rises from Le Noyau's cradle** (behind the composer, never over it); a **parts-bearing** proposal (an `actions[].patchTask` with `parts`) projects instead as the **parts manifest** in the RIGHT column with the primary **Ajouter** = that deterministic PATCH. `patchTask` → **no agent turn**; `instruction` → new turn. A proposal that arrives while one is already pending, or with no hero open (nowhere to raise a cradle), is **deferred into the à-décider queue** instead of dropped (`review` item — replays the same actions later) | CTA layer / `PartsManifest` / à-décider inbox |
 | `toast {tone, message}` | non-alarm → narration line (Noyau heartbeat); **alarm** → docks a `notify` item onto the à-décider queue + a real toast popup | Le Noyau |
 | `status {message}` | one **Noyau pulse** (per narrated step, sparse) + the narration line etches; the same step also appends an **aria-hidden tool-step chip** (short verb + glyph) beside Le Noyau, collapsing into the journal on turn end — a silent companion, never a second announcement | Le Noyau |
 | `turn {phase}` | `start` → Noyau busy/working (aperture focuses, scan locks) + a **cyan scan-sweep** slides across the car; `end` → settle → green/amber/red | Le Noyau + scene overlay |
 
-`PanelKind` also has a `'carnet'` value, but only `showHistory`/the chip raise it client-side — the server's
-`focusView` accepts `specs`/`tasks` only (CONTRACT.md).
+`focusView` addresses the whole `PanelKind` — `specs`, `tasks` **and** `carnet` (CONTRACT.md). A panel the
+type allows but the wire cannot reach is a render surface the agent has no words for, and the answer
+degrades to prose; the vocabulary and the type stay the same size on purpose.
 
 ## The pilot driver — same verbs, different envelope
 
@@ -82,11 +84,37 @@ row replays its `patchTask`/`instruction`; a notify row offers "vu" or "planifie
 ## Data around the turning car (option 2a)
 
 The car IS the interface — no docked slot. Data is either **true of a body region** (échéances — the
-persistent LEFT "Entretien" rail, two workload buckets: **À faire** = anything late, every row wearing its
-red/amber TEXT tag, and **Planifié**, plus the untracked "non suivi" tail; the disc itself stays clean —
+persistent LEFT "Entretien" rail, grouped by VISIT, see below; the disc itself stays clean —
 the ring pins were removed, indices read as a classification they weren't) or **fetched on
-demand** (specs / parts / carnet, which project into the RIGHT **projection column** — one right-edge slot
-so the operator learns a single glance direction for "the agent answered" — and clear on dismiss).
+demand** (specs / parts / carnet / later visits, which project into the RIGHT **projection column** — one
+right-edge slot so the operator learns a single glance direction for "the agent answered" — and clear on
+dismiss).
+
+### The rail is grouped by VISIT, not by service (2026-08-15)
+
+A garage books **trips to the lift**, not services. The log side always knew this — a `MaintenanceRecord`
+is one visit carrying `items[]` — while the plan side listed one row per service, so a vidange and its
+oil filter on the same date read as two obligations and seven planned services read as seven. `visits.ts`
+is the mirror, pure data over `buildRail`, with two grouping axes because undated and dated work are
+scheduled by different things:
+
+| Bucket | What it holds | Grouped by |
+|---|---|---|
+| **Maintenant** | late work + decided-but-undated open tasks | **body region** — what shares a teardown |
+| **Prochaine visite** | the soonest dated cluster | **calendar** — within `VISIT_WINDOW_DAYS` (60), chained off the previous member, not the cluster start |
+| **Plus tard · n** | every later cluster | a COUNT, never a list |
+
+| Real frame / condition | Atelier motion | Owner layer |
+|---|---|---|
+| a visit card enters the rail | rows **unfurl** staggered inside the card, same vocabulary as the worklist/carnet projections; the card itself arrives on `--at-dur-rise` | `EntretienRail` |
+| clicking **Plus tard · n** | the later visits project into the RIGHT column as a **time ladder** (`VisitProjection`): one rung per visit, and the vertical gap between rungs is **proportional to the real calendar gap**, so 2027→2028 sits close and 2028→2030 sits far. Distance encodes when — the ladder is the only place the horizon is legible as a shape rather than read as a date. Rungs unfurl staggered; dismiss clears like every other projection. Does **not** dim the stage (it is a side projection, per the rule above) | `VisitProjection` |
+| a rail row carrying parts | the row shows a **count** (`3 réf.`), never the references. Opening it raises the row's own editor, where the lines are editable. A catalogue is a DECISION surface and the rail is a STATUS surface — three brands at three prices in the ambient layer is the summoned layer leaking into it | `EntretienRail` |
+| nothing due at all | the rail collapses to **one line**. Seven rows saying "OK" is seven rows of cost for no information; the health ring already carries "fine" | `EntretienRail` |
+
+**Why a count and not a scroll.** Compression is only honest if there is a way to look closer, so
+`Plus tard` is a control, never a truncation — the ladder is that magnification (the "optical lenses that
+shunt into place" read, `docs/design-inspiration.md` § 3). A collapsed bucket with no way to open it would
+be hiding, which the truth-before-spectacle rule forbids as much as any fake motion.
 
 **Earned camera (D1).** A region spotlight (a task focus, `focusRegion`, or clicking a rail row)
 **dollies the camera** to that region's anchor instead of dimming the stage — the move itself is the

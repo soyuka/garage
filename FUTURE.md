@@ -120,3 +120,50 @@ mileage-update flow item 2 needs.
 **1 + 4 together** — they make it legibly a GMAO without needing any data source we don't
 already have. 2 follows (usage model). 3's schema is easy but gated on the interval data
 source, so it trails.
+
+---
+
+## Render vocabulary — surfaces the agent cannot reach
+
+Found 2026-08-15 by auditing ~28 real garage prompts against the 29 live MCP tools and the render
+surfaces in `dashboard/`. Full analysis + the design brief: `docs/design-inspiration.md`.
+
+**The shape:** the dashboard grew surfaces the wire vocabulary cannot address, so the agent reads
+real data and has nowhere to put it — falling back to a prose `toast`, which `stage/CLAUDE.md`
+explicitly forbids.
+
+### Closed (shipped 2026-08-15)
+
+- **`focus_view` accepts `carnet`.** `CarnetProjection` existed but only the "Carnet · dépenses"
+  wayfinder chip could raise it, so « quand j'ai fait la dernière vidange ? » and « j'ai dépensé
+  combien ? » had no agent-driven surface.
+- **`show_fact` accepts projected `nodes`.** `Focus.nodes: SpecNode[]` was client-only, so
+  `get_fill_volumes` / `get_motul_oil` / `lookup_plate` results could not be projected —
+  `show_fact(['oil_capacity'])` rendered an EMPTY panel precisely when the agent had done the work.
+
+### 5. Parc-level surface  ★ biggest hole, needs design first
+
+`list_due_maintenance` already forecasts the **whole garage** and always has. Every render intent
+acts on the *selected* vehicle, so no cross-vehicle question has any surface at all: « qu'est-ce qui
+est en retard partout ? », « c'est laquelle la prochaine à passer ? », « quelle bagnole me coûte le
+plus ? ». `ParcLot` exists but no agent verb addresses it.
+
+Not a plumbing job — a new surface with no design. Ranked, never enumerated (see the design brief).
+
+### 6. Entretien rail is item-shaped, should be visit-shaped
+
+The plan side does not mirror the log side. A `MaintenanceRecord` is a **visit** carrying `items[]`;
+the rail lists services one per row, so *vidange* + *filtre à huile* falling on the same date read as
+two jobs instead of one trip to the lift. Four further defects (parts catalogue inside the ambient
+layer, seven rows saying "OK", two competing time formats, a 2030 entry treated as a task) are
+worked through in `docs/design-inspiration.md` § 5.
+
+### 7. Smaller gaps found in the same audit
+
+- **No visual for a recurring schedule.** `set_maintenance_schedule` writes rules that are invisible —
+  only their consequences ever appear. Ties into item 3 above.
+- **No MCP tool for bill attachments.** The API has `POST {recordIri}/attachments`; the agent cannot
+  reach it, so « ajoute la facture » is unanswerable.
+- **No possession/stock model**, so « j'ai déjà le filtre, il me manque quoi ? » cannot be answered.
+- **Region vocabulary tops out at five zones** (`dashboard/src/scene/anchors.ts:26`), so « montre-moi
+  où c'est » is coarse. The engine-bay reveal (workstream C, `CONFERENCE.md`) is what raises it.

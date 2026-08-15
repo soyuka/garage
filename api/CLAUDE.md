@@ -31,9 +31,20 @@ docker compose exec php php -d memory_limit=1G vendor/bin/phpunit    # full suit
 `vendor/bin/phpunit` is the whole toolchain.
 
 After touching code, the worker still holds the compiled container and the MCP tool schemas in
-memory: `rm -rf var/cache && docker compose restart php worker`. `cache:clear` is a no-op for
-API Platform resource metadata — new `ApiResource` properties get silently dropped from JSON-LD until
-`var/cache` is physically removed.
+memory. Clear the cache **inside** both containers — `compose.override.yaml:14,49` mount `/app/var`
+as an anonymous volume, so a host-side `rm -rf var/cache` touches a different directory and silently
+does nothing (verified 2026-08-15):
+
+```bash
+docker compose exec php rm -rf var/cache && docker compose exec worker rm -rf var/cache
+docker compose restart php worker
+```
+
+`cache:clear` is a no-op for API Platform resource metadata — new `ApiResource` properties get
+silently dropped from JSON-LD until `var/cache` is physically removed. The same staleness hits
+generated **input** schemas through `CachedPropertyNameCollectionFactory`, which keys on options: a
+property can be live for `create($cls)` and missing from `create($cls, ['schema_type' => 'input', …])`,
+so a new tool parameter never reaches the advertised MCP schema even though the code defines it.
 
 ## Layout
 

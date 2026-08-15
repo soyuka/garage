@@ -23,6 +23,34 @@ describe('focusForAction', () => {
     expect(focusForAction({ type: 'showHistory' })).toEqual({ panel: 'carnet', keys: [] });
   });
 
+  it('raises the carnet from a SERVER focusView — the same surface, on the wire', () => {
+    expect(focusForAction({ type: 'focusView', panel: 'carnet' })).toEqual({ panel: 'carnet', keys: [] });
+  });
+
+  it('carries a showFact projection (fetched nodes) into the focus', () => {
+    const nodes = [{ key: 'oil_capacity', label: 'Huile moteur', value: '4,3 l', verified: true, info: 'ACEA E3' }];
+    expect(focusForAction({ type: 'showFact', keys: [], title: 'Capacités fluides', nodes })).toEqual({
+      panel: 'specs',
+      keys: [],
+      title: 'Capacités fluides',
+      nodes,
+    });
+  });
+
+  it('keeps the spotlight keys alongside nodes — nodes are the CONTENT, keys light the car', () => {
+    const nodes = [{ key: 'oil_capacity', label: 'Huile moteur', value: '4,3 l', verified: false }];
+    expect(focusForAction({ type: 'showFact', keys: ['oil_change'], nodes })).toEqual({
+      panel: 'specs',
+      keys: ['oil_change'],
+      title: undefined,
+      nodes,
+    });
+  });
+
+  it('leaves nodes unset when the frame carries none (the stored-facts path is unchanged)', () => {
+    expect(focusForAction({ type: 'showFact', keys: ['oil_capacity'] })).not.toHaveProperty('nodes');
+  });
+
   it('returns null for showParts (it drives the parts manifest, not the slot focus)', () => {
     expect(focusForAction({ type: 'showParts', service: 'Vidange', taskId: '/planned-tasks/1' })).toBeNull();
   });

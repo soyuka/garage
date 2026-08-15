@@ -86,23 +86,39 @@ major-unit euros the client converts.
 
 ## The REAL `UIAction` union (verified — the only members the agent tool surface emits)
 
-`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `showFact` `{keys[], title?}` · `focusView`
-`{panel: "specs"|"tasks", keys?[]}` (raises one panel into the centre slot + spotlights the car
-region for each key) · `proposeActions` `{headline, finding?, actions: CtaAction[]}` · `toast`
-`{tone, message}` · `status` `{message}` · `turn` `{phase}`.
+`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `showFact` `{keys[], title?, nodes?}` ·
+`focusView` `{panel: "specs"|"tasks"|"carnet", keys?[]}` (raises one panel into the centre slot +
+spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
+CtaAction[]}` · `toast` `{tone, message}` · `status` `{message}` · `turn` `{phase}`.
 
-`PanelKind` (`src/types.ts`) also has a third value, `'carnet'`, but `focus_view` only accepts
-`specs`/`tasks` server-side — the carnet panel is raised client-only (see next paragraph).
+`focusView` covers the whole `PanelKind` (`src/types.ts`), `'carnet'` included: the history/spend
+projection is a real server emission, not a chip-only surface. The agent raises it after
+`get_maintenance_history` instead of answering « quand ai-je fait la vidange ? » in prose.
+
+**`showFact.nodes` — a FETCHED surface on the wire.** `keys` filters the vehicle's STORED facts;
+`nodes` (`SpecNode[]` = `{key, label, value, verified, info?}`) ARE the panel content, bypassing that
+filter, so a tool can project what it just looked up — fill volumes, an oil grade, the SIV carte
+grise — none of which is a fact on the vehicle. Given both, `nodes` win the content and `keys` keep
+only their car-region spotlight. `value` arrives display-ready (the server formats it; the panel
+renders it verbatim) and a node surface is read-only — a fetched value is not the operator's to edit.
+Without `nodes`, `show_fact(['oil_capacity'])` after a successful lookup renders an EMPTY panel.
 
 ⚠️ **`renderSuggestions` and `patchPanel` DO NOT EXIST** (a `docs/ui.md` sketch artifact). Never build
 against them.
 
 **Client-synthesized, not on the wire:** `showParts` `{service, taskId, parts?}` and `showHistory`
-(the carnet projection) are never emitted by the agent — they're produced locally by the
-deterministic wayfinder chips (`runLocalAnswer` in `Atelier.tsx`) so a chip click never costs a
-turn. `focusRegion` `{region}` (earned-camera dolly) is likewise client-only today — the type is a
+are never emitted by the agent — they're produced locally by the deterministic wayfinder chips
+(`runLocalAnswer` in `Atelier.tsx`) so a chip click never costs a turn. `showHistory` stays
+client-only as a *frame*, but its SURFACE no longer is: the agent reaches the same carnet projection
+with `focusView {panel:'carnet'}`, which both paths funnel into one focus state through
+`focusForAction`. `focusRegion` `{region}` (earned-camera dolly) is likewise client-only today — the type is a
 seed for a future server emission, and the client already dollies to the region a `focusView`/
 `showFact` resolves to, so handling both is idempotent.
+
+`PanelKind` gained a fourth value, **`visits`** (2026-08-15) — the visit ladder the rail's « Plus tard · n »
+control projects. Client-synthesized: `focus_view` accepts `specs`/`tasks`/`carnet` server-side and the
+agent never emits it. Exactly the status `carnet` held until the same day, so if a tool ever needs to
+project the ladder, the server enum is the only thing in the way.
 
 **`CtaAction` is dual-shape — exactly one payload:**
 - `{label, instruction}` → re-runs the agent with that NL instruction (a fresh turn), **or**
@@ -121,6 +137,7 @@ seed for a future server emission, and the client already dollies to the region 
 
 ## Choreography map (real vocabulary → Atelier motion) — frozen in Stage B.0
 
-`selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in · `proposeActions` → CTA rises
+`selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in (stored facts OR projected
+`nodes`) · `focusView {panel:'carnet'}` → carnet projection · `proposeActions` → CTA rises
 from cradle (incl. `patchTask` deterministic path) · `toast` → ember docks to Noyau · `status` →
 Noyau pulse · `turn` → busy state.

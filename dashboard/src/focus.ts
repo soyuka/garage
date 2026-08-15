@@ -1,17 +1,8 @@
-import type { PanelKind, UIAction } from './types';
+import type { PanelKind, SpecNode, UIAction } from './types';
 
-/**
- * A projected constellation node — the shape the spec constellation renders when the focus carries its
- * OWN nodes (a fetched surface: fluid capacities, the SIV carte grise) rather than filtering the
- * vehicle's stored facts. `info` is an optional secondary spec line (e.g. "ACEA E3|E4|E5"). Read-only.
- */
-export interface SpecNode {
-  key: string;
-  label: string;
-  value: string;
-  verified: boolean;
-  info?: string;
-}
+// SpecNode moved to types.ts when it went ON THE WIRE (show_fact's `nodes`) — it is a contract shape
+// now, not a client-local one. Re-exported so the surfaces that build them keep their import.
+export type { SpecNode } from './types';
 
 // The unified focus state behind the single swappable slot. The agent drives it via the `focusView`
 // intent (and the legacy `showFact`, kept as the specs-only subset); a car-pin click or a deterministic
@@ -31,7 +22,9 @@ export function focusForAction(action: UIAction): Focus | null {
     return { panel: action.panel, keys: action.keys ?? [] };
   }
   if (action.type === 'showFact') {
-    return { panel: 'specs', keys: action.keys, title: action.title };
+    const focus: Focus = { panel: 'specs', keys: action.keys, title: action.title };
+    if (action.nodes) focus.nodes = action.nodes;
+    return focus;
   }
   if (action.type === 'showHistory') {
     return { panel: 'carnet', keys: [] };

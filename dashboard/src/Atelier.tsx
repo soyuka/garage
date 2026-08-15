@@ -909,6 +909,7 @@ export function Atelier() {
             onCtaDismiss={() => setCta(null)}
             focus={focus}
             onDismissFocus={() => setFocus(null)}
+            onShowLaterVisits={() => setFocus({ panel: 'visits', keys: [] })}
             quickActions={buildQuickActions(heroBundle)}
             pinnedKeys={pinnedKeys}
             onTogglePin={onTogglePin}

@@ -269,3 +269,105 @@
   background: var(--at-hairline);
   border-radius: 4px;
 }
+
+/* ── visit cards (2026-08-15) — the rail groups by TRIP TO THE LIFT, not by service. A card is one
+   booking: its caption is the date, or the teardown for undated work. See CHOREOGRAPHY.md
+   § "The rail is grouped by VISIT, not by service". */
+
+.at-rail-visit {
+  margin-top: var(--at-space-3);
+  padding-left: var(--at-space-3);
+  border-left: 1px solid var(--at-glass-edge);
+  animation: at-unfurl var(--at-dur-rise) var(--at-ease-sine) both;
+}
+.at-rail-visit:first-of-type {
+  margin-top: var(--at-space-2);
+}
+
+.at-rail-visit-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--at-space-2);
+  margin-bottom: var(--at-space-2);
+}
+
+.at-rail-visit-caption {
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  letter-spacing: var(--at-label-tracking);
+  color: var(--at-text);
+  opacity: var(--at-vib-2);
+}
+
+.at-rail-visit-count {
+  font-family: var(--at-font-mono);
+  font-size: 9px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+/* « Plus tard · n » — a count that OPENS the ladder, never a truncation. */
+.at-rail-later {
+  display: flex;
+  align-items: baseline;
+  gap: var(--at-space-2);
+  width: 100%;
+  padding: var(--at-space-2) 0;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--at-glass-edge);
+  font-family: var(--at-font-mono);
+  color: var(--at-text-dim);
+  text-align: left;
+  cursor: pointer;
+  transition: opacity var(--at-dur-tint) ease;
+}
+.at-rail-later:hover,
+.at-rail-later:focus-visible {
+  opacity: var(--at-vib-1);
+}
+
+.at-rail-later-label {
+  font-size: 10px;
+  letter-spacing: var(--at-label-tracking);
+  text-transform: uppercase;
+}
+
+.at-rail-later-count {
+  font-size: 12px;
+  color: var(--at-text);
+}
+
+.at-rail-later-meta {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: var(--at-vib-3);
+}
+
+.at-rail-later--static {
+  cursor: default;
+  margin: 0;
+}
+
+/* the parts COUNT that replaced the inline catalogue — opens the row's own editor. */
+.at-task-parts-count {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  background: none;
+  border: none;
+  border-bottom: 1px dotted var(--at-glass-edge);
+  font-family: var(--at-font-mono);
+  font-size: 9.5px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  cursor: pointer;
+}
+.at-task-parts-count:hover,
+.at-task-parts-count:focus-visible {
+  opacity: var(--at-vib-1);
+}
+
+[data-reduced='true'] .at-rail-visit {
+  animation: none;
+}

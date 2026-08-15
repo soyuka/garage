@@ -266,14 +266,35 @@ export interface CtaAction {
  * NOTE: `renderSuggestions` and `patchPanel` from the docs/ui.md sketch DO NOT EXIST — never build
  * against them. The choreography map (Stage B.0) binds each real member to an Atelier motion.
  */
-/** The single swappable slot's content: the spec panel, the maintenance to-do list, or the carnet
- *  (past-visits + spend) projection. */
-export type PanelKind = 'specs' | 'tasks' | 'carnet';
+/** The single swappable slot's content: the spec panel, the maintenance to-do list, the carnet
+ *  (past-visits + spend) projection, or the visit ladder.
+ *
+ *  `visits` is CLIENT-SYNTHESIZED — raised by the rail's « Plus tard · n » control, never emitted by
+ *  the agent (`focus_view` accepts specs/tasks/carnet server-side). Same status `carnet` held until
+ *  2026-08-15; if a tool ever needs to project the ladder, the enum is the only thing in the way. */
+export type PanelKind = 'specs' | 'tasks' | 'carnet' | 'visits';
+
+/**
+ * A projected constellation node — an already-formatted line the spec panel renders as-is, instead of
+ * filtering the vehicle's STORED facts. It is how a FETCHED surface (fluid capacities, oil viscosity,
+ * the SIV carte grise) reaches the projection column: the values live nowhere on the vehicle, so
+ * `keys` could never select them. `info` is an optional secondary spec line (e.g. "ACEA E3|E4|E5").
+ * Read-only — a fetched value is not the operator's to edit.
+ */
+export interface SpecNode {
+  key: string;
+  label: string;
+  value: string;
+  verified: boolean;
+  info?: string;
+}
 
 export type UIAction =
   | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: Iri }
   | { type: 'selectVehicle'; id: Iri }
-  | { type: 'showFact'; keys: string[]; title?: string }
+  // `nodes`, when set, ARE the panel content (a fetched surface), bypassing the `keys` filter over the
+  // vehicle's stored facts; `keys` still spotlight their car regions, so a projection can light a part.
+  | { type: 'showFact'; keys: string[]; title?: string; nodes?: SpecNode[] }
   // Point the operator at what matters: raise one panel into the centre slot + spotlight `keys`
   // (each lights its car region and etches matching rows). showFact is the specs-only subset.
   | { type: 'focusView'; panel: PanelKind; keys?: string[] }

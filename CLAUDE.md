@@ -78,9 +78,20 @@ npm run build                       # tsc + vite build
 Test DB safety: `MONGODB_DB=app` from compose once overrode `.env.test` and the suite dropped the
 live database. `tests/bootstrap.php` + `AppTestCase` now guard it — do not weaken those.
 
-After changing code the worker keeps serving from memory: `rm -rf api/var/cache` and
-`docker compose restart worker php`, or MCP clients get the old tool schema. `cache:clear` alone is
-not enough for API Platform metadata — only `rm -rf var/cache` is.
+After changing code the worker keeps serving from memory, so MCP clients get the old tool schema:
+
+```bash
+docker compose exec php rm -rf var/cache && docker compose exec worker rm -rf var/cache
+docker compose restart php worker
+```
+
+**Clear it INSIDE the containers.** `compose.override.yaml:14,49` mount `/app/var` as an anonymous
+volume on both `php` and `worker`, so the host `api/var/` is a different directory — `rm -rf
+api/var/cache` from the host is a no-op that reads as one (verified 2026-08-15). `cache:clear` alone
+is not enough for API Platform metadata either: a stale `CachedPropertyNameCollectionFactory` entry
+is keyed by options, so a new property can be visible to `create($cls)` and absent from the generated
+input schema — the symptom is a new tool parameter that the code clearly defines never reaching the
+advertised MCP schema.
 
 ## Architecture, the parts that need several files to see
 

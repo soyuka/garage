@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class FocusViewInput
 {
-    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['tasks', 'specs'], 'description' => '"tasks" = the maintenance to-do list, "specs" = the spec/échéance panel.'])]
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['tasks', 'specs', 'carnet'], 'description' => '"tasks" = the maintenance to-do list, "specs" = the spec/échéance panel, "carnet" = the past visits + spend projection.'])]
     public string $panel = 'tasks';
 
     /**

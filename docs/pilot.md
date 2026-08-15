@@ -32,8 +32,8 @@ each one as a session-bound `#[AsTool]`.
 | --- | --- |
 | `narrate_step(message)` | one running step sentence on the heartbeat; the first one lifts the orb |
 | `select_vehicle(vehicle)` | drives that car into the workshop — **call it first** if your answer is about another vehicle |
-| `show_fact(keys, title)` | focused spec panel for the SELECTED vehicle |
-| `focus_view(panel, keys)` | raise "tasks" or "specs" and light the matching body regions |
+| `show_fact(keys, title, nodes)` | focused spec panel for the SELECTED vehicle: `keys` filters its STORED facts, `nodes` projects lines you FETCHED (fill volumes, oil grade, carte grise) |
+| `focus_view(panel, keys)` | raise "tasks", "specs" or "carnet" (history + spend) and light the matching body regions |
 | `propose_actions(headline, actions, finding)` | CTA card; buttons are NL follow-ups OR direct part-writes |
 | `toast(message, tone)` | one-line acknowledgement, French |
 | `settle_dashboard(message, tone)` | closing toast + turn end — the orb settles |
@@ -91,7 +91,8 @@ press it again for the `settle_dashboard`.
 ## Demo script — one paste
 
 Drives a full run against the live stack. Replace `VEHICLE` with an `@id` from `list_vehicles`; the
-`show_fact` keys must exist on that vehicle or the panel comes up empty (honest, but dull).
+`show_fact` keys must exist on that vehicle or the panel comes up empty — a value you looked up
+instead of read off the car goes in `nodes`, not `keys`.
 
 ```sh
 TOKEN=$(python3 -c "import json;d=json.load(open('$HOME/.claude.json'));print(d['projects']['~/projects/mon-parc-auto.fr/mon-parc-auto.fr']['mcpServers']['mon-parc-auto']['headers']['Authorization'].split()[1])")

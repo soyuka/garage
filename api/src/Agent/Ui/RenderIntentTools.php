@@ -24,8 +24,8 @@ use Webmozart\Assert\Assert;
  */
 #[AsTool('select_vehicle', 'Focus the dashboard on one vehicle, by its @id (the IRI returned by list_vehicles, e.g. /garage/vehicles/01J...).', 'selectVehicle')]
 #[AsTool('toast', 'Show a transient toast to the user. tone is one of: info, ok, warn, alarm.', 'toast')]
-#[AsTool('show_fact', 'Surface a focused panel showing ONLY the requested fact(s) of the selected vehicle — use it to answer a spec question like "capacité huile moteur" without dumping the whole list. keys are vehicle-fact keys (e.g. oil_capacity, oil_type, spark_plug_ref). Pass a short title for the panel header.', 'showFact')]
-#[AsTool('focus_view', 'After answering, point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?") or "specs" (the spec/échéance panel — use for spec questions and manufacturer recommendations). keys are service-type or fact keys to spotlight (e.g. oil_change, timing_belt, air_filter); each lights its body region red on the car (moteur, filtration, freins…) and etches the matching panel rows. Omit keys to just raise the panel.', 'focusView')]
+#[AsTool('show_fact', 'Surface a focused panel showing ONLY the requested fact(s) of the selected vehicle — use it to answer a spec question like "capacité huile moteur" without dumping the whole list. TWO sources, pick ONE. (1) keys = vehicle-fact keys already STORED on the car (oil_capacity, oil_type, spark_plug_ref) — the panel filters the car\'s own sheet. (2) nodes = lines YOU fetched, which are on no fact sheet: after get_fill_volumes / get_motul_oil / lookup_plate, project the result as nodes [{key, label, value, verified, info}] with value already formatted for display ("4,3 l", "5W-30"). NEVER pass a key the vehicle does not have — keys that match no stored fact render an EMPTY panel, which is exactly the wrong answer after a successful lookup. Pass a short title for the panel header.', 'showFact')]
+#[AsTool('focus_view', 'After answering, point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel — use for spec questions and manufacturer recommendations) or "carnet" (the history + spend projection — use after get_maintenance_history for "quand ai-je fait la vidange ?" / "combien j\'ai dépensé ?"). keys are service-type or fact keys to spotlight (e.g. oil_change, timing_belt, air_filter); each lights its body region red on the car (moteur, filtration, freins…) and etches the matching panel rows. Omit keys to just raise the panel.', 'focusView')]
 #[AsTool('propose_actions', 'Render a call-to-action card: a headline, an optional one-line finding (e.g. "Trouvé en ligne : vidange + courroie"), and a few next-step buttons. Each button is ONE of two kinds. (1) NL follow-up: set "instruction" — clicking re-runs you with that text. (2) Deterministic write: set "taskId" (an open task id from the turn context) + "parts" [{ref, brand, label}] — clicking merges those parts onto that task via a direct PATCH, NO new turn, and the shopping list re-renders. ALWAYS prefer kind (2) for "add this reference" choices, and include one button that adds the recommended refs at once. Never offer a dead-end "see all options" button.', 'proposeActions')]
 final class RenderIntentTools
 {
@@ -92,14 +92,25 @@ final class RenderIntentTools
     }
 
     /**
-     * @param list<string> $keys vehicle-fact keys to spotlight (e.g. ["oil_capacity", "oil_type"])
+     * Raises the spec panel from one of two sources. `keys` FILTERS the vehicle's stored facts (none
+     * ⇒ the whole sheet); `nodes` ARE the content — an already-formatted surface the tool fetched,
+     * which no key over stored facts could select. Given both, the nodes win the panel and the keys
+     * keep only their car-region spotlight (the client contract, `dashboard/src/focus.ts`).
+     *
+     * @param list<string>   $keys  vehicle-fact keys to spotlight (e.g. ["oil_capacity", "oil_type"])
+     * @param list<SpecNode> $nodes fetched lines to project INSTEAD of the stored facts
      */
-    public function showFact(array $keys, ?string $title = null): string
+    public function showFact(array $keys, ?string $title = null, array $nodes = []): string
     {
         Assert::allStringNotEmpty($keys);
+        Assert::allIsInstanceOf($nodes, SpecNode::class);
+
         $action = ['type' => 'showFact', 'keys' => array_values($keys)];
         if (null !== $title && '' !== trim($title)) {
             $action['title'] = $title;
+        }
+        if ([] !== $nodes) {
+            $action['nodes'] = array_map(static fn (SpecNode $n): array => $n->toArray(), array_values($nodes));
         }
         $this->publish($action);
 
@@ -116,7 +127,7 @@ final class RenderIntentTools
      */
     public function focusView(string $panel, array $keys = []): string
     {
-        Assert::inArray($panel, ['specs', 'tasks']);
+        Assert::inArray($panel, ['specs', 'tasks', 'carnet']);
         Assert::allStringNotEmpty($keys);
         $action = ['type' => 'focusView', 'panel' => $panel];
         if ([] !== $keys) {

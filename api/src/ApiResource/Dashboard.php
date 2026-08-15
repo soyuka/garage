@@ -85,7 +85,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'show_fact' => new McpTool(
             title: 'Show Fact',
-            description: 'Surface a focused panel showing ONLY the requested fact(s) of the SELECTED vehicle — the way to answer a spec question ("capacité huile moteur") without dumping the whole list. keys are vehicle-fact keys (oil_capacity, oil_type, spark_plug_ref…); title is the panel header.',
+            description: 'Surface a focused panel showing ONLY the requested fact(s) of the SELECTED vehicle — the way to answer a spec question ("capacité huile moteur") without dumping the whole list. TWO sources, pick ONE. (1) keys = vehicle-fact keys already STORED on the car (oil_capacity, oil_type, spark_plug_ref…): the panel filters the car\'s own sheet. (2) nodes = lines YOU fetched, which sit on no fact sheet: after get_fill_volumes / get_motul_oil / lookup_plate, project the result as nodes [{key, label, value, verified, info}], value already formatted for display ("4,3 l", "5W-30"). NEVER answer a lookup with keys the vehicle does not have — a key matching no stored fact renders an EMPTY panel, so the panel is emptiest exactly where you did the most work. title is the panel header.',
             input: ShowFactInput::class,
             structuredContent: false,
             processor: ShowFactProcessor::class,
@@ -93,7 +93,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'focus_view' => new McpTool(
             title: 'Focus View',
-            description: 'Point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?") or "specs" (the spec/échéance panel). keys are service-type or fact keys to spotlight (oil_change, timing_belt, air_filter…); each lights its body region on the car and etches the matching panel rows. Omit keys to just raise the panel.',
+            description: 'Point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel) or "carnet" (past visits + spend — use after get_maintenance_history for "quand ai-je fait la vidange ?" or "combien ai-je dépensé cette année ?", instead of answering in prose). keys are service-type or fact keys to spotlight (oil_change, timing_belt, air_filter…); each lights its body region on the car and etches the matching panel rows. Omit keys to just raise the panel.',
             input: FocusViewInput::class,
             structuredContent: false,
             processor: FocusViewProcessor::class,
