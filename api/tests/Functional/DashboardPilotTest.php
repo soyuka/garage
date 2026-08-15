@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Tests\Mock\RecordingHub;
-use Symfony\Component\Mercure\Update;
 
 /**
  * The pilot channel: an external MCP host (Claude Code, Goose…) drives the SAME dashboard the in-app
@@ -17,6 +16,7 @@ use Symfony\Component\Mercure\Update;
 final class DashboardPilotTest extends AppTestCase
 {
     use McpClientTrait;
+    use PilotFrameTrait;
 
     public function testDashboardToolsAreDiscoverableOverMcp(): void
     {
@@ -130,26 +130,4 @@ final class DashboardPilotTest extends AppTestCase
         $this->assertResponseStatusCodeSame(401);
     }
 
-    /**
-     * @return list<array<string, mixed>> the decoded frames published on the pilot topic, in order
-     */
-    private function pilotFrames(): array
-    {
-        $hub = static::getContainer()->get(RecordingHub::class);
-
-        return array_values(array_map(
-            static fn (Update $u): array => json_decode($u->getData(), true),
-            array_filter($hub->updates, static fn (Update $u): bool => str_contains($u->getTopics()[0] ?? '', '/agent/pilots/')),
-        ));
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function lastPilotFrame(): ?array
-    {
-        $frames = $this->pilotFrames();
-
-        return [] === $frames ? null : $frames[array_key_last($frames)];
-    }
 }

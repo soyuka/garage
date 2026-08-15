@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\McpTool;
 use App\Dto\Dashboard\FocusViewInput;
 use App\Dto\Dashboard\NarrateStepInput;
+use App\Dto\Dashboard\OpenVehicleInput;
 use App\Dto\Dashboard\ProposeActionsInput;
 use App\Dto\Dashboard\SelectVehicleInput;
 use App\Dto\Dashboard\SettleDashboardInput;
@@ -15,6 +16,7 @@ use App\Dto\Dashboard\ShowFactInput;
 use App\Dto\Dashboard\ToastInput;
 use App\State\Dashboard\FocusViewProcessor;
 use App\State\Dashboard\NarrateStepProcessor;
+use App\State\Dashboard\OpenVehicleProcessor;
 use App\State\Dashboard\ProposeActionsProcessor;
 use App\State\Dashboard\SelectVehicleProcessor;
 use App\State\Dashboard\SettleDashboardProcessor;
@@ -41,6 +43,14 @@ use App\State\Dashboard\ToastProcessor;
  */
 #[ApiResource(
     mcp: [
+        'open_vehicle' => new McpTool(
+            title: 'Open Vehicle',
+            description: 'START HERE when the user names a vehicle ("qu\'est-ce que j\'ai à faire sur la Mazda ?"). ONE call that resolves the spoken name (make, model, plate or VIN — case-insensitive substring), DRIVES THAT CAR onto the dashboard, and returns its whole picture: identity, the due/overdue forecast, the coverage gaps, and the open planned-maintenance checklist with its parts. It replaces the list_vehicles → select_vehicle → list_due_maintenance → list_planned_maintenance sequence: four round trips the user watches as a still screen. Never asks which car you meant — several matches resolve to the MOST-RECENTLY-TOUCHED one and the runners-up come back in `otherMatches`, so say which one you took. A name that matches nothing is a no_match result, not an error. Reach for the granular tools only when you need something this does not carry (history, facts, catalog parts).',
+            input: OpenVehicleInput::class,
+            structuredContent: false,
+            processor: OpenVehicleProcessor::class,
+            annotations: ['readOnlyHint' => true, 'idempotentHint' => true],
+        ),
         'select_vehicle' => new McpTool(
             title: 'Select Vehicle',
             description: 'Focus the user\'s dashboard on ONE vehicle, by its @id (from list_vehicles, e.g. "/garage/vehicles/01J…"). The car drives forward into the workshop. Call it before show_fact / focus_view / propose_actions whenever your answer is about a vehicle other than the one on screen — those three render against the SELECTED vehicle, not the one your text names.',

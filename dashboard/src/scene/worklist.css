@@ -1,0 +1,139 @@
+/* Worklist projection (D3) — the « qu'est-ce que j'ai à faire ? » answer, in the shared projection
+   column at the car's RIGHT (.at-projection, alongside the constellation / carnet / manifest). Focus-
+   placed, so it wears the cyan attribution tick + a ✕ dismiss (.at-proj-* in scene.css). Read-only:
+   the same rows are editable in the left rail, which stays lit beside it. Rows unfurl staggered; a
+   hair leader stubs toward the car on the left edge — same vocabulary as the carnet. */
+
+.at-worklist {
+  position: relative;
+  pointer-events: auto;
+  padding: 14px 15px;
+  background: rgba(13, 14, 16, 0.86); /* scrim law: >= .86 over the bloomed car */
+  border: 1px solid var(--at-hairline);
+  border-radius: 13px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
+  animation: at-etchin var(--at-dur-etch) var(--at-ease-sine) both;
+}
+
+.at-worklist-head {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--at-font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--at-text-dim);
+}
+
+.at-worklist-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.at-worklist-row {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--at-hairline);
+  animation: at-unfurl var(--at-dur-etch) var(--at-ease-sine) both;
+}
+.at-worklist-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* "light is meaning": the row's signal is the only colour it carries. An untracked service reads as a
+   hollow dot — unknown is not a severity, and colouring it green would be a claim we cannot make. */
+.at-worklist-row[data-signal='red'] { --at-sig: var(--at-red); --at-sig-hi: var(--at-red-hi); }
+.at-worklist-row[data-signal='amber'] { --at-sig: var(--at-amber); --at-sig-hi: var(--at-amber-hi); }
+.at-worklist-row[data-signal='green'] { --at-sig: var(--at-green); --at-sig-hi: var(--at-green-hi); }
+
+.at-worklist-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--at-sig, transparent);
+  box-shadow: var(--at-sig) 0 0 7px -1px;
+}
+.at-worklist-row[data-signal='unknown'] .at-worklist-dot {
+  background: transparent;
+  box-shadow: none;
+  border: 1px solid var(--at-text-dim);
+}
+
+.at-worklist-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.at-worklist-svc {
+  font-size: 12.5px;
+  line-height: 1.25;
+  color: var(--at-text);
+  opacity: var(--at-vib-1);
+}
+.at-worklist-meta {
+  font-family: var(--at-font-mono);
+  font-size: 10.5px;
+  line-height: 1.35;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+.at-worklist-tag {
+  flex: 0 0 auto;
+  font-family: var(--at-font-mono);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.at-worklist-tag--late { color: var(--at-red-hi); }
+.at-worklist-tag--soon { color: var(--at-amber-hi); }
+
+.at-worklist-missing {
+  margin: 11px 0 0;
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+.at-worklist-foot {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--at-hairline);
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--at-text-dim);
+}
+.at-worklist-late { color: var(--at-red-hi); }
+
+/* the hair leader — a 1px stub toward the car, the same tie the carnet/constellation use */
+.at-worklist-lead {
+  position: absolute;
+  top: 22px;
+  left: -18px;
+  width: 18px;
+  height: 1px;
+  background: var(--at-hairline);
+}
+
+.at-worklist[data-reduced] {
+  animation: none;
+}
+.at-worklist[data-reduced] .at-worklist-row {
+  animation: none;
+}

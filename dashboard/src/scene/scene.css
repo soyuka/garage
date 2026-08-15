@@ -111,10 +111,15 @@ body {
 
 /* D1 "vue libre" — release the earned-camera hold back to the home framing (one click; Escape does the
    same). Appears only while the view is dollied to a region. Centred just under the cockpit band; orange
-   outline = operator action (rationed to focus); >=44px hit zone; scrim-law opaque ground over the car. */
+   outline = operator action (rationed to focus); >=44px hit zone; scrim-law opaque ground over the car.
+
+   `top` clears the cockpit band, which starts at 52px and runs ~96px (name 30/1.12 + 2 + sub 16 + 3 +
+   the km/santé readout) — so its floor is ~148. At the old 104px the pill sat exactly ON the km/santé
+   line and hid the odometer whenever the camera was held (seen 2026-08-15). Both offsets derive from
+   the same band, so they move together. */
 .at-vuelibre {
   position: absolute;
-  top: 104px;
+  top: 160px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 17; /* above the cockpit band (15), below the dock (40) */

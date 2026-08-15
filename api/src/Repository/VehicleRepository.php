@@ -10,6 +10,7 @@ use App\Security\OwnerContext;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 use Doctrine\ODM\MongoDB\Query\Builder;
+use MongoDB\BSON\Regex;
 
 /**
  * Every query is scoped to the current tenant via {@see OwnerContext}: `owner` leads each lookup
@@ -126,6 +127,38 @@ final class VehicleRepository extends ServiceDocumentRepository
             ->count()
             ->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])
             ->execute();
+    }
+
+    /**
+     * Free-text search over the current owner's garage — the loose lookup `open_vehicle` needs, where
+     * the pilot holds a spoken phrase ("la Mazda", "AB-123-CD") and not a structured make+model pair.
+     * Matches a case-insensitive SUBSTRING of make, model, plate or VIN, MOST-RECENTLY-TOUCHED first,
+     * so a bare "mazda" resolves to the car the user last worked on rather than an arbitrary row.
+     *
+     * Substring, not prefix: "6" must still find a MAZDA6. The garages this serves are personal (tens
+     * of vehicles) and the owner filter bounds the scan, so the unindexed regex is affordable here.
+     *
+     * @return list<Vehicle>
+     */
+    public function searchShared(string $query, ?VehicleType $vehicleType = null, int $limit = 10): array
+    {
+        $needle = new Regex(preg_quote(trim($query), '/'), 'i');
+
+        $qb = $this->baseQuery()->addOr(
+            $this->createQueryBuilder()->expr()->field('make')->equals($needle),
+            $this->createQueryBuilder()->expr()->field('model')->equals($needle),
+            $this->createQueryBuilder()->expr()->field('plate')->equals($needle),
+            $this->createQueryBuilder()->expr()->field('vin')->equals($needle),
+        );
+
+        if (null !== $vehicleType) {
+            $qb->field('vehicleType')->equals($vehicleType->value);
+        }
+
+        return array_values($qb
+            ->sort(['updatedAt' => 'desc', 'addedAt' => 'desc'])
+            ->limit(max(1, $limit))
+            ->getQuery()->execute()->toArray());
     }
 
     private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType): Builder

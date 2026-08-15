@@ -115,6 +115,24 @@
 .at-rail-row[data-activatable] {
   cursor: pointer;
 }
+/* SPOTLIT — the agent named this service (`focusView {panel:'tasks', keys}`, CHOREOGRAPHY.md). An
+   orange left edge bleeding into the rail's gutter: the operator-cue colour, so the row the worklist
+   projects on the RIGHT and the row the operator edits on the LEFT read as one row. Rationed to an
+   edge + a lift, never a fill — the row's own signal tag must stay the loudest thing in it. */
+.at-rail-row[data-lit] {
+  position: relative;
+  background: var(--at-void-lift);
+}
+.at-rail-row[data-lit]::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--at-space-5) * -1);
+  width: 2px;
+  background: var(--at-orange);
+  box-shadow: var(--at-glow-orange);
+}
 /* ── due row (a forecast prediction — no checkbox; a planifier ○ promotes it) ── */
 .at-rail-row--due,
 .at-rail-row--gap {

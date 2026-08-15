@@ -49,13 +49,19 @@ export function EntretienRail({
   checklist,
   onPlan,
   dimmed = false,
+  spotlit,
 }: {
   model: RailModel;
   checklist: ChecklistHandlers;
   onPlan: (due: ForecastDue) => void;
   /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage. */
   dimmed?: boolean;
+  /** service types the agent spotlighted (`focusView {panel:'tasks', keys}`) — those rows carry the
+   *  operator cue so the projected answer and the persistent rail name the SAME rows. Documented in
+   *  CHOREOGRAPHY.md since Stage B; the rows never actually lit until 2026-08-15. */
+  spotlit?: string[];
 }) {
+  const lit = spotlit && spotlit.length > 0 ? new Set(spotlit) : null;
   const [adding, setAdding] = useState(false);
   const { tasks, showDismissed, onToggleDismissed, defaultUnit } = checklist;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
@@ -74,6 +80,7 @@ export function EntretienRail({
           key={item.id}
           className="at-rail-row at-rail-row--due"
           data-signal={item.signal}
+          data-lit={lit?.has(item.type) ? 'true' : undefined}
         >
           <button
             type="button"
@@ -104,6 +111,7 @@ export function EntretienRail({
         caption={taskCaption(item.horizon, item.task)}
         tag={inTodo || (tag && tag.tone !== 'ok') ? tag : null}
         signal={item.due && !item.done ? item.signal : undefined}
+        lit={lit?.has(item.type) ?? false}
         task={item.task!}
         defaultUnit={defaultUnit}
         onToggle={() => checklist.onSetStatus(item.task!.id, item.done ? 'open' : 'done')}
@@ -184,6 +192,7 @@ export function EntretienRail({
                   key={item.id}
                   className="at-rail-row at-rail-row--gap"
                   data-signal="unknown"
+                  data-lit={lit?.has(item.type) ? 'true' : undefined}
                 >
                   <span className="at-rail-svc">{item.label}</span>
                   <span className="at-rail-tag at-rail-tag--gap">non suivi</span>
@@ -228,6 +237,7 @@ function TaskRow({
   caption,
   tag = null,
   signal,
+  lit = false,
   task,
   defaultUnit,
   onToggle,
@@ -244,6 +254,8 @@ function TaskRow({
   /** the bound forecast's signal — colours the caption horizon exactly like a due row's (a late task's
    * "DÉPASSÉ de…" must read as red as an unplanned one's). Absent → neutral caption. */
   signal?: string;
+  /** the agent spotlighted this service — carries the operator cue (see EntretienRail `spotlit`). */
+  lit?: boolean;
   task: PlannedTask;
   defaultUnit: string;
   onToggle: () => void;
@@ -269,7 +281,7 @@ function TaskRow({
   };
 
   return (
-    <li className={cls} data-signal={signal} data-activatable="true" onClick={onRowClick}>
+    <li className={cls} data-signal={signal} data-lit={lit ? 'true' : undefined} data-activatable="true" onClick={onRowClick}>
       <button
         type="button"
         className="at-task-check"
