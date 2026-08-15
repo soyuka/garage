@@ -1,8 +1,9 @@
 # FUTURE — mon-parc-auto
 
 Forward-looking direction, not yet committed work. Parked here so a session can pick a slice
-without re-deriving the analysis. For active near-term work see `TODO.md`; for evaluated-and-
-rejected data sources see `TODO.md` § "Reference — don't re-investigate".
+without re-deriving the analysis. Near-term work is tracked here too — the old `TODO.md` is history,
+archived under `docs/archive/`; its § "Reference — don't re-investigate" still holds the
+evaluated-and-rejected data sources.
 
 ---
 
@@ -88,7 +89,7 @@ override "belongs on the future DB-backed schedule, not here."
 **Scope:** layered resolution — code default → per-model → per-vehicle override. Schema is
 easy. The HARD, possibly-never-solved part = an **authoritative OEM service-interval data
 source**:
-- auto-data.net does **NOT** carry intervals (evaluated — see `TODO.md` reference section).
+- auto-data.net does **NOT** carry intervals (evaluated — see `docs/archive/TODO.md` reference section).
 - No open service-schedule dataset exists and won't (licensed IP, like TecDoc).
 - Treat like the parts moat: vendor-sourced if one is found, else LLM-sourced-**unverified**
   with provenance, same pattern as the garage-fact `source`/`verified` seam.

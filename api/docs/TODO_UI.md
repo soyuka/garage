@@ -1,7 +1,7 @@
 # TODO — UI (MCP Apps)
 
 STATUS 2026-06-15: backend done; **first UI SHIPPED** — the maintenance-history card app
-(idea #1 below) is wired and rendering. See TODO.md "## MCP / platform" for the full wiring
+(idea #1 below) is wired and rendering. See `../../docs/archive/TODO.md` "## MCP / platform" for the full wiring
 record (enableExtension pass, tool `_meta.ui.resourceUri`, `ui://` loader, the HTML bundle at
 `resources/mcp-ui/maintenance-history.html`) + tests/Functional/McpAppsUiTest.php. The ideas
 below #1 remain for later.
@@ -17,7 +17,7 @@ JSON-RPC (app-bridge): the UI can call our existing tools back. Capability negot
 
 Dependency: RESOLVED 2026-06-15 — `mcp/sdk` bumped to **0.6.0** (carries `McpApps` /
 `UiToolMeta` / `Builder::enableExtension()`), installed via path-repo symlinks to local forks
-of mcp-bundle + api-platform/mcp. See TODO.md "## MCP / platform" for the full bump record +
+of mcp-bundle + api-platform/mcp. See `../../docs/archive/TODO.md` "## MCP / platform" for the full bump record +
 the remaining extension WIRING gaps (bundle `enableExtension`, tool `_meta.ui.resourceUri`,
 `ui://` resource registration) that still gate actual rendering.
 
@@ -44,7 +44,7 @@ the remaining extension WIRING gaps (bundle `enableExtension`, tool `_meta.ui.re
    addedAt. Zero new backend — pure win on existing provenance data.
 3. **Garage grid** — home screen. Cards of all vehicles (make/model/year/plate, fact count,
    last-serviced). Click selects → drives next tool call. Needs a `list_garage`/`get_vehicle`
-   tool (already on TODO.md "### Tools").
+   tool (already on `../../docs/archive/TODO.md` "### Tools").
 4. **Plate lookup card** — SIV plate input → vehicle identity card → "add to garage".
 5. **Parts picker** — PartCategory/Article browse → pick filter → ref number + copy button.
 

@@ -7,8 +7,8 @@ Hand-run scenarios for the agent / MCP flow. French, as a real user would phrase
 > mon entretien ?
 
 Exercises: plate lookup → facts → grounded recommendations + planned tasks. The 250k km
-milestone is the reference case behind `docs/next_plan.md` (grounded recommendations) and
-the coverage-variance note in `agent-findings.md`.
+milestone is the reference case behind `../../docs/archive/next_plan.md` (grounded recommendations) and
+the coverage-variance note in `../../docs/archive/agent-findings.md`.
 
 ## Append to checklist
 > ajoute huile moteur et la quantité dans la liste

@@ -75,7 +75,7 @@ FillVolume mapping (verified prototype facts): RU-unit duplicate rows (`Ð».`, `Ð
   query to fixture files under `tests/Fixtures/` (copied from prototype's real, paid responses).
 - Test cache dirs isolated under `var/tests/`, purged per test.
 
-> Build/verification log moved to the root `TODO.md` changelog (deps, cache import, live
+> Build/verification log moved to the archived `../../docs/archive/TODO.md` changelog (deps, cache import, live
 > verification are now shipped history; the stack has since moved to mcp/sdk 0.6, PG cache).
 > The data-source semantics and gotchas below remain the authoritative upstream reference.
 
