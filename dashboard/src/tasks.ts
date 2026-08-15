@@ -6,10 +6,31 @@ import type { PlannedTask } from './types';
 // VehicleDetail is reference only). The title, the milestone a task is pegged to, and the bucketing
 // that groups the checklist by milestone — all honest French via format.ts (no toLocaleString).
 
-/** "<service label>" or "<service label> — <custom label>". */
+// Words that carry no identity in a French service label, so they must not decide whether a custom
+// label already names its service ("Plaquettes de frein" vs "plaquettes frein avant").
+const FILLER = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'l', 'd', 'a', 'au', 'aux', 'en', 'et']);
+
+/** Accent- and punctuation-insensitive significant words. */
+function words(text: string): string[] {
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((w) => w !== '' && !FILLER.has(w));
+}
+
+/**
+ * "<service label>" or "<service label> — <custom label>" — but never both when the custom label
+ * ALREADY names the service. The prefix exists to name a service the operator's words leave implicit;
+ * when their words cover it, repeating it says one thing twice and costs three lines of rail.
+ */
 export function taskTitle(task: PlannedTask): string {
   const base = serviceLabel(task.type);
-  return task.label ? `${base} — ${task.label}` : base;
+  if (!task.label) return base;
+  const own = new Set(words(task.label));
+  const covered = words(base).every((w) => own.has(w));
+  return covered ? task.label : `${base} — ${task.label}`;
 }
 
 export interface Milestone {

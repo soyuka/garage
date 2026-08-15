@@ -16,6 +16,33 @@ describe('taskTitle', () => {
   it('appends a custom label after an em-dash', () => {
     expect(taskTitle(task({ type: 'brake_pads', label: 'avant' }))).toBe('Plaquettes de frein — avant');
   });
+
+  // A label that already names the service must not be prefixed with it. On the live Mazda the rail
+  // read "Sonde de température — Sonde température liquide refroidissement" and wrapped to four lines
+  // to say one thing twice. The label is the operator's own words and always wins when it covers the
+  // service; the prefix exists only to name a service the label leaves implicit.
+  it('drops the prefix when the label already carries the service words', () => {
+    expect(taskTitle(task({ type: 'coolant_temperature_sensor', label: 'Sonde température liquide refroidissement' })))
+      .toBe('Sonde température liquide refroidissement');
+  });
+
+  it('ignores accents and case when deciding', () => {
+    expect(taskTitle(task({ type: 'engine_mount', label: 'support moteur arrière (derrière le moteur)' })))
+      .toBe('support moteur arrière (derrière le moteur)');
+  });
+
+  it('ignores the French articles inside a service label', () => {
+    // "Plaquettes de frein" vs "plaquettes frein avant" — `de` must not be what forces the prefix back.
+    expect(taskTitle(task({ type: 'brake_pads', label: 'plaquettes frein avant' }))).toBe('plaquettes frein avant');
+  });
+
+  it('keeps the prefix when the label names something else entirely', () => {
+    expect(taskTitle(task({ type: 'oil_change', label: "avant l'hiver" }))).toBe("Vidange — avant l'hiver");
+  });
+
+  it('keeps the prefix when the label only partly covers the service', () => {
+    expect(taskTitle(task({ type: 'brake_discs', label: 'plaquettes avant' }))).toBe('Disques de frein — plaquettes avant');
+  });
 });
 
 describe('milestoneOf', () => {
