@@ -269,10 +269,13 @@ export interface CtaAction {
 /** The single swappable slot's content: the spec panel, the maintenance to-do list, the carnet
  *  (past-visits + spend) projection, or the visit ladder.
  *
+ *  `parts` is the shopping list across the open checklist — what « prochaines pièces à commander ? »
+ *  needed and the single-task manifest could not carry.
+ *
  *  `visits` is CLIENT-SYNTHESIZED — raised by the rail's « Plus tard · n » control, never emitted by
  *  the agent (`focus_view` accepts specs/tasks/carnet server-side). Same status `carnet` held until
  *  2026-08-15; if a tool ever needs to project the ladder, the enum is the only thing in the way. */
-export type PanelKind = 'specs' | 'tasks' | 'carnet' | 'visits';
+export type PanelKind = 'specs' | 'tasks' | 'carnet' | 'visits' | 'parts';
 
 /**
  * A projected constellation node — an already-formatted line the spec panel renders as-is, instead of

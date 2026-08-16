@@ -119,3 +119,23 @@
 [data-reduced='true'] .at-ladder-rung {
   animation: none;
 }
+
+/* A rung aims the camera the way a rail card head does — same gesture, one surface further away. The
+   button is a bare text block: no new chrome, because the rung already IS the object. */
+.at-ladder-aim {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+}
+.at-ladder-aim:hover .at-ladder-svc,
+.at-ladder-aim:focus-visible .at-ladder-svc {
+  opacity: var(--at-vib-1);
+}
+/* held: the orange operator cue, exactly as the rail card wears it — the operator moved the camera. */
+.at-ladder-aim[data-held='true'] .at-ladder-date {
+  color: var(--at-orange-hi);
+}

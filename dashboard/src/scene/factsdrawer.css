@@ -148,7 +148,6 @@
 .at-facts-ok { color: var(--at-green-hi); }
 .at-facts-unver { font-style: italic; color: var(--at-text-dim); }
 
-.at-facts-pin,
 .at-facts-remove {
   display: grid;
   place-items: center;
@@ -160,10 +159,7 @@
   border: none;
   border-radius: 6px;
 }
-.at-facts-pin:hover,
 .at-facts-remove:hover { color: var(--at-text); background: rgba(255, 255, 255, 0.06); }
-.at-facts-pin[data-pinned='true'] { color: var(--at-orange-hi); }
-.at-facts-pin:focus-visible,
 .at-facts-remove:focus-visible,
 .at-facts-close:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
 

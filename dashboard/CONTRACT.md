@@ -115,6 +115,12 @@ with `focusView {panel:'carnet'}`, which both paths funnel into one focus state 
 seed for a future server emission, and the client already dollies to the region a `focusView`/
 `showFact` resolves to, so handling both is idempotent.
 
+`PanelKind` also gained **`parts`** (2026-08-16) — the shopping list across the open checklist, a REAL
+server emission (`focus_view` accepts it) plus a « Pièces à commander » wayfinder chip. It exists because
+`PartsManifestModel` carries one `taskId`, so « prochaines pièces à commander ? » — a question spanning the
+checklist — had no surface: asked live, the agent showed one freshly-fetched ref while the seven already on
+three open tasks never appeared.
+
 `PanelKind` gained a fourth value, **`visits`** (2026-08-15) — the visit ladder the rail's « Plus tard · n »
 control projects. Client-synthesized: `focus_view` accepts `specs`/`tasks`/`carnet` server-side and the
 agent never emits it. Exactly the status `carnet` held until the same day, so if a tool ever needs to

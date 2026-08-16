@@ -39,9 +39,9 @@ final class DashboardPilotTest extends AppTestCase
         $schemas = array_column($tools, 'inputSchema', 'name');
 
         $this->assertSame(
-            ['tasks', 'specs', 'carnet'],
+            ['tasks', 'specs', 'carnet', 'parts'],
             $schemas['focus_view']['properties']['panel']['enum'] ?? null,
-            'focus_view must advertise the carnet panel — otherwise the agent cannot raise the history/spend projection.',
+            'focus_view must advertise every panel the client can render — a surface the wire cannot name is one the agent answers in prose instead.',
         );
         $this->assertArrayHasKey(
             'nodes',

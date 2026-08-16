@@ -1,4 +1,4 @@
-import type { Iri, PlannedPart, PlannedTask, VehicleBundle } from '../types';
+import type { Iri, PlannedPart } from '../types';
 import type { Cta } from './CtaCard';
 
 // Parts manifest view-model (option 2a, "option a" — zero contract change). The manifest renders the
@@ -29,17 +29,6 @@ export function manifestTotal(parts: PlannedPart[]): number {
   return parts.reduce((sum, p) => sum + (p.priceCents ?? 0) * (p.qty ?? 1), 0);
 }
 
-// The "Pièces dispo" wayfinder target: the most-urgent OPEN task that already carries parts (option a —
-// zero contract change; the manifest itemises the task's own planned parts). "Most urgent" = its service
-// type sits earliest in the severity-sorted forecast.due; unknown types sort last. Null → hide the chip.
-// TODO(catalog option-b): when the TecDoc chain (§5.8 /cars/{kType}/part-categories?leafOnly&search →
-// /articles) lands client-reachable, fetch real buyable refs here and feed the SAME manifest via showParts.
-export function pickPartsTask(bundle: VehicleBundle): PlannedTask | null {
-  const open = (bundle.vehicle.plannedTasks ?? []).filter((t) => t.status === 'open' && (t.parts?.length ?? 0) > 0);
-  if (open.length === 0) return null;
-  const order = new Map(bundle.forecast.due.map((d, i) => [d.type, i] as const));
-  return [...open].sort((a, b) => (order.get(a.type) ?? 999) - (order.get(b.type) ?? 999))[0];
-}
 
 // A parts-manifest CTA (the deterministic patchTask path — no agent turn). The chip and the agent's
 // `showParts` converge on this shape, so the manifest + its "Ajouter à la tâche" merge are identical from

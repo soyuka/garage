@@ -631,3 +631,12 @@
   background: var(--at-hairline);
   border-radius: 3px;
 }
+
+/* The scrim plates behind the section labels stretched the full column width, so a one-word heading
+   read as a grey BAR wider than the cards it labels. The plate exists to satisfy the scrim law over
+   the bloomed car, not to draw a band: hug the text. */
+.at-rail-head,
+.at-rail-section-title {
+  width: fit-content;
+  max-width: 100%;
+}

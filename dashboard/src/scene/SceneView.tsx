@@ -12,11 +12,13 @@ import { SpecConstellation } from './SpecConstellation';
 import { EntretienRail, type ChecklistHandlers } from './EntretienRail';
 import { buildRail } from './rail';
 import { buildVisits } from './visits';
+import { buildShoppingList } from './shopping';
 import { CtaCard, type Cta } from './CtaCard';
 import { PartsManifest } from './PartsManifest';
 import { CarnetProjection } from './CarnetProjection';
 import { WorklistProjection } from './WorklistProjection';
 import { VisitProjection } from './VisitProjection';
+import { ShoppingListPanel } from './ShoppingList';
 import { buildWorklist } from './worklist';
 import { manifestFromCta } from './parts';
 import { rollupCarnet } from '../carnet';
@@ -95,9 +97,6 @@ interface SceneViewProps {
   onShowLaterVisits?: () => void;
   /** Deterministic quick-action chips shown above the composer (client-side, no agent turn). */
   quickActions?: QuickAction[];
-  /** Pinned fact keys (persisted per-vehicle by the driver) — what the resting constellation shows. */
-  pinnedKeys: string[];
-  onTogglePin: (key: string) => void;
   /** The "Fiche technique" drawer (full fact sheet + pinning) — driver owns open/close state. */
   factsDrawerOpen: boolean;
   onOpenFacts?: () => void;
@@ -147,8 +146,6 @@ export function SceneView({
   edit,
   checklist,
   quickActions,
-  pinnedKeys,
-  onTogglePin,
   factsDrawerOpen,
   // onOpenFacts: the driver opens the drawer itself (the "Fiche technique" quick-action chip already
   // calls it before SceneView ever sees the click) — SceneView only needs the open flag + onCloseFacts.
@@ -202,13 +199,11 @@ export function SceneView({
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOwnsEscape, focusOpen, onDismissFocus, cameraFocus, onCameraRelease]);
   const focusKeys = focus?.keys;
-  // At rest (no specs focus) the constellation shows PINNED facts only — an empty pin set renders
-  // nothing (selectFacts treats an empty `keys` as "show everything", so the empty case is gated here
-  // rather than passed through).
+  // The constellation is a PROJECTED surface only: it exists when the agent (or a chip) answers a spec
+  // question, and not otherwise. It used to double as a resting shelf of operator-pinned facts, which
+  // gave one surface two meanings and left the column occupied by something nobody had asked for.
   const specsFocused = focus?.panel === 'specs';
-  const constellationKeys = specsFocused ? focusKeys ?? [] : pinnedKeys;
-  const constellationTitle = specsFocused ? focus.title : 'Épinglés';
-  const showConstellation = specsFocused ? true : pinnedKeys.length > 0;
+  const showConstellation = specsFocused;
   // A carnet focus (the "Carnet · dépenses" wayfinder / the agent's showHistory) rolls the client-held
   // records into the same projection column. Empty history → nothing (the chip is hidden upstream anyway).
   const carnetFocused = focus?.panel === 'carnet';
@@ -223,6 +218,9 @@ export function SceneView({
   // The visit ladder (« Plus tard · n ») is a side projection like the others — it must NOT dim the
   // stage, so it is resolved here, above `dimScene`.
   const ladderFocused = focus?.panel === 'visits';
+  // « Pièces à commander » — the references already chosen across the OPEN checklist, grouped by job. A
+  // side projection like the others, so it never dims the stage.
+  const shopFocused = focus?.panel === 'parts';
   // The carnet, the fiche technique (specs) and the worklist are side-column projections, not blocking
   // surfaces — they read as integrated with the scene, so none of them dims it. Each closes on its own
   // ✕ + Escape.
@@ -230,7 +228,7 @@ export function SceneView({
   // 'tasks' used to fall through to `true` here and dim the scene for a panel that did not exist: the
   // car went to 45 % and NOTHING replaced it, which is what the operator saw on 2026-08-15 (a blurred
   // stage with no answer). A focus that dims must fill the attention it took.
-  const dimScene = !!focus && !carnetFocused && !specsFocused && !tasksFocused && !ladderFocused;
+  const dimScene = !!focus && !carnetFocused && !specsFocused && !tasksFocused && !ladderFocused && !shopFocused;
 
   // "Planifier" (#10): a hotspot forecast row → a concrete planned task pegged to the predicted-due
   // reading. Uses the checklist's add path (so it re-reads), and the vehicle's garage-spelling axis unit
@@ -261,6 +259,8 @@ export function SceneView({
   // instead of the flat buckets, and « Plus tard · n » projects its tail as the ladder.
   const plan = bundle ? buildVisits(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? []) : null;
   const showLadder = ladderFocused && !!plan && plan.later.length > 0;
+  const shopping = shopFocused && bundle ? buildShoppingList(bundle) : null;
+  const showShopping = !!shopping && shopping.groups.length > 0;
 
   // When a full surface (Données drawer / Le Carnet) is open, the dock slides to the LEFT free column so
   // Le Noyau + its narration + the composer stay visible beside it, and the chips swap to that surface's
@@ -355,17 +355,16 @@ export function SceneView({
               now captions the rim gauge from the identity band instead of floating alone. */}
           {/* the PROJECTION COLUMN (B2): the ONE right-edge slot for everything Le Noyau projects — so the
               operator learns a single glance direction for "the agent answered" (the left "Entretien" rail
-              never moves). A specs focus fans the facts as the constellation (agent-placed → cyan tick + ✕);
-              at rest, PINNED facts take the same column (operator's own pins → no tick, no ✕). A parts-bearing
+              never moves). A specs focus fans the facts as the constellation (agent-placed → cyan tick + ✕). A parts-bearing
               proposal stacks the manifest below. Empty → nothing renders. (The cyan scan is a 3D holo band
               sweeping THROUGH the car via Plateau `scanning`, not a DOM bar.) */}
-          {(showConstellation || showCarnet || showWorklist || showLadder || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
+          {(showConstellation || showCarnet || showWorklist || showLadder || showShopping || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
             <div className="at-projection">
               {showConstellation && (
                 <SpecConstellation
                   facts={bundle.vehicle.facts ?? []}
-                  keys={constellationKeys}
-                  title={constellationTitle}
+                  keys={focusKeys ?? []}
+                  title={focus?.title}
                   reduced={reduced}
                   // fetched surfaces (fluids / carte grise) carry their OWN formatted nodes → read-only, no edit.
                   edit={specsFocused && focus?.nodes ? undefined : edit?.facts}
@@ -381,7 +380,16 @@ export function SceneView({
                 <CarnetProjection model={carnet} reduced={reduced} onDismiss={onDismissFocus} onOpenAll={onOpenHistory} />
               )}
               {showLadder && plan && (
-                <VisitProjection visits={plan.later} reduced={reduced} onDismiss={onDismissFocus} />
+                <VisitProjection
+                  visits={plan.later}
+                  reduced={reduced}
+                  onDismiss={onDismissFocus}
+                  onAimRegion={aimRegion}
+                  heldRegion={cameraFocus?.region ?? null}
+                />
+              )}
+              {showShopping && shopping && (
+                <ShoppingListPanel model={shopping} reduced={reduced} onDismiss={onDismissFocus} />
               )}
               {showManifest && manifest && onCtaPatch && onCtaDismiss && (
                 <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
@@ -401,6 +409,7 @@ export function SceneView({
               spotlit={tasksFocused ? focusKeys : undefined}
               heldRegion={cameraFocus?.region ?? null}
               onAimRegion={aimRegion}
+              reduced={reduced}
             />
           )}
         </>
@@ -494,8 +503,6 @@ export function SceneView({
           open={factsDrawerOpen}
           onClose={onCloseFacts ?? (() => {})}
           facts={bundle.vehicle.facts ?? []}
-          pinnedKeys={pinnedKeys}
-          onTogglePin={onTogglePin}
           edit={edit?.facts && { onEditValue: edit.facts.onEditValue, onRemove: edit.facts.onRemove }}
           reduced={reduced}
         />

@@ -25,8 +25,8 @@ final readonly class FocusViewProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        if (!\in_array($data->panel, ['tasks', 'specs', 'carnet'], true)) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'panel must be "tasks", "specs" or "carnet".']);
+        if (!\in_array($data->panel, ['tasks', 'specs', 'carnet', 'parts'], true)) {
+            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'panel must be "tasks", "specs", "carnet" or "parts".']);
         }
 
         $keys = array_values(array_filter(array_map(trim(...), $data->keys), static fn (string $k): bool => '' !== $k));

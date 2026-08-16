@@ -85,6 +85,7 @@ export function EntretienRail({
   spotlit,
   heldRegion = null,
   onAimRegion,
+  reduced = false,
 }: {
   /** The rail regrouped by trip to the lift — the ONLY model this component renders. */
   plan: VisitPlan;
@@ -100,6 +101,9 @@ export function EntretienRail({
   /** Aim the earned camera at a visit's region. Absent → the card head is a plain caption, never a dead
    *  control. The TOGGLE (re-aim vs release) is resolved by the caller, which owns `cameraFocus`. */
   onAimRegion?: (region: BodyRegion) => void;
+  /** Collapses the card/row arrival to an instant state change. Every projection takes this; the rail
+   *  read it only through a CSS media query, so `[data-reduced]` rules above it never matched. */
+  reduced?: boolean;
   /** service types the agent spotlighted (`focusView {panel:'tasks', keys}`) — those rows carry the
    *  operator cue so the projected answer and the persistent rail name the SAME rows. Documented in
    *  CHOREOGRAPHY.md since Stage B; the rows never actually lit until 2026-08-15. */
@@ -179,7 +183,7 @@ export function EntretienRail({
   };
 
   return (
-    <aside className="at-rail" aria-label="Entretien" data-dim={dimmed ? 'true' : undefined}>
+    <aside className="at-rail" data-reduced={reduced ? 'true' : undefined} aria-label="Entretien" data-dim={dimmed ? 'true' : undefined}>
       <div className="at-rail-head">
         <h2 className="at-rail-title">Entretien</h2>
         {lateCount > 0 && (

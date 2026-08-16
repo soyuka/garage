@@ -1,6 +1,7 @@
 import './visitprojection.css';
 import { formatDate } from '../format';
-import { ladder, type Visit } from './visits';
+import { ladder, visitRegions, type Visit } from './visits';
+import type { BodyRegion } from './anchors';
 
 // The visit ladder — what « Plus tard · n » opens, in the shared projection column at the car's RIGHT.
 //
@@ -10,15 +11,24 @@ import { ladder, type Visit } from './visits';
 //
 // The rungs are spaced by `ladder()`: the gap before a rung is the share of the widest calendar hop, so
 // the shape of the next four years is legible without reading a single date.
+//
+// A rung aims the earned camera at its region, exactly as a rail visit card's head does — the same
+// gesture one surface further away, never a second grammar for the same act. Dolly only, no cyan pulse:
+// the operator moved the camera, Le Noyau did not.
 
 export function VisitProjection({
   visits,
   reduced = false,
   onDismiss,
+  onAimRegion,
+  heldRegion = null,
 }: {
   visits: Visit[];
   reduced?: boolean;
   onDismiss?: () => void;
+  /** Aim the earned camera at a rung's region. Absent → rungs are plain text, never dead controls. */
+  onAimRegion?: (region: BodyRegion) => void;
+  heldRegion?: BodyRegion | null;
 }) {
   if (visits.length === 0) return null;
   const rungs = ladder(visits);
@@ -48,8 +58,7 @@ export function VisitProjection({
               } as React.CSSProperties
             }
           >
-            <span className="at-ladder-date">{visit.date ? formatDate(visit.date) : 'sans échéance'}</span>
-            <span className="at-ladder-svc">{visit.items.map((item) => item.label).join(' + ')}</span>
+            <RungBody visit={visit} onAim={onAimRegion} held={heldRegion} />
           </li>
         ))}
       </ol>
@@ -62,5 +71,33 @@ export function VisitProjection({
           also what answers the rail's leaders on the opposite edge: one instrument, two columns. */}
       <span className="at-ladder-lead" aria-hidden="true" />
     </aside>
+  );
+}
+
+/** A rung's content: aimable when the visit reads off a body region, plain text otherwise. */
+function RungBody({ visit, onAim, held }: { visit: Visit; onAim?: (region: BodyRegion) => void; held: BodyRegion | null }) {
+  const aim = visitRegions(visit)[0];
+  const date = visit.date ? formatDate(visit.date) : 'sans échéance';
+  const services = visit.items.map((item) => item.label).join(' + ');
+  if (!aim || !onAim) {
+    return (
+      <>
+        <span className="at-ladder-date">{date}</span>
+        <span className="at-ladder-svc">{services}</span>
+      </>
+    );
+  }
+  const isHeld = held === aim;
+  return (
+    <button
+      type="button"
+      className="at-ladder-aim"
+      data-held={isHeld ? 'true' : undefined}
+      title={isHeld ? 'Revenir à la vue d’ensemble' : 'Voir cette zone sur le véhicule'}
+      onClick={() => onAim(aim)}
+    >
+      <span className="at-ladder-date">{date}</span>
+      <span className="at-ladder-svc">{services}</span>
+    </button>
   );
 }

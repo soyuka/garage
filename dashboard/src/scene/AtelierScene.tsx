@@ -208,8 +208,6 @@ export function AtelierScene() {
         }}
         edit={demoEdit}
         checklist={demoChecklist}
-        pinnedKeys={[]}
-        onTogglePin={noop}
         factsDrawerOpen={factsDrawerOpen}
         onOpenFacts={() => { setHistoryOpen(false); setFactsDrawerOpen(true); }}
         onCloseFacts={() => setFactsDrawerOpen(false)}

@@ -43,7 +43,8 @@ import { JournalPanel } from './JournalPanel';
 import { DossierPanel } from './DossierPanel';
 import { maintUnitFor } from './units';
 import type { Cta } from './scene/CtaCard';
-import { partsCtaFor, pickPartsTask } from './scene/parts';
+import { partsCtaFor } from './scene/parts';
+import { buildShoppingList } from './scene/shopping';
 import { firstNewlyOverdue } from './scene/crossing';
 import { regionForFrame, type BodyRegion } from './scene/anchors';
 import { PULSE_DURATION } from './scene/holo';
@@ -65,26 +66,6 @@ import type { Iri, MercureFrame, PlannedPart, PlannedTask, UIAction, VehicleBund
 // into the hero at #/v/<seg> (reload restores it). It owns the garage reads and Le Noyau's state, and
 // renders the SAME pure SceneView the fixture playground does — only the data source differs. Mercure
 // (slice 4) and the agent turn (slice 5) feed this orchestrator next; today the composer only listens.
-
-// Pinned fact keys — per-vehicle, like the parc's `mpa.recency` rail (see ParcLot.tsx). Best-effort:
-// a private-mode / quota failure just means pins don't survive a reload, never a thrown error.
-const pinsKey = (iri: string) => `mpa.pins:${iri}`;
-function loadPins(iri: string): string[] {
-  try {
-    const raw = localStorage.getItem(pinsKey(iri));
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed.filter((k): k is string => typeof k === 'string') : [];
-  } catch {
-    return [];
-  }
-}
-function savePins(iri: string, keys: string[]) {
-  try {
-    localStorage.setItem(pinsKey(iri), JSON.stringify(keys));
-  } catch {
-    // quota / private mode — pins just won't persist across reloads
-  }
-}
 
 export function Atelier() {
   const path = useHashPath();
@@ -127,9 +108,6 @@ export function Atelier() {
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
   const [historyOpen, setHistoryOpen] = useState(false); // #7 "Historique" carnet popup (per-vehicle)
-  // Pinned fact keys — persisted per-vehicle (localStorage keyed by IRI, like mpa.recency), so the
-  // resting spec constellation still shows something meaningful after the drawer closes.
-  const [pinnedKeys, setPinnedKeys] = useState<string[]>([]);
   // #10 checklist: "voir les tâches retirées" pulls a includeDismissed list (the bundle carries open+done).
   const [showDismissed, setShowDismissed] = useState(false);
   const [dismissedTasks, setDismissedTasks] = useState<PlannedTask[]>([]);
@@ -195,7 +173,6 @@ export function Atelier() {
     setDossierOpen(false); // the dossier is per-vehicle — close it on navigation
     setFactsDrawerOpen(false); // the facts drawer is per-vehicle too — close it on navigation
     setHistoryOpen(false); // the carnet is per-vehicle too — close it on navigation
-    setPinnedKeys(selectedIri ? loadPins(selectedIri) : []);
     if (!selectedIri) {
       setBundle(null);
       return;
@@ -613,16 +590,20 @@ export function Atelier() {
           }),
       });
     }
-    const partsTask = pickPartsTask(b);
-    if (partsTask) {
+    // « Pièces à commander » — the whole shopping list, not one task's. The old chip named a single
+    // service ("Pièces dispo · Sonde de température") because it itemised the most-urgent task that
+    // happened to carry refs, and its primary "Ajouter à la tâche" merged parts ALREADY on that task —
+    // an idempotent no-op behind a big orange button.
+    if (buildShoppingList(b).groups.length > 0) {
       chips.push({
-        label: `Pièces dispo · ${serviceLabel(partsTask.type)}`,
+        label: 'Pièces à commander',
         disabled: locked,
+        zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
-            steps: ['ouverture de la tâche…', 'liste des pièces…'],
+            steps: ['relecture des tâches ouvertes…', 'rassemblement des références…'],
             failMessage: 'pièces indisponibles',
-            resolve: async () => ({ cta: partsCtaFor(serviceLabel(partsTask.type), partsTask.id, partsTask.parts) }),
+            resolve: async () => ({ focus: { panel: 'parts', keys: [] } }),
           }),
       });
     }
@@ -778,17 +759,6 @@ export function Atelier() {
     facts: { onAdd: onAddFact, onRemove: onRemoveFact, onEditValue: onEditFact },
   };
 
-  // #5 facts drawer + pinning — client-side only (no garage write): pins persist per-vehicle.
-  const onTogglePin = (key: string) => {
-    const iri = selectedIri;
-    if (!iri) return;
-    setPinnedKeys((prev) => {
-      const next = prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key];
-      savePins(iri, next);
-      return next;
-    });
-  };
-
   // ── #10 Task checklist. Task writes hit the /planned-tasks subresource; the domain frame OMITS
   // plannedTasks (see PROVENANCE), so each write re-reads the bundle explicitly (guarded post-await),
   // plus the includeDismissed list when the "voir les retirées" view is open.
@@ -920,8 +890,6 @@ export function Atelier() {
             onDismissFocus={() => setFocus(null)}
             onShowLaterVisits={() => setFocus({ panel: 'visits', keys: [] })}
             quickActions={buildQuickActions(heroBundle)}
-            pinnedKeys={pinnedKeys}
-            onTogglePin={onTogglePin}
             factsDrawerOpen={factsDrawerOpen}
             onOpenFacts={openFacts}
             onCloseFacts={() => setFactsDrawerOpen(false)}

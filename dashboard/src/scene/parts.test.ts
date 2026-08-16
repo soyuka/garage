@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { manifestFromCta, manifestTotal, partsCtaFor, pickPartsTask } from './parts';
+import { manifestFromCta, manifestTotal, partsCtaFor } from './parts';
 import type { Cta } from './CtaCard';
-import type { PlannedTask, VehicleBundle } from '../types';
 
 // The parts manifest (option 2a, contract-free "option a"): it renders the parts a `proposeActions`
 // CTA already carries in its deterministic `patchTask` payload — real refs/prices from the agent's parts
@@ -69,48 +68,6 @@ describe('manifestTotal — unit price × qty, in cents', () => {
 
   it('is zero for an empty list', () => {
     expect(manifestTotal([])).toBe(0);
-  });
-});
-
-// pickPartsTask backs the deterministic "Pièces dispo" wayfinder (option a — the manifest itemises a
-// task's OWN planned parts, no catalog GET). It picks the most-urgent OPEN task that carries parts, where
-// "urgent" = its service type sits earliest in the severity-sorted forecast.due. Null → the chip hides.
-
-const task = (over: Partial<PlannedTask>): PlannedTask => ({ id: '/planned-tasks/x', type: 'oil_change', parts: [], status: 'open', ...over });
-
-const bundle = (tasks: PlannedTask[], dueTypes: string[]): VehicleBundle =>
-  ({
-    vehicle: { plannedTasks: tasks } as VehicleBundle['vehicle'],
-    forecast: { vehicle: '/v/1', gaps: [], due: dueTypes.map((type) => ({ type })) } as unknown as VehicleBundle['forecast'],
-    records: [],
-  }) as VehicleBundle;
-
-describe('pickPartsTask — most-urgent open task carrying parts', () => {
-  it('picks the open task whose type is earliest in the forecast order', () => {
-    const tasks = [
-      task({ id: '/t/brakes', type: 'brake_pads', parts: [{ ref: 'B1' }] }),
-      task({ id: '/t/oil', type: 'oil_change', parts: [{ ref: 'O1' }] }),
-    ];
-    expect(pickPartsTask(bundle(tasks, ['oil_change', 'brake_pads']))!.id).toBe('/t/oil');
-  });
-
-  it('ignores tasks with no parts and non-open tasks', () => {
-    const tasks = [
-      task({ id: '/t/empty', type: 'oil_change', parts: [] }),
-      task({ id: '/t/done', type: 'brake_pads', parts: [{ ref: 'B' }], status: 'done' }),
-      task({ id: '/t/keep', type: 'coolant', parts: [{ ref: 'C' }] }),
-    ];
-    expect(pickPartsTask(bundle(tasks, ['oil_change']))!.id).toBe('/t/keep');
-  });
-
-  it('sorts an unforecast type last but still returns it when it is the only candidate', () => {
-    const tasks = [task({ id: '/t/x', type: 'wiper', parts: [{ ref: 'W' }] })];
-    expect(pickPartsTask(bundle(tasks, ['oil_change']))!.id).toBe('/t/x');
-  });
-
-  it('is null when no open task carries parts', () => {
-    expect(pickPartsTask(bundle([task({ parts: [] })], []))).toBeNull();
-    expect(pickPartsTask(bundle([], []))).toBeNull();
   });
 });
 

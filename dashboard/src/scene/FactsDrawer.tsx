@@ -14,16 +14,12 @@ export function FactsDrawer({
   open,
   onClose,
   facts,
-  pinnedKeys,
-  onTogglePin,
   edit,
   reduced = false,
 }: {
   open: boolean;
   onClose: () => void;
   facts: VehicleFact[];
-  pinnedKeys: string[];
-  onTogglePin: (key: string) => void;
   /** Live-hero editing seam: present → each row is click-to-edit + removable. Absent → read-only. */
   edit?: { onEditValue: (key: string, value: string, unit?: string | null) => void; onRemove: (key: string) => void };
   reduced?: boolean;
@@ -37,9 +33,9 @@ export function FactsDrawer({
 
   if (!open) return null;
 
-  const pinned = new Set(pinnedKeys);
-  // Pinned first, stable within each group — what to focus on reads before the rest of the sheet.
-  const ordered = [...facts].sort((a, b) => Number(pinned.has(b.key)) - Number(pinned.has(a.key)));
+  // Backend order, untouched: pinning is gone, so there is no operator ranking left to honour and any
+  // reordering here would be the drawer inventing one.
+  const ordered = facts;
 
   return (
     <div className="at-facts-overlay" data-reduced={reduced ? 'true' : undefined} onClick={onClose}>
@@ -65,7 +61,6 @@ export function FactsDrawer({
           ) : (
             <ul className="at-facts-list">
               {ordered.map((f) => {
-                const isPinned = pinned.has(f.key);
                 return (
                   <li key={f.key} className="at-facts-row">
                     <span className="at-facts-label">{factLabel(f.key)}</span>
@@ -90,24 +85,6 @@ export function FactsDrawer({
                         <span className="at-facts-unver">· non vérifié</span>
                       )}
                     </span>
-                    <button
-                      type="button"
-                      className="at-facts-pin"
-                      data-pinned={isPinned ? 'true' : undefined}
-                      onClick={() => onTogglePin(f.key)}
-                      aria-pressed={isPinned}
-                      aria-label={isPinned ? `Désépingler ${factLabel(f.key)}` : `Épingler ${factLabel(f.key)}`}
-                    >
-                      <svg width="13" height="13" viewBox="0 0 16 16" fill={isPinned ? 'currentColor' : 'none'} aria-hidden="true">
-                        <path
-                          d="M8 1.5c-1.4 0-2.5 1.1-2.5 2.5 0 .7.3 1.4.8 1.9L5 9.5h6l-1.3-3.6c.5-.5.8-1.2.8-1.9C10.5 2.6 9.4 1.5 8 1.5Z"
-                          stroke="currentColor"
-                          strokeWidth="1.3"
-                          strokeLinejoin="round"
-                        />
-                        <path d="M8 9.5V14.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
-                      </svg>
-                    </button>
                     {edit && (
                       <button
                         type="button"
