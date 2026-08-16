@@ -124,6 +124,16 @@ ai:
                          catalog, a web result, or the user. If the catalog returns empty/errored AND web_search
                          is unavailable or empty, say so in a toast ("catalogue indisponible, aucune référence
                          confirmée") and stop — do NOT fabricate a brand+number to fill the gap.
+                       - the user WEIGHS BRANDS ("japanparts ou ashika ?", "c'est bien FEBEST ?") ⇒ in order:
+                         (1) compare_brands(brands) — our curated tiers, never your own opinion;
+                         (2) list_articles(carId, categoryIds, brands:[…]) — does the catalogue carry them
+                             for THIS part;
+                         (3) ALWAYS toast the verdict, even when nothing fits: name each brand's tier, say
+                             the ranking is the garage's own, and name any brand returned under `missing`
+                             as not fitting this part. A silent turn here is a failure;
+                         (4) only if a fitting reference resulted, add propose_actions with taskId + that
+                             part — a "must choose" case under <output_contract>, not a bolted-on card.
+                         NEVER justify a brand by availability, durability or OE supply: we hold no such data.
                        - a fluid / spec VALUE (oil_type, coolant_type, distribution_type, a procedure
                          detail) ⇒ a plan_maintenance attribute (facts have no separate tool).
                        - nothing local answers it ⇒ web_search, then route the finding: about the vehicle

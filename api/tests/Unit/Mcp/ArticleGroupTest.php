@@ -86,4 +86,60 @@ final class ArticleGroupTest extends TestCase
         $this->assertFalse($group['truncated']);
         $this->assertCount(2, $group['brands']);
     }
+
+    // ── brand filter ────────────────────────────────────────────────────────────────────────────
+    // Without it, "what about JAPANPARTS?" is unanswerable: the ranked slice keeps 6 of 126 brands, so a
+    // brand the operator names is usually absent from the payload and the model answers from its weights.
+
+    public function testABrandFilterKeepsOnlyTheAskedBrands(): void
+    {
+        $group = ArticleGroup::of(100259, $this->oilFilterArticles(), brands: ['JAPANPARTS', 'ASHIKA']);
+
+        // Kept in RANK order, not the order asked and not alphabetical: both are tier 2, and JAPANPARTS
+        // sits ahead of ASHIKA in the curated list — so the payload itself carries the recommendation.
+        $this->assertSame(['JAPANPARTS', 'ASHIKA'], array_column($group['brands'], 'brand'));
+        $this->assertSame([2, 2], array_column($group['brands'], 'tier'));
+    }
+
+    public function testABrandFilterIgnoresTheSixBrandCap(): void
+    {
+        $asked = ['MANN-FILTER', 'PURFLUX', 'BLUE PRINT', 'NPS', 'JAPANPARTS', 'ASHIKA', 'MAHLE', 'BOSCH'];
+        $group = ArticleGroup::of(100259, $this->oilFilterArticles(), brands: $asked);
+
+        $this->assertGreaterThan(ArticleGroup::MAX_BRANDS, \count($group['brands']));
+        $this->assertFalse($group['truncated'], 'a filtered answer is complete for what was asked');
+    }
+
+    public function testABrandFilterMatchesRegardlessOfCaseAndPunctuation(): void
+    {
+        $group = ArticleGroup::of(100259, $this->oilFilterArticles(), brands: ['mann filter']);
+
+        $this->assertSame(['MANN-FILTER'], array_column($group['brands'], 'brand'));
+    }
+
+    public function testAnAskedBrandThatDoesNotFitIsNamedAsMissing(): void
+    {
+        // The honesty seam: "we do not carry it for this part" and "you asked wrong" must not look alike,
+        // and silence here is what let the agent invent a comparison for brands it never saw.
+        $group = ArticleGroup::of(100259, $this->oilFilterArticles(), brands: ['JAPANPARTS', 'BRAND-THAT-DOES-NOT-FIT']);
+
+        $this->assertSame(['BRAND-THAT-DOES-NOT-FIT'], $group['missing']);
+        $this->assertSame(['JAPANPARTS'], array_column($group['brands'], 'brand'));
+    }
+
+    public function testTotalsStillDescribeTheWholeCategoryUnderAFilter(): void
+    {
+        $group = ArticleGroup::of(100259, $this->oilFilterArticles(), brands: ['JAPANPARTS']);
+
+        $this->assertSame(220, $group['totalArticles'], 'the category is still 220 articles deep');
+        $this->assertSame(126, $group['totalBrands']);
+    }
+
+    public function testNoFilterBehavesExactlyAsBefore(): void
+    {
+        $this->assertSame(
+            ArticleGroup::of(100259, $this->oilFilterArticles()),
+            ArticleGroup::of(100259, $this->oilFilterArticles(), brands: []),
+        );
+    }
 }

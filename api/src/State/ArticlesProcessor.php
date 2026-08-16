@@ -32,7 +32,11 @@ final class ArticlesProcessor implements ProcessorInterface
         $groups = [];
         foreach ($data->categoryIds as $categoryId) {
             $categoryId = (int) $categoryId;
-            $groups[] = ArticleGroup::of($categoryId, $this->catalog->articles($data->carId, $categoryId, $carType));
+            $groups[] = ArticleGroup::of(
+                $categoryId,
+                $this->catalog->articles($data->carId, $categoryId, $carType),
+                brands: $data->brands,
+            );
         }
 
         return ToolResult::of([

@@ -40,6 +40,11 @@ docker compose exec php rm -rf var/cache && docker compose exec worker rm -rf va
 docker compose restart php worker
 ```
 
+**Run ONE phpunit at a time.** The suite shares a single test database, so two concurrent runs (or a
+`rm -rf var/cache` landing mid-run) produce phantom errors that differ on every pass — 68, then 5, then
+2, from unchanged code. A surprising failure count is far more likely to be a second run than a
+regression: re-run alone before believing it.
+
 `cache:clear` is a no-op for API Platform resource metadata — new `ApiResource` properties get
 silently dropped from JSON-LD until `var/cache` is physically removed. The same staleness hits
 generated **input** schemas through `CachedPropertyNameCollectionFactory`, which keys on options: a

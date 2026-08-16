@@ -47,6 +47,38 @@ final class BrandTier
     }
 
     /**
+     * Rank the brands someone asked about, best first — the curated opinion, made answerable.
+     *
+     * `known` is the honesty seam: tier 3 means "not on our list", NOT "bad". Reporting an unlisted
+     * brand as a quality verdict would invent a claim, which is precisely what this replaces — before
+     * it existed the agent compared brands from its weights and justified the answer with availability
+     * data we do not hold.
+     *
+     * @param list<string> $brands
+     *
+     * @return list<array{brand: string, tier: int, known: bool}> the brand echoed as it was spelled
+     */
+    public static function rankAll(array $brands): array
+    {
+        $ranked = array_map(
+            static fn (string $brand): array => [
+                'brand' => $brand,
+                'tier' => self::classify($brand),
+                'known' => \array_key_exists(self::normalize($brand), self::rankMap()),
+            ],
+            array_values($brands),
+        );
+
+        usort(
+            $ranked,
+            static fn (array $a, array $b): int => self::rank($a['brand']) <=> self::rank($b['brand'])
+                ?: strcasecmp($a['brand'], $b['brand']),
+        );
+
+        return $ranked;
+    }
+
+    /**
      * @return array<string, int>
      */
     private static function rankMap(): array
