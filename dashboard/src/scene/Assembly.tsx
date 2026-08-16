@@ -1,4 +1,5 @@
 import { useMemo, useRef } from 'react';
+import { useLocale } from '../i18n/LocaleProvider';
 import { useFrame } from '@react-three/fiber';
 import { Edges } from '@react-three/drei';
 import type { Group, Material, Mesh } from 'three';
@@ -100,7 +101,8 @@ export function Assembly({
   reduced?: boolean;
   onPartsLanded?: (landed: number, total: number) => void;
 }) {
-  const parts = useMemo(() => assemblyFor(region, partKeys), [region, partKeys]);
+  const [locale] = useLocale();
+  const parts = useMemo(() => assemblyFor(region, locale, partKeys), [region, locale, partKeys]);
   const anchor = useMemo(() => regionAnchors(bodyClass)[region], [bodyClass, region]);
   const elapsed = useRef(0);
   const reported = useRef(-1);

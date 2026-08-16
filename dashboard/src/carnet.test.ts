@@ -55,23 +55,23 @@ describe('rollupCarnet — records → { rows, totalCents, count, knownCount, un
   ];
 
   it('takes the newest 3 visits, newest first', () => {
-    expect(rollupCarnet(records).rows.map((r) => r.id)).toEqual(['/r/2', '/r/4', '/r/1']);
+    expect(rollupCarnet(records, 'fr').rows.map((r) => r.id)).toEqual(['/r/2', '/r/4', '/r/1']);
   });
 
   it('sums the EFFECTIVE cost across ALL records (unknown counts as 0) and counts them all', () => {
-    const r = rollupCarnet(records);
+    const r = rollupCarnet(records, 'fr');
     expect(r.totalCents).toBe(8900 + 12000 + 4500);
     expect(r.count).toBe(4);
   });
 
   it('counts records with a known vs. unknown effective cost', () => {
-    const r = rollupCarnet(records);
+    const r = rollupCarnet(records, 'fr');
     expect(r.knownCount).toBe(3);
     expect(r.unknownCount).toBe(1);
   });
 
   it('projects each visit its date, odometer, effective cost + source, and item labels', () => {
-    const row = rollupCarnet(records).rows.find((r) => r.id === '/r/1')!;
+    const row = rollupCarnet(records, 'fr').rows.find((r) => r.id === '/r/1')!;
     expect(row.performedAt).toBe('2024-03-01');
     expect(row.usageValue).toBe(100000);
     expect(row.usageUnit).toBe('km');
@@ -79,18 +79,18 @@ describe('rollupCarnet — records → { rows, totalCents, count, knownCount, un
     expect(row.costSource).toBe('bill');
     expect(row.items).toEqual(['Vidange']);
     // a custom item label wins over the derived service label
-    expect(rollupCarnet([rec({ items: [{ type: 'tyres', label: 'Pneus avant', parts: [] }] })]).rows[0].items).toEqual(['Pneus avant']);
+    expect(rollupCarnet([rec({ items: [{ type: 'tyres', label: 'Pneus avant', parts: [] }] })], 'fr').rows[0].items).toEqual(['Pneus avant']);
   });
 
   it('row cost prefers effectiveCostCents and marks it estimated when the bill is unknown', () => {
-    const row = rollupCarnet(records, 10).rows.find((r) => r.id === '/r/3')!;
+    const row = rollupCarnet(records, 'fr', 10).rows.find((r) => r.id === '/r/3')!;
     expect(row.costCents).toBe(4500);
     expect(row.costSource).toBe('estimated');
   });
 
   it('falls back to costCents when effectiveCostCents is absent (API not yet re-serialized)', () => {
     const legacy = [rec({ id: '/r/5', costCents: 3000 })];
-    const r = rollupCarnet(legacy);
+    const r = rollupCarnet(legacy, 'fr');
     expect(r.rows[0].costCents).toBe(3000);
     expect(r.totalCents).toBe(3000);
     expect(r.knownCount).toBe(1);
@@ -98,13 +98,13 @@ describe('rollupCarnet — records → { rows, totalCents, count, knownCount, un
   });
 
   it('flags the total as an estimate when any contributing record is parts-derived (not just billed)', () => {
-    expect(rollupCarnet(records).hasEstimate).toBe(true);
+    expect(rollupCarnet(records, 'fr').hasEstimate).toBe(true);
     const allBilled = records.filter((r) => r.costSource !== 'estimated');
-    expect(rollupCarnet(allBilled).hasEstimate).toBe(false);
+    expect(rollupCarnet(allBilled, 'fr').hasEstimate).toBe(false);
   });
 
   it('is empty/zero for no records', () => {
-    expect(rollupCarnet([])).toEqual({ rows: [], totalCents: 0, count: 0, knownCount: 0, unknownCount: 0, hasEstimate: false });
+    expect(rollupCarnet([], 'fr')).toEqual({ rows: [], totalCents: 0, count: 0, knownCount: 0, unknownCount: 0, hasEstimate: false });
   });
 });
 
@@ -120,26 +120,26 @@ describe('rollupCarnet — keys cut the register to one service', () => {
   ];
 
   it('keeps only the visits carrying a requested service, newest first', () => {
-    const cut = rollupCarnet(records, 3, ['oil_change']);
+    const cut = rollupCarnet(records, 'fr', 3, ['oil_change']);
     expect(cut.rows.map((r) => r.id)).toEqual(['/r/oil-2026', '/r/oil-2025']);
   });
 
   it('counts the CUT, not the register — the footer must not claim 3 visits for a 2-visit answer', () => {
-    expect(rollupCarnet(records, 3, ['oil_change']).count).toBe(2);
+    expect(rollupCarnet(records, 'fr', 3, ['oil_change']).count).toBe(2);
   });
 
   it('a visit matching any one of several keys is kept', () => {
-    expect(rollupCarnet(records, 3, ['oil_change', 'brake_pads']).count).toBe(3);
+    expect(rollupCarnet(records, 'fr', 3, ['oil_change', 'brake_pads']).count).toBe(3);
   });
 
   it('no keys = the whole register, exactly as before', () => {
-    expect(rollupCarnet(records, 3).count).toBe(3);
-    expect(rollupCarnet(records, 3, []).count).toBe(3);
+    expect(rollupCarnet(records, 'fr', 3).count).toBe(3);
+    expect(rollupCarnet(records, 'fr', 3, []).count).toBe(3);
   });
 
   it('a key the vehicle never logged yields an empty cut, not the whole register', () => {
     // Honesty: silence here would make "never done" and "you asked wrong" look identical, so the
     // projection renders nothing and the caller can say so.
-    expect(rollupCarnet(records, 3, ['timing_belt']).count).toBe(0);
+    expect(rollupCarnet(records, 'fr', 3, ['timing_belt']).count).toBe(0);
   });
 });

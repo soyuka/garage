@@ -4,6 +4,9 @@ import { formatDate, formatReading } from '../format';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import { taskTitle } from '../tasks';
 import { dueDescriptor, signalTag } from '../derive';
+import { useLocale, useT } from '../i18n/LocaleProvider';
+import type { Locale } from '../i18n/locale';
+import { messages } from '../i18n/messages';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
 import { closedTasks, type RailItem } from './rail';
@@ -50,25 +53,19 @@ export interface ChecklistHandlers {
 }
 
 /** What a region-grouped visit is called — the teardown it shares, in the operator's words. */
-const REGION_LABEL: Record<BodyRegion, string> = {
-  hood: 'Moteur',
-  windshield: 'Poste de conduite',
-  frontAxle: 'Train avant',
-  rearAxle: 'Train arrière',
-  bay: 'Périphériques',
-};
+const regionLabel = (region: BodyRegion, locale: Locale): string => messages(locale).region[region];
 
 /**
  * The row caption under a task title. Under a card head that already carries the booking's clock the row
  * says only what the head does NOT — nothing at all on the head's own day. Under a clockless head (the
  * region cards of « Maintenant ») it falls back the way it always did: horizon, else target, else date.
  */
-function taskCaption(clock: VisitClock, headHasClock: boolean, task: PlannedTask | undefined): string | null {
+function taskCaption(clock: VisitClock, headHasClock: boolean, task: PlannedTask | undefined, locale: Locale): string | null {
   if (clock.horizon) return clock.horizon;
-  if (clock.date) return formatDate(clock.date);
+  if (clock.date) return formatDate(clock.date, locale);
   if (headHasClock) return null;
-  if (task?.target) return formatReading(task.target.value, task.target.unit ?? undefined);
-  if (task?.dueDate) return formatDate(task.dueDate);
+  if (task?.target) return formatReading(task.target.value, task.target.unit ?? undefined, locale);
+  if (task?.dueDate) return formatDate(task.dueDate, locale);
   return null;
 }
 
@@ -111,6 +108,8 @@ export function EntretienRail({
 }) {
   const lit = spotlit && spotlit.length > 0 ? new Set(spotlit) : null;
   const [adding, setAdding] = useState(false);
+  const [locale] = useLocale();
+  const t = useT();
   const { tasks, showDismissed, onToggleDismissed, defaultUnit } = checklist;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const lateCount = plan.now.reduce((n, v) => n + v.items.filter((i) => i.due?.overdue).length, 0);
@@ -128,8 +127,8 @@ export function EntretienRail({
     const clock = rowClock(visit, item);
     const headHasClock = visitClock(visit).date !== null;
     if (item.kind === 'due') {
-      const desc = dueDescriptor(item.due!);
-      const tag = signalTag(desc.overdue, desc.signal);
+      const desc = dueDescriptor(item.due!, locale);
+      const tag = signalTag(desc.overdue, desc.signal, locale);
       return (
         <li
           key={item.id}
@@ -141,8 +140,8 @@ export function EntretienRail({
           <button
             type="button"
             className="at-rail-plan"
-            aria-label={`${item.label} — planifier`}
-            title="Planifier cette échéance"
+            aria-label={t.rail.planAria(item.label)}
+            title={t.rail.planThis}
             onClick={() => onPlan(item.due!)}
           >
             <span className="at-rail-plan-glyph" aria-hidden="true">○</span>
@@ -152,7 +151,7 @@ export function EntretienRail({
             {(clock.horizon || clock.date) && (
               <span className="at-rail-meta">
                 {clock.horizon && <span className="at-rail-horizon">{clock.horizon}</span>}
-                {clock.date && <span className="at-rail-date">{formatDate(clock.date)}</span>}
+                {clock.date && <span className="at-rail-date">{formatDate(clock.date, locale)}</span>}
               </span>
             )}
           </span>
@@ -162,12 +161,12 @@ export function EntretienRail({
     }
     // A task row keeps its text tag whenever a forecast binds it — a late task is still late (the "À
     // faire" bucket must read red row by row, not only by its section header).
-    const tag = item.due ? signalTag(item.due.overdue && !item.done, item.done ? 'green' : item.signal) : null;
+    const tag = item.due ? signalTag(item.due.overdue && !item.done, item.done ? 'green' : item.signal, locale) : null;
     return (
       <TaskRow
         key={item.id}
         step={step(index)}
-        caption={taskCaption(clock, headHasClock, item.task)}
+        caption={taskCaption(clock, headHasClock, item.task, locale)}
         tag={inTodo || (tag && tag.tone !== 'ok') ? tag : null}
         signal={item.due && !item.done ? item.signal : undefined}
         lit={lit?.has(item.type) ?? false}
@@ -185,9 +184,9 @@ export function EntretienRail({
   };
 
   return (
-    <aside className="at-rail" data-reduced={reduced ? 'true' : undefined} aria-label="Entretien" data-dim={dimmed ? 'true' : undefined}>
+    <aside className="at-rail" data-reduced={reduced ? 'true' : undefined} aria-label={t.rail.title} data-dim={dimmed ? 'true' : undefined}>
       <div className="at-rail-head">
-        <h2 className="at-rail-title">Entretien</h2>
+        <h2 className="at-rail-title">{t.rail.title}</h2>
         {lateCount > 0 && (
           <span className="at-rail-count at-rail-count--late">
             {lateCount} en retard
@@ -197,11 +196,11 @@ export function EntretienRail({
 
       <div className="at-rail-actions">
         <button type="button" className="at-check-btn" aria-expanded={adding} onClick={() => setAdding((a) => !a)}>
-          {adding ? 'Annuler' : '+ Tâche'}
+          {adding ? t.rail.cancel : t.rail.addTask}
         </button>
         {doneCount > 0 && (
           <button type="button" className="at-check-btn" onClick={checklist.onArchiveDone}>
-            Archiver les terminées ({doneCount})
+            {t.rail.archiveDone(doneCount)}
           </button>
         )}
       </div>
@@ -217,7 +216,7 @@ export function EntretienRail({
       )}
 
       {empty ? (
-        <p className="at-check-empty">Rien à suivre pour l’instant.</p>
+        <p className="at-check-empty">{t.rail.empty}</p>
       ) : (
         <>
           {/* The three horizons are NOT three equal headings. Emphasis is vibrancy + the card spine, never
@@ -225,9 +224,9 @@ export function EntretienRail({
               tier 3 for the tail. The red is spent only when something is ACTUALLY late — "Maintenant"
               also holds decided-but-undated work, and colouring it red then is a false alarm. */}
           {plan.now.length > 0 && (
-            <section className="at-rail-section at-rail-section--now" aria-label="Maintenant">
+            <section className="at-rail-section at-rail-section--now" aria-label={t.rail.now}>
               <h3 className="at-rail-section-title" data-late={lateCount > 0 ? 'true' : undefined}>
-                Maintenant
+                {t.rail.now}
               </h3>
               {plan.now.map((visit, i) => (
                 <VisitCard key={visit.id} visit={visit} index={i} held={heldRegion} onAim={onAimRegion}>
@@ -237,30 +236,30 @@ export function EntretienRail({
             </section>
           )}
           {plan.next && (
-            <section className="at-rail-section at-rail-section--next" aria-label="Prochaine visite">
-              <h3 className="at-rail-section-title">Prochaine visite</h3>
+            <section className="at-rail-section at-rail-section--next" aria-label={t.rail.nextVisit}>
+              <h3 className="at-rail-section-title">{t.rail.nextVisit}</h3>
               <VisitCard visit={plan.next} index={0} held={heldRegion} onAim={onAimRegion}>
                 {plan.next.items.map((item, n) => renderItem(plan.next as Visit, item, n, false))}
               </VisitCard>
             </section>
           )}
           {plan.later.length > 0 && (
-            <section className="at-rail-section at-rail-section--later" aria-label="Plus tard">
+            <section className="at-rail-section at-rail-section--later" aria-label={t.rail.later}>
               {/* A count, not a list — and a CONTROL, because compression is only honest if there is a
                   way to look closer. It projects the ladder into the right column. It also sits FAR from
                   the next visit: distance is how the tail reads as far away rather than merely hidden
                   (Gibson's rule, docs/design-inspiration.md § 4), the same language the ladder speaks. */}
               {onShowLaterVisits ? (
                 <button type="button" className="at-rail-later" onClick={onShowLaterVisits}>
-                  <span className="at-rail-later-label">Plus tard</span>
+                  <span className="at-rail-later-label">{t.rail.later}</span>
                   <span className="at-rail-later-count">{plan.later.length}</span>
                   <span className="at-rail-later-meta">
-                    {laterFrom(plan.later) ? `à partir de ${laterFrom(plan.later)}` : `${laterServices} service${laterServices > 1 ? 's' : ''}`}
+                    {laterFrom(plan.later) ? t.rail.laterFrom(laterFrom(plan.later)!) : t.rail.laterServices(laterServices)}
                   </span>
                 </button>
               ) : (
                 <p className="at-rail-later at-rail-later--static">
-                  Plus tard · {plan.later.length}
+                  {t.rail.laterCount(plan.later.length)}
                 </p>
               )}
             </section>
@@ -275,7 +274,7 @@ export function EntretienRail({
                   data-lit={lit?.has(item.type) ? 'true' : undefined}
                 >
                   <span className="at-rail-svc">{item.label}</span>
-                  <span className="at-rail-tag at-rail-tag--gap">non suivi</span>
+                  <span className="at-rail-tag at-rail-tag--gap">{t.rail.untracked}</span>
                 </li>
               ))}
             </ul>
@@ -285,14 +284,14 @@ export function EntretienRail({
 
       <div className="at-rail-foot">
         <button type="button" className="at-check-btn at-check-btn--ghost" aria-pressed={showDismissed} onClick={onToggleDismissed}>
-          {showDismissed ? 'Masquer les tâches classées' : `Voir les tâches terminées et retirées${closed.length > 0 ? ` (${closed.length})` : ''}`}
+          {showDismissed ? t.rail.hideClosed : t.rail.showClosed(closed.length)}
         </button>
         {showDismissed && closed.length > 0 && (
           <ul className="at-rail-rows at-rail-rows--dismissed" role="list">
             {closed.map((t) => (
               <TaskRow
                 key={t.id}
-                caption={taskCaption({ date: null, horizon: null }, false, t)}
+                caption={taskCaption({ date: null, horizon: null }, false, t, locale)}
                 task={t}
                 defaultUnit={defaultUnit}
                 // Both closed states reopen from here — that is what the drawer is for. `×` is the one
@@ -337,8 +336,10 @@ function VisitCard({
   onAim?: (region: BodyRegion) => void;
   children: React.ReactNode;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const clock = visitClock(visit);
-  const caption = visit.region ? REGION_LABEL[visit.region] : clock.date ? formatDate(clock.date) : null;
+  const caption = visit.region ? regionLabel(visit.region, locale) : clock.date ? formatDate(clock.date, locale) : null;
   const regions = visitRegions(visit);
   const aim = regions[0];
   const isHeld = !!held && regions.includes(held);
@@ -361,8 +362,8 @@ function VisitCard({
             type="button"
             className="at-rail-visit-head at-rail-visit-head--aim"
             aria-pressed={isHeld}
-            title={isHeld ? 'Revenir à la vue d’ensemble' : `Voir « ${REGION_LABEL[aim]} » sur le véhicule`}
-            aria-label={`${caption} — ${isHeld ? 'revenir à la vue d’ensemble' : `voir « ${REGION_LABEL[aim]} » sur le véhicule`}`}
+            title={isHeld ? t.rail.backToOverview : t.rail.seeRegionOnCar(regionLabel(aim, locale))}
+            aria-label={t.rail.cardAria(caption ?? '', isHeld ? t.rail.backToOverviewLower : t.rail.seeRegionOnCarLower(regionLabel(aim, locale)))}
             onClick={() => onAim(aim)}
           >
             {head}
@@ -420,6 +421,9 @@ function TaskRow({
   const [editing, setEditing] = useState(false);
   const cls = `at-task at-rail-row${dismissed ? ' at-task--dismissed' : done ? ' at-task--done' : ''}`;
 
+  const [locale] = useLocale();
+  const t = useT();
+
   // Clicking the row body toggles the task (the same act as its checkbox) — but let its own controls
   // (checkbox, ✎ edit, × dismiss, and every input while the editor is open) own their clicks, and never
   // toggle mid-edit (a stray body click must not collapse the form the operator is filling in).
@@ -436,17 +440,17 @@ function TaskRow({
         className="at-task-check"
         role="checkbox"
         aria-checked={done}
-        aria-label={dismissed ? 'Restaurer la tâche' : done ? 'Rouvrir la tâche' : 'Marquer comme fait'}
+        aria-label={dismissed ? t.rail.restoreTask : done ? t.rail.reopenTask : t.rail.markDone}
         onClick={dismissed ? onRestore : onToggle}
       >
         {dismissed ? '↺' : done ? '✓' : '○'}
       </button>
       <div className="at-task-body">
         <div className="at-task-head">
-          <span className="at-task-title">{taskTitle(task)}</span>
+          <span className="at-task-title">{taskTitle(task, locale)}</span>
           {tag && <span className={`at-rail-tag at-rail-tag--${tag.tone}`}>{tag.text}</span>}
           {!dismissed && (
-            <button type="button" className="at-task-edit-toggle" aria-label="Modifier la tâche" aria-expanded={editing} title="Modifier" onClick={() => setEditing((e) => !e)}>
+            <button type="button" className="at-task-edit-toggle" aria-label={t.rail.editTask} aria-expanded={editing} title={t.rail.edit} onClick={() => setEditing((e) => !e)}>
               ✎
             </button>
           )}
@@ -474,9 +478,9 @@ function TaskRow({
                 type="button"
                 className="at-task-parts-count"
                 onClick={() => setEditing(true)}
-                aria-label={`Voir les ${task.parts.length} références de « ${taskTitle(task)} »`}
+                aria-label={t.rail.seeRefs(task.parts.length, taskTitle(task, locale))}
               >
-                {task.parts.length} réf.
+                {t.rail.refShort(task.parts.length)}
               </button>
             )}
           </>
@@ -485,8 +489,8 @@ function TaskRow({
       <button
         type="button"
         className="at-task-dismiss"
-        aria-label={dismissed ? 'Restaurer la tâche' : 'Retirer la tâche'}
-        title={dismissed ? 'Restaurer' : 'Retirer'}
+        aria-label={dismissed ? t.rail.restoreTask : t.rail.dismissTask}
+        title={dismissed ? t.rail.restore : t.rail.remove}
         onClick={dismissed ? onRestore : onDismiss}
       >
         {dismissed ? '↺' : '×'}
@@ -496,6 +500,8 @@ function TaskRow({
 }
 
 function AddTaskForm({ defaultUnit, onSubmit }: { defaultUnit: string; onSubmit: (input: PlannedTaskInput) => void }) {
+  const [locale] = useLocale();
+  const t = useT();
   const listId = useId();
   const [type, setType] = useState('oil_change');
   const [label, setLabel] = useState('');
@@ -510,18 +516,18 @@ function AddTaskForm({ defaultUnit, onSubmit }: { defaultUnit: string; onSubmit:
 
   return (
     <form className="at-task-form at-task-form--add" onSubmit={submit}>
-      <input list={listId} className="at-task-input" placeholder="type (ex. brake_pads)" aria-label="Type de service" value={type} onChange={(e) => setType(e.target.value)} />
+      <input list={listId} className="at-task-input" placeholder={t.rail.typePlaceholder} aria-label={t.rail.typeLabel} value={type} onChange={(e) => setType(e.target.value)} />
       <datalist id={listId}>
         {SERVICE_TYPES.map((t) => (
           <option key={t} value={t}>
-            {serviceLabel(t)}
+            {serviceLabel(t, locale)}
           </option>
         ))}
       </datalist>
-      <input className="at-task-input at-task-input--grow" placeholder="libellé (optionnel)" aria-label="Libellé" value={label} onChange={(e) => setLabel(e.target.value)} />
-      <input className="at-task-input at-task-input--sm" inputMode="numeric" placeholder={`à … ${defaultUnit}`} aria-label="Échéance kilométrage" value={target} onChange={(e) => setTarget(e.target.value)} />
+      <input className="at-task-input at-task-input--grow" placeholder={t.rail.labelPlaceholder} aria-label={t.rail.labelAria} value={label} onChange={(e) => setLabel(e.target.value)} />
+      <input className="at-task-input at-task-input--sm" inputMode="numeric" placeholder={t.rail.targetPlaceholder(defaultUnit)} aria-label={t.rail.targetAria} value={target} onChange={(e) => setTarget(e.target.value)} />
       <button type="submit" className="at-check-btn at-check-btn--do" disabled={!type.trim()}>
-        Ajouter
+        {t.rail.add}
       </button>
     </form>
   );
@@ -545,6 +551,8 @@ function TaskEditForm({
   onEditPart: (partId: string, fields: TaskPartInput) => void;
   onRemovePart: (partId: string) => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const listId = useId();
   const unit = task.target?.unit ?? defaultUnit;
   const [type, setType] = useState(task.type);
@@ -568,19 +576,19 @@ function TaskEditForm({
         <datalist id={listId}>
           {SERVICE_TYPES.map((t) => (
             <option key={t} value={t}>
-              {serviceLabel(t)}
+              {serviceLabel(t, locale)}
             </option>
           ))}
         </datalist>
-        <input className="at-task-input at-task-input--grow" placeholder="libellé (optionnel)" aria-label="Libellé" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <input className="at-task-input at-task-input--sm" inputMode="numeric" placeholder={`à … ${unit}`} aria-label="Échéance kilométrage" value={usage} onChange={(e) => setUsage(e.target.value)} />
-        <input className="at-task-input at-task-input--sm" type="date" aria-label="Échéance date" value={dueDate} disabled={usage.trim() !== ''} onChange={(e) => setDueDate(e.target.value)} />
+        <input className="at-task-input at-task-input--grow" placeholder={t.rail.labelPlaceholder} aria-label={t.rail.labelAria} value={label} onChange={(e) => setLabel(e.target.value)} />
+        <input className="at-task-input at-task-input--sm" inputMode="numeric" placeholder={t.rail.targetPlaceholder(unit)} aria-label={t.rail.targetAria} value={usage} onChange={(e) => setUsage(e.target.value)} />
+        <input className="at-task-input at-task-input--sm" type="date" aria-label={t.rail.dueDateAria} value={dueDate} disabled={usage.trim() !== ''} onChange={(e) => setDueDate(e.target.value)} />
         <div className="at-task-edit-actions">
           <button type="submit" className="at-check-btn at-check-btn--do" disabled={!type.trim()}>
-            Enregistrer
+            {t.rail.save}
           </button>
           <button type="button" className="at-check-btn" onClick={onCancel}>
-            Annuler
+            {t.rail.cancel}
           </button>
         </div>
       </form>
@@ -591,7 +599,7 @@ function TaskEditForm({
           ) : (
             // A derived fluid line has no id — read-only (it is projected, not stored).
             <div key={`derived-${i}`} className="at-task-part-row at-task-part-row--derived">
-              <span>{p.label ?? 'Fluide'}</span>
+              <span>{p.label ?? t.fluid.fallbackLabel}</span>
             </div>
           ),
         )}
@@ -603,6 +611,7 @@ function TaskEditForm({
 
 /** One editable shopping-list line: commits on blur, only when a field actually changed. */
 function PartEditRow({ part, onSave, onRemove }: { part: PlannedPart; onSave: (fields: TaskPartInput) => void; onRemove: () => void }) {
+  const t = useT();
   const [ref, setRef] = useState(part.ref);
   const [brand, setBrand] = useState(part.brand ?? '');
   const [label, setLabel] = useState(part.label ?? '');
@@ -618,11 +627,11 @@ function PartEditRow({ part, onSave, onRemove }: { part: PlannedPart; onSave: (f
 
   return (
     <div className="at-task-part-row">
-      <input className="at-task-input at-task-input--sm" placeholder="réf." aria-label="Référence" value={ref} onChange={(e) => setRef(e.target.value)} onBlur={commit} />
-      <input className="at-task-input at-task-input--sm" placeholder="marque" aria-label="Marque" value={brand} onChange={(e) => setBrand(e.target.value)} onBlur={commit} />
-      <input className="at-task-input at-task-input--grow" placeholder="libellé" aria-label="Libellé de la pièce" value={label} onChange={(e) => setLabel(e.target.value)} onBlur={commit} />
-      <input className="at-task-input at-task-input--xs" inputMode="numeric" placeholder="qté" aria-label="Quantité" value={qty} onChange={(e) => setQty(e.target.value)} onBlur={commit} />
-      <button type="button" className="at-task-part-del" aria-label="Retirer cette pièce" title="Retirer" onClick={onRemove}>
+      <input className="at-task-input at-task-input--sm" placeholder={t.rail.refPlaceholder} aria-label={t.rail.refAria} value={ref} onChange={(e) => setRef(e.target.value)} onBlur={commit} />
+      <input className="at-task-input at-task-input--sm" placeholder={t.rail.brandPlaceholder} aria-label={t.rail.brandAria} value={brand} onChange={(e) => setBrand(e.target.value)} onBlur={commit} />
+      <input className="at-task-input at-task-input--grow" placeholder={t.rail.partLabelPlaceholder} aria-label={t.rail.partLabelAria} value={label} onChange={(e) => setLabel(e.target.value)} onBlur={commit} />
+      <input className="at-task-input at-task-input--xs" inputMode="numeric" placeholder={t.rail.qtyPlaceholder} aria-label={t.rail.qtyAria} value={qty} onChange={(e) => setQty(e.target.value)} onBlur={commit} />
+      <button type="button" className="at-task-part-del" aria-label={t.rail.removePart} title={t.rail.remove} onClick={onRemove}>
         ×
       </button>
     </div>
@@ -631,6 +640,7 @@ function PartEditRow({ part, onSave, onRemove }: { part: PlannedPart; onSave: (f
 
 /** The blank add-a-part row at the foot of the parts editor (its own form — nested forms are illegal). */
 function AddPartRow({ onAdd }: { onAdd: (part: TaskPartInput) => void }) {
+  const t = useT();
   const [ref, setRef] = useState('');
   const [brand, setBrand] = useState('');
   const [label, setLabel] = useState('');
@@ -648,12 +658,12 @@ function AddPartRow({ onAdd }: { onAdd: (part: TaskPartInput) => void }) {
 
   return (
     <form className="at-task-part-row at-task-part-row--add" onSubmit={add}>
-      <input className="at-task-input at-task-input--sm" placeholder="réf." aria-label="Référence" value={ref} onChange={(e) => setRef(e.target.value)} />
-      <input className="at-task-input at-task-input--sm" placeholder="marque" aria-label="Marque" value={brand} onChange={(e) => setBrand(e.target.value)} />
-      <input className="at-task-input at-task-input--grow" placeholder="libellé" aria-label="Libellé de la pièce" value={label} onChange={(e) => setLabel(e.target.value)} />
-      <input className="at-task-input at-task-input--xs" inputMode="numeric" placeholder="qté" aria-label="Quantité" value={qty} onChange={(e) => setQty(e.target.value)} />
+      <input className="at-task-input at-task-input--sm" placeholder={t.rail.refPlaceholder} aria-label={t.rail.refAria} value={ref} onChange={(e) => setRef(e.target.value)} />
+      <input className="at-task-input at-task-input--sm" placeholder={t.rail.brandPlaceholder} aria-label={t.rail.brandAria} value={brand} onChange={(e) => setBrand(e.target.value)} />
+      <input className="at-task-input at-task-input--grow" placeholder={t.rail.partLabelPlaceholder} aria-label={t.rail.partLabelAria} value={label} onChange={(e) => setLabel(e.target.value)} />
+      <input className="at-task-input at-task-input--xs" inputMode="numeric" placeholder={t.rail.qtyPlaceholder} aria-label={t.rail.qtyAria} value={qty} onChange={(e) => setQty(e.target.value)} />
       <button type="submit" className="at-check-btn at-check-btn--do" disabled={!ref.trim() && !label.trim()}>
-        + Pièce
+        {t.rail.addPart}
       </button>
     </form>
   );

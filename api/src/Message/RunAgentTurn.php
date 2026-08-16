@@ -26,6 +26,10 @@ final readonly class RunAgentTurn
         // interpreted against the question rather than re-routed blind — turns stay stateless, this
         // is the one bounded breadcrumb, not a conversation history.
         public string $pendingContext = '',
+        // The interface language, resolved from Accept-Language in the controller. Threaded for the
+        // same reason `owner` is: the worker has no request to read it from, and everything the agent
+        // says this turn — the heartbeat, the failure toasts, the answers themselves — follows it.
+        public string $locale = 'fr',
     ) {
     }
 }

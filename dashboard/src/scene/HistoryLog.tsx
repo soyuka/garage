@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import './historylog.css';
 import { formatEuros, formatDate, formatReading } from '../format';
 import { serviceLabel } from '../labels';
@@ -32,6 +33,8 @@ export function HistoryLog({
   records: MaintenanceRecord[];
   reduced?: boolean;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -49,10 +52,10 @@ export function HistoryLog({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Carnet d’entretien"
+        aria-label={t.carnet.title}
       >
         <header className="at-hlog-head">
-          <h2>Carnet d’entretien</h2>
+          <h2>{t.carnet.title}</h2>
           <button type="button" className="at-hlog-close" onClick={onClose} aria-label="Fermer">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -61,7 +64,7 @@ export function HistoryLog({
         </header>
 
         {visits.length === 0 ? (
-          <p className="at-hlog-empty">Aucun entretien enregistré.</p>
+          <p className="at-hlog-empty">{t.misc.noServiceLogged}</p>
         ) : (
           <ol className="at-hlog-entries">
             {visits.map((record, i) => {
@@ -73,24 +76,24 @@ export function HistoryLog({
                   style={reduced ? undefined : { animationDelay: `${Math.min(i, 8) * 45}ms` }}
                 >
                   <div className="at-hlog-entry-head">
-                    <span className="at-hlog-date">{formatDate(record.performedAt)}</span>
-                    <span className="at-hlog-title">{visitTitle(record)}</span>
+                    <span className="at-hlog-date">{formatDate(record.performedAt, locale)}</span>
+                    <span className="at-hlog-title">{visitTitle(record, locale)}</span>
                     {cost && (
                       <span className="at-hlog-cost">
                         {cost.estimated ? '≈ ' : ''}
-                        {formatEuros(cost.cents)}
+                        {formatEuros(cost.cents, locale)}
                       </span>
                     )}
                   </div>
                   <div className="at-hlog-entry-meta">
-                    {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit)}</span>}
+                    {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit, locale)}</span>}
                     {record.performedBy && <span>{record.performedBy}</span>}
                   </div>
                   {record.items.length > 0 && (
                     <ul className="at-hlog-items">
                       {record.items.map((it, j) => (
                         <li key={j} className="at-hlog-item">
-                          <span className="at-hlog-item-name">{it.label?.trim() || serviceLabel(it.type)}</span>
+                          <span className="at-hlog-item-name">{it.label?.trim() || serviceLabel(it.type, locale)}</span>
                           {it.parts.length > 0 && (
                             <span className="at-hlog-parts">
                               {it.parts

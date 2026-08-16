@@ -1,4 +1,5 @@
 import './partsmanifest.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatEuros } from '../format';
 import type { Iri, PlannedPart } from '../types';
 import { manifestTotal, type PartsManifestModel } from './parts';
@@ -19,13 +20,15 @@ export function PartsManifest({
   onAdd: (patch: { id: Iri; parts: PlannedPart[] }) => void;
   onDismiss: () => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const total = manifestTotal(model.parts);
   return (
-    <aside className="at-parts" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={`Pièces — ${model.service}`}>
+    <aside className="at-parts" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={t.proj.partsFor(model.service)}>
       <div className="at-proj-head">
-        <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
-        <div className="at-parts-head">PIÈCES · {model.service}</div>
-        <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer les pièces">
+        <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
+        <div className="at-parts-head">{t.proj.partsHead(model.service)}</div>
+        <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label={t.proj.closeParts}>
           ✕
         </button>
       </div>
@@ -45,7 +48,7 @@ export function PartsManifest({
                   {p.label ?? p.ref}
                   {qty > 1 ? ` · ${qty}×` : ''}
                 </span>
-                {p.priceCents != null && <span className="at-parts-price">{formatEuros(lineCents)}</span>}
+                {p.priceCents != null && <span className="at-parts-price">{formatEuros(lineCents, locale)}</span>}
               </div>
               <div className="at-parts-meta">
                 {[p.brand, p.ref].filter(Boolean).join(' ')}
@@ -55,14 +58,14 @@ export function PartsManifest({
         })}
       </div>
       <div className="at-parts-foot">
-        <span className="at-parts-total">{formatEuros(total)}</span>
+        <span className="at-parts-total">{formatEuros(total, locale)}</span>
         <div className="at-parts-actions">
           <button
             type="button"
             className="at-parts-add"
             onClick={() => onAdd({ id: model.taskId, parts: model.parts })}
           >
-            Ajouter à la tâche →
+            {t.proj.addToTask}
           </button>
         </div>
       </div>

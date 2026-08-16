@@ -74,7 +74,7 @@ describe('manifestTotal — unit price × qty, in cents', () => {
 describe('partsCtaFor — a deterministic parts-manifest CTA (patchTask, no agent turn)', () => {
   it('wraps the parts as a single patchTask action on the task', () => {
     const parts = [{ ref: 'W 712/75', priceCents: 890, qty: 1 }];
-    const cta = partsCtaFor('Vidange', '/planned-tasks/oil', parts);
+    const cta = partsCtaFor('Vidange', '/planned-tasks/oil', parts, 'fr');
     expect(cta.headline).toBe('Vidange');
     expect(cta.actions).toHaveLength(1);
     expect(cta.actions[0].patchTask).toEqual({ id: '/planned-tasks/oil', parts });

@@ -1,3 +1,5 @@
+import { DEFAULT_LOCALE, type Locale } from '../i18n/locale';
+import { messages, type Messages } from '../i18n/messages';
 import type { Driver } from '../pilot';
 import type { CtaAction, Signal, Tone } from '../types';
 
@@ -16,8 +18,8 @@ export interface JournalEntry {
 }
 
 // A visible step per tool call while Le Noyau works (the C1 chips). `running` shimmers, `done` is
-// steady, `error` is an agent-lifecycle failure (amber "échec", NOT a signal-red). The live wire
-// carries no tool name; see classifyStep for how the identity + short verb are derived.
+// steady, `error` is an agent-lifecycle failure (amber "échec", NOT a signal-red). The frame carries
+// the tool name; see classifyStep for how the chip identity + short verb are resolved from it.
 export type ToolStepState = 'running' | 'done' | 'error';
 
 export interface ToolStep {
@@ -45,9 +47,23 @@ export interface DecisionItem {
   actions?: CtaAction[]; // review only: the deferred proposal's CTA actions (reuse CtaCard wiring)
 }
 
+// A retained toast card (CHOREOGRAPHY § "The notice stack"). The narration line is a HEARTBEAT — the
+// next status overwrites it and `settle` clears it — so a finding pushed as a toast used to scroll
+// past at the speed of the next tool call. A notice is the same message with a surface that stays.
+export interface Notice {
+  id: string; // `${tone}:${text}` — the same finding re-arriving is one card, not a wall
+  tone: Tone;
+  text: string;
+  at: number; // injected clock stamp (drives the "when" caption)
+}
+
+/** How many notices stay on screen. The journal keeps every toast, which is what makes the cap honest. */
+export const NOTICE_CAP = 3;
+
 export interface NoyauState {
   phase: NoyauPhase;
   narration: string | null; // the single ticker line — never stacks
+  notices: Notice[]; // the retained toast cards — outlive the turn; only "vu" removes one
   pulseCount: number; // pulses fired this turn (one per narrated status step)
   result: Signal | null; // set on 'done'
   queue: DecisionItem[]; // the à-décider inbox — pending decisions outlive turns; resolve removes
@@ -82,13 +98,14 @@ export type NoyauEvent =
   // `driver` says who produced the frame (the subscription it arrived on — Atelier tags it). Absent
   // → the in-app turn, so every existing dispatch keeps its meaning unchanged.
   | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean; driver?: Driver }
-  | { type: 'status'; message: string; driver?: Driver }
+  | { type: 'status'; message: string; tool?: string; driver?: Driver }
   | { type: 'toast'; tone: Tone; message: string; driver?: Driver }
   // local: the pilot run has been silent past PILOT_QUIET_MS — stop claiming it is working
   | { type: 'quiet' }
   | { type: 'concern'; message: string; serviceType?: string; vehicleIri?: string } // §9 overdue DOMAIN push (no turn): dock a notify + murmur, hands-off
   | { type: 'defer'; id: string; text: string; finding?: string; actions: CtaAction[] } // a proposal seen elsewhere/superseded → a REVIEW item in the inbox
   | { type: 'resolve'; id: string } // the operator decided a queue item (acted / dismissed) → remove it
+  | { type: 'dismissNotice'; id: string } // local: "vu" on a retained toast card → drop that card only
   | { type: 'typing'; active: boolean } // local UI cue, not a Mercure frame
   | { type: 'settle' } // local: the done animation finished → back to idle
   | { type: 'clearEmber' }; // local: the inbox was opened → mute the badge (does NOT drain the queue)
@@ -96,6 +113,7 @@ export type NoyauEvent =
 export const initialNoyau: NoyauState = {
   phase: 'idle',
   narration: null,
+  notices: [],
   pulseCount: 0,
   result: null,
   queue: [],
@@ -132,37 +150,70 @@ function pushDecision(queue: DecisionItem[], item: DecisionItem): DecisionItem[]
   return queue.some((q) => q.id === item.id) ? queue : [...queue, item];
 }
 
-// The live wire carries NO tool name: StepNarrator (api/src/Agent/Ui/StepNarrator.php) pre-maps each
-// tool call to a French narration sentence, and only that sentence rides the `status` frame. So we
-// reverse-map the sentence to a tool identity + a SHORTER chip verb (the chip is quieter than the
-// narration line it echoes). Keyword-matched (not exact) so minor server rewording — and the mock
-// scripts (mockStream.ts) — degrade to the right chip instead of the generic fallback. Ordered:
-// first match wins, specific before generic.
-interface StepRule {
-  match: string[];
-  tool: string;
-  label: string;
+// Same dedup rule as the queue, plus a cap: the stack is a working set the operator reads at a glance,
+// not a log. Returns the SAME array when the card is already up, so a repeating pilot costs no render.
+function pushNotice(notices: Notice[], item: Notice): Notice[] {
+  if (notices.some((n) => n.id === item.id)) return notices;
+  return [...notices, item].slice(-NOTICE_CAP);
 }
-const STEP_RULES: StepRule[] = [
-  { match: ['motul'], tool: 'get_motul_oil', label: 'huile Motul…' },
-  { match: ['viscosité', 'huile'], tool: 'get_motul_oil', label: 'huile Motul…' },
-  { match: ['catalogue', 'pièces', 'références', 'tecdoc'], tool: 'get_service_parts', label: 'recherche pièces…' },
-  { match: ['plaque'], tool: 'lookup_plate', label: 'plaque…' },
-  { match: ['programme', "d'entretien"], tool: 'plan_maintenance', label: 'planification…' },
-  { match: ['entretiens à venir', 'échéances', 'calcul'], tool: 'list_due_maintenance', label: 'prévision…' },
-  { match: ['historique', 'carnet'], tool: 'get_history', label: 'lecture carnet…' },
-  { match: ['en ligne'], tool: 'web_search', label: 'recherche web…' },
-  { match: ['à jour'], tool: 'update_vehicle', label: 'mise à jour…' },
-  { match: ['intervention', 'enregistre'], tool: 'log_maintenance', label: 'enregistrement…' },
-  { match: ['garage'], tool: 'list_vehicles', label: 'garage…' },
+
+// The chip vocabulary, keyed by the tool the server ran. `get_history` is a CHIP identity, not a tool
+// name: two backend tools (facts + history) both read the carnet and earn the same chip. The label is
+// the SHORT verb — quieter than the full narration line it echoes.
+const CHIP: Record<string, { tool: string; label: keyof Messages['chipVerb'] }> = {
+  get_motul_oil: { tool: 'get_motul_oil', label: 'motulOil' },
+  get_service_parts: { tool: 'get_service_parts', label: 'parts' },
+  lookup_plate: { tool: 'lookup_plate', label: 'plate' },
+  plan_maintenance: { tool: 'plan_maintenance', label: 'planning' },
+  list_due_maintenance: { tool: 'list_due_maintenance', label: 'forecast' },
+  get_maintenance_history: { tool: 'get_history', label: 'carnet' },
+  get_vehicle_facts: { tool: 'get_history', label: 'carnet' },
+  get_history: { tool: 'get_history', label: 'carnet' },
+  web_search: { tool: 'web_search', label: 'webSearch' },
+  update_vehicle: { tool: 'update_vehicle', label: 'updating' },
+  log_maintenance: { tool: 'log_maintenance', label: 'recording' },
+  list_vehicles: { tool: 'list_vehicles', label: 'garage' },
+};
+
+function chip(entry: { tool: string; label: keyof Messages['chipVerb'] }, locale: Locale): { tool: string; label: string } {
+  return { tool: entry.tool, label: messages(locale).chipVerb[entry.label] };
+}
+
+// Fallback path only. StepNarrator (api/src/Agent/Ui/StepNarrator.php) is keyed BY TOOL and now sends
+// that key on the frame, so the prose no longer carries the identity. These keyword rules stay for
+// frames without the field — a server mid-deploy, and the mock scripts (mockStream.ts) — and they are
+// French-only by nature, which is exactly why they must not be load-bearing. Ordered: first match
+// wins, specific before generic.
+const STEP_RULES: Array<{ match: string[]; tool: string }> = [
+  { match: ['motul'], tool: 'get_motul_oil' },
+  { match: ['viscosité', 'huile'], tool: 'get_motul_oil' },
+  { match: ['catalogue', 'pièces', 'références', 'tecdoc'], tool: 'get_service_parts' },
+  { match: ['plaque'], tool: 'lookup_plate' },
+  { match: ['programme', "d'entretien"], tool: 'plan_maintenance' },
+  { match: ['entretiens à venir', 'échéances', 'calcul'], tool: 'list_due_maintenance' },
+  { match: ['historique', 'carnet'], tool: 'get_history' },
+  { match: ['en ligne'], tool: 'web_search' },
+  { match: ['à jour'], tool: 'update_vehicle' },
+  { match: ['intervention', 'enregistre'], tool: 'log_maintenance' },
+  { match: ['garage'], tool: 'list_vehicles' },
 ];
 
-/** Classify a narration sentence into a tool identity + short chip verb (see STEP_RULES). */
-export function classifyStep(message: string): { tool: string; label: string } {
+/**
+ * Resolve a narrated step to a chip identity + short verb.
+ *
+ * `tool` is the server's own key and wins outright when we recognise it. An UNRECOGNISED key (a tool
+ * added server-side before this table knew about it) falls through to the prose rather than to
+ * `unknown` — the sentence is then still the best evidence available.
+ */
+export function classifyStep(message: string, tool?: string, locale: Locale = DEFAULT_LOCALE): { tool: string; label: string } {
+  if (tool && CHIP[tool]) return chip(CHIP[tool], locale);
+
   const m = message.toLowerCase();
   for (const rule of STEP_RULES) {
-    if (rule.match.some((k) => m.includes(k))) return { tool: rule.tool, label: rule.label };
+    if (rule.match.some((k) => m.includes(k))) return chip(CHIP[rule.tool], locale);
   }
+  // Unrecognised: the server's own sentence is the only label there is. It is prose in whatever
+  // language the server wrote it — which is the honest thing to show, not a guess.
   return { tool: 'unknown', label: message };
 }
 
@@ -188,18 +239,23 @@ function resultFromTone(tone: Tone | null): Signal {
 
 // The done state is announced as a mono label (not color alone — §8): a screen-reader hears the
 // outcome on the aria-live line, and green/amber/red stay distinguishable in grayscale.
-const RESULT_LABEL: Record<Signal, string> = {
-  green: 'posé · tout est à jour',
-  amber: 'posé · un service à prévoir',
-  red: 'posé · anomalie détectée',
-};
+function resultLabel(signal: Signal, locale: Locale): string {
+  const t = messages(locale);
+
+  return 'green' === signal ? t.noyau.resultGreen : 'amber' === signal ? t.noyau.resultAmber : t.noyau.resultRed;
+}
 
 function append(state: NoyauState, entry: Omit<JournalEntry, 'id' | 'elapsedMs'>, at: number): JournalEntry[] {
   const elapsedMs = at - (state.turnStartedAt ?? at);
   return [...state.journal, { ...entry, id: state.entrySeq, elapsedMs }];
 }
 
-export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): NoyauState {
+/**
+ * `locale` defaults rather than being required — unlike format.ts, which forces it. There is ONE
+ * production call site (useNoyau) and the reducer is otherwise locale-free; a required argument here
+ * would only churn ~200 test dispatches without catching anything a reader would miss.
+ */
+export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, locale: Locale = DEFAULT_LOCALE): NoyauState {
   switch (ev.type) {
     case 'typing':
       // Busy orb is never interrupted by typing; listening only toggles from rest.
@@ -225,7 +281,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       // phase === 'end'
       {
         const signal = resultFromTone(state.worstTone);
-        const label = RESULT_LABEL[signal];
+        const label = resultLabel(signal, locale);
         return {
           ...state,
           phase: 'done',
@@ -254,7 +310,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       const turnStartedAt = fresh ? at : state.turnStartedAt;
       // A pilot run has no `turn:start` at all — this IS its start (see NarrateStepProcessor).
       const base = { ...state, phase: 'working' as const, turnStartedAt, driver: ev.driver ?? 'app', lastFrameAt: at, quiet: false };
-      const { tool, label } = classifyStep(ev.message);
+      const { tool, label } = classifyStep(ev.message, ev.tool, locale);
       // A new tool narrating means the previous one finished → close it, then push the new running step.
       const steps = [...closeRunning(fresh ? [] : state.steps, 'done'), { id: state.stepSeq, tool, label, state: 'running' as const }];
       return {
@@ -273,6 +329,9 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       // A toast proves the run is alive, but never OPENS one: an alarm pushed between turns (the §9
       // crossing) must not lift the orb. Only refresh liveness when a run is already open.
       const live = 'working' === state.phase ? { driver: ev.driver ?? state.driver, lastFrameAt: at, quiet: false } : {};
+      // Every tone retains a card — the toast IS the agent's answer, and an answer must outlive the
+      // heartbeat that carried it. The tone-specific routing below is unchanged on top of that.
+      const notices = pushNotice(state.notices, { id: `${ev.tone}:${ev.message}`, tone: ev.tone, text: ev.message, at });
       if (ev.tone === 'alarm') {
         // Real popup + a NOTIFY item in the à-décider inbox; never hijacks the heartbeat narration line.
         const queue = pushDecision(state.queue, { id: `alarm:${ev.message}`, kind: 'notify', text: ev.message, at });
@@ -281,6 +340,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
           ...state,
           ...live,
           worstTone,
+          notices,
           queue,
           emberSeen,
           ember: emberOf(queue, emberSeen),
@@ -293,6 +353,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
         ...state,
         ...live,
         worstTone,
+        notices,
         narration: ev.message,
         journal: append(state, { kind: 'narration', message: ev.message }, at),
         entrySeq: state.entrySeq + 1,
@@ -332,6 +393,13 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number): Noya
       const queue = pushDecision(state.queue, { id: ev.id, kind: 'review', text: ev.text, at, finding: ev.finding, actions: ev.actions });
       const emberSeen = queue === state.queue ? state.emberSeen : false;
       return { ...state, queue, emberSeen, ember: emberOf(queue, emberSeen) };
+    }
+
+    case 'dismissNotice': {
+      // "vu" on a card. It never touches the queue: the card says READ THIS NOW, a notify item says
+      // DECIDE THIS LATER, and dismissing a reminder is not deciding the thing it reminds you of.
+      const notices = state.notices.filter((n) => n.id !== ev.id);
+      return notices.length === state.notices.length ? state : { ...state, notices };
     }
 
     case 'resolve': {

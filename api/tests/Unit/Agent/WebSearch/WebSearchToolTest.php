@@ -71,9 +71,9 @@ final class WebSearchToolTest extends TestCase
 
         // Distinct from the genuine "no result" message: the model must know the SERVICE failed, not that
         // the web had nothing — and be steered to the parts catalog rather than retrying blindly.
-        $this->assertMatchesRegularExpression('/indisponible|surchargé/i', $out);
-        $this->assertStringContainsString('catalogue', $out);
-        $this->assertDoesNotMatchRegularExpression('/aucun résultat|no result/i', $out);
+        $this->assertStringContainsString(WebSearchTool::UNAVAILABLE, $out);
+        $this->assertStringNotContainsString(WebSearchTool::NO_RESULTS, $out, 'an overload is not "the web has nothing"');
+        $this->assertStringContainsString('catalog', $out);
         $this->assertStringNotContainsString('http', $out);
         $this->assertTrue($budget->exhausted(), 'an unavailable backend still spends one unit to bound retries');
     }
@@ -87,9 +87,32 @@ final class WebSearchToolTest extends TestCase
         $out = (new WebSearchTool($client, $budget))->search('Mazda 6 2007 programme entretien');
 
         $this->assertNotSame('', trim($out), 'an empty search must not return a blank string to the orchestrator');
-        $this->assertMatchesRegularExpression('/aucun résultat|no result/i', $out);
+        $this->assertStringContainsString(WebSearchTool::NO_RESULTS, $out);
         $this->assertStringNotContainsString('http', $out);
-        $this->assertStringNotContainsString('Limite de recherche', $out, 'no-result is distinct from budget-exhausted');
+        $this->assertStringNotContainsString(WebSearchTool::BUDGET_SPENT, $out, 'no-result is distinct from budget-exhausted');
         $this->assertFalse($budget->exhausted(), 'a single empty search of two must leave a retry');
+    }
+
+    /**
+     * The retry rule in ai.yaml keys on these EXACT tokens. They used to be French prose
+     * ("Aucun résultat"), which made the agent's output language and its control flow the same string:
+     * translate the prose and the retry silently stops firing. The token is the contract; the sentence
+     * beside it is free to change, in any language.
+     */
+    public function testTheControlFlowTokensAreStableAndDistinct(): void
+    {
+        $this->assertSame('NO_RESULTS', WebSearchTool::NO_RESULTS);
+        $this->assertSame('SEARCH_UNAVAILABLE', WebSearchTool::UNAVAILABLE);
+        $this->assertSame('SEARCH_BUDGET_SPENT', WebSearchTool::BUDGET_SPENT);
+    }
+
+    public function testBudgetExhaustedAnnouncesItsOwnToken(): void
+    {
+        $client = $this->createStub(WebSearchClient::class);
+        $budget = new WebSearchBudget(0);
+        $out = (new WebSearchTool($client, $budget))->search('anything');
+
+        $this->assertStringContainsString(WebSearchTool::BUDGET_SPENT, $out);
+        $this->assertStringNotContainsString(WebSearchTool::NO_RESULTS, $out);
     }
 }

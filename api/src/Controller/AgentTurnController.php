@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\I18n\Locale;
 use App\Message\RunAgentTurn;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -62,6 +63,9 @@ final class AgentTurnController
             selectedId: trim((string) ($payload['selectedId'] ?? '')),
             summary: trim((string) ($payload['summary'] ?? '')),
             pendingContext: trim((string) ($payload['pendingContext'] ?? '')),
+            // Not a payload field: the browser already announces its language on the request, so the
+            // dashboard's choice arrives for free (framework.yaml `set_locale_from_accept_language`).
+            locale: Locale::resolve($request->getLocale())->value,
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);

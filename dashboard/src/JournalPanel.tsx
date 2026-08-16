@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { useT } from './i18n/LocaleProvider';
 import './journal.css';
 import { getTurn, getTurns, type TurnDetail, type TurnSummary } from './journal';
 
@@ -14,6 +15,7 @@ const STATUS_TONE: Record<TurnSummary['status'], 'ok' | 'warn' | 'alarm'> = {
 };
 
 export function JournalPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useT();
   const [turns, setTurns] = useState<TurnSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,20 +60,20 @@ export function JournalPanel({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <div className="at-journal-overlay" onClick={onClose}>
-      <aside className="at-journal glass" onClick={(e) => e.stopPropagation()} aria-label="Journal de l'agent">
+      <aside className="at-journal glass" onClick={(e) => e.stopPropagation()} aria-label={t.journal.title}>
         <header className="at-journal-head">
-          <h2>Journal de l'agent</h2>
+          <h2>{t.journal.title}</h2>
           <div className="at-journal-head-actions">
-            <button type="button" className="at-journal-btn" onClick={load} title="Rafraîchir" aria-label="Rafraîchir">↻</button>
-            <button type="button" className="at-journal-btn" onClick={onClose} aria-label="Fermer">✕</button>
+            <button type="button" className="at-journal-btn" onClick={load} title={t.journal.refresh} aria-label={t.journal.refresh}>↻</button>
+            <button type="button" className="at-journal-btn" onClick={onClose} aria-label={t.journal.close}>✕</button>
           </div>
         </header>
 
-        {error && <div className="at-journal-error">Échec du chargement : {error}</div>}
+        {error && <div className="at-journal-error">{t.journal.loadFailed} {error}</div>}
 
         <ol className="at-journal-list">
-          {loading && turns.length === 0 && <li className="at-journal-empty">Chargement…</li>}
-          {!loading && turns.length === 0 && !error && <li className="at-journal-empty">Aucun tour enregistré.</li>}
+          {loading && turns.length === 0 && <li className="at-journal-empty">{t.journal.loading}</li>}
+          {!loading && turns.length === 0 && !error && <li className="at-journal-empty">{t.journal.empty}</li>}
           {turns.map((t) => (
             <li key={t.id}>
               <button
@@ -98,7 +100,8 @@ export function JournalPanel({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
-  if (!detail) return <div className="at-journal-detail at-journal-muted">Chargement du détail…</div>;
+  const t = useT();
+  if (!detail) return <div className="at-journal-detail at-journal-muted">{t.journal.loadingDetail}</div>;
   return (
     <div className="at-journal-detail">
       <Section title="Prompt">
@@ -106,7 +109,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
       </Section>
 
       <dl className="at-journal-facts">
-        <dt>Modèle</dt>
+        <dt>{t.journal.model}</dt>
         <dd>
           {detail.provider || '?'} / {detail.model || '?'} {detail.stream ? '(stream)' : ''}
         </dd>
@@ -118,27 +121,27 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
         </dd>
         {detail.selectedId && (
           <>
-            <dt>Véhicule</dt>
+            <dt>{t.journal.vehicle}</dt>
             <dd className="at-journal-mono">{detail.selectedId}</dd>
           </>
         )}
         {detail.error && (
           <>
-            <dt>Erreur</dt>
+            <dt>{t.journal.error}</dt>
             <dd className="at-journal-mono at-journal-err-text">{detail.error}</dd>
           </>
         )}
       </dl>
 
       {detail.context && (
-        <Section title="Contexte LLM">
+        <Section title={t.journal.llmContext}>
           <pre className="at-journal-pre">{detail.context}</pre>
         </Section>
       )}
 
       <Section title={`Appels d'outils (${detail.toolCalls.length})`}>
         {detail.toolCalls.length === 0 ? (
-          <p className="at-journal-muted">Aucun</p>
+          <p className="at-journal-muted">{t.journal.none}</p>
         ) : (
           <ol className="at-journal-tools">
             {detail.toolCalls.map((c) => (
@@ -158,7 +161,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
       {detail.webSearchCount > 0 && (
         <Section title={`Recherche web (${detail.webSearchCount})`}>
           {detail.webSearchQueries.length === 0 ? (
-            <p className="at-journal-muted">Aucune requête capturée (stream).</p>
+            <p className="at-journal-muted">{t.journal.noCalls}</p>
           ) : (
             <ul className="at-journal-queries">
               {detail.webSearchQueries.map((q, i) => (
@@ -172,14 +175,14 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
       )}
 
       {detail.finalText && (
-        <Section title="Réponse finale">
+        <Section title={t.journal.finalAnswer}>
           <pre className="at-journal-pre">{detail.finalText}</pre>
         </Section>
       )}
 
       {detail.rawCalls.length > 0 && (
         <details className="at-journal-raw">
-          <summary>Données brutes ({detail.rawCalls.length})</summary>
+          <summary>{t.journal.rawData(detail.rawCalls.length)}</summary>
           <pre className="at-journal-pre at-journal-pre--sm">{JSON.stringify(detail.rawCalls, null, 2)}</pre>
         </details>
       )}

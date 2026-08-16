@@ -17,7 +17,7 @@ const task = (type: string, status: string, id = `/t/${type}`, label?: string): 
 
 describe('buildVisits — horizons', () => {
   it('an overdue service lands in `now`', () => {
-    const plan = buildVisits([due('oil_change', { overdue: true, dueAt: '2026-01-05' })]);
+    const plan = buildVisits([due('oil_change', { overdue: true, dueAt: '2026-01-05' })], 'fr');
     expect(plan.now.flatMap((v) => v.items.map((i) => i.type))).toEqual(['oil_change']);
     expect(plan.next).toBeNull();
     expect(plan.later).toEqual([]);
@@ -28,13 +28,13 @@ describe('buildVisits — horizons', () => {
       due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 }),
       due('oil_change', { dueAt: '2027-07-06', daysUntilDue: 324 }),
       due('spark_plug', { dueAt: '2030-04-28', daysUntilDue: 1352 }),
-    ]);
+    ], 'fr');
     expect(plan.next?.items.map((i) => i.type)).toEqual(['inspection']);
     expect(plan.later.map((v) => v.items.map((i) => i.type))).toEqual([['oil_change'], ['spark_plug']]);
   });
 
   it('undated decided work lands in `now`, never in the forecast horizons', () => {
-    const plan = buildVisits([], [], [task('engine_mount', 'open')]);
+    const plan = buildVisits([], 'fr', [], [task('engine_mount', 'open')]);
     expect(plan.now.flatMap((v) => v.items.map((i) => i.type))).toEqual(['engine_mount']);
     expect(plan.next).toBeNull();
   });
@@ -47,7 +47,7 @@ describe('buildVisits — clustering', () => {
     const plan = buildVisits([
       due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 }),
       due('fuel_filter', { projectedDueAt: '2027-04-02', daysUntilDue: 230 }),
-    ]);
+    ], 'fr');
     expect(plan.later).toEqual([]);
     expect(plan.next?.items.map((i) => i.type)).toEqual(['inspection', 'fuel_filter']);
     expect(plan.next?.date).toBe('2027-03-21');
@@ -57,7 +57,7 @@ describe('buildVisits — clustering', () => {
     const plan = buildVisits([
       due('inspection', { dueAt: '2027-03-21' }),
       due('oil_change', { dueAt: '2027-07-06' }),
-    ]);
+    ], 'fr');
     expect(plan.next?.items.map((i) => i.type)).toEqual(['inspection']);
     expect(plan.later.map((v) => v.items.map((i) => i.type))).toEqual([['oil_change']]);
   });
@@ -69,13 +69,13 @@ describe('buildVisits — clustering', () => {
       due('inspection', { dueAt: '2027-01-01' }),
       due('oil_change', { dueAt: '2027-02-10' }),
       due('oil_filter', { dueAt: '2027-03-22' }),
-    ]);
+    ], 'fr');
     expect(plan.next?.items).toHaveLength(3);
     expect(plan.later).toEqual([]);
   });
 
   it('projectedDueAt stands in when the time axis has no date', () => {
-    const plan = buildVisits([due('fuel_filter', { dueAt: null, projectedDueAt: '2027-04-02' })]);
+    const plan = buildVisits([due('fuel_filter', { dueAt: null, projectedDueAt: '2027-04-02' })], 'fr');
     expect(plan.next?.date).toBe('2027-04-02');
   });
 
@@ -87,7 +87,7 @@ describe('buildVisits — clustering', () => {
 describe('buildVisits — undated work groups by body region', () => {
   it('three engine-bay jobs are ONE visit', () => {
     // Sonde de température + two engine mounts: all read off the hood, one teardown, one booking.
-    const plan = buildVisits([], [], [
+    const plan = buildVisits([], 'fr', [], [
       task('coolant_temperature_sensor', 'open', '/t/sonde'),
       task('engine_mount', 'open', '/t/mount-rear', 'support moteur arrière'),
       task('engine_mount', 'open', '/t/mount-left', 'support moteur gauche'),
@@ -98,7 +98,7 @@ describe('buildVisits — undated work groups by body region', () => {
   });
 
   it('different regions stay different visits', () => {
-    const plan = buildVisits([], [], [
+    const plan = buildVisits([], 'fr', [], [
       task('engine_mount', 'open', '/t/mount'),
       task('brake_pads', 'open', '/t/pads'),
     ]);
@@ -108,21 +108,21 @@ describe('buildVisits — undated work groups by body region', () => {
 
 describe('buildVisits — what stays out', () => {
   it('coverage gaps pass through untouched, never clustered', () => {
-    const plan = buildVisits([], ['timing_belt'], []);
+    const plan = buildVisits([], 'fr', ['timing_belt'], []);
     expect(plan.gaps.map((i) => i.type)).toEqual(['timing_belt']);
     expect(plan.now).toEqual([]);
     expect(plan.next).toBeNull();
   });
 
   it('a done task is not work — it never opens a visit', () => {
-    const plan = buildVisits([due('oil_change', { dueAt: '2027-07-06' })], [], [task('oil_change', 'done')]);
+    const plan = buildVisits([due('oil_change', { dueAt: '2027-07-06' })], 'fr', [], [task('oil_change', 'done')]);
     expect(plan.now).toEqual([]);
     expect(plan.next).toBeNull();
     expect(plan.later).toEqual([]);
   });
 
   it('an empty forecast produces an empty plan, not an empty visit', () => {
-    const plan = buildVisits([], [], []);
+    const plan = buildVisits([], 'fr', [], []);
     expect(plan).toEqual({ now: [], next: null, later: [], gaps: [] });
   });
 });
@@ -132,13 +132,13 @@ describe('visitSignal — a card carries its worst news', () => {
     const plan = buildVisits([
       due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 }),
       due('fuel_filter', { projectedDueAt: '2027-04-02', daysUntilDue: 20 }),
-    ]);
+    ], 'fr');
     // the fuel filter is 20 days out → amber; the visit reads amber even though the CT is green.
     expect(plan.next && visitSignal(plan.next)).toBe('amber');
   });
 
   it('an overdue member makes the whole visit red', () => {
-    const plan = buildVisits([], [], [task('engine_mount', 'open'), task('oil_change', 'open')]);
+    const plan = buildVisits([], 'fr', [], [task('engine_mount', 'open'), task('oil_change', 'open')]);
     const visit = { ...plan.now[0], items: plan.now[0].items.map((i, n) => (n === 0 ? { ...i, signal: 'red' as const } : i)) };
     expect(visitSignal(visit)).toBe('red');
   });
@@ -150,7 +150,7 @@ describe('visitSignal — a card carries its worst news', () => {
 
 describe('visitRegions — a card names a part of the car', () => {
   it('a region visit names its own region', () => {
-    const plan = buildVisits([], [], [task('engine_mount', 'open')]);
+    const plan = buildVisits([], 'fr', [], [task('engine_mount', 'open')]);
     expect(visitRegions(plan.now[0])).toEqual(['hood']);
   });
 
@@ -159,7 +159,7 @@ describe('visitRegions — a card names a part of the car', () => {
       due('inspection', { dueAt: '2027-03-21' }), // windshield
       due('fuel_filter', { dueAt: '2027-04-02' }), // bay
       due('cabin_filter', { dueAt: '2027-04-10' }), // bay again
-    ]);
+    ], 'fr');
     expect(plan.next && visitRegions(plan.next)).toEqual(['windshield', 'bay']);
   });
 
@@ -170,7 +170,7 @@ describe('visitRegions — a card names a part of the car', () => {
 
 describe('visitClock / rowClock — one clock per visit, not one per row', () => {
   it('a dated cluster’s head owns the date AND the horizon', () => {
-    const plan = buildVisits([due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 })]);
+    const plan = buildVisits([due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 })], 'fr');
     const clock = visitClock(plan.next!);
     expect(clock.date).toBe('2027-03-21');
     expect(clock.horizon).toBeTruthy();
@@ -182,7 +182,7 @@ describe('visitClock / rowClock — one clock per visit, not one per row', () =>
     const plan = buildVisits([
       due('oil_change', { dueAt: '2027-07-06', daysUntilDue: 324 }),
       due('oil_filter', { dueAt: '2027-07-06', daysUntilDue: 324 }),
-    ]);
+    ], 'fr');
     const visit = plan.next!;
     expect(visit.items).toHaveLength(2);
     for (const item of visit.items) expect(rowClock(visit, item)).toEqual({ date: null, horizon: null });
@@ -192,14 +192,14 @@ describe('visitClock / rowClock — one clock per visit, not one per row', () =>
     const plan = buildVisits([
       due('inspection', { dueAt: '2027-03-21', daysUntilDue: 217 }),
       due('fuel_filter', { projectedDueAt: '2027-04-02', daysUntilDue: 230 }),
-    ]);
+    ], 'fr');
     const visit = plan.next!;
     expect(rowClock(visit, visit.items[0]).date).toBeNull();
     expect(rowClock(visit, visit.items[1]).date).toBe('2027-04-02');
   });
 
   it('a region visit has NO head clock, so every row keeps its own overshoot', () => {
-    const plan = buildVisits([due('oil_change', { overdue: true, dueAt: '2026-01-05', daysUntilDue: -40 })]);
+    const plan = buildVisits([due('oil_change', { overdue: true, dueAt: '2026-01-05', daysUntilDue: -40 })], 'fr');
     const visit = plan.now[0];
     expect(visitClock(visit)).toEqual({ date: null, horizon: null });
     expect(rowClock(visit, visit.items[0]).horizon).toContain('DÉPASSÉ');
@@ -212,7 +212,7 @@ describe('laterFrom — far is far, and says how far', () => {
       due('inspection', { dueAt: '2027-03-21' }),
       due('oil_change', { dueAt: '2028-07-06' }),
       due('spark_plug', { dueAt: '2030-04-28' }),
-    ]);
+    ], 'fr');
     expect(laterFrom(plan.later)).toBe('2028');
   });
 

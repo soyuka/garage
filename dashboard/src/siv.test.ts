@@ -20,7 +20,7 @@ describe('carteGriseNodes — SIV vehicle → carte grise nodes', () => {
     fiscalPower: 6,
   };
 
-  const byKey = (v: SivVehicle) => Object.fromEntries(carteGriseNodes(v).map((n) => [n.key, n]));
+  const byKey = (v: SivVehicle) => Object.fromEntries(carteGriseNodes(v, 'fr').map((n) => [n.key, n]));
 
   it('formats power as "75 kW · 102 ch"', () => {
     expect(byKey(full).power.value).toBe(`75${NBSP}kW · 102${NBSP}ch`);
@@ -47,15 +47,15 @@ describe('carteGriseNodes — SIV vehicle → carte grise nodes', () => {
   });
 
   it('marks every node verified (siv catalog)', () => {
-    expect(carteGriseNodes(full).every((n) => n.verified)).toBe(true);
+    expect(carteGriseNodes(full, 'fr').every((n) => n.verified)).toBe(true);
   });
 
   it('omits nodes for absent fields (no empty rows)', () => {
-    const keys = carteGriseNodes({ powerKw: 60, powerHp: 82 }).map((n) => n.key);
+    const keys = carteGriseNodes({ powerKw: 60, powerHp: 82 }, 'fr').map((n) => n.key);
     expect(keys).toEqual(['power']);
   });
 
   it('is empty for a bare response', () => {
-    expect(carteGriseNodes({})).toEqual([]);
+    expect(carteGriseNodes({}, 'fr')).toEqual([]);
   });
 });

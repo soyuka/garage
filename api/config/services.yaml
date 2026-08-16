@@ -111,6 +111,23 @@ services:
                 gemini: '@App\Agent\WebSearch\GeminiWebSearchClient'
             $backend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
 
+    # The voice (docs/voice-plan.md). Deliberately the SAME shape as the WebSearchClient seam above —
+    # runtime router over a !service_locator — so only the selected backend is instantiated and the
+    # unused provider never demands an API key. A Google Chirp 3 HD client drops in as one class, one
+    # enum case and one line here.
+    App\Speech\ElevenLabsSpeechClient:
+        arguments:
+            $apiKey: '%env(ELEVENLABS_API_KEY)%'
+            $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
+            $model: '%env(ELEVENLABS_MODEL)%'
+
+    App\Speech\SpeechClient:
+        class: App\Speech\SelectableSpeechClient
+        arguments:
+            $clients: !service_locator
+                elevenlabs: '@App\Speech\ElevenLabsSpeechClient'
+            $backend: '%env(enum:App\Speech\SpeechBackend:TTS_BACKEND)%'
+
     # Qwen counterpart: record the live model on the debug journal off each call.
     # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.
     App\Agent\QwenModelLogger:
@@ -182,6 +199,18 @@ when@test:
 
         # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler.
         App\Tests\Security\FakeOidcTokenHandler: ~
+
+        # The vendor TTS transport. Its own double rather than FixtureHttpClient because the speech
+        # tests assert on the OUTGOING request (key header, voice in the path, model in the body).
+        App\Tests\Mock\RecordingSpeechHttpClient:
+            public: true
+
+        App\Speech\ElevenLabsSpeechClient:
+            arguments:
+                $http: '@App\Tests\Mock\RecordingSpeechHttpClient'
+                $apiKey: '%env(ELEVENLABS_API_KEY)%'
+                $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
+                $model: '%env(ELEVENLABS_MODEL)%'
 
         # A default tenant for the suite: garage reads that send no token resolve to the same owner
         # the tests seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.

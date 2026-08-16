@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useLocale, useT } from './i18n/LocaleProvider';
 import './tokens/atelier.css';
 import './floor/floor.css';
 import './scene/scene.css';
@@ -52,6 +53,7 @@ import type { CameraFocus } from './scene/cameraRig';
 import { focusForReveal, revealFor, revealSurvives, type RevealState } from './scene/reveal';
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
+import { useAudition, useVoice } from './noyau/useVoice';
 import { busy } from './noyau/state';
 import type { DecisionItem } from './noyau/state';
 import { ABANDON_MS, STAGE_INIT, stageReduce, type Driver, type StageState } from './pilot';
@@ -69,6 +71,8 @@ import type { Iri, MercureFrame, PlannedPart, PlannedTask, UIAction, VehicleBund
 // (slice 4) and the agent turn (slice 5) feed this orchestrator next; today the composer only listens.
 
 export function Atelier() {
+  const [locale] = useLocale();
+  const t = useT();
   const path = useHashPath();
   const seg = vehicleSegFromHash(path);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
@@ -77,6 +81,10 @@ export function Atelier() {
   const [error, setError] = useState<string | null>(null);
   const { state, dispatch } = useNoyau();
   const reduced = useReducedMotion();
+  // The audition. Ships muted; the notice cards are what it reads, so it can never say anything that
+  // is not also on screen (CHOREOGRAPHY § Audition — speech, for answers).
+  const [audition, toggleAudition] = useAudition();
+  useVoice(state.notices, audition);
   // One session per tab — scopes the agent's render-intent topic (slice 5 posts turns onto it).
   const [sessionId] = useState(() => crypto.randomUUID());
   // The owner's PILOT topic: render intents driven from an external MCP host (Claude Code, Goose…),
@@ -228,7 +236,7 @@ export function Atelier() {
     clearWatchdog();
     watchdog.current = window.setTimeout(() => {
       // toast BEFORE turn/end so the done filament settles amber (worstTone), not a false green.
-      dispatch({ type: 'toast', tone: 'warn', message: "Le tour ne répond plus — réessayez." });
+      dispatch({ type: 'toast', tone: 'warn', message: t.atelier.turnStalled });
       dispatch({ type: 'turn', phase: 'end', failed: true });
     }, DWELL.watchdog);
   }, [clearWatchdog, dispatch]);
@@ -355,7 +363,7 @@ export function Atelier() {
         // Absent `parts` → itemise the target task's own planned parts (option a); the "Ajouter" merge is
         // idempotent (server dedups by ref). No parts anywhere → nothing to project.
         const parts = frame.parts ?? (bundleRef.current?.vehicle.plannedTasks ?? []).find((t) => t.id === frame.taskId)?.parts ?? [];
-        if (parts.length > 0) setCta(partsCtaFor(frame.service, frame.taskId, parts));
+        if (parts.length > 0) setCta(partsCtaFor(frame.service, frame.taskId, parts, locale));
       } else if (frame.type === 'revealAssembly') {
         revealRegion(frame.region, frame.partKeys);
       } else if (frame.type === 'focusRegion') {
@@ -387,7 +395,7 @@ export function Atelier() {
       if (out.dropped) {
         // Never a silent failure: an answer about a car that never arrived is dropped, not shown over
         // whichever car happens to be on screen — and the operator is told it happened.
-        dispatch({ type: 'toast', tone: 'warn', message: `Réponse abandonnée : le véhicule n’est pas arrivé (${out.dropped}).` });
+        dispatch({ type: 'toast', tone: 'warn', message: t.atelier.answerDropped(String(out.dropped)) });
       }
       if (expireTimer.current != null) window.clearTimeout(expireTimer.current);
       if (stage.current.awaiting !== null) expireTimer.current = window.setTimeout(() => runStage({ type: 'expire', at: performance.now() }), ABANDON_MS);
@@ -423,7 +431,7 @@ export function Atelier() {
               setBundle(b);
               if (crossed) {
                 // carry the raw type + vehicle so the à-décider notify row can offer "planifier ○"
-                dispatch({ type: 'concern', message: `${serviceLabel(crossed)} en retard`, serviceType: crossed, vehicleIri: iri });
+                dispatch({ type: 'concern', message: t.atelier.overdueConcern(serviceLabel(crossed, locale)), serviceType: crossed, vehicleIri: iri });
                 if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
                 crossTimer.current = window.setTimeout(() => {
                   if (phaseRef.current !== 'working') dispatch({ type: 'settle' }); // don't cut a live turn
@@ -447,7 +455,7 @@ export function Atelier() {
         if (frame.phase === 'end') closeRun();
         else openRun(driver);
       } else if (frame.type === 'status') {
-        dispatch({ type: 'status', message: frame.message, driver });
+        dispatch({ type: 'status', message: frame.message, tool: frame.tool, driver });
         openRun(driver);
       } else if (frame.type === 'toast') {
         dispatch({ type: 'toast', tone: frame.tone, message: frame.message, driver });
@@ -482,7 +490,7 @@ export function Atelier() {
     // Carry the CTA being replied to as one bounded line (NOT a transcript), so a terse reply lands in
     // context against the question the agent just asked. Capture BEFORE clearing the surfaces.
     const pendingContext = cta
-      ? [cta.headline, cta.finding, cta.actions.length ? `Options : ${cta.actions.map((a) => a.label).join(', ')}` : '']
+      ? [cta.headline, cta.finding, cta.actions.length ? t.atelier.ctaOptions(cta.actions.map((a) => a.label).join(', ')) : '']
           .filter(Boolean)
           .join(' — ')
       : undefined;
@@ -497,7 +505,7 @@ export function Atelier() {
     postTurn(instruction, { sessionId, selectedId: selectedIri ?? undefined, summary, pendingContext }).catch((e) => {
       clearWatchdog();
       // toast BEFORE turn/end so the done filament settles red (worstTone), not a false green.
-      dispatch({ type: 'toast', tone: 'alarm', message: `Échec de la requête : ${(e as Error).message}` });
+      dispatch({ type: 'toast', tone: 'alarm', message: t.atelier.requestFailed((e as Error).message) });
       dispatch({ type: 'turn', phase: 'end', failed: true });
     });
   };
@@ -561,24 +569,24 @@ export function Atelier() {
     const locked = busy(state);
     const chips: QuickAction[] = [];
     chips.push({
-      label: 'Données',
+      label: t.chip.data,
       disabled: locked,
       onClick: () =>
         runLocalAnswer({
-          steps: ['ouverture du dossier…', 'lecture des données véhicule…'],
-          failMessage: 'données indisponibles',
+          steps: t.chip.dataSteps,
+          failMessage: t.chip.dataFail,
           resolve: async () => ({ effect: openFacts }),
         }),
     });
     if (b.records.length > 0) {
       chips.push({
-        label: 'Historique',
+        label: t.chip.history,
         disabled: locked,
         zone: 'centre',
         onClick: () =>
           runLocalAnswer({
-            steps: ['ouverture du carnet…', 'relecture des visites…'],
-            failMessage: 'carnet indisponible',
+            steps: t.chip.historySteps,
+            failMessage: t.chip.historyFail,
             resolve: async () => ({ effect: openHistory }),
           }),
       });
@@ -586,23 +594,23 @@ export function Atelier() {
     if (b.vehicle.kType != null) {
       const kType = b.vehicle.kType;
       chips.push({
-        label: 'Capacités fluides',
+        label: t.chip.fluids,
         disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
-            steps: ['consultation des capacités…', 'lecture des specs fluides…'],
-            failMessage: 'le catalogue ne répond pas',
+            steps: t.chip.fluidsSteps,
+            failMessage: t.chip.fluidsFail,
             resolve: async () => {
               let vols;
               try {
                 vols = await getFillVolumes(kType);
               } catch {
-                throw new Error('le catalogue ne répond pas');
+                throw new Error(t.chip.fluidsFail);
               }
-              const nodes = fluidNodes(vols);
-              if (nodes.length === 0) throw new Error('aucune capacité fluide connue pour ce véhicule');
-              return { focus: { panel: 'specs', keys: [], title: 'Capacités fluides', nodes } };
+              const nodes = fluidNodes(vols, locale);
+              if (nodes.length === 0) throw new Error(t.chip.fluidsEmpty);
+              return { focus: { panel: 'specs', keys: [], title: t.chip.fluids, nodes } };
             },
           }),
       });
@@ -611,15 +619,15 @@ export function Atelier() {
     // service ("Pièces dispo · Sonde de température") because it itemised the most-urgent task that
     // happened to carry refs, and its primary "Ajouter à la tâche" merged parts ALREADY on that task —
     // an idempotent no-op behind a big orange button.
-    if (buildShoppingList(b).groups.length > 0) {
+    if (buildShoppingList(b, locale).groups.length > 0) {
       chips.push({
-        label: 'Pièces à commander',
+        label: t.chip.parts,
         disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
-            steps: ['relecture des tâches ouvertes…', 'rassemblement des références…'],
-            failMessage: 'pièces indisponibles',
+            steps: t.chip.partsSteps,
+            failMessage: t.chip.partsFail,
             resolve: async () => ({ focus: { panel: 'parts', keys: [] } }),
           }),
       });
@@ -627,36 +635,36 @@ export function Atelier() {
     if (b.vehicle.plate) {
       const plate = b.vehicle.plate;
       chips.push({
-        label: 'Fiche technique',
+        label: t.chip.spec,
         disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
-            steps: ['lecture de la carte grise…', 'préparation de la fiche technique…'],
-            failMessage: "l'immatriculation ne répond pas",
+            steps: t.chip.specSteps,
+            failMessage: t.chip.specFail,
             resolve: async () => {
               let siv;
               try {
                 siv = await getSivVehicle(plate);
               } catch {
-                throw new Error("l'immatriculation ne répond pas");
+                throw new Error(t.chip.specFail);
               }
-              const nodes = carteGriseNodes(siv);
-              if (nodes.length === 0) throw new Error('aucune donnée SIV pour cette plaque');
-              return { focus: { panel: 'specs', keys: [], title: 'Fiche technique', nodes } };
+              const nodes = carteGriseNodes(siv, locale);
+              if (nodes.length === 0) throw new Error(t.chip.specEmpty);
+              return { focus: { panel: 'specs', keys: [], title: t.chip.spec, nodes } };
             },
           }),
       });
     }
     if (b.records.length > 0) {
       chips.push({
-        label: 'Carnet · dépenses',
+        label: t.chip.carnet,
         disabled: locked,
         zone: 'colonne',
         onClick: () =>
           runLocalAnswer({
-            steps: ['lecture du carnet…', 'calcul des dépenses…'],
-            failMessage: 'carnet indisponible',
+            steps: t.chip.carnetSteps,
+            failMessage: t.chip.carnetFail,
             resolve: async () => ({ focus: { panel: 'carnet', keys: [] } }),
           }),
       });
@@ -682,7 +690,7 @@ export function Atelier() {
       .then(() => getVehicleBundle(iri))
       // Guard POST-await so a re-read landing after navigation can't overwrite the now-open vehicle.
       .then((b) => patchCurrentBundle(iri, () => b))
-      .catch((e) => dispatch({ type: 'toast', tone: 'alarm', message: `Échec de l’ajout : ${(e as Error).message}` }));
+      .catch((e) => dispatch({ type: 'toast', tone: 'alarm', message: t.atelier.addFailed((e as Error).message) }));
   };
 
   // ── C2 à-décider inbox handlers. `resolve` drops a decided item from the queue (a "vu" dismiss or the
@@ -698,7 +706,7 @@ export function Atelier() {
       .then(() => {
         if (selectedIriRef.current === vIri) afterTaskWrite(vIri);
       })
-      .catch((e) => alarm(`Échec de la planification : ${(e as Error).message}`));
+      .catch((e) => alarm(t.atelier.planFailed((e as Error).message)));
   };
 
   // ── #9 Vehicle CRUD + facts (the manual surfaces; the agent does the same via NL). Every write also
@@ -713,7 +721,7 @@ export function Atelier() {
         setVehicles((prev) => upsertVehicle(prev, v)); // Mercure 'created' also fans it; optimistic so the nav resolves now
         window.location.hash = hashForVehicle(v['@id']); // drive into the blank car to fill it in
       })
-      .catch((e) => alarm(`Échec de la création : ${(e as Error).message}`));
+      .catch((e) => alarm(t.atelier.createFailed((e as Error).message)));
   };
 
   const onPatchVehicle = (patch: VehiclePatch) => {
@@ -726,7 +734,7 @@ export function Atelier() {
       // nav must NOT overwrite the now-open vehicle (defeats the heroBundle @id gate → stuck loading).
       .then((b) => patchCurrentBundle(iri, () => b))
       .catch((e) => {
-        alarm(`Échec de la mise à jour : ${(e as Error).message}`);
+        alarm(t.atelier.updateFailed((e as Error).message));
         getVehicleBundle(iri)
           .then((b) => patchCurrentBundle(iri, () => b)) // reconcile the optimistic merge
           .catch(() => undefined);
@@ -742,7 +750,7 @@ export function Atelier() {
         setBundle(null);
         window.location.hash = '#/'; // the car is gone — back to the parc
       })
-      .catch((e) => alarm(`Échec de la suppression : ${(e as Error).message}`));
+      .catch((e) => alarm(t.atelier.deleteFailed((e as Error).message)));
   };
 
   const onAddFact = (fact: { key: string; value: string; unit?: string | null }) => {
@@ -750,7 +758,7 @@ export function Atelier() {
     if (!iri) return;
     postVehicleFact(iri, fact)
       .then((fresh) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: fresh.facts, factCount: fresh.factCount } })))
-      .catch((e) => alarm(`Échec de l’ajout : ${(e as Error).message}`));
+      .catch((e) => alarm(t.atelier.addFailed((e as Error).message)));
   };
 
   const onRemoveFact = (key: string) => {
@@ -765,7 +773,7 @@ export function Atelier() {
           : undefined,
       )
       .catch((e) => {
-        alarm(`Échec de la suppression : ${(e as Error).message}`);
+        alarm(t.atelier.deleteFailed((e as Error).message));
         if (selectedIriRef.current === iri)
           getVehicle(iri).then((v) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: v.facts } }))).catch(() => undefined);
       });
@@ -812,30 +820,30 @@ export function Atelier() {
     if (next && iri)
       getVehicleTasks(iri, true)
         .then((ts) => selectedIriRef.current === iri && setDismissedTasks(ts))
-        .catch((e) => alarm(`Échec du chargement : ${(e as Error).message}`));
+        .catch((e) => alarm(t.atelier.loadFailed((e as Error).message)));
   };
 
   const checklist = {
     showDismissed,
     onToggleDismissed,
-    onSetStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') => taskWrite(() => patchTaskStatus(taskIri, status), 'Échec de la mise à jour'),
-    onEditTask: (taskIri: string, fields: TaskEdit) => taskWrite(() => updateTask(taskIri, fields), 'Échec de la mise à jour'),
-    onAddTask: (input: PlannedTaskInput) => taskWrite((iri) => createTask(iri, input), 'Échec de l’ajout'),
-    onAddPart: (taskIri: string, part: TaskPartInput) => taskWrite(() => addTaskPart(taskIri, part), 'Échec de l’ajout'),
-    onEditPart: (taskIri: string, partId: string, fields: TaskPartInput) => taskWrite(() => updateTaskPart(taskIri, partId, fields), 'Échec de la mise à jour'),
-    onRemovePart: (taskIri: string, partId: string) => taskWrite(() => removeTaskPart(taskIri, partId), 'Échec de la suppression'),
-    onArchiveDone: () => taskWrite((iri) => archiveTasks(iri), 'Échec de l’archivage'),
+    onSetStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') => taskWrite(() => patchTaskStatus(taskIri, status), t.atelier.failUpdate),
+    onEditTask: (taskIri: string, fields: TaskEdit) => taskWrite(() => updateTask(taskIri, fields), t.atelier.failUpdate),
+    onAddTask: (input: PlannedTaskInput) => taskWrite((iri) => createTask(iri, input), t.atelier.failAdd),
+    onAddPart: (taskIri: string, part: TaskPartInput) => taskWrite(() => addTaskPart(taskIri, part), t.atelier.failAdd),
+    onEditPart: (taskIri: string, partId: string, fields: TaskPartInput) => taskWrite(() => updateTaskPart(taskIri, partId, fields), t.atelier.failUpdate),
+    onRemovePart: (taskIri: string, partId: string) => taskWrite(() => removeTaskPart(taskIri, partId), t.atelier.failDelete),
+    onArchiveDone: () => taskWrite((iri) => archiveTasks(iri), t.atelier.failArchive),
   };
 
   if (error) {
     return (
       <div className="at-auth-screen">
         <div className="at-auth-card">
-          <h1>Erreur de chargement</h1>
+          <h1>{t.atelier.loadError}</h1>
           <p>{error}</p>
           <div style={{ display: 'flex', gap: 'var(--at-space-3)' }}>
             <button type="button" className="at-auth-button" onClick={() => location.reload()}>
-              Réessayer
+              {t.atelier.retry}
             </button>
             <button
               type="button"
@@ -845,7 +853,7 @@ export function Atelier() {
                 window.location.hash = '#/';
               }}
             >
-              ← Le Parc
+              {t.atelier.backToParc}
             </button>
           </div>
         </div>
@@ -859,7 +867,7 @@ export function Atelier() {
     return (
       <div className="at-scene">
         <div className="at-scene-top">
-          <a href="#/" className="at-scene-back">← Le Parc</a>
+          <a href="#/" className="at-scene-back">{t.atelier.backToParc}</a>
           <Identity onJournal={() => setJournalOpen(true)} onDossier={heroBundle ? () => setDossierOpen(true) : undefined} />
           <span style={{ flex: 1 }} />
         </div>
@@ -882,11 +890,11 @@ export function Atelier() {
 
         {vehicleMissing ? (
           <div className="at-scene-main">
-            <div className="at-scene-empty">Véhicule introuvable — <a href="#/" className="at-scene-back">retour au parc</a></div>
+            <div className="at-scene-empty">{t.atelier.vehicleNotFound}<a href="#/" className="at-scene-back">{t.atelier.backToParcInline}</a></div>
           </div>
         ) : !heroBundle ? (
           <div className="at-scene-main">
-            <div className="at-scene-empty">Chargement du véhicule…</div>
+            <div className="at-scene-empty">{t.atelier.loadingVehicle}</div>
           </div>
         ) : (
           <SceneView
@@ -902,6 +910,9 @@ export function Atelier() {
             onClearEmber={() => dispatch({ type: 'clearEmber' })}
             onResolveDecision={onResolveDecision}
             onScheduleDecision={onScheduleDecision}
+            onDismissNotice={(id) => dispatch({ type: 'dismissNotice', id })}
+            audition={audition}
+            onToggleAudition={toggleAudition}
             onComposerFocus={(active) => dispatch({ type: 'typing', active })}
             onSubmit={send}
             cta={cta}
@@ -930,8 +941,8 @@ export function Atelier() {
                 <button
                   type="button"
                   className="at-scene-sim"
-                  title="Interrompre le tour"
-                  aria-label="Interrompre le tour"
+                  title={t.atelier.cancelTurn}
+                  aria-label={t.atelier.cancelTurn}
                   onClick={() => void cancelTurn(sessionId).catch(() => undefined)}
                 >
                   ✕
@@ -948,13 +959,13 @@ export function Atelier() {
   return (
     <div className="at-parc-page">
       <div className="at-parc-page-top">
-        <h1 className="at-parc-page-title" style={{ margin: 0 }}>Le Parc</h1>
+        <h1 className="at-parc-page-title" style={{ margin: 0 }}>{t.atelier.parc}</h1>
         <span style={{ flex: 1 }} />
         <Identity onJournal={() => setJournalOpen(true)} />
       </div>
       <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
       {loadingParc ? (
-        <p className="at-parc-empty">Chargement du parc…</p>
+        <p className="at-parc-empty">{t.atelier.loadingParc}</p>
       ) : (
         <ParcLot vehicles={vehicles} reduced={reduced} onSelect={(iri) => (window.location.hash = hashForVehicle(iri))} onAddVehicle={onAddVehicle} />
       )}
@@ -964,6 +975,7 @@ export function Atelier() {
 
 /** The signed-in identity + the dossier (hero only) + the journal + sign-out (top-right chrome). */
 function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?: () => void }) {
+  const t = useT();
   const id = getIdentity();
   const chip: React.CSSProperties = {
     appearance: 'none',
@@ -977,9 +989,9 @@ function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?:
   };
   return (
     <span className="at-scene-back" style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}>
-      <span>{id.name ?? id.email ?? 'connecté'}</span>
+      <span>{id.name ?? id.email ?? t.atelier.signedIn}</span>
       {onDossier && (
-        <button type="button" onClick={onDossier} className="at-identity-chip" title="Dossier du véhicule" aria-label="Ouvrir le dossier du véhicule">
+        <button type="button" onClick={onDossier} className="at-identity-chip" title={t.atelier.dossierTitle} aria-label={t.atelier.dossierAria}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path
               d="M2 4.5c0-.55.45-1 1-1h3.2l1.1 1.4h5.7c.55 0 1 .45 1 1v6.6c0 .55-.45 1-1 1H3c-.55 0-1-.45-1-1V4.5z"
@@ -989,10 +1001,10 @@ function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?:
               strokeLinejoin="round"
             />
           </svg>
-          dossier
+          {t.atelier.dossier}
         </button>
       )}
-      <button type="button" onClick={onJournal} className="at-identity-chip" title="Journal de l'agent" aria-label="Ouvrir le journal de l'agent">
+      <button type="button" onClick={onJournal} className="at-identity-chip" title={t.atelier.journalTitle} aria-label={t.atelier.journalAria}>
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
           <path
             d="M3 2.8c0-.44.36-.8.8-.8h7.9c.44 0 .8.36.8.8v10.9l-1.9-1.1-1.9 1.1-1.9-1.1-1.9 1.1-1.9-1.1V2.8z"
@@ -1007,7 +1019,7 @@ function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?:
       </button>
       <Credits />
       <button type="button" onClick={() => logout()} style={chip}>
-        Déconnexion
+        {t.atelier.signOut}
       </button>
     </span>
   );

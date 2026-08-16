@@ -63,7 +63,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'toast' => new McpTool(
             title: 'Toast',
-            description: 'Show a transient one-line acknowledgement on the dashboard, in French — what you just did or found ("Vidange enregistrée", "Aucune référence au catalogue"). tone ∈ info|ok|warn|alarm; "alarm" also docks a decision item in the à-décider inbox. This is how the user hears you: an MCP transcript they are not reading is not an answer.',
+            description: 'Show a transient one-line acknowledgement on the dashboard, in the interface language — what you just did or found ("Vidange enregistrée" / "Oil change recorded"). tone ∈ info|ok|warn|alarm; "alarm" also docks a decision item in the à-décider inbox. This is how the user hears you: an MCP transcript they are not reading is not an answer.',
             input: ToastInput::class,
             structuredContent: false,
             processor: ToastProcessor::class,
@@ -71,7 +71,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'narrate_step' => new McpTool(
             title: 'Narrate Step',
-            description: 'Put ONE running step sentence on the dashboard heartbeat, in French, first person present ("Je relis le carnet…", "Je cherche la référence…"). The orb lifts to work on the first one, and each call adds a step chip — so narrate before a slow lookup, not after. Close the run with settle_dashboard.',
+            description: 'Put ONE running step sentence on the dashboard heartbeat, in the interface language, first person present ("Je relis le carnet…" / "Rereading the logbook…"). The orb lifts to work on the first one, and each call adds a step chip — so narrate before a slow lookup, not after. Close the run with settle_dashboard.',
             input: NarrateStepInput::class,
             structuredContent: false,
             processor: NarrateStepProcessor::class,

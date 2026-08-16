@@ -1,4 +1,5 @@
 import './visitprojection.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatDate } from '../format';
 import { ladder, visitRegions, type Visit } from './visits';
 import type { BodyRegion } from './anchors';
@@ -30,17 +31,18 @@ export function VisitProjection({
   onAimRegion?: (region: BodyRegion) => void;
   heldRegion?: BodyRegion | null;
 }) {
+  const t = useT();
   if (visits.length === 0) return null;
   const rungs = ladder(visits);
   const services = visits.reduce((n, v) => n + v.items.length, 0);
 
   return (
-    <aside className="at-ladder" data-reduced={reduced ? 'true' : undefined} role="group" aria-label="Plus tard">
+    <aside className="at-ladder" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={t.rail.later}>
       <div className="at-proj-head">
-        <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
+        <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
         <div className="at-ladder-head">PLUS TARD</div>
         {onDismiss && (
-          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer l’échéancier">
+          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label={t.misc.closeSchedule}>
             ✕
           </button>
         )}
@@ -76,8 +78,10 @@ export function VisitProjection({
 
 /** A rung's content: aimable when the visit reads off a body region, plain text otherwise. */
 function RungBody({ visit, onAim, held }: { visit: Visit; onAim?: (region: BodyRegion) => void; held: BodyRegion | null }) {
+  const [locale] = useLocale();
+  const t = useT();
   const aim = visitRegions(visit)[0];
-  const date = visit.date ? formatDate(visit.date) : 'sans échéance';
+  const date = visit.date ? formatDate(visit.date, locale) : t.forecast.noDueDateLower;
   const services = visit.items.map((item) => item.label).join(' + ');
   if (!aim || !onAim) {
     return (
@@ -93,7 +97,7 @@ function RungBody({ visit, onAim, held }: { visit: Visit; onAim?: (region: BodyR
       type="button"
       className="at-ladder-aim"
       data-held={isHeld ? 'true' : undefined}
-      title={isHeld ? 'Revenir à la vue d’ensemble' : 'Voir cette zone sur le véhicule'}
+      title={isHeld ? t.proj.backToOverview : t.proj.seeOnCar}
       onClick={() => onAim(aim)}
     >
       <span className="at-ladder-date">{date}</span>

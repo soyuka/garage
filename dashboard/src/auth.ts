@@ -14,6 +14,8 @@
 // Reads are public; the Bearer unlocks /agent/turn + every write.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { currentLocale } from './i18n/locale';
+
 const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'http://casdoor:8000').replace(/\/$/, '');
 const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? 'monparc-dashboard-0a1b2c3d';
 const API = import.meta.env.VITE_API_BASE ?? '';
@@ -224,6 +226,11 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
   const token = getToken();
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
+  // The interface language, announced the standard way. The API reads it via Symfony's
+  // `set_locale_from_accept_language`, so nothing needs a bespoke field on any payload. Set
+  // explicitly rather than left to the browser: the operator's choice (and `?lang=`) must win over
+  // whatever languages the browser itself is configured with.
+  headers.set('Accept-Language', currentLocale());
 
   const res = await fetch(input, { ...init, headers });
   if (res.status === 401) {

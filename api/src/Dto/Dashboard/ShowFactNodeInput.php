@@ -11,7 +11,7 @@ final class ShowFactNodeInput
     #[ApiProperty(description: 'A stable identifier for the line, e.g. "oil_capacity". Used as the row key; when it matches a service type it also lights that body region on the car.')]
     public string $key = '';
 
-    #[ApiProperty(description: 'The French label shown on the line, e.g. "Huile moteur".')]
+    #[ApiProperty(description: 'The label shown on the line, in the interface language, e.g. "Huile moteur" / "Engine oil".')]
     public string $label = '';
 
     #[ApiProperty(description: 'The value, ALREADY formatted for display — the dashboard renders it verbatim. e.g. "4,3 l", "5W-30", "Diesel".')]

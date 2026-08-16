@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useLocale } from '../i18n/LocaleProvider';
 import '../tokens/atelier.css';
 import './scene.css';
 import { FIXTURES, SCENARIOS, type Scenario } from '../fixtures/vehicles';
@@ -67,6 +68,7 @@ const RUNGS: { id: Rung; label: string }[] = [
 ];
 
 export function AtelierScene() {
+  const [locale] = useLocale();
   const [scenario, setScenario] = useState<Scenario>('healthy');
   const [rung, setRung] = useState<Rung>('b');
   const [reducedToggle, setReducedToggle] = useState(false);
@@ -170,8 +172,8 @@ export function AtelierScene() {
     const idx = crossableIdx;
     if (idx === -1) return;
     const u = bundle.vehicle;
-    const reading = u.usageValue != null ? ` · ${formatReading(u.usageValue, u.usageUnit)}` : '';
-    const msg = `${serviceLabel(bundle.forecast.due[idx].type)} en retard${reading}`;
+    const reading = u.usageValue != null ? ` · ${formatReading(u.usageValue, u.usageUnit, locale)}` : '';
+    const msg = `${serviceLabel(bundle.forecast.due[idx].type, locale)} en retard${reading}`;
     setCrossed(true);
     dispatch({ type: 'concern', message: msg });
     if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
@@ -251,6 +253,7 @@ export function AtelierScene() {
         ]}
         onClearEmber={() => dispatch({ type: 'clearEmber' })}
         onResolveDecision={(id) => dispatch({ type: 'resolve', id })}
+        onDismissNotice={(id) => dispatch({ type: 'dismissNotice', id })}
         onComposerFocus={(active) => dispatch({ type: 'typing', active })}
         composerExtras={
           <>

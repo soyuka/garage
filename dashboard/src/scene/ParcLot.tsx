@@ -1,4 +1,7 @@
 import { Suspense, useEffect, useRef, useState } from 'react';
+import { useLocale, useT } from '../i18n/LocaleProvider';
+import type { Locale } from '../i18n/locale';
+import { messages } from '../i18n/messages';
 import { Canvas } from '@react-three/fiber';
 import { View } from '@react-three/drei';
 import { SilhouetteCar } from './SilhouetteCar';
@@ -100,11 +103,12 @@ function paintFor(make: string): string {
 
 type ParcTag = { text: string; tone: 'ok' | 'soon' | 'late' | 'gap' };
 
-function tagFor(signal: Signal | 'unknown'): ParcTag {
-  if (signal === 'red') return { text: 'EN RETARD', tone: 'late' };
-  if (signal === 'amber') return { text: 'BIENTÔT', tone: 'soon' };
-  if (signal === 'green') return { text: 'OK', tone: 'ok' };
-  return { text: 'NON SUIVI', tone: 'gap' };
+function tagFor(signal: Signal | 'unknown', locale: Locale): ParcTag {
+  const t = messages(locale);
+  if (signal === 'red') return { text: t.signal.late, tone: 'late' };
+  if (signal === 'amber') return { text: t.signal.soon, tone: 'soon' };
+  if (signal === 'green') return { text: t.signal.ok, tone: 'ok' };
+  return { text: t.signal.untracked, tone: 'gap' };
 }
 
 // The next-due one-liner horizon. Overdue is precise (§5 exception); else the rounded horizon. Every
@@ -112,14 +116,18 @@ function tagFor(signal: Signal | 'unknown'): ParcTag {
 // due: a negative usageRemaining (km/h overshoot) wins; else a negative day count; else bare DÉPASSÉ.
 // usageRemaining can be POSITIVE on a time-overdue service (km left but the calendar lapsed) — never
 // format that as an overshoot (the live MAZDA: overdue 113 j, yet 6 548 km remaining).
-export function horizonFor(n: NextDue): string {
+export function horizonFor(n: NextDue, locale: Locale): string {
+  const t = messages(locale);
   if (n.overdue) {
-    if (n.usageRemaining != null && n.usageRemaining < 0 && n.usageUnit) return formatOverdue(n.usageRemaining, n.usageUnit);
-    if (n.daysUntilDue != null && n.daysUntilDue < 0) return formatOverdue(Math.abs(n.daysUntilDue), n.daysUntilDue === -1 ? 'jour' : 'jours');
-    return 'DÉPASSÉ';
+    if (n.usageRemaining != null && n.usageRemaining < 0 && n.usageUnit) return formatOverdue(n.usageRemaining, n.usageUnit, locale);
+    if (n.daysUntilDue != null && n.daysUntilDue < 0) {
+      const days = Math.abs(n.daysUntilDue);
+      return formatOverdue(days, t.forecast.dayUnit(days), locale);
+    }
+    return t.forecast.overdue;
   }
-  if (n.daysUntilDue != null) return formatHorizon(n.daysUntilDue);
-  if (n.usageRemaining != null && n.usageUnit) return `dans ${formatReading(n.usageRemaining, n.usageUnit)}`;
+  if (n.daysUntilDue != null) return formatHorizon(n.daysUntilDue, locale);
+  if (n.usageRemaining != null && n.usageUnit) return t.forecast.inReading(formatReading(n.usageRemaining, n.usageUnit, locale));
   return '';
 }
 
@@ -136,17 +144,19 @@ function ParcCard({
   reduced: boolean;
   paused: boolean;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const v = vehicle;
   const signal = parcSignal(v);
-  const tag = tagFor(signal);
+  const tag = tagFor(signal, locale);
   const bodyClass = bodyClassFor(v.vehicleType);
   const paint = paintFor(v.make);
   const sub = [v.year, v.engineVariant].filter(Boolean).join(' · ');
-  const horizon = v.nextDue ? horizonFor(v.nextDue) : null;
+  const horizon = v.nextDue ? horizonFor(v.nextDue, locale) : null;
   const activate = onSelect ? () => onSelect(v['@id']) : undefined;
   // A blank just-created vehicle has empty make/model — degrade the name (and the button's accessible
   // name) to a readable fallback instead of bare whitespace.
-  const name = [v.make, v.model].filter(Boolean).join(' ') || 'Véhicule sans nom';
+  const name = [v.make, v.model].filter(Boolean).join(' ') || t.parc.unnamed;
 
   const stageRef = useRef<HTMLDivElement>(null);
   const inView = useInView(stageRef);
@@ -184,9 +194,9 @@ function ParcCard({
       </div>
 
       <div className="at-parc-meta">
-        <span className="at-label at-parc-meta-label">Kilométrage</span>
+        <span className="at-label at-parc-meta-label">{t.parc.usage}</span>
         <span className="at-parc-mileage">
-          {v.usageValue != null ? formatReading(v.usageValue, v.usageUnit) : '—'}
+          {v.usageValue != null ? formatReading(v.usageValue, v.usageUnit, locale) : '—'}
         </span>
       </div>
 
@@ -198,11 +208,11 @@ function ParcCard({
               {/* The backend nextDue.label is unreliable (sometimes the raw type "oil_change",
                   sometimes an English component "foam element"), so localize from the type — matching
                   the floor leaves (serviceLabel) and keeping the parc French-correct. */}
-              <span className="at-parc-due-label">{serviceLabel(v.nextDue.type)}</span>
+              <span className="at-parc-due-label">{serviceLabel(v.nextDue.type, locale)}</span>
               {horizon && <span className="at-parc-due-horizon">{horizon}</span>}
             </>
           ) : (
-            <span className="at-parc-due-label at-parc-due-none">Aucune échéance</span>
+            <span className="at-parc-due-label at-parc-due-none">{t.parc.nothingDue}</span>
           )}
         </span>
         <span className={`at-tag at-tag--${tag.tone}`}>{tag.text}</span>
@@ -212,12 +222,14 @@ function ParcCard({
 }
 
 function AddCard({ onAdd }: { onAdd: () => void }) {
+  const t = useT();
+
   return (
-    <button type="button" className="at-parc-card at-parc-add glass" onClick={onAdd} aria-label="Ajouter un véhicule au parc">
+    <button type="button" className="at-parc-card at-parc-add glass" onClick={onAdd} aria-label={t.parc.addAria}>
       <span className="at-parc-add-glyph" aria-hidden="true">
         +
       </span>
-      <span className="at-parc-add-label">Ajouter un véhicule</span>
+      <span className="at-parc-add-label">{t.parc.add}</span>
     </button>
   );
 }
@@ -227,13 +239,14 @@ export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotPr
   // WebGL probed once on mount (SSR-safe: false until mounted, then the real capability).
   const [live, setLive] = useState(false);
   useEffect(() => setLive(detectWebgl()), []);
+  const t = useT();
   const pageVisible = usePageVisible();
   const paused = !pageVisible;
 
   if (ordered.length === 0 && !onAddVehicle) {
     return (
       <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label="Le parc">
-        <p className="at-parc-empty">Aucun véhicule dans le parc.</p>
+        <p className="at-parc-empty">{t.parc.empty}</p>
       </section>
     );
   }

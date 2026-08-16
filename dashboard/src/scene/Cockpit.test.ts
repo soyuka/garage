@@ -33,15 +33,15 @@ describe('engineBadge — join variant + code, either alone, null when neither',
 
 describe('healthStat — the cockpit health readout', () => {
   it('rounds the score to the nearest 5 with a non-breaking-space percent', () => {
-    expect(healthStat({ status: 'green', score: 72, overdue: 0, dueSoon: 0, tracked: 3, gaps: 0 })).toEqual({ text: '70 %', status: 'green' });
+    expect(healthStat({ status: 'green', score: 72, overdue: 0, dueSoon: 0, tracked: 3, gaps: 0 }, 'fr')).toEqual({ text: '70 %', status: 'green' });
   });
 
   it('carries the signal status through for the glow', () => {
-    expect(healthStat({ status: 'red', score: 45, overdue: 2, dueSoon: 0, tracked: 3, gaps: 0 })?.status).toBe('red');
+    expect(healthStat({ status: 'red', score: 45, overdue: 2, dueSoon: 0, tracked: 3, gaps: 0 }, 'fr')?.status).toBe('red');
   });
 
   it('is null when the rollup is missing or has no score', () => {
-    expect(healthStat(undefined)).toBeNull();
-    expect(healthStat({ status: 'unknown', score: null, overdue: 0, dueSoon: 0, tracked: 0, gaps: 0 })).toBeNull();
+    expect(healthStat(undefined, 'fr')).toBeNull();
+    expect(healthStat({ status: 'unknown', score: null, overdue: 0, dueSoon: 0, tracked: 0, gaps: 0 }, 'fr')).toBeNull();
   });
 });

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent;
 
+use App\I18n\LocaleContext;
+use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\TurnCancellations;
 use App\Agent\Ui\CancelTurnListener;
 use App\Agent\Ui\RenderIntentTools;
@@ -28,7 +30,7 @@ final class CancelTurnListenerTest extends TestCase
         $render->bindSession(self::SESSION_TOPIC);
 
         $event = new ToolCallsExecuted([]);
-        (new CancelTurnListener($cancellations, $render))($event);
+        (new CancelTurnListener($cancellations, $render, new LocaleContext(new RequestStack())))($event);
 
         $this->assertTrue($event->hasResult(), 'a requested cancel must end the tool loop');
         $this->assertSame('', $event->getResult()->getContent());
@@ -46,7 +48,7 @@ final class CancelTurnListenerTest extends TestCase
         $render->bindSession(self::SESSION_TOPIC);
 
         $event = new ToolCallsExecuted([]);
-        (new CancelTurnListener($cancellations, $render))($event);
+        (new CancelTurnListener($cancellations, $render, new LocaleContext(new RequestStack())))($event);
 
         $this->assertFalse($event->hasResult(), 'an uncancelled turn keeps looping');
     }
@@ -62,7 +64,7 @@ final class CancelTurnListenerTest extends TestCase
         // A terminal tool (end_turn) already ended the turn this round — do not double-handle.
         $event = new ToolCallsExecuted([]);
         $event->setResult(new \Symfony\AI\Platform\Result\TextResult('done'));
-        (new CancelTurnListener($cancellations, $render))($event);
+        (new CancelTurnListener($cancellations, $render, new LocaleContext(new RequestStack())))($event);
 
         $this->assertSame('done', $event->getResult()->getContent());
         $this->assertTrue($cancellations->isRequested('sess-abc'), 'the flag is untouched when another listener owns the result');

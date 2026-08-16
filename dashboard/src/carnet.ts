@@ -1,3 +1,4 @@
+import type { Locale } from './i18n/locale';
 import { serviceLabel } from './labels';
 import type { MaintenanceRecord } from './types';
 
@@ -42,7 +43,7 @@ function costSourceOf(r: MaintenanceRecord): 'bill' | 'estimated' | null {
  * visit is not its answer — the same narrowing `focusView {panel:'tasks', keys}` already does for the
  * worklist. A visit is kept when it carries any requested type. Empty keys ⇒ the whole register.
  */
-export function rollupCarnet(records: MaintenanceRecord[], limit = 3, keys: string[] = []): CarnetRollup {
+export function rollupCarnet(records: MaintenanceRecord[], locale: Locale, limit = 3, keys: string[] = []): CarnetRollup {
   if (keys.length > 0) {
     const wanted = new Set(keys);
     records = records.filter((r) => r.items.some((it) => wanted.has(it.type)));
@@ -55,7 +56,7 @@ export function rollupCarnet(records: MaintenanceRecord[], limit = 3, keys: stri
     usageUnit: r.usageUnit ?? null,
     costCents: effectiveCostCents(r),
     costSource: costSourceOf(r),
-    items: r.items.map((it) => it.label?.trim() || serviceLabel(it.type)),
+    items: r.items.map((it) => it.label?.trim() || serviceLabel(it.type, locale)),
   }));
   const totalCents = records.reduce((sum, r) => sum + (effectiveCostCents(r) ?? 0), 0);
   const knownCount = records.filter((r) => effectiveCostCents(r) != null).length;

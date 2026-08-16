@@ -1,4 +1,5 @@
 import type { BodyClass } from './CarProxy';
+import { useT } from '../i18n/LocaleProvider';
 
 // Rung c — a flat SVG car silhouette in the resolved paint color, a clean side profile per body-class.
 // The lowest VISUAL rung before the flat list (rung d): no WebGL, still recognizably the vehicle.
@@ -24,8 +25,9 @@ const WHEELS: Record<BodyClass, [number, number][]> = {
 };
 
 export function SilhouetteCar({ bodyClass, paint }: { bodyClass: BodyClass; paint: string }) {
+  const t = useT();
   return (
-    <svg className="at-silhouette" viewBox="0 0 400 180" role="img" aria-label="Silhouette du véhicule">
+    <svg className="at-silhouette" viewBox="0 0 400 180" role="img" aria-label={t.misc.vehicleSilhouette}>
       <path d={PROFILE[bodyClass]} fill={paint} stroke="rgba(255,255,255,0.12)" strokeWidth={1.5} />
       {WHEELS[bodyClass].map(([cx, cy], i) => (
         <g key={i}>

@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class ProposeActionsInput
 {
-    #[ApiProperty(description: 'The card headline, in French.')]
+    #[ApiProperty(description: 'The card headline, in the interface language.')]
     public string $headline = '';
 
     /**

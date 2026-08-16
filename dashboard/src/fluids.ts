@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale';
+import { messages } from './i18n/messages';
 import { NBSP, formatAmount } from './format';
 import type { SpecNode } from './focus';
 
@@ -45,15 +47,15 @@ function toNumber(v: number | string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-export function fluidNodes(vols: FillVolume[]): SpecNode[] {
+export function fluidNodes(vols: FillVolume[], locale: Locale): SpecNode[] {
   const nodes: SpecNode[] = [];
   vols.forEach((v, i) => {
     const amount = toNumber(v.volume);
     const info = v.info?.trim() || undefined;
-    const label = (v.label?.trim() || v.originalTitle?.trim() || 'Fluide') as string;
+    const label = (v.label?.trim() || v.originalTitle?.trim() || messages(locale).fluid.fallbackLabel) as string;
     if (amount != null) {
       const unit = abbrevUnit(v.unit);
-      const value = unit ? `${formatAmount(amount)}${NBSP}${unit}` : formatAmount(amount);
+      const value = unit ? `${formatAmount(amount, locale)}${NBSP}${unit}` : formatAmount(amount, locale);
       nodes.push({ key: `fluid:${v.id ?? i}`, label, value, verified: true, info });
     } else if (info) {
       // a spec-only entry (brake fluid grade, refrigerant) — the info IS the value.

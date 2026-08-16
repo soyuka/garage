@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useT } from '../i18n/LocaleProvider';
 import { safeHref } from '../safeHref';
 
 // CC-BY attribution for the default blueprint meshes — required to ship. Each source is credited with
@@ -41,14 +42,15 @@ const chip: React.CSSProperties = {
 };
 
 export function Credits() {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button
         type="button"
         className="at-identity-chip"
-        title="Crédits des modèles 3D"
-        aria-label="Crédits des modèles 3D"
+        title={t.credits.title}
+        aria-label={t.credits.title}
         onClick={() => setOpen((o) => !o)}
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -56,12 +58,12 @@ export function Credits() {
           <path d="M8 7.2v4.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           <circle cx="8" cy="4.9" r="0.15" fill="currentColor" stroke="currentColor" strokeWidth="1.1" />
         </svg>
-        crédits
+        {t.credits.short}
       </button>
       {open && (
         <div
           role="dialog"
-          aria-label="Crédits des modèles 3D"
+          aria-label={t.credits.title}
           style={{
             position: 'fixed',
             top: 52,
@@ -80,9 +82,9 @@ export function Credits() {
           }}
         >
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 8 }}>
-            <strong style={{ color: 'var(--at-text)' }}>Modèles 3D</strong>
+            <strong style={{ color: 'var(--at-text)' }}>{t.credits.heading}</strong>
             <span style={{ flex: 1 }} />
-            <button type="button" style={chip} aria-label="Fermer les crédits" onClick={() => setOpen(false)}>
+            <button type="button" style={chip} aria-label={t.credits.close} onClick={() => setOpen(false)}>
               ✕
             </button>
           </div>

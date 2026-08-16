@@ -1,4 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { useLocale, useT } from '../i18n/LocaleProvider';
+import type { Locale } from '../i18n/locale';
+import type { Messages } from '../i18n/messages';
 import type { DecisionItem, DecisionKind } from './state';
 import type { Iri, PlannedPart } from '../types';
 import './ambientInbox.css';
@@ -22,6 +25,10 @@ interface AmbientInboxProps {
   onReviewPatch?: (patch: { id: Iri; parts: PlannedPart[] }) => void;
   /** Promote a notify item (a due service) to a planned task on its vehicle. */
   onSchedule?: (item: DecisionItem) => void;
+  /** Audition: is the Atelier speaking its answers? Undefined hides the control entirely. */
+  audition?: boolean;
+  /** Flip it. A caution signal needs manual reset and a volume control (MIL-STD-1472F §7.2.9.11). */
+  onToggleAudition?: () => void;
 }
 
 // Kind glyphs differ by SHAPE (never colour alone — colour-blind safe, matches the hotspot rule): a bell
@@ -51,18 +58,60 @@ function KindGlyph({ kind }: { kind: DecisionKind }) {
   );
 }
 
-const KIND_LABEL: Record<DecisionKind, string> = { notify: 'à voir', question: 'question', review: 'à revoir' };
-
-function whenLabel(at: number): string {
-  const secs = Math.max(0, Math.round((performance.now() - at) / 1000));
-  if (secs < 10) return "à l'instant";
-  if (secs < 60) return `il y a ${secs}s`;
-  const mins = Math.round(secs / 60);
-  if (mins < 60) return `il y a ${mins} min`;
-  return `il y a ${Math.round(mins / 60)} h`;
+// Speaker with/without waves — SHAPE carries the state, never colour alone (the hotspot rule).
+function AuditionGlyph({ on }: { on: boolean }) {
+  return (
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6.2h2.4L8.6 3.4v9.2L5.4 9.8H3z" />
+      {on ? <path d="M10.8 6a2.8 2.8 0 0 1 0 4M12.6 4.4a5.2 5.2 0 0 1 0 7.2" /> : <path d="M10.8 6.4l3.2 3.2M14 6.4l-3.2 3.2" />}
+    </svg>
+  );
 }
 
-export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onReviewInstruction, onReviewPatch, onSchedule }: AmbientInboxProps) {
+const kindLabel = (kind: DecisionKind, t: Messages): string =>
+  'notify' === kind ? t.inbox.kindNotify : 'question' === kind ? t.inbox.kindQuestion : t.inbox.kindReview;
+
+function whenLabel(at: number, t: Messages): string {
+  const secs = Math.max(0, Math.round((performance.now() - at) / 1000));
+  if (secs < 10) return t.inbox.justNow;
+  if (secs < 60) return t.inbox.secondsAgo(secs);
+  const mins = Math.round(secs / 60);
+  if (mins < 60) return t.inbox.minutesAgo(mins);
+  return t.inbox.hoursAgo(Math.round(mins / 60));
+}
+
+/**
+ * The language switch. It sits beside the audition toggle because they are the same KIND of thing —
+ * the operator's two standing preferences, both persisted under `mpa.*`, both about how the Atelier
+ * addresses them. Two states, so a toggle rather than a menu: the label names the language you would
+ * GET by pressing, which is the one thing a two-state control has to make unambiguous.
+ */
+function LocaleToggle() {
+  const [locale, setLocale] = useLocale();
+  const other: Locale = 'fr' === locale ? 'en' : 'fr';
+
+  return (
+    <button
+      type="button"
+      className="at-inbox-locale"
+      onClick={() => setLocale(other)}
+      title={LOCALE_TITLE[other]}
+      aria-label={LOCALE_TITLE[other]}
+    >
+      <span className="at-inbox-locale-label">{other.toUpperCase()}</span>
+    </button>
+  );
+}
+
+// Each title is written in the language it switches TO — the one string in the app that must not
+// follow the current locale, because it is the way out of a language you cannot read.
+const LOCALE_TITLE: Record<Locale, string> = {
+  fr: 'Afficher l’Atelier en français',
+  en: 'Show the Atelier in English',
+};
+
+export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onReviewInstruction, onReviewPatch, onSchedule, audition, onToggleAudition }: AmbientInboxProps) {
+  const t = useT();
   const ref = useRef<HTMLDivElement>(null);
   // Move focus into the leaf when it opens so Escape/Tab reach it, and it reads as a dialog to AT.
   useEffect(() => {
@@ -83,7 +132,7 @@ export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onRevie
       ref={ref}
       className="at-inbox"
       role="dialog"
-      aria-label="À décider"
+      aria-label={t.inbox.title}
       data-reduced={reduced ? 'true' : undefined}
       tabIndex={-1}
       onKeyDown={(e) => {
@@ -120,12 +169,27 @@ export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onRevie
     >
       {/* the attribution hairline — Le Noyau surfaced these; cyan is rationed to THIS line only */}
       <div className="at-inbox-head">
-        <span className="at-inbox-title">À décider</span>
+        <span className="at-inbox-title">{t.inbox.title}</span>
         <span className="at-inbox-count">{queue.length}</span>
+        {onToggleAudition && (
+          // The audio affordance lives HERE because this is where the concern already lands: the
+          // inbox is the surface the operator opens when something wants their attention.
+          <button
+            type="button"
+            className="at-inbox-audition"
+            onClick={onToggleAudition}
+            aria-pressed={audition ? 'true' : 'false'}
+            title={audition ? t.inbox.muteVoice : t.inbox.unmuteVoice}
+          >
+            <AuditionGlyph on={audition === true} />
+            <span className="at-inbox-audition-label">{audition ? t.inbox.voiceOn : t.inbox.voiceOff}</span>
+          </button>
+        )}
+        <LocaleToggle />
       </div>
 
       {queue.length === 0 ? (
-        <p className="at-inbox-empty">Rien à décider.</p>
+        <p className="at-inbox-empty">{t.inbox.empty}</p>
       ) : (
         <ul className="at-inbox-list">
           {queue.map((item) => (
@@ -135,7 +199,7 @@ export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onRevie
               </span>
               <div className="at-inbox-main">
                 <p className="at-inbox-text">
-                  <span className="at-inbox-kind">{KIND_LABEL[item.kind]}</span>
+                  <span className="at-inbox-kind">{kindLabel(item.kind, t)}</span>
                   {item.text}
                 </p>
                 {item.finding && <p className="at-inbox-finding">{item.finding}</p>}
@@ -172,7 +236,7 @@ export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onRevie
                         resolveKeepingFocus(item.id);
                       }}
                     >
-                      planifier ○
+                      {t.inbox.plan}
                     </button>
                   )}
                   <button type="button" className="at-inbox-btn at-inbox-btn--dismiss" onClick={() => resolveKeepingFocus(item.id)}>
@@ -180,7 +244,7 @@ export function AmbientInbox({ open, queue, reduced, onClose, onResolve, onRevie
                   </button>
                 </div>
               </div>
-              <span className="at-inbox-when">{whenLabel(item.at)}</span>
+              <span className="at-inbox-when">{whenLabel(item.at, t)}</span>
             </li>
           ))}
         </ul>

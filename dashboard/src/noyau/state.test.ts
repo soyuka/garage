@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { busy, classifyStep, initialNoyau, reduceNoyau, type DecisionItem } from './state';
+import { busy, classifyStep, initialNoyau, NOTICE_CAP, reduceNoyau, type DecisionItem } from './state';
 
 const R = reduceNoyau;
 
@@ -138,10 +138,10 @@ describe('Le Noyau frame→state machine', () => {
   });
 });
 
-// The typed tool-step chips (C1). The live wire carries NO tool name — StepNarrator pre-maps each tool
-// call to a French sentence on the `status` frame — so we reverse-map that sentence back to a tool
-// identity + a SHORT chip verb. See api/src/Agent/Ui/StepNarrator.php for the source sentences.
-describe('classifyStep — narration sentence → {tool, short verb}', () => {
+// The typed tool-step chips (C1). These cover the FALLBACK path — a frame with no `tool` field, from a
+// server predating it — where the French sentence is still keyword-matched back to a chip. The primary
+// path is the tool key on the frame; see the describe below.
+describe('classifyStep — narration sentence → {tool, short verb} (fallback)', () => {
   const cases: Array<[string, string, string]> = [
     ['Je consulte le catalogue de pièces…', 'get_service_parts', 'recherche pièces…'],
     ['Je calcule les entretiens à venir…', 'list_due_maintenance', 'prévision…'],
@@ -167,6 +167,55 @@ describe('classifyStep — narration sentence → {tool, short verb}', () => {
 
   it('an unmatched sentence → tool "unknown", label = the message itself (humanized fallback)', () => {
     expect(classifyStep('Quelque chose de nouveau…')).toEqual({ tool: 'unknown', label: 'Quelque chose de nouveau…' });
+  });
+});
+
+// The frame now carries the tool name the server already had (StepNarrator is keyed by it). The
+// sentence stops being the identity and goes back to being prose — which is what lets it be written
+// in any language without the chips degrading.
+describe('classifyStep — the tool name on the frame wins over the prose', () => {
+  it('classifies from the tool name, ignoring the sentence entirely', () => {
+    expect(classifyStep('n’importe quoi', 'get_service_parts')).toEqual({
+      tool: 'get_service_parts',
+      label: 'recherche pièces…',
+    });
+  });
+
+  it('an English narration still lands the right chip when the tool name rides along', () => {
+    expect(classifyStep('Checking the parts catalogue…', 'get_service_parts').tool).toBe('get_service_parts');
+    expect(classifyStep('Reading the plate…', 'lookup_plate').tool).toBe('lookup_plate');
+  });
+
+  it('folds both backend history tools onto the one carnet chip', () => {
+    expect(classifyStep('', 'get_maintenance_history')).toEqual({ tool: 'get_history', label: 'lecture carnet…' });
+    expect(classifyStep('', 'get_vehicle_facts')).toEqual({ tool: 'get_history', label: 'lecture carnet…' });
+  });
+
+  it('an UNKNOWN tool name falls back to the prose, not to "unknown"', () => {
+    // A newly added server tool: the sentence is still the best evidence we have.
+    expect(classifyStep('Je lis la plaque…', 'some_new_tool').tool).toBe('lookup_plate');
+  });
+
+  it('no tool name → the keyword table, exactly as before', () => {
+    expect(classifyStep('Je lis la plaque…').tool).toBe('lookup_plate');
+  });
+
+  it('the chip verb follows the interface language', () => {
+    expect(classifyStep('', 'get_service_parts', 'fr').label).toBe('recherche pièces…');
+    expect(classifyStep('', 'get_service_parts', 'en').label).toBe('parts search…');
+  });
+
+  it('an unrecognised step shows the server’s own sentence, whatever language it is in', () => {
+    // No guess is better than a wrong one: the prose IS the only label available.
+    expect(classifyStep('Doing something new…', 'brand_new_tool', 'en')).toEqual({
+      tool: 'unknown',
+      label: 'Doing something new…',
+    });
+  });
+
+  it('the reducer puts the frame’s tool on the chip', () => {
+    const s = R(initialNoyau, { type: 'status', message: 'Checking the parts catalogue…', tool: 'get_service_parts' }, 0);
+    expect(s.steps[s.steps.length - 1].tool).toBe('get_service_parts');
   });
 });
 
@@ -406,5 +455,66 @@ describe('who is at the controls', () => {
     expect(busy(s)).toBe(true);
     s = R(s, { type: 'quiet' }, 4000);
     expect(busy(s)).toBe(false); // a quiet pilot never holds the dashboard hostage
+  });
+});
+
+// The retained notice stack (CHOREOGRAPHY § "The notice stack — an answer that stays"). The narration
+// line is a heartbeat — overwritten by the next status, cleared on settle — so a `toast` finding used
+// to scroll past and vanish. Every toast now also raises a card that stays until the operator says "vu".
+describe('Le Noyau — the retained notice stack', () => {
+  it('starts with no notices', () => {
+    expect(initialNoyau.notices).toEqual([]);
+  });
+
+  it('EVERY tone raises a notice, alarm included, while the existing routing is unchanged', () => {
+    let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    s = R(s, { type: 'toast', tone: 'ok', message: 'Vidange enregistrée' }, 100);
+    expect(s.notices).toHaveLength(1);
+    expect(s.notices[0]).toMatchObject({ tone: 'ok', text: 'Vidange enregistrée', at: 100 });
+    expect(s.narration).toBe('Vidange enregistrée'); // heartbeat routing untouched
+
+    s = R(s, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 200);
+    expect(s.notices.map((n) => n.tone)).toEqual(['ok', 'alarm']);
+    expect(s.queue).toHaveLength(1); // the alarm still docks its own decision item
+  });
+
+  it('the same tone+message re-arriving is ONE card (a pilot repeating itself builds no wall)', () => {
+    let s = R(initialNoyau, { type: 'toast', tone: 'warn', message: 'Pas au catalogue' }, 0);
+    const first = s.notices;
+    s = R(s, { type: 'toast', tone: 'warn', message: 'Pas au catalogue' }, 500);
+    expect(s.notices).toBe(first); // identity: no re-render churn either
+  });
+
+  it('the stack is capped at NOTICE_CAP — the oldest leaves, the journal keeps everything', () => {
+    let s = initialNoyau;
+    ['a', 'b', 'c', 'd'].forEach((m, i) => {
+      s = R(s, { type: 'toast', tone: 'info', message: m }, i * 10);
+    });
+    expect(s.notices).toHaveLength(NOTICE_CAP);
+    expect(s.notices.map((n) => n.text)).toEqual(['b', 'c', 'd']);
+    expect(s.journal.filter((e) => e.kind === 'narration')).toHaveLength(4);
+  });
+
+  it('"vu" removes exactly that card and leaves the à-décider queue alone', () => {
+    let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 0);
+    s = R(s, { type: 'toast', tone: 'ok', message: 'Référence trouvée' }, 10);
+    s = R(s, { type: 'dismissNotice', id: s.notices[0].id }, 20);
+    expect(s.notices.map((n) => n.text)).toEqual(['Référence trouvée']);
+    expect(s.queue).toHaveLength(1); // dismissing the reminder is not deciding the thing
+  });
+
+  it('an unknown dismiss id is identity (no render, no crash)', () => {
+    const s = R(initialNoyau, { type: 'toast', tone: 'ok', message: 'a' }, 0);
+    expect(R(s, { type: 'dismissNotice', id: 'nope' }, 10)).toBe(s);
+  });
+
+  it('notices survive turn end AND settle — they are what the turn produced', () => {
+    let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    s = R(s, { type: 'toast', tone: 'warn', message: 'Deux véhicules — j’ai pris la Mazda' }, 100);
+    s = R(s, { type: 'turn', phase: 'end' }, 200);
+    s = R(s, { type: 'settle' }, 300);
+    expect(s.phase).toBe('idle');
+    expect(s.narration).toBeNull(); // the heartbeat is cleared…
+    expect(s.notices).toHaveLength(1); // …the answer is not
   });
 });

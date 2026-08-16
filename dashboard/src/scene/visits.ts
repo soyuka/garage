@@ -1,4 +1,5 @@
 import { BODY_REGIONS, regionForType, regionsForKeys, type BodyRegion } from './anchors';
+import type { Locale } from '../i18n/locale';
 import { buildRail, type RailItem } from './rail';
 import type { ForecastDue, PlannedTask, Signal } from '../types';
 
@@ -164,8 +165,8 @@ export function ladder(visits: Visit[]): Rung[] {
   return visits.map((visit, i) => ({ visit, gap: widest > 0 ? hops[i] / widest : 0 }));
 }
 
-export function buildVisits(due: ForecastDue[], gaps: string[] = [], tasks: PlannedTask[] = []): VisitPlan {
-  const rail = buildRail(due, gaps, tasks);
+export function buildVisits(due: ForecastDue[], locale: Locale, gaps: string[] = [], tasks: PlannedTask[] = []): VisitPlan {
+  const rail = buildRail(due, locale, gaps, tasks);
 
   // `done` is not work. It stays out of every horizon — the carnet is where a finished service belongs.
   const work = [...rail.todo, ...rail.ongoing, ...rail.planned].filter((i) => !i.done);

@@ -113,7 +113,7 @@ final class TurnContextBuilderTest extends TestCase
         self::assertStringNotContainsString('Faits connus', $context);
     }
 
-    private function resolver(Vehicle $vehicle): GarageResolver
+    private function resolver(?Vehicle $vehicle): GarageResolver
     {
         $resolver = $this->createStub(GarageResolver::class);
         $resolver->method('resolveById')->willReturn($vehicle);
@@ -130,5 +130,48 @@ final class TurnContextBuilderTest extends TestCase
         $repository->method('checklistForVehicle')->willReturn($tasks);
 
         return $repository;
+    }
+
+    /**
+     * The one place the agent is told which language to ANSWER in. It rides the per-turn context
+     * rather than the system prompt because the prompt is static config while the locale is per
+     * request — and because the prompt's own instructions stay English either way (they are
+     * model-facing; only the user-facing output moves).
+     */
+    public function testTellsTheModelWhichLanguageToAnswerIn(): void
+    {
+        $builder = new TurnContextBuilder($this->resolver(null), new VehicleFactsProjector(), $this->repository([]));
+
+        $french = $builder->build(new RunAgentTurn(
+            instruction: 'what do I need on the Mazda?',
+            sessionTopic: 'https://localhost/agent/sessions/abc',
+            owner: 'test-user',
+            locale: 'fr',
+        ));
+        $english = $builder->build(new RunAgentTurn(
+            instruction: 'what do I need on the Mazda?',
+            sessionTopic: 'https://localhost/agent/sessions/abc',
+            owner: 'test-user',
+            locale: 'en',
+        ));
+
+        self::assertStringContainsString('French', $french);
+        self::assertStringContainsString('English', $english);
+        self::assertStringNotContainsString('English', $french);
+        self::assertStringNotContainsString('French', $english);
+    }
+
+    public function testAnUnknownLocaleStillGetsADirectiveRatherThanNone(): void
+    {
+        $builder = new TurnContextBuilder($this->resolver(null), new VehicleFactsProjector(), $this->repository([]));
+
+        $context = $builder->build(new RunAgentTurn(
+            instruction: 'x',
+            sessionTopic: 'https://localhost/agent/sessions/abc',
+            owner: 'test-user',
+            locale: 'de',
+        ));
+
+        self::assertStringContainsString('French', $context);
     }
 }

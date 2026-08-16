@@ -1,4 +1,6 @@
 import type { Iri, PlannedPart } from '../types';
+import type { Locale } from '../i18n/locale';
+import { messages } from '../i18n/messages';
 import type { Cta } from './CtaCard';
 
 // Parts manifest view-model (option 2a, "option a" — zero contract change). The manifest renders the
@@ -33,6 +35,6 @@ export function manifestTotal(parts: PlannedPart[]): number {
 // A parts-manifest CTA (the deterministic patchTask path — no agent turn). The chip and the agent's
 // `showParts` converge on this shape, so the manifest + its "Ajouter à la tâche" merge are identical from
 // either source. The server merge dedups by ref, so re-merging a task's own parts (option a) is idempotent.
-export function partsCtaFor(service: string, taskId: Iri, parts: PlannedPart[]): Cta {
-  return { headline: service, actions: [{ label: 'Ajouter à la tâche', patchTask: { id: taskId, parts } }] };
+export function partsCtaFor(service: string, taskId: Iri, parts: PlannedPart[], locale: Locale): Cta {
+  return { headline: service, actions: [{ label: messages(locale).misc.addToTask, patchTask: { id: taskId, parts } }] };
 }

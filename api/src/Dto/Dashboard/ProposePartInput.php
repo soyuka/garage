@@ -14,7 +14,7 @@ final class ProposePartInput
     #[ApiProperty(description: 'The brand, e.g. "MANN-FILTER".')]
     public ?string $brand = null;
 
-    #[ApiProperty(description: 'A short French label, e.g. "Filtre à huile".')]
+    #[ApiProperty(description: 'A short label in the interface language, e.g. "Filtre à huile" / "Oil filter".')]
     public ?string $label = null;
 
     #[ApiProperty(description: 'Quantity, when more than one is needed.')]

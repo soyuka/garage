@@ -60,18 +60,18 @@ describe('parcSignal — card signal derived from nextDue only', () => {
 
 describe('horizonFor — the next-due one-liner (honest overdue axis)', () => {
   it('overdue on the usage axis (negative remaining) → km overshoot', () => {
-    expect(horizonFor(nextDue({ overdue: true, usageRemaining: -3200, usageUnit: 'km', daysUntilDue: -80 }))).toBe(`DÉPASSÉ de 3${THIN}200${NBSP}km`);
+    expect(horizonFor(nextDue({ overdue: true, usageRemaining: -3200, usageUnit: 'km', daysUntilDue: -80 }), 'fr')).toBe(`DÉPASSÉ de 3${THIN}200${NBSP}km`);
   });
   it('overdue by TIME with km still remaining → day overshoot, never the positive remaining (live MAZDA case)', () => {
-    const h = horizonFor(nextDue({ overdue: true, usageRemaining: 6548, usageUnit: 'km', daysUntilDue: -113 }));
+    const h = horizonFor(nextDue({ overdue: true, usageRemaining: 6548, usageUnit: 'km', daysUntilDue: -113 }), 'fr');
     expect(h).toBe(`DÉPASSÉ de 113${NBSP}jours`);
     expect(h).not.toContain('6');
   });
   it('overdue with no negative axis → bare DÉPASSÉ', () => {
-    expect(horizonFor(nextDue({ overdue: true, usageRemaining: 200, usageUnit: 'km', daysUntilDue: null }))).toBe('DÉPASSÉ');
+    expect(horizonFor(nextDue({ overdue: true, usageRemaining: 200, usageUnit: 'km', daysUntilDue: null }), 'fr')).toBe('DÉPASSÉ');
   });
   it('upcoming with a day count → rounded horizon', () => {
-    expect(horizonFor(nextDue({ daysUntilDue: 155 }))).toBe(`dans environ 5${NBSP}mois`);
+    expect(horizonFor(nextDue({ daysUntilDue: 155 }), 'fr')).toBe(`dans environ 5${NBSP}mois`);
   });
 });
 

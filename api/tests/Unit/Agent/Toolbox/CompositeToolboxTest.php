@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent\Toolbox;
 
+use App\I18n\LocaleContext;
+use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\Toolbox\CompositeToolbox;
 use App\Agent\Ui\RenderIntentTools;
 use App\Tests\Mock\TestDashboardChannel;
@@ -41,7 +43,7 @@ final class CompositeToolboxTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new CompositeToolbox($render, $mcp, new StepNarrator($tools));
+        return new CompositeToolbox($render, $mcp, new StepNarrator($tools, new LocaleContext(new RequestStack())));
     }
 
     private function mcpToolboxExposing(string $name): McpToolbox
@@ -65,7 +67,7 @@ final class CompositeToolboxTest extends TestCase
         $toolbox->execute(new ToolCall('id-1', 'get_service_parts', []));
 
         $this->assertSame(
-            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…']],
+            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…', 'tool' => 'get_service_parts']],
             $published->getArrayCopy(),
         );
     }

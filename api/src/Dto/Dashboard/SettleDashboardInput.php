@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class SettleDashboardInput
 {
-    #[ApiProperty(description: 'Optional closing toast, in French — sent before the settle so the orb takes its colour from it.')]
+    #[ApiProperty(description: 'Optional closing toast, in the interface language — sent before the settle so the orb takes its colour from it.')]
     public ?string $message = null;
 
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['info', 'ok', 'warn', 'alarm'], 'description' => 'Tone of the closing toast. Defaults to "ok".'])]

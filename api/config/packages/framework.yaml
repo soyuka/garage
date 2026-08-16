@@ -2,6 +2,15 @@
 framework:
     secret: '%env(APP_SECRET)%'
 
+    # French is the default and stays it — English is a second catalog beside it (App\I18n\Locale).
+    # `set_locale_from_accept_language` is why nothing needs a custom listener: the dashboard sends
+    # `Accept-Language` on every call, so `$request->getLocale()` is already the answer at the edge.
+    # It only ever yields a locale from `enabled_locales`, so an unsupported language falls back here
+    # rather than reaching a vendor as-is.
+    default_locale: fr
+    enabled_locales: ['fr', 'en']
+    set_locale_from_accept_language: true
+
     # Note that the session will be started ONLY if you read or write from it.
     session: true
 

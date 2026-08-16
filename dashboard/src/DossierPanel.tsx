@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useLocale, useT } from './i18n/LocaleProvider';
 import { AgentMark } from './AgentMark';
 import './dossier.css';
 import { coerceInt } from './edit';
@@ -43,6 +44,7 @@ interface DossierProps {
 }
 
 export function DossierPanel({ open, onClose, vehicleIri, records, defaultUnit, onChanged, onError }: DossierProps) {
+  const t = useT();
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -53,10 +55,10 @@ export function DossierPanel({ open, onClose, vehicleIri, records, defaultUnit, 
   if (!open) return null;
   return (
     <div className="at-dossier-overlay" onClick={onClose}>
-      <aside className="at-dossier glass" onClick={(e) => e.stopPropagation()} aria-label="Dossier du véhicule">
+      <aside className="at-dossier glass" onClick={(e) => e.stopPropagation()} aria-label={t.dossier.panel}>
         <header className="at-dossier-head">
-          <h2>Dossier</h2>
-          <button type="button" className="at-dossier-btn" onClick={onClose} aria-label="Fermer">
+          <h2>{t.dossier.title}</h2>
+          <button type="button" className="at-dossier-btn" onClick={onClose} aria-label={t.dossier.close}>
             ✕
           </button>
         </header>
@@ -82,6 +84,8 @@ function RecordsSection({
   onChanged: () => void;
   onError: (m: string) => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -91,7 +95,7 @@ function RecordsSection({
         setAdding(false);
         onChanged();
       })
-      .catch((e) => onError(`Échec de l’enregistrement : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.saveFailed((e as Error).message)));
   };
   const submitEdit = (recordIri: string, input: MaintenanceRecordInput) => {
     updateMaintenanceRecord(recordIri, input)
@@ -99,28 +103,28 @@ function RecordsSection({
         setEditingId(null);
         onChanged();
       })
-      .catch((e) => onError(`Échec de la mise à jour : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.updateFailed((e as Error).message)));
   };
   const remove = (record: MaintenanceRecord) => {
-    if (!window.confirm(`Supprimer l’entretien « ${visitTitle(record)} » du ${formatDate(record.performedAt)} ?`)) return;
+    if (!window.confirm(t.dossier.confirmDeleteRecord(visitTitle(record, locale), formatDate(record.performedAt, locale)))) return;
     deleteMaintenanceRecord(record.id)
       .then(onChanged)
-      .catch((e) => onError(`Échec de la suppression : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.deleteFailed((e as Error).message)));
   };
 
   return (
     <section className="at-dossier-section">
       <div className="at-dossier-section-head">
-        <h3>Entretiens passés</h3>
+        <h3>{t.dossier.pastServices}</h3>
         <button type="button" className="at-dossier-btn" aria-expanded={adding} onClick={() => { setAdding((a) => !a); setEditingId(null); }}>
-          {adding ? 'Annuler' : '+ Entretien'}
+          {adding ? t.dossier.cancel : t.dossier.addService}
         </button>
       </div>
 
       {adding && <RecordForm defaultUnit={defaultUnit} onSubmit={submitNew} onCancel={() => setAdding(false)} />}
 
       {records.length === 0 && !adding ? (
-        <p className="at-dossier-empty">Aucun entretien enregistré.</p>
+        <p className="at-dossier-empty">{t.dossier.noServices}</p>
       ) : (
         <ul className="at-dossier-records">
           {records.map((r) =>
@@ -159,6 +163,8 @@ function RecordCard({
   onChanged: () => void;
   onError: (m: string) => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   // Effective cost mirrors the carnet: the bill when entered, else the parts-sum estimate the server
   // derived (marked ≈). Falls back to costCents for a record the API hasn't re-serialized yet.
   const costCents = record.effectiveCostCents ?? record.costCents ?? null;
@@ -166,31 +172,31 @@ function RecordCard({
   return (
     <div className="at-rec">
       <div className="at-rec-head">
-        <span className="at-rec-title">{visitTitle(record)}</span>
+        <span className="at-rec-title">{visitTitle(record, locale)}</span>
         {isAgentAuthored(record.source) && <AgentMark />}
-        <span className="at-rec-date">{formatDate(record.performedAt)}</span>
+        <span className="at-rec-date">{formatDate(record.performedAt, locale)}</span>
         <span className="at-rec-actions">
-          <button type="button" className="at-rec-act" aria-label="Modifier l’entretien" title="Modifier" onClick={onEdit}>✎</button>
-          <button type="button" className="at-rec-act at-rec-act--del" aria-label="Supprimer l’entretien" title="Supprimer" onClick={onDelete}>✕</button>
+          <button type="button" className="at-rec-act" aria-label={t.dossier.editService} title={t.dossier.edit} onClick={onEdit}>✎</button>
+          <button type="button" className="at-rec-act at-rec-act--del" aria-label={t.dossier.deleteService} title={t.dossier.delete} onClick={onDelete}>✕</button>
         </span>
       </div>
       <div className="at-rec-meta">
-        {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit)}</span>}
-        {costCents != null && <span>{estimated ? '≈ ' : ''}{formatEuros(costCents)}</span>}
+        {record.usageValue != null && <span>{formatReading(record.usageValue, record.usageUnit, locale)}</span>}
+        {costCents != null && <span>{estimated ? '≈ ' : ''}{formatEuros(costCents, locale)}</span>}
         {record.performedBy && <span>{record.performedBy}</span>}
       </div>
       {record.items.length > 0 && (
         <ul className="at-rec-items">
           {record.items.map((it, i) => (
             <li key={i} className="at-rec-item">
-              <span className="at-rec-item-name">{it.label?.trim() || serviceLabel(it.type)}</span>
+              <span className="at-rec-item-name">{it.label?.trim() || serviceLabel(it.type, locale)}</span>
               {it.parts.length > 0 && (
                 <ul className="at-rec-parts">
                   {it.parts.map((p, j) => (
                     <li key={j} className="at-rec-part">
                       {[p.brand, p.ref || p.label].filter(Boolean).join(' ')}
                       {p.qty != null && p.qty > 1 ? ` ×${p.qty}` : ''}
-                      {p.priceCents != null ? ` — ${formatEuros(p.priceCents)}` : ''}
+                      {p.priceCents != null ? ` — ${formatEuros(p.priceCents, locale)}` : ''}
                     </li>
                   ))}
                 </ul>
@@ -206,6 +212,7 @@ function RecordCard({
 }
 
 function BillChips({ record, onChanged, onError }: { record: MaintenanceRecord; onChanged: () => void; onError: (m: string) => void }) {
+  const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
   const bills = record.attachments ?? [];
 
@@ -217,19 +224,19 @@ function BillChips({ record, onChanged, onError }: { record: MaintenanceRecord; 
         window.open(url, '_blank', 'noopener');
         window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
       })
-      .catch((e) => onError(`Échec de l’ouverture de la facture : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.billOpenFailed((e as Error).message)));
   };
   const remove = (att: MaintenanceAttachment) => {
-    if (!window.confirm(`Supprimer la facture « ${att.filename} » ?`)) return;
+    if (!window.confirm(t.dossier.confirmDeleteBill(att.filename))) return;
     deleteMaintenanceAttachment(att.url)
       .then(onChanged)
-      .catch((e) => onError(`Échec de la suppression : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.deleteFailed((e as Error).message)));
   };
   const upload = (file: File | undefined) => {
     if (!file) return;
     uploadMaintenanceAttachment(record.id, file)
       .then(onChanged)
-      .catch((e) => onError(`Échec de l’ajout de la facture : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.billAddFailed((e as Error).message)));
   };
 
   return (
@@ -242,7 +249,7 @@ function BillChips({ record, onChanged, onError }: { record: MaintenanceRecord; 
           <button type="button" className="at-rec-bill-del" aria-label={`Supprimer la facture ${att.filename}`} title="Supprimer" onClick={() => remove(att)}>×</button>
         </span>
       ))}
-      <button type="button" className="at-dossier-btn at-dossier-btn--sm" onClick={() => fileInput.current?.click()}>+ facture</button>
+      <button type="button" className="at-dossier-btn at-dossier-btn--sm" onClick={() => fileInput.current?.click()}>{t.dossier.addBill}</button>
       <input
         ref={fileInput}
         type="file"
@@ -275,6 +282,8 @@ function seedItems(record?: MaintenanceRecord): FormItem[] {
 }
 
 function RecordForm({ record, defaultUnit, onSubmit, onCancel }: { record?: MaintenanceRecord; defaultUnit: string; onSubmit: (input: MaintenanceRecordInput) => void; onCancel: () => void }) {
+  const [locale] = useLocale();
+  const t = useT();
   const listId = useId();
   const [label, setLabel] = useState(record?.label ?? '');
   const [performedAt, setPerformedAt] = useState(record?.performedAt ?? '');
@@ -318,49 +327,49 @@ function RecordForm({ record, defaultUnit, onSubmit, onCancel }: { record?: Main
   return (
     <form className="at-recform" onSubmit={submit}>
       <div className="at-recform-row">
-        <input className="at-dossier-input at-dossier-input--grow" placeholder="Libellé de la visite (ex. Révision annuelle)" aria-label="Libellé de la visite" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <input className="at-dossier-input" type="date" aria-label="Date de l’entretien" value={performedAt} onChange={(e) => setPerformedAt(e.target.value)} required />
+        <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.visitLabelPlaceholder} aria-label={t.dossier.visitLabelAria} value={label} onChange={(e) => setLabel(e.target.value)} />
+        <input className="at-dossier-input" type="date" aria-label={t.dossier.dateAria} value={performedAt} onChange={(e) => setPerformedAt(e.target.value)} required />
       </div>
       <div className="at-recform-row">
-        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder="relevé" aria-label="Relevé" value={reading} onChange={(e) => setReading(e.target.value)} />
-        <select className="at-dossier-input at-dossier-input--unit" aria-label="Unité du relevé" value={unit} onChange={(e) => setUnit(e.target.value)}>
+        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder={t.dossier.readingPlaceholder} aria-label={t.dossier.readingAria} value={reading} onChange={(e) => setReading(e.target.value)} />
+        <select className="at-dossier-input at-dossier-input--unit" aria-label={t.dossier.unitAria} value={unit} onChange={(e) => setUnit(e.target.value)}>
           {MAINT_USAGE_UNITS.map((u) => (<option key={u} value={u}>{u}</option>))}
         </select>
-        <input className="at-dossier-input at-dossier-input--sm" inputMode="decimal" placeholder="coût €" aria-label="Coût en euros" value={cost} onChange={(e) => setCost(e.target.value)} />
-        <input className="at-dossier-input at-dossier-input--grow" placeholder="effectué par" aria-label="Effectué par" value={performer} onChange={(e) => setPerformer(e.target.value)} />
+        <input className="at-dossier-input at-dossier-input--sm" inputMode="decimal" placeholder={t.dossier.costPlaceholder} aria-label={t.dossier.costAria} value={cost} onChange={(e) => setCost(e.target.value)} />
+        <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.performerPlaceholder} aria-label={t.dossier.performerAria} value={performer} onChange={(e) => setPerformer(e.target.value)} />
       </div>
-      <textarea className="at-dossier-input at-recform-notes" placeholder="notes" aria-label="Notes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+      <textarea className="at-dossier-input at-recform-notes" placeholder={t.dossier.notesPlaceholder} aria-label={t.dossier.notesAria} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
 
       <div className="at-recform-items">
         {items.map((it, i) => (
           <div className="at-recform-item" key={i}>
             <div className="at-recform-row">
-              <input list={listId} className="at-dossier-input" placeholder="type" aria-label="Type de service" value={it.type} onChange={(e) => setItem(i, { type: e.target.value })} />
-              <input className="at-dossier-input at-dossier-input--grow" placeholder="libellé (optionnel)" aria-label="Libellé du service" value={it.label} onChange={(e) => setItem(i, { label: e.target.value })} />
+              <input list={listId} className="at-dossier-input" placeholder={t.dossier.typePlaceholder} aria-label={t.dossier.typeAria} value={it.type} onChange={(e) => setItem(i, { type: e.target.value })} />
+              <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.serviceLabelPlaceholder} aria-label={t.dossier.serviceLabelAria} value={it.label} onChange={(e) => setItem(i, { label: e.target.value })} />
               {items.length > 1 && (
-                <button type="button" className="at-recform-x" aria-label="Retirer ce service" title="Retirer" onClick={() => setItems((arr) => arr.filter((_, k) => k !== i))}>×</button>
+                <button type="button" className="at-recform-x" aria-label={t.dossier.removeService} title="Retirer" onClick={() => setItems((arr) => arr.filter((_, k) => k !== i))}>×</button>
               )}
             </div>
             {it.parts.map((p, j) => (
               <div className="at-recform-part" key={j}>
-                <input className="at-dossier-input at-dossier-input--sm" placeholder="réf." aria-label="Référence" value={p.ref} onChange={(e) => setPart(i, j, { ref: e.target.value })} />
-                <input className="at-dossier-input at-dossier-input--sm" placeholder="marque" aria-label="Marque" value={p.brand} onChange={(e) => setPart(i, j, { brand: e.target.value })} />
-                <input className="at-dossier-input at-dossier-input--grow" placeholder="libellé" aria-label="Libellé de la pièce" value={p.label} onChange={(e) => setPart(i, j, { label: e.target.value })} />
-                <input className="at-dossier-input at-dossier-input--xs" inputMode="numeric" placeholder="qté" aria-label="Quantité" value={p.qty} onChange={(e) => setPart(i, j, { qty: e.target.value })} />
-                <input className="at-dossier-input at-dossier-input--xs" inputMode="decimal" placeholder="€" aria-label="Prix unitaire en euros" value={p.price} onChange={(e) => setPart(i, j, { price: e.target.value })} />
-                <button type="button" className="at-recform-x" aria-label="Retirer cette pièce" title="Retirer" onClick={() => setItem(i, { parts: it.parts.filter((_, m) => m !== j) })}>×</button>
+                <input className="at-dossier-input at-dossier-input--sm" placeholder={t.dossier.refPlaceholder} aria-label={t.dossier.refAria} value={p.ref} onChange={(e) => setPart(i, j, { ref: e.target.value })} />
+                <input className="at-dossier-input at-dossier-input--sm" placeholder={t.dossier.brandPlaceholder} aria-label={t.dossier.brandAria} value={p.brand} onChange={(e) => setPart(i, j, { brand: e.target.value })} />
+                <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.partLabelPlaceholder} aria-label={t.dossier.partLabelAria} value={p.label} onChange={(e) => setPart(i, j, { label: e.target.value })} />
+                <input className="at-dossier-input at-dossier-input--xs" inputMode="numeric" placeholder={t.dossier.qtyPlaceholder} aria-label={t.dossier.qtyAria} value={p.qty} onChange={(e) => setPart(i, j, { qty: e.target.value })} />
+                <input className="at-dossier-input at-dossier-input--xs" inputMode="decimal" placeholder={t.dossier.unitPricePlaceholder} aria-label={t.dossier.unitPriceAria} value={p.price} onChange={(e) => setPart(i, j, { price: e.target.value })} />
+                <button type="button" className="at-recform-x" aria-label={t.dossier.removePart} title={t.dossier.remove} onClick={() => setItem(i, { parts: it.parts.filter((_, m) => m !== j) })}>×</button>
               </div>
             ))}
-            <button type="button" className="at-dossier-btn at-dossier-btn--sm" onClick={() => setItem(i, { parts: [...it.parts, blankPart()] })}>+ pièce</button>
+            <button type="button" className="at-dossier-btn at-dossier-btn--sm" onClick={() => setItem(i, { parts: [...it.parts, blankPart()] })}>{t.dossier.addPart}</button>
           </div>
         ))}
-        <datalist id={listId}>{SERVICE_TYPES.map((t) => (<option key={t} value={t}>{serviceLabel(t)}</option>))}</datalist>
+        <datalist id={listId}>{SERVICE_TYPES.map((t) => (<option key={t} value={t}>{serviceLabel(t, locale)}</option>))}</datalist>
         <button type="button" className="at-dossier-btn at-dossier-btn--sm" onClick={() => setItems((arr) => [...arr, blankItem()])}>+ ajouter un service</button>
       </div>
 
       <div className="at-recform-actions">
-        <button type="submit" className="at-dossier-btn at-dossier-btn--do" disabled={!valid}>{record ? 'Enregistrer' : 'Ajouter'}</button>
-        <button type="button" className="at-dossier-btn" onClick={onCancel}>Annuler</button>
+        <button type="submit" className="at-dossier-btn at-dossier-btn--do" disabled={!valid}>{record ? t.dossier.save : t.dossier.add}</button>
+        <button type="button" className="at-dossier-btn" onClick={onCancel}>{t.dossier.cancel}</button>
       </div>
     </form>
   );
@@ -369,6 +378,8 @@ function RecordForm({ record, defaultUnit, onSubmit, onCancel }: { record?: Main
 // ── Service schedule ──────────────────────────────────────────────────────────
 
 function ScheduleSection({ vehicleIri, onChanged, onError }: { vehicleIri: string; onChanged: () => void; onError: (m: string) => void }) {
+  const [locale] = useLocale();
+  const t = useT();
   const [rules, setRules] = useState<ServiceRule[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -385,7 +396,7 @@ function ScheduleSection({ vehicleIri, onChanged, onError }: { vehicleIri: strin
     setLoading(true);
     getServiceSchedule(vehicleIri)
       .then((rs) => { if (token === reqToken.current) setRules(rs); })
-      .catch((e) => { if (token === reqToken.current) onErrorRef.current(`Échec du chargement du programme : ${(e as Error).message}`); })
+      .catch((e) => { if (token === reqToken.current) onErrorRef.current(t.dossier.scheduleLoadFailed((e as Error).message)); })
       .finally(() => { if (token === reqToken.current) setLoading(false); });
   }, [vehicleIri]);
   useEffect(() => load(), [load]);
@@ -407,24 +418,24 @@ function ScheduleSection({ vehicleIri, onChanged, onError }: { vehicleIri: strin
         load();
         onChanged();
       })
-      .catch((e) => onError(`Échec de la suppression : ${(e as Error).message}`));
+      .catch((e) => onError(t.dossier.deleteFailed((e as Error).message)));
   };
 
   return (
     <section className="at-dossier-section">
       <div className="at-dossier-section-head">
-        <h3>Programme d’entretien</h3>
+        <h3>{t.dossier.schedule}</h3>
         <button type="button" className="at-dossier-btn" aria-expanded={adding} onClick={() => { setAdding((a) => !a); setEditing(null); }}>
-          {adding ? 'Annuler' : '+ Règle'}
+          {adding ? t.dossier.cancel : t.dossier.addRule}
         </button>
       </div>
 
       {adding && <RuleForm onSave={save} onCancel={() => setAdding(false)} />}
 
       {loading && rules.length === 0 ? (
-        <p className="at-dossier-empty">Chargement…</p>
+        <p className="at-dossier-empty">{t.dossier.loading}</p>
       ) : rules.length === 0 && !adding ? (
-        <p className="at-dossier-empty">Aucune règle d’entretien. Ajoutez-en une pour piloter les prévisions.</p>
+        <p className="at-dossier-empty">{t.dossier.noRules}</p>
       ) : (
         <ul className="at-dossier-rules">
           {rules.map((r) =>
@@ -432,12 +443,12 @@ function ScheduleSection({ vehicleIri, onChanged, onError }: { vehicleIri: strin
               <li key={r.id}><RuleForm rule={r} onSave={save} onCancel={() => setEditing(null)} /></li>
             ) : (
               <li className="at-rule" key={r.id}>
-                <button type="button" className="at-rule-main" onClick={() => { setEditing(r); setAdding(false); }} aria-label={`Modifier ${ruleTitle(r)}`}>
-                  <span className="at-rule-title">{ruleTitle(r)}</span>
-                  <span className="at-rule-cadence">{formatCadence(r)}</span>
+                <button type="button" className="at-rule-main" onClick={() => { setEditing(r); setAdding(false); }} aria-label={t.dossier.editRule(ruleTitle(r, locale))}>
+                  <span className="at-rule-title">{ruleTitle(r, locale)}</span>
+                  <span className="at-rule-cadence">{formatCadence(r, locale)}</span>
                 </button>
                 <RuleSource rule={r} />
-                <button type="button" className="at-rule-del" aria-label={`Retirer ${ruleTitle(r)}`} title="Retirer" onClick={() => remove(r)}>×</button>
+                <button type="button" className="at-rule-del" aria-label={t.dossier.removeRule(ruleTitle(r, locale))} title={t.dossier.remove} onClick={() => remove(r)}>×</button>
               </li>
             ),
           )}
@@ -448,9 +459,10 @@ function ScheduleSection({ vehicleIri, onChanged, onError }: { vehicleIri: strin
 }
 
 function RuleSource({ rule }: { rule: ServiceRule }) {
+  const t = useT();
   const href = safeHref(rule.url);
   const badge = (
-    <span className={`at-rule-source${rule.verified ? ' at-rule-source--verified' : ''}`} title={rule.verified ? 'Source vérifiée (catalogue)' : `Source : ${rule.source}`}>
+    <span className={`at-rule-source${rule.verified ? ' at-rule-source--verified' : ''}`} title={rule.verified ? t.dossier.verifiedSource : t.dossier.source(rule.source)}>
       {rule.verified ? '✓ ' : ''}
       {rule.source}
     </span>
@@ -466,6 +478,8 @@ function RuleSource({ rule }: { rule: ServiceRule }) {
 const ACTIONS: ServiceAction[] = ['change', 'replace', 'clean', 'inspect'];
 
 function RuleForm({ rule, onSave, onCancel }: { rule?: ServiceRule; onSave: (input: ServiceRuleInput) => void; onCancel: () => void }) {
+  const [locale] = useLocale();
+  const t = useT();
   const listId = useId();
   const [type, setType] = useState(rule?.type ?? 'oil_change');
   const [action, setAction] = useState<ServiceAction>(rule?.action ?? 'change');
@@ -498,26 +512,26 @@ function RuleForm({ rule, onSave, onCancel }: { rule?: ServiceRule; onSave: (inp
   return (
     <form className="at-ruleform" onSubmit={submit}>
       <div className="at-recform-row">
-        <input list={listId} className="at-dossier-input" placeholder="type" aria-label="Type de service" value={type} onChange={(e) => setType(e.target.value)} />
-        <datalist id={listId}>{SERVICE_TYPES.map((t) => (<option key={t} value={t}>{serviceLabel(t)}</option>))}</datalist>
+        <input list={listId} className="at-dossier-input" placeholder={t.dossier.typePlaceholder} aria-label={t.dossier.typeAria} value={type} onChange={(e) => setType(e.target.value)} />
+        <datalist id={listId}>{SERVICE_TYPES.map((t) => (<option key={t} value={t}>{serviceLabel(t, locale)}</option>))}</datalist>
         <select className="at-dossier-input at-dossier-input--unit" aria-label="Action" value={action} onChange={(e) => setAction(e.target.value as ServiceAction)}>
           {ACTIONS.map((a) => (<option key={a} value={a}>{a}</option>))}
         </select>
-        <input className="at-dossier-input at-dossier-input--grow" placeholder="composant (optionnel)" aria-label="Composant" value={component} onChange={(e) => setComponent(e.target.value)} />
+        <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.componentPlaceholder} aria-label={t.dossier.componentAria} value={component} onChange={(e) => setComponent(e.target.value)} />
       </div>
       <div className="at-recform-row">
-        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder="tous les …" aria-label="Cadence kilométrage" value={usage} onChange={(e) => setUsage(e.target.value)} />
-        <select className="at-dossier-input at-dossier-input--unit" aria-label="Unité de cadence" value={usageUnit} onChange={(e) => setUsageUnit(e.target.value)}>
+        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder={t.dossier.everyUsagePlaceholder} aria-label={t.dossier.everyUsageAria} value={usage} onChange={(e) => setUsage(e.target.value)} />
+        <select className="at-dossier-input at-dossier-input--unit" aria-label={t.dossier.cadenceUnitAria} value={usageUnit} onChange={(e) => setUsageUnit(e.target.value)}>
           {MAINT_USAGE_UNITS.map((u) => (<option key={u} value={u}>{u}</option>))}
         </select>
-        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder="tous les … mois" aria-label="Cadence mois" value={months} onChange={(e) => setMonths(e.target.value)} />
-        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder="1ʳᵉ fois à …" aria-label="Premier intervalle" value={first} onChange={(e) => setFirst(e.target.value)} />
+        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder={t.dossier.everyMonthsPlaceholder} aria-label={t.dossier.everyMonthsAria} value={months} onChange={(e) => setMonths(e.target.value)} />
+        <input className="at-dossier-input at-dossier-input--sm" inputMode="numeric" placeholder={t.dossier.firstAtPlaceholder} aria-label={t.dossier.firstAtAria} value={first} onChange={(e) => setFirst(e.target.value)} />
       </div>
       <div className="at-recform-actions">
-        <button type="submit" className="at-dossier-btn at-dossier-btn--do" disabled={!valid} title={!hasCadence ? 'Indiquez au moins une cadence' : undefined}>
-          {rule ? 'Corriger' : 'Ajouter'}
+        <button type="submit" className="at-dossier-btn at-dossier-btn--do" disabled={!valid} title={!hasCadence ? t.dossier.needCadence : undefined}>
+          {rule ? t.dossier.fix : t.dossier.add}
         </button>
-        <button type="button" className="at-dossier-btn" onClick={onCancel}>Annuler</button>
+        <button type="button" className="at-dossier-btn" onClick={onCancel}>{t.dossier.cancel}</button>
       </div>
     </form>
   );

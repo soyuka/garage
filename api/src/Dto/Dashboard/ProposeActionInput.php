@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 
 final class ProposeActionInput
 {
-    #[ApiProperty(description: 'The button label, in French.')]
+    #[ApiProperty(description: 'The button label, in the interface language.')]
     public string $label = '';
 
     #[ApiProperty(description: 'NL follow-up: clicking re-runs the IN-APP agent with this text. Leave null for a deterministic write.')]

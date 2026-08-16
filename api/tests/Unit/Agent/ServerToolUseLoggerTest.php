@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent;
 
+use App\I18n\LocaleContext;
+use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\ServerToolUseLogger;
 use App\Agent\Ui\RenderIntentTools;
@@ -86,7 +88,7 @@ final class ServerToolUseLoggerTest extends TestCase
         $this->assertSame(0, $raw->reads, 'streaming must not force the raw HTTP fetch');
         $this->assertTrue($budget->exhausted(), 'the streamed web_search count must feed the budget');
         // The same toolTokens delta also narrates the search on the dashboard heartbeat.
-        $this->assertSame([['type' => 'status', 'message' => 'Je cherche en ligne…']], $published->getArrayCopy());
+        $this->assertSame([['type' => 'status', 'message' => 'Je cherche en ligne…', 'tool' => 'web_search']], $published->getArrayCopy());
     }
 
     /**
@@ -117,7 +119,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools), $journal);
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack())), $journal);
     }
 
     /**

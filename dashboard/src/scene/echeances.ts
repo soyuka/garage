@@ -1,4 +1,5 @@
 import { dueDescriptor } from '../derive';
+import type { Locale } from '../i18n/locale';
 import { serviceLabel } from '../labels';
 import type { ForecastDue, PlannedTask, Signal } from '../types';
 
@@ -29,12 +30,12 @@ function weight(e: Echeance): number {
 
 /** A task's own words when it has them ("support moteur gauche"), else the service label — the only
  *  thing telling two same-type jobs apart. */
-function taskLabel(t: PlannedTask): string {
+function taskLabel(t: PlannedTask, locale: Locale): string {
   const own = t.label?.trim();
-  return own ? own : serviceLabel(t.type);
+  return own ? own : serviceLabel(t.type, locale);
 }
 
-export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: PlannedTask[] = []): Echeance[] {
+export function buildEcheances(due: ForecastDue[], locale: Locale, gaps: string[] = [], tasks: PlannedTask[] = []): Echeance[] {
   const openByType = new Map<string, PlannedTask>();
   const doneByType = new Map<string, PlannedTask>();
   for (const t of tasks) {
@@ -51,13 +52,13 @@ export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: P
   const dueTypes = new Set(due.map((d) => d.type));
 
   for (const d of due) {
-    const desc = dueDescriptor(d);
+    const desc = dueDescriptor(d, locale);
     const t = taskFor(d.type);
     if (t) {
       emittedTasks.add(t.id);
-      out.push({ id: t.id, kind: 'task', type: d.type, label: taskLabel(t), horizon: desc.horizon, signal: desc.signal, taskId: t.id, done: t.status === 'done', due: d });
+      out.push({ id: t.id, kind: 'task', type: d.type, label: taskLabel(t, locale), horizon: desc.horizon, signal: desc.signal, taskId: t.id, done: t.status === 'done', due: d });
     } else {
-      out.push({ id: `due:${d.type}`, kind: 'due', type: d.type, label: serviceLabel(d.type), horizon: desc.horizon, signal: desc.signal, due: d });
+      out.push({ id: `due:${d.type}`, kind: 'due', type: d.type, label: serviceLabel(d.type, locale), horizon: desc.horizon, signal: desc.signal, due: d });
     }
   }
   // Every remaining task — a manually-planned service with no forecast, and any SIBLING of a task a
@@ -65,12 +66,12 @@ export function buildEcheances(due: ForecastDue[], gaps: string[] = [], tasks: P
   for (const t of tasks) {
     if (t.status === 'dismissed' || emittedTasks.has(t.id)) continue;
     emittedTasks.add(t.id);
-    out.push({ id: t.id, kind: 'task', type: t.type, label: taskLabel(t), horizon: null, signal: 'green', taskId: t.id, done: t.status === 'done' });
+    out.push({ id: t.id, kind: 'task', type: t.type, label: taskLabel(t, locale), horizon: null, signal: 'green', taskId: t.id, done: t.status === 'done' });
   }
   // coverage gaps not carried by a due.
   for (const g of gaps) {
     if (dueTypes.has(g)) continue;
-    out.push({ id: `gap:${g}`, kind: 'gap', type: g, label: serviceLabel(g), horizon: null, signal: 'green' });
+    out.push({ id: `gap:${g}`, kind: 'gap', type: g, label: serviceLabel(g, locale), horizon: null, signal: 'green' });
   }
 
   // stable sort, worst-first (JS sort is stable → equal-weight items keep soonest-first forecast order).

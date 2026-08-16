@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
 import { NoyauVoice } from '../noyau/NoyauVoice';
 import { AmbientInbox } from '../noyau/AmbientInbox';
+import { NoticeStack } from '../noyau/NoticeStack';
 import type { DecisionItem, NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
 import type { RevealState } from './reveal';
@@ -75,6 +77,12 @@ interface SceneViewProps {
   onResolveDecision?: (id: string) => void;
   /** C2: promote a notify item (a due service) to a planned task on its own vehicle. */
   onScheduleDecision?: (item: DecisionItem) => void;
+  /** "vu" on a retained notice card. Required — a card the operator cannot dismiss is a dead control. */
+  onDismissNotice: (id: string) => void;
+  /** Audition: is the Atelier speaking its answers? Ships false. Absent → the affordance is hidden. */
+  audition?: boolean;
+  /** Flip the audition preference. Lives in the inbox head — MIL-STD-1472F §7.2.9.11 manual reset. */
+  onToggleAudition?: () => void;
   /** Composer focus toggles Le Noyau's listening cue (a local UI event, not a wire frame). */
   onComposerFocus?: (active: boolean) => void;
   /** Submit an instruction (Enter). Live → posts an agent turn; absent → input is inert (pre-agent). */
@@ -138,6 +146,9 @@ export function SceneView({
   onClearEmber,
   onResolveDecision,
   onScheduleDecision,
+  onDismissNotice,
+  audition,
+  onToggleAudition,
   onComposerFocus,
   onSubmit,
   composerExtras,
@@ -171,6 +182,8 @@ export function SceneView({
   // close, so without restoration a keyboard/AT user is dumped onto <body>. Save the opener at open time,
   // and on close return focus to it if still connected, else to a stable Le Noyau anchor (the muted ember
   // re-entry chip if the queue survives, otherwise the orb) — never nothing.
+  const [locale] = useLocale();
+  const t = useT();
   const consoleRef = useRef<HTMLDivElement>(null);
   const inboxOpenerRef = useRef<HTMLElement | null>(null);
   const inboxWasOpen = useRef(false);
@@ -215,7 +228,7 @@ export function SceneView({
   // Keys CUT the register to the visits carrying those services — « quand la dernière vidange ? » is a
   // question about ONE service, and every visit is not its answer. Same narrowing the worklist already
   // does for `focusView {panel:'tasks', keys}`.
-  const carnet = carnetFocused ? rollupCarnet(records, 3, focusKeys ?? []) : null;
+  const carnet = carnetFocused ? rollupCarnet(records, locale, 3, focusKeys ?? []) : null;
   const showCarnet = !!carnet && carnet.count > 0;
   // A tasks focus (`focusView {panel:'tasks'}` — « qu'est-ce que j'ai à faire ? ») projects the
   // WORKLIST into the same column: the agent's cut of the rail, in the order it answered.
@@ -255,16 +268,16 @@ export function SceneView({
 
   // The rail model: todo ("À faire" — late, red-tagged row by row) / planned / gaps. The rail is the ONE
   // reading surface for échéances (the ring pins were removed — the disc stays clean; zoom via the rows).
-  const rail = bundle ? buildRail(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? []) : null;
+  const rail = bundle ? buildRail(bundle.forecast.due, locale, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? []) : null;
   // The worklist is a CUT of that same rail (never a second source): no keys → the actionable workload,
   // keys → exactly those services plus an honest note for any the vehicle does not track.
   const worklist = tasksFocused && rail ? buildWorklist(rail, focusKeys ?? []) : null;
   const showWorklist = !!worklist && (worklist.items.length > 0 || worklist.missing.length > 0);
   // The visit plan is the SAME rail regrouped by trip to the lift (visits.ts) — the rail renders it
   // instead of the flat buckets, and « Plus tard · n » projects its tail as the ladder.
-  const plan = bundle ? buildVisits(bundle.forecast.due, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? []) : null;
+  const plan = bundle ? buildVisits(bundle.forecast.due, locale, bundle.forecast.gaps, bundle.vehicle.plannedTasks ?? []) : null;
   const showLadder = ladderFocused && !!plan && plan.later.length > 0;
-  const shopping = shopFocused && bundle ? buildShoppingList(bundle) : null;
+  const shopping = shopFocused && bundle ? buildShoppingList(bundle, locale) : null;
   const showShopping = !!shopping && shopping.groups.length > 0;
 
   // When a full surface (Données drawer / Le Carnet) is open, the dock slides to the LEFT free column so
@@ -273,13 +286,13 @@ export function SceneView({
   const overlayOpen = factsDrawerOpen || historyOpen;
   const contextChips: QuickAction[] = factsDrawerOpen
     ? [
-        { label: 'Historique', onClick: () => onOpenHistory?.() },
-        { label: 'Fermer', onClick: () => onCloseFacts?.() },
+        { label: t.scene.history, onClick: () => onOpenHistory?.() },
+        { label: t.scene.close, onClick: () => onCloseFacts?.() },
       ]
     : historyOpen
       ? [
-          { label: 'Données', onClick: () => onOpenFacts?.() },
-          { label: 'Fermer', onClick: () => onCloseHistory?.() },
+          { label: t.scene.data, onClick: () => onOpenFacts?.() },
+          { label: t.scene.close, onClick: () => onCloseHistory?.() },
         ]
       : [];
 
@@ -311,7 +324,7 @@ export function SceneView({
     <>
       {!bundle ? (
         <div className="at-scene-main">
-          <div className="at-scene-empty">Parc vide — ajoutez un véhicule.</div>
+          <div className="at-scene-empty">{t.scene.emptyFleet}</div>
         </div>
       ) : rung === 'd' ? (
         // canvas-off fallback (weak GPU) — the honest floor.
@@ -345,9 +358,9 @@ export function SceneView({
               home framing. Orange outline = operator action; ~44px hit zone. Reduced motion: the dolly was
               a cut, so this is an instant return. */}
           {cameraFocus && onCameraRelease && (
-            <button type="button" className="at-vuelibre" onClick={onCameraRelease} aria-label="Vue libre — revenir à la vue d’ensemble">
+            <button type="button" className="at-vuelibre" onClick={onCameraRelease} aria-label={t.scene.freeView}>
               <span className="at-vuelibre-glyph" aria-hidden="true">⤢</span>
-              vue libre
+              {t.scene.freeViewShort}
             </button>
           )}
           {/* health now reads as the glowing base halo on Le Plateau's rim (Plateau → Turntable), colour =
@@ -427,6 +440,9 @@ export function SceneView({
           bottom Données drawer is a sheet, so the dock floats above it (--top). */}
       {!historyOpen && (
         <div className={`at-scene-dock${factsDrawerOpen ? ' at-scene-dock--top' : ''}`}>
+          {/* 0. the retained notices — the agent's findings, which outlive the narration heartbeat that
+              carried them. Above the CTA so a proposal (which needs a decision now) stays nearest the orb. */}
+          <NoticeStack notices={noyau.notices} reduced={reduced} onDismiss={onDismissNotice} />
           {/* 1. the rail slot — holds EITHER the chip rail OR (while the agent works) Le Noyau's live
               phrase, in the SAME vertical space, so swapping never shifts the console below. */}
           <div className="at-scene-rail-slot">
@@ -487,6 +503,8 @@ export function SceneView({
                 onReviewInstruction={onCtaInstruction}
                 onReviewPatch={onCtaPatch}
                 onSchedule={onScheduleDecision}
+                audition={audition}
+                onToggleAudition={onToggleAudition}
               />
             </div>
             <div className="at-scene-composer">
@@ -494,8 +512,8 @@ export function SceneView({
               <input
                 className="at-scene-input"
                 name="composer"
-                aria-label="Parlez à l'atelier"
-                placeholder="Parlez à l'atelier…"
+                aria-label={t.scene.speak}
+                placeholder={t.scene.speakPlaceholder}
                 onFocus={() => onComposerFocus?.(true)}
                 onBlur={() => onComposerFocus?.(false)}
                 onKeyDown={handleSubmit}

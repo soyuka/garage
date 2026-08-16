@@ -6,7 +6,7 @@ product
 
 ## Users
 
-Individual owners and small-fleet managers ("parc auto") in France maintaining cars, motos, utilitaires and groundscare machines. They are in a task: logging a maintenance visit, checking what's due, asking the agent to find a part. French-language, mechanic-literate — they read part references and mileages verbatim.
+Individual owners and small-fleet managers ("parc auto") in France maintaining cars, motos, utilitaires and groundscare machines. They are in a task: logging a maintenance visit, checking what's due, asking the agent to find a part. Mechanic-literate — they read part references and mileages verbatim. **French by default, English available** (since 2026-08-16): the interface ships `fr` and switches to `en` from the à-décider inbox, persisted in `mpa.locale`. The domain does not translate — a Contrôle Technique and a carte grise stay what they are.
 
 ## Product Purpose
 
@@ -31,7 +31,7 @@ The shipped stage reads this as a lit **workbench**, not a void: a cutting-mat f
 - **Telemetry reads off the machine.** Health lives on the car and the ring it stands on; the glass panel beside it carries the exact numbers.
 - **No false precision.** Health rounds to 5, forecasts say `dans environ 2 mois` — except overdue, which is exact.
 - **Honesty survives degradation.** Every value must exist outside its glow; the flat "plan" list is always reachable.
-- **Mono is data.** Plates, km, dates, refs render in JetBrains Mono, French-formatted (thin-space `142 000 km`).
+- **Mono is data.** Plates, km, dates, refs render in JetBrains Mono, formatted for the interface language — French thin-space `142 000 km`, English `142,000 km`. `src/format.ts` is the single source, and its `locale` argument is required so no call site can quietly stay French.
 - **Desktop-only.** The garage is a workbench view, not a pocket one: the layout targets a desktop/laptop
   viewport and makes no sub-900px accommodation — no responsive collapse, no mobile nav.
 

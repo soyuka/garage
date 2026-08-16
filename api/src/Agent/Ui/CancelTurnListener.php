@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use App\I18n\AgentMessages;
+use App\I18n\LocaleContext;
 use App\Agent\TurnCancellations;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Platform\Result\TextResult;
@@ -25,6 +27,7 @@ final readonly class CancelTurnListener
     public function __construct(
         private TurnCancellations $cancellations,
         private RenderIntentTools $render,
+        private LocaleContext $locale,
     ) {
     }
 
@@ -42,7 +45,7 @@ final readonly class CancelTurnListener
 
         // Honour the cancel once, then clear so the flag cannot bleed into a later turn on this session.
         $this->cancellations->clear($sessionId);
-        $this->render->toast('Demande interrompue.', 'warn');
+        $this->render->toast(AgentMessages::for($this->locale->current())->cancelled, 'warn');
         $event->setResult(new TextResult(''));
     }
 }

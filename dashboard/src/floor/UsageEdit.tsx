@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { coerceInt, defaultUsageUnit, VEHICLE_USAGE_UNITS } from '../edit';
 import { groupThousands } from '../format';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { InlineEdit } from './InlineEdit';
 import './floor.css';
 
@@ -18,6 +19,8 @@ export function nextUsageOnUnitChange(value: number | null, unit: string): { val
 // "hours" would be rejected. Value + unit are always written together (the backend requires the pair);
 // changing the unit re-stamps an existing reading immediately, a value commit carries the held unit.
 export function UsageEdit({ value, unit, vehicleType, onCommit }: { value: number | null; unit: string | null; vehicleType: string; onCommit: (value: number, unit: string) => void }) {
+  const [locale] = useLocale();
+  const t = useT();
   const [u, setU] = useState<string>(unit ?? defaultUsageUnit(vehicleType));
   useEffect(() => {
     if (unit) setU(unit);
@@ -36,13 +39,13 @@ export function UsageEdit({ value, unit, vehicleType, onCommit }: { value: numbe
   return (
     <span className="at-usage-edit">
       <InlineEdit
-        value={value != null ? groupThousands(value) : ''}
-        placeholder="+ relevé"
-        ariaLabel="Modifier le kilométrage"
+        value={value != null ? groupThousands(value, locale) : ''}
+        placeholder={t.usage.placeholder}
+        ariaLabel={t.usage.edit}
         className="at-usage-edit-val"
         onCommit={commitValue}
       />
-      <select className="at-usage-edit-unit" aria-label="Unité du relevé" value={u} onChange={(e) => changeUnit(e.target.value)}>
+      <select className="at-usage-edit-unit" aria-label={t.usage.unitLabel} value={u} onChange={(e) => changeUnit(e.target.value)}>
         {VEHICLE_USAGE_UNITS.map((opt) => (
           <option key={opt} value={opt}>
             {opt}

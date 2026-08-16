@@ -79,10 +79,15 @@ final class RenderIntentTools
      * {@see StepNarrator}, wired into {@see \App\Agent\Toolbox\CompositeToolbox}), so the user sees
      * "Je consulte le catalogue…" while the agent works, without the model spending a tool call on it.
      * A distinct `status` frame (not a `toast`) so it feeds only the heartbeat, never a toast popup.
+     *
+     * `$tool` rides along so the dashboard can key its step chip on the tool IDENTITY rather than on
+     * the wording of the sentence: it used to keyword-match the French prose to recover exactly the
+     * key we already hold here. Null for a pilot's own `narrate_step`, which has no tool to name —
+     * the field is then omitted rather than sent empty.
      */
-    public function narrate(string $message): void
+    public function narrate(string $message, ?string $tool = null): void
     {
-        $this->publish(['type' => 'status', 'message' => $message]);
+        $this->publish(['type' => 'status', 'message' => $message, ...(null !== $tool ? ['tool' => $tool] : [])]);
     }
 
     public function selectVehicle(string $id): string

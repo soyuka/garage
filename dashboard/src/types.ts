@@ -20,7 +20,8 @@ export type Iri = string;
 /** Signal semantics, locked: vert = ok, ambre = bientôt, rouge = en retard. */
 export type Signal = 'green' | 'amber' | 'red';
 
-/** Toast tone. `alarm` is the only tone that surfaces a real toast popup; the rest feed narration. */
+/** Toast tone. Every tone retains a notice card; `alarm` additionally docks an à-décider item, the
+ *  rest additionally feed the (transient) narration line. */
 export type Tone = 'info' | 'ok' | 'warn' | 'alarm';
 
 /** A usage axis unit. Drives whether a service forecasts on km / miles / engine-hours. */
@@ -320,7 +321,12 @@ export type UIAction =
   | { type: 'toast'; tone: Tone; message: string }
   // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
   // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.
-  | { type: 'status'; message: string }
+  //
+  // `tool` is the server's own tool key (StepNarrator is keyed by it). It is what the chip is derived
+  // from — `message` is prose and is free to be written in any language. Optional so a server that
+  // predates the field still renders: the client then keyword-matches the French sentence, which is
+  // a fallback, not the contract.
+  | { type: 'status'; message: string; tool?: string }
   // Turn lifecycle — drives the busy/working state. Carries no reducer state.
   | { type: 'turn'; phase: 'start' | 'end' };
 

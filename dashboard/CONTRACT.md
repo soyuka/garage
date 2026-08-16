@@ -81,8 +81,15 @@ major-unit euros the client converts.
   **no follow-up fetch**.
 - **Session frames** (session topic): the real `UIAction` union +
   - `{type:'turn', phase:'start'|'end'}` → busy
-  - `{type:'status', message}` → narration line + Noyau pulse
-  - `{type:'toast', tone, message}` → ember / toast
+  - `{type:'status', message, tool?}` → narration line + Noyau pulse. `tool` is the server's own tool
+    key (`StepNarrator` is keyed by it) and is what the step chip is derived from; `message` is prose.
+    Optional: a pilot's `narrate_step` has no tool to name, and a server predating the field still
+    renders — the client then keyword-matches the French sentence, which is a FALLBACK, not the
+    contract (it was the contract until 2026-08-16, and it made the chips hostage to the wording)
+  - `{type:'toast', tone, message}` → retained notice card (every tone) + narration (non-alarm) / ember (alarm)
+    + **spoken aloud when the audition is on** — no new frame, no new field: the voice reads the card's
+    own `message` verbatim, so the wire contract is UNCHANGED by the audition (CHOREOGRAPHY
+    § "Audition — speech, for ANSWERS")
 
 ## The REAL `UIAction` union (verified — the only members the agent tool surface emits)
 
@@ -90,7 +97,7 @@ major-unit euros the client converts.
 `showFact` `{keys[], title?, nodes?}` ·
 `focusView` `{panel: "specs"|"tasks"|"carnet", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
-CtaAction[]}` · `toast` `{tone, message}` · `status` `{message}` · `turn` `{phase}`.
+CtaAction[]}` · `toast` `{tone, message}` · `status` `{message, tool?}` · `turn` `{phase}`.
 
 **`revealAssembly` `{region, partKeys?}` (2026-08-16)** — a REAL server emission (`reveal_assembly`,
 `api/src/ApiResource/Dashboard.php` + the `#[AsTool]` twin, so both drivers reach it). It ghosts the
@@ -148,8 +155,10 @@ project the ladder, the server enum is the only thing in the way.
 
 ## Routing rules that bite
 
-- **Narration line** is fed by `status` frames **AND non-alarm `toast` frames**. Only **`alarm`-tone
-  toasts** surface as real toast popups. Le Noyau's narration queue consumes both.
+- **Narration line** is fed by `status` frames **AND non-alarm `toast` frames** — it is a HEARTBEAT: the
+  next `status` overwrites it and `settle` clears it. **Every** toast, alarm or not, additionally raises a
+  **retained notice card** that stays until the operator dismisses it (CHOREOGRAPHY § "The notice stack"),
+  and an **`alarm`**-tone toast additionally docks a `notify` item on the à-décider queue.
 - **Pulse granularity:** `status` frames fire only for a **whitelisted subset of tools** (a step
   narrator) — **not one per tool-call**. Le Noyau pulses **per narrated step, sparsely**. Mock
   streams must fire `status` sparsely to match. ⚠️ This **supersedes DESIGN-VISION §1** ("Every
@@ -160,5 +169,5 @@ project the ladder, the server enum is the only thing in the way.
 
 `selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in (stored facts OR projected
 `nodes`) · `focusView {panel:'carnet'}` → carnet projection · `proposeActions` → CTA rises
-from cradle (incl. `patchTask` deterministic path) · `toast` → ember docks to Noyau · `status` →
+from cradle (incl. `patchTask` deterministic path) · `toast` → retained notice card (+ ember on alarm) · `status` →
 Noyau pulse · `turn` → busy state.

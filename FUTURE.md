@@ -175,3 +175,118 @@ worked through in `docs/design-inspiration.md` § 5.
   tests. The fix is two rows in `SERVICE_ALIASES`, but front/rear are genuinely different parts on
   different axles, so folding both onto `brake_pads` throws away the axle — which is exactly the datum
   the region lookup needs. Decide whether the axle survives as a distinct region key before folding.
+
+---
+
+## Audition — the two open questions after the 2026-08-16 measurement
+
+Plan and research live in `docs/voice-plan.md` and `docs/voice.md`. Parked here is only what a future
+session must not re-derive.
+
+### 8. Hosted TTS was measured and the premise it rested on is gone
+
+`docs/voice.md:57` excluded ElevenLabs on "no paid API", not on merit. The voice plan then assumed a
+free key was a working middle ground. **It is not, and this is measured, not inferred:** a free-tier
+key sees exactly 21 voices, all `language: en`; every French voice is a shared-library voice; and the
+API returns `402 paid_plan_required — "Free users cannot use library voices via the API"` for all of
+them, *including* voices whose `shared-voices` record says `free_users_allowed: true` (that flag
+governs the web app). Free-tier cloning is off, so there is no workaround. **A French hosted voice
+costs a paid plan.**
+
+That puts the decision back where `docs/voice.md` already left it — Piper route A, which is installed
+on this machine, French, 0.4–0.7 s cold, and immune to the plan's own top risk (conference wifi). The
+`/tts` seam in phases 1–5 is provider-agnostic and is the real work; it is worth building against
+Piper regardless. Do not re-run the ElevenLabs free-tier experiment — the 402 above is the answer.
+
+### 9. Generated SFX are probably the wrong tool for the `échéance` icon
+
+`POST /v1/sound-generation` **is** open on the free tier (verified — it is the one paid-adjacent thing
+a free key can do), and phase 7 of the voice plan uses it at build time only, so it carries no runtime
+dependency. But eleven generations across three prompt strategies produced audio that is consistently
+**noisy** — room tone and texture baked in — which is the opposite of what a caution signal peaking at
+gain `0.14` needs. Denoising a generated clip down to a clean two-pulse tone may cost more than
+rendering the tone physically or sourcing a CC0 sample. Try one clean-source route before assuming
+generation is the path. The *design* target found in the same session still holds and is the useful
+output: **no strike transient, physically-credible machine resonance** (coil, tuning fork) — a bell,
+a chime or a kitchen timer reads domestic, and a sci-fi UI blip is forbidden outright by
+`docs/prompt-pilot-motion.md:124` § Taste.
+
+**Licensing gate, unresolved:** free-tier ElevenLabs output may be attribution-bound or
+non-commercial. The icon would be *committed into the product*, so this must be checked against the
+live terms — not from memory — before any generated asset lands in git.
+
+
+---
+
+## Internationalisation — the app speaks fr and en (2026-08-16)
+
+The chrome, the formatting and the voice's pronunciation now follow `mpa.locale`. What follows is the
+part deliberately left French, with the traps found while doing the rest.
+
+### Already shipped — DO NOT rebuild
+
+`dashboard/src/i18n/` (`locale.ts` pure core + `LocaleProvider.tsx` + `fr.ts`/`en.ts` catalogs typed
+`Messages = typeof fr`) · `format.ts` and `labels.ts` take a **required** `locale` · the switch beside
+the audition toggle (`AmbientInbox.tsx`) · `Accept-Language` on `authFetch` and `/tts` ·
+`framework.yaml` `default_locale`/`enabled_locales`/`set_locale_from_accept_language` ·
+`App\I18n\Locale`, `LocaleContext`, `AgentMessages` · `SpeechClient::synthesize($text, Locale)`
+sending `language_code` · `status {tool}` on the wire so the step chips no longer keyword-match
+French prose · the per-turn output-language directive and the `NO_RESULTS` token family.
+
+### Closed (shipped 2026-08-17) — the agent answers in the interface language
+
+`ai.yaml:82` no longer names a language: it defers to a per-turn directive built by
+`api/src/Agent/TurnContextBuilder.php`, which is the first line of every turn context. The locale
+reaches the worker on `RunAgentTurn.locale` (resolved from `Accept-Language` in
+`AgentTurnController`) and is bound into `App\I18n\LocaleContext` — the same shape as `OwnerContext`,
+for the same reason. `StepNarrator`, the two failure toasts in `RunAgentTurnHandler` and
+`CancelTurnListener` read their wording from `App\I18n\AgentMessages`. Every `#[ApiProperty]` and
+tool description that used to say "in French" now says "in the interface language".
+
+**The sentinel is gone too.** `WebSearchTool` returns `NO_RESULTS` / `SEARCH_UNAVAILABLE` /
+`SEARCH_BUDGET_SPENT` as leading tokens and `ai.yaml` keys its retry rule on those, so the agent's
+output language and its control flow are no longer the same string. Tool RESULTS and tool
+DESCRIPTIONS stay English on purpose — they are model-facing, and the model already reads English
+while writing French.
+
+A hand-written catalog rather than `symfony/translation`: `composer require` cannot run in this repo
+at all, because two local path repositories under `~/forks` are not visible inside the php container
+(verified 2026-08-17 — it aborts on `PathRepository … does not exist` and reverts cleanly). Revisit
+if that setup changes.
+
+### 11. Catalog + domain text that is French at the source  ★ the parts of the screen no catalog can reach
+
+**Gap:** four different French-by-origin surfaces, each needing a different answer, none of them a
+translation key.
+
+- `api/src/ApiResource/FillVolume.php:45-66` `LABELS_FR` is a Russian→French map. **Careful:**
+  `App\Catalog\ServiceKind::fluidLabels()` matches against its French *output*, so translating it in
+  place silently breaks fluid matching.
+- `api/src/Maintenance/MaintenanceTypeNormalizer.php` — ~80 French input aliases. English aliases must
+  be **added**, never swapped: French input has to keep parsing whatever the UI language is.
+- `PARTSAPI_LANG=6` / `MOTUL_LOCALE=fr-FR` are global singletons **and part of the cache key**
+  (`api/docs/PARTSAPI.md:11-16`), so per-request catalog language means per-locale cache keys and a
+  re-fetch per method per language.
+- `dashboard/src/siv.ts` (carte grise) and the Contrôle Technique work are French-regulatory: the
+  field labels translate, the documents do not. `CV` is a French tax band — rendering it `hp` would
+  state something false, and `en.ts` deliberately keeps `CV`.
+
+### 12. The room around the app  ★ an English demo is more than an English UI
+
+**Scope:** `stage/CLAUDE.md:21,50,60-64,75-93` and `stage/.claude/output-styles/atelier.md:11` mandate
+French presenter copy and French narration — an English demo needs an `en` output style and an English
+beat sheet. Casdoor's login is `defaultLanguage = "en"` in all three `api/docker/casdoor/app.conf*`
+files, i.e. already English and already inconsistent with a French app; a language change there must
+land in all three or it becomes a fourth stage/dev divergence. `admin/` has zero French strings and
+needs nothing. `dashboard/src/scene/shopping.ts:68-70` links Mister-Auto and Auto-Doc, French
+storefronts — a real choice, not a string.
+
+### 13. Speaking French well costs a paid ElevenLabs plan  ★ English TTS is currently BETTER than French
+
+**Gap:** `language_code` now rides every `/tts` call, which is the right fix and improves French
+pronunciation from the configured voice. It does not change the measured ceiling in item 8: a
+free-tier key sees 21 voices, all `language: en`, and every French voice is a library voice returning
+`402 paid_plan_required`. So `ELEVENLABS_VOICE_ID` is Sarah, an English voice — English now sounds
+native and French sounds like an English speaker reading French. That inversion is new and worth
+stating before anyone demos it. The Piper route (item 8, `docs/voice.md` route A) remains the
+alternative and the `/tts` seam is already provider-agnostic.

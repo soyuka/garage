@@ -48,15 +48,15 @@ describe('centsToEurosInput', () => {
 
 describe('visitTitle', () => {
   it('prefers a non-blank visit label', () => {
-    expect(visitTitle(rec({ label: 'Révision annuelle', items: [{ type: 'oil_change', parts: [] }] }))).toBe('Révision annuelle');
+    expect(visitTitle(rec({ label: 'Révision annuelle', items: [{ type: 'oil_change', parts: [] }] }), 'fr')).toBe('Révision annuelle');
   });
   it('falls back to the single service label', () => {
-    expect(visitTitle(rec({ items: [{ type: 'oil_change', parts: [] }] }))).toBe('Vidange');
+    expect(visitTitle(rec({ items: [{ type: 'oil_change', parts: [] }] }), 'fr')).toBe('Vidange');
   });
   it('a multi-service visit with no label reads "Entretien"', () => {
-    expect(visitTitle(rec({ items: [{ type: 'oil_change', parts: [] }, { type: 'brake_pads', parts: [] }] }))).toBe('Entretien');
+    expect(visitTitle(rec({ items: [{ type: 'oil_change', parts: [] }, { type: 'brake_pads', parts: [] }] }), 'fr')).toBe('Entretien');
   });
   it('no items and no label → "—"', () => {
-    expect(visitTitle(rec({ items: [] }))).toBe('—');
+    expect(visitTitle(rec({ items: [] }), 'fr')).toBe('—');
   });
 });

@@ -55,7 +55,7 @@ describe('dueSignal (§2 semantics)', () => {
 
 describe('dueDescriptor (honest, render-ready — same values for panel + flat list)', () => {
   it('overdue → precise amount, no horizon rounding, until is null', () => {
-    const d = dueDescriptor(due({ overdue: true, daysUntilDue: -80, usage: { last: 128800, due: 138800, remaining: -3200, unit: 'km' } }));
+    const d = dueDescriptor(due({ overdue: true, daysUntilDue: -80, usage: { last: 128800, due: 138800, remaining: -3200, unit: 'km' } }), 'fr');
     expect(d.signal).toBe('red');
     expect(d.overdue).toBe(true);
     expect(d.horizon).toBe(`DÉPASSÉ de 3${THIN}200${NBSP}km`);
@@ -65,22 +65,22 @@ describe('dueDescriptor (honest, render-ready — same values for panel + flat l
   it('overdue by TIME with km still remaining → day overshoot, never the positive remaining (live MAZDA case)', () => {
     // overdue=true on the calendar axis, but the usage axis still has 6 548 km left — must NOT read
     // "DÉPASSÉ de 6 548 km" (that figure is remaining, not an overshoot).
-    const d = dueDescriptor(due({ overdue: true, daysUntilDue: -113, usage: { last: 0, due: 10000, remaining: 6548, unit: 'km' } }));
+    const d = dueDescriptor(due({ overdue: true, daysUntilDue: -113, usage: { last: 0, due: 10000, remaining: 6548, unit: 'km' } }), 'fr');
     expect(d.horizon).toBe(`DÉPASSÉ de 113${NBSP}jours`);
     expect(d.horizon).not.toContain('6');
   });
   it('overdue with neither a negative-usage nor a negative-day axis → bare DÉPASSÉ (no false precision)', () => {
-    const d = dueDescriptor(due({ overdue: true, daysUntilDue: null, usage: { last: 0, due: 10000, remaining: 200, unit: 'km' } }));
+    const d = dueDescriptor(due({ overdue: true, daysUntilDue: null, usage: { last: 0, due: 10000, remaining: 200, unit: 'km' } }), 'fr');
     expect(d.horizon).toBe('DÉPASSÉ');
   });
   it('upcoming → rounded horizon + full-precision remaining', () => {
-    const d = dueDescriptor(due({ daysUntilDue: 155, usage: { last: 136000, due: 148000, remaining: 6000, unit: 'km' } }));
+    const d = dueDescriptor(due({ daysUntilDue: 155, usage: { last: 136000, due: 148000, remaining: 6000, unit: 'km' } }), 'fr');
     expect(d.overdue).toBe(false);
     expect(d.horizon).toBe(`dans environ 5${NBSP}mois`);
     expect(d.until).toBe(`6${THIN}000${NBSP}km`);
   });
   it('a time-only axis exposes NO precise "until" (no false day-count §5)', () => {
-    const d = dueDescriptor(due({ daysUntilDue: 75, dueAt: '2026-09-12' }));
+    const d = dueDescriptor(due({ daysUntilDue: 75, dueAt: '2026-09-12' }), 'fr');
     expect(d.until).toBeNull();
     expect(d.horizon).toBe(`dans environ 3${NBSP}mois`); // rounded, never "75 j"
   });

@@ -10,14 +10,14 @@ describe('assemblyFor — every region has a diagram', () => {
   it('draws something for every region the camera can be sent to', () => {
     for (const region of BODY_REGIONS) {
       expect(hasAssembly(region)).toBe(true);
-      expect(assemblyFor(region).length).toBeGreaterThan(0);
-      expect(assemblySize(region)).toBe(assemblyFor(region).length);
+      expect(assemblyFor(region, 'fr').length).toBeGreaterThan(0);
+      expect(assemblySize(region)).toBe(assemblyFor(region, 'fr').length);
     }
   });
 
   it('keeps every part within arm’s reach of the anchor — a diagram, not a scatter', () => {
     for (const region of BODY_REGIONS) {
-      for (const part of assemblyFor(region)) {
+      for (const part of assemblyFor(region, 'fr')) {
         for (const axis of part.offset) expect(Math.abs(axis)).toBeLessThanOrEqual(0.7);
         expect(part.size).toBeGreaterThan(0);
         // Generous, because the diagram is schematic and sized to READ, but still bounded: a part
@@ -29,7 +29,7 @@ describe('assemblyFor — every region has a diagram', () => {
 
   it('gives every part a label and a key — a shape with no name is decoration', () => {
     for (const region of BODY_REGIONS) {
-      for (const part of assemblyFor(region)) {
+      for (const part of assemblyFor(region, 'fr')) {
         expect(part.label.length).toBeGreaterThan(0);
         expect(part.key.length).toBeGreaterThan(0);
       }
@@ -39,32 +39,32 @@ describe('assemblyFor — every region has a diagram', () => {
 
 describe('assemblyFor — keys call parts out, they do not filter the circuit', () => {
   it('highlights nothing when no keys are given', () => {
-    expect(assemblyFor('bay').every((p) => !p.highlighted)).toBe(true);
+    expect(assemblyFor('bay', 'fr').every((p) => !p.highlighted)).toBe(true);
   });
 
   it('still draws the WHOLE circuit when one part is named (context is the point)', () => {
-    const all = assemblyFor('bay');
-    const one = assemblyFor('bay', ['fuel_filter']);
+    const all = assemblyFor('bay', 'fr');
+    const one = assemblyFor('bay', 'fr', ['fuel_filter']);
     expect(one).toHaveLength(all.length);
     expect(one.filter((p) => p.highlighted).map((p) => p.key)).toEqual(['fuel_filter']);
   });
 
   it('folds spelling variants through canonicalService, like every other key surface', () => {
-    const canonical = assemblyFor('frontAxle', ['tyres']).filter((p) => p.highlighted);
-    const variant = assemblyFor('frontAxle', ['tires']).filter((p) => p.highlighted);
+    const canonical = assemblyFor('frontAxle', 'fr', ['tyres']).filter((p) => p.highlighted);
+    const variant = assemblyFor('frontAxle', 'fr', ['tires']).filter((p) => p.highlighted);
     expect(canonical.length).toBeGreaterThan(0);
     expect(variant.map((p) => p.key)).toEqual(canonical.map((p) => p.key));
   });
 
   it('ignores a key the diagram does not know rather than throwing', () => {
-    const parts = assemblyFor('hood', ['oil_filter', 'not_a_part']);
+    const parts = assemblyFor('hood', 'fr', ['oil_filter', 'not_a_part']);
     expect(parts.filter((p) => p.highlighted).map((p) => p.key)).toEqual(['oil_filter']);
   });
 
   it('returns a fresh array each call — a caller marking parts must not mutate the diagram', () => {
-    const a = assemblyFor('hood', ['oil_filter']);
+    const a = assemblyFor('hood', 'fr', ['oil_filter']);
     a[0].highlighted = true;
-    expect(assemblyFor('hood')[0].highlighted).toBe(false);
+    expect(assemblyFor('hood', 'fr')[0].highlighted).toBe(false);
   });
 });
 

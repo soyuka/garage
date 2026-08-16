@@ -20,7 +20,7 @@ describe('buildRail — todo/planned/gaps buckets', () => {
       due('coolant'), // green → planned
       due('brake_fluid', { daysUntilDue: 12 }), // amber → planned
       due('oil_change', { overdue: true }), // red → todo
-    ]);
+    ], 'fr');
     expect(model.todo.map((i) => i.type)).toEqual(['oil_change']);
     expect(model.planned.map((i) => i.type)).toEqual(['brake_fluid', 'coolant']);
     expect(model.gaps).toEqual([]);
@@ -28,7 +28,7 @@ describe('buildRail — todo/planned/gaps buckets', () => {
 
   it('an overdue service WITH an open task is still todo (late is late)', () => {
     const t = task('oil_change', 'open');
-    const model = buildRail([due('oil_change', { overdue: true })], [], [t]);
+    const model = buildRail([due('oil_change', { overdue: true })], 'fr', [], [t]);
     expect(model.todo).toHaveLength(1);
     expect(model.todo[0].kind).toBe('task');
     expect(model.todo[0].task).toBe(t);
@@ -36,7 +36,7 @@ describe('buildRail — todo/planned/gaps buckets', () => {
 
   it('a DONE task bound to an overdue due is handled → planned, not todo', () => {
     const t = task('oil_change', 'done');
-    const model = buildRail([due('oil_change', { overdue: true })], [], [t]);
+    const model = buildRail([due('oil_change', { overdue: true })], 'fr', [], [t]);
     expect(model.todo).toEqual([]);
     expect(model.planned.map((i) => [i.kind, i.done])).toEqual([['task', true]]);
   });
@@ -44,26 +44,26 @@ describe('buildRail — todo/planned/gaps buckets', () => {
   // Work the operator DECIDED to do is not a prediction: it gets its own bucket, above the forecast,
   // so a dateless task can no longer sink under items the schedule merely guesses at.
   it('an open task with no forecast is ongoing work, not a prediction', () => {
-    const model = buildRail([], [], [task('brake_pads', 'open')]);
+    const model = buildRail([], 'fr', [], [task('brake_pads', 'open')]);
     expect(model.ongoing.map((i) => i.kind)).toEqual(['task']);
     expect(model.planned).toEqual([]);
     expect(model.todo).toEqual([]);
   });
 
   it('an open task bound to a not-yet-due forecast is ongoing too', () => {
-    const model = buildRail([due('fuel_filter')], [], [task('fuel_filter', 'open')]);
+    const model = buildRail([due('fuel_filter')], 'fr', [], [task('fuel_filter', 'open')]);
     expect(model.ongoing.map((i) => i.type)).toEqual(['fuel_filter']);
     expect(model.planned).toEqual([]);
   });
 
   it('a late task stays in todo — late outranks ongoing', () => {
-    const model = buildRail([due('oil_change', { overdue: true })], [], [task('oil_change', 'open')]);
+    const model = buildRail([due('oil_change', { overdue: true })], 'fr', [], [task('oil_change', 'open')]);
     expect(model.todo.map((i) => i.type)).toEqual(['oil_change']);
     expect(model.ongoing).toEqual([]);
   });
 
   it('a done task is handled, never ongoing', () => {
-    const model = buildRail([due('oil_change')], [], [task('oil_change', 'done')]);
+    const model = buildRail([due('oil_change')], 'fr', [], [task('oil_change', 'done')]);
     expect(model.ongoing).toEqual([]);
     expect(model.planned.map((i) => i.done)).toEqual([true]);
   });
@@ -74,19 +74,19 @@ describe('buildRail — todo/planned/gaps buckets', () => {
       due('air_filter', { overdue: true }), // red
       due('brake_fluid', { daysUntilDue: 12 }), // amber
       due('oil_change', { overdue: true }), // red
-    ]);
+    ], 'fr');
     expect(model.todo.map((i) => i.type)).toEqual(['air_filter', 'oil_change']);
     expect(model.planned.map((i) => i.type)).toEqual(['brake_fluid', 'coolant']);
   });
 
   it('gaps go to the gaps bucket', () => {
-    const model = buildRail([due('oil_change', { overdue: true })], ['air_filter']);
+    const model = buildRail([due('oil_change', { overdue: true })], 'fr', ['air_filter']);
     expect(model.gaps.map((i) => i.type)).toEqual(['air_filter']);
     expect(model.todo).toHaveLength(1);
   });
 
   it('empty forecast → empty model', () => {
-    expect(buildRail([])).toEqual({ todo: [], ongoing: [], planned: [], gaps: [] });
+    expect(buildRail([], 'fr')).toEqual({ todo: [], ongoing: [], planned: [], gaps: [] });
   });
 });
 

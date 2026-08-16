@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useT } from '../i18n/LocaleProvider';
 import { tickMarks } from './gauge';
 import type { NoyauState } from './state';
 import './noyau.css';
@@ -29,6 +30,7 @@ export function Noyau({
    *  Stage-A playground has no inbox) the click falls back to a bare badge acknowledge. */
   onEmberActivate?: () => void;
 }) {
+  const t = useT();
   const ticks = useMemo(() => tickMarks(60, C, C, 53, 59, 5), []);
   const [rings, setRings] = useState<number[]>([]);
   const prevPulse = useRef(0);
@@ -136,7 +138,7 @@ export function Noyau({
             type="button"
             className="noyau-ember"
             data-muted={state.emberSeen ? 'true' : undefined}
-            aria-label={`${state.queue.length} décision(s) en attente — ouvrir « à décider »`}
+            aria-label={t.noyau.pendingDecisions(state.queue.length)}
             aria-live="polite"
             onClick={(e) => {
               e.stopPropagation();

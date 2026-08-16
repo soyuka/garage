@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locale';
 import { taskTitle } from '../tasks';
 import type { Iri, PlannedPart, VehicleBundle } from '../types';
 
@@ -28,10 +29,10 @@ export interface ShoppingList {
   unpricedCount: number;
 }
 
-export function buildShoppingList(bundle: VehicleBundle): ShoppingList {
+export function buildShoppingList(bundle: VehicleBundle, locale: Locale): ShoppingList {
   const groups: ShoppingGroup[] = (bundle.vehicle.plannedTasks ?? [])
     .filter((t) => t.status === 'open' && (t.parts?.length ?? 0) > 0)
-    .map((t) => ({ taskId: t.id, title: taskTitle(t), parts: t.parts }));
+    .map((t) => ({ taskId: t.id, title: taskTitle(t, locale), parts: t.parts }));
 
   const parts = groups.flatMap((g) => g.parts);
   return {

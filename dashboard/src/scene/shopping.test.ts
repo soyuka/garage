@@ -24,6 +24,7 @@ describe('buildShoppingList', () => {
         task({ type: 'coolant_temperature_sensor', parts: [part('L35G-18-840')] }),
         task({ type: 'engine_mount', id: '/t/mount-a', parts: [part('TEG1101'), part('GJ6A-39-040A')] }),
       ]),
+      'fr',
     );
     expect(list.groups.map((g) => g.parts.length)).toEqual([1, 2]);
     expect(list.partCount).toBe(3);
@@ -31,7 +32,7 @@ describe('buildShoppingList', () => {
   });
 
   it('skips a task with no references — nothing to order is not a line', () => {
-    const list = buildShoppingList(bundle([task({ type: 'fuel_filter', parts: [] })]));
+    const list = buildShoppingList(bundle([task({ type: 'fuel_filter', parts: [] })]), 'fr');
     expect(list.groups).toEqual([]);
     expect(list.partCount).toBe(0);
   });
@@ -43,6 +44,7 @@ describe('buildShoppingList', () => {
         task({ type: 'air_filter', status: 'dismissed', parts: [part('C25114')] }),
         task({ type: 'brake_pads', parts: [part('GDB1330')] }),
       ]),
+      'fr',
     );
     expect(list.groups).toHaveLength(1);
     expect(list.groups[0].parts[0].ref).toBe('GDB1330');
@@ -53,6 +55,7 @@ describe('buildShoppingList', () => {
       bundle([
         task({ type: 'brake_pads', parts: [part('A', { priceCents: 1250, qty: 2 }), part('B')] }),
       ]),
+      'fr',
     );
     expect(list.totalCents).toBe(2500);
   });
@@ -62,6 +65,7 @@ describe('buildShoppingList', () => {
     // as free rather than as unknown.
     const list = buildShoppingList(
       bundle([task({ type: 'brake_pads', parts: [part('A', { priceCents: 1250 }), part('B'), part('C')] })]),
+      'fr',
     );
     expect(list.totalCents).toBe(1250);
     expect(list.unpricedCount).toBe(2);
@@ -73,12 +77,13 @@ describe('buildShoppingList', () => {
         task({ type: 'engine_mount', id: '/t/a', label: 'support moteur arrière', parts: [part('TEG1101')] }),
         task({ type: 'engine_mount', id: '/t/b', label: 'support moteur gauche', parts: [part('TEG1128')] }),
       ]),
+      'fr',
     );
     expect(list.groups.map((g) => g.title)).toEqual(['support moteur arrière', 'support moteur gauche']);
   });
 
   it('an empty checklist produces an empty list, not a group of nothing', () => {
-    expect(buildShoppingList(bundle([]))).toEqual({ groups: [], partCount: 0, taskCount: 0, totalCents: 0, unpricedCount: 0 });
+    expect(buildShoppingList(bundle([]), 'fr')).toEqual({ groups: [], partCount: 0, taskCount: 0, totalCents: 0, unpricedCount: 0 });
   });
 });
 

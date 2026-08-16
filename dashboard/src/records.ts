@@ -1,3 +1,5 @@
+import type { Locale } from './i18n/locale';
+import { messages } from './i18n/messages';
 import { serviceLabel } from './labels';
 import type { MaintenanceRecord } from './types';
 
@@ -24,9 +26,9 @@ export function centsToEurosInput(cents: number | null | undefined): string {
 }
 
 /** A visit's headline: its label, else a single service's label, else a generic word, else a dash. */
-export function visitTitle(record: MaintenanceRecord): string {
+export function visitTitle(record: MaintenanceRecord, locale: Locale): string {
   if (record.label && record.label.trim()) return record.label.trim();
-  if (record.items.length === 1) return serviceLabel(record.items[0].type);
-  if (record.items.length > 1) return 'Entretien';
+  if (record.items.length === 1) return serviceLabel(record.items[0].type, locale);
+  if (record.items.length > 1) return messages(locale).record.genericVisit;
   return '—';
 }

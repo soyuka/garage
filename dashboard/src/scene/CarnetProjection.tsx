@@ -1,4 +1,5 @@
 import './carnet.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatDate, formatEuros, formatReading } from '../format';
 import type { CarnetRollup } from '../carnet';
 
@@ -19,12 +20,14 @@ export function CarnetProjection({
   /** opens Le Carnet drawer (the FULL visit history) — the projection is only the spend summary. */
   onOpenAll?: () => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   if (model.count === 0) return null;
   return (
-    <aside className="at-carnet" data-reduced={reduced ? 'true' : undefined} role="group" aria-label="Carnet · dépenses">
+    <aside className="at-carnet" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={t.proj.carnet}>
       <div className="at-proj-head">
-        <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
-        <div className="at-carnet-head">CARNET · DÉPENSES</div>
+        <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
+        <div className="at-carnet-head">{t.proj.carnetHead}</div>
         {onDismiss && (
           <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer le carnet">
             ✕
@@ -35,17 +38,17 @@ export function CarnetProjection({
         {model.rows.map((r, i) => (
           <div key={r.id} className="at-carnet-row" style={reduced ? undefined : { animationDelay: `${Math.min(i, 3) * 70 + 60}ms` }}>
             <div className="at-carnet-line">
-              <span className="at-carnet-date">{formatDate(r.performedAt)}</span>
+              <span className="at-carnet-date">{formatDate(r.performedAt, locale)}</span>
               {r.costCents != null && (
                 <span className="at-carnet-cost">
                   {r.costSource === 'estimated' ? '≈ ' : ''}
-                  {formatEuros(r.costCents)}
+                  {formatEuros(r.costCents, locale)}
                 </span>
               )}
             </div>
             <div className="at-carnet-meta">
               {r.items.join(' · ') || '—'}
-              {r.usageValue != null ? ` — ${formatReading(r.usageValue, r.usageUnit)}` : ''}
+              {r.usageValue != null ? ` — ${formatReading(r.usageValue, r.usageUnit, locale)}` : ''}
             </div>
           </div>
         ))}
@@ -53,11 +56,11 @@ export function CarnetProjection({
       <div className="at-carnet-foot">
         <span className="at-carnet-total">
           {model.hasEstimate ? '≈ ' : ''}
-          {formatEuros(model.totalCents)}
+          {formatEuros(model.totalCents, locale)}
         </span>
         <span className="at-carnet-count">
           {model.count} visite{model.count > 1 ? 's' : ''}
-          {model.unknownCount > 0 ? `, ${model.unknownCount} sans coût` : ''}
+          {model.unknownCount > 0 ? t.proj.withoutCost(model.unknownCount) : ''}
         </span>
         {onOpenAll && (
           <button type="button" className="at-carnet-all" onClick={onOpenAll}>

@@ -1,4 +1,5 @@
 import './worklist.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { serviceLabel } from '../labels';
 import { signalTag } from '../derive';
 import type { Worklist } from './worklist';
@@ -24,13 +25,15 @@ export function WorklistProjection({
   reduced?: boolean;
   onDismiss?: () => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   if (model.items.length === 0 && model.missing.length === 0) return null;
   const late = model.items.filter((i) => i.due?.overdue && !i.done).length;
   return (
-    <aside className="at-worklist" data-reduced={reduced ? 'true' : undefined} role="group" aria-label="À faire">
+    <aside className="at-worklist" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={t.proj.worklist}>
       <div className="at-proj-head">
-        <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
-        <div className="at-worklist-head">À FAIRE</div>
+        <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
+        <div className="at-worklist-head">{t.proj.worklistHead}</div>
         {onDismiss && (
           <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer la liste">
             ✕
@@ -40,7 +43,7 @@ export function WorklistProjection({
 
       <ul className="at-worklist-rows" role="list">
         {model.items.map((item, i) => {
-          const tag = item.due ? signalTag(!!item.due.overdue && !item.done, item.signal) : null;
+          const tag = item.due ? signalTag(!!item.due.overdue && !item.done, item.signal, locale) : null;
           const parts = item.task?.parts?.length ?? 0;
           return (
             <li
@@ -53,8 +56,8 @@ export function WorklistProjection({
               <span className="at-worklist-body">
                 <span className="at-worklist-svc">{item.label}</span>
                 <span className="at-worklist-meta">
-                  {item.kind === 'gap' ? 'jamais consigné — depuis quand ?' : item.horizon ?? 'sans échéance'}
-                  {parts > 0 && ` · ${parts} référence${parts > 1 ? 's' : ''}`}
+                  {item.kind === 'gap' ? t.proj.neverLogged : (item.horizon ?? t.forecast.noDueDateLower)}
+                  {parts > 0 && t.proj.refCount(parts)}
                 </span>
               </span>
               {tag && tag.tone !== 'ok' && <span className={`at-worklist-tag at-worklist-tag--${tag.tone}`}>{tag.text}</span>}
@@ -67,7 +70,7 @@ export function WorklistProjection({
           here used to make a bad key and a working panel look identical. */}
       {model.missing.length > 0 && (
         <p className="at-worklist-missing">
-          Pas de suivi ici&nbsp;: {model.missing.map((k) => serviceLabel(k)).join(' · ')}
+          Pas de suivi ici&nbsp;: {model.missing.map((k) => serviceLabel(k, locale)).join(' · ')}
         </p>
       )}
 

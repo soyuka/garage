@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { AgentMark } from '../AgentMark';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { factLabel } from '../labels';
 import { isAgentAuthored } from '../provenance';
 import { safeHref } from '../safeHref';
@@ -20,16 +21,17 @@ export interface FactsEdit {
 }
 
 export function FactsSection({ facts, edit }: { facts: VehicleFact[]; edit?: FactsEdit }) {
+  const t = useT();
   // No facts and no way to add → render nothing (keeps the read-only floor/playground panel clean).
   if (facts.length === 0 && !edit) return null;
   return (
     <div className="at-truth-block at-facts">
-      <span className="at-label">Spécifications</span>
+      <span className="at-label">{t.facts.title}</span>
       <ul className="at-facts-list">
         {facts.map((f) => (
           <FactRow key={f.key} fact={f} edit={edit} />
         ))}
-        {facts.length === 0 && <li className="at-facts-empty">Aucune spécification enregistrée.</li>}
+        {facts.length === 0 && <li className="at-facts-empty">{t.facts.empty}</li>}
       </ul>
       {edit && <FactAdd onAdd={edit.onAdd} />}
     </div>
@@ -37,19 +39,21 @@ export function FactsSection({ facts, edit }: { facts: VehicleFact[]; edit?: Fac
 }
 
 function FactRow({ fact, edit }: { fact: VehicleFact; edit?: FactsEdit }) {
+  const [locale] = useLocale();
+  const t = useT();
   const href = safeHref(fact.url);
   const badge = (
-    <span className={`at-fact-source${fact.verified ? ' at-fact-source--verified' : ''}`} title={fact.verified ? 'Source vérifiée (catalogue)' : `Source : ${fact.source}`}>
+    <span className={`at-fact-source${fact.verified ? ' at-fact-source--verified' : ''}`} title={fact.verified ? t.facts.verifiedSource : t.facts.source(fact.source)}>
       {fact.verified ? '✓ ' : ''}
       {fact.source}
     </span>
   );
   return (
     <li className="at-fact-row">
-      <span className="at-fact-key">{factLabel(fact.key)}</span>
+      <span className="at-fact-key">{factLabel(fact.key, locale)}</span>
       <span className="at-fact-value">
         {edit ? (
-          <InlineEdit value={fact.value} ariaLabel={`Modifier ${factLabel(fact.key)}`} onCommit={(v) => edit.onEditValue(fact.key, v, fact.unit)} />
+          <InlineEdit value={fact.value} ariaLabel={t.facts.edit(factLabel(fact.key, locale))} onCommit={(v) => edit.onEditValue(fact.key, v, fact.unit)} />
         ) : (
           fact.value
         )}
@@ -67,7 +71,7 @@ function FactRow({ fact, edit }: { fact: VehicleFact; edit?: FactsEdit }) {
         {isAgentAuthored(fact.source) && <AgentMark />}
       </span>
       {edit && (
-        <button type="button" className="at-fact-del" aria-label={`Retirer ${factLabel(fact.key)}`} title="Retirer" onClick={() => edit.onRemove(fact.key)}>
+        <button type="button" className="at-fact-del" aria-label={t.facts.remove(factLabel(fact.key, locale))} title={t.facts.removeShort} onClick={() => edit.onRemove(fact.key)}>
           ×
         </button>
       )}
@@ -76,6 +80,7 @@ function FactRow({ fact, edit }: { fact: VehicleFact; edit?: FactsEdit }) {
 }
 
 function FactAdd({ onAdd }: { onAdd: FactsEdit['onAdd'] }) {
+  const t = useT();
   const [key, setKey] = useState('');
   const [value, setValue] = useState('');
   const [unit, setUnit] = useState('');
@@ -92,11 +97,11 @@ function FactAdd({ onAdd }: { onAdd: FactsEdit['onAdd'] }) {
   };
   return (
     <div className="at-fact-add">
-      <input className="at-fact-add-key" placeholder="clé (ex. oil_type)" aria-label="Clé de la spécification" value={key} onChange={(e) => setKey(e.target.value)} onKeyDown={onEnter} />
-      <input className="at-fact-add-val" placeholder="valeur" aria-label="Valeur de la spécification" value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={onEnter} />
-      <input className="at-fact-add-unit" placeholder="unité" aria-label="Unité (optionnelle)" value={unit} onChange={(e) => setUnit(e.target.value)} onKeyDown={onEnter} />
+      <input className="at-fact-add-key" placeholder={t.facts.keyPlaceholder} aria-label={t.facts.keyLabel} value={key} onChange={(e) => setKey(e.target.value)} onKeyDown={onEnter} />
+      <input className="at-fact-add-val" placeholder={t.facts.valuePlaceholder} aria-label={t.facts.valueLabel} value={value} onChange={(e) => setValue(e.target.value)} onKeyDown={onEnter} />
+      <input className="at-fact-add-unit" placeholder={t.facts.unitPlaceholder} aria-label={t.facts.unitLabel} value={unit} onChange={(e) => setUnit(e.target.value)} onKeyDown={onEnter} />
       <button type="button" className="at-fact-add-btn" disabled={!canAdd} onClick={submit}>
-        Ajouter
+        {t.facts.add}
       </button>
     </div>
   );

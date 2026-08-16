@@ -1,4 +1,5 @@
 import './specconstellation.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { AgentMark } from '../AgentMark';
 import { NBSP } from '../format';
 import { factLabel } from '../labels';
@@ -49,21 +50,23 @@ export function SpecConstellation({
    * set, these ARE the content — read-only, with an optional secondary spec line — bypassing facts/keys. */
   nodes?: SpecNode[];
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const factNodes = selectFacts(facts, keys);
   const count = nodes ? nodes.length : factNodes.length;
   if (count === 0) return null;
   const delay = (i: number) => (reduced ? undefined : { animationDelay: `${Math.min(i, MAX_STAGGER) * STAGGER_MS}ms` });
   return (
-    <div className="at-spec" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={title ?? 'Spécifications'}>
+    <div className="at-spec" data-reduced={reduced ? 'true' : undefined} role="group" aria-label={title ?? t.proj.specs}>
       <div className="at-proj-head">
         {agentPlaced ? (
-          <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
+          <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
         ) : (
           <span className="at-spec-glyph" aria-hidden="true">◇</span>
         )}
-        <div className="at-spec-head">{title ?? 'Spécifications'}</div>
+        <div className="at-spec-head">{title ?? t.proj.specs}</div>
         {onDismiss && (
-          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer les spécifications">
+          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label={t.proj.closeSpecs}>
             ✕
           </button>
         )}
@@ -76,7 +79,7 @@ export function SpecConstellation({
                 <span className="at-spec-value">
                   {n.value}{' '}
                   {n.verified && (
-                    <span className="at-spec-ok" aria-label="vérifié">
+                    <span className="at-spec-ok" aria-label={t.proj.verified}>
                       ✓
                     </span>
                   )}
@@ -87,21 +90,21 @@ export function SpecConstellation({
             ))
           : factNodes.map((f, i) => (
               <div key={f.key} className="at-spec-node" style={delay(i)}>
-                <span className="at-spec-label">{factLabel(f.key)}</span>
+                <span className="at-spec-label">{factLabel(f.key, locale)}</span>
                 <span className="at-spec-value">
                   {edit ? (
-                    <InlineEdit value={f.value} ariaLabel={`Modifier ${factLabel(f.key)}`} onCommit={(next) => edit.onEditValue(f.key, next, f.unit)} />
+                    <InlineEdit value={f.value} ariaLabel={`Modifier ${factLabel(f.key, locale)}`} onCommit={(next) => edit.onEditValue(f.key, next, f.unit)} />
                   ) : (
                     f.value
                   )}
                   {f.unit ? `${NBSP}${f.unit}` : ''}{' '}
                   {f.verified ? (
-                    <span className="at-spec-ok" aria-label="vérifié">
+                    <span className="at-spec-ok" aria-label={t.proj.verified}>
                       ✓
                     </span>
                   ) : (
                     <>
-                      <span className="at-spec-unver">· non vérifié</span>
+                      <span className="at-spec-unver">{t.proj.unverified}</span>
                       {isAgentAuthored(f.source) && <AgentMark />}
                     </>
                   )}

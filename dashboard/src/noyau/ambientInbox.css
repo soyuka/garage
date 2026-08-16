@@ -54,6 +54,55 @@
   font-variant-numeric: tabular-nums;
   margin-left: auto;
 }
+/* The audition toggle. Stays mono like every other row control — cyan is rationed to the hairline. */
+.at-inbox-audition {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 5px;
+  border: 1px solid var(--at-line);
+  border-radius: 3px;
+  background: none;
+  color: var(--at-text-dim);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  opacity: var(--at-vib-2);
+}
+.at-inbox-audition:hover,
+.at-inbox-audition:focus-visible {
+  color: var(--at-text);
+  opacity: 1;
+}
+.at-inbox-audition[aria-pressed='true'] {
+  color: var(--at-text);
+  opacity: 1;
+}
+.at-inbox-audition-label {
+  font-variant: small-caps;
+}
+/* The language switch, deliberately identical to the audition toggle beside it: same size, same
+   border, same rationing. Two standing preferences should not compete for attention with each other. */
+.at-inbox-locale {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid var(--at-line);
+  border-radius: 3px;
+  background: none;
+  color: var(--at-text-dim);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  opacity: var(--at-vib-2);
+}
+.at-inbox-locale:hover,
+.at-inbox-locale:focus-visible {
+  color: var(--at-text);
+  opacity: 1;
+}
 .at-inbox-empty {
   margin: 4px 2px;
   font-size: 12px;

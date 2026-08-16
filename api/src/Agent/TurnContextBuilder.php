@@ -7,6 +7,7 @@ namespace App\Agent;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Garage\GarageResolver;
+use App\I18n\Locale;
 use App\Maintenance\VehicleFactsProjector;
 use App\Message\RunAgentTurn;
 use App\Repository\PlannedMaintenanceRepository;
@@ -34,7 +35,8 @@ final readonly class TurnContextBuilder
 
     public function build(RunAgentTurn $turn): string
     {
-        $context = "Instruction de l'utilisateur : ".$turn->instruction;
+        $context = self::outputLanguage(Locale::resolve($turn->locale))
+            ."Instruction de l'utilisateur : ".$turn->instruction;
 
         if ('' !== $turn->selectedId) {
             $context .= "\n\nVéhicule actuellement sélectionné dans le tableau de bord : ".$turn->selectedId;
@@ -56,6 +58,32 @@ final readonly class TurnContextBuilder
         }
 
         return $context;
+    }
+
+    /**
+     * Which language the agent must ANSWER in — every toast, chip label and narration it writes.
+     *
+     * It rides the per-turn context rather than the system prompt because the prompt is static config
+     * while the locale is per request. The prompt's own instructions stay English either way: they are
+     * model-facing, and a model reading English while writing French is exactly what it already does.
+     *
+     * First line of the context on purpose. It is an instruction about the OUTPUT, so it must not sit
+     * below a wall of vehicle facts where a long context can bury it.
+     */
+    private static function outputLanguage(Locale $locale): string
+    {
+        $language = match ($locale) {
+            Locale::Fr => 'French',
+            Locale::En => 'English',
+        };
+
+        return \sprintf(
+            "Write every user-facing string this turn in %s — toast messages, suggestion chips, fact"
+            ." labels and any narration. This is the language of the interface the user is looking at."
+            ." It does NOT change the tool names, the part references or the service-type keys, which"
+            ." stay exactly as the tools define them.\n\n",
+            $language,
+        );
     }
 
     private function resolve(string $iri): ?Vehicle

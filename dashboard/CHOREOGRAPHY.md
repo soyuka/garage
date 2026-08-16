@@ -17,7 +17,7 @@ Stage-B/C component animates against THIS map; no agent invents a different mapp
 | `showHistory` / `focusView {panel:'carnet'}` | raises the **carnet projection** (past visits + spend) into the same RIGHT column. The `showHistory` FRAME stays client-synthesized (the "Carnet · dépenses" chip), but the SURFACE is now a real server emission: the agent raises it with `focusView {panel:'carnet'}` after reading the history, instead of degrading to a prose toast. Both funnel through `focusForAction` into one focus state, so chip and agent answer are indistinguishable | scene overlay (`CarnetProjection`) |
 | `focusView {panel:'parts'}` | raises the **shopping list** — every reference ALREADY chosen across the open checklist, grouped by the job it belongs to — as a **CENTRED surface** (scrim + `aria-modal`, groups **unfurl** staggered). The one intent that does NOT use the right projection column, and the exception is the point: the column is ~270px and these rows carry a reference, a brand, a description, a price and two shop links each, which at column width wrapped to unreadable stubs. It is a working document the operator reads across and acts on, not a glance-answer. Read-only, and deliberately **without a primary action**: these refs are already on their tasks, so an "Ajouter" would merge what is already there — the idempotent no-op the old "Pièces dispo · <service>" chip offered behind an orange primary. Each line carries **Mister-Auto** and **Auto-Doc** searches in the rationed operator hue (restored from 44cb4fb; a reference you cannot go and buy is one you retype into a search box). An unpriced reference reads `—`, never `0,00 €`: free and unknown must not look the same | scene overlay (`ShoppingListOverlay`) |
 | `proposeActions {headline, finding?, actions}` | a plain proposal → a CTA card **rises from Le Noyau's cradle** (behind the composer, never over it); a **parts-bearing** proposal (an `actions[].patchTask` with `parts`) projects instead as the **parts manifest** in the RIGHT column with the primary **Ajouter** = that deterministic PATCH. `patchTask` → **no agent turn**; `instruction` → new turn. A proposal that arrives while one is already pending, or with no hero open (nowhere to raise a cradle), is **deferred into the à-décider queue** instead of dropped (`review` item — replays the same actions later) | CTA layer / `PartsManifest` / à-décider inbox |
-| `toast {tone, message}` | non-alarm → narration line (Noyau heartbeat); **alarm** → docks a `notify` item onto the à-décider queue + a real toast popup | Le Noyau |
+| `toast {tone, message}` | **every** tone raises a **retained notice card** above the console (§ The notice stack) — it stays until the operator dismisses it. On top of that: non-alarm also writes the narration line (Noyau heartbeat, transient); **alarm** also docks a `notify` item onto the à-décider queue | Le Noyau (`NoticeStack`) |
 | `status {message}` | one **Noyau pulse** (per narrated step, sparse) + the narration line etches; the same step also appends an **aria-hidden tool-step chip** (short verb + glyph) beside Le Noyau, collapsing into the journal on turn end — a silent companion, never a second announcement | Le Noyau |
 | `turn {phase}` | `start` → Noyau busy/working (aperture focuses, scan locks) + a **cyan scan-sweep** slides across the car; `end` → settle → green/amber/red | Le Noyau + scene overlay |
 
@@ -81,6 +81,31 @@ reserved, not yet produced). The badge shows the live queue length. Opening the 
 (`emberSeen`) but does **not** drain the queue — only resolving or dismissing every row does, so a closed-
 without-resolving inbox re-opens with everything still there. Rows resolve deterministically (a review
 row replays its `patchTask`/`instruction`; a notify row offers "vu" or "planifier ○") — never a transcript.
+
+## The notice stack — an answer that stays (2026-08-16)
+
+The narration line is a **heartbeat**: it says what Le Noyau is doing right now, and the next `status`
+overwrites it, and `settle` clears it. That was the whole surface a non-alarm `toast` ever reached, so
+the agent's actual *findings* — « pas de filtre à air dans le catalogue pour ce moteur », « j'ai pris
+la Mazda, tu en as deux » — scrolled past at the speed of the next tool call and were gone by the time
+the turn settled. An answer is not a heartbeat. It gets its own surface, and that surface persists.
+
+| Real frame / condition | Atelier motion | Owner layer |
+|---|---|---|
+| any `toast {tone, message}` | a **notice card rises** above the console (`--at-dur-rise`, from below — it comes out of Le Noyau, like the CTA cradle), newest closest to the orb. It carries a severity spine in its gutter (the visit-card vocabulary: colour + a mono tone label, never colour alone) and one control, **vu**. It does not expire, does not fade, is not on a timer | Le Noyau (`NoticeStack`) |
+| a toast whose exact `tone:message` is already on the stack | **nothing new** — the same finding re-arriving is one card (the `pushDecision` dedup rule, applied to notices). A pilot repeating itself does not build a wall | `state.ts` |
+| a fourth notice while three are up | the **oldest leaves**, instantly (`NOTICE_CAP` = 3). The stack is a working set, not a log — the journal drawer already keeps every toast at full precision, which is what makes the cap honest (compression with a way to look closer) | `state.ts` |
+| **vu** | the card is removed at once — no exit animation. A dismissal is the operator's own action, and animating their own click back at them is the theatre the render path forbids | `NoticeStack` |
+| `turn {phase:'end'}` / `settle` | **notices survive both.** They are what the turn produced; clearing them when the orb returns to veille would delete the answer at the exact moment the operator looks up from the car | `state.ts` |
+| `prefers-reduced-motion` | the rise cuts to the end state. Nothing is lost — the card and its spine *are* the information | `NoticeStack` |
+
+**Not a second announcement.** The stack carries no `aria-live`: a non-alarm toast is already announced
+once on the narration line, and an alarm is already a row in the à-décider inbox. The cards are a
+sighted-only retention surface reachable by browsing — the same rule the tool-step chips follow.
+
+**An alarm still docks in the inbox.** The card and the `notify` item are two different jobs — the card
+is *read this now*, the queue item is *decide this later* — so **vu** on a card does not resolve the
+queue row. Dismissing a reminder is not deciding the thing it reminds you of.
 
 ## Data around the turning car (option 2a)
 
@@ -243,8 +268,53 @@ can make that claim.
 | a write landing (`log_maintenance`, a `patchTask` merge) | the write produces the largest visual event the app has — the health arc animating old→new, the task striking and leaving the rail. It is also **bursty**: several frames per gesture. ISA-18.2 defines an alarm flood as more than ten alarms in ten minutes; a piloted burst of four intents in 300 ms would hit that on its own. Anything the burst window coalesces must not have a sound per member |
 | the break of a long pilot silence (veille pilotée → under load) | it requires no response. EEMUA 191 / ISA-18.2 rationalisation is a single question — *does this need the operator to do something?* — and "the pilot resumed" does not. The frame's own motion is the cue, as the pilot table already says. Its steady-state budget is also wrong: fewer than one signal per ten minutes per operator position is the target, and a chatty session breaks that in a minute |
 | severity mapped parametrically onto the tone | this is the documented failure of IEC 60601-1-8, whose eight high-priority alarms share one acoustic structure and one rhythm and differ **only** in pitch pattern. They are hard to learn, hard to discriminate, their urgency is misperceived, and nurses with a year of musical training identify them far more accurately than those without — a set that only musicians can read is not a set. The audio twin of **never colour-only** is **never pitch-only**: severity is read off the spine and the ember, in grayscale, on a still screen |
-| speech ("échéance dépassée") | genuinely better on the evidence — auditory icons and speech beat abstract earcons on identification speed, accuracy and learnability (McNeer et al. 2018; Edworthy et al. 2014, 2017) — and rejected anyway: `SpeechSynthesis` voices are OS-dependent, French quality is a lottery, bundling a voice breaks the self-contained page, and a talking dashboard over a conference PA is a catastrophe |
+| speech ("échéance dépassée") — **re-opened 2026-08-16, see `docs/voice.md`**: that document keeps this rejection for the *signal* and asks the separate question of whether the agent's ANSWERS (the `toast` frames now retained as notice cards) should be spoken | genuinely better on the evidence — auditory icons and speech beat abstract earcons on identification speed, accuracy and learnability (McNeer et al. 2018; Edworthy et al. 2014, 2017) — and rejected **as the alert signal** anyway, on the grounds that survive: an alert has to fire on a screen nobody is watching, possibly offline, and a sentence is the worst shape for that. The *original* reasons (OS-dependent `SpeechSynthesis`, French a lottery, a bundled voice breaking the self-contained page) were **superseded 2026-08-16** — the voice is now a server-side call to a same-origin `/tts`, so none of them describe what exists. They no longer argue against speech for ANSWERS; see § "Audition — speech, for ANSWERS" below. What still stands, unchanged, is that a talking dashboard over a conference PA is a catastrophe: hence muted by default, everywhere, always |
 | recorded auditory icons (a real ratchet, a real chime) | the same evidence favours them, and the same constraint forbids them: no external CDN assets, the page stays self-contained. Synthesised oscillators cannot make a credible auditory icon, so the one signal is honestly an abstract earcon and is kept to **one** for that reason |
+
+### Audition — speech, for ANSWERS (built 2026-08-16)
+
+The row above rejects speech **as the alert signal**, and that rejection stands: a caution signal has
+to work on a muted, offline, unattended screen, and a sentence is the worst possible shape for one.
+This section is the *other* question — whether the agent's **answers**, which are already retained as
+notice cards, should also be read aloud. They are, and the reasoning is that this is not a new claim
+on the operator's attention: it is the same claim, in a second modality, for the moment they are under
+a car and cannot look up.
+
+**No new wire verb, deliberately.** The `toast {tone, message}` frame is what gets spoken — the very
+frame the notice stack already renders. A `say()` tool would let the agent speak something that is not
+on screen, which the binding rule below forbids outright, and the two surfaces could then drift into
+disagreeing about what was said. One frame, two modalities, no third source of truth.
+
+| Real frame / condition | The signal | Owner layer |
+|---|---|---|
+| any `toast {tone, message}`, **audition on** | the card's own sentence is **spoken once**, in the interface language, while its card is on screen. Never a summary, never a rephrase, and never a TRANSLATION — the spoken text and the printed text are the same string | `voice.ts` + `useVoice.ts` |
+| a second line arriving mid-utterance | it **waits**; one voice at a time, never a mix. Queue capped at **2** | `voice.ts` |
+| a third line arriving while two wait | the **oldest pending** is dropped unspoken. Overrun keeps the newest: never hearing the latest answer is the worse failure, and the dropped line is still on screen at full precision | `voice.ts` |
+| a line that waited longer than **10 s** | dropped **unread**. By the time it would be spoken it is no longer news, and a burst narrated a minute late is the alarm-flood failure with a delay bolted on | `voice.ts` |
+| the same `tone:message` already spoken | **not re-spoken** — the same dedup key the notice stack uses (`state.ts`), so a repeating pilot is one card AND one utterance | `voice.ts` |
+| **vu** on a card whose line is being spoken | the utterance is **cancelled mid-word** | `useVoice.ts` |
+| audition switched off mid-utterance | the voice **stops at once** and the queue empties. A mute that finishes its sentence is not a mute | `useVoice.ts` |
+| no vendor, no budget, no gesture, no network | **silence**, and nothing else — no toast, no badge, no retry | `useVoice.ts` |
+
+#### Binding rules specific to speech
+
+- **The card is authoritative; the voice is best-effort.** These two caps differ on purpose —
+  `NOTICE_CAP` is 3, the voice queue is 2 — so the stack can legitimately show a line that was never
+  spoken. That is **by design, not drift**: three cards are readable at a glance, three spoken lines
+  are a queue nobody can skip. Anything the ear misses is on screen; nothing is ever only spoken.
+- **Speech is not a second announcement.** The stack carries no `aria-live` because the narration line
+  already announces a non-alarm toast once and the inbox already carries an alarm. Speech is a THIRD
+  rendering of that same sentence, which is exactly why it **ships muted and is never auto-enabled**:
+  a screen-reader user who leaves it off hears their own reader, once. Turning it on is the operator
+  saying they want the sentence twice, and that is their call to make, not a default to guess.
+- **A dismissal is a cancellation.** Audio that outlives its own card is audio-only, and audio-only is
+  forbidden. This is the reason the card list — not an event stream — is the input to the queue.
+- **The voice never seizes the session.** The `/tts` fetch deliberately does not use `authFetch`: that
+  bounces to the login flow on a 401, and a garnish feature must never take the operator somewhere.
+  A voice that cannot authenticate is a voice that stays quiet.
+- **Autoplay is asserted, never assumed** (§ "The AudioContext trap"). A piloted session produces no
+  gesture in this browser, so playback is unlocked from the operator's first real interaction; before
+  that, lines are dropped silently rather than queued against a lock that may never open.
 
 ### Binding rules
 
@@ -264,6 +334,14 @@ can make that claim.
   the concern lands anyway. A caution signal shall have manual reset and volume control
   (MIL-STD-1472F §7.2.9.11); WCAG 1.4.2 exempts audio under three seconds, which this is, but the
   affordance is not optional for that reason.
+- **The voice follows the interface, and never translates it.** (Added 2026-08-16 with fr/en.) The
+  spoken string is still the printed string, byte for byte — the audition may not put a translation
+  layer between a card and its utterance, because then the room hears something the screen does not
+  say, which is the one thing § "one signal" forbids. What the language DOES decide is pronunciation:
+  the browser sends `Accept-Language` and `POST /tts` passes it as `language_code`, so a multilingual
+  voice reads the same sentence the way that language reads. A card written in French by the agent is
+  therefore spoken in French even while the chrome is English — correct, and the honest consequence
+  of the same-string rule. Nothing about the queue, the cap, the staleness or the dedup key moves.
 - **Room-proof, not desk-proof.** 660/1980 Hz sits inside the 500–3000 Hz band the guidance prefers
   (HFDS §7.2.7.2, range 200–5000) and must clear a bay with a compressor in it — two pulses rather than
   one beep, because a single short beep in a garage is lost. It must **not** resemble a sound the room

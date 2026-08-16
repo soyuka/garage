@@ -1,6 +1,7 @@
 import { dueDescriptor, latestPerformedAt, signalTag } from '../derive';
 import { coerceInt, emptyToNull } from '../edit';
 import { formatDate, formatHealthPct, formatReading, NBSP } from '../format';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { HEALTH_LABEL, serviceLabel } from '../labels';
 import type { ForecastDue, VehicleFact, VehicleForecast, VehicleSummary } from '../types';
 import type { VehiclePatch } from '../garage';
@@ -41,6 +42,8 @@ export function TruthPanel({
   /** Plan a concrete task pegged to a forecast row's predicted-due reading. Absent → no plan button. */
   onPlan?: (due: ForecastDue) => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const v = vehicle;
   const focus = new Set(focusKeys ?? []);
   const health = v.health;
@@ -50,13 +53,13 @@ export function TruthPanel({
   const lastService = latestPerformedAt(forecast.due);
 
   return (
-    <section className="at-truth glass" aria-label="Fiche véhicule">
+    <section className="at-truth glass" aria-label={t.truth.panel}>
       <div className="at-truth-plate-row">
         {edit ? (
           <InlineEdit
             value={v.plate ?? ''}
-            placeholder="+ plaque"
-            ariaLabel="Modifier la plaque d'immatriculation"
+            placeholder={t.truth.plate}
+            ariaLabel={t.truth.editPlate}
             className="at-truth-plate--edit"
             onCommit={(s) => edit.onPatch({ plate: emptyToNull(s) })}
           />
@@ -68,8 +71,8 @@ export function TruthPanel({
       <h2 className="at-truth-name">
         {edit ? (
           <>
-            <InlineEdit value={v.make} placeholder="Marque" ariaLabel="Modifier la marque" onCommit={(s) => edit.onPatch({ make: s })} />{' '}
-            <InlineEdit value={v.model} placeholder="Modèle" ariaLabel="Modifier le modèle" onCommit={(s) => edit.onPatch({ model: s })} />
+            <InlineEdit value={v.make} placeholder={t.truth.make} ariaLabel={t.truth.editMake} onCommit={(s) => edit.onPatch({ make: s })} />{' '}
+            <InlineEdit value={v.model} placeholder={t.truth.model} ariaLabel={t.truth.editModel} onCommit={(s) => edit.onPatch({ model: s })} />
           </>
         ) : (
           <>
@@ -81,13 +84,13 @@ export function TruthPanel({
       <p className="at-truth-sub">
         {edit ? (
           <>
-            <InlineEdit value={v.year != null ? String(v.year) : ''} placeholder="+ année" ariaLabel="Modifier l'année" onCommit={(s) => edit.onPatch({ year: coerceInt(s) })} />
+            <InlineEdit value={v.year != null ? String(v.year) : ''} placeholder={t.truth.year} ariaLabel={t.truth.editYear} onCommit={(s) => edit.onPatch({ year: coerceInt(s) })} />
             <span className="at-truth-sub-sep"> · </span>
-            <InlineEdit value={v.engineVariant ?? ''} placeholder="+ finition" ariaLabel="Modifier la finition" onCommit={(s) => edit.onPatch({ engineVariant: emptyToNull(s) })} />
+            <InlineEdit value={v.engineVariant ?? ''} placeholder={t.truth.trim} ariaLabel={t.truth.editTrim} onCommit={(s) => edit.onPatch({ engineVariant: emptyToNull(s) })} />
             <span className="at-truth-sub-sep"> · </span>
-            <InlineEdit value={v.engineCode ?? ''} placeholder="+ moteur" ariaLabel="Modifier le code moteur" onCommit={(s) => edit.onPatch({ engineCode: emptyToNull(s) })} />
+            <InlineEdit value={v.engineCode ?? ''} placeholder={t.truth.engine} ariaLabel={t.truth.editEngine} onCommit={(s) => edit.onPatch({ engineCode: emptyToNull(s) })} />
             <span className="at-truth-sub-sep"> · </span>
-            <InlineEdit value={v.kType != null ? String(v.kType) : ''} placeholder="+ kType" ariaLabel="Modifier le kType TecDoc" onCommit={(s) => edit.onPatch({ kType: coerceInt(s) })} />
+            <InlineEdit value={v.kType != null ? String(v.kType) : ''} placeholder={t.truth.kType} ariaLabel={t.truth.editKType} onCommit={(s) => edit.onPatch({ kType: coerceInt(s) })} />
           </>
         ) : (
           [v.year, v.engineVariant].filter(Boolean).join(' · ')
@@ -95,49 +98,49 @@ export function TruthPanel({
       </p>
 
       <div className="at-truth-block">
-        <span className="at-label">Kilométrage</span>
+        <span className="at-label">{t.truth.usage}</span>
         {edit ? (
           <UsageEdit value={v.usageValue ?? null} unit={v.usageUnit ?? null} vehicleType={v.vehicleType} onCommit={(value, unit) => edit.onPatch({ usageValue: value, usageUnit: unit })} />
         ) : (
-          <span className="at-truth-big">{v.usageValue != null ? formatReading(v.usageValue, v.usageUnit) : '—'}</span>
+          <span className="at-truth-big">{v.usageValue != null ? formatReading(v.usageValue, v.usageUnit, locale) : '—'}</span>
         )}
       </div>
 
       <div className="at-truth-block at-truth-health" data-signal={status}>
-        <span className="at-label">État</span>
+        <span className="at-label">{t.truth.state}</span>
         <span className="at-row">
           <span className="at-dot" aria-hidden="true" />
-          <span className="at-pill">{HEALTH_LABEL[status]}</span>
-          {health?.score != null && <span className="at-truth-score">{formatHealthPct(health.score)}</span>}
+          <span className="at-pill">{HEALTH_LABEL[locale][status]}</span>
+          {health?.score != null && <span className="at-truth-score">{formatHealthPct(health.score, locale)}</span>}
         </span>
         {health && (health.overdue > 0 || health.dueSoon > 0) && (
           <span className="at-truth-context">
-            {health.overdue > 0 && `${health.overdue}${NBSP}en retard`}
+            {health.overdue > 0 && t.truth.overdueCount(`${health.overdue}${NBSP}`)}
             {health.overdue > 0 && health.dueSoon > 0 && ' · '}
-            {health.dueSoon > 0 && `${health.dueSoon}${NBSP}bientôt`}
+            {health.dueSoon > 0 && t.truth.soonCount(`${health.dueSoon}${NBSP}`)}
           </span>
         )}
       </div>
 
       {lastService && (
         <div className="at-truth-block at-truth-last">
-          <span className="at-label">Dernière intervention</span>
-          <span className="at-truth-last-date">{formatDate(lastService)}</span>
+          <span className="at-label">{t.truth.lastService}</span>
+          <span className="at-truth-last-date">{formatDate(lastService, locale)}</span>
         </div>
       )}
 
       <div className="at-truth-block">
-        <span className="at-label">Échéances par système</span>
+        <span className="at-label">{t.truth.perSystem}</span>
         <ul className="at-truth-systems">
           {forecast.due.map((due, i) => {
-            const d = dueDescriptor(due);
-            const date = formatDate(due.projectedDueAt ?? due.dueAt);
-            const tag = signalTag(d.overdue, d.signal);
+            const d = dueDescriptor(due, locale);
+            const date = formatDate(due.projectedDueAt ?? due.dueAt, locale);
+            const tag = signalTag(d.overdue, d.signal, locale);
             return (
               <li className="at-truth-system" key={i} data-signal={d.signal} data-focus={focus.has(due.type) ? 'true' : undefined}>
                 <span className="at-dot" aria-hidden="true" />
-                <span className="at-truth-system-name">{serviceLabel(due.type)}</span>
-                <span className="at-truth-system-pct">{d.healthPct != null ? formatHealthPct(d.healthPct) : '—'}</span>
+                <span className="at-truth-system-name">{serviceLabel(due.type, locale)}</span>
+                <span className="at-truth-system-pct">{d.healthPct != null ? formatHealthPct(d.healthPct, locale) : '—'}</span>
                 <span className="at-truth-system-when">
                   <span className={`at-truth-system-due${d.overdue ? ' at-truth-system-due--late' : ''}`}>{d.horizon}</span>
                   {date && <span className="at-truth-system-date">{date}</span>}
@@ -147,17 +150,17 @@ export function TruthPanel({
                     floating hotspot card into the stable panel row). */}
                 {onPlan && (
                   <button type="button" className="at-truth-plan" onClick={() => onPlan(due)}>
-                    Planifier {serviceLabel(due.type)} →
+                    {t.truth.planService(serviceLabel(due.type, locale))}
                   </button>
                 )}
               </li>
             );
           })}
-          {forecast.due.length === 0 && <li className="at-truth-system at-plan-empty">Aucune échéance prévue.</li>}
+          {forecast.due.length === 0 && <li className="at-truth-system at-plan-empty">{t.plan.empty}</li>}
         </ul>
         {forecast.gaps.length > 0 && (
           <p className="at-truth-gaps">
-            <span className="at-tag at-tag--gap">NON SUIVI</span> {forecast.gaps.map(serviceLabel).join(' · ')}
+            <span className="at-tag at-tag--gap">{t.signal.untracked}</span> {forecast.gaps.map((g) => serviceLabel(g, locale)).join(' · ')}
           </p>
         )}
       </div>
@@ -170,10 +173,10 @@ export function TruthPanel({
             type="button"
             className="at-truth-delete"
             onClick={() => {
-              if (window.confirm(`Retirer « ${[v.make, v.model].filter(Boolean).join(' ') || 'ce véhicule'} » du parc ?`)) edit.onDelete();
+              if (window.confirm(t.truth.confirmDelete([v.make, v.model].filter(Boolean).join(' ') || t.truth.thisVehicle))) edit.onDelete();
             }}
           >
-            Retirer du parc
+            {t.truth.delete}
           </button>
         </div>
       )}

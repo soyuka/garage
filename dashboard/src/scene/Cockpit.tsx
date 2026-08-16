@@ -1,4 +1,6 @@
 import './cockpit.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
+import type { Locale } from '../i18n/locale';
 import { formatHealthPct, formatReading } from '../format';
 import { emptyToNull } from '../edit';
 import { InlineEdit } from '../floor/InlineEdit';
@@ -20,9 +22,9 @@ export function engineBadge(vehicle: { engineVariant?: string | null; engineCode
 /** The SANTÉ stat integrated into the cockpit slab (was a floating top-right HUD): rounded % (§5, no
  * false precision) + the signal that drives its glow. Null when the rollup is absent or scoreless —
  * the cockpit then renders no stat at all. */
-export function healthStat(health: MaintenanceHealth | undefined | null): { text: string; status: Signal | 'unknown' } | null {
+export function healthStat(health: MaintenanceHealth | undefined | null, locale: Locale): { text: string; status: Signal | 'unknown' } | null {
   if (!health || health.score == null) return null;
-  return { text: formatHealthPct(health.score), status: health.status };
+  return { text: formatHealthPct(health.score, locale), status: health.status };
 }
 
 /** The patch fields Cockpit ever writes — a narrow view of VehiclePatch (make/model/plate/engine/usage). */
@@ -38,12 +40,14 @@ export interface CockpitPatch {
 
 /** SANTÉ beside the kilométrage — the number captioning the rim gauge below it, glowing its signal. */
 function HealthStat({ health }: { health: MaintenanceHealth | undefined | null }) {
-  const stat = healthStat(health);
+  const [locale] = useLocale();
+  const t = useT();
+  const stat = healthStat(health, locale);
   if (!stat) return null;
   return (
     <div className="at-cockpit-sante" data-signal={stat.status}>
       <span className="at-cockpit-sante-value">{stat.text}</span>
-      <span className="at-label at-cockpit-stat-label">Santé</span>
+      <span className="at-label at-cockpit-stat-label">{t.cockpit.health}</span>
     </div>
   );
 }
@@ -55,6 +59,8 @@ export function Cockpit({
   vehicle: VehicleSummary;
   edit?: { onPatch: (patch: CockpitPatch) => void };
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   const badge = engineBadge(vehicle);
 
   if (!edit) {
@@ -73,7 +79,7 @@ export function Cockpit({
         <div className="at-cockpit-stats">
           <div className="at-cockpit-km">
             <span className="at-cockpit-km-value">
-              {vehicle.usageValue != null ? formatReading(vehicle.usageValue, vehicle.usageUnit) : '—'}
+              {vehicle.usageValue != null ? formatReading(vehicle.usageValue, vehicle.usageUnit, locale) : '—'}
             </span>
           </div>
           <HealthStat health={vehicle.health} />
@@ -94,7 +100,7 @@ export function Cockpit({
           />{' '}
           <InlineEdit
             value={vehicle.model}
-            ariaLabel="Modifier le modèle"
+            ariaLabel={t.cockpit.editModel}
             className="at-cockpit-name--edit"
             onCommit={(next) => edit.onPatch({ model: next })}
           />
@@ -102,7 +108,7 @@ export function Cockpit({
         <p className="at-cockpit-sub">
           <InlineEdit
             value={vehicle.plate ?? ''}
-            placeholder="+ plaque"
+            placeholder={t.cockpit.plate}
             ariaLabel="Modifier la plaque d'immatriculation"
             className="at-cockpit-sub--edit"
             onCommit={(next) => edit.onPatch({ plate: emptyToNull(next) })}
@@ -110,7 +116,7 @@ export function Cockpit({
           <span className="at-cockpit-sep"> · </span>
           <InlineEdit
             value={vehicle.engineVariant ?? ''}
-            placeholder="+ variante"
+            placeholder={t.cockpit.variant}
             ariaLabel="Modifier la variante moteur"
             className="at-cockpit-sub--edit"
             onCommit={(next) => edit.onPatch({ engineVariant: emptyToNull(next) })}
@@ -118,7 +124,7 @@ export function Cockpit({
           <span className="at-cockpit-sep"> · </span>
           <InlineEdit
             value={vehicle.engineCode ?? ''}
-            placeholder="+ code moteur"
+            placeholder={t.cockpit.engineCode}
             ariaLabel="Modifier le code moteur"
             className="at-cockpit-sub--edit"
             onCommit={(next) => edit.onPatch({ engineCode: emptyToNull(next) })}

@@ -1,4 +1,6 @@
 import type { BodyRegion } from './anchors';
+import type { Locale } from '../i18n/locale';
+import { messages, type Messages } from '../i18n/messages';
 import { canonicalService } from '../labels';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -25,6 +27,7 @@ export type AssemblyShape =
 export interface AssemblyPart {
   /** the service/part key this stands for — the same vocabulary `regionsForKeys` reads. */
   key: string;
+  /** resolved from the diagram's `labelKey` against the interface language. */
   label: string;
   shape: AssemblyShape;
   /** offset from the region anchor, car-local metres. */
@@ -37,40 +40,42 @@ export interface AssemblyPart {
   highlighted: boolean;
 }
 
-type PartSpec = Omit<AssemblyPart, 'highlighted'>;
+// The spec carries a label KEY, not a label: the diagram is geometry plus identity, and what those
+// identities are CALLED belongs to the catalog like every other caption.
+type PartSpec = Omit<AssemblyPart, 'highlighted' | 'label'> & { labelKey: keyof Messages['assembly'] };
 
 // Each diagram is read at the region's anchor, so the offsets are small — tens of centimetres. They
 // describe a LAYOUT (what sits next to what, what connects to what), never a measurement.
 const DIAGRAMS: Record<BodyRegion, PartSpec[]> = {
   hood: [
-    { key: 'engine', label: 'Bloc moteur', shape: 'housing', offset: [0, -0.12, 0], size: 1.116 },
-    { key: 'oil_filter', label: 'Filtre à huile', shape: 'canister', offset: [-0.18, -0.16, 0.26], size: 0.135 },
-    { key: 'oil_change', label: 'Circuit d’huile', shape: 'line', offset: [-0.05, -0.24, 0.16], size: 0.792 },
-    { key: 'spark_plug', label: 'Bougies', shape: 'node', offset: [0.14, 0.06, -0.12], size: 0.072 },
-    { key: 'coolant', label: 'Circuit de refroidissement', shape: 'line', offset: [0.2, -0.04, 0.2], size: 0.648 },
+    { key: 'engine', labelKey: 'engineBlock', shape: 'housing', offset: [0, -0.12, 0], size: 1.116 },
+    { key: 'oil_filter', labelKey: 'oilFilter', shape: 'canister', offset: [-0.18, -0.16, 0.26], size: 0.135 },
+    { key: 'oil_change', labelKey: 'oilCircuit', shape: 'line', offset: [-0.05, -0.24, 0.16], size: 0.792 },
+    { key: 'spark_plug', labelKey: 'sparkPlugs', shape: 'node', offset: [0.14, 0.06, -0.12], size: 0.072 },
+    { key: 'coolant', labelKey: 'coolantCircuit', shape: 'line', offset: [0.2, -0.04, 0.2], size: 0.648 },
   ],
   bay: [
-    { key: 'air_filter', label: 'Boîtier de filtre à air', shape: 'housing', offset: [0.1, 0.02, -0.22], size: 0.54 },
-    { key: 'fuel_filter', label: 'Filtre à carburant', shape: 'canister', offset: [-0.12, -0.14, 0.24], size: 0.126 },
-    { key: 'fuel_line', label: 'Ligne carburant', shape: 'line', offset: [-0.02, -0.16, 0.12], size: 0.9 },
-    { key: 'battery', label: 'Batterie', shape: 'housing', offset: [0.06, 0.04, 0.3], size: 0.432 },
-    { key: 'cabin_filter', label: 'Filtre d’habitacle', shape: 'canister', offset: [-0.3, 0.06, -0.06], size: 0.108 },
+    { key: 'air_filter', labelKey: 'airFilterHousing', shape: 'housing', offset: [0.1, 0.02, -0.22], size: 0.54 },
+    { key: 'fuel_filter', labelKey: 'fuelFilter', shape: 'canister', offset: [-0.12, -0.14, 0.24], size: 0.126 },
+    { key: 'fuel_line', labelKey: 'fuelLine', shape: 'line', offset: [-0.02, -0.16, 0.12], size: 0.9 },
+    { key: 'battery', labelKey: 'battery', shape: 'housing', offset: [0.06, 0.04, 0.3], size: 0.432 },
+    { key: 'cabin_filter', labelKey: 'cabinFilter', shape: 'canister', offset: [-0.3, 0.06, -0.06], size: 0.108 },
   ],
   windshield: [
-    { key: 'inspection', label: 'Poste de conduite', shape: 'housing', offset: [0, -0.1, 0], size: 0.72 },
-    { key: 'wipers', label: 'Tringlerie d’essuie-glace', shape: 'line', offset: [0.12, -0.02, 0], size: 0.9 },
-    { key: 'cabin_filter', label: 'Filtre d’habitacle', shape: 'canister', offset: [0.16, -0.14, 0.2], size: 0.108 },
+    { key: 'inspection', labelKey: 'cockpit', shape: 'housing', offset: [0, -0.1, 0], size: 0.72 },
+    { key: 'wipers', labelKey: 'wiperLinkage', shape: 'line', offset: [0.12, -0.02, 0], size: 0.9 },
+    { key: 'cabin_filter', labelKey: 'cabinFilter', shape: 'canister', offset: [0.16, -0.14, 0.2], size: 0.108 },
   ],
   frontAxle: [
-    { key: 'brake_discs', label: 'Disque de frein', shape: 'disc', offset: [0, 0, 0.02], size: 0.306 },
-    { key: 'brake_pads', label: 'Plaquettes', shape: 'housing', offset: [-0.1, 0.09, 0.04], size: 0.216 },
-    { key: 'brake_fluid', label: 'Flexible de frein', shape: 'line', offset: [-0.06, 0.16, 0.0], size: 0.468 },
-    { key: 'tyres', label: 'Pneumatique', shape: 'node', offset: [0, 0, 0.16], size: 0.09 },
+    { key: 'brake_discs', labelKey: 'brakeDisc', shape: 'disc', offset: [0, 0, 0.02], size: 0.306 },
+    { key: 'brake_pads', labelKey: 'brakePads', shape: 'housing', offset: [-0.1, 0.09, 0.04], size: 0.216 },
+    { key: 'brake_fluid', labelKey: 'brakeHose', shape: 'line', offset: [-0.06, 0.16, 0.0], size: 0.468 },
+    { key: 'tyres', labelKey: 'tyre', shape: 'node', offset: [0, 0, 0.16], size: 0.09 },
   ],
   rearAxle: [
-    { key: 'brake_discs', label: 'Disque arrière', shape: 'disc', offset: [0, 0, 0.02], size: 0.27 },
-    { key: 'brake_pads', label: 'Plaquettes arrière', shape: 'housing', offset: [0.09, 0.08, 0.04], size: 0.198 },
-    { key: 'brake_fluid', label: 'Flexible de frein', shape: 'line', offset: [0.06, 0.15, 0.0], size: 0.432 },
+    { key: 'brake_discs', labelKey: 'rearDisc', shape: 'disc', offset: [0, 0, 0.02], size: 0.27 },
+    { key: 'brake_pads', labelKey: 'rearPads', shape: 'housing', offset: [0.09, 0.08, 0.04], size: 0.198 },
+    { key: 'brake_fluid', labelKey: 'brakeHose', shape: 'line', offset: [0.06, 0.15, 0.0], size: 0.432 },
   ],
 };
 
@@ -84,9 +89,15 @@ const DIAGRAMS: Record<BodyRegion, PartSpec[]> = {
  * unknown key simply highlights nothing rather than erroring — same best-effort contract as
  * `regionForFrame`.
  */
-export function assemblyFor(region: BodyRegion, keys: string[] = []): AssemblyPart[] {
+export function assemblyFor(region: BodyRegion, locale: Locale, keys: string[] = []): AssemblyPart[] {
+  const labels = messages(locale).assembly;
   const wanted = new Set(keys.map(canonicalService));
-  return DIAGRAMS[region].map((p) => ({ ...p, highlighted: wanted.has(canonicalService(p.key)) }));
+
+  return DIAGRAMS[region].map(({ labelKey, ...p }) => ({
+    ...p,
+    label: labels[labelKey],
+    highlighted: wanted.has(canonicalService(p.key)),
+  }));
 }
 
 /** Does this region have a diagram worth revealing? Total — every region does today, but a caller

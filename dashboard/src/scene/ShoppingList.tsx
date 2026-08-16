@@ -1,4 +1,5 @@
 import './shopping.css';
+import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatEuros } from '../format';
 import { safeHref } from '../safeHref';
 import { partShopLinks, type ShoppingList } from './shopping';
@@ -25,6 +26,8 @@ export function ShoppingListOverlay({
   reduced?: boolean;
   onDismiss?: () => void;
 }) {
+  const [locale] = useLocale();
+  const t = useT();
   if (model.groups.length === 0) return null;
 
   return (
@@ -33,15 +36,14 @@ export function ShoppingListOverlay({
         className="at-shop glass"
         role="dialog"
         aria-modal="true"
-        aria-label="Pièces à commander"
+        aria-label={t.proj.shopping}
         onClick={(e) => e.stopPropagation()}
       >
         <header className="at-shop-head">
-          <span className="at-proj-tick" aria-label="placé par Le Noyau" role="img" />
-          <h2>Pièces à commander</h2>
+          <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
+          <h2>{t.proj.shopping}</h2>
           <span className="at-shop-count">
-            {model.partCount} référence{model.partCount > 1 ? 's' : ''} · {model.taskCount} poste
-            {model.taskCount > 1 ? 's' : ''}
+            {t.proj.refAndLineCount(model.partCount, model.taskCount)}
           </span>
           {onDismiss && (
             <button type="button" className="at-shop-close" onClick={onDismiss} aria-label="Fermer">
@@ -66,7 +68,7 @@ export function ShoppingListOverlay({
                     {p.label && <span className="at-shop-label">{p.label}</span>}
                     {p.qty != null && p.qty > 1 && <span className="at-shop-qty">×{p.qty}</span>}
                     <span className="at-shop-price" data-unknown={p.priceCents == null ? 'true' : undefined}>
-                      {p.priceCents == null ? '—' : formatEuros(p.priceCents)}
+                      {p.priceCents == null ? '—' : formatEuros(p.priceCents, locale)}
                     </span>
                     {/* Restored from 44cb4fb: a reference you cannot go and BUY is one you retype into a
                         search box. Untrusted-URL discipline still applies — these are built locally, but
@@ -79,7 +81,7 @@ export function ShoppingListOverlay({
                           href={safeHref(link.url)}
                           target="_blank"
                           rel="noreferrer noopener"
-                          title={`Chercher « ${p.ref} » sur ${link.name}`}
+                          title={t.proj.searchOn(p.ref, link.name)}
                         >
                           {link.name}
                         </a>
@@ -93,11 +95,11 @@ export function ShoppingListOverlay({
         </div>
 
         <footer className="at-shop-foot">
-          <span className="at-shop-total">{model.totalCents > 0 ? formatEuros(model.totalCents) : '—'}</span>
+          <span className="at-shop-total">{model.totalCents > 0 ? formatEuros(model.totalCents, locale) : '—'}</span>
           {/* Honesty seam: a total over priced lines only must say so, or an unpriced list reads as free. */}
           {model.unpricedCount > 0 && (
             <span className="at-shop-partial">
-              {model.unpricedCount} référence{model.unpricedCount > 1 ? 's' : ''} sans prix connu
+              {t.proj.unpriced(model.unpricedCount)}
             </span>
           )}
         </footer>

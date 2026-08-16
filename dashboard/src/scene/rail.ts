@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locale';
 import { buildEcheances, type Echeance } from './echeances';
 import type { ForecastDue, PlannedTask } from '../types';
 
@@ -40,10 +41,10 @@ export function closedTasks(tasks: PlannedTask[]): PlannedTask[] {
   return [...tasks.filter((t) => t.status === 'done'), ...tasks.filter((t) => t.status === 'dismissed')];
 }
 
-export function buildRail(due: ForecastDue[], gaps: string[] = [], tasks: PlannedTask[] = []): RailModel {
+export function buildRail(due: ForecastDue[], locale: Locale, gaps: string[] = [], tasks: PlannedTask[] = []): RailModel {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const model: RailModel = { todo: [], ongoing: [], planned: [], gaps: [] };
-  for (const e of buildEcheances(due, gaps, tasks)) {
+  for (const e of buildEcheances(due, locale, gaps, tasks)) {
     const item: RailItem = { ...e, task: e.kind === 'task' && e.taskId ? byId.get(e.taskId) : undefined };
     if (e.kind === 'gap') model.gaps.push(item);
     else if (e.due?.overdue && !e.done) model.todo.push(item);

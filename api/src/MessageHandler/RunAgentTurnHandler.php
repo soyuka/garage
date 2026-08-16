@@ -15,6 +15,9 @@ use App\Agent\TurnCancellations;
 use App\Agent\WebSearchBudget;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
+use App\I18n\AgentMessages;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\AgentInterface;
@@ -55,6 +58,7 @@ final readonly class RunAgentTurnHandler
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
+        private LocaleContext $locale,
         private SelectedVehicleContext $selectedVehicle,
         private TurnCancellations $cancellations,
         private LoggerInterface $logger,
@@ -67,6 +71,12 @@ final readonly class RunAgentTurnHandler
         // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
         // because the handler is a long-lived singleton in the consume worker.
         $this->owner->set($message->owner);
+        // Same shape, same reason: the worker has no request, so the interface language rides the turn
+        // message. Everything the agent says this turn — the heartbeat, the failure toasts, and the
+        // output-language directive in the context — reads off this.
+        $locale = Locale::resolve($message->locale);
+        $this->locale->set($locale);
+        $messages = AgentMessages::for($locale);
         // Carry the dashboard's selected vehicle so list_vehicles floats it first (singleton in the
         // worker — bound each turn, empty when nothing is selected).
         $this->selectedVehicle->set($message->selectedId);
@@ -115,7 +125,7 @@ final readonly class RunAgentTurnHandler
                 $status = AgentTurnStatus::NoOp;
                 $error = 'Turn ended without any write or render action (prose-only exit).';
                 $this->logger->warning('Garage turn was a no-op: {error}', ['error' => $error]);
-                $this->renderTools->toast("Je n'ai pas pu traiter ta demande. Reformule ou précise ce que tu veux enregistrer.", 'warn');
+                $this->renderTools->toast($messages->noOp, 'warn');
             }
         } catch (MaxIterationsExceededException | RepeatedToolFailureException $e) {
             $status = AgentTurnStatus::Capped;
@@ -128,7 +138,7 @@ final readonly class RunAgentTurnHandler
             // routes the turn straight to the `failed` transport, so capped runs stay visible for
             // monitoring instead of vanishing into a log line.
             $this->logger->warning('Garage turn did not converge, dead-lettering: {error}', ['error' => $e->getMessage()]);
-            $this->renderTools->toast("Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.", 'warn');
+            $this->renderTools->toast($messages->notConverged, 'warn');
 
             throw new UnrecoverableMessageHandlerException('Garage turn did not converge.', previous: $e);
         } catch (\Throwable $e) {
