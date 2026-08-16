@@ -73,6 +73,8 @@ export function AtelierScene() {
   const [crossed, setCrossed] = useState(false);
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [showDismissed, setShowDismissed] = useState(false);
+  const [taskOverrides, setTaskOverrides] = useState<Map<string, string>>(new Map());
   const { state, dispatch } = useNoyau();
   const cancel = useRef<null | (() => void)>(null);
   const crossTimer = useRef<number | null>(null);
@@ -138,10 +140,19 @@ export function AtelierScene() {
   const demoEdit = { onPatch: noop, onDelete: noop, facts: { onAdd: noop, onRemove: noop, onEditValue: noop } };
   const demoChecklist = shown
     ? {
-        tasks: shown.vehicle.plannedTasks ?? [],
-        showDismissed: false,
-        onToggleDismissed: noop,
-        onSetStatus: noop,
+        tasks: taskOverrides.size > 0 ? (shown.vehicle.plannedTasks ?? []).map((t) => ({ ...t, status: taskOverrides.get(t.id) ?? t.status })) : (shown.vehicle.plannedTasks ?? []),
+        showDismissed,
+        onToggleDismissed: () => setShowDismissed((v) => !v),
+        // The one write the playground really performs. Everything else here is a no-op, but STATUS has
+        // to be live: ticking a row is the act that removes it from every horizon, and a harness where
+        // that does nothing cannot show whether the row is recoverable — which is exactly the bug the
+        // closed drawer fixes (rail.ts closedTasks).
+        onSetStatus: (taskIri: string, status: 'open' | 'done' | 'dismissed') =>
+          setTaskOverrides((prev) => {
+            const next = new Map(prev);
+            next.set(taskIri, status);
+            return next;
+          }),
         onEditTask: noop,
         onAddTask: noop,
         onAddPart: noop,
@@ -176,6 +187,7 @@ export function AtelierScene() {
 
   const selectScenario = (id: Scenario) => {
     setScenario(id);
+    setTaskOverrides(new Map()); // a different car — the previous one's ticked rows are not its own
     resetCrossing();
   };
 

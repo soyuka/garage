@@ -23,6 +23,23 @@ export interface RailModel {
   gaps: RailItem[];
 }
 
+/**
+ * The tasks that are CLOSED — done or dismissed — in the order the footer drawer shows them.
+ *
+ * It exists because ticking a task off was a one-way door. `buildVisits` drops done work out of every
+ * horizon (rightly: "done is not work, the carnet is where a finished service belongs"), so a row
+ * marked done vanished from the rail the instant it was clicked — and the whole row body is the hit
+ * target. The reopen control was already built (`TaskRow`'s checkbox reads "Rouvrir la tâche" when a
+ * task is done) but it lived on a row that was never rendered again, and the footer listed `dismissed`
+ * only. The one button on offer was "Archiver les terminées", which is the opposite of an undo.
+ *
+ * Done sorts before dismissed because an accidental tick is the common way in, and stable within a
+ * status so the drawer does not reshuffle under the operator between renders.
+ */
+export function closedTasks(tasks: PlannedTask[]): PlannedTask[] {
+  return [...tasks.filter((t) => t.status === 'done'), ...tasks.filter((t) => t.status === 'dismissed')];
+}
+
 export function buildRail(due: ForecastDue[], gaps: string[] = [], tasks: PlannedTask[] = []): RailModel {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const model: RailModel = { todo: [], ongoing: [], planned: [], gaps: [] };

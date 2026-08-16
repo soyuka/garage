@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildRail } from './rail';
+import { buildRail, closedTasks } from './rail';
 import type { ForecastDue, PlannedTask } from '../types';
 
 // The rail model: buildEcheances' merge (reused verbatim) split into the operator's TWO workload buckets —
@@ -87,5 +87,41 @@ describe('buildRail — todo/planned/gaps buckets', () => {
 
   it('empty forecast → empty model', () => {
     expect(buildRail([])).toEqual({ todo: [], ongoing: [], planned: [], gaps: [] });
+  });
+});
+
+// ── The closed drawer: a tick must be reversible ──────────────────────────────
+// Clicking a rail row body marks the task done (EntretienRail's whole-row hit target), and `buildVisits`
+// drops done work out of every horizon — correctly, "done is not work". The consequence was a one-way
+// door: the row vanished, the footer listed only `dismissed`, and the only control offered was
+// "Archiver les terminées". `closedTasks` is the drawer that gives the reopen control somewhere to live.
+
+describe('closedTasks — everything the operator can put back', () => {
+  it('is empty when every task is open', () => {
+    expect(closedTasks([task('oil_change', 'open'), task('tyres', 'open')])).toEqual([]);
+  });
+
+  it('carries BOTH closed states — a done task was the one with no way back', () => {
+    const done = task('oil_change', 'done');
+    const dismissed = task('tyres', 'dismissed');
+    expect(closedTasks([task('coolant', 'open'), done, dismissed])).toEqual([done, dismissed]);
+  });
+
+  it('puts done before dismissed — an accidental tick is the common case, and it reads first', () => {
+    const closed = closedTasks([task('tyres', 'dismissed'), task('oil_change', 'done')]);
+    expect(closed.map((t) => t.status)).toEqual(['done', 'dismissed']);
+  });
+
+  it('keeps input order within a status, so the drawer does not reshuffle between renders', () => {
+    const closed = closedTasks([task('oil_change', 'done'), task('coolant', 'done'), task('tyres', 'dismissed')]);
+    expect(closed.map((t) => t.id)).toEqual(['/t/oil_change', '/t/coolant', '/t/tyres']);
+  });
+
+  it('ignores a status the vocabulary does not know rather than hiding it in the drawer', () => {
+    expect(closedTasks([task('oil_change', 'archived')])).toEqual([]);
+  });
+
+  it('handles no tasks at all', () => {
+    expect(closedTasks([])).toEqual([]);
   });
 });

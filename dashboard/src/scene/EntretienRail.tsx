@@ -6,7 +6,7 @@ import { taskTitle } from '../tasks';
 import { dueDescriptor, signalTag } from '../derive';
 import type { ForecastDue, PlannedPart, PlannedTask } from '../types';
 import type { PlannedTaskInput, TaskEdit, TaskPartInput } from '../garage';
-import type { RailItem } from './rail';
+import { closedTasks, type RailItem } from './rail';
 import { laterFrom, rowClock, visitClock, visitRegions, visitSignal, type Visit, type VisitClock, type VisitPlan } from './visits';
 import type { BodyRegion } from './anchors';
 import './checklist.css';
@@ -114,11 +114,13 @@ export function EntretienRail({
   const { tasks, showDismissed, onToggleDismissed, defaultUnit } = checklist;
   const doneCount = tasks.filter((t) => t.status === 'done').length;
   const lateCount = plan.now.reduce((n, v) => n + v.items.filter((i) => i.due?.overdue).length, 0);
-  const dismissed = tasks.filter((t) => t.status === 'dismissed');
+  // Done AND dismissed: both are closed, and both need a way back. The drawer used to hold only the
+  // dismissed, which made ticking a task off — a whole-row click — irreversible (rail.ts closedTasks).
+  const closed = closedTasks(tasks);
 
   const laterServices = plan.later.reduce((n, v) => n + v.items.length, 0);
   const empty =
-    plan.now.length === 0 && !plan.next && plan.later.length === 0 && plan.gaps.length === 0 && dismissed.length === 0;
+    plan.now.length === 0 && !plan.next && plan.later.length === 0 && plan.gaps.length === 0 && closed.length === 0;
 
   const renderItem = (visit: Visit, item: RailItem, index: number, inTodo: boolean) => {
     // ONE clock per booking: the card head carries the visit's date + horizon, so a member falling on
@@ -283,18 +285,21 @@ export function EntretienRail({
 
       <div className="at-rail-foot">
         <button type="button" className="at-check-btn at-check-btn--ghost" aria-pressed={showDismissed} onClick={onToggleDismissed}>
-          {showDismissed ? `Masquer les retirées${dismissed.length > 0 ? ` (${dismissed.length})` : ''}` : 'Voir les tâches retirées'}
+          {showDismissed ? 'Masquer les tâches classées' : `Voir les tâches terminées et retirées${closed.length > 0 ? ` (${closed.length})` : ''}`}
         </button>
-        {showDismissed && dismissed.length > 0 && (
+        {showDismissed && closed.length > 0 && (
           <ul className="at-rail-rows at-rail-rows--dismissed" role="list">
-            {dismissed.map((t) => (
+            {closed.map((t) => (
               <TaskRow
                 key={t.id}
                 caption={taskCaption({ date: null, horizon: null }, false, t)}
                 task={t}
                 defaultUnit={defaultUnit}
+                // Both closed states reopen from here — that is what the drawer is for. `×` is the one
+                // control that keeps its own meaning: on a DONE row it still retires the task rather
+                // than reopening it, so the two closed states stay reachable from each other.
                 onToggle={() => checklist.onSetStatus(t.id, 'open')}
-                onDismiss={() => checklist.onSetStatus(t.id, 'open')}
+                onDismiss={() => checklist.onSetStatus(t.id, t.status === 'done' ? 'dismissed' : 'open')}
                 onRestore={() => checklist.onSetStatus(t.id, 'open')}
                 onEdit={(fields) => checklist.onEditTask(t.id, fields)}
                 onAddPart={(p) => checklist.onAddPart(t.id, p)}
