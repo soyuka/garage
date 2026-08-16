@@ -42,3 +42,31 @@ export function buildShoppingList(bundle: VehicleBundle): ShoppingList {
     unpricedCount: parts.filter((p) => p.priceCents == null).length,
   };
 }
+
+/**
+ * A human search query for a planned part — its SKU, brand and label, in that order.
+ *
+ * Restored from 44cb4fb, which the Atelier rewrite dropped. The fluid branch of the original also read
+ * `part.spec` (viscosity + manufacturer standard); `PlannedPart` no longer carries `spec`, so that branch
+ * is not restored rather than guessed at.
+ */
+export function partSearchQuery(part: PlannedPart): string {
+  return [part.ref, part.brand, part.label].filter(Boolean).join(' ').trim();
+}
+
+export interface PartShopLink {
+  name: string;
+  url: string;
+}
+
+/** Two parts-shop searches for a planned part, or [] when there is nothing searchable. */
+export function partShopLinks(part: PlannedPart): PartShopLink[] {
+  const q = partSearchQuery(part);
+  if (!q) return [];
+  const enc = encodeURIComponent(q);
+  return [
+    { name: 'Mister-Auto', url: `https://www.mister-auto.com/rechercher/?q=${enc}` },
+    // Auto-Doc's search wants '+' for spaces; the rest of the encoding (e.g. %2F) is identical.
+    { name: 'Auto-Doc', url: `https://www.auto-doc.fr/search?keyword=${enc.replace(/%20/g, '+')}` },
+  ];
+}

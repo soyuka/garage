@@ -18,7 +18,7 @@ import { PartsManifest } from './PartsManifest';
 import { CarnetProjection } from './CarnetProjection';
 import { WorklistProjection } from './WorklistProjection';
 import { VisitProjection } from './VisitProjection';
-import { ShoppingListPanel } from './ShoppingList';
+import { ShoppingListOverlay } from './ShoppingList';
 import { buildWorklist } from './worklist';
 import { manifestFromCta } from './parts';
 import { rollupCarnet } from '../carnet';
@@ -358,7 +358,7 @@ export function SceneView({
               never moves). A specs focus fans the facts as the constellation (agent-placed → cyan tick + ✕). A parts-bearing
               proposal stacks the manifest below. Empty → nothing renders. (The cyan scan is a 3D holo band
               sweeping THROUGH the car via Plateau `scanning`, not a DOM bar.) */}
-          {(showConstellation || showCarnet || showWorklist || showLadder || showShopping || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
+          {(showConstellation || showCarnet || showWorklist || showLadder || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
             <div className="at-projection">
               {showConstellation && (
                 <SpecConstellation
@@ -388,9 +388,6 @@ export function SceneView({
                   heldRegion={cameraFocus?.region ?? null}
                 />
               )}
-              {showShopping && shopping && (
-                <ShoppingListPanel model={shopping} reduced={reduced} onDismiss={onDismissFocus} />
-              )}
               {showManifest && manifest && onCtaPatch && onCtaDismiss && (
                 <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
               )}
@@ -413,6 +410,10 @@ export function SceneView({
             />
           )}
         </>
+      )}
+
+      {showShopping && shopping && (
+        <ShoppingListOverlay model={shopping} reduced={reduced} onDismiss={onDismissFocus} />
       )}
 
       {/* The dock hides while Le Carnet (a true aria-modal popup) owns the screen — relocating an

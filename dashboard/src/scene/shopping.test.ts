@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildShoppingList } from './shopping';
+import { buildShoppingList, partShopLinks } from './shopping';
+import { safeHref } from '../safeHref';
 import type { PlannedPart, PlannedTask, VehicleBundle } from '../types';
 
 // The shopping list — every reference chosen across the OPEN checklist, grouped by the job it belongs to.
@@ -78,5 +79,33 @@ describe('buildShoppingList', () => {
 
   it('an empty checklist produces an empty list, not a group of nothing', () => {
     expect(buildShoppingList(bundle([]))).toEqual({ groups: [], partCount: 0, taskCount: 0, totalCents: 0, unpricedCount: 0 });
+  });
+});
+
+// Shop-search links, restored from 44cb4fb ("part shop-search links on open tasks") — lost in 5284f8f
+// when the Atelier replaced the old dashboard. A reference the operator cannot go and BUY is a reference
+// they have to retype into a search box.
+describe('partShopLinks', () => {
+  it('builds a Mister-Auto and an Auto-Doc search from ref + brand + label', () => {
+    const links = partShopLinks(part('W 712/75', { brand: 'MANN', label: 'Filtre à huile' }));
+    expect(links.map((l) => l.name)).toEqual(['Mister-Auto', 'Auto-Doc']);
+    expect(links[0].url).toBe('https://www.mister-auto.com/rechercher/?q=W%20712%2F75%20MANN%20Filtre%20%C3%A0%20huile');
+  });
+
+  it("uses '+' for spaces on Auto-Doc, whose search rejects %20 — the rest of the encoding is identical", () => {
+    const [, autodoc] = partShopLinks(part('W 712/75', { brand: 'MANN' }));
+    expect(autodoc.url).toBe('https://www.auto-doc.fr/search?keyword=W+712%2FMANN'.replace('%2FMANN', '%2F75+MANN'));
+  });
+
+  it('works from a bare reference', () => {
+    expect(partShopLinks(part('TEG1101'))[0].url).toContain('q=TEG1101');
+  });
+
+  it('offers nothing when there is nothing searchable', () => {
+    expect(partShopLinks({ ref: '' })).toEqual([]);
+  });
+
+  it('every URL survives safeHref — these are rendered as anchors', () => {
+    for (const l of partShopLinks(part('X', { brand: 'Y' }))) expect(safeHref(l.url)).toBe(l.url);
   });
 });

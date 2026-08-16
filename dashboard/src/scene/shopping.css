@@ -1,40 +1,94 @@
-/* « Pièces à commander » — the shopping list across the open checklist, in the shared projection column
-   at the car's RIGHT. Same material as the worklist / carnet / ladder: .86 ground, hairline, 13px radius,
-   blur, and a hair leader stubbing toward the car. Groups unfurl staggered. */
+/* « Pièces à commander » — the shopping list across the open checklist, as a CENTRED surface.
+   Deliberately not a projection-column card: the column is ~270px, and these rows carry a reference, a
+   brand, a description, a price and two shop links each. At column width they wrapped to stubs. Same
+   glass vocabulary as the Données / Carnet overlays, centred rather than docked to an edge. */
+
+.at-shop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(8, 8, 7, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--at-space-5);
+  animation: at-facts-scrim-in var(--at-dur-swap) var(--at-ease-sine) both;
+}
 
 .at-shop {
   position: relative;
-  pointer-events: auto;
-  padding: 14px 15px;
-  background: rgba(13, 14, 16, 0.86); /* scrim law: >= .86 over the bloomed car */
-  border: 1px solid var(--at-hairline);
-  border-radius: 13px;
-  backdrop-filter: blur(4px);
-  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.6);
-  animation: at-etchin var(--at-dur-etch) var(--at-ease-sine) both;
+  z-index: 61;
+  width: min(760px, 100%);
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(140% 150% at 50% 0%, rgba(150, 175, 210, 0.11), rgba(0, 0, 0, 0) 58%), var(--at-glass-fill);
+  backdrop-filter: blur(calc(var(--at-glass-blur) * 1.4));
+  border: 1px solid var(--at-glass-edge);
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.66);
+  animation: at-etchin var(--at-dur-rise) var(--at-ease-sine) both;
 }
 
 .at-shop-head {
-  flex: 1 1 auto;
-  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: var(--at-space-3);
+  padding: var(--at-space-4) var(--at-space-5);
+  border-bottom: 1px solid var(--at-hairline);
+}
+.at-shop-head h2 {
+  margin: 0;
   font-family: var(--at-font-mono);
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  color: var(--at-text);
+}
+
+.at-shop-count {
+  margin-left: auto;
+  font-family: var(--at-font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
   color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
+.at-shop-close {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: var(--at-text-dim);
+  cursor: pointer;
+}
+.at-shop-close:hover {
+  color: var(--at-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.at-shop-body {
+  overflow-y: auto;
+  padding: var(--at-space-3) var(--at-space-5) var(--at-space-4);
+  scrollbar-width: thin;
+  scrollbar-color: var(--at-hairline) transparent;
 }
 
 .at-shop-group {
-  margin-top: 12px;
+  margin-top: var(--at-space-4);
   animation: at-unfurl var(--at-dur-etch) var(--at-ease-sine) both;
 }
 
-/* the job a set of references belongs to — the same caption type a rail visit card head wears, so the
+/* the job a set of references belongs to — the caption type a rail visit card head wears, so the
    operator recognises the grouping they already know from the left column. */
 .at-shop-job {
   font-family: var(--at-font-mono);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: var(--at-label-tracking);
   text-transform: uppercase;
@@ -45,8 +99,7 @@
 .at-shop-rows {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin: 7px 0 0;
+  margin: var(--at-space-2) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -54,25 +107,26 @@
 .at-shop-row {
   display: flex;
   align-items: baseline;
-  gap: 7px;
-  padding-bottom: 6px;
+  gap: var(--at-space-3);
+  padding: var(--at-space-2) 0;
   border-bottom: 1px solid var(--at-hairline);
 }
 .at-shop-row:last-child {
   border-bottom: none;
-  padding-bottom: 0;
 }
 
 .at-shop-ref {
+  flex: 0 0 auto;
   font-family: var(--at-font-mono);
-  font-size: 10.5px;
+  font-size: 13px;
   color: var(--at-text);
   opacity: var(--at-vib-1);
 }
 
 .at-shop-brand {
+  flex: 0 0 auto;
   font-family: var(--at-font-mono);
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--at-text-dim);
@@ -85,72 +139,87 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 11px;
+  font-size: 12.5px;
   color: var(--at-text-dim);
-  opacity: var(--at-vib-3);
+  opacity: var(--at-vib-2);
 }
 
 .at-shop-qty {
   font-family: var(--at-font-mono);
-  font-size: 9.5px;
+  font-size: 11px;
   color: var(--at-text-dim);
-  opacity: var(--at-vib-2);
 }
 
 .at-shop-price {
-  margin-left: auto;
+  flex: 0 0 auto;
+  min-width: 62px;
+  text-align: right;
   font-family: var(--at-font-mono);
-  font-size: 10.5px;
+  font-size: 12.5px;
   color: var(--at-text);
-  opacity: var(--at-vib-2);
+  opacity: var(--at-vib-1);
 }
 /* an unknown price is a dash, never 0,00 € — free and unknown must not look the same. */
 .at-shop-price[data-unknown='true'] {
   opacity: var(--at-vib-3);
 }
 
+.at-shop-shops {
+  flex: 0 0 auto;
+  display: flex;
+  gap: var(--at-space-2);
+}
+
+/* outbound shop searches — the operator ACTS here, so they carry the rationed operator hue. */
+.at-shop-shop {
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 3px 7px;
+  border: 1px solid var(--at-glass-edge);
+  border-radius: 6px;
+  color: var(--at-orange-hi);
+  opacity: var(--at-vib-2);
+}
+.at-shop-shop:hover,
+.at-shop-shop:focus-visible {
+  opacity: var(--at-vib-1);
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .at-shop-foot {
   display: flex;
   align-items: baseline;
   gap: var(--at-space-3);
-  margin-top: 12px;
-  padding-top: 9px;
+  padding: var(--at-space-3) var(--at-space-5) var(--at-space-4);
   border-top: 1px solid var(--at-hairline);
-  font-family: var(--at-font-mono);
 }
 
 .at-shop-total {
-  font-size: 12px;
+  font-family: var(--at-font-mono);
+  font-size: 15px;
   color: var(--at-text);
 }
 
-.at-shop-count {
-  margin-left: auto;
-  font-size: 9.5px;
-  letter-spacing: 0.08em;
-  color: var(--at-text-dim);
-  opacity: var(--at-vib-3);
-}
-
 .at-shop-partial {
-  margin: 6px 0 0;
-  font-size: 10px;
+  margin-left: auto;
+  font-size: 11px;
   font-style: italic;
   color: var(--at-text-dim);
   opacity: var(--at-vib-3);
 }
 
-/* the hair leader toward the car — the tie every projection on this edge wears. */
-.at-shop-lead {
-  position: absolute;
-  top: 22px;
-  left: -18px;
-  width: 18px;
-  height: 1px;
-  background: var(--at-hairline);
-}
-
-[data-reduced='true'] .at-shop,
-[data-reduced='true'] .at-shop-group {
+.at-shop-overlay[data-reduced='true'],
+.at-shop-overlay[data-reduced='true'] .at-shop,
+.at-shop-overlay[data-reduced='true'] .at-shop-group {
   animation: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-shop-overlay,
+  .at-shop,
+  .at-shop-group {
+    animation: none !important;
+  }
 }
