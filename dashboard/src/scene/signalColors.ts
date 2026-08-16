@@ -19,3 +19,8 @@ export const NEON_RED = '#ff2418';
 /** The blueprint edge — electric blue, saturated (hue ~220°, deliberately bluer than Le Noyau's
  * rationed cyan ~190° so "cyan = the agent thinking" stays unambiguous). */
 export const BLUEPRINT_EDGE = '#6d9eff';
+
+/** The operator's focus hue — mirrors `--at-orange`, and carries the same ration: the OPERATOR's
+ * subject and the primary action, never a signal and never the agent's cyan. A reveal's called-out
+ * part wears it because a part named in the answer is standing state, not an action in flight. */
+export const OPERATOR_HEX = '#ee4322';

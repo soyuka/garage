@@ -312,6 +312,11 @@ export type UIAction =
   // key. Client support is the contract seed — the server may not emit it yet; the client already dollies
   // to the region a focusView/showFact resolves to (see Atelier.onFrame). Handling both is idempotent.
   | { type: 'focusRegion'; region: BodyRegion }
+  // Look INSIDE the car (C1–C4). Ghosts the shell to a wireframe and raises that region's schematic
+  // assembly under it, camera in the reveal pose. `partKeys` CALL OUT parts of the diagram (drawn in the
+  // operator hue); they never filter it — the circuit is what answers "where does this sit". A region
+  // with no diagram declines, leaving the shell alone (`reveal.ts` revealFor).
+  | { type: 'revealAssembly'; region: BodyRegion; partKeys?: string[] }
   | { type: 'toast'; tone: Tone; message: string }
   // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
   // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.

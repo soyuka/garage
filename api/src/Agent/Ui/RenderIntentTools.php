@@ -26,9 +26,18 @@ use Webmozart\Assert\Assert;
 #[AsTool('toast', 'Show a transient toast to the user. tone is one of: info, ok, warn, alarm.', 'toast')]
 #[AsTool('show_fact', 'Surface a focused panel showing ONLY the requested fact(s) of the selected vehicle — use it to answer a spec question like "capacité huile moteur" without dumping the whole list. TWO sources, pick ONE. (1) keys = vehicle-fact keys already STORED on the car (oil_capacity, oil_type, spark_plug_ref) — the panel filters the car\'s own sheet. (2) nodes = lines YOU fetched, which are on no fact sheet: after get_fill_volumes / get_motul_oil / lookup_plate, project the result as nodes [{key, label, value, verified, info}] with value already formatted for display ("4,3 l", "5W-30"). NEVER pass a key the vehicle does not have — keys that match no stored fact render an EMPTY panel, which is exactly the wrong answer after a successful lookup. Pass a short title for the panel header.', 'showFact')]
 #[AsTool('focus_view', 'After answering, point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel — use for spec questions and manufacturer recommendations) or "carnet" (the history + spend projection — use after get_maintenance_history for "quand ai-je fait la vidange ?" / "combien j\'ai dépensé ?") or "parts" (the shopping list of every reference ALREADY chosen across the open checklist — the answer to "quelles pieces commander ?"; raise it BEFORE reaching for the catalogue, because the operator has usually already picked refs). keys are service-type or fact keys to spotlight (e.g. oil_change, timing_belt, air_filter); each lights its body region red on the car (moteur, filtration, freins…) and etches the matching panel rows. On "carnet", keys CUT the register to the visits carrying those services — pass the type you were asked about (["oil_change"] for "quand ai-je fait la vidange ?") so the answer is the top row, not 16 visits the operator must read. Then say the answer in ONE toast ("Derniere vidange : 6 juillet 2026") — the panel shows the register, the toast names the datum that was asked for. Omit keys to just raise the panel.', 'focusView')]
+#[AsTool('reveal_assembly', 'Look INSIDE the car: ghost the shell to a wireframe and raise that region\'s schematic assembly under it, camera descending over the part. Use it when the answer is about a component the closed body hides — "quelle piece je commande ?", "ou est le filtre a carburant ?" — where a spec panel names the part but never shows where it lives. region is "hood" (the engine: oil, plugs, coolant), "bay" (around it: air/fuel filters, battery), "windshield" (cabin front: wipers, cabin filter), "frontAxle"/"rearAxle" (that axle\'s brakes and wheel). partKeys CALL OUT parts of the diagram in the operator colour (e.g. ["fuel_filter"]) — they never filter it: the whole circuit is always drawn, because what surrounds a part is how the operator finds it. It is a DIAGRAM of that kind of assembly, not a scan of this car, so never claim it depicts their specific engine. Releasing the camera ("vue libre", Escape) puts the shell back.', 'revealAssembly')]
 #[AsTool('propose_actions', 'Render a call-to-action card: a headline, an optional one-line finding (e.g. "Trouvé en ligne : vidange + courroie"), and a few next-step buttons. Each button is ONE of two kinds. (1) NL follow-up: set "instruction" — clicking re-runs you with that text. (2) Deterministic write: set "taskId" (an open task id from the turn context) + "parts" [{ref, brand, label}] — clicking merges those parts onto that task via a direct PATCH, NO new turn, and the shopping list re-renders. ALWAYS prefer kind (2) for "add this reference" choices, and include one button that adds the recommended refs at once. Never offer a dead-end "see all options" button.', 'proposeActions')]
 final class RenderIntentTools
 {
+    /**
+     * The car regions the client can point inside of — the single server-side copy of the vocabulary in
+     * `dashboard/src/scene/anchors.ts`. A region absent here is one the agent has no word for.
+     *
+     * @var list<string>
+     */
+    public const BODY_REGIONS = ['hood', 'bay', 'windshield', 'frontAxle', 'rearAxle'];
+
     public function __construct(
         private readonly HubInterface $hub,
         private readonly LoggerInterface $logger,
@@ -132,6 +141,27 @@ final class RenderIntentTools
         $action = ['type' => 'focusView', 'panel' => $panel];
         if ([] !== $keys) {
             $action['keys'] = array_values($keys);
+        }
+        $this->publish($action);
+
+        return 'ok';
+    }
+
+    /**
+     * Ghosts the car's shell to a wireframe and raises the region's schematic assembly under it — the
+     * one intent that shows the operator something the closed body hides. `$partKeys` CALL OUT parts of
+     * that diagram; they never filter it, because "where does this sit" is answered by what surrounds
+     * it. The camera takes the region's reveal pose, and releasing the hold clears the whole thing.
+     *
+     * @param list<string> $partKeys service-type keys to call out (empty → raise the diagram plain)
+     */
+    public function revealAssembly(string $region, array $partKeys = []): string
+    {
+        Assert::inArray($region, self::BODY_REGIONS);
+        Assert::allStringNotEmpty($partKeys);
+        $action = ['type' => 'revealAssembly', 'region' => $region];
+        if ([] !== $partKeys) {
+            $action['partKeys'] = array_values($partKeys);
         }
         $this->publish($action);
 

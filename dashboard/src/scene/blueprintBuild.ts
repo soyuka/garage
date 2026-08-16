@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { EDGE, FILL_OPACITY } from './CarProxy';
+import { GHOST_EDGE_FLOOR } from './holo';
 
 // Shared blueprint builder for any loaded glb scene — the faint paint-tinted volume under glowing
 // steel-blue edges. Extracted from VehicleMesh so the hero leaf and the parc-grid thumb share ONE copy
@@ -42,6 +43,17 @@ export interface PulseControl {
   halfLen: number;
 }
 
+/** The GHOST verb (C1): the shell steps out of the way of a reveal. One uniform dims the edges toward
+ * {@link GHOST_EDGE_FLOOR}; the paint fill is a plain material opacity, so it needs no shader at all.
+ * `apply` moves both together — a depth in [0,1], 0 = the untouched blueprint. Inert at 0, so a parc
+ * thumb (which never calls it) is bit-for-bit what it was. */
+export interface GhostControl {
+  uniforms: {
+    uGhost: { value: number };
+  };
+  apply: (depth: number) => void;
+}
+
 export interface Blueprint {
   /** The cloned, re-centred, fill-overridden mesh group. Render via <primitive>. */
   clone: THREE.Object3D;
@@ -51,6 +63,8 @@ export interface Blueprint {
   scan: ScanControl;
   /** The region-pulse control — animate via PulseRunner; inert at uPulseOn=0. */
   pulse: PulseControl;
+  /** The ghost control — animate via GhostRunner; inert at depth 0. */
+  ghost: GhostControl;
   /** Free per-instance resources on unmount. Never the cached edge geometry or the drei-cached glb. */
   dispose: () => void;
 }
@@ -63,8 +77,9 @@ export interface Blueprint {
 // applied to the fill mesh: its geometry keeps per-mesh LOCAL coords, which don't line up with the baked
 // edges (would glow uniformly). Inert at uScanOn≈0 AND uPulseOn≈0, so parc thumbs (never animated) look
 // unchanged.
-function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseControl['uniforms']): void {
+function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseControl['uniforms'], g: GhostControl['uniforms']): void {
   mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uGhost = g.uGhost;
     shader.uniforms.uScanX = s.uScanX;
     shader.uniforms.uScanOn = s.uScanOn;
     shader.uniforms.uScanWidth = s.uScanWidth;
@@ -78,9 +93,11 @@ function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseCont
       '#include <begin_vertex>',
       '#include <begin_vertex>\n\tvScanC = mix(position.x, position.z, uScanAxis);',
     );
-    shader.fragmentShader = `uniform float uScanX;\nuniform float uScanOn;\nuniform float uScanWidth;\nuniform vec3 uScanColor;\nuniform float uPulseCenter;\nuniform float uPulseOn;\nuniform float uPulseWidth;\nuniform vec3 uPulseColor;\nvarying float vScanC;\n${shader.fragmentShader}`.replace(
+    // The ghost multiplies LAST, after the two cyan verbs: a shell that has stepped aside must not keep
+    // flaring at full brightness underneath the diagram that replaced it.
+    shader.fragmentShader = `uniform float uScanX;\nuniform float uScanOn;\nuniform float uScanWidth;\nuniform vec3 uScanColor;\nuniform float uPulseCenter;\nuniform float uPulseOn;\nuniform float uPulseWidth;\nuniform vec3 uPulseColor;\nuniform float uGhost;\nvarying float vScanC;\n${shader.fragmentShader}`.replace(
       '#include <dithering_fragment>',
-      '#include <dithering_fragment>\n\tfloat _band = smoothstep(uScanWidth, 0.0, abs(vScanC - uScanX)) * uScanOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uScanColor, _band * 0.85) + uScanColor * _band * 0.9;\n\tfloat _pulse = smoothstep(uPulseWidth, 0.0, abs(vScanC - uPulseCenter)) * uPulseOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uPulseColor, _pulse * 0.85) + uPulseColor * _pulse * 0.9;',
+      `#include <dithering_fragment>\n\tfloat _band = smoothstep(uScanWidth, 0.0, abs(vScanC - uScanX)) * uScanOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uScanColor, _band * 0.85) + uScanColor * _band * 0.9;\n\tfloat _pulse = smoothstep(uPulseWidth, 0.0, abs(vScanC - uPulseCenter)) * uPulseOn;\n\tgl_FragColor.rgb = mix(gl_FragColor.rgb, uPulseColor, _pulse * 0.85) + uPulseColor * _pulse * 0.9;\n\tgl_FragColor.rgb *= mix(1.0, ${GHOST_EDGE_FLOOR.toFixed(3)}, uGhost);`,
     );
   };
   mat.needsUpdate = true;
@@ -134,7 +151,16 @@ export function buildBlueprint(
     },
     halfLen,
   };
-  patchHolo(edgeMat, scan.uniforms, pulse.uniforms); // edges only — world-baked coords; the faint fill would misalign
+  // The ghost: one uniform for the edges, plain opacity for the fill. `apply` is called from a useFrame
+  // driver, so it must not allocate.
+  const ghost: GhostControl = {
+    uniforms: { uGhost: { value: 0 } },
+    apply: (depth: number) => {
+      ghost.uniforms.uGhost.value = depth;
+      fillMat.opacity = FILL_OPACITY * (1 - depth);
+    },
+  };
+  patchHolo(edgeMat, scan.uniforms, pulse.uniforms, ghost.uniforms); // edges only — world-baked coords; the faint fill would misalign
 
   const key = cacheKey ? `${cacheKey}|${edgeAngle}` : undefined;
   const cached = key ? EDGES_CACHE.get(key) : undefined;
@@ -165,5 +191,5 @@ export function buildBlueprint(
     // Only free edge geometries we built AND did not cache (uncached one-offs).
     if (!key) geoms.forEach((g) => g.dispose());
   };
-  return { clone, edges, scan, pulse, dispose };
+  return { clone, edges, scan, pulse, ghost, dispose };
 }

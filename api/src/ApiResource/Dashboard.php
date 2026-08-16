@@ -10,6 +10,7 @@ use App\Dto\Dashboard\FocusViewInput;
 use App\Dto\Dashboard\NarrateStepInput;
 use App\Dto\Dashboard\OpenVehicleInput;
 use App\Dto\Dashboard\ProposeActionsInput;
+use App\Dto\Dashboard\RevealAssemblyInput;
 use App\Dto\Dashboard\SelectVehicleInput;
 use App\Dto\Dashboard\SettleDashboardInput;
 use App\Dto\Dashboard\ShowFactInput;
@@ -18,6 +19,7 @@ use App\State\Dashboard\FocusViewProcessor;
 use App\State\Dashboard\NarrateStepProcessor;
 use App\State\Dashboard\OpenVehicleProcessor;
 use App\State\Dashboard\ProposeActionsProcessor;
+use App\State\Dashboard\RevealAssemblyProcessor;
 use App\State\Dashboard\SelectVehicleProcessor;
 use App\State\Dashboard\SettleDashboardProcessor;
 use App\State\Dashboard\ShowFactProcessor;
@@ -98,6 +100,14 @@ use App\State\Dashboard\ToastProcessor;
             structuredContent: false,
             processor: FocusViewProcessor::class,
             annotations: ['readOnlyHint' => true],
+        ),
+        'reveal_assembly' => new McpTool(
+            title: 'Reveal Assembly',
+            description: 'Look INSIDE the car: ghost the shell to a wireframe and raise that region\'s schematic assembly under it, the camera descending over the part. Use it when the answer is about a component the closed body hides — "quelle piece je commande ?", "ou est le filtre a carburant ?" — where show_fact names the part but never shows where it lives; pair the two (the panel carries the reference, the reveal carries the place). region is "hood" (the engine: oil, plugs, coolant), "bay" (around it: air/fuel filters, battery), "windshield" (cabin front: wipers, cabin filter), "frontAxle"/"rearAxle" (that axle\'s brakes and wheel). partKeys CALL OUT parts of the diagram in the operator colour (e.g. ["fuel_filter"]) — they never filter it: the whole circuit is always drawn, because what surrounds a part is how the operator finds it. It is a DIAGRAM of that class of assembly, not a scan of this car — never tell the user it depicts their specific engine. Releasing the camera ("vue libre", Escape) puts the shell back.',
+            input: RevealAssemblyInput::class,
+            structuredContent: false,
+            processor: RevealAssemblyProcessor::class,
+            annotations: ['readOnlyHint' => true, 'idempotentHint' => true],
         ),
         'propose_actions' => new McpTool(
             title: 'Propose Actions',

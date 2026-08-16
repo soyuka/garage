@@ -132,7 +132,8 @@ be hiding, which the truth-before-spectacle rule forbids as much as any fake mot
 card's head — the ROW itself ticks the task off, so the head is the camera control)
 **dollies the camera** to that region's anchor instead of dimming the stage — the move itself is the
 attention cue, and the camera never drifts from the part it names (the same `regionAnchors` the glow
-reads off). It fires only on explicit intent: never mid-drag (a request during a user drag queues until
+reads off), **from that region's own angle** (§ "The region pose (C2)" below — the framing is part of
+the answer, not a uniform zoom). It fires only on explicit intent: never mid-drag (a request during a user drag queues until
 release), and grabbing the camera always wins — it drops the hold outright. Eases over ~900ms sine
 in/out; released by re-activating the SAME row (a toggle — "click again to go back"), the **"vue libre"**
 button, `Escape`, or the drag itself. While a region is held, or the projection column is open, the
@@ -142,6 +143,53 @@ stage/cockpit/rail dim (`data-dim`) to cue that a projected answer is the curren
 no tokens**: they replay the SAME choreography (`turn:start` → two `status` narration steps ≈ +950ms →
 answer + `turn:end` ≈ +1900ms) and set the same `focus`/`cta` the agent would. Only the composer free-text
 opens an LLM turn. The user sees no difference.
+
+## The reveal — looking inside the car (C1–C4)
+
+`CONFERENCE.md` § Workstream C. A focus dollies to the OUTSIDE of a closed shell, which is a polite
+zoom and nothing more: the answer « quelle pièce je commande ? » is about a thing the operator cannot
+see. The reveal is the surface for that, and it is the one place the stage stops drawing the car and
+starts drawing a **diagram** — deliberately, because `public/mazda6-gh-web.glb` is ONE node, ONE mesh
+(no hood, no door, no engine), so any claim to be showing that specific engine bay would be a lie the
+geometry cannot back. Authored primitives in the region's anchor space say "circuit du filtre à
+carburant"; they never say "your car's fuel filter, photographed".
+
+| Real frame / condition | Atelier motion | Owner layer |
+|---|---|---|
+| `revealAssembly {region, partKeys?}` | the shell **ghosts**: the paint-tinted fill fades out and the blueprint edges dim to a floor, so the body reads as a wireframe you can see through — never to nothing, because the operator must keep the car's shape to know where they are. Under it, the region's **schematic assembly** rises in that region's anchor space, parts unfurling staggered (`--at-dur-fan`, the manifest/rail vocabulary, capped at 4 steps). The camera takes the region's **reveal pose** — steeper than its focus pose and further BACK, not closer: a reveal is the same car seen through, and cropping to the part would throw away the context that makes the diagram locatable | `VehicleMesh` (`GhostRunner`) + `Assembly` + `cameraRig` |
+| a reveal whose parts have not all landed | **the ghost depth tracks how much of the assembly is on screen.** The shell dissolves as the parts arrive, so a slow catalogue lookup produces a slow dissolve rather than a finished dissolve held over an empty bay. The one thing that could have made C1 theatre — a fixed-length fade — is exactly what this removes: the duration is the fetch's | `VehicleMesh` + `Assembly` |
+| a reveal is released (same controls as any hold: re-activating it, "vue libre", `Escape`, a drag) | ghost returns to 0 and the assembly sinks and clears on `--at-dur-swap`; the camera returns to the resting band. A drag during a reveal breaks it like any other hold — the operator grabbing the camera always wins | `VehicleMesh` + `Assembly` + `cameraRig` |
+| `prefers-reduced-motion` | the ghost and the assembly are **state, not attention**: both cut instantly to their end value and stay there. Nothing is lost — a wireframe shell with a diagram under it is the information, and the dissolve was only ever the transition into it. The reveal dolly cuts, like every other dolly | all three |
+
+**A reveal is a hold, not a mode.** It reuses `CameraFocus` with `mode:'reveal'`, so every rule the
+earned camera already has — the intent gate, the mid-drag queue, the drag-breaks-hold, the burst
+coalescer — applies unchanged and none of them was re-implemented. The only difference is which pose
+family it reads.
+
+C2 also planned to **widen the polar floor** for the reveal ("descend to a near-vertical over-the-bay
+pose"). Built and then deleted, on the evidence: straight down through a *ghosted* shell superimposes
+roof, floor and both flanks into one mat of lines, so the steepest angle is the worst one for a
+wireframe, and at that radius the car overflowed the frame — costing the operator the one thing the
+reveal is for, knowing where on the car they are looking. The pose that actually reads sits inside the
+resting band, so the widening (and the machinery that had to widen it before the ease and give it back
+only once the camera was home) guarded a case that does not exist. `cameraRig.test.ts` asserts it stays
+inside the band.
+
+### The region pose (C2) — the angle IS the region
+
+`derivePreset` used to keep the HOME azimuth and the HOME polar for every region and change only the
+target and the radius. Every dolly in the app therefore produced the same shot, and the framing
+encoded nothing beyond "closer". A camera that cannot tell the hood from the rear axle is a camera
+carrying no datum, which the Taste rule forbids as much as any decorative sweep.
+
+So each region now owns a **view** (`REGION_VIEWS` in `cameraRig.ts`): an azimuth offset from home, an
+absolute polar, and a radius factor. The hood is read from a raised front three-quarter, the bay
+steeper still, the axles from near ground level swung toward the wheel they name. The offsets are
+per-REGION and shared across body classes — the anchor position already carries the body-class
+difference, and the angle you read a wheel from does not change because the car is a van.
+
+The radius factor is per-region for the same reason: one flat `DOLLY_RADIUS_FACTOR` framed a brake
+caliper and a whole engine bay identically, so the frame never said how big the thing was. It does now.
 
 ## Stage look
 

@@ -6,6 +6,7 @@ import { NoyauVoice } from '../noyau/NoyauVoice';
 import { AmbientInbox } from '../noyau/AmbientInbox';
 import type { DecisionItem, NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
+import type { RevealState } from './reveal';
 import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
@@ -60,6 +61,9 @@ interface SceneViewProps {
   pulseRegion?: PulseRegion | null;
   /** D1 earned camera: the region the view is dollied to (null/absent = home framing / playground). */
   cameraFocus?: CameraFocus | null;
+  /** C1–C4: the region's schematic assembly to raise under a ghosted shell. Anchored to `cameraFocus` —
+   * releasing the hold clears it (reveal.ts revealSurvives), so there is no separate dismiss. */
+  reveal?: RevealState | null;
   /** Clears cameraFocus — the "vue libre" reset, Escape, or a user drag breaking the hold (via Plateau). */
   onCameraRelease?: () => void;
   /** D1 from the AMBIENT layer: the operator aimed a rail visit card at its body region. Dolly only — no
@@ -128,6 +132,7 @@ export function SceneView({
   noyau,
   pulseRegion = null,
   cameraFocus = null,
+  reveal = null,
   onCameraRelease,
   onHoldRegion,
   onClearEmber,
@@ -332,6 +337,7 @@ export function SceneView({
               scanning={noyau.phase === 'working'}
               pulseRegion={pulseRegion}
               cameraFocus={cameraFocus}
+              reveal={reveal}
               onCameraRelease={onCameraRelease}
             />
           </div>

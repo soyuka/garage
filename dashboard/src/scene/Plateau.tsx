@@ -1,4 +1,4 @@
-import { memo, Suspense, useEffect, useRef } from 'react';
+import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
@@ -7,18 +7,21 @@ import type { ForecastDue, Signal, VehicleSummary } from '../types';
 import { bodyClassFor, type BodyClass } from './CarProxy';
 import { SIGNAL_HEX, NEUTRAL_HEX, NEON_RED } from './signalColors';
 import { computeRingSegments } from './ringSegments';
-import { breathe01, podiumGlow } from './holo';
+import { breathe01, ghostTarget, podiumGlow } from './holo';
+import { Assembly } from './Assembly';
+import type { RevealState } from './reveal';
 import { HoloPodium } from './HoloPodium';
 import { CuttingMat } from './CuttingMat';
 import { VehicleBody } from './VehicleBody';
 import type { PulseRegion } from './VehicleMesh';
 import {
   HOME,
+  POLAR,
   DOLLY_SECONDS,
   GATE_INIT,
   gateReduce,
   dragBreaksHold,
-  presetForRegion,
+  presetForFocus,
   sineEaseInOut,
   type CameraFocus,
   type GateState,
@@ -105,12 +108,12 @@ function CameraRig({
       return;
     }
     const held = g.held;
-    const nextSig = held ? `${held.region}:${held.key}` : 'home';
+    const nextSig = held ? `${held.region}:${held.mode ?? 'focus'}:${held.key}` : 'home';
     if (nextSig !== sig.current) {
       sig.current = nextSig;
       // Compute the preset ONLY on a sig change (a fresh Record + Vec3 tuples per call) — a settled hold
       // re-enters this frame with nextSig === sig.current and skips it, so it costs zero allocation.
-      const pose = held ? presetForRegion(bodyClass, held.region) : HOME;
+      const pose = held ? presetForFocus(bodyClass, held.region, held.mode) : HOME;
       goalPos.current.set(pose.position[0], pose.position[1], pose.position[2]);
       goalTgt.current.set(pose.target[0], pose.target[1], pose.target[2]);
       if (reduced) {
@@ -242,6 +245,7 @@ function Plateau3D({
   scanning,
   pulseRegion,
   cameraFocus,
+  reveal,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -250,9 +254,22 @@ function Plateau3D({
   scanning: boolean;
   pulseRegion: PulseRegion | null;
   cameraFocus: CameraFocus | null;
+  reveal: RevealState | null;
   onCameraRelease: () => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
+  // C1↔C3: the shell's ghost depth is the fraction of the diagram that has arrived, so the dissolve is
+  // paced by the reveal's own parts. Kept in a ref-backed state that only changes on a landed-count
+  // change (Assembly reports edge-triggered), so a settled reveal re-renders nothing.
+  const [landed, setLanded] = useState({ landed: 0, total: 0 });
+  const revealKey = reveal ? `${reveal.region}:${reveal.key}` : null;
+  const lastKey = useRef<string | null>(null);
+  if (revealKey !== lastKey.current) {
+    lastKey.current = revealKey;
+    if (landed.landed !== 0 || landed.total !== 0) setLanded({ landed: 0, total: 0 });
+  }
+  const onPartsLanded = useCallback((l: number, total: number) => setLanded({ landed: l, total }), []);
+  const ghostDepth = reveal ? ghostTarget(landed.landed, landed.total) : 0;
   return (
     <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.position, fov: 33 }} gl={{ antialias: true }}>
       <color attach="background" args={['#131210']} />
@@ -260,7 +277,19 @@ function Plateau3D({
       <CuttingMat />
       <Suspense fallback={null}>
         <group position={[0, 0.04, 0]}>
-          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
+          <VehicleBody key={vehicle['@id']} vehicle={vehicle} bodyClass={bodyClass} paint={paintFor(vehicle)} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />
+          {/* The reveal's diagram. Mounted only while it holds — unmount IS the dismiss, so there is no
+              hidden geometry and no second state to keep in step with the ghost. */}
+          {reveal && (
+            <Assembly
+              key={`${reveal.region}:${reveal.key}`}
+              bodyClass={bodyClass}
+              region={reveal.region}
+              partKeys={reveal.partKeys}
+              reduced={reduced}
+              onPartsLanded={onPartsLanded}
+            />
+          )}
           {/* on-car sick-region orbs removed — health now reads on the segmented base ring + the échéance
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
         </group>
@@ -280,8 +309,8 @@ function Plateau3D({
         enablePan={false}
         enableZoom={false}
         autoRotateSpeed={0.55}
-        minPolarAngle={Math.PI * 0.16}
-        maxPolarAngle={Math.PI * 0.49}
+        minPolarAngle={POLAR.min}
+        maxPolarAngle={POLAR.max}
         target={HOME.target}
       />
       {/* autoRotate is owned by CameraRig (it pauses during a dolly/hold, resumes at home) — a single
@@ -303,6 +332,7 @@ function PlateauImpl({
   scanning = false,
   pulseRegion = null,
   cameraFocus = null,
+  reveal = null,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -313,6 +343,8 @@ function PlateauImpl({
   pulseRegion?: PulseRegion | null;
   /** D1 earned camera: the region the view is dollied to (null = home framing). Absent → no dolly (playground). */
   cameraFocus?: CameraFocus | null;
+  /** C1–C4 reveal: the region's schematic assembly to raise under a ghosted shell. Absent → no reveal. */
+  reveal?: RevealState | null;
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
@@ -340,6 +372,7 @@ function PlateauImpl({
         scanning={scanning}
         pulseRegion={pulseRegion}
         cameraFocus={cameraFocus}
+        reveal={reveal}
         onCameraRelease={onCameraRelease ?? (() => {})}
       />
     </div>

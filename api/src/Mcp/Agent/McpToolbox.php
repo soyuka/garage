@@ -58,6 +58,7 @@ class McpToolbox implements ToolboxInterface
         'propose_actions',
         'narrate_step',
         'settle_dashboard',
+        'reveal_assembly',
     ];
 
     /** @var list<Tool>|null */

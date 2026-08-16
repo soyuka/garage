@@ -34,18 +34,21 @@ function ThumbThenFull({
   scanning,
   reduced,
   pulseRegion,
+  ghostDepth,
 }: {
   spec: ReturnType<typeof resolveMesh>;
   paint: string;
   scanning: boolean;
   reduced: boolean;
   pulseRegion: PulseRegion | null;
+  ghostDepth: number;
 }) {
   const thumbSpec = { ...spec, url: spec.thumbUrl };
-  if (spec.thumbUrl === spec.url) return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />;
+  if (spec.thumbUrl === spec.url)
+    return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />;
   return (
-    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />}>
-      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
+    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />}>
+      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />
     </Suspense>
   );
 }
@@ -57,6 +60,7 @@ export function VehicleBody({
   scanning = false,
   reduced = false,
   pulseRegion = null,
+  ghostDepth = 0,
 }: {
   vehicle: VehicleSummary;
   bodyClass: BodyClass;
@@ -64,6 +68,8 @@ export function VehicleBody({
   scanning?: boolean;
   reduced?: boolean;
   pulseRegion?: PulseRegion | null;
+  /** C1 reveal: how far the shell has stepped aside. The proxy fallback has no ghost (nor scan/pulse). */
+  ghostDepth?: number;
 }) {
   const spec = resolveMesh(vehicle);
   const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
@@ -71,7 +77,7 @@ export function VehicleBody({
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>
       <Suspense fallback={proxy}>
-        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} />
+        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />
       </Suspense>
     </MeshErrorBoundary>
   );

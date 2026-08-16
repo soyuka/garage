@@ -56,3 +56,33 @@ const REGION_AXIS: Record<BodyRegion, number> = {
 export function regionAxisFraction(region: BodyRegion): number {
   return REGION_AXIS[region];
 }
+
+// ── GHOST: the shell gets out of the way (C1) ─────────────────────────────────
+// The fourth verb, and the only one that SUBTRACTS. A reveal has to show what is under the body, and
+// the body is one merged mesh with no hood to open — so instead of animating panels that do not exist,
+// the paint-tinted fill fades out and the blueprint edges dim to a floor. What is left is a wireframe
+// you can see through and still recognise: the operator must keep the car's shape to know where the
+// diagram under it sits, which is why the edges dim rather than disappear.
+
+/** How much of the edge brightness survives a full ghost. Never 0 — a shape, not an absence. */
+export const GHOST_EDGE_FLOOR = 0.2;
+
+/** How fast the ghost approaches its target, per second. */
+export const GHOST_RAMP = 3.2;
+
+/**
+ * The ghost depth the shell should be AT, given how much of the assembly has arrived. This is the
+ * whole of hard rule 1 for the reveal: the dissolve is paced by the fetch, not by a clock, so a slow
+ * catalogue lookup dissolves slowly and a fast one dissolves fast. Nothing waits on anything.
+ */
+export function ghostTarget(landed: number, expected: number): number {
+  if (expected <= 0) return 0;
+  return Math.min(1, Math.max(0, landed / expected));
+}
+
+/** One eased frame toward `target`. Clamps the delta (a tab-restore hitch must not jump the whole way)
+ * and snaps at the end, so a useFrame loop settles instead of chasing an asymptote forever. */
+export function ghostStep(current: number, target: number, delta: number, rate: number = GHOST_RAMP): number {
+  const next = current + (target - current) * Math.min(1, Math.max(0, delta) * rate);
+  return Math.abs(target - next) < 0.001 ? target : next;
+}

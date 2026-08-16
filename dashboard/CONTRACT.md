@@ -86,10 +86,25 @@ major-unit euros the client converts.
 
 ## The REAL `UIAction` union (verified — the only members the agent tool surface emits)
 
-`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `showFact` `{keys[], title?, nodes?}` ·
+`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `revealAssembly` `{region, partKeys?}` ·
+`showFact` `{keys[], title?, nodes?}` ·
 `focusView` `{panel: "specs"|"tasks"|"carnet", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
 CtaAction[]}` · `toast` `{tone, message}` · `status` `{message}` · `turn` `{phase}`.
+
+**`revealAssembly` `{region, partKeys?}` (2026-08-16)** — a REAL server emission (`reveal_assembly`,
+`api/src/ApiResource/Dashboard.php` + the `#[AsTool]` twin, so both drivers reach it). It ghosts the
+car's shell to a wireframe and raises that region's schematic assembly under it, camera in the reveal
+pose. `region` is a `BodyRegion`, and the enum is duplicated **once** server-side as
+`RenderIntentTools::BODY_REGIONS` — a region absent there is one the agent has no word for.
+
+`partKeys` **call out** parts of the diagram; they never filter it. The whole circuit is always drawn,
+because "where does this part sit" is answered by what surrounds it. Omitted `partKeys` is absent from
+the wire, not `[]` — "call nothing out" and "call out nothing" must not look the same.
+
+The diagram is **authored, not extracted**: `public/mazda6-gh-web.glb` is one node and one mesh, so
+there is no engine to reveal. It is a diagram of that class of assembly and the tool description says
+so — the agent must never present it as a scan of the user's specific car.
 
 `focusView` covers the whole `PanelKind` (`src/types.ts`), `'carnet'` included: the history/spend
 projection is a real server emission, not a chip-only surface. The agent raises it after

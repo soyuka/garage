@@ -21,10 +21,12 @@ export interface CameraPose {
   target: Vec3;
 }
 
-/** A held camera focus. `key` re-triggers a dolly even for a repeat region (mirrors PulseRegion). */
+/** A held camera focus. `key` re-triggers a dolly even for a repeat region (mirrors PulseRegion).
+ * `mode` picks the pose family — absent means `focus`, so a reveal is a hold like any other. */
 export interface CameraFocus {
   region: BodyRegion;
   key: number;
+  mode?: FocusMode;
 }
 
 /** The resting framing — the single source (was inline in Plateau's Canvas camera + OrbitControls). */
@@ -38,6 +40,69 @@ export const POLAR = { min: Math.PI * 0.16, max: Math.PI * 0.49 };
 
 /** A region framing sits at this fraction of the home orbit radius — closer, so the region fills more. */
 export const DOLLY_RADIUS_FACTOR = 0.62;
+
+/**
+ * How a region is LOOKED AT, as opposed to where it is (that is `regionAnchors`). Three numbers,
+ * because the framing has to carry the same three facts the operator needs: which end of the car,
+ * from how high, and how big the thing is.
+ *
+ * - `azimuth` is an OFFSET from the home viewing angle, radians, positive swinging toward the nose.
+ *   An offset rather than an absolute keeps every pose on the established viewing side — the camera
+ *   moves around the car it is already looking at instead of cutting to the far flank.
+ * - `polar` is absolute, from +y. Small = looking down INTO something, large = at it from its own level.
+ * - `factor` is the orbit radius as a fraction of home. A caliper is not framed like an engine bay.
+ *
+ * Per-REGION and shared across body classes on purpose: the anchor already carries the body-class
+ * difference, and the angle you read a wheel from does not change because the car is a van.
+ */
+export interface RegionView {
+  azimuth: number;
+  polar: number;
+  factor: number;
+}
+
+export const REGION_VIEWS: Record<BodyRegion, RegionView> = {
+  // the engine, from a raised front three-quarter — the angle a person leans over a fender at
+  hood: { azimuth: 0.2, polar: Math.PI * 0.3, factor: 0.55 },
+  // deeper and steeper than the hood: the bay is a volume you look down into, not a surface
+  bay: { azimuth: 0.1, polar: Math.PI * 0.25, factor: 0.48 },
+  // the greenhouse, from slightly above and ahead — close to the resting angle, it is the one region
+  // the home framing already reads well
+  windshield: { azimuth: 0.05, polar: Math.PI * 0.33, factor: 0.62 },
+  // a wheel is read at its own level, swung forward so the face is not edge-on
+  frontAxle: { azimuth: 0.34, polar: Math.PI * 0.45, factor: 0.4 },
+  // …and the rear swings the other way, so the two axles are never the same shot
+  rearAxle: { azimuth: -0.4, polar: Math.PI * 0.45, factor: 0.4 },
+};
+
+/** The reveal family: the same regions, descended far enough to look INTO the car, no further. */
+// Tuned against the real mesh, not derived: a first pass put these at 0.09–0.14π and 0.46 radius —
+// literally the "near-vertical over-the-bay pose" C2 asked for — and it was unreadable. Two reasons,
+// both only visible on screen. Straight down through a GHOSTED shell superimposes the roof, the floor
+// and both flanks into one dense mat of lines, so the steepest angle is the WORST one for a wireframe.
+// And at that radius the car overflows the frame, which costs the operator the very thing the reveal is
+// for: knowing where on the car they are looking. So the reveal descends decisively but stops short of
+// plan view, and stands far enough back that the body still reads. Note these radii are LARGER than the
+// plain focus family's: a reveal is not a closer look at the outside, it is the same car seen through —
+// what changes is the angle and the ghost, and pulling IN as well would throw away the context that
+// makes the diagram locatable.
+//
+// A consequence worth recording, because it deleted code: C2 planned to WIDEN the polar floor for the
+// reveal ("descend to a near-vertical over-the-bay pose", CONFERENCE.md). Once the pose was tuned to be
+// readable it landed comfortably INSIDE the resting band, so the widened band — and the machinery in
+// CameraRig that had to widen it before the ease and give it back only once the camera was home — was
+// dead weight guarding a case that turned out not to exist. The band that stops a user's drag flying
+// over the roof is the same band a legible reveal wants.
+export const REVEAL_VIEWS: Record<BodyRegion, RegionView> = {
+  hood: { azimuth: 0.16, polar: Math.PI * 0.23, factor: 0.84 },
+  bay: { azimuth: 0.08, polar: Math.PI * 0.21, factor: 0.82 },
+  windshield: { azimuth: 0.04, polar: Math.PI * 0.26, factor: 0.86 },
+  frontAxle: { azimuth: 0.3, polar: Math.PI * 0.32, factor: 0.66 },
+  rearAxle: { azimuth: -0.36, polar: Math.PI * 0.32, factor: 0.66 },
+};
+
+/** Which pose family a hold uses. `reveal` is the cutaway (C1–C4); everything else is `focus`. */
+export type FocusMode = 'focus' | 'reveal';
 
 /** Dolly duration — matches the ~900ms sine ease the spec calls for. */
 export const DOLLY_SECONDS = 0.9;
@@ -70,25 +135,31 @@ export function fromSpherical(radius: number, polar: number, azimuth: number): V
 }
 
 /**
- * A closer framing centred on `anchor`: keep the home viewing angle (azimuth + tilt), but re-target onto
- * the region and pull the camera in to {@link DOLLY_RADIUS_FACTOR} of the home radius. Retargeting is what
- * makes the move read as "going to the region" (each region's anchor differs); the dolly-in fills the frame.
- * The tilt is clamped so a preset can never leave the OrbitControls polar band.
+ * A framing centred on `anchor`, seen through `view`: re-target onto the region, swing `view.azimuth`
+ * off the home viewing angle, tilt to `view.polar`, and pull in to `view.factor` of the home radius.
+ * Retargeting is what makes the move read as "going to the region"; the angle is what makes it read as
+ * going to THAT region (CHOREOGRAPHY § "The region pose"). The tilt is clamped into `band` so a preset
+ * can never land somewhere OrbitControls will immediately snap back out of.
  */
-export function derivePreset(anchor: Vec3, home: CameraPose = HOME, factor: number = DOLLY_RADIUS_FACTOR): CameraPose {
+export function derivePreset(anchor: Vec3, view: RegionView, home: CameraPose = HOME, band: { min: number; max: number } = POLAR): CameraPose {
   const homeOffset: Vec3 = [home.position[0] - home.target[0], home.position[1] - home.target[1], home.position[2] - home.target[2]];
-  const { radius, polar, azimuth } = toSpherical(homeOffset);
-  const offset = fromSpherical(radius * factor, clampPolar(polar), azimuth);
+  const { radius, azimuth } = toSpherical(homeOffset);
+  const offset = fromSpherical(radius * view.factor, clampPolar(view.polar, band.min, band.max), azimuth + view.azimuth);
   return {
     position: [anchor[0] + offset[0], anchor[1] + offset[1], anchor[2] + offset[2]],
     target: [...anchor] as Vec3,
   };
 }
 
-/** The camera preset for a region on a body class — derived from the region's 3D anchor. */
-export function presetForRegion(bodyClass: BodyClass, region: BodyRegion): CameraPose {
+/** The camera preset for a region on a body class, in the given pose family. */
+export function presetForFocus(bodyClass: BodyClass, region: BodyRegion, mode: FocusMode = 'focus'): CameraPose {
   const anchor: Anchor = regionAnchors(bodyClass)[region];
-  return derivePreset(anchor as Vec3);
+  return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region]);
+}
+
+/** The plain focus preset — what every non-reveal call site means. */
+export function presetForRegion(bodyClass: BodyClass, region: BodyRegion): CameraPose {
+  return presetForFocus(bodyClass, region, 'focus');
 }
 
 // ── Intent gate ────────────────────────────────────────────────────────────────

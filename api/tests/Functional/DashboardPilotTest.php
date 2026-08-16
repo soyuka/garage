@@ -25,9 +25,72 @@ final class DashboardPilotTest extends AppTestCase
 
         $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
 
-        foreach (['select_vehicle', 'toast', 'show_fact', 'focus_view', 'propose_actions', 'narrate_step', 'settle_dashboard'] as $tool) {
+        foreach (['select_vehicle', 'toast', 'show_fact', 'focus_view', 'propose_actions', 'narrate_step', 'settle_dashboard', 'reveal_assembly'] as $tool) {
             $this->assertContains($tool, $tools);
         }
+    }
+
+    public function testRevealAssemblyGhostsTheShellAndRaisesTheRegionDiagram(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'reveal_assembly',
+            'arguments' => ['region' => 'bay', 'partKeys' => ['fuel_filter']],
+        ], 3);
+
+        $this->assertSame(
+            ['type' => 'revealAssembly', 'region' => 'bay', 'partKeys' => ['fuel_filter']],
+            $this->lastPilotFrame(),
+        );
+    }
+
+    public function testRevealAssemblyNeedsNoPartKeys(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'reveal_assembly',
+            'arguments' => ['region' => 'hood'],
+        ], 3);
+
+        // The circuit alone is a valid answer to "where does this sit", so an omitted partKeys must not
+        // become an empty array on the wire: the client's default is "call nothing out", not "call out
+        // nothing", and the two would be indistinguishable if the key were always present.
+        $this->assertSame(['type' => 'revealAssembly', 'region' => 'hood'], $this->lastPilotFrame());
+    }
+
+    public function testRevealAssemblyRejectsARegionTheCarDoesNotHave(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'reveal_assembly',
+            'arguments' => ['region' => 'coffre'],
+        ], 3);
+
+        $this->assertStringContainsString('invalid_input', json_encode($result));
+        $this->assertNull($this->lastPilotFrame());
+    }
+
+    public function testRevealAssemblyAdvertisesTheRegionsTheClientCanDraw(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $schemas = [];
+        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+            $schemas[$tool['name']] = $tool['inputSchema'];
+        }
+
+        // A region the wire cannot name is a part of the car the agent can never point inside of.
+        $this->assertSame(
+            ['hood', 'bay', 'windshield', 'frontAxle', 'rearAxle'],
+            $schemas['reveal_assembly']['properties']['region']['enum'] ?? null,
+        );
     }
 
     public function testTheAdvertisedSchemasCarryTheCarnetPanelAndTheProjectedNodes(): void

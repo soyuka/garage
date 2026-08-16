@@ -104,3 +104,65 @@ describe('regionAxisFraction — where a region sits along the car (nose=+1, tai
     }
   });
 });
+
+// ── C1: the ghost ──────────────────────────────────────────────────────────────
+
+import { GHOST_EDGE_FLOOR, ghostTarget, ghostStep } from './holo';
+
+describe('ghostTarget — the shell dissolves as the assembly arrives', () => {
+  it('is 0 with nothing expected (no reveal → no ghost, the parc thumbs are untouched)', () => {
+    expect(ghostTarget(0, 0)).toBe(0);
+    expect(ghostTarget(3, 0)).toBe(0);
+  });
+
+  it('tracks the fraction of parts on screen, so a slow lookup dissolves slowly', () => {
+    expect(ghostTarget(0, 4)).toBe(0);
+    expect(ghostTarget(1, 4)).toBeCloseTo(0.25);
+    expect(ghostTarget(2, 4)).toBeCloseTo(0.5);
+    expect(ghostTarget(4, 4)).toBe(1);
+  });
+
+  it('never exceeds a full ghost even if more parts land than were expected', () => {
+    expect(ghostTarget(9, 4)).toBe(1);
+  });
+
+  it('leaves the edges standing at the floor — a fully ghosted shell is still a shape', () => {
+    expect(GHOST_EDGE_FLOOR).toBeGreaterThan(0);
+    expect(GHOST_EDGE_FLOOR).toBeLessThan(1);
+  });
+});
+
+describe('ghostStep — the eased approach, clock injected', () => {
+  it('moves toward the target and never past it', () => {
+    let v = 0;
+    for (let i = 0; i < 200; i++) v = ghostStep(v, 1, 1 / 60);
+    expect(v).toBeCloseTo(1);
+    expect(v).toBeLessThanOrEqual(1);
+  });
+
+  it('comes back down the same way', () => {
+    let v = 1;
+    for (let i = 0; i < 200; i++) v = ghostStep(v, 0, 1 / 60);
+    expect(v).toBeCloseTo(0);
+    expect(v).toBeGreaterThanOrEqual(0);
+  });
+
+  it('is monotone toward the target — no overshoot, ever', () => {
+    let v = 0;
+    let prev = -1;
+    for (let i = 0; i < 40; i++) {
+      v = ghostStep(v, 1, 1 / 60);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      prev = v;
+    }
+  });
+
+  it('clamps a tab-restore hitch instead of jumping the whole way', () => {
+    expect(ghostStep(0, 1, 30)).toBeLessThanOrEqual(1);
+    expect(ghostStep(0, 1, 30)).toBeGreaterThan(0);
+  });
+
+  it('snaps once it is within a pixel of the target (no infinite asymptote in useFrame)', () => {
+    expect(ghostStep(0.9999, 1, 1 / 60)).toBe(1);
+  });
+});

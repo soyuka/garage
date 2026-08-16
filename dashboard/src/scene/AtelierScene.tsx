@@ -12,6 +12,7 @@ import { serviceLabel } from '../labels';
 import { formatReading } from '../format';
 import { PULSE_DURATION } from './holo';
 import type { CameraFocus } from './cameraRig';
+import { focusForReveal, revealFor, revealSurvives, type RevealState } from './reveal';
 import type { PulseRegion } from './VehicleMesh';
 import type { MaintenanceRecord } from '../types';
 
@@ -80,6 +81,7 @@ export function AtelierScene() {
   // ONE dolly for the script's three-region burst — the coalescing is visible, not just tested.
   const [pulseRegion, setPulseRegion] = useState<PulseRegion | null>(null);
   const [cameraFocus, setCameraFocus] = useState<CameraFocus | null>(null);
+  const [reveal, setReveal] = useState<RevealState | null>(null);
   const flareKey = useRef(0);
   const pulseTimer = useRef<number | null>(null);
   const requestFlare = useRegionBurst((region) => {
@@ -89,6 +91,21 @@ export function AtelierScene() {
     pulseTimer.current = window.setTimeout(() => setPulseRegion(null), (PULSE_DURATION + 0.3) * 1000);
     setCameraFocus({ region, key: flareKey.current });
   });
+  // The reveal, offline: the same intent a `reveal_assembly` frame produces. Derived-from-the-hold
+  // exactly like the live orchestrator, so the playground cannot drift from it.
+  const liveReveal = revealSurvives(reveal, cameraFocus) ? reveal : null;
+  const toggleReveal = () => {
+    if (liveReveal) {
+      setCameraFocus(null);
+      return;
+    }
+    flareKey.current += 1;
+    const next = revealFor('bay', ['fuel_filter'], flareKey.current);
+    if (!next) return;
+    setReveal(next);
+    setCameraFocus(focusForReveal(next));
+  };
+
   const piloted = state.driver === 'pilot';
   const runPilot = () => {
     cancel.current?.();
@@ -200,6 +217,7 @@ export function AtelierScene() {
         noyau={state}
         pulseRegion={pulseRegion}
         cameraFocus={cameraFocus}
+        reveal={liveReveal}
         onCameraRelease={() => setCameraFocus(null)}
         onHoldRegion={(region) => {
           // the operator's own dolly — no cyan flare, the playground mirrors the live driver exactly.
@@ -243,6 +261,14 @@ export function AtelierScene() {
               onClick={() => (crossed ? resetCrossing() : triggerCrossing())}
             >
               {crossed ? '↺' : '⚠'}
+            </button>
+            <button
+              className={`at-scene-sim${liveReveal ? ' at-scene-cross--on' : ''}`}
+              title={liveReveal ? 'Refermer la carrosserie' : 'Simuler reveal_assembly (bay · filtre à carburant)'}
+              aria-label={liveReveal ? 'Refermer la carrosserie' : 'Simuler une vue éclatée'}
+              onClick={toggleReveal}
+            >
+              ◉
             </button>
             <button
               className={`at-scene-sim${piloted ? ' at-scene-cross--on' : ''}`}

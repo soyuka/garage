@@ -1,10 +1,10 @@
 import { useMemo, useEffect, useRef } from 'react';
 import { useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { buildBlueprint, type PulseControl, type ScanControl } from './blueprintBuild';
+import { buildBlueprint, type GhostControl, type PulseControl, type ScanControl } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
 import type { BodyRegion } from './anchors';
-import { PULSE_DURATION, pulseEnvelope, regionAxisFraction } from './holo';
+import { PULSE_DURATION, ghostStep, pulseEnvelope, regionAxisFraction } from './holo';
 
 /** A one-shot region flare (PULSE verb): when `region`+`key` change, play the eased cyan envelope ONCE on
  * that region's slice, then rest. Idempotent per key — even if the prop lingers, it fires once. No-op
@@ -82,18 +82,36 @@ function ScanRunner({ scan, active, reduced }: { scan: ScanControl; active: bool
   return null;
 }
 
+// Drives the GHOST (C1): eases the shell toward `depth` so the reveal's diagram is not read through a
+// painted body. Unlike the scan and the pulse, this is STATE, not attention — under reduced motion it
+// CUTS to the target instead of going inert, because a wireframe shell with an assembly under it IS the
+// information and the dissolve was only ever the transition into it (CHOREOGRAPHY, reveal table).
+function GhostRunner({ ghost, depth, reduced }: { ghost: GhostControl; depth: number; reduced: boolean }) {
+  const current = useRef(0);
+  useFrame((_, delta) => {
+    const next = reduced ? depth : ghostStep(current.current, depth, delta);
+    if (next === current.current) return; // settled — no uniform write, no material dirtying
+    current.current = next;
+    ghost.apply(next);
+  });
+  return null;
+}
+
 export function VehicleMesh({
   spec,
   paint,
   scanning = false,
   reduced = false,
   pulseRegion = null,
+  ghostDepth = 0,
 }: {
   spec: MeshSpec;
   paint: string;
   scanning?: boolean;
   reduced?: boolean;
   pulseRegion?: PulseRegion | null;
+  /** C1 reveal: 0 = the untouched blueprint, 1 = fill gone + edges at the floor. */
+  ghostDepth?: number;
 }) {
   const { scene } = useGLTF(spec.url);
   const built = useMemo(
@@ -108,6 +126,7 @@ export function VehicleMesh({
       <primitive object={built.edges} />
       <ScanRunner scan={built.scan} active={scanning} reduced={reduced} />
       <PulseRunner pulse={built.pulse} pulseRegion={pulseRegion} reduced={reduced} />
+      <GhostRunner ghost={built.ghost} depth={ghostDepth} reduced={reduced} />
     </>
   );
 }

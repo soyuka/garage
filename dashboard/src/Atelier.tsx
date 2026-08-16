@@ -49,6 +49,7 @@ import { firstNewlyOverdue } from './scene/crossing';
 import { regionForFrame, type BodyRegion } from './scene/anchors';
 import { PULSE_DURATION } from './scene/holo';
 import type { CameraFocus } from './scene/cameraRig';
+import { focusForReveal, revealFor, revealSurvives, type RevealState } from './scene/reveal';
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
 import { busy } from './noyau/state';
@@ -103,6 +104,9 @@ export function Atelier() {
   // the hold (their input wins). A monotonic key re-triggers a dolly even for a repeat region. Held until
   // released (unlike the one-shot pulse).
   const [cameraFocus, setCameraFocus] = useState<CameraFocus | null>(null);
+  // C1–C4: the reveal is anchored to the hold above — `revealSurvives` below is the only thing that
+  // keeps it, so "vue libre", Escape, a drag or any other region clears it with no separate dismiss.
+  const [reveal, setReveal] = useState<RevealState | null>(null);
   const cameraKey = useRef(0);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
@@ -299,6 +303,17 @@ export function Atelier() {
     setCameraFocus({ region, key: cameraKey.current });
   }, []);
 
+  // C4 — look inside. Unlike a focus this does NOT flare cyan: the reveal's own arrival (the shell
+  // dissolving, the diagram rising) is the announcement, and a cyan flare on edges that are busy fading
+  // out reads as two things happening to the same object. A region with no diagram declines outright.
+  const revealRegion = useCallback((region: BodyRegion, partKeys?: string[]) => {
+    cameraKey.current += 1;
+    const next = revealFor(region, partKeys, cameraKey.current);
+    if (!next) return;
+    setReveal(next);
+    setCameraFocus(focusForReveal(next));
+  }, []);
+
   // Region targets inside one burst are ONE gesture — the camera dollies once, to where the burst
   // ended (useRegionBurst / pilot.ts). Only the dolly waits for the window; the panels those same
   // frames open land immediately (hard rule 1: motion may overlap an arrival, never gate one).
@@ -341,6 +356,8 @@ export function Atelier() {
         // idempotent (server dedups by ref). No parts anywhere → nothing to project.
         const parts = frame.parts ?? (bundleRef.current?.vehicle.plannedTasks ?? []).find((t) => t.id === frame.taskId)?.parts ?? [];
         if (parts.length > 0) setCta(partsCtaFor(frame.service, frame.taskId, parts));
+      } else if (frame.type === 'revealAssembly') {
+        revealRegion(frame.region, frame.partKeys);
       } else if (frame.type === 'focusRegion') {
         // D1 explicit camera intent (contract seed — the server may not emit it yet): dolly to the region
         // + flare the pulse so the move is announced, matching the focusView-derived path above.
@@ -358,7 +375,7 @@ export function Atelier() {
         if (frame.preferredId) window.location.hash = hashForVehicle(frame.preferredId);
       }
     },
-    [dispatch, requestFlare],
+    [dispatch, requestFlare, revealRegion],
   );
 
   /** Run the gate over an event and apply whatever it releases; narrate anything it had to drop. */
@@ -651,6 +668,10 @@ export function Atelier() {
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
   // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
   const onCameraRelease = useCallback(() => setCameraFocus(null), []); // stable → keeps the memo'd Plateau idle on typing renders
+  // The reveal is DERIVED from the hold, never stored in parallel with it: one rule (revealSurvives)
+  // decides whether the diagram is still standing, so there is no path where the shell stays ghosted
+  // after the camera has moved on, and no dismiss handler to keep in step with the release handler.
+  const liveReveal = revealSurvives(reveal, cameraFocus) ? reveal : null;
 
   const onCtaInstruction = (instruction: string) => send(instruction);
   const onCtaPatch = (patch: { id: Iri; parts: PlannedPart[] }) => {
@@ -875,6 +896,7 @@ export function Atelier() {
             noyau={state}
             pulseRegion={pulseRegion}
             cameraFocus={cameraFocus}
+            reveal={liveReveal}
             onCameraRelease={onCameraRelease}
             onHoldRegion={holdRegion}
             onClearEmber={() => dispatch({ type: 'clearEmber' })}

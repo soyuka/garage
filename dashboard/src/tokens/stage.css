@@ -1,0 +1,58 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   C5 — the `--at-stage` projector layer. CONFERENCE.md § Workstream C5.
+
+   The whole design was tuned for a desk at 60 cm on an LCD. Projected at 1920×1080 and read from
+   10 m through a DLP's gamma, three things stop working: hairlines vanish, the vibrancy tiers
+   (1 / .72 / .5) collapse toward each other, and cyan-on-graphite loses the separation that made
+   the colour ration legible.
+
+   This is a LAYER, not a redesign: every rule below is scoped to `:root[data-stage]`, the base
+   tokens in atelier.css are untouched, and removing the attribute restores the desk design exactly.
+   No component knows this file exists.
+
+   Toggle: `?stage=1` (or `#…&stage=1`) on the URL, or `localStorage['mpa.stage'] = '1'` — read once
+   at boot by `applyStageLayer()` in tokens/stage.ts. `mpa stage up` (workstream B) will set the
+   localStorage key when it opens the kiosk browser.
+   ───────────────────────────────────────────────────────────────────────── */
+
+:root[data-stage] {
+  /* Hairlines: the alpha is what dies first, well before the width does. 0.16 → 0.34 keeps the seam
+     structural at distance without turning it into a drawn border. */
+  --at-hairline: rgba(180, 196, 210, 0.34);
+
+  /* Glass: the scrim law's floor is .86 for a reason (text over a bloomed, rotating car). A projector
+     lifts blacks, so the same fill reads thinner — push it up rather than lose the law. */
+  --at-glass-fill: rgba(10, 11, 14, 0.94);
+  --at-glass-edge: rgba(255, 255, 255, 0.1);
+
+  /* Vibrancy tiers: three levels 0.28 apart survive a desk, not a projector. Compress the range from
+     the BOTTOM so tier 1 stays the reference and tertiary stops disappearing — the hierarchy is
+     preserved, the floor is raised. */
+  --at-vib-2: 0.82;
+  --at-vib-3: 0.66;
+
+  /* Text: lift the dim ends of the ramp. Primary is already near-white and stays put. */
+  --at-text-mono: #d8d5cd;
+  --at-text-dim: #a4a29c;
+  --at-label: #b3b8bd;
+
+  /* Glows: "light is meaning" is carried by bloom on the canvas and box-shadow in the DOM. DLP gamma
+     eats the low end of both, so the DOM half is widened and strengthened — a signal that does not
+     read as lit is a signal read as a flat colour swatch. */
+  --at-glow-green: 0 0 12px rgba(74, 222, 128, 0.7);
+  --at-glow-amber: 0 0 12px rgba(252, 211, 153, 0.7);
+  --at-glow-red: 0 0 14px rgba(252, 165, 165, 0.75);
+  --at-glow-cyan: 0 0 12px rgba(103, 232, 234, 0.65);
+  --at-glow-orange: 0 0 14px rgba(238, 67, 34, 0.62);
+
+  /* Tracking: uppercase nameplates at distance need more air between letters, not more size. */
+  --at-label-tracking: 0.12em;
+}
+
+/* Size is the one thing tokens cannot express here — the type scale lives in component stylesheets as
+   px. `zoom` scales the whole instrument (type, spacing, borders, radii) in one place and leaves the
+   layout proportions exactly as designed, which a font-size bump would not. The WebGL canvas resizes
+   with its container, so the scene reframes rather than being magnified. */
+:root[data-stage] body {
+  zoom: var(--at-stage-zoom, 1.15);
+}

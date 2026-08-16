@@ -18,6 +18,8 @@ describe('holdIntent — the rail head is a toggle', () => {
 import {
   HOME,
   POLAR,
+  REGION_VIEWS,
+  REVEAL_VIEWS,
   DOLLY_RADIUS_FACTOR,
   clampPolar,
   sineEaseInOut,
@@ -25,6 +27,7 @@ import {
   fromSpherical,
   derivePreset,
   presetForRegion,
+  presetForFocus,
   gateReduce,
   dragBreaksHold,
   GATE_INIT,
@@ -86,26 +89,60 @@ describe('spherical round-trip', () => {
   });
 });
 
+/** The spherical offset of a pose from its own target — the framing, stripped of where the car is. */
+function framing(pose: { position: Vec3; target: Vec3 }) {
+  return toSpherical([pose.position[0] - pose.target[0], pose.position[1] - pose.target[1], pose.position[2] - pose.target[2]]);
+}
+
 describe('derivePreset — a closer framing centred on the region anchor', () => {
   const anchor: Vec3 = [1.2, 0.7, 0];
-  const preset = derivePreset(anchor);
+  const view = { azimuth: 0, polar: toSpherical([HOME.position[0], HOME.position[1] - HOME.target[1], HOME.position[2]]).polar, factor: DOLLY_RADIUS_FACTOR };
+  const preset = derivePreset(anchor, view);
 
   it('targets the region anchor exactly (the view goes TO the thing)', () => {
     expect(preset.target).toEqual(anchor);
   });
 
-  it('sits closer than the home orbit, at the dolly radius', () => {
+  it('sits closer than the home orbit, at the view’s radius factor', () => {
     const homeRadius = dist(HOME.position, HOME.target);
-    const presetRadius = dist(preset.position, preset.target);
-    expect(presetRadius).toBeCloseTo(homeRadius * DOLLY_RADIUS_FACTOR);
-    expect(presetRadius).toBeLessThan(homeRadius);
+    expect(framing(preset).radius).toBeCloseTo(homeRadius * DOLLY_RADIUS_FACTOR);
+    expect(framing(preset).radius).toBeLessThan(homeRadius);
   });
 
   it('keeps the tilt within the polar clamps', () => {
-    const offset: Vec3 = [preset.position[0] - anchor[0], preset.position[1] - anchor[1], preset.position[2] - anchor[2]];
-    const { polar } = toSpherical(offset);
+    const { polar } = framing(preset);
     expect(polar).toBeGreaterThanOrEqual(POLAR.min);
     expect(polar).toBeLessThanOrEqual(POLAR.max);
+  });
+
+  it('applies the view’s azimuth as an OFFSET from the home viewing angle', () => {
+    const homeAz = toSpherical([HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]]).azimuth;
+    const swung = derivePreset(anchor, { ...view, azimuth: 0.3 });
+    expect(framing(swung).azimuth).toBeCloseTo(homeAz + 0.3);
+  });
+});
+
+// C2 — the angle IS the region (CHOREOGRAPHY § "The region pose"). A preset that kept the home azimuth
+// AND the home polar for every region produced one shot with five targets: the framing carried no datum.
+
+describe('REGION_VIEWS — one view per region, all reachable', () => {
+  it('covers every region', () => {
+    for (const region of BODY_REGIONS) expect(REGION_VIEWS[region]).toBeDefined();
+  });
+
+  it('stays inside the resting polar band — a focus never leaves the operator’s own orbit', () => {
+    for (const region of BODY_REGIONS) {
+      expect(REGION_VIEWS[region].polar).toBeGreaterThanOrEqual(POLAR.min);
+      expect(REGION_VIEWS[region].polar).toBeLessThanOrEqual(POLAR.max);
+    }
+  });
+
+  it('frames a wheel closer than the greenhouse — the radius encodes the part’s size', () => {
+    expect(REGION_VIEWS.frontAxle.factor).toBeLessThan(REGION_VIEWS.windshield.factor);
+  });
+
+  it('reads the bay from higher up than an axle — polar encodes "looking into" vs "looking at"', () => {
+    expect(REGION_VIEWS.bay.polar).toBeLessThan(REGION_VIEWS.frontAxle.polar);
   });
 });
 
@@ -118,8 +155,7 @@ describe('presetForRegion — every region on every body class', () => {
       for (const region of BODY_REGIONS) {
         const preset = presetForRegion(bc, region);
         expect(preset.target).toEqual(anchors[region]);
-        const offset: Vec3 = [preset.position[0] - preset.target[0], preset.position[1] - preset.target[1], preset.position[2] - preset.target[2]];
-        const { polar } = toSpherical(offset);
+        const { polar } = framing(preset);
         expect(polar).toBeGreaterThanOrEqual(POLAR.min - 1e-9);
         expect(polar).toBeLessThanOrEqual(POLAR.max + 1e-9);
       }
@@ -131,6 +167,53 @@ describe('presetForRegion — every region on every body class', () => {
     const rear = presetForRegion('berline', 'rearAxle');
     expect(hood.target).not.toEqual(rear.target);
     expect(hood.position).not.toEqual(rear.position);
+  });
+
+  it('gives them distinct FRAMINGS too, not just distinct targets — the shot says which region', () => {
+    const hood = framing(presetForRegion('berline', 'hood'));
+    const rear = framing(presetForRegion('berline', 'rearAxle'));
+    expect(Math.abs(hood.azimuth - rear.azimuth)).toBeGreaterThan(0.15);
+    expect(Math.abs(hood.polar - rear.polar)).toBeGreaterThan(0.15);
+  });
+
+  it('swings toward the end of the car it names — front regions one way, rear the other', () => {
+    const homeAz = toSpherical([HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]]).azimuth;
+    expect(framing(presetForRegion('berline', 'frontAxle')).azimuth).toBeGreaterThan(homeAz);
+    expect(framing(presetForRegion('berline', 'rearAxle')).azimuth).toBeLessThan(homeAz);
+  });
+});
+
+describe('presetForFocus — the reveal pose family', () => {
+  // C2 planned a widened polar floor for the reveal. The readable pose turned out to sit inside the
+  // resting band, so the widening was deleted rather than kept as headroom — this asserts it STAYS
+  // deleted: a reveal that drifts back outside the band silently re-introduces the OrbitControls snap
+  // the widening existed to avoid, and nothing else in the app would notice.
+  it('every reveal view is reachable without widening the resting band', () => {
+    for (const region of BODY_REGIONS) {
+      expect(REVEAL_VIEWS[region].polar).toBeGreaterThanOrEqual(POLAR.min);
+      expect(REVEAL_VIEWS[region].polar).toBeLessThanOrEqual(POLAR.max);
+    }
+  });
+
+  it('descends over the bay — steeper than the same region’s focus pose', () => {
+    const focus = framing(presetForFocus('berline', 'bay', 'focus'));
+    const reveal = framing(presetForFocus('berline', 'bay', 'reveal'));
+    expect(reveal.polar).toBeLessThan(focus.polar);
+  });
+
+  it('stands FURTHER back than the focus pose — a reveal keeps the car, it does not crop to the part', () => {
+    for (const region of BODY_REGIONS) {
+      expect(REVEAL_VIEWS[region].factor).toBeGreaterThan(REGION_VIEWS[region].factor);
+    }
+  });
+
+  it('a reveal still targets the region anchor — the diagram sits where the part does', () => {
+    const anchors = regionAnchors('berline');
+    expect(presetForFocus('berline', 'hood', 'reveal').target).toEqual(anchors.hood);
+  });
+
+  it('presetForRegion is the focus mode (the existing call sites keep their meaning)', () => {
+    expect(presetForRegion('suv', 'hood')).toEqual(presetForFocus('suv', 'hood', 'focus'));
   });
 });
 

@@ -35,6 +35,7 @@ each one as a session-bound `#[AsTool]`.
 | `show_fact(keys, title, nodes)` | focused spec panel for the SELECTED vehicle: `keys` filters its STORED facts, `nodes` projects lines you FETCHED (fill volumes, oil grade, carte grise) |
 | `focus_view(panel, keys)` | raise "tasks", "specs" or "carnet" (history + spend) and light the matching body regions |
 | `propose_actions(headline, actions, finding)` | CTA card; buttons are NL follow-ups OR direct part-writes |
+| `reveal_assembly(region, part_keys)` | look INSIDE: the shell ghosts to a wireframe, the region's schematic assembly rises under it, camera descends into the reveal pose. `part_keys` call parts out, they never filter the diagram |
 | `toast(message, tone)` | one-line acknowledgement, French |
 | `settle_dashboard(message, tone)` | closing toast + turn end — the orb settles |
 
@@ -125,6 +126,12 @@ curl -sk -o /dev/null -X POST https://localhost/mcp "${H[@]}" -d "$(body select_
   --next -sk -o /dev/null -X POST https://localhost/mcp "${H[@]}" -d "$(body show_fact '{"keys":["oil_capacity","oil_type","oil_viscosity"],"title":"Huile moteur"}')" \
   --next -sk -o /dev/null -X POST https://localhost/mcp "${H[@]}" -d "$(body focus_view '{"panel":"tasks","keys":["oil_change"]}')"
 #    …two of those name a region: ONE dolly fires, to the last one.
+
+# 3b. THE REVEAL (C1–C4): open the car up. The shell ghosts to a wireframe, the bay's schematic
+#     assembly rises under it and the camera descends over it. The dissolve is paced by the diagram's
+#     own arrival, so there is nothing to wait for here — and no dismiss call either: releasing the
+#     camera ("vue libre", Escape, a drag) puts the shell back.
+call reveal_assembly '{"region":"bay","partKeys":["fuel_filter"]}'
 
 # 4. a decision to take, then the close — the filament takes its colour from this tone
 call propose_actions '{"headline":"Vidange à prévoir","finding":"Filtre MANN W 712/75 au catalogue","actions":[{"label":"Planifier la vidange","instruction":"planifie la vidange"}]}'

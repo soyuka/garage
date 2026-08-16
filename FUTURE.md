@@ -167,3 +167,11 @@ worked through in `docs/design-inspiration.md` § 5.
 - **No possession/stock model**, so « j'ai déjà le filtre, il me manque quoi ? » cannot be answered.
 - **Region vocabulary tops out at five zones** (`dashboard/src/scene/anchors.ts:26`), so « montre-moi
   où c'est » is coarse. The engine-bay reveal (workstream C, `CONFERENCE.md`) is what raises it.
+- **`brake_pads_front` / `brake_pads_rear` are not declared aliases** (`dashboard/src/labels.ts:9`).
+  The backend emits them — `AtelierScene`'s own history fixture uses `brake_pads_front` — but
+  `SERVICE_ALIASES` folds neither, so `regionForType` misses `TYPE_REGION` and falls through to its
+  unmapped-→`hood` default: a front brake job spotlights the **engine**, and `serviceLabel` prints the
+  humanized raw key instead of « Plaquettes de frein ». Found 2026-08-16 while writing the C3 assembly
+  tests. The fix is two rows in `SERVICE_ALIASES`, but front/rear are genuinely different parts on
+  different axles, so folding both onto `brake_pads` throws away the axle — which is exactly the datum
+  the region lookup needs. Decide whether the axle survives as a distinct region key before folding.
