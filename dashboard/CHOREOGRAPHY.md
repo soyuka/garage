@@ -211,6 +211,114 @@ constant, 0.55) — that tuning is the only thing the mat floor changed.
 | `{kind:'vehicle', event, resource}` | **the data cascade** (~800ms): health bars animate old→new with the glow trailing; KPI numbers count; hotspots cross-fade color (400ms); the rim sweeps the delta arc. Identical for local + other-tab events — the room is shared | scene assembler |
 | overdue crossing (a domain `updated` that tips a service past due) | hood-glow breathes red + rim arc ignites + ember docks to the Noyau, **hands-off** — the §9 wow | scene assembler + Le Noyau |
 
+## Audition — one signal, and the reasons the others were cut
+
+The Atelier makes **one** sound, and it is **off until the operator turns it on**. Not a bed, not a
+palette of earcons, not a severity mapped onto a pitch. The reasoning is the same test the motion map
+already applies — *name the datum, in one sentence* — with one addition the ear forces: **sound is for
+the moment the operator is not looking at the screen.** Human-factors guidance is explicit that a
+non-verbal audio signal's job is to be "supplementary or supportive, alerting and directing the user's
+attention to the appropriate visual display" (FAA HFDS 2003 §7.1.1.12, from MIL-STD-1472F). Every frame
+in the tables above is an answer to something the operator or the pilot just did, in front of a screen
+they are watching. Sounding those is not instrumentation, it is applause.
+
+Exactly one row in this whole document describes a change **nobody asked for**.
+
+| Real frame / condition | The signal | Owner layer |
+|---|---|---|
+| **overdue crossing** — a domain `updated` that tips a service past due, hands-off (§ Domain frames) | **`échéance`** — two 180 ms pulses, ~1.2 s apart, once. A 660 Hz fundamental with a single odd partial at 1980 Hz at −14 dB, 15 ms attack, `setTargetAtTime` release; peak gain `0.14`, never normalised. Fires **at most once per sweep**, not once per service: a nightly forecast that tips five items is one event to the ear, exactly as a burst is one dolly to the camera. The datum: *something became late while you were under a car.* It carries no severity and no identity — the ember badge, the visit spine and the aria-live line carry those, and they were already there | Le Noyau (`audition.ts`) |
+
+That row survives because of FAA HFDS §7.1.1.8: an alerting signal must give the user *a greater
+probability of detecting the triggering condition than normal observation would provide in its absence*.
+On an unattended workshop screen, a red hood-glow gives a probability of zero. Nothing else in the map
+can make that claim.
+
+### What does not sound, and why
+
+| Candidate | Why it is silent |
+|---|---|
+| a continuous ambient bed | encodes no datum. It fails the one-sentence test outright, and it is the exact "overuse of sound" the guidance warns produces signals that "are ignored and can cause annoyance, interference, or confusion" (HFDS §7.2.1.8, discussion) |
+| `turn {phase:'end'}` — the settle tone (ok/warn/alarm) | the operator is watching the thing that just settled. The done filament already pairs colour with a mono label and announces on the aria-live line; a tone repeats a value that is on screen at full precision. A needle that moves because a value moved is instrumentation; a needle that moves because the operator already saw the value is theatre |
+| a write landing (`log_maintenance`, a `patchTask` merge) | the write produces the largest visual event the app has — the health arc animating old→new, the task striking and leaving the rail. It is also **bursty**: several frames per gesture. ISA-18.2 defines an alarm flood as more than ten alarms in ten minutes; a piloted burst of four intents in 300 ms would hit that on its own. Anything the burst window coalesces must not have a sound per member |
+| the break of a long pilot silence (veille pilotée → under load) | it requires no response. EEMUA 191 / ISA-18.2 rationalisation is a single question — *does this need the operator to do something?* — and "the pilot resumed" does not. The frame's own motion is the cue, as the pilot table already says. Its steady-state budget is also wrong: fewer than one signal per ten minutes per operator position is the target, and a chatty session breaks that in a minute |
+| severity mapped parametrically onto the tone | this is the documented failure of IEC 60601-1-8, whose eight high-priority alarms share one acoustic structure and one rhythm and differ **only** in pitch pattern. They are hard to learn, hard to discriminate, their urgency is misperceived, and nurses with a year of musical training identify them far more accurately than those without — a set that only musicians can read is not a set. The audio twin of **never colour-only** is **never pitch-only**: severity is read off the spine and the ember, in grayscale, on a still screen |
+| speech ("échéance dépassée") | genuinely better on the evidence — auditory icons and speech beat abstract earcons on identification speed, accuracy and learnability (McNeer et al. 2018; Edworthy et al. 2014, 2017) — and rejected anyway: `SpeechSynthesis` voices are OS-dependent, French quality is a lottery, bundling a voice breaks the self-contained page, and a talking dashboard over a conference PA is a catastrophe |
+| recorded auditory icons (a real ratchet, a real chime) | the same evidence favours them, and the same constraint forbids them: no external CDN assets, the page stays self-contained. Synthesised oscillators cannot make a credible auditory icon, so the one signal is honestly an abstract earcon and is kept to **one** for that reason |
+
+### Binding rules
+
+- **Nothing is audio-only.** Every sound has a visual that defines the condition and an aria-live
+  announcement — the mirror of *never colour-only*, and the letter of HFDS §7.1.1.11 ("all nonverbal
+  audio signals shall be accompanied by a visual signal that defines the condition"). Mute the app and
+  no value is lost; the test is the same one the WebGL canvas already passes.
+- **One signal, and it is a caution, not a warning.** A late oil change is a "condition requiring
+  attention but not immediate action" (MIL-STD-411 via HFDS §7.1.2.7). So: fires once, never loops,
+  never escalates in loudness, never persists until acknowledged. A signal that nags trains the operator
+  to kill the feature, and then the one real crossing is silent too. 85–99 % of clinical alarms need no
+  intervention (Joint Commission SEA 50, 2013) — that is what a product earns by sounding everything.
+- **Mute is a first path, and silence is the default.** `prefers-reduced-motion` is a first path because
+  the OS *tells us*. There is no audio twin — Media Queries Level 5 has no `prefers-reduced-sound` — so
+  the OS tells us nothing, and a preference we cannot read must not be guessed loud. Ships muted;
+  one persisted toggle (`mpa.audition`, beside `mpa.recency`), reachable from the à-décider inbox where
+  the concern lands anyway. A caution signal shall have manual reset and volume control
+  (MIL-STD-1472F §7.2.9.11); WCAG 1.4.2 exempts audio under three seconds, which this is, but the
+  affordance is not optional for that reason.
+- **Room-proof, not desk-proof.** 660/1980 Hz sits inside the 500–3000 Hz band the guidance prefers
+  (HFDS §7.2.7.2, range 200–5000) and must clear a bay with a compressor in it — two pulses rather than
+  one beep, because a single short beep in a garage is lost. It must **not** resemble a sound the room
+  already makes (HFDS §7.2.3.4): no click, no impact, no phone-notification shape.
+- **No abrupt gain changes, ever.** A step in gain is a discontinuity and the discontinuity is the
+  click. Attack over 15 ms, release with `setTargetAtTime` — `exponentialRampToValueAtTime` cannot
+  reach 0 and throws on it, which is how a "why does the fade-out pop" afternoon starts.
+- **Schedule against the audio clock, never `setTimeout`.** The two pulses are placed at
+  `ctx.currentTime + n` and let the hardware fire them; the JS timer is jittered by layout and GC
+  ("A Tale of Two Clocks"). This is the same rule as *cheap idle* seen from the audio side — one
+  scheduling call per event, no polling loop, no `AudioContext` left running to burn a core on a screen
+  that has been quiet for six hours. Suspend after the tail, resume on the next signal.
+- **Constants live in code, not CSS.** `src/tokens/audition.ts` beside `motion.ts`, same discipline:
+  frequencies, gains and envelope times are named, and a component may not spell one out. The
+  synthesiser is pure (nodes in, schedule out) and unit-tested against a stub context — no test sleeps
+  and none plays a sound.
+
+### The AudioContext trap
+
+**A piloted session produces no user gesture in the browser.** Frames arrive over Mercure from an MCP
+call made on another machine; the tab is never clicked. An `AudioContext` constructed before the
+document has received a gesture is created **suspended**, and every note scheduled on it is silently
+dropped — no error, no console warning, nothing to debug. It only ever resumes from inside a real
+gesture handler.
+
+So the unlock is **stage setup, not a code path**: the context is created and `resume()`d from the
+first genuine interaction the page receives (the operator opening the app, accepting the cert, picking
+a vehicle), and that single unlock holds for the tab's lifetime. It must then be **asserted**, not
+assumed — `mpa stage check` (workstream B) adds one line: `ctx.state === 'running'`, alongside the
+pilot-topic match. Chrome gates this on a per-profile Media Engagement Index, so the behaviour is
+*machine-dependent*: it can work on the dev laptop and fail on the stage laptop with identical code.
+That is precisely the class of failure the preflight exists to catch before the room fills.
+
+### Not in the talk
+
+The stage profile ships **muted**, and `mpa stage check` asserts that too. The act is a presenter
+speaking over a PA while the UI answers in 3D — the visual *is* the payload, and WCAG 1.4.2's own
+rationale for the audio-control requirement is that concurrent audio makes speech hard to hear.
+A tone competing with the lapel mic is a regression in the demo's own terms. Worse, it is
+unrehearsable: laptop→projector over HDMI routes audio to a projector speaker that is usually
+disabled, and a conference PA generally carries the mic and nothing else. Workstream E rehearses every
+failure with its recovery; an audio path that may not reach the room at all cannot be rehearsed, and
+should not be added six weeks out. Three beats in ten minutes is also not enough exposure to learn a
+signal — retention needs regular presentation (HFDS §7.2.2.1, discussion, after Patterson 1982 and
+Stanton & Edworthy 1994), which the workshop screen has and the stage does not.
+
+### Headroom, if a second signal is ever wanted
+
+The ceiling is low and it is worth writing down before someone spends it. Absolute identification of
+non-verbal audio signals should not exceed **four** (HFDS §7.2.2.1, from MIL-STD-1472F); 4–7 are
+acquired reasonably quickly and performance falls off sharply beyond, with up to nine retained only
+under regular exposure. This product has spent **one**. A second must clear the same bar the first did
+— a change the operator did not cause, on a screen they are not watching, that they must act on — and
+it must be discriminable by **timbre and rhythm**, not by pitch alone, for the IEC reason above. Nothing
+currently in the frame vocabulary qualifies.
+
 ## Priority & honesty rules (binding)
 
 - **All panel animations YIELD to Le Noyau's narration.** While a turn is active, panel transitions

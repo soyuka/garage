@@ -191,7 +191,7 @@ the thing that is broken.
 | command | does |
 | --- | --- |
 | `mpa stage up` | compose up, wait healthy, `rm -rf var/cache`, **restart `php` AND `worker`** (FrankenPHP worker mode holds the compiled container *and* the tool schemas — `rm -rf` alone is not enough), open the tunnel, print the connector URL + a QR for the phone, open the dashboard kiosk-mode on the projector display |
-| `mpa stage check` | the preflight. Green/red, no prose. Asserts: Mercure stream open · pilot topic **matches on both sides** (A.4) · `tools/list` returns the expected count · a real `toast` round-trip observed on the SSE stream · cert accepted by the browser profile · GPU frame budget sane |
+| `mpa stage check` | the preflight. Green/red, no prose. Asserts: Mercure stream open · pilot topic **matches on both sides** (A.4) · `tools/list` returns the expected count · a real `toast` round-trip observed on the SSE stream · cert accepted by the browser profile · GPU frame budget sane · **audio muted** and, if ever unmuted, `AudioContext.state === 'running'` (`CHOREOGRAPHY.md` § Audition — Chrome gates the unlock on a per-profile Media Engagement Index, so it can work on the dev laptop and fail on the stage laptop with identical code) |
 | `mpa stage rehearse` | replays the three beats deterministically from a recorded frame script, **no LLM, no network**. This is both the rehearsal loop and the live fallback if voice or wifi dies. |
 | `mpa stage reset` | restore the demo database to a known snapshot — between rehearsals, and once before walking on stage |
 
