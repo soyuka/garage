@@ -35,7 +35,7 @@ export function WorklistProjection({
         <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
         <div className="at-worklist-head">{t.proj.worklistHead}</div>
         {onDismiss && (
-          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer la liste">
+          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label={t.proj.closeWorklist}>
             ✕
           </button>
         )}

@@ -34,9 +34,10 @@ lifecycle should look like when nothing declares the start.
 
 ## Ground truth — read these before touching anything
 
-- `dashboard/CHOREOGRAPHY.md` — **the binding frame → motion map**, and the authority. It is marked
-  FROZEN in Stage B.0: you may extend it, but every new motion goes in the table, in the same verified
-  vocabulary, and no component animates against a mapping that is not written there.
+- `dashboard/CHOREOGRAPHY.md` — **the binding frame → motion map**, and the authority. Revisable
+  (unfrozen 2026-09-04): every new motion goes in the table, in the same verified vocabulary, no
+  component animates against a mapping that is not written there, and a row that has gone stale is
+  **corrected and dated** rather than contradicted by a newer one.
 - `dashboard/CONTRACT.md` — the wire shapes. Never invent a frame name; the union is real and
   server-side in `api/src/Agent/Ui/RenderIntentTools.php`.
 - `dashboard/src/noyau/state.ts` — the frame→state reducer. Pure, clock-injected (timestamps passed

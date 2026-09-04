@@ -1,3 +1,4 @@
+import { useT } from '../i18n/LocaleProvider';
 import type { CtaAction, Iri, PlannedPart } from '../types';
 
 // The CTA layer (§6 choreography): a `proposeActions` frame raises THIS card from Le Noyau's cradle —
@@ -23,6 +24,7 @@ interface CtaCardProps {
 }
 
 export function CtaCard({ cta, onInstruction, onPatch, onDismiss, reduced }: CtaCardProps) {
+  const t = useT();
   if (!cta) return null;
   return (
     <div className="at-cta glass" role="group" aria-label={cta.headline} data-reduced={reduced ? 'true' : undefined}>
@@ -45,8 +47,8 @@ export function CtaCard({ cta, onInstruction, onPatch, onDismiss, reduced }: Cta
             {a.label}
           </button>
         ))}
-        <button type="button" className="at-cta-btn at-cta-btn--decline" onClick={onDismiss} aria-label="Fermer la proposition">
-          Plus tard
+        <button type="button" className="at-cta-btn at-cta-btn--decline" onClick={onDismiss} aria-label={t.cta.dismiss}>
+          {t.cta.later}
         </button>
       </div>
     </div>

@@ -84,6 +84,9 @@ export const fr = {
     partsFor: (service: string) => `Pièces — ${service}`,
     partsHead: (service: string) => `PIÈCES · ${service}`,
     closeParts: 'Fermer les pièces',
+    closeCarnet: 'Fermer le carnet',
+    closeWorklist: 'Fermer la liste',
+    closeShopping: 'Fermer les pièces à commander',
     addToTask: 'Ajouter à la tâche →',
     carnet: 'Carnet · dépenses',
     carnetHead: 'CARNET · DÉPENSES',
@@ -111,6 +114,7 @@ export const fr = {
     addAria: 'Ajouter un véhicule au parc',
     add: 'Ajouter un véhicule',
     empty: 'Aucun véhicule dans le parc.',
+    landmark: 'Le parc',
   },
 
   cockpit: {
@@ -204,7 +208,6 @@ export const fr = {
     loadError: 'Erreur de chargement',
     retry: 'Réessayer',
     backToParc: '← Le Parc',
-    parc: 'Le Parc',
     vehicleNotFound: 'Véhicule introuvable — ',
     backToParcInline: 'retour au parc',
     loadingVehicle: 'Chargement du véhicule…',
@@ -225,23 +228,37 @@ export const fr = {
     data: 'Données',
     dataSteps: ['ouverture du dossier…', 'lecture des données véhicule…'] as [string, string],
     dataFail: 'données indisponibles',
+    // The closing sentence (CHOREOGRAPHY § "What a finished action says"): names the vehicle when it
+    // has a usable name, else the generic form (closingLine.ts picks between the two).
+    dataResult: (name: string) => `Voici les données collectées sur la ${name}. Cherchez-vous quelque chose en particulier ?`,
+    dataResultGeneric: 'Voici les données collectées sur ce véhicule. Cherchez-vous quelque chose en particulier ?',
     history: 'Historique',
     historySteps: ['ouverture du carnet…', 'relecture des visites…'] as [string, string],
     historyFail: 'carnet indisponible',
+    historyResult: 'Voici l’historique des visites.',
     fluids: 'Capacités fluides',
     fluidsSteps: ['consultation des capacités…', 'lecture des specs fluides…'] as [string, string],
     fluidsFail: 'le catalogue ne répond pas',
     fluidsEmpty: 'aucune capacité fluide connue pour ce véhicule',
+    fluidsResult: 'Voici les capacités de fluides.',
     parts: 'Pièces à commander',
     partsSteps: ['relecture des tâches ouvertes…', 'rassemblement des références…'] as [string, string],
     partsFail: 'pièces indisponibles',
+    partsResult: 'Voici les pièces à commander.',
     spec: 'Fiche technique',
     specSteps: ['lecture de la carte grise…', 'préparation de la fiche technique…'] as [string, string],
     specFail: "l'immatriculation ne répond pas",
     specEmpty: 'aucune donnée SIV pour cette plaque',
+    specResult: 'Voici la fiche technique.',
     carnet: 'Carnet · dépenses',
     carnetSteps: ['lecture du carnet…', 'calcul des dépenses…'] as [string, string],
     carnetFail: 'carnet indisponible',
+    carnetResult: 'Voici le récapitulatif des dépenses.',
+    // The agent chip (CHOREOGRAPHY § "Asking the agent from the UI") — the label is UI copy, the
+    // instruction is the prompt actually posted to the agent (postTurn), not shown on screen.
+    summariseSpending: 'Résumer les dépenses',
+    summariseSpendingInstruction:
+      "résume les dépenses d'entretien de ce véhicule : les postes principaux, le total, et le prochain gros poste à prévoir",
   },
 
   dossier: {
@@ -293,6 +310,9 @@ export const fr = {
     unitPricePlaceholder: '€',
     unitPriceAria: 'Prix unitaire en euros',
     removeService: 'Retirer ce service',
+    deleteShort: 'Supprimer',
+    removeShort: 'Retirer',
+    actionAria: 'Action',
     removePart: 'Retirer cette pièce',
     remove: 'Retirer',
     addPart: '+ pièce',
@@ -320,10 +340,38 @@ export const fr = {
   },
 
   noyau: {
-    resultGreen: 'posé · tout est à jour',
-    resultAmber: 'posé · un service à prévoir',
-    resultRed: 'posé · anomalie détectée',
+    /**
+     * Last-resort fallback only (CHOREOGRAPHY § "What a finished action says", removed 2026-09-04): a
+     * turn that ends having narrated nothing at all. Every documented case supplies its own sentence
+     * instead — a deterministic wayfinder's closing line, or a real agent turn's own `toast`.
+     */
     pendingDecisions: (n: number) => `${n} décision(s) en attente — ouvrir « à décider »`,
+    /** "Le Noyau" is the core's NAME — it stays French in both catalogs, like `proj.placedByNoyau`. */
+    orbAria: (phase: string, detail: string) => `Le Noyau — ${phase}${detail}`,
+    pilot: 'pilote',
+    pilotWaiting: 'en attente',
+    signal: { green: 'vert', amber: 'ambre', red: 'rouge' } as Record<string, string>,
+  },
+
+  /** The opening ticker lines (CHOREOGRAPHY § "The opening — the workshop speaks first"). */
+  greeting: {
+    none: 'Sur quelle voiture travaille-t-on aujourd’hui ?',
+    vehicle: (name: string) => `${name} sélectionnée. Que souhaitez-vous savoir ?`,
+  },
+
+  /** The retained toast cards — the chrome around an answer that stays until the operator says "vu". */
+  notice: {
+    tone: { info: 'note', ok: 'fait', warn: 'attention', alarm: 'alerte' } as Record<string, string>,
+    seen: 'vu',
+    dismiss: (text: string) => `Fermer : ${text}`,
+    /** The provenance stamp: this card is a sentence written THEN; the Data panel is the reading NOW. */
+    stamp: (age: string) => `${age} · voir Données`,
+  },
+
+  /** The proposal card raised from Le Noyau's cradle. */
+  cta: {
+    later: 'Plus tard',
+    dismiss: 'Fermer la proposition',
   },
 
   misc: {

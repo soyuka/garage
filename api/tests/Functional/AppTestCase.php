@@ -45,6 +45,19 @@ abstract class AppTestCase extends ApiTestCase
         }
 
         (new Client($url))->dropDatabase($db);
+
+        // The TTS disk cache (docs/voice-plan.md § Phase 2, config/services.yaml speech.caching.*)
+        // has no DAMA-style rollback either: it is a real filesystem directory, shared by every test
+        // in the run. Wipe it per test so a line cached by one test never masks the next test's
+        // assertion on the outgoing vendor request (e.g. SpeechTest expects a vendor call on a text
+        // another test already caused to be cached). Computed without booting the kernel, same
+        // reason as the Mongo client above.
+        $ttsCache = \dirname(__DIR__, 2).'/var/tts';
+        if (is_dir($ttsCache)) {
+            foreach (glob($ttsCache.'/*') ?: [] as $file) {
+                unlink($file);
+            }
+        }
     }
 
     /**

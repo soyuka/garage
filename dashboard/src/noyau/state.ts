@@ -97,12 +97,17 @@ export type NoyauEvent =
   // in-flight step chip reads "échec". A normal end (incl. an amber/red finding) omits it.
   // `driver` says who produced the frame (the subscription it arrived on — Atelier tags it). Absent
   // → the in-app turn, so every existing dispatch keeps its meaning unchanged.
-  | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean; driver?: Driver }
+  // `resultText` (end only): the closing sentence a deterministic wayfinder supplies for what it just
+  // did (CHOREOGRAPHY § "What a finished action says") — used INSTEAD of whatever was last narrated.
+  // A real agent turn omits it: its own `toast` already sits on `narration`, and that is the answer —
+  // "nothing generic" is achieved by simply not overwriting it (see the 'end' branch below).
+  | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean; driver?: Driver; resultText?: string }
   | { type: 'status'; message: string; tool?: string; driver?: Driver }
   | { type: 'toast'; tone: Tone; message: string; driver?: Driver }
   // local: the pilot run has been silent past PILOT_QUIET_MS — stop claiming it is working
   | { type: 'quiet' }
   | { type: 'concern'; message: string; serviceType?: string; vehicleIri?: string } // §9 overdue DOMAIN push (no turn): dock a notify + murmur, hands-off
+  | { type: 'greet'; message: string } // local: the opening ticker line — a murmur with no turn, no notice card, no decision
   | { type: 'defer'; id: string; text: string; finding?: string; actions: CtaAction[] } // a proposal seen elsewhere/superseded → a REVIEW item in the inbox
   | { type: 'resolve'; id: string } // the operator decided a queue item (acted / dismissed) → remove it
   | { type: 'dismissNotice'; id: string } // local: "vu" on a retained toast card → drop that card only
@@ -237,14 +242,14 @@ function resultFromTone(tone: Tone | null): Signal {
   return 'green';
 }
 
-// The done state is announced as a mono label (not color alone — §8): a screen-reader hears the
-// outcome on the aria-live line, and green/amber/red stay distinguishable in grayscale.
-function resultLabel(signal: Signal, locale: Locale): string {
-  const t = messages(locale);
-
-  return 'green' === signal ? t.noyau.resultGreen : 'amber' === signal ? t.noyau.resultAmber : t.noyau.resultRed;
-}
-
+// LAST-RESORT fallback only (CHOREOGRAPHY § "What a finished action says", 2026-09-04 removal): a
+// tone-keyed sentence used to announce every turn end regardless of what happened, which both claimed
+// an unchecked finding ("tout est à jour" from a turn that read nothing) and read as nonsense once
+// spoken aloud. Real closing sentences now come from the turn itself — a deterministic wayfinder's own
+// `resultText`, or a real agent turn's own `toast` already sitting on `narration` — so this only fires
+// when a turn ends having narrated NOTHING at all. The signal itself (green/amber/red) is unaffected
+// and stays a separate carrier: `t.noyau.signal[result]` on the orb's aria-label (Noyau.tsx:63) and the
+// journal done row's `signal` field.
 function append(state: NoyauState, entry: Omit<JournalEntry, 'id' | 'elapsedMs'>, at: number): JournalEntry[] {
   const elapsedMs = at - (state.turnStartedAt ?? at);
   return [...state.journal, { ...entry, id: state.entrySeq, elapsedMs }];
@@ -281,18 +286,26 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       // phase === 'end'
       {
         const signal = resultFromTone(state.worstTone);
-        const label = resultLabel(signal, locale);
+        // The wayfinder's own closing sentence, else whatever is already narrated (a real agent
+        // turn's `toast` — CHOREOGRAPHY "a real agent turn: nothing generic"), else NOTHING. There is
+        // deliberately no generic fallback: `resultFromTone(null)` is 'green', so one would have a
+        // turn that did nothing announce « Tout est à jour. » — a verdict on the vehicle invented by
+        // an action that never looked at it. The signal still reaches text via the orb's aria-label
+        // and the journal's done row, which is what the a11y fix actually required.
+        const narration = ev.resultText ?? state.narration ?? null;
         return {
           ...state,
           phase: 'done',
           result: signal,
-          narration: label, // surfaces the outcome as text on the aria-live line
+          narration,
           // resolve the last in-flight chip: 'error' ("échec") only on an agent-lifecycle failure —
           // an amber/red FINDING is a legitimate outcome, so it still resolves to 'done'.
           steps: closeRunning(state.steps, ev.failed ? 'error' : 'done'),
           journal: append(
             { ...state, turnStartedAt: state.turnStartedAt ?? at },
-            { kind: 'done', message: label, signal },
+            // A silent turn still gets a journal row, and it says the SIGNAL word ('vert'/'ambre'/
+            // 'rouge') — a fact about the outcome — never an invented sentence about the vehicle.
+            { kind: 'done', message: narration ?? messages(locale).noyau.signal[signal], signal },
             at,
           ),
           entrySeq: state.entrySeq + 1,
@@ -385,6 +398,18 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
         entrySeq: state.entrySeq + 1,
       };
     }
+
+    case 'greet':
+      // The opening line (CHOREOGRAPHY § "The opening — the workshop speaks first"): a murmur on the
+      // ticker only. Unlike `status` it must NOT enter 'working' (there is no turn to end, so nothing
+      // would ever settle it back down) and unlike `toast` it mints no notice card — "Bonjour" is not
+      // an answer to keep. phase, queue and worstTone are all untouched.
+      return {
+        ...state,
+        narration: ev.message,
+        journal: append(state, { kind: 'narration', message: ev.message }, at),
+        entrySeq: state.entrySeq + 1,
+      };
 
     case 'defer': {
       // A proposeActions that arrived while the operator was elsewhere (on the parc, no hero to raise the

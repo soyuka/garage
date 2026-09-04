@@ -56,7 +56,7 @@ export function HistoryLog({
       >
         <header className="at-hlog-head">
           <h2>{t.carnet.title}</h2>
-          <button type="button" className="at-hlog-close" onClick={onClose} aria-label="Fermer">
+          <button type="button" className="at-hlog-close" onClick={onClose} aria-label={t.scene.close}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>

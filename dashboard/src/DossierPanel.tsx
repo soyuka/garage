@@ -8,7 +8,7 @@ import { serviceLabel, SERVICE_TYPES } from './labels';
 import { isAgentAuthored } from './provenance';
 import { centsToEurosInput, parseEuros, visitTitle } from './records';
 import { MAINT_USAGE_UNITS } from './units';
-import { formatCadence, ruleTitle } from './schedule';
+import { actionVerb, formatCadence, ruleTitle } from './schedule';
 import { safeHref } from './safeHref';
 import {
   createMaintenanceRecord,
@@ -246,7 +246,7 @@ function BillChips({ record, onChanged, onError }: { record: MaintenanceRecord; 
           <button type="button" className="at-rec-bill-open" onClick={() => view(att)} title={att.filename}>
             <span aria-hidden="true">{att.contentType.startsWith('image/') ? '🖼️' : '📄'}</span> {att.filename}
           </button>
-          <button type="button" className="at-rec-bill-del" aria-label={`Supprimer la facture ${att.filename}`} title="Supprimer" onClick={() => remove(att)}>×</button>
+          <button type="button" className="at-rec-bill-del" aria-label={t.dossier.removeBill(att.filename)} title={t.dossier.deleteShort} onClick={() => remove(att)}>×</button>
         </span>
       ))}
       <button type="button" className="at-dossier-btn at-dossier-btn--sm" onClick={() => fileInput.current?.click()}>{t.dossier.addBill}</button>
@@ -347,7 +347,7 @@ function RecordForm({ record, defaultUnit, onSubmit, onCancel }: { record?: Main
               <input list={listId} className="at-dossier-input" placeholder={t.dossier.typePlaceholder} aria-label={t.dossier.typeAria} value={it.type} onChange={(e) => setItem(i, { type: e.target.value })} />
               <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.serviceLabelPlaceholder} aria-label={t.dossier.serviceLabelAria} value={it.label} onChange={(e) => setItem(i, { label: e.target.value })} />
               {items.length > 1 && (
-                <button type="button" className="at-recform-x" aria-label={t.dossier.removeService} title="Retirer" onClick={() => setItems((arr) => arr.filter((_, k) => k !== i))}>×</button>
+                <button type="button" className="at-recform-x" aria-label={t.dossier.removeService} title={t.dossier.removeShort} onClick={() => setItems((arr) => arr.filter((_, k) => k !== i))}>×</button>
               )}
             </div>
             {it.parts.map((p, j) => (
@@ -514,8 +514,8 @@ function RuleForm({ rule, onSave, onCancel }: { rule?: ServiceRule; onSave: (inp
       <div className="at-recform-row">
         <input list={listId} className="at-dossier-input" placeholder={t.dossier.typePlaceholder} aria-label={t.dossier.typeAria} value={type} onChange={(e) => setType(e.target.value)} />
         <datalist id={listId}>{SERVICE_TYPES.map((t) => (<option key={t} value={t}>{serviceLabel(t, locale)}</option>))}</datalist>
-        <select className="at-dossier-input at-dossier-input--unit" aria-label="Action" value={action} onChange={(e) => setAction(e.target.value as ServiceAction)}>
-          {ACTIONS.map((a) => (<option key={a} value={a}>{a}</option>))}
+        <select className="at-dossier-input at-dossier-input--unit" aria-label={t.dossier.actionAria} value={action} onChange={(e) => setAction(e.target.value as ServiceAction)}>
+          {ACTIONS.map((a) => (<option key={a} value={a}>{actionVerb(a, locale)}</option>))}
         </select>
         <input className="at-dossier-input at-dossier-input--grow" placeholder={t.dossier.componentPlaceholder} aria-label={t.dossier.componentAria} value={component} onChange={(e) => setComponent(e.target.value)} />
       </div>

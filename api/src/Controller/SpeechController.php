@@ -57,8 +57,9 @@ final class SpeechController
             return new Response(status: Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
-        return new Response($audio, Response::HTTP_OK, [
-            'Content-Type' => 'audio/mpeg',
+        return new Response($audio->bytes, Response::HTTP_OK, [
+            // Whatever the backend produced: mp3 from ElevenLabs, WAV from a pocket-tts sidecar.
+            'Content-Type' => $audio->contentType,
             // The text is the cache key upstream, so the same sentence is byte-identical forever.
             'Cache-Control' => 'private, max-age=86400',
             // …per language. The same sentence read as French and as English is two different audios

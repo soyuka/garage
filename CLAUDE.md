@@ -122,8 +122,10 @@ frame) is *one* task owned by whoever holds `dashboard/src/types.ts` — not two
 ## Conventions specific to this repo
 
 - Test-first, always: failing test shown before production code.
-- A new motion gets its row in `dashboard/CHOREOGRAPHY.md` **before** it is written. That file is
-  FROZEN-but-extensible.
+- A new motion gets its row in `dashboard/CHOREOGRAPHY.md` **before** it is written. That file is the
+  authority and it is **revisable** (unfrozen 2026-09-04): correct a stale row rather than appending a
+  contradiction, date the correction, and never silently erase a decision — if a rule is being
+  reversed, say what it was and why.
 - No theatre in the render path: no `sleep`, no padded pacing, no staged beat sheet. Motion may
   overlap an arrival, never gate one (`docs/prompt-pilot-motion.md` § Hard rules 1).
 - Dashboard tests on the host need a real `dashboard/node_modules` — the host directory is a

@@ -32,7 +32,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
     ) {
     }
 
-    public function synthesize(string $text, Locale $locale): string
+    public function synthesize(string $text, Locale $locale): SpokenAudio
     {
         if ('' === $this->apiKey || '' === $this->voiceId) {
             throw new SpeechUnavailable('ElevenLabs is selected but ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID are unset.');
@@ -59,7 +59,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
                 throw new SpeechUnavailable(\sprintf('ElevenLabs refused the request (HTTP %d).', $status));
             }
 
-            return $response->getContent();
+            return new SpokenAudio($response->getContent(), 'audio/mpeg');
         } catch (HttpClientException $e) {
             throw new SpeechUnavailable('ElevenLabs could not be reached.', previous: $e);
         }

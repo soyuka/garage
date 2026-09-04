@@ -57,6 +57,10 @@ body {
   transition: color var(--at-dur-tint) var(--at-ease-sine), border-color var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-identity-chip svg { flex-shrink: 0; }
+/* The two standing preferences (Preferences.tsx) wear the identity chip; small caps keeps their
+   one-word labels quieter than the identity beside them. */
+.at-pref-label { font-variant: small-caps; letter-spacing: 0.06em; font-size: 11px; }
+.at-identity-chip[aria-pressed='true'] { color: var(--at-text); border-color: var(--at-chrome-hi); }
 .at-identity-chip:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
 .at-identity-chip:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
 .at-scene-switch { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
@@ -407,6 +411,25 @@ body {
 }
 .at-scene-chip:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
 .at-scene-chip:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* the agent chip (CHOREOGRAPHY § "Asking the agent from the UI") — cyan border + tick, echoing the
+   `.at-proj-tick` attribution mark: cyan is rationed to Le Noyau, so this is the one visual cue that
+   the chip spends a model call instead of resolving instantly like its neutral siblings. */
+.at-scene-chip--agent { border-color: var(--at-cyan); }
+.at-scene-chip--agent:hover:not(:disabled) {
+  border-color: var(--at-cyan-hi);
+  background: linear-gradient(rgba(34, 211, 238, 0.12), rgba(34, 211, 238, 0.12)), rgba(13, 14, 16, 0.86);
+}
+.at-scene-chip-agent-tick {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--at-cyan);
+  box-shadow: var(--at-glow-cyan);
+  vertical-align: middle;
+}
 
 /* chip destination micro-map — 3 neutral cells (rail / centre / colonne, fixed order). Neutral grey
    only: never cyan (rationed to Le Noyau) nor orange nor a signal colour (brand law). */

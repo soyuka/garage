@@ -286,7 +286,123 @@ storefronts — a real choice, not a string.
 **Gap:** `language_code` now rides every `/tts` call, which is the right fix and improves French
 pronunciation from the configured voice. It does not change the measured ceiling in item 8: a
 free-tier key sees 21 voices, all `language: en`, and every French voice is a library voice returning
-`402 paid_plan_required`. So `ELEVENLABS_VOICE_ID` is Sarah, an English voice — English now sounds
-native and French sounds like an English speaker reading French. That inversion is new and worth
-stating before anyone demos it. The Piper route (item 8, `docs/voice.md` route A) remains the
-alternative and the `/tts` seam is already provider-agnostic.
+`402 paid_plan_required`. English now sounds native and French sounds like an English speaker reading
+French. That inversion is new and worth stating before anyone demos it. The Piper route (item 8,
+`docs/voice.md` route A) remains the alternative and the `/tts` seam is already provider-agnostic.
+
+**Re-measured 2026-08-17.** The ceiling is unchanged and the voice list is worth pinning, because the
+account now *displays* four professional voices — `Claire`, `Alexandre` and `Marine` (both Parisian)
+and `PIERRE N.` — which makes it look solved. It is not: all four still answer
+`402 paid_plan_required` through the API, as do all shared-library voices, and the message is explicit
+that the free-users flag governs the web app rather than the API. Only the 21 premade voices synthesize.
+Models reachable on this key: `eleven_v3`, `eleven_multilingual_v2`, `eleven_flash_v2_5`,
+`eleven_turbo_v2_5` (+ two English-only and two speech-to-speech).
+
+**Changed 2026-08-17 (config only, no code):** `ELEVENLABS_VOICE_ID` = Matilda
+(`XrExE9yKIg1WjnnlVkGX`) and `ELEVENLABS_MODEL` = `eleven_v3`, chosen by A/B against `Bella` on the
+three line shapes the audition speaks (ticker, answer card, alarm). `eleven_flash_v2_5` was judged
+robotic. The cost is **latency**: measured end-to-end through `/tts`, flash was ~0.65-0.75 s and v3 is
+**~2.2-3.0 s**. Nothing waits on it (speech is garnish, the card is already on screen), but it makes
+the ticker's coalescing more visible — each spoken line now occupies ~3 s, so a burst drops more
+intermediate steps by the latest-wins rule. If that becomes the complaint, `eleven_multilingual_v2`
+(~1.2 s) is the middle setting, and `voice_settings` is still **unsent** by
+`ElevenLabsSpeechClient::synthesize()` — stability / similarity_boost / style are untouched API
+defaults and are the cheapest unexplored quality lever.
+### 14. Firefox voice — the autoplay gate was real, but it was hiding a code bug (updated 2026-08-17)
+
+**Partly closed.** The original entry concluded "This is not a code gap — `refused()` now puts the line
+back and waits for a gesture instead of burning it." That is **refuted**. `refused()` was unreachable on
+the Firefox path:
+
+`useVoice.ts` wired BOTH `ended` and `error` on the audio element to the same `done()`, while only the
+`play()` promise rejection reached `refused()`. Both branches guard on `prev.speaking?.id === utterance.id`,
+so whichever ran first made the other a no-op — and a failed media load fires `error` at the element
+*before* it rejects the pending `play()`. So on Firefox, where an autoplay refusal arrives precisely as an
+aborted media load (the ABORT string the original entry documented), `done()` won every time: the line was
+burned, `spoken` kept it so the dedup could never re-offer it, and `blocked` stayed `false` — which meant
+the *next* line was promoted and died the same way. The whole queue drained silently. The catch-block
+comment already said Firefox "reports it as an aborted media load"; the intent was documented, the wiring
+defeated it.
+
+**Shipped:** `mediaOutcome(code)` in `dashboard/src/noyau/voice.ts` — `MEDIA_ERR_ABORTED` (1) -> `refused()`
+(latch, put the line back), network/decode/unsupported -> `finish()` (spend the line, keep the queue
+moving, because one bad body must not silence every line behind it). The `error` listener also honours
+the effect's `stopped` flag, since our own teardown aborts the load too and must not read as a refusal.
+Rules live in `voice.ts` with the rest, per that file's stated design (the hook is untested — no jsdom).
+
+**Still open, and NOT verified in a browser:**
+
+1. **The measurement nobody took.** Every Firefox observation so far is of the *symptom*. Open the
+   Firefox network panel and record whether `POST /tts` fires at all. If it does not, the cause is
+   `unlocked` never turning true and the fix above is aimed at the wrong layer; if it fires and returns
+   `200`, the fix above is the answer. Log `el.error?.code` while doing it.
+2. ~~**No audio unlock.**~~ **Shipped 2026-08-17.** `useVoice.ts` now keeps ONE `Audio()` element in
+   its ref for the session: the gesture handler creates it and plays 8 silent frames on it
+   *synchronously* (an element that has begun playback inside a gesture keeps its permission for every
+   later `src`, where an element created 2-3 s afterwards is judged on the page's autoplay permission
+   alone — the thing Firefox refuses). Each line then assigns `.src` instead of constructing an element.
+   Handlers are ASSIGNED (`onended`/`onerror`), not added, and are nulled in cleanup before the next
+   `src` lands, so switching source cannot trip the refusal path. The element deliberately survives
+   teardown. **Not verified in a browser** — measurement 1 above is still the thing that would confirm
+   it, and this hook is untested by design (no jsdom).
+3. **`state.blocked` is still rendered nowhere.** It is read only inside `voice.ts` and the hook's dep
+   array. The honest one-shot "your browser blocked it" notice this entry originally asked for is now
+   *reachable* (the latch works), but still unbuilt — an audition toggle that turns on and produces no
+   sound remains a lying control.
+4. Operator workaround, unchanged and still per-machine: `about:config` -> `media.autoplay.default = 0`,
+   or the `permissions.sqlite` row. Worth a line in `stage/CLAUDE.md` § launch checklist either way.
+
+`dashboard/CHOREOGRAPHY.md` § Audition still claims the handler "cannot discriminate on the error and
+treats every failed `play()` the same way" — that sentence is now wrong in both directions and needs
+rewriting to match `mediaOutcome`.
+
+### 15. `EntretienRail` duplicate due rows — CLOSED (shipped 2026-08-17)
+
+**It was not a forecasting fault.** The data question the entry demanded be answered first: two due
+entries of one service type are **correct**. The backend keys the per-vehicle schedule on
+type + action + component (`ServiceInterval::key()`), exactly so that `spark_plug:inspect` and
+`spark_plug:replace` — or `air_filter:clean:foam` and `air_filter:replace:paper` — are two distinct
+cadences; `DueMaintenanceView::item()` even ships `action`/`component` per due with the comment "the
+action/component disambiguate two cadences of one type". The dashboard threw both fields away.
+
+Three faults, all in `dashboard/src/scene/echeances.ts`:
+
+- the React key was `due:${d.type}`, losing the rest of the identity -> the console collision;
+- the label was `serviceLabel(d.type)`, so both rows printed "Spark plugs" -> the a11y tree the entry read
+  as duplicated data;
+- `taskFor(type)` returned the SAME open task to every due of that type, so two dues both emitted
+  `id: t.id` — a second, worse collision that also showed one job twice.
+
+**Shipped:** `ruleKey()` + `serviceTitle()` in `dashboard/src/schedule.ts` (which already owned rule
+naming — `NamedRule` now covers a schedule rule and a forecast due alike); the rail keys on the full
+triple, spends the action verb only when the component alone still leaves two rows reading identically,
+and a task is CONSUMED by the first due that claims it.
+
+### 16. "Note" card and the "Data" panel overlap and disagree — mixed language fixed, design still open
+
+**The i18n half is CLOSED.** The reported `Fermer : …` was one instance of a class: `NoticeStack` carried
+a French-only `TONE_LABEL` (`note`/`fait`/`attention`/`alerte` — the `NOTE`/`FAIT` chrome), a hardcoded
+`vu` button and the French dismiss aria; `CtaCard` had no `useT` at all (`Plus tard`, "Fermer la
+proposition"); `Noyau` built its orb aria from a `SIGNAL_FR` lookup; `DossierPanel` printed raw action
+enum values and French tooltips; `ParcLot`, `FactsDrawer`, `HistoryLog`, `ShoppingList`,
+`CarnetProjection`, `WorklistProjection` and `EntretienRail` all had literal labels. All now go through
+`messages.ts` (new `notice` / `cta` namespaces, plus `noyau.orbAria`/`signal`, `parc.landmark`,
+`proj.close*`, `dossier.actionAria`). `dashboard/src/i18n/hardcoded.test.ts` guards the class: no
+`aria-label`/`placeholder` in the live app may be a quoted literal. The dev playgrounds
+(`App.tsx:12-14`) are excluded by name — a fixture harness is allowed its own copy. `title=` is not
+scanned, because it is also an ordinary React prop and a regex cannot tell a tooltip from a component API.
+
+**The design question is now DECIDED and shipped (2026-08-17):** both surfaces may be on screen at once.
+The **Data panel is authoritative**; the notice card is a sentence written at a moment, and now carries a
+provenance stamp — its age plus a `· voir Données` / `· see Data` mark (`notice.stamp`). The two are
+therefore allowed to disagree, and the stamp is what makes the disagreement legible rather than messy.
+The alternatives — making the card carry no values, or auto-closing one surface when the other rises —
+were rejected: the first needs the agent to stop putting numbers in toasts, the second takes away a panel
+the operator deliberately opened. The rule has its row in `dashboard/CHOREOGRAPHY.md` § Audition.
+
+The age caption is relative (`il y a 3 min`), not an hour, because `Notice.at` is a `performance.now()`
+stamp and there is no wall clock to print. `whenLabel()` moved out of `AmbientInbox.tsx` into
+`dashboard/src/noyau/age.ts` (clock-injected, tested) so the inbox and the notice stack cannot drift.
+
+**Still open:** nothing forces the agent to keep a card's numbers consistent with the panel — the stamp
+makes staleness readable, it does not prevent it.

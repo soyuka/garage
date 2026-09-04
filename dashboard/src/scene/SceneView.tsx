@@ -13,6 +13,7 @@ import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
 import { EntretienRail, type ChecklistHandlers } from './EntretienRail';
+import { Composer } from './Composer';
 import { buildRail } from './rail';
 import { buildVisits } from './visits';
 import { buildShoppingList } from './shopping';
@@ -50,6 +51,10 @@ export interface QuickAction {
    * ONLY after checking the real render target (never copy a neighbor's value); omit when the
    * destination is ambiguous or rung-dependent — a missing zone renders no map, a wrong one lies. */
   zone?: 'rail' | 'centre' | 'colonne';
+  /** Set when the chip posts a real agent turn instead of resolving client-side (CHOREOGRAPHY §
+   * "Asking the agent from the UI"). Rendered with the cyan agent mark — cyan is rationed to Le
+   * Noyau, so this is the one thing that tells the two chip families apart before either is clicked. */
+  agent?: boolean;
 }
 
 interface SceneViewProps {
@@ -80,9 +85,6 @@ interface SceneViewProps {
   /** "vu" on a retained notice card. Required — a card the operator cannot dismiss is a dead control. */
   onDismissNotice: (id: string) => void;
   /** Audition: is the Atelier speaking its answers? Ships false. Absent → the affordance is hidden. */
-  audition?: boolean;
-  /** Flip the audition preference. Lives in the inbox head — MIL-STD-1472F §7.2.9.11 manual reset. */
-  onToggleAudition?: () => void;
   /** Composer focus toggles Le Noyau's listening cue (a local UI event, not a wire frame). */
   onComposerFocus?: (active: boolean) => void;
   /** Submit an instruction (Enter). Live → posts an agent turn; absent → input is inert (pre-agent). */
@@ -147,8 +149,6 @@ export function SceneView({
   onResolveDecision,
   onScheduleDecision,
   onDismissNotice,
-  audition,
-  onToggleAudition,
   onComposerFocus,
   onSubmit,
   composerExtras,
@@ -300,14 +300,6 @@ export function SceneView({
   // stays the dock CtaCard. On the canvas-off rung d the CtaCard carries every proposal (no overlay there).
   const manifest = manifestFromCta(cta ?? null);
   const showManifest = !!manifest && rung !== 'd';
-
-  const handleSubmit = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== 'Enter' || !onSubmit) return;
-    const value = e.currentTarget.value.trim();
-    if (!value) return;
-    onSubmit(value);
-    e.currentTarget.value = '';
-  };
 
   // The chip rail is a single horizontal line; a mouse wheel only emits deltaY, so translate it to
   // horizontal scroll (trackpads already scroll X). The stage is a fixed full-bleed surface with no
@@ -464,7 +456,14 @@ export function SceneView({
                 <div className="at-scene-chip-rail" onWheel={railWheel}>
                   <div className="at-scene-chip-rail-track">
                     {quickActions.map((qa, i) => (
-                      <button key={i} type="button" className="at-scene-chip" onClick={qa.onClick} disabled={qa.disabled}>
+                      <button
+                        key={i}
+                        type="button"
+                        className={qa.agent ? 'at-scene-chip at-scene-chip--agent' : 'at-scene-chip'}
+                        onClick={qa.onClick}
+                        disabled={qa.disabled}
+                      >
+                        {qa.agent && <span className="at-scene-chip-agent-tick" aria-hidden="true" />}
                         {qa.label}
                         {qa.zone && <ChipZoneMap zone={qa.zone} />}
                       </button>
@@ -503,22 +502,9 @@ export function SceneView({
                 onReviewInstruction={onCtaInstruction}
                 onReviewPatch={onCtaPatch}
                 onSchedule={onScheduleDecision}
-                audition={audition}
-                onToggleAudition={onToggleAudition}
               />
             </div>
-            <div className="at-scene-composer">
-              {composerExtras}
-              <input
-                className="at-scene-input"
-                name="composer"
-                aria-label={t.scene.speak}
-                placeholder={t.scene.speakPlaceholder}
-                onFocus={() => onComposerFocus?.(true)}
-                onBlur={() => onComposerFocus?.(false)}
-                onKeyDown={handleSubmit}
-              />
-            </div>
+            <Composer onComposerFocus={onComposerFocus} onSubmit={onSubmit} composerExtras={composerExtras} />
           </div>
         </div>
       )}

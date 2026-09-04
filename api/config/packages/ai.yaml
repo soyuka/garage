@@ -30,8 +30,16 @@ ai:
             # turn must still have room to synthesise the schedule into plan_maintenance calls (carrying
             # both parts and attributes) afterwards — 2048 truncated that tail. WebSearchBudget caps the
             # turn to two searches (one happy-path + one retry on an empty result) so context cannot balloon.
+            #
+            # Raised Haiku → Sonnet: narrate_step and the propose_actions/toast copy are now
+            # model-authored prose the user actually reads (and, under the audition, hears spoken),
+            # and Haiku's phrasing there was visibly weaker than the pilot path's (which already runs
+            # Sonnet). claude-sonnet-4-6 is the highest Sonnet id in the vendored fork's catalog
+            # (vendor/symfony/ai-platform/src/Bridge/Anthropic/ModelCatalog.php) — that catalog is the
+            # ceiling: an id absent from it throws ModelNotFoundException, so do not chase a newer one
+            # without confirming it is vendored first.
             platform: 'ai.platform.anthropic'
-            model: 'claude-haiku-4-5?max_tokens=8192'
+            model: 'claude-sonnet-4-6?max_tokens=8192'
             #
             # Alibaba Cloud Qwen. Web search is NOT tied to the orchestrator: it is the provider-agnostic
             # web_search custom tool, so keep AGENT_WEB_SEARCH=off and pick its backend with
@@ -86,6 +94,8 @@ ai:
                     - Every turn ends with EITHER end_turn OR propose_actions — nothing else closes it.
                     - A maintenance / "what do I need" turn is not finished until plan_maintenance has
                       recorded the tasks; the checklist and shopping list render from them.
+                    - A turn doing slow work (a catalogue call, a web search) opens with narrate_step
+                      before the first one; narration is never a substitute for the closing toast.
                     - propose_actions is a last resort, only when you must ask the user to choose a
                       direction you cannot decide. A turn that completed a clear action ends with a toast
                       + select_vehicle + end_turn, with no card bolted on.
@@ -267,6 +277,9 @@ ai:
 
                     <dashboard_tools>
                     Render intents — they drive the UI the user is looking at; they do not persist data.
+                    - narrate_step(message) — one clause, first person, present tense, in the turn's
+                      language, BEFORE each slow step (catalogue call, web search). It is the
+                      sentence the workshop says out loud. Never the answer, never a recap.
                     - select_vehicle(id) — focus a vehicle by its @id.
                     - toast(message, tone) — a one-line acknowledgement; tone ∈ info|ok|warn|alarm.
                     - end_turn() — no arguments; the LAST tool of the turn, and the only way to finish one
@@ -275,6 +288,19 @@ ai:
                       selected vehicle, to answer a spec question without dumping the whole list:
                       "capacité huile moteur" ⇒ show_fact(["oil_capacity"], "Huile moteur"). For "liste
                       TOUTES les données", call nothing — the user expands the panel themselves.
+                    - focus_view(panel, keys) — after answering, raise ONE panel to the centre and
+                      light the matching regions of the car. panel is "tasks" (what to do), "specs"
+                      (a spec question), "carnet" (history + spend — use AFTER
+                      get_maintenance_history, with keys cut to the service asked about) or "parts"
+                      (references already chosen). keys spotlight service-type or fact keys
+                      (oil_change, timing_belt, air_filter). Then name the datum in ONE toast: the
+                      panel shows the register, the toast gives the answer.
+                    - reveal_assembly(region, partKeys) — ghost the shell and raise that region's
+                      schematic underneath, for a question about a component the closed body hides
+                      ("ou est le filtre a carburant ?", "quelle piece je commande ?"). region is
+                      hood, bay, windshield, frontAxle or rearAxle. partKeys call out parts in the
+                      operator colour; the whole circuit is always drawn. It is a DIAGRAM of that
+                      kind of assembly, never a scan of this car.
                     - propose_actions(headline, actions, finding) — a call-to-action card. Each action is
                       ONE kind, never both:
                         • NL follow-up {label, instruction} — the instruction re-runs you as a new turn on

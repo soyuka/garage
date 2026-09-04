@@ -27,3 +27,24 @@
   letter-spacing: 0.01em;
   margin: 16px 12px 4px;
 }
+
+/* The agent console (CHOREOGRAPHY § "The agent is on the home screen too"): the greeting REPLACES the
+   static title (never sits beside it — two headings competing), the composer + orb sit beneath it in
+   normal flow, not the hero's fixed-to-viewport dock (`.at-scene-dock`) — the parc still scrolls to
+   the lot below. */
+.at-parc-console {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 28px 12px 32px;
+  text-align: center;
+}
+.at-parc-greet {
+  margin: 0;
+  max-width: 720px;
+  font-size: clamp(22px, 3.2vw, 32px);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: 0.01em;
+}

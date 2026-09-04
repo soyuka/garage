@@ -8,6 +8,8 @@ use App\Agent\Ui\ActionButton;
 use App\Agent\Ui\ActionPart;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\SpecNode;
+use App\Message\PrewarmSpeech;
+use App\Tests\Mock\RecordingMessageBus;
 use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -15,9 +17,52 @@ use Symfony\AI\Platform\Contract\JsonSchema\Factory;
 use Symfony\Component\Mercure\Exception\RuntimeException;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Component\Messenger\MessageBusInterface;
 
 final class RenderIntentToolsTest extends TestCase
 {
+    /**
+     * dashboard/CHOREOGRAPHY.md § "The voice starts before the browser asks": a `toast` must start
+     * synthesis before the frame reaches the browser, so the browser's own `POST /tts` lands a cache
+     * hit. This is the one method both drivers (in-app agent, MCP pilot) call, so hooking it here
+     * covers both without either needing to know a prewarm exists.
+     */
+    public function testToastDispatchesExactlyOnePrewarmMessage(): void
+    {
+        $hub = $this->createStub(HubInterface::class);
+        $bus = new RecordingMessageBus();
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), $bus, TestDashboardChannel::locale());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->toast('Vidange enregistrée.', 'ok');
+
+        $this->assertCount(1, $bus->dispatched);
+        $this->assertInstanceOf(PrewarmSpeech::class, $bus->dispatched[0]);
+        $this->assertSame('Vidange enregistrée.', $bus->dispatched[0]->text);
+        // No request in flight and no override set → the app default (fr).
+        $this->assertSame('fr', $bus->dispatched[0]->locale);
+    }
+
+    /**
+     * Per the contract, a prewarm is an optimisation and may never become a dependency: a queue
+     * that is down must not turn a toast into a failed turn.
+     */
+    public function testAPrewarmDispatchFailureIsSwallowed(): void
+    {
+        $hub = $this->createStub(HubInterface::class);
+        $bus = $this->createStub(MessageBusInterface::class);
+        $bus->method('dispatch')->willThrowException(new \RuntimeException('Queue unreachable.'));
+
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects($this->once())->method('warning');
+
+        $tools = new RenderIntentTools($hub, $logger, TestDashboardChannel::create(), $bus, TestDashboardChannel::locale());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $this->assertSame('ok', $tools->toast('Vidange enregistrée.', 'ok'));
+    }
+
     public function testPublishFailureIsBestEffortAndDoesNotBreakTheTurn(): void
     {
         $hub = $this->createStub(HubInterface::class);
@@ -26,7 +71,7 @@ final class RenderIntentToolsTest extends TestCase
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects($this->once())->method('warning');
 
-        $tools = new RenderIntentTools($hub, $logger, TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $logger, TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->assertSame('ok', $tools->toast('Entretien enregistré', 'ok'));
@@ -42,7 +87,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->selectVehicle('/garage/vehicles/01J');
@@ -71,7 +116,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->narrate('Je consulte le catalogue de pièces…');
@@ -82,6 +127,31 @@ final class RenderIntentToolsTest extends TestCase
         // toast popup.
         $this->assertSame(
             ['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…'],
+            json_decode($published->getData(), true),
+        );
+    }
+
+    public function testNarrateStepPublishesAStatusFrameWithoutAToolKey(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $this->assertSame('ok', $tools->narrateStep('Je relis le carnet…'));
+
+        $this->assertNotNull($published);
+        $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
+        // Model-authored narration has no tool identity: the dashboard's step chip keys on `tool`
+        // and must not receive a bogus one, unlike the deterministic StepNarrator-driven narrate().
+        $this->assertSame(
+            ['type' => 'status', 'message' => 'Je relis le carnet…'],
             json_decode($published->getData(), true),
         );
     }
@@ -125,7 +195,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         // A bare ULID is normalised to the task's tick-off IRI so the dashboard can PATCH it directly.
@@ -159,7 +229,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->focusView('tasks', ['oil_change', 'timing_belt']);
@@ -182,7 +252,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->focusView('specs');
@@ -202,7 +272,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->focusView('carnet');
@@ -221,7 +291,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         // The nodes ARE the panel; the key only lights the moteur region (the client contract).
@@ -248,7 +318,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->showFact(['oil_capacity']);
@@ -259,7 +329,7 @@ final class RenderIntentToolsTest extends TestCase
 
     public function testFocusViewRejectsUnknownPanel(): void
     {
-        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->expectException(\InvalidArgumentException::class);
@@ -268,7 +338,7 @@ final class RenderIntentToolsTest extends TestCase
 
     public function testProposeActionsRejectsAButtonThatNeitherInstructsNorWrites(): void
     {
-        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($this->createStub(HubInterface::class), $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->expectException(\InvalidArgumentException::class);
@@ -285,7 +355,7 @@ final class RenderIntentToolsTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->proposeActions('Entretien à 250 000 km', [

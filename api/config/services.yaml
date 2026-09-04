@@ -121,11 +121,48 @@ services:
             $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
             $model: '%env(ELEVENLABS_MODEL)%'
 
+    # One `pocket-tts serve` per language: the model is bound at process start, so a locale with no
+    # server configured stays mute rather than borrowing another language's phonetics.
+    App\Speech\PocketTtsSpeechClient:
+        arguments:
+            $endpoints:
+                fr: '%env(POCKET_TTS_FR_URL)%'
+                en: '%env(POCKET_TTS_EN_URL)%'
+
+    # The disk cache (docs/voice-plan.md § Phase 2): a hit makes zero calls to the backend. Wraps
+    # EACH backend individually, not the routed SpeechClient below — only here is the model/voice
+    # identifying the coming audio a compile-time value, so the decorator itself never has to know
+    # which backend is live. `abstract: true` keeps the App\: resource glob from also trying (and
+    # failing) to autowire this class's scalar constructor arguments on its own.
+    App\Speech\CachingSpeechClient:
+        abstract: true
+
+    speech.caching.elevenlabs:
+        class: App\Speech\CachingSpeechClient
+        arguments:
+            $inner: '@App\Speech\ElevenLabsSpeechClient'
+            $backend: 'elevenlabs'
+            $model: '%env(ELEVENLABS_MODEL)%'
+            $voice: '%env(ELEVENLABS_VOICE_ID)%'
+            $cacheDir: '%kernel.project_dir%/var/tts'
+
+    speech.caching.pockettts:
+        class: App\Speech\CachingSpeechClient
+        arguments:
+            $inner: '@App\Speech\PocketTtsSpeechClient'
+            $backend: 'pockettts'
+            # pocket-tts serve exposes no separate model/voice choice — one Kyutai model per locale
+            # IS the whole identity — so these are fixed labels, not read from env.
+            $model: 'kyutai-pocket-tts'
+            $voice: ''
+            $cacheDir: '%kernel.project_dir%/var/tts'
+
     App\Speech\SpeechClient:
         class: App\Speech\SelectableSpeechClient
         arguments:
             $clients: !service_locator
-                elevenlabs: '@App\Speech\ElevenLabsSpeechClient'
+                elevenlabs: '@speech.caching.elevenlabs'
+                pockettts: '@speech.caching.pockettts'
             $backend: '%env(enum:App\Speech\SpeechBackend:TTS_BACKEND)%'
 
     # Qwen counterpart: record the live model on the debug journal off each call.

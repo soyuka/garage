@@ -35,7 +35,7 @@ motion layer is for. So:
   now and animates while open.
 - No `sleep` anywhere in the render path, no artificial step pacing, no "thinking…" that isn't.
 - Every new motion gets a row in `dashboard/CHOREOGRAPHY.md` before it is written, in the existing
-  vocabulary. That file is the authority and it is FROZEN-but-extensible.
+  vocabulary. That file is the authority and it is **revisable** — correct a stale row and date it.
 
 If a beat only works because something was slowed down, the beat is wrong and gets cut.
 

@@ -1,6 +1,6 @@
 # Plan — the Atelier speaks (ElevenLabs first, provider-swappable)
 
-Status: **phases 1, 3, 4 built (2026-08-16); phases 2, 5, 6, 7 open.** Research and the route comparison live in
+Status: **phases 1, 3, 4 built (2026-08-16); phase 6 done (2026-09-04, via pocket-tts); phases 2, 5, 7 open.** Research and the route comparison live in
 `docs/voice.md`. The provider decision was reaffirmed after the free-tier measurement below:
 ElevenLabs now, a paid plan later for the French voice.
 
@@ -9,7 +9,7 @@ ElevenLabs now, a paid plan later for the French voice.
 | | |
 |---|---|
 | Provider now | **ElevenLabs**, `eleven_flash_v2_5` (~75 ms, 0.5 credit/char) |
-| Provider later | **Google Chirp 3 HD** (`fr-FR-Chirp3-HD-*`) — must cost *one new class + one enum case + one locator line*, nothing else |
+| Second backend | **pocket-tts**, local, shipped 2026-09-04 (`TTS_BACKEND=pockettts`) — it, not Google, is what proved the seam. Google Chirp 3 HD remains unimplemented |
 | What is spoken | the existing **`toast {tone, message}`** frame. **No new wire verb** |
 | Default state | **muted**, one persisted toggle |
 | Where the key lives | `api/` only. The browser never sees it |
@@ -204,14 +204,40 @@ Original plan:
 
 ## Phase 5 — docs (same commit as the code)
 
-- `dashboard/CHOREOGRAPHY.md` § Audition: the speech row currently reads "rejected". It becomes a
-  **built** row for *answers* while keeping the rejection for the *alert signal* — two different
-  claims, and the file is FROZEN-but-extensible, so the row is added, not rewritten.
+- `dashboard/CHOREOGRAPHY.md` § Audition: the speech row read "rejected" long after speech shipped.
+  It is a **built** row for *answers* and keeps the rejection for the *alert signal* — two different
+  claims. This was originally appended rather than rewritten because the file was
+  FROZEN-but-extensible; that freeze is **lifted (2026-09-04)** precisely because the workaround left
+  two opposed statements in one document. Correct the row in place and date it.
 - `dashboard/CONTRACT.md`: unchanged — no new frame. Worth one sentence saying so explicitly.
 - `docs/voice.md`: mark route A superseded by the hosted decision, keep Piper documented as the
   offline fallback (it is the only option that survives a dead conference wifi).
 
-## Phase 6 — prove the swap (do not skip)
+## Phase 6 — prove the swap ✅ DONE 2026-09-04, with pocket-tts rather than Google
+
+The swap was proven by a **local** provider instead of Google: `TTS_BACKEND=pockettts` reaches a
+Kyutai `pocket-tts serve` sidecar (`docs/voice.md` § PocketTTS measured). Cost, as the acceptance
+criterion demanded: one class (`PocketTtsSpeechClient`), one enum case, one locator line — plus one
+genuine leak the exercise existed to find.
+
+**The leak.** `SpeechClient::synthesize()` returned raw mp3 bytes and `SpeechController` hardcoded
+`Content-Type: audio/mpeg`. pocket-tts emits 24 kHz mono WAV, so the second backend would have served
+a WAV body labelled mp3. `App\Speech\SpokenAudio` now carries the format with the bytes. This is
+exactly the "expensive after the code has grown ElevenLabs-shaped assumptions" the phase warned about,
+caught while it was a three-line fix.
+
+**What it changes for phase 2.** A local backend has no credits, so `TTS_MONTHLY_CHAR_BUDGET` and the
+204-over-budget path only ever apply to a hosted backend. The disk cache is still worth having; the
+budget guard is not, when `pockettts` is selected.
+
+**One constraint the seam did not anticipate:** `pocket-tts serve` binds ONE model per process
+(`--language`), so the client takes a locale→endpoint map and a locale with no server configured
+raises `SpeechUnavailable` (→ 503 → silence) rather than reading English with French phonetics. The
+compose stack ships the French container; the English twin is one more service plus one env var.
+
+Google Chirp 3 HD remains unimplemented and is no longer the thing blocking confidence in the seam.
+
+### Original plan, for reference
 
 Add `GoogleSpeechClient` behind the same interface and flip `TTS_BACKEND=google` in a scratch env.
 If that is more than *one class + one enum case + one locator line*, the seam is wrong and phase 1

@@ -245,13 +245,13 @@ export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotPr
 
   if (ordered.length === 0 && !onAddVehicle) {
     return (
-      <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label="Le parc">
+      <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label={t.parc.landmark}>
         <p className="at-parc-empty">{t.parc.empty}</p>
       </section>
     );
   }
   return (
-    <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label="Le parc">
+    <section className="at-parc" data-reduced={reduced ? 'true' : undefined} aria-label={t.parc.landmark}>
       {live && (
         // ONE shared canvas for every card's <View>. Fixed + transparent + pointer-events:none so it
         // overlays the stages (drei tracks each rect per frame) without blocking the card buttons.

@@ -29,7 +29,7 @@ export function CarnetProjection({
         <span className="at-proj-tick" aria-label={t.proj.placedByNoyau} role="img" />
         <div className="at-carnet-head">{t.proj.carnetHead}</div>
         {onDismiss && (
-          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label="Fermer le carnet">
+          <button type="button" className="at-proj-dismiss" onClick={onDismiss} aria-label={t.proj.closeCarnet}>
             ✕
           </button>
         )}

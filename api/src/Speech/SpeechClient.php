@@ -11,11 +11,13 @@ use App\I18n\Locale;
  * from the vendor providing it: the browser only ever calls same-origin `/tts`, so the API key stays
  * server-side and the provider is an implementation detail nobody downstream can observe.
  *
- * One implementation per backend ({@see ElevenLabsSpeechClient}). Adding Google Chirp 3 HD is meant
- * to cost exactly three things and nothing else: a class implementing this interface, a case on
- * {@see SpeechBackend}, and a line in the `!service_locator` in services.yaml. If a second provider
- * ever needs more than that, this seam is wrong — see docs/voice-plan.md § Phase 6, which exists
- * specifically to prove the swap while it is still cheap.
+ * One implementation per backend ({@see ElevenLabsSpeechClient}, {@see PocketTtsSpeechClient}). A new
+ * provider is meant to cost exactly three things and nothing else: a class implementing this
+ * interface, a case on {@see SpeechBackend}, and a line in the `!service_locator` in services.yaml.
+ *
+ * pocket-tts was the swap docs/voice-plan.md § Phase 6 asks for, and it found the one leak: the
+ * return type used to be raw mp3 bytes, so the controller stamped `audio/mpeg` on a WAV body. That is
+ * what {@see SpokenAudio} fixes. The seam held everywhere else.
  *
  * @see \App\Agent\WebSearch\WebSearchClient the proven seam this deliberately mirrors
  */
@@ -25,9 +27,11 @@ interface SpeechClient
      * @param Locale $locale the language the text is IN — not a hint, a pronunciation instruction:
      *                       a multilingual voice reads the same sentence differently depending on it
      *
-     * @return string the audio bytes (mp3)
+     * @return SpokenAudio the audio bytes and the format they are in — the format is the backend's,
+     *                      not the endpoint's, so it travels with the payload rather than being
+     *                      assumed downstream
      *
      * @throws SpeechUnavailable when the vendor refuses or is unreachable — never a 500 for the caller
      */
-    public function synthesize(string $text, Locale $locale): string;
+    public function synthesize(string $text, Locale $locale): SpokenAudio;
 }

@@ -572,7 +572,7 @@ function TaskEditForm({
   return (
     <div className="at-task-edit">
       <form className="at-task-form" onSubmit={submit}>
-        <input list={listId} className="at-task-input" placeholder="type" aria-label="Type de service" value={type} onChange={(e) => setType(e.target.value)} />
+        <input list={listId} className="at-task-input" placeholder={t.rail.typePlaceholder} aria-label={t.rail.typeLabel} value={type} onChange={(e) => setType(e.target.value)} />
         <datalist id={listId}>
           {SERVICE_TYPES.map((t) => (
             <option key={t} value={t}>

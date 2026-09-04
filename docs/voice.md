@@ -39,6 +39,67 @@ upmc 0.38–0.40 s per cold run. Samples kept at `<scratchpad>/short-fr_FR-*.wav
 `aplay <file>` before picking a voice; the numbers do not tell you which one you can listen to for
 ten minutes.
 
+## PocketTTS measured (2026-09-04) — viable, and now wired as a backend
+
+Re-opened because the 2026-08-16 note below dismissed PocketTTS as "heavier than a prototype needs"
+on a size claim, without measuring. Measured, it is usable — but *only* as a warm resident server,
+which is the number that took two attempts to get right.
+
+**Cold CLI invocation**, `french_24l`, unquantized — same protocol as the Piper table above, so these
+compare directly. Each run reloads the model:
+
+| line | wall | audio | RTF |
+|---|---|---|---|
+| long (2 sentences), cold incl. download | 76.70 s | 12.12 s | 6.33 |
+| long | 12.61 s | 6.12 s | **2.06** |
+| long | 13.24 s | 6.68 s | **1.98** |
+| short | 9.93 s | 4.04 s | 2.46 |
+| short | 8.61 s | 2.76 s | 3.12 |
+
+That reads as "slower than realtime, unusable" — and it is the wrong measurement. It bundles a ~5 s
+model load into every line, which the deployment does exactly once.
+
+**Warm resident server** (`pocket-tts serve --language french_24l --quantize`), which is how it ships:
+
+| line | wall |
+|---|---|
+| long (2 sentences) ×3 | 3.91 / 4.22 / 4.28 s |
+| short ×3 | 1.48 / 1.94 / 2.01 s |
+| ticker line (« Je consulte le catalogue de pièces… ») ×2 | 1.50 / 2.31 s |
+
+Audio durations were not re-derived for the warm runs (the streamed WAV header carries a placeholder
+length), so **no warm RTF is claimed here** — only the wall times, which are what the queue feels. On
+the cold-run durations for the same strings (~6.4 s long, ~3.4 s short) these land comfortably under
+realtime.
+
+What the numbers turned out to depend on:
+
+- **Warm + int8 is worth ~3×** over the cold unquantized path. `--quantize` is a `serve` flag.
+- **`french_24l` is the undistilled preview** — the CLI's own help says *"bigger models, not distilled
+  yet and here only as preview"*. The published ~6× realtime / ~200 ms figures are the **distilled
+  English** model on an M4.
+- **This box is ~4–6× slower than that reference.** The distilled English model measured RTF ~0.98
+  cold-invoked here (7.1 s audio in 6.9 s) against ~0.167 claimed on an M4. So both the hardware gap
+  and the preview-model weight are real, and they compound.
+- **The `powersave` governor was not a factor.** `amd-pstate-epp` in `active` mode boosted to
+  **4741 MHz** during the run; Tctl stayed at 37 °C. An idle frequency reading proves nothing here.
+- **Output is 24 kHz mono WAV**, never mp3 — which is what forced `SpokenAudio` (see below).
+
+Licence: code **MIT**, weights **CC-BY-4.0** (attribution obligation, satisfied by this file plus the
+client docblock). French premade voice `estelle`. `serve` binds **one language per process**, so a
+bilingual app needs one container per locale.
+
+What it buys over the hosted route: no API key, no credit budget, no per-line trip off the machine,
+and a demo that still speaks with the network unplugged — which retires the top entry in
+`voice-plan.md` § Risks.
+
+**Wired 2026-09-04** as `TTS_BACKEND=pockettts` (`api/src/Speech/PocketTtsSpeechClient.php`,
+`api/docker/pocket-tts/Dockerfile`, compose service `pocket-tts-fr`). It doubled as the § Phase 6
+swap proof, and it found exactly one leak in the seam: `SpeechClient` returned raw mp3 bytes and
+`SpeechController` stamped `audio/mpeg` on them, so a WAV body was announced as mp3. Fixed by
+`App\Speech\SpokenAudio` carrying the content type with the bytes. Everything else was the promised
+one class + one enum case + one locator line.
+
 ## The three routes
 
 | | How | First-load cost | Latency | Verdict |

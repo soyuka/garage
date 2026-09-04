@@ -7,7 +7,6 @@ import './noyau.css';
 const VIEW = 132;
 const C = VIEW / 2;
 
-const SIGNAL_FR: Record<string, string> = { green: 'vert', amber: 'ambre', red: 'rouge' };
 
 /**
  * Le Noyau — the agent embodied as a diagnostic instrument: a machined lens/iris that READS the car.
@@ -61,7 +60,7 @@ export function Noyau({
       <div
         className="noyau-orb"
         role="img"
-        aria-label={`Le Noyau — ${state.phase}${state.driver === 'pilot' ? ` · pilote${state.quiet ? ' en attente' : ''}` : ''}${state.result ? ` · ${SIGNAL_FR[state.result]}` : ''}`}
+        aria-label={t.noyau.orbAria(state.phase, `${state.driver === 'pilot' ? ` · ${t.noyau.pilot}${state.quiet ? ` ${t.noyau.pilotWaiting}` : ''}` : ''}${state.result ? ` · ${t.noyau.signal[state.result]}` : ''}`)}
       >
         <svg className="noyau-lens" viewBox={`0 0 ${VIEW} ${VIEW}`} aria-hidden="true">
           <defs>

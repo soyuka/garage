@@ -53,27 +53,38 @@ describe('Le Noyau frame→state machine', () => {
     expect(s.narration).toBe('narr');
   });
 
-  it('turn end with no warnings → done=green, and the result is announced as TEXT (not color-only)', () => {
+  // CHOREOGRAPHY § "What a finished action says" (2026-09-04): the old tone-keyed "posé · X" label is
+  // gone. `narration` at turn-end is now either a real closing sentence already narrated during the
+  // turn (a real agent turn's own `toast`) or an explicit `resultText` (a deterministic wayfinder's
+  // closing line) — the fallback below only fires when a turn narrated nothing at all.
+  // A turn that narrated NOTHING knows nothing, so it must not claim anything. `resultFromTone(null)`
+  // is 'green', so a generic fallback sentence here would announce « Tout est à jour. » — a health
+  // verdict invented by a turn that failed or did nothing. Silence is the honest outcome; the signal
+  // still reaches text through the orb's aria-label and the journal's done row.
+  it('turn end with nothing narrated stays SILENT rather than inventing a health verdict', () => {
     let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
-    s = R(s, { type: 'status', message: 'x' }, 100);
     s = R(s, { type: 'turn', phase: 'end' }, 200);
     expect(s.phase).toBe('done');
     expect(s.result).toBe('green');
-    // honesty: the signal must be legible as a mono label, not conveyed by glow alone (§8).
-    expect(s.narration).toContain('posé');
+    expect(s.narration).toBeNull();
     const done = s.journal.find((e) => e.kind === 'done');
-    expect(done?.signal).toBe('green');
-    expect(done?.message).toBe(s.narration); // the journal carries the same legible line
+    expect(done?.signal).toBe('green'); // the signal is still recorded as text in the journal
   });
 
-  it('the done narration differs per signal so green/amber/red are distinguishable without color', () => {
-    const end = (tone: 'ok' | 'warn' | 'alarm') => {
-      let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
-      s = R(s, { type: 'toast', tone, message: 'm' }, 50);
-      return R(s, { type: 'turn', phase: 'end' }, 100).narration;
-    };
-    const lines = new Set([end('ok'), end('warn'), end('alarm')]);
-    expect(lines.size).toBe(3); // three distinct mono labels
+  it('turn end never overwrites what was already narrated — a real agent turn keeps its own toast, no generic label', () => {
+    let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    s = R(s, { type: 'toast', tone: 'ok', message: 'Vidange enregistrée' }, 100);
+    s = R(s, { type: 'turn', phase: 'end' }, 200);
+    expect(s.narration).toBe('Vidange enregistrée');
+    const done = s.journal.find((e) => e.kind === 'done');
+    expect(done?.message).toBe('Vidange enregistrée');
+  });
+
+  it('turn end honours an explicit resultText — a deterministic wayfinder\'s own closing sentence wins over both the last status and the fallback', () => {
+    let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+    s = R(s, { type: 'status', message: 'ouverture du dossier…' }, 100);
+    s = R(s, { type: 'turn', phase: 'end', resultText: 'Voici les données collectées sur la Mazda 6.' }, 200);
+    expect(s.narration).toBe('Voici les données collectées sur la Mazda 6.');
   });
 
   it('a warn toast during the turn → done=amber', () => {
@@ -135,6 +146,16 @@ describe('Le Noyau frame→state machine', () => {
     s = R(s, { type: 'concern', message: 'm' }, 50);
     expect(s.phase).toBe('working'); // a turn in flight stays working; the ember still docks
     expect(s.ember).toBe(1);
+  });
+
+  it('greet (the opening ticker line) murmurs the line and is HANDS-OFF (no turn, no notice, no ember)', () => {
+    const s = R(initialNoyau, { type: 'greet', message: 'Bonjour, on s’occupe de quel véhicule ?' }, 0);
+    expect(s.phase).toBe('idle'); // NOT working — nothing would ever settle it back down
+    expect(busy(s)).toBe(false);
+    expect(s.narration).toBe('Bonjour, on s’occupe de quel véhicule ?');
+    expect(s.notices).toEqual([]); // unlike toast, mints no retained card
+    expect(s.ember).toBe(0); // unlike concern, docks no decision
+    expect(s.journal[s.journal.length - 1]?.kind).toBe('narration');
   });
 });
 

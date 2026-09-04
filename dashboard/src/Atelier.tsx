@@ -39,6 +39,8 @@ import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from './ro
 import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from './useMercure';
 import { ParcLot } from './scene/ParcLot';
 import { SceneView, type QuickAction } from './scene/SceneView';
+import { Composer } from './scene/Composer';
+import { Noyau } from './noyau/Noyau';
 import type { TruthPanelEdit } from './floor/TruthPanel';
 import { JournalPanel } from './JournalPanel';
 import { DossierPanel } from './DossierPanel';
@@ -47,6 +49,7 @@ import type { Cta } from './scene/CtaCard';
 import { partsCtaFor } from './scene/parts';
 import { buildShoppingList } from './scene/shopping';
 import { firstNewlyOverdue } from './scene/crossing';
+import { agentChipState } from './scene/agentChip';
 import { regionForFrame, type BodyRegion } from './scene/anchors';
 import { PULSE_DURATION } from './scene/holo';
 import type { CameraFocus } from './scene/cameraRig';
@@ -54,13 +57,17 @@ import { focusForReveal, revealFor, revealSurvives, type RevealState } from './s
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
 import { useAudition, useVoice } from './noyau/useVoice';
+import { useNoticeAutoClose } from './noyau/useNoticeAutoClose';
 import { busy } from './noyau/state';
 import type { DecisionItem } from './noyau/state';
+import { greetingForSelection } from './noyau/greeting';
+import { dataClosingLine } from './noyau/closingLine';
 import { ABANDON_MS, STAGE_INIT, stageReduce, type Driver, type StageState } from './pilot';
 import { DWELL, PILOT_QUIET_MS } from './tokens/motion';
 import { useRegionBurst } from './scene/useRegionBurst';
 import { useReducedMotion } from './scene/useReducedMotion';
 import { Credits } from './scene/Attribution';
+import { AuditionToggle, LocaleToggle } from './Preferences';
 import { serviceLabel } from './labels';
 import { focusForAction, type Focus } from './focus';
 import type { Iri, MercureFrame, PlannedPart, PlannedTask, UIAction, VehicleBundle, VehicleSummary } from './types';
@@ -81,10 +88,10 @@ export function Atelier() {
   const [error, setError] = useState<string | null>(null);
   const { state, dispatch } = useNoyau();
   const reduced = useReducedMotion();
-  // The audition. Ships muted; the notice cards are what it reads, so it can never say anything that
-  // is not also on screen (CHOREOGRAPHY § Audition — speech, for answers).
+  // The audition. Ships muted; what it reads is what is PRINTED — the notice cards, the answer card and
+  // the orb's ticker line — so it can never say anything that is not also on screen (CHOREOGRAPHY
+  // § Audition — speech, for answers). The call itself sits below the `cta` state it reads.
   const [audition, toggleAudition] = useAudition();
-  useVoice(state.notices, audition);
   // One session per tab — scopes the agent's render-intent topic (slice 5 posts turns onto it).
   const [sessionId] = useState(() => crypto.randomUUID());
   // The owner's PILOT topic: render intents driven from an external MCP host (Claude Code, Goose…),
@@ -99,6 +106,13 @@ export function Atelier() {
   // value) — used to defer a still-pending proposal to the à-décider inbox when a newer one supersedes it.
   const ctaRef = useRef<Cta | null>(cta);
   ctaRef.current = cta;
+  // Reads the three printed surfaces: the notice stack, the orb's ticker line, and the answer card.
+  // `narration` is now one string, printed and spoken alike (CHOREOGRAPHY § "What a finished action
+  // says", 2026-09-04 — the "posé · X" visual label and its spoken twin collapsed into one sentence).
+  const speakingId = useVoice(state.notices, state.narration, cta, audition);
+  // Auto-close a retained notice card after its read dwell — never while its own line is still being
+  // spoken (CHOREOGRAPHY § "an answer that lands, then clears", auto-close 2026-09-04).
+  useNoticeAutoClose(state.notices, speakingId, DWELL.noticeRead, (id) => dispatch({ type: 'dismissNotice', id }));
   const [focus, setFocus] = useState<Focus | null>(null);
   // PULSE verb: the region the agent is currently acting on — a one-shot cyan flare on the car's edges.
   // A monotonic `key` re-triggers the flare even when two consecutive intents target the SAME region; the
@@ -220,6 +234,22 @@ export function Atelier() {
   const busyRef = useRef(false);
   busyRef.current = busy(state);
   const crossTimer = useRef<number | null>(null);
+
+  // The opening — the workshop speaks first (CHOREOGRAPHY, added 2026-09-04). `seg === null` settles
+  // to "no vehicle" immediately (no vehicle is ever intended); `heroBundle` settles to "vehicle
+  // selected" once its data actually lands. A hash naming a vehicle whose bundle hasn't arrived yet is
+  // neither — `undefined` withholds the greeting so the "no vehicle" line never flashes ahead of the
+  // real one during a direct load or a car→car nav.
+  const greetedRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const next: string | null | undefined = seg === null ? null : heroBundle ? heroBundle.vehicle['@id'] : undefined;
+    if (next === undefined) return;
+    const name = heroBundle ? [heroBundle.vehicle.make, heroBundle.vehicle.model].filter(Boolean).join(' ') : undefined;
+    const greeting = greetingForSelection(greetedRef.current, next, name, busyRef.current);
+    greetedRef.current = next;
+    if (!greeting) return;
+    dispatch({ type: 'greet', message: greeting.kind === 'none' ? t.greeting.none : t.greeting.vehicle(greeting.name) });
+  }, [seg, heroBundle, dispatch, t]);
 
   // Liveness watchdog: the turn runs async on the worker, so an optimistic turn/start could otherwise
   // hang Le Noyau in 'working' forever if the worker dies / a frame is dropped after the 202 (the
@@ -518,7 +548,15 @@ export function Atelier() {
   const runLocalAnswer = useCallback(
     // `effect` runs at the answer beat (never `then` — a thenable return would recurse the promise chain):
     // the seam for answers that OPEN a surface (Données / Le Carnet) instead of projecting a focus/cta.
-    (opts: { steps: [string, string]; failMessage: string; resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null; effect?: () => void }> }) => {
+    (opts: {
+      steps: [string, string];
+      failMessage: string;
+      resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null; effect?: () => void }>;
+      // The turn-end closing sentence (CHOREOGRAPHY § "What a finished action says") — printed AND
+      // spoken, replacing whatever the last step narrated. Omitted on failure: the warn toast already
+      // narrated honestly, and `turn:end` there must not paper over it with a success sentence.
+      spokenResult?: string;
+    }) => {
       if (busyRef.current) return; // one driver at a time — composer + chips share the rule
       clearDet(); // supersede any in-flight replay (bumps detToken → drops a pending fetch's late apply)
       const token = detToken.current;
@@ -536,7 +574,7 @@ export function Atelier() {
         if (o?.focus !== undefined) setFocus(o.focus ?? null);
         if (o?.cta !== undefined) setCta(o.cta ?? null);
         o?.effect?.();
-        dispatch({ type: 'turn', phase: 'end', failed: !o });
+        dispatch({ type: 'turn', phase: 'end', failed: !o, resultText: o ? opts.spokenResult : undefined });
       };
       const settle = () =>
         outcome.then(
@@ -576,6 +614,7 @@ export function Atelier() {
           steps: t.chip.dataSteps,
           failMessage: t.chip.dataFail,
           resolve: async () => ({ effect: openFacts }),
+          spokenResult: dataClosingLine([b.vehicle.make, b.vehicle.model].filter(Boolean).join(' '), t.chip.dataResult, t.chip.dataResultGeneric),
         }),
     });
     if (b.records.length > 0) {
@@ -588,6 +627,7 @@ export function Atelier() {
             steps: t.chip.historySteps,
             failMessage: t.chip.historyFail,
             resolve: async () => ({ effect: openHistory }),
+            spokenResult: t.chip.historyResult,
           }),
       });
     }
@@ -612,6 +652,7 @@ export function Atelier() {
               if (nodes.length === 0) throw new Error(t.chip.fluidsEmpty);
               return { focus: { panel: 'specs', keys: [], title: t.chip.fluids, nodes } };
             },
+            spokenResult: t.chip.fluidsResult,
           }),
       });
     }
@@ -629,6 +670,7 @@ export function Atelier() {
             steps: t.chip.partsSteps,
             failMessage: t.chip.partsFail,
             resolve: async () => ({ focus: { panel: 'parts', keys: [] } }),
+            spokenResult: t.chip.partsResult,
           }),
       });
     }
@@ -653,6 +695,7 @@ export function Atelier() {
               if (nodes.length === 0) throw new Error(t.chip.specEmpty);
               return { focus: { panel: 'specs', keys: [], title: t.chip.spec, nodes } };
             },
+            spokenResult: t.chip.specResult,
           }),
       });
     }
@@ -666,7 +709,21 @@ export function Atelier() {
             steps: t.chip.carnetSteps,
             failMessage: t.chip.carnetFail,
             resolve: async () => ({ focus: { panel: 'carnet', keys: [] } }),
+            spokenResult: t.chip.carnetResult,
           }),
+      });
+    }
+    // The judgement chip (CHOREOGRAPHY § "Asking the agent from the UI"): unlike every chip above,
+    // this posts a REAL turn (the exact `send` path a typed question uses) — the answer is language/
+    // judgement a panel cannot produce. Same records prerequisite as the carnet/history chips, so the
+    // two families never disagree about whether there is anything to summarise.
+    const spendingChip = agentChipState(b.records.length, locked);
+    if (spendingChip.visible) {
+      chips.push({
+        label: t.chip.summariseSpending,
+        disabled: spendingChip.disabled,
+        agent: true,
+        onClick: () => send(t.chip.summariseSpendingInstruction),
       });
     }
     return chips;
@@ -868,7 +925,7 @@ export function Atelier() {
       <div className="at-scene">
         <div className="at-scene-top">
           <a href="#/" className="at-scene-back">{t.atelier.backToParc}</a>
-          <Identity onJournal={() => setJournalOpen(true)} onDossier={heroBundle ? () => setDossierOpen(true) : undefined} />
+          <Identity onJournal={() => setJournalOpen(true)} onDossier={heroBundle ? () => setDossierOpen(true) : undefined} audition={audition} onToggleAudition={toggleAudition} />
           <span style={{ flex: 1 }} />
         </div>
 
@@ -911,8 +968,6 @@ export function Atelier() {
             onResolveDecision={onResolveDecision}
             onScheduleDecision={onScheduleDecision}
             onDismissNotice={(id) => dispatch({ type: 'dismissNotice', id })}
-            audition={audition}
-            onToggleAudition={toggleAudition}
             onComposerFocus={(active) => dispatch({ type: 'typing', active })}
             onSubmit={send}
             cta={cta}
@@ -956,14 +1011,48 @@ export function Atelier() {
   }
 
   // ── Parc landing (#/) ───────────────────────────────────────────────────────
+  // Carries its own agent console (CHOREOGRAPHY § "The agent is on the home screen too"): the opening
+  // greeting is dispatched into `state.narration` regardless of route (the effect above fires on
+  // `seg === null`) and useVoice already speaks it — this route just PRINTS it, which is the fix for
+  // the audio-only violation. The heading IS the live narration line (greeting → turn steps → the
+  // answer), so the printed and spoken forms are always the exact same string. `send` is the identical
+  // path the hero composer posts through — no vehicle selected just omits `selectedId`/`summary`
+  // (agent.ts `TurnContext` already treats both as optional), and the agent's own `select_vehicle`
+  // drives the hash forward into the hero the same way a lot click does (`applyRender`).
   return (
     <div className="at-parc-page">
       <div className="at-parc-page-top">
-        <h1 className="at-parc-page-title" style={{ margin: 0 }}>{t.atelier.parc}</h1>
         <span style={{ flex: 1 }} />
-        <Identity onJournal={() => setJournalOpen(true)} />
+        <Identity onJournal={() => setJournalOpen(true)} audition={audition} onToggleAudition={toggleAudition} />
       </div>
       <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
+      <div className="at-parc-console">
+        <h1 className="at-parc-greet" aria-live="polite">
+          {state.narration ?? t.greeting.none}
+        </h1>
+        <div className="at-scene-console">
+          <div className="at-scene-socket">
+            <Noyau state={state} reduced={reduced} onClearEmber={() => dispatch({ type: 'clearEmber' })} />
+          </div>
+          <Composer
+            onComposerFocus={(active) => dispatch({ type: 'typing', active })}
+            onSubmit={send}
+            composerExtras={
+              busy(state) && state.driver !== 'pilot' ? (
+                <button
+                  type="button"
+                  className="at-scene-sim"
+                  title={t.atelier.cancelTurn}
+                  aria-label={t.atelier.cancelTurn}
+                  onClick={() => void cancelTurn(sessionId).catch(() => undefined)}
+                >
+                  ✕
+                </button>
+              ) : undefined
+            }
+          />
+        </div>
+      </div>
       {loadingParc ? (
         <p className="at-parc-empty">{t.atelier.loadingParc}</p>
       ) : (
@@ -974,7 +1063,17 @@ export function Atelier() {
 }
 
 /** The signed-in identity + the dossier (hero only) + the journal + sign-out (top-right chrome). */
-function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?: () => void }) {
+function Identity({
+  onJournal,
+  onDossier,
+  audition,
+  onToggleAudition,
+}: {
+  onJournal: () => void;
+  onDossier?: () => void;
+  audition: boolean;
+  onToggleAudition: () => void;
+}) {
   const t = useT();
   const id = getIdentity();
   const chip: React.CSSProperties = {
@@ -990,6 +1089,10 @@ function Identity({ onJournal, onDossier }: { onJournal: () => void; onDossier?:
   return (
     <span className="at-scene-back" style={{ display: 'inline-flex', gap: 10, alignItems: 'center' }}>
       <span>{id.name ?? id.email ?? t.atelier.signedIn}</span>
+      {/* The two standing preferences, always reachable — see Preferences.tsx for why they are here
+          and not in the à-décider inbox. */}
+      <LocaleToggle />
+      <AuditionToggle on={audition} onToggle={onToggleAudition} />
       {onDossier && (
         <button type="button" onClick={onDossier} className="at-identity-chip" title={t.atelier.dossierTitle} aria-label={t.atelier.dossierAria}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

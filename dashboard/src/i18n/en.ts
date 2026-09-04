@@ -72,6 +72,9 @@ export const en: Messages = {
     partsFor: (service: string) => `Parts — ${service}`,
     partsHead: (service: string) => `PARTS · ${service}`,
     closeParts: 'Close the parts',
+    closeCarnet: 'Close the logbook',
+    closeWorklist: 'Close the list',
+    closeShopping: 'Close the parts to order',
     addToTask: 'Add to the task →',
     carnet: 'Logbook · spend',
     carnetHead: 'LOGBOOK · SPEND',
@@ -99,6 +102,7 @@ export const en: Messages = {
     addAria: 'Add a vehicle to the fleet',
     add: 'Add a vehicle',
     empty: 'No vehicles in the fleet.',
+    landmark: 'The fleet',
   },
 
   cockpit: {
@@ -190,7 +194,6 @@ export const en: Messages = {
     loadError: 'Loading error',
     retry: 'Try again',
     backToParc: '← The fleet',
-    parc: 'The fleet',
     vehicleNotFound: 'Vehicle not found — ',
     backToParcInline: 'back to the fleet',
     loadingVehicle: 'Loading the vehicle…',
@@ -210,23 +213,33 @@ export const en: Messages = {
     data: 'Data',
     dataSteps: ['opening the file…', 'reading the vehicle data…'] as [string, string],
     dataFail: 'data unavailable',
+    dataResult: (name: string) => `Here is the data collected on the ${name}. Are you looking for anything in particular?`,
+    dataResultGeneric: 'Here is the data collected on this vehicle. Are you looking for anything in particular?',
     history: 'History',
     historySteps: ['opening the logbook…', 'rereading the visits…'] as [string, string],
     historyFail: 'logbook unavailable',
+    historyResult: 'Here is the visit history.',
     fluids: 'Fluid capacities',
     fluidsSteps: ['checking the capacities…', 'reading the fluid specs…'] as [string, string],
     fluidsFail: 'the catalogue is not responding',
     fluidsEmpty: 'no fluid capacity known for this vehicle',
+    fluidsResult: 'Here are the fluid capacities.',
     parts: 'Parts to order',
     partsSteps: ['rereading the open tasks…', 'gathering the references…'] as [string, string],
     partsFail: 'parts unavailable',
+    partsResult: 'Here are the parts to order.',
     spec: 'Spec sheet',
     specSteps: ['reading the registration…', 'preparing the spec sheet…'] as [string, string],
     specFail: 'the registration lookup is not responding',
     specEmpty: 'no registration data for this plate',
+    specResult: 'Here is the spec sheet.',
     carnet: 'Logbook · spend',
     carnetSteps: ['reading the logbook…', 'totalling the spend…'] as [string, string],
     carnetFail: 'logbook unavailable',
+    carnetResult: 'Here is the spending summary.',
+    summariseSpending: 'Summarise spending',
+    summariseSpendingInstruction:
+      "summarise this vehicle's maintenance spending: the main cost categories, the total, and the next big expense to plan for",
   },
 
   dossier: {
@@ -278,6 +291,9 @@ export const en: Messages = {
     unitPricePlaceholder: '€',
     unitPriceAria: 'Unit price in euros',
     removeService: 'Remove this service',
+    deleteShort: 'Delete',
+    removeShort: 'Remove',
+    actionAria: 'Action',
     removePart: 'Remove this part',
     remove: 'Remove',
     addPart: '+ part',
@@ -305,10 +321,29 @@ export const en: Messages = {
   },
 
   noyau: {
-    resultGreen: 'settled · all up to date',
-    resultAmber: 'settled · one service due',
-    resultRed: 'settled · problem found',
     pendingDecisions: (n: number) => `${n} decision(s) waiting — open “to decide”`,
+    orbAria: (phase: string, detail: string) => `Le Noyau — ${phase}${detail}`,
+    pilot: 'pilot',
+    pilotWaiting: 'waiting',
+    signal: { green: 'green', amber: 'amber', red: 'red' },
+  },
+
+  /** The opening ticker lines (CHOREOGRAPHY § "The opening — the workshop speaks first"). */
+  greeting: {
+    none: 'Which car are we working on today?',
+    vehicle: (name: string) => `${name} selected. What would you like to know?`,
+  },
+
+  notice: {
+    tone: { info: 'note', ok: 'done', warn: 'warning', alarm: 'alert' },
+    seen: 'seen',
+    dismiss: (text: string) => `Dismiss: ${text}`,
+    stamp: (age: string) => `${age} · see Data`,
+  },
+
+  cta: {
+    later: 'Later',
+    dismiss: 'Dismiss the proposal',
   },
 
   misc: {

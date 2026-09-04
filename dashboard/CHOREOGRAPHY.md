@@ -1,8 +1,26 @@
-# Atelier choreography map — FROZEN in Stage B.0
+# Atelier choreography map — the authority, and revisable
 
 The single binding of the **real** agent vocabulary (and Mercure domain frames) to Atelier motion.
 Written in the verified `UIAction` / frame names only — never the `docs/ui.md` sketch names. Every
 Stage-B/C component animates against THIS map; no agent invents a different mapping.
+
+**Unfrozen 2026-09-04.** This file was "FROZEN in Stage B.0 / FROZEN-but-extensible", which bundled
+three rules together. Two of them stand and are not negotiable:
+
+1. **It is the authority.** No component animates against a mapping that is not written here, and a
+   new motion gets its row *before* it is written.
+2. **Verified vocabulary only.** Real `UIAction` / frame names, never a sketch name.
+
+The third — *existing rows may only be appended to, never rewritten* — is dropped, because it was
+producing contradictions instead of preventing them. The speech row read "rejected" for weeks after
+speech shipped, and `docs/voice-plan.md` recorded the workaround in as many words: *"the file is
+FROZEN-but-extensible, so the row is added, not rewritten"* — leaving two opposed claims about the
+same behaviour in one document. A map that cannot be corrected stops describing the thing it maps.
+
+So: **correct a row when it goes stale, and date the correction.** That is already the habit
+everywhere below ("added 2026-08-17", "Corrected 2026-08-17", "Decided 2026-08-17") — the practice had
+outgrown the label. What a rewrite must never do is quietly erase a decision: if a rule is being
+reversed rather than clarified, say what it was and why it changed, so the reasoning survives.
 
 ## Agent → UI intents (session topic)
 
@@ -17,7 +35,7 @@ Stage-B/C component animates against THIS map; no agent invents a different mapp
 | `showHistory` / `focusView {panel:'carnet'}` | raises the **carnet projection** (past visits + spend) into the same RIGHT column. The `showHistory` FRAME stays client-synthesized (the "Carnet · dépenses" chip), but the SURFACE is now a real server emission: the agent raises it with `focusView {panel:'carnet'}` after reading the history, instead of degrading to a prose toast. Both funnel through `focusForAction` into one focus state, so chip and agent answer are indistinguishable | scene overlay (`CarnetProjection`) |
 | `focusView {panel:'parts'}` | raises the **shopping list** — every reference ALREADY chosen across the open checklist, grouped by the job it belongs to — as a **CENTRED surface** (scrim + `aria-modal`, groups **unfurl** staggered). The one intent that does NOT use the right projection column, and the exception is the point: the column is ~270px and these rows carry a reference, a brand, a description, a price and two shop links each, which at column width wrapped to unreadable stubs. It is a working document the operator reads across and acts on, not a glance-answer. Read-only, and deliberately **without a primary action**: these refs are already on their tasks, so an "Ajouter" would merge what is already there — the idempotent no-op the old "Pièces dispo · <service>" chip offered behind an orange primary. Each line carries **Mister-Auto** and **Auto-Doc** searches in the rationed operator hue (restored from 44cb4fb; a reference you cannot go and buy is one you retype into a search box). An unpriced reference reads `—`, never `0,00 €`: free and unknown must not look the same | scene overlay (`ShoppingListOverlay`) |
 | `proposeActions {headline, finding?, actions}` | a plain proposal → a CTA card **rises from Le Noyau's cradle** (behind the composer, never over it); a **parts-bearing** proposal (an `actions[].patchTask` with `parts`) projects instead as the **parts manifest** in the RIGHT column with the primary **Ajouter** = that deterministic PATCH. `patchTask` → **no agent turn**; `instruction` → new turn. A proposal that arrives while one is already pending, or with no hero open (nowhere to raise a cradle), is **deferred into the à-décider queue** instead of dropped (`review` item — replays the same actions later) | CTA layer / `PartsManifest` / à-décider inbox |
-| `toast {tone, message}` | **every** tone raises a **retained notice card** above the console (§ The notice stack) — it stays until the operator dismisses it. On top of that: non-alarm also writes the narration line (Noyau heartbeat, transient); **alarm** also docks a `notify` item onto the à-décider queue | Le Noyau (`NoticeStack`) |
+| `toast {tone, message}` | **every** tone raises a **notice card** above the console (§ The notice stack) — dismissed by **vu**, or auto-closed after a read dwell once its spoken line has finished (corrected 2026-09-04; it used to stay until dismissed). On top of that: non-alarm also writes the narration line (Noyau heartbeat, transient); **alarm** also docks a `notify` item onto the à-décider queue | Le Noyau (`NoticeStack`) |
 | `status {message}` | one **Noyau pulse** (per narrated step, sparse) + the narration line etches; the same step also appends an **aria-hidden tool-step chip** (short verb + glyph) beside Le Noyau, collapsing into the journal on turn end — a silent companion, never a second announcement | Le Noyau |
 | `turn {phase}` | `start` → Noyau busy/working (aperture focuses, scan locks) + a **cyan scan-sweep** slides across the car; `end` → settle → green/amber/red | Le Noyau + scene overlay |
 
@@ -82,17 +100,38 @@ reserved, not yet produced). The badge shows the live queue length. Opening the 
 without-resolving inbox re-opens with everything still there. Rows resolve deterministically (a review
 row replays its `patchTask`/`instruction`; a notify row offers "vu" or "planifier ○") — never a transcript.
 
-## The notice stack — an answer that stays (2026-08-16)
+## The notice stack — an answer that lands, then clears (2026-08-16; auto-close 2026-09-04)
 
 The narration line is a **heartbeat**: it says what Le Noyau is doing right now, and the next `status`
 overwrites it, and `settle` clears it. That was the whole surface a non-alarm `toast` ever reached, so
 the agent's actual *findings* — « pas de filtre à air dans le catalogue pour ce moteur », « j'ai pris
 la Mazda, tu en as deux » — scrolled past at the speed of the next tool call and were gone by the time
-the turn settled. An answer is not a heartbeat. It gets its own surface, and that surface persists.
+the turn settled. An answer is not a heartbeat. It gets its own surface.
+
+**Reversed 2026-09-04 — the cards now auto-close.** This section was written as *"an answer that
+stays"*, and the row below said in as many words: *"It does not expire, does not fade, is not on a
+timer."* That rule was protecting against findings scrolling past before they could be read. It is
+dropped, deliberately, because in use the stack became litter the operator had to sweep: three cards
+each needing a **vu**, during a demo, with both hands elsewhere.
+
+What makes the reversal honest is the same thing that made `NOTICE_CAP` honest — **the journal drawer
+keeps every toast at full precision.** Nothing is destroyed by a card leaving; it is compression with a
+way to look closer. What would NOT be honest is a card vanishing mid-sentence, so:
+
+- **The dwell never cuts the voice.** A dismissal is a cancellation (§ binding rules), so a fixed timer
+  shorter than the utterance would truncate the very line it is displaying — recreating the exact
+  truncation fixed on 2026-09-04 in the pocket-tts header. A card whose own line is still being spoken
+  does not close; the dwell starts when the sentence ends.
+- **It closes whether or not it was spoken**, so muted and unmuted behave the same. The audition is a
+  garnish and must never be what decides whether the screen clears.
+- **vu still works and still closes at once.** Auto-close is a floor, not a replacement for the control.
+- **An alarm is unaffected** — it docks in the à-décider inbox, and the queue item is not on any timer.
+  Auto-closing a *reminder to decide* would be deciding it, which is the one thing **vu** already may
+  not do.
 
 | Real frame / condition | Atelier motion | Owner layer |
 |---|---|---|
-| any `toast {tone, message}` | a **notice card rises** above the console (`--at-dur-rise`, from below — it comes out of Le Noyau, like the CTA cradle), newest closest to the orb. It carries a severity spine in its gutter (the visit-card vocabulary: colour + a mono tone label, never colour alone) and one control, **vu**. It does not expire, does not fade, is not on a timer | Le Noyau (`NoticeStack`) |
+| any `toast {tone, message}` | a **notice card rises** above the console (`--at-dur-rise`, from below — it comes out of Le Noyau, like the CTA cradle), newest closest to the orb. It carries a severity spine in its gutter (the visit-card vocabulary: colour + a mono tone label, never colour alone) and one control, **vu**. It **auto-closes** after a read dwell — but never while its own line is still being spoken, and the dwell only starts when that sentence ends (corrected 2026-09-04; it used to never expire) | Le Noyau (`NoticeStack`) |
 | a toast whose exact `tone:message` is already on the stack | **nothing new** — the same finding re-arriving is one card (the `pushDecision` dedup rule, applied to notices). A pilot repeating itself does not build a wall | `state.ts` |
 | a fourth notice while three are up | the **oldest leaves**, instantly (`NOTICE_CAP` = 3). The stack is a working set, not a log — the journal drawer already keeps every toast at full precision, which is what makes the cap honest (compression with a way to look closer) | `state.ts` |
 | **vu** | the card is removed at once — no exit animation. A dismissal is the operator's own action, and animating their own click back at them is the theatre the render path forbids | `NoticeStack` |
@@ -295,6 +334,24 @@ disagreeing about what was said. One frame, two modalities, no third source of t
 | **vu** on a card whose line is being spoken | the utterance is **cancelled mid-word** | `useVoice.ts` |
 | audition switched off mid-utterance | the voice **stops at once** and the queue empties. A mute that finishes its sentence is not a mute | `useVoice.ts` |
 | no vendor, no budget, no gesture, no network | **silence**, and nothing else — no toast, no badge, no retry | `useVoice.ts` |
+| the **ticker line** (`narration`) — a `status` step, a non-alarm `toast`, a `concern` murmur — **audition on** (added 2026-08-17) | the sentence on the orb's live line is **spoken as it appears**. This is the commentary, not the conclusion: *"je relis l'historique"*, *"je compare les marques"*. Same string as the ticker, same language, never a rephrase | `voice.ts` + `useVoice.ts` |
+| a newer ticker line while one is **waiting** | the waiting one is **replaced, unspoken**. The ticker never stacks (`state.ts:65` — "the single ticker line"), so neither does its voice: **one slot, latest wins**. The ear mirrors the eye — a step that was superseded on screen in 300 ms is not narrated 4 s later | `voice.ts` |
+| a newer ticker line while one is **being spoken** | the spoken one **finishes**; the new one takes the slot. One voice at a time, and a sentence cut mid-word to start another is worse than a sentence that lands slightly behind the orb | `voice.ts` |
+| a notice card and the ticker carrying the **same sentence** (every non-alarm `toast` sets both — `state.ts:351-357`) | spoken **once**. Dedup is on the TEXT, not on the frame identity, precisely because one frame legitimately lands on two surfaces | `voice.ts` |
+| the notice queue and the ticker slot both holding a line | the **notice goes first**. A card is the answer and outlives the turn; the ticker is a heartbeat that is already gone | `voice.ts` |
+| `play()` **refused** by the browser (Firefox with autoplay off for the origin, a background-tab policy) | the line goes **back where it was** and the audition **stops promoting** until the next real gesture, which re-arms it. Not marked spoken, not retried in a loop | `useVoice.ts` |
+| a `proposeActions` card raised on the cradle — **audition on** (added 2026-08-17) | its **headline then its finding** are spoken, in that order, as one utterance. This card is frequently THE answer (`propose_actions` was the answering tool in a measured turn where no `toast` was published at all), and a headline alone names the subject without giving the content — the finding is where the reference, the number or the verdict lives. Both strings are printed on the card, so this is reading it, not rephrasing it | `voice.ts` + `useVoice.ts` |
+| that card resolved, dismissed, or **superseded** by a newer proposal | the utterance is **cancelled**, same rule as a notice card's "vu". A superseded proposal is parked in the à-décider inbox, so its text is still printed — the ear simply stops mid-answer rather than narrating a card the cradle no longer holds | `useVoice.ts` |
+| a notice card and the **Data** panel on screen together, carrying the same subject | **both stay.** The panel is authoritative; the card is stamped with its AGE (`il y a 3 min` / `3 min ago`, the inbox's own vocabulary) and a `· see Data` mark. A card is a sentence written at a moment, the panel is the current reading — so the two are allowed to disagree, and the stamp is what makes the disagreement legible instead of messy. Decided 2026-08-17, after the operator reported "both don't have same info" | `NoticeStack.tsx` |
+| a `showFact` / `focusView` panel raised (the **Data** surface) | **silent.** A panel is a table — a title and rows of values — and a table is the worst possible shape for the ear: "front tire dimensions, 16 pouces, tube dimensions, 16 pouces" is a recitation the operator cannot skip, arriving while the values sit on screen at full precision. Decided 2026-08-17, with speaking the title alone rejected too: a cue to look at a panel that just animated into the centre slot is a signal with no datum | — |
+
+**The `done`-label exception is gone (removed 2026-09-04).** The row above briefly carved out the
+turn-end line as the one place the ticker's "same string, printed and spoken" rule did not hold — the
+"posé · tout est à jour" visual label was nonsense read aloud, so a separate `resultSpoken` sentence
+was split off for the ear. Turn-end no longer prints that label at all (§ "What a finished action
+says"): `narration` at turn-end is now either a deterministic wayfinder's own closing sentence or a
+real agent turn's own `toast`, either of which is already the one true string. The split, and the
+exception it required, both collapse — there is nothing left for the ticker rule to except.
 
 #### Binding rules specific to speech
 
@@ -309,12 +366,41 @@ disagreeing about what was said. One frame, two modalities, no third source of t
   saying they want the sentence twice, and that is their call to make, not a default to guess.
 - **A dismissal is a cancellation.** Audio that outlives its own card is audio-only, and audio-only is
   forbidden. This is the reason the card list — not an event stream — is the input to the queue.
+- **The ticker is a stream, so its voice may run one sentence behind.** The binding rule above is about
+  a card being *dismissed* — the operator saying they are done with it. A `status` line being *replaced*
+  is not a dismissal, it is the next heartbeat, and cutting the voice on every replacement would mean a
+  pilot burst is heard as a stutter of half-words. So: a spoken ticker line finishes, and only the
+  *pending* slot is overwritten. What this costs is that for ~2 s the voice can name a step the orb has
+  already moved past; what it buys is that the sentence the operator does hear is a whole one. The
+  10 s staleness rule still bounds the lag, and nothing here is audio-only — the journal holds every
+  line the ticker ever showed (`state.ts` `journal`, kind `pulse`/`narration`).
+- **Dedup is on the text, not on the frame.** A non-alarm `toast` writes a card AND the ticker line with
+  the same string, so a frame-keyed dedup would speak every answer twice. The utterance's `id` still
+  exists, but only for *cancellation* (which card's "vu" kills which line); what makes a line "already
+  said" is the sentence itself.
+- **A refused `play()` is not a spent line.** Autoplay refusal is a property of the *page*, not of the
+  sentence: the same line would play fine one gesture later. So a rejection puts the utterance back and
+  latches the audition closed until a real gesture re-arms it — never a retry loop against a policy
+  that will not change on its own, and never a line burned by a permission the operator can grant.
+  Firefox with autoplay disabled for the origin reports this as an *abort* of the media load fired at
+  the ELEMENT, not as a `NotAllowedError` rejection of `play()` (measured 2026-08-17). The handler
+  therefore has to read `HTMLMediaElement.error.code` — `mediaOutcome()` in `voice.ts` — and route
+  `MEDIA_ERR_ABORTED` to the refusal path. A network/decode/unsupported error is the *body's* fault,
+  not the page's, so it spends the line and lets the queue advance: one undecodable body must never
+  latch every line behind it closed. Wiring `error` and `ended` to the same handler (the bug fixed
+  2026-08-17) made this rule unreachable — `error` fires first, so the refusal branch never ran and
+  the whole queue drained silently on Firefox.
 - **The voice never seizes the session.** The `/tts` fetch deliberately does not use `authFetch`: that
   bounces to the login flow on a 401, and a garnish feature must never take the operator somewhere.
   A voice that cannot authenticate is a voice that stays quiet.
 - **Autoplay is asserted, never assumed** (§ "The AudioContext trap"). A piloted session produces no
-  gesture in this browser, so playback is unlocked from the operator's first real interaction; before
-  that, lines are dropped silently rather than queued against a lock that may never open.
+  gesture in this browser, so playback is unlocked from the operator's first real interaction. Until
+  then a fresh line **waits in the queue** — it is not promoted, so it is not marked spoken. Corrected
+  2026-08-17: the gate used to sit at the impure edge, *after* `next()` had already moved the line
+  into `spoken`, so the first answer of every session was consumed in silence and unlocking later
+  never brought it back — the one line most worth hearing was the one guaranteed to be lost. The
+  10 s staleness rule still applies while locked: waiting on a gesture does not make old news new, so
+  the lock can never open onto a backlog.
 
 ### Binding rules
 
@@ -330,8 +416,11 @@ disagreeing about what was said. One frame, two modalities, no third source of t
 - **Mute is a first path, and silence is the default.** `prefers-reduced-motion` is a first path because
   the OS *tells us*. There is no audio twin — Media Queries Level 5 has no `prefers-reduced-sound` — so
   the OS tells us nothing, and a preference we cannot read must not be guessed loud. Ships muted;
-  one persisted toggle (`mpa.audition`, beside `mpa.recency`), reachable from the à-décider inbox where
-  the concern lands anyway. A caution signal shall have manual reset and volume control
+  one persisted toggle (`mpa.audition`, beside `mpa.recency`), in the **top-right chrome** beside the
+  language switch (`Preferences.tsx`). It sat in the à-décider inbox until 2026-08-17, which made it
+  unreachable at rest: the inbox is gated on `queue.length > 0` (`Noyau.tsx`) and force-closes when the
+  queue drains (`SceneView.tsx`), so the mute only existed while a decision was pending — the opposite
+  of a manual reset, and the requirement below is not conditional on unrelated state. A caution signal shall have manual reset and volume control
   (MIL-STD-1472F §7.2.9.11); WCAG 1.4.2 exempts audio under three seconds, which this is, but the
   affordance is not optional for that reason.
 - **The voice follows the interface, and never translates it.** (Added 2026-08-16 with fr/en.) The
@@ -397,6 +486,164 @@ under regular exposure. This product has spent **one**. A second must clear the 
 — a change the operator did not cause, on a screen they are not watching, that they must act on — and
 it must be discriminable by **timbre and rhythm**, not by pitch alone, for the IEC reason above. Nothing
 currently in the frame vocabulary qualifies.
+
+## The opening — the workshop speaks first (added 2026-09-04)
+
+Until now the Atelier opened mute and still: a rail of vehicles and a composer, with no statement of
+what it is or what it can be asked. The operator had to know. Two lines fix that, and they are
+**deterministic** — no agent turn, no model call, no token.
+
+| moment | what happens | where |
+| --- | --- | --- |
+| the app settles with **no vehicle selected** | one ticker line: « Bonjour, on s'occupe de quel véhicule ? ». The rail is already the answer, so the line names the choice rather than adding a control | `Atelier.tsx` |
+| a vehicle **becomes selected** (rail click, URL hash, `select_vehicle` from a turn) | one ticker line naming it and offering the next move: « Mazda 6 sélectionnée. Que souhaitez-vous savoir ? », with the deterministic wayfinder chips already beside the composer as the suggestions | `Atelier.tsx` |
+| the same vehicle re-selected, or a re-render | **silent.** The greeting fires on a CHANGE of selection, never on a repaint — a workshop that says hello every render is a workshop nobody leaves open | `Atelier.tsx` |
+| a greeting line while a turn is **working** | **not emitted.** The ticker belongs to the turn; a greeting is what the app says when it has nothing else to say | `Atelier.tsx` |
+
+**Why the ticker and not a toast.** A greeting is transient commentary, which is exactly what the
+ticker is for (§ "Audition — speech, for ANSWERS": *"This is the commentary, not the conclusion"*). A
+`toast` would mint a notice card — a dismissible thing that outlives the turn — and « Bonjour » is not
+an answer anyone needs to keep or tick off. It also gets the audition for free: the ticker line is
+spoken when the operator has it on, and it is journaled, so **nothing here is audio-only.**
+
+**Its own event, `greet` — corrected 2026-09-04.** This row first said the greeting rides the existing
+`status` event. It cannot: `status` sets `phase: 'working'` unconditionally, and nothing brings it back
+to idle but a `turn:end` — which itself overwrites `narration` with the done-label. A greeting sent as
+`status` would therefore pin `busy(state)` true forever, deadlocking the composer and every chip, and
+then erase its own text. `concern` docks an alarm into the à-décider queue and `toast` mints a card,
+so neither fits either. `greet` is the minimum: it sets `narration` and appends one `'narration'`
+journal entry, and touches **neither phase, nor queue, nor worstTone**. It is a LOCAL `NoyauEvent`, not
+a wire frame — `CONTRACT.md` is unaffected and no new agent verb exists.
+
+**Why deterministic and not an agent turn.** A model call on arrival buys nothing the data does not
+already answer — which vehicles exist, which one is selected — and costs 3–10 s of dead screen before
+the first word, on the one beat where the operator is deciding whether the thing works. Hard rule 1
+applies unchanged: no `sleep`, no paced beats. The greeting lands when the data lands.
+
+**The suggestions are the chips that already exist** (§ "Deterministic-first", `buildQuickActions`),
+not a new surface. They keep their own rule: a chip whose data prerequisite is absent is **hidden**,
+never shown disabled — so the offer is always real and there is no dead control to click.
+
+**`prefers-reduced-motion`:** nothing to collapse. Two text lines have no motion, which is the point.
+
+## The agent is on the home screen too (added 2026-09-04)
+
+**This fixes a rule violation shipped hours earlier.** § "The opening" gave the parc landing a greeting
+line — « Bonjour, on s'occupe de quel véhicule ? » — but the parc landing renders only its title, the
+identity chrome and `ParcLot`. There is no `Noyau` and no composer there, so that greeting was
+**dispatched into state with nothing on screen to show it**: spoken when the audition was on, never
+printed. Audio-only, which the binding rules forbid outright. The greeting was right; the surface was
+missing.
+
+| moment | what happens | where |
+| --- | --- | --- |
+| the parc landing (`#/`) | it carries an **agent console**: the greeting as the largest line on the page, a composer beneath it, and Le Noyau's orb for turn feedback. The greeting is PRINTED here and spoken from the same string — one sentence, two modalities, which is the binding rule satisfied rather than worked around | `Atelier.tsx` |
+| the greeting itself | « **Sur quelle voiture travaille-t-on aujourd'hui ?** » — replaces the static « Parc » heading rather than sitting beside it. A title naming what the page obviously is, next to a question inviting the operator to act, is two headings competing; the question does both jobs | `Atelier.tsx` |
+| the operator answers in the composer (« la Mazda ») | a **normal turn**, from the parc. The agent has `list_vehicles` and `select_vehicle`, so its answer is to drive that car in — the question is answered by the UI moving, not by prose. This is the whole reason the console belongs here | `Atelier.tsx` |
+| suggestions | **none added.** `ParcLot` already shows every vehicle, and the cars ARE the choices — § "The opening" already said the rail is the answer. A chip row duplicating the lot would be a second way to do the same thing | — |
+| a turn working from the parc | the orb works exactly as in the hero, and the composer locks. One driver at a time, unchanged | `Atelier.tsx` |
+| the agent selects a vehicle | the hash changes and the Atelier drives into the hero, the same as a click on the lot. No new navigation path | `Atelier.tsx` |
+
+**The composer moves, it is not copied.** It is inlined inside `SceneView` today (which takes a
+`bundle` and owns the 3D car), so it gets extracted into a component both surfaces mount. A second
+composer implementation on the parc would be two inputs to keep in sync, and the busy/lock rule would
+be enforced in two places.
+
+## What a finished action says (added 2026-09-04)
+
+Turn-end used to announce a label keyed on **tone**, not on what happened: « posé · tout est à jour ».
+Two things were wrong with it, and only one was the wording.
+
+- **It claimed something it had not checked.** Opening the Données panel is not a health assessment,
+  yet it announced *tout est à jour* — an assertion about the vehicle, produced by an action that read
+  nothing about the vehicle's condition. A tone is not a finding.
+- **It was written to be seen, then got spoken.** « posé » is a visual metaphor about the orb settling
+  and the `·` is silent, so aloud the line is a stray participle followed by a clause.
+
+**Removed 2026-09-04.** Replaced by a sentence per action — what it actually did, addressed to the
+operator, ending in an invitation where one makes sense:
+
+| action | what it says when it lands |
+| --- | --- |
+| **Données** | « Voici les données collectées sur la Mazda 6. Cherchez-vous quelque chose en particulier ? » — names the car, and hands the turn back |
+| any deterministic wayfinder | its own closing sentence, supplied by the chip, naming what was opened |
+| a real agent turn | **nothing generic.** The agent's own `toast` is the answer; a second machine-written line after it is noise |
+| a turn that narrated **nothing at all** | **silence.** There is no fallback sentence, deliberately: the signal derives from tone, and `resultFromTone(null)` is `green`, so a generic fallback would have a turn that did nothing — or failed — announce « Tout est à jour ». A verdict on the vehicle, invented by an action that never looked at it, in the one case where nothing is known. The journal row still records the **signal word** (`vert`/`ambre`/`rouge`), which is a fact about the outcome rather than a claim about the car |
+
+The signal (green/amber/red) is unaffected and still carried as text, which is what the original a11y
+fix was for (`noyau/CRITIQUE.md`): the orb's `aria-label` renders `t.noyau.signal[result]`
+(`Noyau.tsx:63`) and the journal's done row renders the signal word. The removed label was a third
+carrier of the same fact, never the only one — verified before deleting it.
+
+## The voice starts before the browser asks (added 2026-09-04)
+
+Synthesis costs ~2 s (`docs/voice.md` § PocketTTS measured). Where that 2 s sits decides whether the
+workshop feels alive or laggy, and until now it sat in the worst possible place: the `/tts` fetch lived
+inside the *"speak the promoted line"* effect, so a line did not begin synthesizing until it reached
+the lips. A line queued behind another waited for its predecessor to finish before starting — the delay
+compounded down a burst.
+
+| moment | what happens | where |
+| --- | --- | --- |
+| a line enters the queue while another is speaking | its audio is **fetched immediately**, in parallel with the line being spoken, so it is ready at the handover. One synthesis in flight per waiting line, not one at a time | `useVoice.ts` |
+| the server publishes a `toast` | synthesis is **already under way before the frame reaches the browser** — the publish enqueues a prewarm job and the worker synthesizes into the cache, so the browser's `/tts` is a cache hit. This is the only way the FIRST line of a turn can be fast; no amount of client prefetch can start before the frame arrives | `api/` |
+| the same sentence a second time | **no synthesis at all** — disk cache keyed `sha256(backend·model·voice·locale·text)`. The Atelier repeats itself constantly (« Vidange enregistrée », « J'ai pris la Mazda »), which is what makes the cache worth more than the prewarm | `api/` |
+| a prewarm that fails, or is slow | **nothing observable.** The browser asks as it always did and takes the miss. A prewarm is an optimisation and may never become a dependency | `api/` |
+
+**Prewarm is unconditional** (decided 2026-09-04) even though the audition ships muted, because the
+server cannot know whether any listener has it on without new plumbing that can go stale. The cost is
+CPU on a box that already holds the model in memory. If that ever bites, gating it is one env read —
+but it is not gated today, and that is a choice, not an oversight.
+
+## Asking the agent from the UI — the judgement chip (added 2026-09-04)
+
+The deterministic wayfinders (§ "Deterministic-first") answer everything the stored data already
+answers, with no turn and no token. This adds the other half: a chip that **does** run a turn, for the
+questions data cannot answer.
+
+**The dividing line, and it is the whole rule.** A chip is deterministic when the answer is a *value
+or a surface* — open the carnet, list the references already chosen, show the oil capacity. A chip is
+an agent chip when the answer is *language or judgement* — « tu as surtout dépensé en freinage cette
+année, et la distribution est le prochain gros poste ». No panel can produce that sentence and no
+amount of formatting turns a table into it. If a proposed agent chip could be answered by opening a
+panel, it is a deterministic chip written wrong.
+
+| moment | what happens | where |
+| --- | --- | --- |
+| an **agent chip** is clicked (« Résumer les dépenses ») | it posts a real turn with a fixed instruction, and the orb enters `working` for real — `turn:start`, the model's own `narrate_step` lines, then the answer as a `toast`. Identical to a typed question, minus the typing | `Atelier.tsx` |
+| the answer lands, **audition on** | it is spoken, because it is a `toast` and toasts are spoken. This is the point of the feature: « demande à l'agent de résumer les dépenses » → you *listen* to the answer instead of reading a table | `useVoice.ts` |
+| an agent chip while anything is **working** | **disabled**, not queued. One driver at a time — the rule the composer and the deterministic chips already share (`busyRef`) | `Atelier.tsx` |
+| an agent chip whose data prerequisite is absent (no visits logged → nothing to summarise) | **hidden**, exactly like a deterministic chip. Never a dead control, and never an agent turn that can only answer "there is nothing" | `Atelier.tsx` |
+| the turn fails, is cancelled, or returns no tool call | the existing turn-failure path, unchanged. An agent chip earns no special error handling — it is a turn | `Noyau.tsx` |
+
+**It must look different from a deterministic chip.** They cost different things: one is instant and
+free, the other spends a model call and takes seconds. An operator choosing between them on a
+projector deserves to know which is which before clicking, so the agent chip carries a mark and its
+own label register — never the same flat pill as « Données ».
+
+**Why not `propose_actions`.** That already renders NL follow-up buttons `{label, instruction}` that
+re-run a turn on click, and this deliberately reuses the same *mechanism*. The difference is who
+offers it: `propose_actions` is the agent proposing a next step it chose, mid-conversation. This is the
+UI offering a standing capability that exists before any turn has run — there is no agent yet to
+propose it.
+
+### Opening Historique also asks for a summary (added 2026-09-04)
+
+A register of sixteen visits answers « qu'est-ce que j'ai fait ? » and cannot answer « où part mon
+argent ? ». Opening it therefore does both: the panel at data speed, the reading a moment later.
+
+| moment | what happens | where |
+| --- | --- | --- |
+| the Historique chip is clicked | the panel **opens instantly**, exactly as today — deterministic, no turn, no waiting. Hard rule 1: the model may overlap the arrival, never gate it | `Atelier.tsx` |
+| at the same instant | a turn is posted asking for the spend reading. It lands as a `toast` when the model has it, so it is **spoken** and it is a card — never audio-only | `Atelier.tsx` |
+| the summary arrives after the operator has closed the panel | the card still lands. It is an answer to a question they asked, and answers are not cancelled by looking away — the panel was never its only home | `state.ts` |
+| Historique opened while a turn is **working** | the panel opens; **no turn is posted**. One driver at a time, the rule the composer and every chip share | `Atelier.tsx` |
+| no logged visits | the chip is **hidden** already (its existing prerequisite), so neither half can fire | `Atelier.tsx` |
+
+**This is the one place a deterministic chip also spends a model call**, and it is worth saying why
+that is not a violation of "Deterministic-first": the panel is still deterministic and still instant.
+The turn buys the sentence a table cannot say. If the summary is ever cut, the panel is unaffected —
+the two halves fail independently by construction.
 
 ## Priority & honesty rules (binding)
 

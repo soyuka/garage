@@ -165,7 +165,7 @@ project the ladder, the server enum is the only thing in the way.
   tool-call fires one discrete pulse" / "visibly pulses four times") — the live contract narrates per
   step, not per tool-call. Build against the contract; the vision text on this point is stale.
 
-## Choreography map (real vocabulary → Atelier motion) — frozen in Stage B.0
+## Choreography map (real vocabulary → Atelier motion) — see CHOREOGRAPHY.md, which is revisable
 
 `selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in (stored facts OR projected
 `nodes`) · `focusView {panel:'carnet'}` → carnet projection · `proposeActions` → CTA rises

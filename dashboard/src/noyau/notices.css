@@ -39,7 +39,7 @@
   background: var(--at-sig, var(--at-unknown));
 }
 
-.at-notice-main { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.at-notice-main { min-width: 0; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .at-notice-tone {
   flex: 0 0 auto;
   font-size: 9px;
@@ -54,6 +54,16 @@
   line-height: 1.35;
   color: var(--at-text);
   opacity: var(--at-vib-1);
+}
+
+/* The provenance stamp — its own row under the sentence, so the tone chip and the text keep their
+   baseline. Matches `.at-inbox-when`: the age caption reads the same wherever a card carries one. */
+.at-notice-stamp {
+  flex: 0 0 100%;
+  font-size: 9.5px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  white-space: nowrap;
 }
 
 .at-notice-vu {

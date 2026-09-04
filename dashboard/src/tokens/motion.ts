@@ -48,6 +48,10 @@ export const DWELL = {
   concern: 2000,
   /** a rejected deterministic answer's warning paints before the orb settles with no surface */
   warn: 600,
+  /** a notice card's read time before it auto-closes (NoticeStack) — never counted while its own line
+   *  is still being spoken; the dwell starts fresh when that sentence ends (CHOREOGRAPHY § "an answer
+   *  that lands, then clears", auto-close 2026-09-04) */
+  noticeRead: 8000,
   /** the in-app turn's liveness watchdog: the worker runs async, so a dead one must not hang the orb
    *  forever. NOT applied to a pilot run — see PILOT_QUIET_MS. */
   watchdog: 90_000,

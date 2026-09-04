@@ -46,7 +46,7 @@ export function ShoppingListOverlay({
             {t.proj.refAndLineCount(model.partCount, model.taskCount)}
           </span>
           {onDismiss && (
-            <button type="button" className="at-shop-close" onClick={onDismiss} aria-label="Fermer">
+            <button type="button" className="at-shop-close" onClick={onDismiss} aria-label={t.proj.closeShopping}>
               ✕
             </button>
           )}

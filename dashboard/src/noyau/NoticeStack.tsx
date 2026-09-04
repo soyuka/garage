@@ -1,3 +1,5 @@
+import { useT } from '../i18n/LocaleProvider';
+import { whenLabel } from './age';
 import type { Notice } from './state';
 import type { Signal, Tone } from '../types';
 import './notices.css';
@@ -13,9 +15,9 @@ import './notices.css';
 // never colour alone. `info` has no severity, so it takes the neutral 'unknown' ramp rather than
 // borrowing green: "I have nothing to report" and "this is healthy" are different claims.
 const TONE_SIGNAL: Record<Tone, Signal | 'unknown'> = { info: 'unknown', ok: 'green', warn: 'amber', alarm: 'red' };
-const TONE_LABEL: Record<Tone, string> = { info: 'note', ok: 'fait', warn: 'attention', alarm: 'alerte' };
 
 export function NoticeStack({ notices, reduced, onDismiss }: { notices: Notice[]; reduced?: boolean; onDismiss: (id: string) => void }) {
+  const t = useT();
   if (notices.length === 0) return null;
   return (
     <div className="at-notices" data-reduced={reduced ? 'true' : undefined}>
@@ -23,11 +25,14 @@ export function NoticeStack({ notices, reduced, onDismiss }: { notices: Notice[]
         <article key={n.id} className="at-notice" data-signal={TONE_SIGNAL[n.tone]}>
           <span className="at-notice-spine" aria-hidden="true" />
           <div className="at-notice-main">
-            <span className="at-notice-tone">{TONE_LABEL[n.tone]}</span>
+            <span className="at-notice-tone">{t.notice.tone[n.tone]}</span>
             <p className="at-notice-text">{n.text}</p>
+            {/* The Data panel is authoritative; this card is what was said at `n.at`. The stamp is what
+                lets the two be on screen together and disagree LEGIBLY (CHOREOGRAPHY § Audition). */}
+            <span className="at-notice-stamp">{t.notice.stamp(whenLabel(n.at, t))}</span>
           </div>
-          <button type="button" className="at-notice-vu" onClick={() => onDismiss(n.id)} aria-label={`Fermer : ${n.text}`}>
-            vu
+          <button type="button" className="at-notice-vu" onClick={() => onDismiss(n.id)} aria-label={t.notice.dismiss(n.text)}>
+            {t.notice.seen}
           </button>
         </article>
       ))}
