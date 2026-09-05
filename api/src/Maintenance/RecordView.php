@@ -27,7 +27,7 @@ final class RecordView
      *     label: string|null,
      *     performedAt: string,
      *     usage: array{value: int, unit: string|null}|null,
-     *     cost: array{amount: string, currency: string|null}|null,
+     *     cost: array{amount: string, currency: string|null, source: 'bill'|'estimated'}|null,
      *     notes: string|null,
      *     performedBy: string|null,
      *     source: string,
@@ -37,7 +37,7 @@ final class RecordView
     public function toArray(MaintenanceRecord $record): array
     {
         $usageValue = $record->getUsageValue();
-        $costCents = $record->getCostCents();
+        $effectiveCostCents = $record->getEffectiveCostCents();
 
         return [
             '@id' => $this->iriConverter->getIriFromResource(GarageMaintenanceRecord::fromEntity($record)),
@@ -47,8 +47,8 @@ final class RecordView
             'usage' => null !== $usageValue
                 ? ['value' => $usageValue, 'unit' => $record->getUsageUnit()?->value]
                 : null,
-            'cost' => null !== $costCents
-                ? ['amount' => number_format($costCents / 100, 2, '.', ''), 'currency' => $record->getCurrency()]
+            'cost' => null !== $effectiveCostCents
+                ? ['amount' => number_format($effectiveCostCents / 100, 2, '.', ''), 'currency' => $record->getCurrency(), 'source' => $record->getCostSource()]
                 : null,
             'notes' => $record->getNotes(),
             'performedBy' => $record->getPerformedBy(),

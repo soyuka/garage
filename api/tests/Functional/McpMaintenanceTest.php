@@ -643,6 +643,55 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertCount(1, $byFilter['records'], 'a per-type history query matches a visit that contains that item type');
     }
 
+    public function testHistoryReportsEstimatedCostFromPricedParts(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        // No cost/currency passed — only priced parts. The agent path must fall back to the same
+        // parts-sum estimate the dashboard already shows via effectiveCostCents/costSource.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'SUBARU',
+                'model' => 'FORESTER',
+                'performedAt' => '2026-03-01',
+                'items' => [
+                    ['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'brand' => 'Motul', 'price' => 25.90]]],
+                    ['type' => 'oil_filter', 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER', 'price' => 7.50]]],
+                ],
+            ],
+        ], 3);
+
+        $estimated = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'SUBARU', 'model' => 'FORESTER'],
+        ], 4)['result']['structuredContent']['records'][0];
+
+        $this->assertSame(['amount' => '33.40', 'currency' => null, 'source' => 'estimated'], $estimated['cost']);
+
+        // A visit with an explicit bill still reports 'bill' — the source key must not regress the
+        // already-working path.
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'log_maintenance',
+            'arguments' => [
+                'make' => 'SUBARU',
+                'model' => 'FORESTER',
+                'performedAt' => '2026-03-15',
+                'cost' => '50.00',
+                'currency' => 'EUR',
+                'items' => [['type' => 'tires', 'parts' => []]],
+            ],
+        ], 5);
+
+        $billed = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'get_maintenance_history',
+            'arguments' => ['make' => 'SUBARU', 'model' => 'FORESTER', 'type' => 'tires'],
+        ], 6)['result']['structuredContent']['records'][0];
+
+        $this->assertSame(['amount' => '50.00', 'currency' => 'EUR', 'source' => 'bill'], $billed['cost']);
+    }
+
     public function testRepeatedSameTypeAppendsRatherThanOverwrites(): void
     {
         $client = static::createClient();
