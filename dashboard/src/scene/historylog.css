@@ -25,7 +25,7 @@
 .at-hlog {
   position: relative;
   z-index: 61;
-  width: min(460px, 40vw);
+  width: var(--at-legend-w);
   height: calc(100% - 2 * var(--at-space-5));
   max-height: none;
   overflow-y: auto;

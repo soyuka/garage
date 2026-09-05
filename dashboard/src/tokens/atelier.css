@@ -67,6 +67,10 @@
   --at-space-5: 24px;
   --at-space-6: 32px;
 
+  /* ── layout: the right-docked legend width (CHOREOGRAPHY § The stage under a legend) — sizes both
+     legend cards AND the console dock / nameplate header's right padding while a legend is open. ── */
+  --at-legend-w: min(460px, 40vw);
+
   /* ── motion: easings + the DURATION SCALE (everything yields to Le Noyau) ──
      One step per INTENT, not per taste — pick by what the motion means. The twin of this block is
      src/tokens/motion.ts (which also owns the useFrame-side motions CSS cannot reach: the dolly, the

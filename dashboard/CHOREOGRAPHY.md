@@ -564,6 +564,38 @@ right. Nothing else about editing facts changes.
 | a fiche row is hovered or focused | its node takes the operator hue edge, nothing else changes | `FactsDrawer` → `SceneView` → `Plateau` |
 | Data closes | nodes sink, camera released as after the ring | same |
 
+### The stage under a legend (corrected 2026-09-05, at first light)
+
+Both legends dock right and the camera shifts the car left — but the console, the orb above it and the
+nameplate header stayed centred on the FULL viewport, so at 945 px the orb stood on the constellation and
+the legend ate half the nameplate. The old `at-scene-dock--top` modifier (the console jumping above the
+fiche when it was a bottom sheet) is void and removed. Rule: **while a legend is docked, everything that
+centres on the stage centres on the stage that is left.** One token, `--at-legend-w: min(460px, 40vw)`,
+sizes the legends AND the right padding of the console dock and the nameplate header, keyed with
+`.at-scene:has(.at-hlog, .at-facts)` — no JS state, the legend's own presence is the signal. Transition
+over `--at-dur-swap`; reduced motion cuts.
+
+### Fluids — the volumes (2026-09-05)
+
+Third station. « Capacités fluides » already projects the catalogue's fill volumes as `SpecNode`s into
+the specs column (`fluids.ts`, `focus.panel: 'specs'`). Each **volume** gets a body: a **cylinder
+standing on the disc in a row in front of the car**, facing the camera's home azimuth (row centre at
+radius 2.3, 0.42 m apart, radius 0.15 m), **height = litres × 0.14 m** — equal radius, so height IS the
+volume and 7.5 L of coolant visibly dwarfs 0.9 L of steering fluid. `ml` converts; a **mass** (`g`, `kg`,
+refrigerant) is not a volume and stands **wire only at the floor height**, the legend carrying the number.
+Catalogue-sourced nodes are verified, so cylinders fill; an info-only node (a grade like `DOT 4`) has no
+body. Rise over `--at-dur-rise`, staggered across `--at-dur-fan`; the camera takes the **fluids pose**
+(home azimuth, tilt lower than the data pose, closer, target on the row, shifted right by the specs
+column's width, not the legend's). Hovering a constellation node marks its cylinder in the operator hue.
+Close: sink over `--at-dur-rise`, camera released. **Precedence:** a station shows only when no legend is
+docked — Carnet and fiche win over the specs column.
+
+| Real frame / condition | Atelier motion | Owner layer |
+| --- | --- | --- |
+| `focus.panel === 'specs'` with volume nodes | the volumes rise (above), camera to the fluids pose | `Plateau.tsx` (`FluidVolumes`) + `fluidVolumes.ts` + `cameraRig.ts` |
+| a specs node is hovered or focused | its cylinder takes the operator hue edge | `SpecConstellation` → `SceneView` → `Plateau` |
+| the specs column closes, or a legend docks | cylinders sink, camera released | same |
+
 ## Domain frames (collection topic)
 
 | Frame | Atelier motion | Owner layer |

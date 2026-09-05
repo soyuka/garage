@@ -289,15 +289,6 @@ body {
   pointer-events: none; /* let the empty area pass clicks through to the canvas (orbit the car) */
   transition: transform var(--at-dur-rise) var(--at-ease-sine);
 }
-/* Données drawer fills the bottom ~40vh — float the orb + composer CENTERED in the free upper band,
-   with clear air above the drawer edge (the composer must not sit flush against it). Le Carnet is a
-   true aria-modal popup, so the dock hides entirely there (SceneView) rather than relocating. */
-.at-scene-dock--top {
-  bottom: calc(40vh + 40px);
-  justify-content: center;
-  padding-bottom: 0;
-}
-
 /* console capsule — Le Noyau's freed orb sits full native size above the composer (CHOREOGRAPHY § The
    pilot driver; corrected 2026-09-05: this geometry is now UNCONDITIONAL under both drivers — only what
    sits UNDER the orb keys on data-driver, below). */
@@ -307,7 +298,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  width: min(680px, 86vw);
+  width: min(680px, 86vw, 100%);
   margin-top: 10px;
 }
 .at-scene-socket {
@@ -328,7 +319,7 @@ body {
 /* the composer: full width, its own box (the column layout above sizes it, not a row's flex:1) */
 .at-scene-console .at-scene-composer {
   flex: 0 0 auto;
-  width: min(680px, 86vw);
+  width: min(680px, 86vw, 100%);
   height: 48px;
   overflow: hidden;
   border: 1px solid var(--at-hairline);
@@ -377,6 +368,30 @@ body {
   }
 }
 
+/* CHOREOGRAPHY § The stage under a legend (corrected 2026-09-05, at first light) — while a legend is
+   docked right, everything that centres on the stage centres on the stage that is left. Keyed on the
+   legend card's own presence in the DOM (.at-hlog / .at-facts, the two legends' root classes) — no JS
+   state. Sizes the console dock's and the nameplate header's (.at-scene-cockpit) right padding so both
+   re-centre on the narrowed stage; both are left:0/right:0 + flex-centred, so padding-right shifts
+   their visual centre correctly. */
+.at-scene:has(.at-hlog-overlay, .at-facts-overlay) .at-scene-dock {
+  padding-right: var(--at-legend-w);
+  transition: transform var(--at-dur-rise) var(--at-ease-sine), padding-right var(--at-dur-swap) var(--at-ease-sine);
+}
+.at-scene:has(.at-hlog-overlay, .at-facts-overlay) .at-scene-cockpit {
+  padding-right: var(--at-legend-w);
+  transition: padding-right var(--at-dur-swap) var(--at-ease-sine);
+}
+.at-scene:has(.at-hlog-overlay, .at-facts-overlay) .at-scene-dock[data-reduced='true'] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-scene:has(.at-hlog-overlay, .at-facts-overlay) .at-scene-dock,
+  .at-scene:has(.at-hlog-overlay, .at-facts-overlay) .at-scene-cockpit {
+    transition: none;
+  }
+}
+
 /* deterministic quick-action chips — resolve client-side, never a postTurn. Orange hover marks the
    operator-focus role; cyan stays rationed to Le Noyau. Single line, nowrap, edge-masked scroll: no
    wrap means no dock-height jitter as the chip set changes. */
@@ -387,14 +402,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(620px, 88vw);
+  width: min(620px, 88vw, 100%);
   min-height: 48px;
   margin-top: 8px;
 }
 /* the live phrase, centred in the slot; a slow breathe while the agent is actually working signals a
    living presence (the orb also breathes). done/settle holds steady; reduced-motion → no breathe. */
 .at-scene-rail-slot .noyau-voice { width: 100%; }
-.at-scene-rail-slot .noyau-narration { margin-top: 0; max-width: min(620px, 88vw); }
+.at-scene-rail-slot .noyau-narration { margin-top: 0; max-width: min(620px, 88vw, 100%); }
 @media (prefers-reduced-motion: no-preference) {
   .at-scene-rail-slot .noyau-voice[data-phase='working'] .noyau-narration {
     animation: at-voice-breathe 2.8s var(--at-ease-sine) infinite;
@@ -404,7 +419,7 @@ body {
 
 .at-scene-chip-rail {
   pointer-events: auto;
-  width: min(620px, 88vw);
+  width: min(620px, 88vw, 100%);
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -416,6 +431,7 @@ body {
   display: flex;
   gap: 8px;
   width: max-content;
+  margin-inline: auto;
   padding: 8px 4px; /* clears the chip's own -7px hit-halo + focus-visible outline */
 }
 .at-scene-chip {
@@ -478,7 +494,7 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  width: min(680px, 86vw);
+  width: min(680px, 86vw, 100%);
   margin-top: 10px;
 }
 .at-scene-sim {
