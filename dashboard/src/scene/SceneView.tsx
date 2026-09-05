@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
@@ -35,6 +35,7 @@ import { visitRingLayout } from './visitRing';
 import { factConstellationLayout } from './factConstellation';
 import { fluidVolumesLayout } from './fluidVolumes';
 import { bodyClassFor } from './CarProxy';
+import { legendFocusReducer } from './picking';
 import type { Focus } from '../focus';
 import type { ForecastDue, Iri, MaintenanceRecord, PlannedPart, VehicleBundle } from '../types';
 
@@ -225,8 +226,20 @@ export function SceneView({
   // `records` rarely changes while the ring holds, so this is cheap to recompute on every render.
   const visits = useMemo(() => (historyOpen ? visitRingLayout(records) : null), [historyOpen, records]);
   const [hoveredVisit, setHoveredVisit] = useState<string | null>(null);
+  // The body → legend pointer (§ "Picking — the body points back"): a body hover/leave/pick funnels
+  // through ONE reducer shared by all three stations, scoped by `kind` so they never clear each other's
+  // pick. A pick "is a look, not an action" — nothing is selected, nothing opens.
+  const [legendFocus, dispatchLegendFocus] = useReducer(legendFocusReducer, null);
+  const onHoverVisit = useCallback((key: string | null) => {
+    setHoveredVisit(key);
+    dispatchLegendFocus({ type: 'hover', kind: 'visit', key });
+  }, []);
+  const onPickVisit = useCallback((key: string) => dispatchLegendFocus({ type: 'pick', kind: 'visit', key }), []);
   useEffect(() => {
-    if (!historyOpen) setHoveredVisit(null);
+    if (!historyOpen) {
+      setHoveredVisit(null);
+      dispatchLegendFocus({ type: 'leave', kind: 'visit' });
+    }
   }, [historyOpen]);
   // The fact constellation — same on-demand-only shape as the visit ring, keyed off factsDrawerOpen.
   const bodyClass = bundle ? bodyClassFor(bundle.vehicle.vehicleType) : null;
@@ -235,8 +248,16 @@ export function SceneView({
     [factsDrawerOpen, bundle, bodyClass],
   );
   const [hoveredFact, setHoveredFact] = useState<string | null>(null);
+  const onHoverFact = useCallback((key: string | null) => {
+    setHoveredFact(key);
+    dispatchLegendFocus({ type: 'hover', kind: 'fact', key });
+  }, []);
+  const onPickFact = useCallback((key: string) => dispatchLegendFocus({ type: 'pick', kind: 'fact', key }), []);
   useEffect(() => {
-    if (!factsDrawerOpen) setHoveredFact(null);
+    if (!factsDrawerOpen) {
+      setHoveredFact(null);
+      dispatchLegendFocus({ type: 'leave', kind: 'fact' });
+    }
   }, [factsDrawerOpen]);
   // The fluid volumes station — third and last: only when no legend (Carnet/fiche) is docked, the specs
   // panel is showing PROJECTED nodes (a fetched surface, never the stored facts), and at least one of
@@ -250,8 +271,16 @@ export function SceneView({
   }, [fluidsStationCandidate]);
   const fluidsOpen = fluids != null;
   const [hoveredFluid, setHoveredFluid] = useState<string | null>(null);
+  const onHoverFluid = useCallback((key: string | null) => {
+    setHoveredFluid(key);
+    dispatchLegendFocus({ type: 'hover', kind: 'fluid', key });
+  }, []);
+  const onPickFluid = useCallback((key: string) => dispatchLegendFocus({ type: 'pick', kind: 'fluid', key }), []);
   useEffect(() => {
-    if (!fluidsOpen) setHoveredFluid(null);
+    if (!fluidsOpen) {
+      setHoveredFluid(null);
+      dispatchLegendFocus({ type: 'leave', kind: 'fluid' });
+    }
   }, [fluidsOpen]);
   // A drag breaking the hold (Plateau's onCameraRelease) must not re-dolly to the station pose on release
   // — tracked separately from historyOpen/factsDrawerOpen/fluidsOpen so the drawer/carnet/column itself
@@ -404,10 +433,16 @@ export function SceneView({
               reveal={reveal}
               visits={visits}
               hoveredVisit={hoveredVisit}
+              onHoverVisit={onHoverVisit}
+              onPickVisit={onPickVisit}
               facts={facts}
               hoveredFact={hoveredFact}
+              onHoverFact={onHoverFact}
+              onPickFact={onPickFact}
               fluids={fluids}
               hoveredFluid={hoveredFluid}
+              onHoverFluid={onHoverFluid}
+              onPickFluid={onPickFluid}
               onCameraRelease={onPlateauCameraRelease}
             />
           </div>
@@ -447,7 +482,10 @@ export function SceneView({
                   agentPlaced={specsFocused}
                   onDismiss={specsFocused ? onDismissFocus : undefined}
                   nodes={specsFocused ? focus?.nodes : undefined}
+                  // The legend's OWN hover only marks the body (never touches legendFocus — that is the
+                  // body→legend direction only, § "Picking — the body points back").
                   onHoverNode={specsFocused && focus?.nodes ? setHoveredFluid : undefined}
+                  focusKey={legendFocus?.kind === 'fluid' ? legendFocus.key : null}
                 />
               )}
               {showWorklist && worklist && (
@@ -588,6 +626,7 @@ export function SceneView({
           edit={edit?.facts && { onEditValue: edit.facts.onEditValue, onRemove: edit.facts.onRemove }}
           reduced={reduced}
           onHoverFact={setHoveredFact}
+          focusKey={legendFocus?.kind === 'fact' ? legendFocus.key : null}
         />
       )}
 
@@ -597,6 +636,7 @@ export function SceneView({
         records={records}
         reduced={reduced}
         onHoverRecord={setHoveredVisit}
+        focusKey={legendFocus?.kind === 'visit' ? legendFocus.key : null}
       />
     </>
   );

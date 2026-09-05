@@ -106,7 +106,8 @@
 }
 .at-hlog-entry:last-child { border-bottom: none; }
 .at-hlog-entry:hover,
-.at-hlog-entry:focus-visible {
+.at-hlog-entry:focus-visible,
+.at-hlog-entry[data-picked] {
   border-bottom-color: var(--at-orange);
 }
 

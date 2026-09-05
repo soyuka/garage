@@ -5,6 +5,7 @@ import type { Group } from 'three';
 import { buildHoloFill, type HoloFillControl } from './holoFill';
 import { HOLO_CYAN, OPERATOR_HEX } from './signalColors';
 import { MOTION } from '../tokens/motion';
+import { usePickHandlers } from './picking';
 import type { VisitSlab } from './visitRing';
 
 // The visit ring's slabs (CHOREOGRAPHY § "History — the visit ring").
@@ -43,11 +44,13 @@ interface SlabProps {
   delay: number;
   phaseClock: MutableRefObject<number>;
   sinking: boolean;
+  onHover?: (key: string | null) => void;
+  onPick?: (key: string) => void;
 }
 
 // scale.y around the group origin keeps the bottom pinned to the disc, top grows.
 // A cost-less visit is wire only: no fill mesh, edges alone (truth first — unknown is not zero).
-function Slab({ slab, hovered, reduced, delay, phaseClock, sinking }: SlabProps) {
+function Slab({ slab, hovered, reduced, delay, phaseClock, sinking, onHover, onPick }: SlabProps) {
   const group = useRef<Group>(null);
   const last = useRef(-1);
 
@@ -82,12 +85,29 @@ function Slab({ slab, hovered, reduced, delay, phaseClock, sinking }: SlabProps)
   });
 
   const edgeColor = hovered ? OPERATOR_HEX : HOLO_CYAN;
+  const pick = usePickHandlers(slab.id, onHover, onPick);
 
   return (
-    <group ref={group} position={slab.position} rotation={[0, slab.angle, 0]} scale={[1, t0, 1]} visible={t0 > 0.0005}>
-      {fill && (
+    <group
+      ref={group}
+      position={slab.position}
+      rotation={[0, slab.angle, 0]}
+      scale={[1, t0, 1]}
+      visible={t0 > 0.0005}
+      onPointerOver={pick.onPointerOver}
+      onPointerOut={pick.onPointerOut}
+      onClick={pick.onClick}
+    >
+      {fill ? (
         <mesh position={[0, slab.height / 2, 0]} geometry={geometry}>
           <primitive object={fill.material} attach="material" />
+        </mesh>
+      ) : (
+        // A cost-less visit has no fill, so the wire alone is what would be hit — hard to raycast.
+        // Same geometry, invisible (opacity 0, not `visible={false}`: three does not raycast a hidden
+        // mesh), so a wire body picks exactly like a filled one (§ "Picking — the body points back").
+        <mesh position={[0, slab.height / 2, 0]} geometry={geometry}>
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
       <lineSegments position={[0, slab.height / 2, 0]} geometry={edgesGeometry}>
@@ -105,11 +125,15 @@ export interface VisitRingProps {
   /** Caller keeps VisitRing mounted through this and unmounts on `onSunk`. */
   sinking?: boolean;
   onSunk?: () => void;
+  /** A slab hovered/unhovered (§ "Picking — the body points back"). Absent → no hover wiring back to Le Carnet. */
+  onHover?: (key: string | null) => void;
+  /** A slab clicked — scrolls the matching Carnet row into view. Absent → no pick wiring. */
+  onPick?: (key: string) => void;
 }
 
 // Owns a single phase clock so a slab mounting mid-cascade joins the current instant instead of
 // replaying from 0 (mirrors Assembly's one-diagram-clock rationale).
-export function VisitRing({ slabs, hovered, reduced, sinking = false, onSunk }: VisitRingProps) {
+export function VisitRing({ slabs, hovered, reduced, sinking = false, onSunk, onHover, onPick }: VisitRingProps) {
   const phaseClock = useRef(0);
   const phaseStartWall = useRef<number | null>(null);
   const wasSinking = useRef(sinking);
@@ -145,6 +169,8 @@ export function VisitRing({ slabs, hovered, reduced, sinking = false, onSunk }: 
           delay={staggerDelay(slab.index, slabs.length)}
           phaseClock={phaseClock}
           sinking={sinking}
+          onHover={onHover}
+          onPick={onPick}
         />
       ))}
     </group>

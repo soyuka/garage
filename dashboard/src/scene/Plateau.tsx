@@ -252,10 +252,16 @@ function Plateau3D({
   reveal,
   visits,
   hoveredVisit,
+  onHoverVisit,
+  onPickVisit,
   facts,
   hoveredFact,
+  onHoverFact,
+  onPickFact,
   fluids,
   hoveredFluid,
+  onHoverFluid,
+  onPickFluid,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -268,10 +274,16 @@ function Plateau3D({
   reveal: RevealState | null;
   visits: VisitSlab[] | null;
   hoveredVisit: string | null;
+  onHoverVisit?: (key: string | null) => void;
+  onPickVisit?: (key: string) => void;
   facts: FactNode[] | null;
   hoveredFact: string | null;
+  onHoverFact?: (key: string | null) => void;
+  onPickFact?: (key: string) => void;
   fluids: FluidCylinder[] | null;
   hoveredFluid: string | null;
+  onHoverFluid?: (key: string | null) => void;
+  onPickFluid?: (key: string) => void;
   onCameraRelease: () => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
@@ -332,7 +344,15 @@ function Plateau3D({
           {/* on-car sick-region orbs removed — health now reads on the segmented base ring + the échéance
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
           {ringMounted && (
-            <VisitRing slabs={visits ?? lastVisits.current} hovered={hoveredVisit} reduced={reduced} sinking={sinkingRing} onSunk={onRingSunk} />
+            <VisitRing
+              slabs={visits ?? lastVisits.current}
+              hovered={hoveredVisit}
+              reduced={reduced}
+              sinking={sinkingRing}
+              onSunk={onRingSunk}
+              onHover={onHoverVisit}
+              onPick={onPickVisit}
+            />
           )}
           {constellationMounted && (
             <FactConstellation
@@ -341,6 +361,8 @@ function Plateau3D({
               reduced={reduced}
               sinking={sinkingConstellation}
               onSunk={onConstellationSunk}
+              onHover={onHoverFact}
+              onPick={onPickFact}
             />
           )}
           {fluidsMounted && (
@@ -350,6 +372,8 @@ function Plateau3D({
               reduced={reduced}
               sinking={sinkingFluids}
               onSunk={onFluidsSunk}
+              onHover={onHoverFluid}
+              onPick={onPickFluid}
             />
           )}
         </group>
@@ -398,10 +422,16 @@ function PlateauImpl({
   reveal = null,
   visits = null,
   hoveredVisit = null,
+  onHoverVisit,
+  onPickVisit,
   facts = null,
   hoveredFact = null,
+  onHoverFact,
+  onPickFact,
   fluids = null,
   hoveredFluid = null,
+  onHoverFluid,
+  onPickFluid,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -421,14 +451,26 @@ function PlateauImpl({
   visits?: VisitSlab[] | null;
   /** The Carnet entry hovered/focused in the DOM — that slab's edges take the operator hue. */
   hoveredVisit?: string | null;
+  /** A slab hovered/unhovered on the stage (§ "Picking — the body points back"). Absent → no wiring. */
+  onHoverVisit?: (key: string | null) => void;
+  /** A slab clicked on the stage. Absent → no wiring. */
+  onPickVisit?: (key: string) => void;
   /** The fact constellation's nodes (§ "Data — the fact constellation") — non-null raises it. Absent → none. */
   facts?: FactNode[] | null;
   /** The fiche row hovered/focused in the DOM — that node's edges take the operator hue. */
   hoveredFact?: string | null;
+  /** A node hovered/unhovered on the stage (§ "Picking — the body points back"). Absent → no wiring. */
+  onHoverFact?: (key: string | null) => void;
+  /** A node clicked on the stage. Absent → no wiring. */
+  onPickFact?: (key: string) => void;
   /** The fluid volumes' cylinders (§ "Fluids — the volumes") — non-null raises the row. Absent → none. */
   fluids?: FluidCylinder[] | null;
   /** The specs constellation node hovered/focused in the DOM — that cylinder's edges take the operator hue. */
   hoveredFluid?: string | null;
+  /** A cylinder hovered/unhovered on the stage (§ "Picking — the body points back"). Absent → no wiring. */
+  onHoverFluid?: (key: string | null) => void;
+  /** A cylinder clicked on the stage. Absent → no wiring. */
+  onPickFluid?: (key: string) => void;
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
@@ -460,10 +502,16 @@ function PlateauImpl({
         reveal={reveal}
         visits={visits}
         hoveredVisit={hoveredVisit}
+        onHoverVisit={onHoverVisit}
+        onPickVisit={onPickVisit}
         facts={facts}
         hoveredFact={hoveredFact}
+        onHoverFact={onHoverFact}
+        onPickFact={onPickFact}
         fluids={fluids}
         hoveredFluid={hoveredFluid}
+        onHoverFluid={onHoverFluid}
+        onPickFluid={onPickFluid}
         onCameraRelease={onCameraRelease ?? (() => {})}
       />
     </div>

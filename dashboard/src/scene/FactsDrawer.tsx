@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import './factsdrawer.css';
 import { NBSP } from '../format';
 import { factLabel } from '../labels';
 import { InlineEdit } from '../floor/InlineEdit';
-import { factRegion } from './factConstellation';
+import { groupFactsByRegion } from './factGroups';
 import type { VehicleFact } from '../types';
 
 // The facts drawer — replaces the old always-on MOTEUR fact cards with an on-demand, full-sheet
@@ -19,6 +19,7 @@ export function FactsDrawer({
   edit,
   reduced = false,
   onHoverFact,
+  focusKey = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -29,9 +30,13 @@ export function FactsDrawer({
   /** A row hovered/focused marks its constellation node in the operator hue. Absent → the constellation
    * wires to no ledger (the fixture playground). */
   onHoverFact?: (key: string | null) => void;
+  /** A constellation node picked on the stage — that row scrolls into view and wears the hover hairline
+   * for as long as the pick stands (§ "Picking — the body points back"). Absent/null → no row is picked. */
+  focusKey?: string | null;
 }) {
   const t = useT();
   const [locale] = useLocale();
+  const bodyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -39,11 +44,17 @@ export function FactsDrawer({
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
+  useEffect(() => {
+    if (!focusKey) return;
+    const el = bodyRef.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`);
+    el?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+  }, [focusKey, reduced]);
+
   if (!open) return null;
 
-  // Backend order, untouched: pinning is gone, so there is no operator ranking left to honour and any
-  // reordering here would be the drawer inventing one.
-  const ordered = facts;
+  // Grouped by region, in anchor order (CHOREOGRAPHY § "The legend is grouped like the body") — arrival
+  // order is kept inside each group, so within a group this is still backend order.
+  const groups = groupFactsByRegion(facts);
 
   return (
     <div className="at-facts-overlay" data-reduced={reduced ? 'true' : undefined} onClick={onClose}>
@@ -63,64 +74,67 @@ export function FactsDrawer({
           </button>
         </header>
 
-        <div className="at-facts-body">
-          {ordered.length === 0 ? (
+        <div className="at-facts-body" ref={bodyRef}>
+          {facts.length === 0 ? (
             <p className="at-facts-empty">{t.misc.noData}</p>
           ) : (
-            <ul className="at-facts-list">
-              {ordered.map((f) => {
-                const unplaced = factRegion(f.key) === 'unplaced';
-                return (
-                  <li
-                    key={f.key}
-                    className="at-facts-row"
-                    tabIndex={onHoverFact ? 0 : undefined}
-                    onMouseEnter={onHoverFact ? () => onHoverFact(f.key) : undefined}
-                    onMouseLeave={onHoverFact ? () => onHoverFact(null) : undefined}
-                    onFocusCapture={onHoverFact ? () => onHoverFact(f.key) : undefined}
-                    onBlurCapture={onHoverFact ? () => onHoverFact(null) : undefined}
-                  >
-                    <span className="at-facts-label">
-                      {factLabel(f.key, locale)}
-                      {unplaced && <span className="at-facts-unplaced">{t.facts.unplaced}</span>}
-                    </span>
-                    <span className="at-facts-value">
-                      {edit ? (
-                        <InlineEdit
-                          value={f.value}
-                          ariaLabel={`Modifier ${factLabel(f.key, locale)}`}
-                          onCommit={(next) => edit.onEditValue(f.key, next, f.unit)}
-                        />
-                      ) : (
-                        f.value
+            groups.map(({ region, facts: groupFacts }) => (
+              <section key={region} className="at-facts-group">
+                <p className="at-facts-group-caption">
+                  {region === 'unplaced' ? t.facts.unplaced : t.facts.region[region]}
+                </p>
+                <ul className="at-facts-list">
+                  {groupFacts.map((f) => (
+                    <li
+                      key={f.key}
+                      className="at-facts-row"
+                      data-key={f.key}
+                      data-picked={focusKey === f.key ? 'true' : undefined}
+                      tabIndex={onHoverFact ? 0 : undefined}
+                      onMouseEnter={onHoverFact ? () => onHoverFact(f.key) : undefined}
+                      onMouseLeave={onHoverFact ? () => onHoverFact(null) : undefined}
+                      onFocusCapture={onHoverFact ? () => onHoverFact(f.key) : undefined}
+                      onBlurCapture={onHoverFact ? () => onHoverFact(null) : undefined}
+                    >
+                      <span className="at-facts-label">{factLabel(f.key, locale)}</span>
+                      <span className="at-facts-value">
+                        {edit ? (
+                          <InlineEdit
+                            value={f.value}
+                            ariaLabel={`Modifier ${factLabel(f.key, locale)}`}
+                            onCommit={(next) => edit.onEditValue(f.key, next, f.unit)}
+                          />
+                        ) : (
+                          f.value
+                        )}
+                        {f.unit ? `${NBSP}${f.unit}` : ''}
+                      </span>
+                      <span className="at-facts-status">
+                        {f.verified ? (
+                          <span className="at-facts-ok" aria-label={t.proj.verified}>
+                            ✓
+                          </span>
+                        ) : (
+                          <span className="at-facts-unver">{t.proj.unverified}</span>
+                        )}
+                      </span>
+                      {edit && (
+                        <button
+                          type="button"
+                          className="at-facts-remove"
+                          onClick={() => edit.onRemove(f.key)}
+                          aria-label={t.facts.remove(factLabel(f.key, locale))}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                            <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                          </svg>
+                        </button>
                       )}
-                      {f.unit ? `${NBSP}${f.unit}` : ''}
-                    </span>
-                    <span className="at-facts-status">
-                      {f.verified ? (
-                        <span className="at-facts-ok" aria-label={t.proj.verified}>
-                          ✓
-                        </span>
-                      ) : (
-                        <span className="at-facts-unver">{t.proj.unverified}</span>
-                      )}
-                    </span>
-                    {edit && (
-                      <button
-                        type="button"
-                        className="at-facts-remove"
-                        onClick={() => edit.onRemove(f.key)}
-                        aria-label={t.facts.remove(factLabel(f.key, locale))}
-                      >
-                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-                          <path d="M1 1L13 13M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-                        </svg>
-                      </button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))
           )}
         </div>
       </section>

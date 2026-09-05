@@ -419,6 +419,3 @@ makes staleness readable, it does not prevent it.
 
 - History ring (2026-09-05): the car does not yet rescale to make room for the ring + the right-docked
   Carnet — both share the left ~60% of the viewport as-is, untested against a very long car (utilitaire).
-- History ring: slab picking (click a slab → scroll the Carnet to that entry, the reverse of the existing
-  hover→highlight) is not built.
-- Data constellation: legend not yet grouped by region; node picking not built.

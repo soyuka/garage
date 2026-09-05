@@ -5,6 +5,7 @@ import type { Group } from 'three';
 import { buildHoloFill, type HoloFillControl } from './holoFill';
 import { HOLO_CYAN, OPERATOR_HEX } from './signalColors';
 import { MOTION } from '../tokens/motion';
+import { usePickHandlers } from './picking';
 import type { FluidCylinder } from './fluidVolumes';
 
 // The fluid volumes' cylinders (CHOREOGRAPHY § "Fluids — the volumes"). Mirrors VisitRing.tsx
@@ -42,12 +43,14 @@ interface CylinderProps {
   delay: number;
   phaseClock: MutableRefObject<number>;
   sinking: boolean;
+  onHover?: (key: string | null) => void;
+  onPick?: (key: string) => void;
 }
 
 // scale.y around the group origin keeps the bottom pinned to the disc, top grows — same trick as
 // VisitRing's Slab. A mass reading (hasVolume:false) is wire only: no fill mesh, edges alone (truth
 // first — unknown/non-volume is not zero).
-function Cylinder({ cylinder, hovered, reduced, delay, phaseClock, sinking }: CylinderProps) {
+function Cylinder({ cylinder, hovered, reduced, delay, phaseClock, sinking, onHover, onPick }: CylinderProps) {
   const group = useRef<Group>(null);
   const last = useRef(-1);
 
@@ -85,12 +88,27 @@ function Cylinder({ cylinder, hovered, reduced, delay, phaseClock, sinking }: Cy
   });
 
   const edgeColor = hovered ? OPERATOR_HEX : HOLO_CYAN;
+  const pick = usePickHandlers(cylinder.key, onHover, onPick);
 
   return (
-    <group ref={group} position={cylinder.position} scale={[1, t0, 1]} visible={t0 > 0.0005}>
-      {fill && (
+    <group
+      ref={group}
+      position={cylinder.position}
+      scale={[1, t0, 1]}
+      visible={t0 > 0.0005}
+      onPointerOver={pick.onPointerOver}
+      onPointerOut={pick.onPointerOut}
+      onClick={pick.onClick}
+    >
+      {fill ? (
         <mesh position={[0, cylinder.height / 2, 0]} geometry={geometry}>
           <primitive object={fill.material} attach="material" />
+        </mesh>
+      ) : (
+        // A mass reading has no fill, so the wire alone is what would be hit — hard to raycast. Same
+        // geometry, invisible (opacity 0), so a wire body picks exactly like a filled one.
+        <mesh position={[0, cylinder.height / 2, 0]} geometry={geometry}>
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
       <lineSegments position={[0, cylinder.height / 2, 0]} geometry={edgesGeometry}>
@@ -108,11 +126,15 @@ export interface FluidVolumesProps {
   /** Caller keeps FluidVolumes mounted through this and unmounts on `onSunk`. */
   sinking?: boolean;
   onSunk?: () => void;
+  /** A cylinder hovered/unhovered (§ "Picking — the body points back"). Absent → no hover wiring back to the specs column. */
+  onHover?: (key: string | null) => void;
+  /** A cylinder clicked — scrolls the matching specs node into view. Absent → no pick wiring. */
+  onPick?: (key: string) => void;
 }
 
 // Owns a single phase clock so a cylinder mounting mid-fan joins the current instant instead of
 // replaying from 0 (mirrors VisitRing's/FactConstellation's rationale).
-export function FluidVolumes({ cylinders, hovered, reduced, sinking = false, onSunk }: FluidVolumesProps) {
+export function FluidVolumes({ cylinders, hovered, reduced, sinking = false, onSunk, onHover, onPick }: FluidVolumesProps) {
   const phaseClock = useRef(0);
   const phaseStartWall = useRef<number | null>(null);
   const wasSinking = useRef(sinking);
@@ -148,6 +170,8 @@ export function FluidVolumes({ cylinders, hovered, reduced, sinking = false, onS
           delay={staggerDelay(cylinder.index, cylinders.length)}
           phaseClock={phaseClock}
           sinking={sinking}
+          onHover={onHover}
+          onPick={onPick}
         />
       ))}
     </group>

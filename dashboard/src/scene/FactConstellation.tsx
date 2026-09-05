@@ -5,6 +5,7 @@ import type { Group } from 'three';
 import { buildHoloFill, type HoloFillControl } from './holoFill';
 import { HOLO_CYAN, OPERATOR_HEX } from './signalColors';
 import { MOTION } from '../tokens/motion';
+import { usePickHandlers } from './picking';
 import { FIRST_OFFSET, type FactNode, type FactRegion } from './factConstellation';
 
 // The fact constellation's nodes (CHOREOGRAPHY § "Data — the fact constellation"). Mirrors
@@ -66,12 +67,14 @@ interface NodeMeshProps {
   delay: number;
   phaseClock: MutableRefObject<number>;
   sinking: boolean;
+  onHover?: (key: string | null) => void;
+  onPick?: (key: string) => void;
 }
 
 // Uniform scale around the node's own centre (unlike VisitRing's scale.y-pinned-to-floor slab, a
 // point marker has no "floor end" to pin). A verified fact is a filled holo node; an unverified one
 // is wire only — the same truth-first law as a cost-less visit slab.
-function NodeMesh({ node, hovered, reduced, delay, phaseClock, sinking }: NodeMeshProps) {
+function NodeMesh({ node, hovered, reduced, delay, phaseClock, sinking, onHover, onPick }: NodeMeshProps) {
   const group = useRef<Group>(null);
   const last = useRef(-1);
 
@@ -96,12 +99,27 @@ function NodeMesh({ node, hovered, reduced, delay, phaseClock, sinking }: NodeMe
   });
 
   const edgeColor = hovered ? OPERATOR_HEX : HOLO_CYAN;
+  const pick = usePickHandlers(node.key, onHover, onPick);
 
   return (
-    <group ref={group} position={node.position} scale={[t0, t0, t0]} visible={t0 > 0.0005}>
-      {fill && (
+    <group
+      ref={group}
+      position={node.position}
+      scale={[t0, t0, t0]}
+      visible={t0 > 0.0005}
+      onPointerOver={pick.onPointerOver}
+      onPointerOut={pick.onPointerOut}
+      onClick={pick.onClick}
+    >
+      {fill ? (
         <mesh geometry={nodeGeometry}>
           <primitive object={fill.material} attach="material" />
+        </mesh>
+      ) : (
+        // An unverified fact has no fill, so the wire alone is what would be hit — hard to raycast.
+        // Same geometry, invisible (opacity 0), so a wire body picks exactly like a filled one.
+        <mesh geometry={nodeGeometry}>
+          <meshBasicMaterial transparent opacity={0} depthWrite={false} />
         </mesh>
       )}
       <lineSegments geometry={nodeEdgesGeometry}>
@@ -155,11 +173,15 @@ export interface FactConstellationProps {
   /** Caller keeps FactConstellation mounted through this and unmounts on `onSunk`. */
   sinking?: boolean;
   onSunk?: () => void;
+  /** A node hovered/unhovered (§ "Picking — the body points back"). Absent → no hover wiring back to the fiche. */
+  onHover?: (key: string | null) => void;
+  /** A node clicked — scrolls the matching fiche row into view. Absent → no pick wiring. */
+  onPick?: (key: string) => void;
 }
 
 // Owns a single phase clock so a node mounting mid-fan joins the current instant instead of replaying
 // from 0 (mirrors VisitRing's rationale).
-export function FactConstellation({ nodes, hovered, reduced, sinking = false, onSunk }: FactConstellationProps) {
+export function FactConstellation({ nodes, hovered, reduced, sinking = false, onSunk, onHover, onPick }: FactConstellationProps) {
   const phaseClock = useRef(0);
   const phaseStartWall = useRef<number | null>(null);
   const wasSinking = useRef(sinking);
@@ -199,6 +221,8 @@ export function FactConstellation({ nodes, hovered, reduced, sinking = false, on
           delay={delays.get(node.key) ?? 0}
           phaseClock={phaseClock}
           sinking={sinking}
+          onHover={onHover}
+          onPick={onPick}
         />
       ))}
       {leaders.map((node) => (

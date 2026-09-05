@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import './historylog.css';
 import { formatEuros, formatDate, formatReading } from '../format';
@@ -28,6 +28,7 @@ export function HistoryLog({
   records,
   reduced = false,
   onHoverRecord,
+  focusKey = null,
 }: {
   open: boolean;
   onClose: () => void;
@@ -35,15 +36,25 @@ export function HistoryLog({
   reduced?: boolean;
   /** Absent → no ring wired to this ledger (the fixture playground). */
   onHoverRecord?: (id: string | null) => void;
+  /** A visit slab picked on the stage — that row scrolls into view and wears the hover hairline for as
+   * long as the pick stands (§ "Picking — the body points back"). Absent/null → no row is picked. */
+  focusKey?: string | null;
 }) {
   const [locale] = useLocale();
   const t = useT();
+  const entriesRef = useRef<HTMLOListElement>(null);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!focusKey) return;
+    const el = entriesRef.current?.querySelector<HTMLElement>(`[data-key="${CSS.escape(focusKey)}"]`);
+    el?.scrollIntoView({ block: 'center', behavior: reduced ? 'auto' : 'smooth' });
+  }, [focusKey, reduced]);
 
   if (!open) return null;
   const visits = sortedRecords(records);
@@ -69,13 +80,15 @@ export function HistoryLog({
         {visits.length === 0 ? (
           <p className="at-hlog-empty">{t.misc.noServiceLogged}</p>
         ) : (
-          <ol className="at-hlog-entries">
+          <ol className="at-hlog-entries" ref={entriesRef}>
             {visits.map((record, i) => {
               const cost = effectiveCost(record);
               return (
                 <li
                   key={record.id}
                   className="at-hlog-entry"
+                  data-key={record.id}
+                  data-picked={focusKey === record.id ? 'true' : undefined}
                   style={reduced ? undefined : { animationDelay: `${Math.min(i, 8) * 45}ms` }}
                   tabIndex={onHoverRecord ? 0 : undefined}
                   onMouseEnter={onHoverRecord ? () => onHoverRecord(record.id) : undefined}

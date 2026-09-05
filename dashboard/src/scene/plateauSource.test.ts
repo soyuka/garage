@@ -26,4 +26,12 @@ describe('Plateau source', () => {
   it('mounts the fluid volumes alongside the ring and the constellation, in the same car group (§ Stations)', () => {
     expect(source).toContain('<FluidVolumes');
   });
+  it('forwards the six picking props to every station (§ "Picking — the body points back")', () => {
+    expect(source).toContain('onHoverVisit');
+    expect(source).toContain('onPickVisit');
+    expect(source).toContain('onHoverFact');
+    expect(source).toContain('onPickFact');
+    expect(source).toContain('onHoverFluid');
+    expect(source).toContain('onPickFluid');
+  });
 });

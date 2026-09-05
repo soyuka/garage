@@ -506,6 +506,13 @@ export const fr = {
     unitLabel: 'Unité (optionnelle)',
     add: 'Ajouter',
     unplaced: 'sans emplacement',
+    region: {
+      hood: 'Capot',
+      windshield: 'Pare-brise',
+      bay: 'Baie moteur',
+      frontAxle: 'Train avant',
+      rearAxle: 'Train arrière',
+    },
   },
 
   usage: {

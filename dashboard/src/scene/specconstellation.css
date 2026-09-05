@@ -71,6 +71,12 @@
   border-radius: 9px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5);
   animation: at-etchin var(--at-dur-fan) var(--at-ease-sine) both;
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine);
+}
+/* the body points back (§ "Picking — the body points back"): a picked cylinder/node scrolls its card
+   into view and the card wears the same operator-hue hairline the legend rows wear on hover. */
+.at-spec-node[data-picked] {
+  border-color: var(--at-orange);
 }
 
 .at-spec-label {

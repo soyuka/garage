@@ -476,6 +476,13 @@ export const en: Messages = {
     unitLabel: 'Unit (optional)',
     add: 'Add',
     unplaced: 'no location',
+    region: {
+      hood: 'Hood',
+      windshield: 'Windshield',
+      bay: 'Engine bay',
+      frontAxle: 'Front axle',
+      rearAxle: 'Rear axle',
+    },
   },
 
   usage: {
