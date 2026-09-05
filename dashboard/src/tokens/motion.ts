@@ -17,7 +17,8 @@ export const MOTION = {
   tint: 140,
   /** a surface swaps: dims, slides, cross-fades in place */
   swap: 240,
-  /** a surface arrives: a sheet, a popup card, a projection panel */
+  /** a surface arrives: a sheet, a popup card, a projection panel; also one visit slab's rise/sink
+   *  (twin of VisitRing's RISE_SECONDS) */
   rise: 280,
   /** a line etches: narration, a CTA rising from the cradle */
   etch: 360,
@@ -25,7 +26,8 @@ export const MOTION = {
   fan: 480,
   /** the done filament cross-fades to its result colour */
   filament: 600,
-  /** the domain data cascade — health bars, cardinals, hotspots (CHOREOGRAPHY "data cascade") */
+  /** the domain data cascade — health bars, cardinals, hotspots (CHOREOGRAPHY "data cascade"); also the
+   *  visit ring's stagger window (twin of visitRing's CASCADE_SECONDS) */
   cascade: 800,
   /** the earned-camera dolly to a body region (twin of cameraRig.DOLLY_SECONDS) */
   dolly: 900,

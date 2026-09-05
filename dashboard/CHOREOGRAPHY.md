@@ -487,6 +487,36 @@ same day:** the part-mesh decision is taken — § "The reveal", "Corrected 2026
 meshes". GENERIC meshes of a part's kind, drawn through this same blueprint pass; vehicle-specific
 meshes (`engine-v6.glb`) stay refused for the reason the reveal section gives.
 
+## Stations — data given a body (added 2026-09-05)
+
+A **station** is what a surface does to the *scene*, not to the DOM. Until now every surface opened as a
+panel over the same shot; the stage only changed for the reveal. The direction settled 2026-09-04
+(`docs/design-inspiration.md` § 7, § "The hologram is the light") rejects props and a detailed hero car:
+the only matter allowed on the disc is **data**. So a station gives one dataset a body on the disc,
+projected in the hologram hue, and the DOM panel becomes its legend rather than its replacement. Binding
+for every station:
+
+- **truth first** — an unknown value has an unknown body (wire only), never a zero-sized or invented one;
+- **one hue** — stations are part of the hologram (`HOLO_CYAN` fill + edges); the operator hue marks the
+  one item the operator is pointing at, nothing else;
+- **no in-canvas text** — the scene has no font asset; dates, amounts and labels stay in the DOM legend,
+  the body carries shape, order and size;
+- **the panel must not cover the station** — a station under a centred scrim is theatre nobody sees.
+
+### History — the visit ring (2026-09-05)
+
+**Correction, dated 2026-09-05:** the Carnet was a *centred glass popup, deliberately NOT a side drawer*
+(`historylog.css` header comment). That held while the scene had nothing to say about history. With the
+ring on the disc the popup would hide the very thing it describes, so the Carnet becomes a **right-docked
+glass column** (same content, same glass, same z-order, no scrim over the scene). The shopping list
+(`focusView {panel:'parts'}`, above) keeps its centred surface — it has no station.
+
+| Real frame / condition | Atelier motion | Owner layer |
+| --- | --- | --- |
+| Historique opens (`historyOpen` true) | **the visit ring rises.** One slab per visit stands on the disc on the outer echo-ring radius, upright, tangent to the ring, ordered by `performedAt` clockwise — oldest at the far end of the arc, newest nearest the camera. The arc is centred on the camera's home azimuth and spans at most ~200° so no visit hides behind the car; angular step shrinks with the count (≤ 14°). **Height is the visit's effective cost** (bill, else the parts-sum estimate — the same figure the Carnet prints), normalised to the dearest visit; a visit **without any cost is wire only** at the floor height — unknown is not zero. Slabs rise from the disc over `--at-dur-rise` each, staggered across `--at-dur-cascade` in total; the camera dollies (`--at-dur-dolly`) to a higher, wider pose that frames ring and car in the left part of the viewport, the Carnet column on the right. Reduced motion: slabs appear, camera cuts | `Plateau.tsx` (`VisitRing`) + `visitRing.ts` + `cameraRig.ts` |
+| a Carnet entry is hovered or focused | its slab takes the **operator hue** edge; every other slab stays cyan. The ring points at what the operator reads, nothing more | `HistoryLog` → `SceneView` → `Plateau` |
+| Historique closes | slabs sink over `--at-dur-rise` (reverse, no stagger), camera released as after a reveal | same |
+
 ## Domain frames (collection topic)
 
 | Frame | Atelier motion | Owner layer |

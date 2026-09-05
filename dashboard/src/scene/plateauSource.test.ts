@@ -16,4 +16,8 @@ describe('Plateau source', () => {
     expect(source).toContain('<Vignette');
     expect(source.indexOf('<Bloom')).toBeLessThan(source.indexOf('<Vignette'));
   });
+  it('mounts the visit ring after the reveal assembly, in the same car group (§ Stations)', () => {
+    expect(source).toContain('<VisitRing');
+    expect(source.indexOf('<Assembly')).toBeLessThan(source.indexOf('<VisitRing'));
+  });
 });

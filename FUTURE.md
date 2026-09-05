@@ -412,3 +412,10 @@ stamp and there is no wall clock to print. `whenLabel()` moved out of `AmbientIn
 makes staleness readable, it does not prevent it.
 
 - 2026-09-04 (3D stage lane): the hero composer logs `GL_INVALID_OPERATION: glBlitFramebuffer: Read and write depth stencil attachments cannot be the same image` ×256 then silences itself — pre-existing (reproduced with the Vignette pass removed; `<Canvas shadows>` + EffectComposer `multisampling={0}` on r169 / postprocessing 6.39). Harmless on screen; find the blit and either drop `shadows` (nothing casts) or give the composer its own depth target.
+
+### Stations
+
+- History ring (2026-09-05): the car does not yet rescale to make room for the ring + the right-docked
+  Carnet — both share the left ~60% of the viewport as-is, untested against a very long car (utilitaire).
+- History ring: slab picking (click a slab → scroll the Carnet to that entry, the reverse of the existing
+  hover→highlight) is not built.

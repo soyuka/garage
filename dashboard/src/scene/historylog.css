@@ -1,15 +1,23 @@
-/* Le Carnet — a centered glass popup (garage-log idiom), NOT a side drawer. Ledger/timeline: full-width
-   hairline separators between visits, mono for dates/readings/cost, tabular-nums throughout. No cyan
-   (rationed to Le Noyau); no side-stripe accents. z-index mirrors the facts drawer (scrim 60 / card 61). */
+/* Le Carnet. Ledger/timeline: full-width hairline separators between visits, mono for dates/readings/
+   cost, tabular-nums throughout. No cyan (rationed to Le Noyau); no side-stripe accents. z-index mirrors
+   the facts drawer (scrim 60 / card 61).
+
+   Correction, 2026-09-05 (CHOREOGRAPHY § "History — the visit ring"): this was a CENTERED glass popup,
+   deliberately not a side drawer — that held while the scene had nothing to say about history. The visit
+   ring now rises on the disc behind this panel, so a centred popup would hide the very station it
+   describes. The Carnet becomes a right-docked glass column instead: same content, same glass, same
+   z-order, but no scrim over the scene (the ring must stay visible) and the card docks to the right edge
+   so the ring + car read in the left ~60% of the stage. */
 
 .at-hlog-overlay {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(0, 0, 0, 0.45);
+  /* no scrim — the station behind this panel must stay visible (§ "the panel must not cover the station") */
+  background: transparent;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-end;
   padding: var(--at-space-5);
   animation: at-hlog-scrim var(--at-dur-swap) var(--at-ease-sine) both;
 }
@@ -17,8 +25,9 @@
 .at-hlog {
   position: relative;
   z-index: 61;
-  width: min(640px, 92vw);
-  max-height: 80vh;
+  width: min(460px, 40vw);
+  height: calc(100% - 2 * var(--at-space-5));
+  max-height: none;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -34,6 +43,7 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   font-family: var(--at-font-ui);
   color: var(--at-text);
+  /* a docked column arrives from its own edge, not a centred pop (the popup's old scale-in) */
   animation: at-hlog-card var(--at-dur-rise) var(--at-ease-sine) both;
 }
 
@@ -91,8 +101,14 @@
   padding: var(--at-space-4) 0;
   border-bottom: 1px solid var(--at-hairline);
   animation: at-hlog-etchin var(--at-dur-etch) var(--at-ease-sine) both;
+  outline: none;
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine);
 }
 .at-hlog-entry:last-child { border-bottom: none; }
+.at-hlog-entry:hover,
+.at-hlog-entry:focus-visible {
+  border-bottom-color: var(--at-orange);
+}
 
 .at-hlog-entry-head {
   display: flex;
@@ -168,8 +184,8 @@
   to { opacity: 1; }
 }
 @keyframes at-hlog-card {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 @keyframes at-hlog-etchin {
   from { opacity: 0; transform: translateY(6px); }

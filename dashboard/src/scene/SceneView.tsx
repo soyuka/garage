@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
@@ -27,10 +27,11 @@ import { ShoppingListOverlay } from './ShoppingList';
 import { buildWorklist } from './worklist';
 import { manifestFromCta } from './parts';
 import { rollupCarnet } from '../carnet';
-import { holdIntent, type CameraFocus } from './cameraRig';
+import { deriveCameraFocus, holdIntent, type CameraFocus } from './cameraRig';
 import type { BodyRegion } from './anchors';
 import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
+import { visitRingLayout } from './visitRing';
 import type { Focus } from '../focus';
 import type { ForecastDue, Iri, MaintenanceRecord, PlannedPart, VehicleBundle } from '../types';
 
@@ -217,6 +218,25 @@ export function SceneView({
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOwnsEscape, focusOpen, onDismissFocus, cameraFocus, onCameraRelease]);
+
+  // `records` rarely changes while the ring holds, so this is cheap to recompute on every render.
+  const visits = useMemo(() => (historyOpen ? visitRingLayout(records) : null), [historyOpen, records]);
+  const [hoveredVisit, setHoveredVisit] = useState<string | null>(null);
+  useEffect(() => {
+    if (!historyOpen) setHoveredVisit(null);
+  }, [historyOpen]);
+  // A drag breaking the hold (Plateau's onCameraRelease) must not re-dolly to the history pose on release
+  // — tracked separately from historyOpen so the Carnet itself can stay open with the camera set free.
+  const [historyHoldReleased, setHistoryHoldReleased] = useState(false);
+  useEffect(() => {
+    if (historyOpen) setHistoryHoldReleased(false);
+  }, [historyOpen]);
+  const onPlateauCameraRelease = useCallback(() => {
+    onCameraRelease?.();
+    setHistoryHoldReleased(true);
+  }, [onCameraRelease]);
+  const plateauCameraFocus = deriveCameraFocus(cameraFocus, historyOpen, historyHoldReleased);
+
   const focusKeys = focus?.keys;
   // The constellation is a PROJECTED surface only: it exists when the agent (or a chip) answers a spec
   // question, and not otherwise. It used to double as a resting shelf of operator-pinned facts, which
@@ -343,9 +363,11 @@ export function SceneView({
               scanning={noyau.phase === 'working'}
               agent={agentLightOf(noyau)}
               pulseRegion={pulseRegion}
-              cameraFocus={cameraFocus}
+              cameraFocus={plateauCameraFocus}
               reveal={reveal}
-              onCameraRelease={onCameraRelease}
+              visits={visits}
+              hoveredVisit={hoveredVisit}
+              onCameraRelease={onPlateauCameraRelease}
             />
           </div>
           {/* D1 "vue libre": while the view is dollied to a region, one click (or Escape) eases back to the
@@ -526,7 +548,13 @@ export function SceneView({
         />
       )}
 
-      <HistoryLog open={historyOpen} onClose={onCloseHistory ?? (() => {})} records={records} reduced={reduced} />
+      <HistoryLog
+        open={historyOpen}
+        onClose={onCloseHistory ?? (() => {})}
+        records={records}
+        reduced={reduced}
+        onHoverRecord={setHoveredVisit}
+      />
     </>
   );
 }

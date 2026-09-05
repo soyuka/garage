@@ -29,6 +29,8 @@ import {
   type GateState,
 } from './cameraRig';
 import { SilhouetteCar } from './SilhouetteCar';
+import { VisitRing } from './VisitRing';
+import type { VisitSlab } from './visitRing';
 import './scene.css';
 
 // The minimal imperative surface of the default OrbitControls (registered via makeDefault → r3f
@@ -244,6 +246,8 @@ function Plateau3D({
   pulseRegion,
   cameraFocus,
   reveal,
+  visits,
+  hoveredVisit,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -254,9 +258,19 @@ function Plateau3D({
   pulseRegion: PulseRegion | null;
   cameraFocus: CameraFocus | null;
   reveal: RevealState | null;
+  visits: VisitSlab[] | null;
+  hoveredVisit: string | null;
   onCameraRelease: () => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
+  // Unlike the reveal (unmount IS the dismiss), the ring sinks before it unmounts: keep it mounted a beat
+  // after `visits` goes null, frozen on the last layout, until the ring itself reports the reverse settled.
+  const [ringMounted, setRingMounted] = useState(visits != null);
+  const lastVisits = useRef<VisitSlab[]>(visits ?? []);
+  if (visits) lastVisits.current = visits;
+  if (visits != null && !ringMounted) setRingMounted(true);
+  const sinkingRing = visits == null && ringMounted;
+  const onRingSunk = useCallback(() => setRingMounted(false), []);
   // C1↔C3: the shell's ghost depth is the fraction of the diagram that has arrived, so the dissolve is
   // paced by the reveal's own parts. Kept in a ref-backed state that only changes on a landed-count
   // change (Assembly reports edge-triggered), so a settled reveal re-renders nothing.
@@ -291,6 +305,9 @@ function Plateau3D({
           )}
           {/* on-car sick-region orbs removed — health now reads on the segmented base ring + the échéance
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
+          {ringMounted && (
+            <VisitRing slabs={visits ?? lastVisits.current} hovered={hoveredVisit} reduced={reduced} sinking={sinkingRing} onSunk={onRingSunk} />
+          )}
         </group>
         <Turntable status={vehicle.health?.status ?? 'unknown'} due={due} reduced={reduced} />
         <AgentLightRig agent={agent} reduced={reduced} />
@@ -335,6 +352,8 @@ function PlateauImpl({
   pulseRegion = null,
   cameraFocus = null,
   reveal = null,
+  visits = null,
+  hoveredVisit = null,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -350,6 +369,10 @@ function PlateauImpl({
   cameraFocus?: CameraFocus | null;
   /** C1–C4 reveal: the region's schematic assembly to raise under a ghosted shell. Absent → no reveal. */
   reveal?: RevealState | null;
+  /** The visit ring's slabs (§ "History — the visit ring") — non-null raises the ring. Absent → no ring. */
+  visits?: VisitSlab[] | null;
+  /** The Carnet entry hovered/focused in the DOM — that slab's edges take the operator hue. */
+  hoveredVisit?: string | null;
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
@@ -379,6 +402,8 @@ function PlateauImpl({
         pulseRegion={pulseRegion}
         cameraFocus={cameraFocus}
         reveal={reveal}
+        visits={visits}
+        hoveredVisit={hoveredVisit}
         onCameraRelease={onCameraRelease ?? (() => {})}
       />
     </div>

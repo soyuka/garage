@@ -22,9 +22,10 @@ export interface CameraPose {
 }
 
 /** A held camera focus. `key` re-triggers a dolly even for a repeat region (mirrors PulseRegion).
- * `mode` picks the pose family — absent means `focus`, so a reveal is a hold like any other. */
+ * `mode` picks the pose family — absent means `focus`, so a reveal is a hold like any other. `region`
+ * is absent only for `mode:'history'` — the visit ring is not anchored to a body region. */
 export interface CameraFocus {
-  region: BodyRegion;
+  region?: BodyRegion;
   key: number;
   mode?: FocusMode;
 }
@@ -101,8 +102,9 @@ export const REVEAL_VIEWS: Record<BodyRegion, RegionView> = {
   rearAxle: { azimuth: -0.36, polar: Math.PI * 0.32, factor: 0.66 },
 };
 
-/** Which pose family a hold uses. `reveal` is the cutaway (C1–C4); everything else is `focus`. */
-export type FocusMode = 'focus' | 'reveal';
+/** Which pose family a hold uses. `reveal` is the cutaway (C1–C4); `history` is the visit-ring pose
+ * (§ "History — the visit ring"); everything else is `focus`. */
+export type FocusMode = 'focus' | 'reveal' | 'history';
 
 /** Dolly duration — matches the ~900ms sine ease the spec calls for. */
 export const DOLLY_SECONDS = 0.9;
@@ -151,10 +153,38 @@ export function derivePreset(anchor: Vec3, view: RegionView, home: CameraPose = 
   };
 }
 
-/** The camera preset for a region on a body class, in the given pose family. */
-export function presetForFocus(bodyClass: BodyClass, region: BodyRegion, mode: FocusMode = 'focus'): CameraPose {
-  const anchor: Anchor = regionAnchors(bodyClass)[region];
-  return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region]);
+// The target shift is computed from the home azimuth's own right vector rather than an eyeballed
+// screen-space nudge, so it stays correct if HOME ever moves.
+export const HISTORY_VIEW = {
+  polar: Math.PI * 0.3,
+  distanceFactor: 1.35,
+  targetY: 0.3,
+  rightShift: 1.2,
+} as const;
+
+/** The history-ring camera pose, derived from `home`. Same azimuth as home, raised polar, pulled back,
+ * target shifted along the view's right vector (see {@link HISTORY_VIEW}). */
+export function historyPose(home: CameraPose = HOME): CameraPose {
+  const homeOffset: Vec3 = [home.position[0] - home.target[0], home.position[1] - home.target[1], home.position[2] - home.target[2]];
+  const { radius, azimuth } = toSpherical(homeOffset);
+  const polar = clampPolar(HISTORY_VIEW.polar);
+  const offset = fromSpherical(radius * HISTORY_VIEW.distanceFactor, polar, azimuth);
+  // Shifting the target along the camera's rightward ground-plane vector pushes the (fixed,
+  // origin-centred) car left of screen-centre.
+  const right: Vec3 = [Math.cos(azimuth), 0, -Math.sin(azimuth)];
+  const target: Vec3 = [right[0] * HISTORY_VIEW.rightShift, HISTORY_VIEW.targetY, right[2] * HISTORY_VIEW.rightShift];
+  return {
+    position: [target[0] + offset[0], target[1] + offset[1], target[2] + offset[2]],
+    target,
+  };
+}
+
+/** The camera preset for a region on a body class, in the given pose family. `history` ignores
+ * `bodyClass`/`region` — the ring is not anchored to a part of the car. */
+export function presetForFocus(bodyClass: BodyClass, region: BodyRegion | undefined, mode: FocusMode = 'focus'): CameraPose {
+  if (mode === 'history') return historyPose();
+  const anchor: Anchor = regionAnchors(bodyClass)[region as BodyRegion];
+  return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region as BodyRegion]);
 }
 
 /** The plain focus preset — what every non-reveal call site means. */
@@ -207,4 +237,14 @@ export function holdIntent(held: CameraFocus | null, region: BodyRegion): 'hold'
 /** True when a starting drag interrupts an active or pending hold — the parent must then clear cameraFocus. */
 export function dragBreaksHold(state: GateState): boolean {
   return state.held != null || state.queued != null;
+}
+
+/** What Plateau's `cameraFocus` should be: an explicit hold always wins; otherwise the history pose while
+ * Historique is open, unless a drag already released it (`historyHoldReleased`). */
+export function deriveCameraFocus(
+  cameraFocus: CameraFocus | null,
+  historyOpen: boolean,
+  historyHoldReleased: boolean,
+): CameraFocus | null {
+  return cameraFocus ?? (historyOpen && !historyHoldReleased ? { key: 0, mode: 'history' } : null);
 }

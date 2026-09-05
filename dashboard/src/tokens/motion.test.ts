@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { DOLLY_SECONDS } from '../scene/cameraRig';
 import { FLICKER_SECONDS, PULSE_DURATION } from '../scene/holo';
 import { FILAMENT_SECONDS } from '../scene/agentLight';
+import { RISE_SECONDS, CASCADE_SECONDS } from '../scene/VisitRing';
 import atelier from './atelier.css?raw';
 import { MOTION } from './motion';
 
@@ -30,6 +31,8 @@ describe('the motion scale', () => {
     expect(PULSE_DURATION * 1000).toBe(MOTION.pulse);
     expect(FILAMENT_SECONDS * 1000).toBe(MOTION.filament);
     expect(FLICKER_SECONDS * 1000).toBe(MOTION.etch);
+    expect(RISE_SECONDS * 1000).toBe(MOTION.rise);
+    expect(CASCADE_SECONDS * 1000).toBe(MOTION.cascade);
   });
 
   it('preserves Le Noyau’s ~4s sleeping-Mac breathe as the signature period', () => {

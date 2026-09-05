@@ -20,6 +20,7 @@ import {
   POLAR,
   REGION_VIEWS,
   REVEAL_VIEWS,
+  HISTORY_VIEW,
   DOLLY_RADIUS_FACTOR,
   clampPolar,
   sineEaseInOut,
@@ -28,8 +29,10 @@ import {
   derivePreset,
   presetForRegion,
   presetForFocus,
+  historyPose,
   gateReduce,
   dragBreaksHold,
+  deriveCameraFocus,
   GATE_INIT,
   type Vec3,
   type GateState,
@@ -214,6 +217,58 @@ describe('presetForFocus — the reveal pose family', () => {
 
   it('presetForRegion is the focus mode (the existing call sites keep their meaning)', () => {
     expect(presetForRegion('suv', 'hood')).toEqual(presetForFocus('suv', 'hood', 'focus'));
+  });
+});
+
+describe('historyPose — the visit-ring station camera', () => {
+  const homeRadius = dist(HOME.position, HOME.target);
+  const homeAz = toSpherical([HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]]).azimuth;
+  const pose = historyPose();
+
+  it('pulls back to distanceFactor × the home radius', () => {
+    expect(framing(pose).radius).toBeCloseTo(homeRadius * HISTORY_VIEW.distanceFactor);
+  });
+
+  it('keeps the raised polar within the OrbitControls band', () => {
+    const { polar } = framing(pose);
+    expect(polar).toBeGreaterThanOrEqual(POLAR.min);
+    expect(polar).toBeLessThanOrEqual(POLAR.max);
+  });
+
+  it('keeps the same azimuth as home — the ring does not swing around the car', () => {
+    expect(framing(pose).azimuth).toBeCloseTo(homeAz);
+  });
+
+  it('shifts the target along the RIGHT vector so the car lands left of centre (Carnet docks right)', () => {
+    const right: Vec3 = [Math.cos(homeAz), 0, -Math.sin(homeAz)];
+    const dot = pose.target[0] * right[0] + pose.target[2] * right[2];
+    expect(dot).toBeCloseTo(HISTORY_VIEW.rightShift);
+  });
+
+  it('is presetForFocus’s history mode', () => {
+    expect(presetForFocus('berline', undefined, 'history')).toEqual(historyPose());
+  });
+});
+
+describe('deriveCameraFocus — a drag releases the history hold', () => {
+  const held = { region: 'hood' as const, key: 1 };
+
+  it('an explicit hold always wins over history', () => {
+    expect(deriveCameraFocus(held, true, false)).toEqual(held);
+    expect(deriveCameraFocus(held, true, true)).toEqual(held);
+  });
+
+  it('Historique open with nothing else held earns the history pose', () => {
+    expect(deriveCameraFocus(null, true, false)).toEqual({ key: 0, mode: 'history' });
+  });
+
+  it('a drag that already released the hold keeps the camera free while Historique stays open', () => {
+    expect(deriveCameraFocus(null, true, true)).toBeNull();
+  });
+
+  it('closed Historique is free regardless of the released flag', () => {
+    expect(deriveCameraFocus(null, false, false)).toBeNull();
+    expect(deriveCameraFocus(null, false, true)).toBeNull();
   });
 });
 

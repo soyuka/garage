@@ -27,11 +27,14 @@ export function HistoryLog({
   onClose,
   records,
   reduced = false,
+  onHoverRecord,
 }: {
   open: boolean;
   onClose: () => void;
   records: MaintenanceRecord[];
   reduced?: boolean;
+  /** Absent → no ring wired to this ledger (the fixture playground). */
+  onHoverRecord?: (id: string | null) => void;
 }) {
   const [locale] = useLocale();
   const t = useT();
@@ -74,6 +77,11 @@ export function HistoryLog({
                   key={record.id}
                   className="at-hlog-entry"
                   style={reduced ? undefined : { animationDelay: `${Math.min(i, 8) * 45}ms` }}
+                  tabIndex={onHoverRecord ? 0 : undefined}
+                  onMouseEnter={onHoverRecord ? () => onHoverRecord(record.id) : undefined}
+                  onMouseLeave={onHoverRecord ? () => onHoverRecord(null) : undefined}
+                  onFocus={onHoverRecord ? () => onHoverRecord(record.id) : undefined}
+                  onBlur={onHoverRecord ? () => onHoverRecord(null) : undefined}
                 >
                   <div className="at-hlog-entry-head">
                     <span className="at-hlog-date">{formatDate(record.performedAt, locale)}</span>
