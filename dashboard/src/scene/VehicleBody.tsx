@@ -1,4 +1,4 @@
-import { Component, Suspense, type ReactNode } from 'react';
+import { Component, Suspense, useRef, type ReactNode } from 'react';
 import type { VehicleSummary } from '../types';
 import { CarProxy, type BodyClass } from './CarProxy';
 import { resolveMesh } from './vehicleMesh';
@@ -35,6 +35,7 @@ function ThumbThenFull({
   reduced,
   pulseRegion,
   ghostDepth,
+  riseAge,
 }: {
   spec: ReturnType<typeof resolveMesh>;
   paint: string;
@@ -42,13 +43,14 @@ function ThumbThenFull({
   reduced: boolean;
   pulseRegion: PulseRegion | null;
   ghostDepth: number;
+  riseAge: { current: number };
 }) {
   const thumbSpec = { ...spec, url: spec.thumbUrl };
   if (spec.thumbUrl === spec.url)
-    return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />;
+    return <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} riseAge={riseAge} />;
   return (
-    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />}>
-      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />
+    <Suspense fallback={<VehicleMesh spec={thumbSpec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} riseAge={riseAge} />}>
+      <VehicleMesh spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} riseAge={riseAge} />
     </Suspense>
   );
 }
@@ -73,11 +75,15 @@ export function VehicleBody({
 }) {
   const spec = resolveMesh(vehicle);
   const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
+  // The projector-boot clock (CHOREOGRAPHY § "One stage", row 2): owned HERE, not by VehicleMesh, so it
+  // survives the proxy→thumb→full swap below (this component is keyed on the vehicle id by its parent,
+  // Plateau — a mesh swap re-renders ThumbThenFull's children but never remounts VehicleBody itself).
+  const riseAge = useRef(0);
   // key on the resolved url so switching to a different mesh resets a previously-failed boundary.
   return (
     <MeshErrorBoundary key={spec.url} fallback={proxy}>
       <Suspense fallback={proxy}>
-        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} />
+        <ThumbThenFull spec={spec} paint={paint} scanning={scanning} reduced={reduced} pulseRegion={pulseRegion} ghostDepth={ghostDepth} riseAge={riseAge} />
       </Suspense>
     </MeshErrorBoundary>
   );

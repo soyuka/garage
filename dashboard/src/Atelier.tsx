@@ -37,7 +37,8 @@ import { carteGriseNodes } from './siv';
 import { defaultUsageUnit } from './edit';
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from './router';
 import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from './useMercure';
-import { ParcLot } from './scene/ParcLot';
+import { ParcLot, type DepartureOrigin } from './scene/ParcLot';
+import { Departure } from './scene/Departure';
 import { SceneView, type QuickAction } from './scene/SceneView';
 import { Composer } from './scene/Composer';
 import { Noyau } from './noyau/Noyau';
@@ -130,6 +131,12 @@ export function Atelier() {
   // keeps it, so "vue libre", Escape, a drag or any other region clears it with no separate dismiss.
   const [reveal, setReveal] = useState<RevealState | null>(null);
   const cameraKey = useRef(0);
+  // The departure ghost (CHOREOGRAPHY § "One stage — the lot and the podium"): set by ParcLot's onSelect
+  // in the SAME handler that changes the hash (hard rule 1 — the hash never waits on the motion). Kept
+  // non-null for the duration of the ghost's flight; while it is set the parc landing keeps rendering
+  // (with its grid receding) even though `seg` already points at the hero, so the ghost has a page to
+  // fly over and the lot fades rather than hard-cutting away under it.
+  const [departure, setDeparture] = useState<DepartureOrigin | null>(null);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
@@ -919,9 +926,16 @@ export function Atelier() {
   }
 
   // ── Hero route (#/v/<seg>) ──────────────────────────────────────────────────
+  // NEVER gated on `departure` (hard rule 1 — motion overlaps an arrival, never gates one): the hero
+  // mounts, fetches its bundle and begins its own arrival the instant the hash changes. While the ghost
+  // is still in flight the lot it grew out of is echoed as a fixed overlay ABOVE this tree (see
+  // `DepartureEcho` below + the unified return at the bottom of this component) so the swap never
+  // hard-cuts under it; the ghost itself (`<Departure>`) is mounted once, at that same stable spot, so
+  // it is never remounted mid-flight by this branch swap.
+  let page: React.ReactNode;
   if (seg) {
     const vehicleMissing = !selectedIri && !loadingParc && vehicles.length > 0;
-    return (
+    page = (
       <div className="at-scene">
         <div className="at-scene-top">
           <a href="#/" className="at-scene-back">{t.atelier.backToParc}</a>
@@ -1008,56 +1022,107 @@ export function Atelier() {
         )}
       </div>
     );
+  } else {
+    // ── Parc landing (#/) ─────────────────────────────────────────────────────
+    // Carries its own agent console (CHOREOGRAPHY § "The agent is on the home screen too"): the opening
+    // greeting is dispatched into `state.narration` regardless of route (the effect above fires on
+    // `seg === null`) and useVoice already speaks it — this route just PRINTS it, which is the fix for
+    // the audio-only violation. The heading IS the live narration line (greeting → turn steps → the
+    // answer), so the printed and spoken forms are always the exact same string. `send` is the identical
+    // path the hero composer posts through — no vehicle selected just omits `selectedId`/`summary`
+    // (agent.ts `TurnContext` already treats both as optional), and the agent's own `select_vehicle`
+    // drives the hash forward into the hero the same way a lot click does (`applyRender`).
+    page = (
+      <div className="at-parc-page">
+        <div className="at-parc-page-top">
+          <span style={{ flex: 1 }} />
+          <Identity onJournal={() => setJournalOpen(true)} audition={audition} onToggleAudition={toggleAudition} />
+        </div>
+        <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
+        <div className="at-parc-console">
+          <h1 className="at-parc-greet" aria-live="polite">
+            {state.narration ?? t.greeting.none}
+          </h1>
+          <div className="at-scene-console">
+            <div className="at-scene-socket">
+              <Noyau state={state} reduced={reduced} onClearEmber={() => dispatch({ type: 'clearEmber' })} />
+            </div>
+            <Composer
+              onComposerFocus={(active) => dispatch({ type: 'typing', active })}
+              onSubmit={send}
+              composerExtras={
+                busy(state) && state.driver !== 'pilot' ? (
+                  <button
+                    type="button"
+                    className="at-scene-sim"
+                    title={t.atelier.cancelTurn}
+                    aria-label={t.atelier.cancelTurn}
+                    onClick={() => void cancelTurn(sessionId).catch(() => undefined)}
+                  >
+                    ✕
+                  </button>
+                ) : undefined
+              }
+            />
+          </div>
+        </div>
+        {loadingParc ? (
+          <p className="at-parc-empty">{t.atelier.loadingParc}</p>
+        ) : (
+          <ParcLot
+            vehicles={vehicles}
+            reduced={reduced}
+            receding={departure !== null}
+            onSelect={(iri, origin) => {
+              // Both in the SAME handler, before any await or timeout (hard rule 1): the hash never
+              // waits on the ghost. Reduced motion skips the ghost outright — no ghost, no recede, just
+              // the cut.
+              if (!reduced) setDeparture(origin);
+              window.location.hash = hashForVehicle(iri);
+            }}
+            onAddVehicle={onAddVehicle}
+          />
+        )}
+      </div>
+    );
   }
 
-  // ── Parc landing (#/) ───────────────────────────────────────────────────────
-  // Carries its own agent console (CHOREOGRAPHY § "The agent is on the home screen too"): the opening
-  // greeting is dispatched into `state.narration` regardless of route (the effect above fires on
-  // `seg === null`) and useVoice already speaks it — this route just PRINTS it, which is the fix for
-  // the audio-only violation. The heading IS the live narration line (greeting → turn steps → the
-  // answer), so the printed and spoken forms are always the exact same string. `send` is the identical
-  // path the hero composer posts through — no vehicle selected just omits `selectedId`/`summary`
-  // (agent.ts `TurnContext` already treats both as optional), and the agent's own `select_vehicle`
-  // drives the hash forward into the hero the same way a lot click does (`applyRender`).
+  // `<Departure>` (the ghost) is mounted ONCE, here, at a tree position that is stable across the
+  // seg flip above — the hero and parc branches are two unrelated root elements, so a `<Departure>`
+  // living inside either one would be torn down and remounted the instant the hash flips mid-flight,
+  // restarting its drive from scratch. `DepartureEcho` is the lot's grid, echoed as a fixed overlay
+  // ABOVE the hero (and only ever while the hero is what's showing — the parc route already shows the
+  // real, still-mounted grid receding in place) so the swap from lot to car never hard-cuts under the
+  // still-flying ghost.
   return (
-    <div className="at-parc-page">
-      <div className="at-parc-page-top">
-        <span style={{ flex: 1 }} />
-        <Identity onJournal={() => setJournalOpen(true)} audition={audition} onToggleAudition={toggleAudition} />
-      </div>
-      <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
-      <div className="at-parc-console">
-        <h1 className="at-parc-greet" aria-live="polite">
-          {state.narration ?? t.greeting.none}
-        </h1>
-        <div className="at-scene-console">
-          <div className="at-scene-socket">
-            <Noyau state={state} reduced={reduced} onClearEmber={() => dispatch({ type: 'clearEmber' })} />
-          </div>
-          <Composer
-            onComposerFocus={(active) => dispatch({ type: 'typing', active })}
-            onSubmit={send}
-            composerExtras={
-              busy(state) && state.driver !== 'pilot' ? (
-                <button
-                  type="button"
-                  className="at-scene-sim"
-                  title={t.atelier.cancelTurn}
-                  aria-label={t.atelier.cancelTurn}
-                  onClick={() => void cancelTurn(sessionId).catch(() => undefined)}
-                >
-                  ✕
-                </button>
-              ) : undefined
-            }
-          />
-        </div>
-      </div>
-      {loadingParc ? (
-        <p className="at-parc-empty">{t.atelier.loadingParc}</p>
-      ) : (
-        <ParcLot vehicles={vehicles} reduced={reduced} onSelect={(iri) => (window.location.hash = hashForVehicle(iri))} onAddVehicle={onAddVehicle} />
-      )}
+    <>
+      {page}
+      {seg && departure && <DepartureEcho vehicles={vehicles} reduced={reduced} />}
+      <Departure origin={departure} reduced={reduced} onDone={() => setDeparture(null)} />
+    </>
+  );
+}
+
+/** The lot's grid, echoed as a fixed overlay above the hero while the departure ghost is mid-flight
+ *  (CHOREOGRAPHY § "One stage — the lot and the podium"). The hero mounts the instant the hash changes
+ *  (hard rule 1) — this is what keeps the grid the ghost grew out of on screen, receding underneath it,
+ *  instead of the hero hard-cutting in the moment the real parc route unmounts. Mounts at full opacity
+ *  (matching the last frame the real parc route painted) then flips ParcLot's own `receding` fade one
+ *  frame later — mounting straight into `data-receding` would pop the grid in already transparent, since
+ *  a CSS transition needs an already-rendered node to animate FROM (the same reason Departure.tsx defers
+ *  its own `driven` flip past the first frame). Purely decorative: no `onSelect`/`onAddVehicle` (nothing
+ *  here is clickable), `pointer-events: none` + `aria-hidden` in the CSS/markup below, and it never
+ *  re-runs an entrance cascade because ParcLot's cards don't have one — only this recede fade and the
+ *  hover lift, neither of which fires on mount. */
+function DepartureEcho({ vehicles, reduced }: { vehicles: VehicleSummary[]; reduced: boolean }) {
+  const [receding, setReceding] = useState(false);
+  useEffect(() => {
+    const raf = requestAnimationFrame(() => setReceding(true));
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return (
+    <div className="at-departure-echo" aria-hidden="true">
+      <ParcLot vehicles={vehicles} reduced={reduced} receding={receding} />
     </div>
   );
 }

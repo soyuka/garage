@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DOLLY_SECONDS } from '../scene/cameraRig';
-import { FLICKER_SECONDS, PULSE_DURATION } from '../scene/holo';
+import { FLICKER_SECONDS, PULSE_DURATION, RISE_IN_SECONDS } from '../scene/holo';
 import { FILAMENT_SECONDS } from '../scene/agentLight';
 import { RISE_SECONDS, CASCADE_SECONDS } from '../scene/VisitRing';
 import { ETCH_SECONDS, FAN_SECONDS } from '../scene/FactConstellation';
@@ -33,6 +33,7 @@ describe('the motion scale', () => {
     expect(PULSE_DURATION * 1000).toBe(MOTION.pulse);
     expect(FILAMENT_SECONDS * 1000).toBe(MOTION.filament);
     expect(FLICKER_SECONDS * 1000).toBe(MOTION.etch);
+    expect(RISE_IN_SECONDS * 1000).toBe(MOTION.cascade);
     expect(RISE_SECONDS * 1000).toBe(MOTION.rise);
     expect(CASCADE_SECONDS * 1000).toBe(MOTION.cascade);
     expect(ETCH_SECONDS * 1000).toBe(MOTION.etch);

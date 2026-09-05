@@ -4,7 +4,7 @@ import { useFrame } from '@react-three/fiber';
 import { buildBlueprint, type GhostControl, type PulseControl, type ScanControl } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
 import type { BodyRegion } from './anchors';
-import { FLICKER_SECONDS, PULSE_DURATION, flickerEnvelope, ghostStep, pulseEnvelope, regionAxisFraction } from './holo';
+import { FLICKER_SECONDS, PULSE_DURATION, RISE_IN_SECONDS, flickerEnvelope, ghostStep, pulseEnvelope, regionAxisFraction, riseEnvelope } from './holo';
 import type { HoloFillControl } from './holoFill';
 
 /** A one-shot region flare (PULSE verb): when `region`+`key` change, play the eased cyan envelope ONCE on
@@ -98,26 +98,36 @@ function GhostRunner({ ghost, depth, reduced }: { ghost: GhostControl; depth: nu
   return null;
 }
 
-// Drives the hologram fill: the scanline clock, and the ARRIVAL flicker — a per-scanline dropout decaying
+// Drives the hologram fill: the scanline clock, the ARRIVAL flicker — a per-scanline dropout decaying
 // over the etch step from the moment this mesh mounted (mount IS the arrival: VehicleBody keys on the
-// vehicle id, and ThumbThenFull mounts the thumb then the full glb, each an arrival that fires once). Age
+// vehicle id, and ThumbThenFull mounts the thumb then the full glb, each an arrival that fires once) —
+// and, when `riseAge` is supplied, the projector-boot RISE (uRise 0→1 over RISE_IN_SECONDS). Flicker age
 // runs on wall time in every mode so the window expires under reduced motion too — a later motion-on
-// toggle cannot replay it. Under reduced motion uTime is frozen (static scanlines) and the flicker never
-// fires (attention, not state).
-export function HoloRunner({ holo, reduced }: { holo: HoloFillControl; reduced: boolean }) {
+// toggle cannot replay it. Under reduced motion uTime is frozen (static scanlines), the flicker never
+// fires, and the rise (if driven) cuts straight to 1 (attention, not state — CHOREOGRAPHY row 2).
+//
+// `riseAge` is an OPTIONAL ref owned by the caller: VehicleBody creates one and keeps it across the
+// proxy→thumb→full swap (it is keyed on the vehicle id, not the mesh), so the rise survives a swap that
+// would otherwise restart it. Assembly's parts call HoloRunner with no `riseAge` and are unaffected —
+// they drive their own uRise for the C1 reveal.
+export function HoloRunner({ holo, reduced, riseAge }: { holo: HoloFillControl; reduced: boolean; riseAge?: { current: number } }) {
   const age = useRef(0);
   useFrame((state, delta) => {
-    age.current += Math.min(delta, 0.05);
+    const dt = Math.min(delta, 0.05);
+    age.current += dt;
+    if (riseAge) riseAge.current += dt;
     if (reduced) {
       if (holo.uniforms.uFlicker.value !== 0) holo.uniforms.uFlicker.value = 0;
+      if (riseAge && holo.uniforms.uRise.value !== 1) holo.uniforms.uRise.value = 1;
       return;
     }
     holo.uniforms.uTime.value = state.clock.elapsedTime;
     if (age.current >= FLICKER_SECONDS) {
       if (holo.uniforms.uFlicker.value !== 0) holo.uniforms.uFlicker.value = 0;
-      return;
+    } else {
+      holo.uniforms.uFlicker.value = flickerEnvelope(age.current);
     }
-    holo.uniforms.uFlicker.value = flickerEnvelope(age.current);
+    if (riseAge) holo.uniforms.uRise.value = riseEnvelope(riseAge.current, RISE_IN_SECONDS);
   });
   return null;
 }
@@ -129,6 +139,7 @@ export function VehicleMesh({
   reduced = false,
   pulseRegion = null,
   ghostDepth = 0,
+  riseAge,
 }: {
   spec: MeshSpec;
   paint: string;
@@ -137,6 +148,8 @@ export function VehicleMesh({
   pulseRegion?: PulseRegion | null;
   /** C1 reveal: 0 = the untouched blueprint, 1 = fill gone + edges at the floor. */
   ghostDepth?: number;
+  /** The projector-boot clock, owned by VehicleBody and kept across a mesh swap (see HoloRunner). */
+  riseAge?: { current: number };
 }) {
   const { scene } = useGLTF(spec.url);
   const built = useMemo(
@@ -152,7 +165,7 @@ export function VehicleMesh({
       <ScanRunner scan={built.scan} active={scanning} reduced={reduced} />
       <PulseRunner pulse={built.pulse} pulseRegion={pulseRegion} reduced={reduced} />
       <GhostRunner ghost={built.ghost} depth={ghostDepth} reduced={reduced} />
-      <HoloRunner holo={built.holo} reduced={reduced} />
+      <HoloRunner holo={built.holo} reduced={reduced} riseAge={riseAge} />
     </>
   );
 }

@@ -1,6 +1,7 @@
 import type { ForecastDue, Signal } from '../types';
 import type { BodyRegion } from './anchors';
 import { NEON_RED, NEUTRAL_HEX, SIGNAL_HEX } from './signalColors';
+import { MOTION } from '../tokens/motion';
 
 // Pure timing/color logic for the holo podium. The visuals live in Plateau/HoloPodium; everything
 // that can be unit-tested lives here.
@@ -86,6 +87,23 @@ export function flickerEnvelope(t: number, duration: number = FLICKER_SECONDS): 
   if (duration <= 0 || t < 0 || t >= duration) return 0;
   const k = 1 - t / duration;
   return k * k;
+}
+
+// ── RISE: the projector boots the car ────────────────────────────────────────
+// CHOREOGRAPHY § "One stage — the lot and the podium": when the hero car's meshes first mount for a
+// vehicle, uRise ramps 0→1 (alpha, fresnel included) over the cascade step, alongside the existing
+// arrival flicker. It is keyed on the vehicle's IDENTITY, not the mesh — a fallback swap inside the
+// cascade (proxy→thumb→full) must not restart it (VehicleBody owns the clock across that swap).
+
+/** Twin of MOTION.cascade (motion.test.ts pins it) — the projector boot window. */
+export const RISE_IN_SECONDS = MOTION.cascade / 1000;
+
+/** Rising one-shot: t/d on [0, d), clamped to 1 after. Never negative before the window starts. */
+export function riseEnvelope(t: number, duration: number = RISE_IN_SECONDS): number {
+  if (duration <= 0) return 1;
+  if (t <= 0) return 0;
+  if (t >= duration) return 1;
+  return t / duration;
 }
 
 // ── GHOST: the shell gets out of the way (C1) ─────────────────────────────────

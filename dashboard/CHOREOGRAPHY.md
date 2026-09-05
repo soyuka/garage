@@ -26,7 +26,7 @@ reversed rather than clarified, say what it was and why it changed, so the reaso
 
 | Real frame | Atelier motion | Owner layer |
 |---|---|---|
-| `selectVehicle {id}` | the car **drives forward** into Le Plateau; previous car recedes into the lot (~350ms cross-fade) | scene assembler |
+| `selectVehicle {id}` | the car **drives forward** into Le Plateau; previous car recedes into the lot (~350ms cross-fade). **Corrected 2026-09-05:** built as § "One stage — the lot and the podium": the picked card's ghost drives to the stage centre over `--at-dur-etch` (there is no 350 ms token) while the lot recedes, and the hero car etches in on the podium; the hash changes at the click, never after the motion | `Atelier.tsx` (`Departure`) + `holoFill.ts` |
 | `showFact {keys, title?}` / `focusView {panel:'specs', keys?}` | the **spec constellation** fans the matching `vehicle.facts` into the RIGHT **projection column** (staggered **etch-in**). Empty `keys` ⇒ the whole sheet | scene overlay (`SpecConstellation`) |
 | `showFact {nodes, title?}` | the SAME constellation, same etch-in — but the nodes ARE the content: an already-formatted surface the agent FETCHED (fill volumes, an oil grade, the SIV carte grise), which no `keys` filter over stored facts could ever select. Read-only (no inline edit — a fetched value is not the operator's), and it wears the same agent-placed cyan tick as any projection. Not a new motion: the identical surface the "Capacités fluides" / "Fiche technique" chips already project, now reachable **on the wire** | scene overlay (`SpecConstellation`) |
 | `focusView {panel:'tasks', keys}` | projects the **worklist** — the agent's cut of the rail — into the RIGHT projection column (rows **unfurl** staggered, same vocabulary as the carnet), AND resolves the first key to a body region (`regionForFrame`) to **spotlight it by dollying the earned camera there** (D1) + a one-shot cyan pulse on the region's edges. The spotlighted services' Entretien-rail row(s) light with the orange operator cue (`data-lit`: a 2px left edge in the gutter + a lift), so the projected answer and the editable rail name visibly the same rows. **Never dims the stage** — like the specs/carnet projections it reads as integrated, not blocking | scene overlay (`WorklistProjection`) + scene assembler (`cameraFocus`) + `EntretienRail` |
@@ -597,6 +597,37 @@ docked — Carnet and fiche win over the specs column.
 | `focus.panel === 'specs'` with volume nodes | the volumes rise (above), camera to the fluids pose | `Plateau.tsx` (`FluidVolumes`) + `fluidVolumes.ts` + `cameraRig.ts` |
 | a specs node is hovered or focused | its cylinder takes the operator hue edge | `SpecConstellation` → `SceneView` → `Plateau` |
 | the specs column closes, or a legend docks | cylinders sink, camera released | same |
+
+### The legend is grouped like the body (2026-09-05)
+
+The fiche listed facts in backend order while the constellation stacked them by region, so the eye had
+nothing to match. The fiche now groups rows **by region, in anchor order** — capot, pare-brise, baie
+moteur, train avant, train arrière, sans emplacement — each group under a tier-3 mono caption, rows
+keeping their arrival order inside a group (the same order the column stacks them, lowest first). Facts
+are edited exactly as before; only the order and the captions change. Owner: `FactsDrawer`.
+
+### Picking — the body points back (2026-09-05)
+
+Hover on a legend row marks its body in the operator hue (the rows above). The reverse now holds:
+**pointing at a body marks it and brings its legend row into view.** Hover over a slab, a node or a
+cylinder takes the operator hue on that body; a click scrolls the legend so the row sits in view
+(`scrollIntoView`, centred, no smooth-scroll under reduced motion) and the row wears the same hairline
+it wears on hover, for as long as the pointer stays on the body. Nothing is selected, nothing opens: a
+pick is a look, not an action. Owner: the station components (`VisitRing`, `FactConstellation`,
+`FluidVolumes`) → `Plateau` → `SceneView` → the legend (`HistoryLog`, `FactsDrawer`, `SpecConstellation`).
+
+## One stage — the lot and the podium (added 2026-09-05)
+
+The lot (`#/`) and the car page are two render trees with two canvases; a hard swap between them read as
+two apps. A single canvas across routes is the eventual answer and is NOT this section. This is the
+continuity the row `selectVehicle` promised, built without gating anything:
+
+| Real frame / condition | Atelier motion | Owner layer |
+| --- | --- | --- |
+| a lot card is clicked, or the agent selects a vehicle from the lot | **the hash changes on the click** (hard rule 1: motion overlaps the arrival, never gates it). In the same instant a **ghost of the clicked card** — the same glass, the same spinning thumb port, fixed at the card's own rect — **drives forward**: it translates to the centre of the stage and grows (~1.6×) while its opacity falls to 0, over `--at-dur-etch`, ease-out; the other cards **recede**: opacity to 0 over the same duration, no movement. The ghost unmounts when its transition ends (or at once under reduced motion). While it plays, the car page mounts underneath and fetches its bundle | `Atelier.tsx` (`Departure`) + `parclot.css` |
+| the hero car's meshes mount on the podium | **the projector boots the car**: `uRise` ramps 0 → 1 over `--at-dur-cascade` (alpha, fresnel included), together with the existing arrival flicker (`FLICKER_SECONDS`). A car that comes back from the lot rises the same way; a mesh swap inside the fallback cascade (proxy → thumb → full) does NOT re-rise — the rise belongs to the arrival, not to the level of detail. Reduced motion: alpha 1 at mount | `VehicleMesh.tsx` / `holoFill.ts` |
+| the lot itself | **one room**: the lot page paints the same dark ground as the stage, so leaving and returning never changes the room's light. Verified at build (2026-09-05): `parcpage.css` already carried the scene's exact gradient — the warm gradient this row first blamed belongs to the card glass, not the page. Cards keep their glass; the thumbs keep the hologram hue | `parcpage.css` |
+| `← The fleet` | the car page unmounts, the lot mounts — no reverse ghost (nothing to drive back from; the row above is about the CAR arriving, and the lot's arrival is its own cascade of cards) | — |
 
 ## Domain frames (collection topic)
 

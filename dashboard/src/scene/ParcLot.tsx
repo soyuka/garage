@@ -55,12 +55,22 @@ function usePageVisible(): boolean {
   return visible;
 }
 
+/** The clicked card's own rect + vehicle — the departure ghost (CHOREOGRAPHY § "One stage") is fixed
+ *  at `rect` and needs the vehicle's fields to look like the card it grew out of. */
+export interface DepartureOrigin {
+  rect: DOMRect;
+  vehicle: VehicleSummary;
+}
+
 interface ParcLotProps {
   vehicles: VehicleSummary[];
-  onSelect?: (iri: Iri) => void;
+  onSelect?: (iri: Iri, origin: DepartureOrigin) => void;
   /** Create a blank vehicle then drive into its hero to fill it in (#9). Absent → no add affordance. */
   onAddVehicle?: () => void;
   reduced?: boolean;
+  /** A departure ghost is in flight: the grid fades to 0 (CSS only) while the ghost drives to the
+   *  stage centre. Never set together with a fresh interactive state — it is a one-way trip. */
+  receding?: boolean;
 }
 
 // The parc listing (the COLLECTION) omits `health` — only `nextDue` rides each member. So the card
@@ -97,13 +107,13 @@ const MAKE_PAINT: Record<string, string> = {
   yamaha: '#3f4a5a',
 };
 
-function paintFor(make: string): string {
+export function paintFor(make: string): string {
   return MAKE_PAINT[make.toLowerCase()] ?? NEUTRAL_PAINT;
 }
 
-type ParcTag = { text: string; tone: 'ok' | 'soon' | 'late' | 'gap' };
+export type ParcTag = { text: string; tone: 'ok' | 'soon' | 'late' | 'gap' };
 
-function tagFor(signal: Signal | 'unknown', locale: Locale): ParcTag {
+export function tagFor(signal: Signal | 'unknown', locale: Locale): ParcTag {
   const t = messages(locale);
   if (signal === 'red') return { text: t.signal.late, tone: 'late' };
   if (signal === 'amber') return { text: t.signal.soon, tone: 'soon' };
@@ -139,7 +149,7 @@ function ParcCard({
   paused,
 }: {
   vehicle: VehicleSummary;
-  onSelect?: (iri: Iri) => void;
+  onSelect?: (iri: Iri, origin: DepartureOrigin) => void;
   live: boolean;
   reduced: boolean;
   paused: boolean;
@@ -153,7 +163,11 @@ function ParcCard({
   const paint = paintFor(v.make);
   const sub = [v.year, v.engineVariant].filter(Boolean).join(' · ');
   const horizon = v.nextDue ? horizonFor(v.nextDue, locale) : null;
-  const activate = onSelect ? () => onSelect(v['@id']) : undefined;
+  // The departure ghost (CHOREOGRAPHY § "One stage") needs the clicked card's OWN rect, not the stage's
+  // — it grows from where the whole glass card sits, not just its thumb.
+  const activate = onSelect
+    ? (e: React.MouseEvent<HTMLButtonElement>) => onSelect(v['@id'], { rect: e.currentTarget.getBoundingClientRect(), vehicle: v })
+    : undefined;
   // A blank just-created vehicle has empty make/model — degrade the name (and the button's accessible
   // name) to a readable fallback instead of bare whitespace.
   const name = [v.make, v.model].filter(Boolean).join(' ') || t.parc.unnamed;
@@ -234,7 +248,7 @@ function AddCard({ onAdd }: { onAdd: () => void }) {
   );
 }
 
-export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotProps) {
+export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced, receding }: ParcLotProps) {
   const ordered = byRecency(vehicles);
   // WebGL probed once on mount (SSR-safe: false until mounted, then the real capability).
   const [live, setLive] = useState(false);
@@ -267,7 +281,7 @@ export function ParcLot({ vehicles, onSelect, onAddVehicle, reduced }: ParcLotPr
           <View.Port />
         </Canvas>
       )}
-      <ul className="at-parc-grid">
+      <ul className="at-parc-grid" data-receding={receding ? 'true' : undefined}>
         {ordered.map((v) => (
           <li key={v['@id']}>
             <ParcCard vehicle={v} onSelect={onSelect} live={live} reduced={!!reduced} paused={paused} />

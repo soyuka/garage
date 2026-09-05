@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { breathe01, flickerEnvelope, podiumGlow, pulseEnvelope, regionAxisFraction, FLICKER_SECONDS, PULSE_DURATION } from './holo';
+import { breathe01, flickerEnvelope, podiumGlow, pulseEnvelope, regionAxisFraction, riseEnvelope, FLICKER_SECONDS, PULSE_DURATION, RISE_IN_SECONDS } from './holo';
 import { NEON_RED, NEUTRAL_HEX, SIGNAL_HEX } from './signalColors';
 import type { ForecastDue } from '../types';
 
@@ -86,6 +86,35 @@ describe('pulseEnvelope', () => {
   it('defaults to PULSE_DURATION when no duration is given', () => {
     expect(pulseEnvelope(PULSE_DURATION / 2)).toBeCloseTo(1);
     expect(pulseEnvelope(PULSE_DURATION)).toBeCloseTo(0);
+  });
+});
+
+// The projector boot (CHOREOGRAPHY § "One stage — the lot and the podium", row 2): uRise ramps 0→1
+// over RISE_IN_SECONDS from the vehicle's arrival, keyed on the vehicle's identity, not the mesh.
+describe('riseEnvelope — the projector boots the car', () => {
+  it('is 0 at the start and 1 once the window has fully elapsed', () => {
+    expect(riseEnvelope(0, RISE_IN_SECONDS)).toBe(0);
+    expect(riseEnvelope(RISE_IN_SECONDS, RISE_IN_SECONDS)).toBe(1);
+    expect(riseEnvelope(RISE_IN_SECONDS * 2, RISE_IN_SECONDS)).toBe(1);
+  });
+
+  it('rises monotonically and stays within [0,1]', () => {
+    let prev = -1;
+    for (let t = 0; t <= RISE_IN_SECONDS; t += RISE_IN_SECONDS / 10) {
+      const v = riseEnvelope(t, RISE_IN_SECONDS);
+      expect(v).toBeGreaterThanOrEqual(prev);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(1);
+      prev = v;
+    }
+  });
+
+  it('defaults to RISE_IN_SECONDS when no duration is given', () => {
+    expect(riseEnvelope(RISE_IN_SECONDS / 2)).toBeCloseTo(0.5);
+  });
+
+  it('never negative for a time before the window starts', () => {
+    expect(riseEnvelope(-1, RISE_IN_SECONDS)).toBe(0);
   });
 });
 

@@ -211,6 +211,25 @@
   letter-spacing: 0.02em;
 }
 
+/* ── departure: the grid fades under the ghost (CHOREOGRAPHY § "One stage", row 1) ───────────
+   CSS only, no movement — the ghost itself carries the motion. */
+.at-parc-grid[data-receding='true'] > li {
+  opacity: 0;
+  transition: opacity var(--at-dur-etch) var(--at-ease-sine);
+  pointer-events: none;
+}
+
+/* ── departure echo: the SAME grid, echoed as a fixed overlay above the hero while the ghost is
+   mid-flight (Atelier.tsx `DepartureEcho`) — the hero is never gated on the ghost, so this is what keeps
+   the lot receding on screen instead of a hard cut. Above the scene shell (canvas/pins/cockpit/top, all
+   ≤20), below the ghost itself (z-index 60 in Departure.tsx). Purely decorative — never clickable. */
+.at-departure-echo {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+}
+
 /* ── reduced-motion: no hover-lift, instant state ─────────────────────────── */
 .at-parc[data-reduced='true'] .at-parc-card {
   transition: none;
@@ -218,11 +237,17 @@
 .at-parc[data-reduced='true'] .at-parc-card:hover {
   transform: none;
 }
+.at-parc[data-reduced='true'] .at-parc-grid[data-receding='true'] > li {
+  transition: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .at-parc-card {
     transition: none;
   }
   .at-parc-card:hover {
     transform: none;
+  }
+  .at-parc-grid[data-receding='true'] > li {
+    transition: none;
   }
 }
