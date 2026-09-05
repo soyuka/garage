@@ -100,6 +100,65 @@ swap proof, and it found exactly one leak in the seam: `SpeechClient` returned r
 `App\Speech\SpokenAudio` carrying the content type with the bytes. Everything else was the promised
 one class + one enum case + one locator line.
 
+## Streamed (2026-09-05) — the gap was the buffering, not the model
+
+The operator's complaint: the spoken answer starts long after its card is on screen. Measured on the
+same box (Ryzen 7 PRO 6850U, CPU-only, `french_24l --quantize`, warm `serve`, no CPU limit on the
+container — `NanoCpus=0`, 16 cores visible):
+
+**pocket-tts itself, inside the compose network** (`POST http://pocket-tts-fr:8000/tts`, chunk
+arrival timestamps):
+
+| line | headers | first audio bytes | steady state | complete |
+| --- | --- | --- | --- | --- |
+| short (4.2 s of audio) | 9 ms | **243 ms** | 3840 B = 80 ms of audio every ~60 ms | 3.23 s (RTF 0.77) |
+| medium (10.0 s of audio) | 3 ms | **413 ms** | same | 8.36 s (RTF 0.84) |
+| two short lines **concurrently** | — | 302 / 324 ms | — | 3.99 s for 3.64 s, 4.27 s for 3.96 s (**RTF ≈ 1.1 each**) |
+
+**Through `/tts` as it was** (`SpeechController` → `CachingSpeechClient` → `PocketTtsSpeechClient`
+buffering `getContent()` to stamp the WAV lengths), via Caddy, `curl -w`:
+
+| line | TTFB | total |
+| --- | --- | --- |
+| short, cold | **3.18 s** | 3.18 s |
+| short, cached | 29 ms | 30 ms |
+| medium, cold | **10.4 s** | 10.4 s |
+| medium, cached | 29 ms | 31 ms |
+
+TTFB = total: the browser received nothing until the line was finished. The dashboard then wrapped the
+whole body in a Blob for an `<audio>` element, so first sound ≈ TTFB + decode. Meanwhile
+`RenderIntentTools::toast()` had ALSO enqueued a `PrewarmSpeech` job; the worker and the browser both
+missed the cache within the same few tens of ms, so every first line was synthesized twice at once —
+the concurrent row above — making the audible one ~30 % slower, not faster. On the in-app driver the
+prewarm sat behind the running turn on the same single consumer and never ran until the turn ended.
+
+**Dominant contributor: waiting for the whole body** (3.2–10.4 s), with the duplicate synthesis
+stacked on top. Neither first-byte nor transfer nor decode mattered — headers were in 3–9 ms and a
+cache hit came back whole in 30 ms.
+
+**After** — `/tts` relays each chunk as it arrives (`StreamedResponse`, `ob_flush` + `flush` per
+chunk because php.ini `output_buffering=4096` would otherwise hold a piece until the next one overflowed
+it), the disk cache is written from the completed body once the stream has been consumed (the
+header-stamped copy: `pack('V')` real sizes, verified on the cached file), the prewarm is removed, and
+the browser decodes 16-bit PCM pieces and schedules each on the `AudioContext` clock
+(`dashboard/src/noyau/pcm.ts`, `speaker.ts`; a non-WAV body such as ElevenLabs mp3 is decoded whole
+via `decodeAudioData`). Same `curl -N` through Caddy/FrankenPHP, body-byte arrival timestamps:
+
+| line | first body bytes | complete |
+| --- | --- | --- |
+| short, cold (1.7 s of audio) | **0.535 s** | 1.65 s |
+| short, cached | 22 ms | 24 ms |
+| medium, cold (8.5 s of audio) | **0.208 s** | 5.93 s |
+
+First sound moves from "when the line is done" to ~0.2–0.5 s after the request — about the time a
+reader takes to glance at the card — so no holding of the text was needed and CHOREOGRAPHY hard rule 1
+(*motion may overlap an arrival, never gate one*) is untouched. The client primes 160 ms of audio
+(`tokens/audition.ts` `SPEECH.primeSeconds`) before the first sample so one late piece is absorbed.
+
+Caddy needs nothing: its reverse proxy flushes immediately for a response without `Content-Length`,
+and `encode` does not match `audio/wav`. `<audio>` could not have done this — no `MediaSource` codec
+exists for WAV — which is why the element and its silent-frame blessing are gone.
+
 ## The three routes
 
 | | How | First-load cost | Latency | Verdict |

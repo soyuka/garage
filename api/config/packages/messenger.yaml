@@ -13,10 +13,6 @@ framework:
 
         routing:
             App\Message\RunAgentTurn: async
-            # Same transport/worker as the turn itself — no new infrastructure. A speech prewarm is
-            # tiny (one synthesis, discarded) and the handler swallows its own failures, so it never
-            # needs the retry/failed-transport handling RunAgentTurn relies on.
-            App\Message\PrewarmSpeech: async
 
 when@test:
     framework:

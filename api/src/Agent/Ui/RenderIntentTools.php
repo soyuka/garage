@@ -4,13 +4,10 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
-use App\I18n\LocaleContext;
-use App\Message\PrewarmSpeech;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Webmozart\Assert\Assert;
 
 /**
@@ -46,8 +43,6 @@ final class RenderIntentTools
         private readonly HubInterface $hub,
         private readonly LoggerInterface $logger,
         private readonly DashboardChannel $channel,
-        private readonly MessageBusInterface $bus,
-        private readonly LocaleContext $locale,
     ) {
     }
 
@@ -119,28 +114,8 @@ final class RenderIntentTools
     {
         Assert::inArray($tone, ['info', 'ok', 'warn', 'alarm']);
         $this->publish(['type' => 'toast', 'tone' => $tone, 'message' => $message]);
-        $this->prewarmSpeech($message);
 
         return 'ok';
-    }
-
-    /**
-     * Starts synthesis before the frame reaches the browser (dashboard/CHOREOGRAPHY.md § "The voice
-     * starts before the browser asks"), so the browser's own `POST /tts` for this exact line lands a
-     * cache hit. Covers BOTH drivers because `toast()` is the one method they both call — the
-     * in-app agent via the `#[AsTool]` loop, the pilot via an MCP `tools/call` — unlike
-     * {@see DashboardChannel}, which knows only the topic, never the text.
-     *
-     * Unconditional and best-effort like the render intent itself: a dispatch failure (queue down)
-     * must never fail the turn over an optimisation nobody asked to be told about.
-     */
-    private function prewarmSpeech(string $text): void
-    {
-        try {
-            $this->bus->dispatch(new PrewarmSpeech($text, $this->locale->current()->value));
-        } catch (\Throwable $e) {
-            $this->logger->warning('Speech prewarm dispatch failed for a toast: {error}', ['error' => $e->getMessage()]);
-        }
     }
 
     /**

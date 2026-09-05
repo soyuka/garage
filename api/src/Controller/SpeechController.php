@@ -6,9 +6,11 @@ namespace App\Controller;
 
 use App\I18n\Locale;
 use App\Speech\SpeechClient;
+use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -20,6 +22,12 @@ use Symfony\Component\Routing\Attribute\Route;
  * Unlike a bill download there is nothing owner-SCOPED to check — no stored resource is read — so the
  * gate is authentication, not ownership. Per-owner budget accounting arrives with the cache layer
  * (docs/voice-plan.md § Phase 2).
+ *
+ * STREAMED, chunk for chunk, since 2026-09-05. pocket-tts produces the first 80 ms of audio ~250 ms
+ * after the request and the rest at ~0.77× real time; the browser plays each piece as it lands
+ * (dashboard `noyau/speaker.ts`). Buffering the body here made the first byte wait for the last one —
+ * 3.2 s for a short line, 10 s for a medium one (docs/voice.md) — which is the whole gap between the
+ * card appearing and the voice starting.
  */
 final class SpeechController
 {
@@ -51,20 +59,38 @@ final class SpeechController
             // The browser announces its language on every request (framework.yaml
             // `set_locale_from_accept_language`), so the spoken line follows the interface without
             // the dashboard sending a field — the audition adds nothing to the wire (CONTRACT.md).
-            $audio = $this->speech->synthesize($text, Locale::resolve($request->getLocale()));
+            $stream = $this->speech->stream($text, Locale::resolve($request->getLocale()));
         } catch (SpeechUnavailable) {
             // Silence is a degraded mode, never a broken one: the notice card is already on screen.
             return new Response(status: Response::HTTP_SERVICE_UNAVAILABLE);
         }
 
-        return new Response($audio->bytes, Response::HTTP_OK, [
+        return new StreamedResponse(static fn () => self::send($stream), Response::HTTP_OK, [
             // Whatever the backend produced: mp3 from ElevenLabs, WAV from a pocket-tts sidecar.
-            'Content-Type' => $audio->contentType,
+            'Content-Type' => $stream->contentType,
             // The text is the cache key upstream, so the same sentence is byte-identical forever.
             'Cache-Control' => 'private, max-age=86400',
             // …per language. The same sentence read as French and as English is two different audios
             // on one URL, so the language has to be part of what a cache keys on.
             'Vary' => 'Accept-Language',
         ]);
+    }
+
+    private static function send(SpeechStream $stream): void
+    {
+        try {
+            foreach ($stream->chunks() as $chunk) {
+                echo $chunk;
+                // php.ini `output_buffering=4096` would otherwise hold a chunk until the next one
+                // overflows it: the user-level buffer has to be pushed before the SAPI is.
+                if (ob_get_level() > 0) {
+                    ob_flush();
+                }
+                flush();
+            }
+        } catch (SpeechUnavailable) {
+            // Headers are out and part of the line is already playing; a truncated stream is the
+            // only honest ending. The card is on screen regardless.
+        }
     }
 }

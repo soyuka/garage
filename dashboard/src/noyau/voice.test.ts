@@ -8,7 +8,6 @@ import {
   enqueue,
   finish,
   follow,
-  mediaOutcome,
   narrate,
   next,
   rearm,
@@ -338,10 +337,10 @@ describe('waiting — the prefetch targets', () => {
   });
 });
 
-// A browser that refuses play() is refusing THE PAGE, not the sentence: the same line plays fine one
-// gesture later. Measured 2026-08-17 — Firefox with autoplay off for the origin reports it as an abort
-// of the media load, not as NotAllowedError, so the rule cannot depend on which error came back.
-describe('a refused play()', () => {
+// A browser that refuses to play is refusing THE PAGE, not the sentence: the same line plays fine one
+// gesture later. The signal is the AudioContext staying suspended (speaker.ts, 2026-09-05) — before
+// that it was a media error whose code Firefox and Chrome disagreed on (measured 2026-08-17).
+describe('a refused play', () => {
   it('puts the line back and stops promoting until a gesture re-arms it', () => {
     let s = next(enqueue(empty, notice('vidange', 0), 0), 1, true);
     s = refused(s);
@@ -363,24 +362,6 @@ describe('a refused play()', () => {
 
     expect(s.narration?.text).toBe('je relis l’historique');
     expect(s.queue).toHaveLength(0);
-  });
-
-  // The refusal does not always arrive as a rejected play(): Firefox fires it at the ELEMENT as an
-  // aborted media load. Routing every media error to finish() burned the line AND lost the latch, so
-  // `blocked` never turned true and the whole queue drained silently — the Firefox symptom.
-  it('reads an aborted media load as a refusal, not as a spent line', () => {
-    expect(mediaOutcome(1)).toBe('refused');
-  });
-
-  it('reads a network/decode/unsupported error as a spent line — one bad body must not latch the queue closed', () => {
-    expect(mediaOutcome(2)).toBe('failed');
-    expect(mediaOutcome(3)).toBe('failed');
-    expect(mediaOutcome(4)).toBe('failed');
-  });
-
-  it('reads a missing code as a spent line — never latch the audition closed on a guess', () => {
-    expect(mediaOutcome(null)).toBe('failed');
-    expect(mediaOutcome(undefined)).toBe('failed');
   });
 
   it('still lets a latched line go stale — a permission granted a minute later is too late', () => {

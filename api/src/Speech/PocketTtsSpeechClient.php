@@ -8,6 +8,7 @@ use App\I18n\Locale;
 use Symfony\Component\Mime\Part\Multipart\FormDataPart;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
  * Speaks through a local Kyutai `pocket-tts` server (`pocket-tts serve`, FastAPI, `POST /tts`).
@@ -22,10 +23,13 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * French model does not fail, it reads English words with French phonetics, and a wrong-sounding
  * voice is far harder to diagnose than a silent one.
  *
- * MEASURED on this machine (2026-09-04, AMD Ryzen 7 PRO 6850U, CPU-only, `french_24l` + `--quantize`):
- * a warm resident server answers a short line in ~1.5–2.0 s and a two-sentence line in ~3.9–4.3 s.
- * Cold CLI invocations are 3× worse because each reloads the model — which is exactly why this talks
- * to a long-running server instead of shelling out per line.
+ * MEASURED on this machine (2026-09-05, AMD Ryzen 7 PRO 6850U, CPU-only, `french_24l` + `--quantize`,
+ * docs/voice.md): headers in 3–9 ms, first audio bytes at 243 ms (short line) / 413 ms (medium), then
+ * 3840 B = 80 ms of audio every ~60 ms — real-time factor ≈ 0.77. A 4.2 s line is complete after
+ * 3.2 s, a 10 s line after 8.4 s. Buffering that body (what this did until 2026-09-05) made the
+ * browser's first byte wait for the last one; passing the chunks through makes the first sound
+ * arrive ~250–400 ms after the request instead. A second synthesis running concurrently pushes the
+ * factor to ~1.1 — slower than playback — which is why nothing else may synthesize the same line.
  */
 final readonly class PocketTtsSpeechClient implements SpeechClient
 {
@@ -42,7 +46,7 @@ final readonly class PocketTtsSpeechClient implements SpeechClient
     ) {
     }
 
-    public function synthesize(string $text, Locale $locale): SpokenAudio
+    public function stream(string $text, Locale $locale): SpeechStream
     {
         $base = trim($this->endpoints[$locale->value] ?? '');
 
@@ -60,28 +64,50 @@ final readonly class PocketTtsSpeechClient implements SpeechClient
                 'body' => $form->bodyToIterable(),
             ]);
 
+            // Blocks until the headers are in (~5 ms) and is what surfaces "unreachable" here rather
+            // than from inside the generator, where no status could be chosen any more.
             if (200 !== $response->getStatusCode()) {
                 throw new SpeechUnavailable(\sprintf('pocket-tts refused the request (HTTP %d).', $response->getStatusCode()));
             }
-
-            return new SpokenAudio(self::withRealLengths($response->getContent()), self::CONTENT_TYPE);
         } catch (HttpClientException $e) {
             throw new SpeechUnavailable('pocket-tts could not be reached.', previous: $e);
         }
+
+        return new SpeechStream(self::CONTENT_TYPE, $this->chunks($response));
+    }
+
+    /** @return \Generator<int, string, mixed, string> */
+    private function chunks(ResponseInterface $response): \Generator
+    {
+        $body = '';
+
+        try {
+            foreach ($this->http->stream($response) as $chunk) {
+                $content = $chunk->getContent();
+                if ('' === $content) {
+                    continue;
+                }
+
+                $body .= $content;
+                yield $content;
+            }
+        } catch (HttpClientException $e) {
+            throw new SpeechUnavailable('pocket-tts dropped the stream.', previous: $e);
+        }
+
+        return self::withRealLengths($body);
     }
 
     /**
-     * Stamp the true byte counts into a streamed WAV header.
+     * Stamp the true byte counts into the COMPLETED body — the copy the cache keeps.
      *
      * `serve` streams, so it cannot know the length when it writes the header and emits a 2 GB
-     * placeholder in both the RIFF and `data` chunk sizes. An `<audio>` element trusts that: it reads
-     * a 6-second line as an 11-hour stream, plays to the real EOF, and Firefox raises
-     * MEDIA_ERR_ABORTED — which the dashboard's audition reads as an autoplay refusal and latches
-     * itself closed on. So one bad header does not merely cut a line, it mutes the ones behind it.
-     *
-     * Buffering the body is what makes the fix possible and is why it belongs here rather than in the
-     * controller: this is the only place that holds the vendor's bytes and knows they came from
-     * pocket-tts. Anything that is not RIFF/WAVE passes through untouched.
+     * placeholder in both the RIFF and `data` chunk sizes. The wire necessarily carries that
+     * placeholder (the browser's decoder reads the format and ignores the sizes — dashboard
+     * `noyau/pcm.ts`), but a file at rest with an 11-hour header is a broken artifact for anything
+     * that trusts headers: an `<audio>` element played it to the real EOF and then raised
+     * MEDIA_ERR_ABORTED. This is the only place that holds the vendor's bytes and knows they came from
+     * pocket-tts, so it belongs here. Anything that is not RIFF/WAVE passes through untouched.
      */
     private static function withRealLengths(string $wav): string
     {

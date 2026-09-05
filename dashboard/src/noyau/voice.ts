@@ -2,7 +2,7 @@ import type { Notice } from './state';
 
 // The ear's half of the notice stack (CHOREOGRAPHY § "Audition — speech, for answers"). Pure and
 // clock-injected: every rule that matters — order, cap, staleness, dedup, cancellation — is decided
-// here, so the impure edge in useVoice.ts is left with nothing but fetch/<audio>/onended.
+// here, so the impure edge in useVoice.ts is left with nothing but fetch and an AudioContext (speaker.ts).
 //
 // Speech is GARNISH. The notice card is the payload and the card is authoritative; this queue is
 // allowed to drop lines the stack still shows, and does. It must never be the only way to learn
@@ -180,10 +180,11 @@ export function waiting(state: VoiceState, now: number): Utterance[] {
 }
 
 /**
- * `play()` came back rejected. The line goes BACK where it was and the audition latches closed until a
- * gesture re-arms it: autoplay refusal is a property of the page, so the same sentence would play fine
- * one click later, and consuming it here is how a permission the operator can still grant becomes a
- * line they can never hear. A refused ticker line that was meanwhile superseded stays superseded.
+ * The page refused to play — the AudioContext would not come back running (speaker.ts). The line goes
+ * BACK where it was and the audition latches closed until a gesture re-arms it: autoplay refusal is a
+ * property of the page, so the same sentence would play fine one click later, and consuming it here is
+ * how a permission the operator can still grant becomes a line they can never hear. A refused ticker
+ * line that was meanwhile superseded stays superseded.
  */
 export function refused(state: VoiceState): VoiceState {
   const utterance = state.speaking;
@@ -196,20 +197,6 @@ export function refused(state: VoiceState): VoiceState {
       : { queue: [utterance, ...state.queue].slice(-VOICE_CAP) };
 
   return { ...state, ...back, speaking: null, spoken, blocked: true };
-}
-
-/**
- * What a media `error` event MEANS for the line that was playing — the one impure signal the ear has
- * to read, kept here with the rest of the rules rather than in the hook's wiring.
- *
- * Firefox reports an autoplay refusal by firing `error` AT THE ELEMENT with `MEDIA_ERR_ABORTED`
- * ("aborted by the user agent at the user's request"), not by rejecting `play()` the way Chrome does.
- * Routing every media error to {@see finish} therefore burned the line and never latched `blocked`.
- * A decode/network/unsupported error is the BODY's fault, not the page's: it spends the line and lets
- * the queue advance, because one bad body must never silence every line behind it.
- */
-export function mediaOutcome(code: number | null | undefined): 'refused' | 'failed' {
-  return 1 === code ? 'refused' : 'failed'; // 1 = MediaError.MEDIA_ERR_ABORTED
 }
 
 /** A real gesture arrived — the page may be allowed to play now, so try again. */

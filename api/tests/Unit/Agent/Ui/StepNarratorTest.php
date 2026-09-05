@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Agent\Ui;
 use App\Agent\Ui\RenderIntentTools;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
-use App\Tests\Mock\RecordingMessageBus;
 use App\Tests\Mock\TestDashboardChannel;
 use App\Agent\Ui\StepNarrator;
 use PHPUnit\Framework\TestCase;
@@ -30,7 +29,7 @@ final class StepNarratorTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $context = new LocaleContext(new RequestStack());
@@ -104,7 +103,7 @@ final class StepNarratorTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $tools->narrate('Je relis le carnet…');

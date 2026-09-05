@@ -11,7 +11,13 @@ use Psr\Log\LoggerInterface;
  * Decorates {@see SpeechClient} with a disk cache (docs/voice-plan.md § Phase 2): a hit makes ZERO
  * calls to the wrapped backend. The Atelier repeats a handful of sentences constantly
  * (« Vidange enregistrée. », « J'ai pris la Mazda. »), so paying a vendor call — money on
- * ElevenLabs, a ~2s wait on pocket-tts — for the same line twice is pure waste.
+ * ElevenLabs, ~3 s of CPU on pocket-tts — for the same line twice is pure waste.
+ *
+ * A miss is a TEE, not a buffer: the backend's chunks pass straight through to the caller with their
+ * boundaries intact, and the cache is written once the stream has completed, from the body the
+ * backend RETURNED (for pocket-tts, the header-stamped copy — not the wire concatenation). A stream
+ * that dies part-way writes nothing: a half-line answering the same text forever would be worse than
+ * a miss.
  *
  * Key: `sha256(backend|model|voice|locale|text)`. `locale` MUST be in it: the same sentence read as
  * French and as English is two different audios, and a key without locale would serve one for the
@@ -42,7 +48,7 @@ final readonly class CachingSpeechClient implements SpeechClient
     ) {
     }
 
-    public function synthesize(string $text, Locale $locale): SpokenAudio
+    public function stream(string $text, Locale $locale): SpeechStream
     {
         $key = hash('sha256', implode('|', [$this->backend, $this->model, $this->voice, $locale->value, $text]));
         $bytesPath = $this->path($key, 'bin');
@@ -50,13 +56,22 @@ final readonly class CachingSpeechClient implements SpeechClient
 
         $cached = $this->read($bytesPath, $typePath);
         if (null !== $cached) {
-            return $cached;
+            return SpeechStream::whole($cached);
         }
 
-        $audio = $this->inner->synthesize($text, $locale);
-        $this->write($bytesPath, $typePath, $audio);
+        $live = $this->inner->stream($text, $locale);
 
-        return $audio;
+        return new SpeechStream($live->contentType, $this->tee($live, $bytesPath, $typePath));
+    }
+
+    /** @return \Generator<int, string, mixed, string> */
+    private function tee(SpeechStream $live, string $bytesPath, string $typePath): \Generator
+    {
+        $body = yield from $live->chunks();
+
+        $this->write($bytesPath, $typePath, new SpokenAudio($body, $live->contentType));
+
+        return $body;
     }
 
     private function read(string $bytesPath, string $typePath): ?SpokenAudio

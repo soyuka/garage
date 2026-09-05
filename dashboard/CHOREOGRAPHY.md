@@ -535,13 +535,16 @@ scrim, unrelated to the car body. Every `VehicleFact` gets a **node** in the vol
 part of the car it describes:
 
 - **placement** — a fact's region is derived, never stored: `<type>_ref` keys reuse the service-type map
-  (`anchors.ts` `TYPE_REGION`, `oil_filter_ref` → bay); the remaining keys go through a small curated
-  prefix table (`oil_`, `coolant_`, `engine_`, `battery`, `belt`, `spark` → bay; `brake_`, `tyre_`,
+  (`anchors.ts` `TYPE_REGION`, `oil_filter_ref` → hood, `air_filter_ref` → bay); the remaining keys go through a small curated
+  prefix table (`oil_`, `coolant_`, `engine_`, `battery`, `belt`, `spark`, `gearbox_`, `transmission_`,
+  `power_steering`, `ac_`, `refrigerant`, `fuel_`, `alternator`, `starter` → bay; `brake_`, `tyre_`,
   `wheel` → frontAxle, `rear_*` variants → rearAxle; `wiper`, `windshield` → windshield). A key no rule
   places is **unplaced**: it stands on a sixth anchor above the roof centre and the legend says so
   (`sans emplacement`) — the station never guesses a location;
-- **body** — nodes of one region stack in a column above the anchor (first node 0.35 m up, 0.22 m step),
-  one thin leader from the anchor to the lowest node. A **verified** fact is a filled holo node; an
+- **body** — nodes of one region stack in columns of at most eight above the anchor (first node 0.35 m
+  up, 0.22 m step; the ninth starts a second column 0.3 m to the side, columns centred on the anchor),
+  one thin leader per column from its foot to its lowest node — *corrected 2026-09-05 at first light: 45
+  facts made a single column run off the screen*. A **verified** fact is a filled holo node; an
   **unverified** one is wire only — same law as the cost-less slab;
 - **arrival** — nodes etch in over `--at-dur-etch` each, staggered across `--at-dur-fan` per column, all
   columns together; the camera takes the **data pose**: home azimuth, a lower tilt than the history pose
@@ -670,18 +673,21 @@ exception it required, both collapse — there is nothing left for the ticker ru
   the same string, so a frame-keyed dedup would speak every answer twice. The utterance's `id` still
   exists, but only for *cancellation* (which card's "vu" kills which line); what makes a line "already
   said" is the sentence itself.
-- **A refused `play()` is not a spent line.** Autoplay refusal is a property of the *page*, not of the
-  sentence: the same line would play fine one gesture later. So a rejection puts the utterance back and
+- **A refused play is not a spent line.** Autoplay refusal is a property of the *page*, not of the
+  sentence: the same line would play fine one gesture later. So a refusal puts the utterance back and
   latches the audition closed until a real gesture re-arms it — never a retry loop against a policy
   that will not change on its own, and never a line burned by a permission the operator can grant.
-  Firefox with autoplay disabled for the origin reports this as an *abort* of the media load fired at
-  the ELEMENT, not as a `NotAllowedError` rejection of `play()` (measured 2026-08-17). The handler
-  therefore has to read `HTMLMediaElement.error.code` — `mediaOutcome()` in `voice.ts` — and route
-  `MEDIA_ERR_ABORTED` to the refusal path. A network/decode/unsupported error is the *body's* fault,
-  not the page's, so it spends the line and lets the queue advance: one undecodable body must never
-  latch every line behind it closed. Wiring `error` and `ended` to the same handler (the bug fixed
-  2026-08-17) made this rule unreachable — `error` fires first, so the refusal branch never ran and
-  the whole queue drained silently on Firefox.
+  A network/decode/unsupported failure is the *body's* fault, not the page's, so it spends the line and
+  lets the queue advance: one undecodable body must never latch every line behind it closed.
+  **How the refusal is read — corrected 2026-09-05.** With an `<audio>` element it was
+  `HTMLMediaElement.error.code`: Firefox with autoplay disabled reported the refusal as an *abort* of
+  the media load fired at the ELEMENT, not as a `NotAllowedError` rejection of `play()` (measured
+  2026-08-17), and wiring `error` and `ended` to one handler had made the rule unreachable. The voice
+  now plays through an `AudioContext` (§ "The voice starts before the browser asks"), and the signal
+  is the context **staying suspended**: `speaker.ts` calls `resume()`, waits a bounded
+  `SPEECH.resumeGraceMs` (Firefox leaves the promise *pending* rather than rejecting it, so it cannot
+  be awaited) and reads `state` back. Not `running` → refused; a body the decoder cannot read →
+  failed. `mediaOutcome()` and its media-error table are gone with the element.
 - **The voice never seizes the session.** The `/tts` fetch deliberately does not use `authFetch`: that
   bounces to the login flow on a 401, and a garnish feature must never take the operator somewhere.
   A voice that cannot authenticate is a voice that stays quiet.
@@ -750,7 +756,10 @@ gesture handler.
 
 So the unlock is **stage setup, not a code path**: the context is created and `resume()`d from the
 first genuine interaction the page receives (the operator opening the app, accepting the cert, picking
-a vehicle), and that single unlock holds for the tab's lifetime. It must then be **asserted**, not
+a vehicle), and that single unlock holds for the tab's lifetime. Since 2026-09-05 this is literally
+the voice's own context — `useVoice.ts` creates and resumes it inside every `pointerdown`/`keydown`,
+and `speaker.ts` asserts `state === 'running'` before each line (it used to be an `<audio>` element
+blessed with a silent frame inside the gesture; same policy, same trap). It must then be **asserted**, not
 assumed — `mpa stage check` (workstream B) adds one line: `ctx.state === 'running'`, alongside the
 pilot-topic match. Chrome gates this on a per-profile Media Engagement Index, so the behaviour is
 *machine-dependent*: it can work on the dev laptop and fail on the stage laptop with identical code.
@@ -867,25 +876,43 @@ fix was for (`noyau/CRITIQUE.md`): the orb's `aria-label` renders `t.noyau.signa
 (`Noyau.tsx:63`) and the journal's done row renders the signal word. The removed label was a third
 carrier of the same fact, never the only one — verified before deleting it.
 
-## The voice starts before the browser asks (added 2026-09-04)
+## The voice starts before the browser asks (added 2026-09-04, corrected 2026-09-05)
 
-Synthesis costs ~2 s (`docs/voice.md` § PocketTTS measured). Where that 2 s sits decides whether the
-workshop feels alive or laggy, and until now it sat in the worst possible place: the `/tts` fetch lived
-inside the *"speak the promoted line"* effect, so a line did not begin synthesizing until it reached
-the lips. A line queued behind another waited for its predecessor to finish before starting — the delay
-compounded down a burst.
+Synthesis costs ~3 s for a short line and ~8 s for a medium one (`docs/voice.md` § Streamed). Where
+that time sits decides whether the workshop feels alive or laggy, and until 2026-09-04 it sat in the
+worst possible place: the `/tts` fetch lived inside the *"speak the promoted line"* effect, so a line
+did not begin synthesizing until it reached the lips. A line queued behind another waited for its
+predecessor to finish before starting — the delay compounded down a burst.
+
+**Corrected 2026-09-05 — the wait was never the synthesis, it was waiting for ALL of it.** pocket-tts
+streams: the first 80 ms of audio is on the wire ~250 ms after the request and the rest follows at
+0.77× real time. `/tts` buffered that body to completion before answering, so the browser's first
+byte arrived when the LAST one did — 3.2 s after the card for a short line, 10.4 s for a medium one
+(measured through Caddy, `docs/voice.md`). The operator read the card and then waited; the gap read
+as broken because it was three to ten times longer than any latency a listener forgives. The fix is
+end to end: `/tts` relays each chunk as it lands (`SpeechController`, `SpeechStream`), and the ear
+schedules each one on the audio clock as it arrives (`noyau/speaker.ts`, `noyau/pcm.ts`) instead of
+handing a finished blob to an `<audio>` element. First sound is now 0.2–0.5 s after the card.
 
 | moment | what happens | where |
 | --- | --- | --- |
 | a line enters the queue while another is speaking | its audio is **fetched immediately**, in parallel with the line being spoken, so it is ready at the handover. One synthesis in flight per waiting line, not one at a time | `useVoice.ts` |
-| the server publishes a `toast` | synthesis is **already under way before the frame reaches the browser** — the publish enqueues a prewarm job and the worker synthesizes into the cache, so the browser's `/tts` is a cache hit. This is the only way the FIRST line of a turn can be fast; no amount of client prefetch can start before the frame arrives | `api/` |
-| the same sentence a second time | **no synthesis at all** — disk cache keyed `sha256(backend·model·voice·locale·text)`. The Atelier repeats itself constantly (« Vidange enregistrée », « J'ai pris la Mazda »), which is what makes the cache worth more than the prewarm | `api/` |
-| a prewarm that fails, or is slow | **nothing observable.** The browser asks as it always did and takes the miss. A prewarm is an optimisation and may never become a dependency | `api/` |
+| a line reaches the lips | it is **heard from its first chunk** — 24 kHz PCM pieces of 80 ms, each placed flush against the previous one on the audio clock, the first after 160 ms of audio is in hand so one late piece is a wobble and not a hole in the first word. Never a whole-body wait; never `setTimeout` (§ Binding rules) | `speaker.ts` + `pcm.ts` |
+| ~~the server publishes a `toast`~~ — **removed 2026-09-05** | ~~synthesis is already under way before the frame reaches the browser — a prewarm job synthesizes into the cache so the browser's `/tts` is a hit~~. Measured false: the prewarm and the browser's own request left within the same few tens of ms and BOTH missed, so pocket-tts synthesized the line twice at once, and two concurrent syntheses run at ~1.1× real time each against 0.77× alone — the prewarm made the line the operator hears ~30 % SLOWER, and under streaming it would have made it stutter (generation behind playback). The first line of a turn is fast because it streams, not because it was guessed ahead | `api/` |
+| the same sentence a second time | **no synthesis at all** — disk cache keyed `sha256(backend·model·voice·locale·text)`, written from the COMPLETED body once the stream has been consumed (a stream that dies part-way caches nothing). The Atelier repeats itself constantly (« Vidange enregistrée », « J'ai pris la Mazda ») | `api/` |
+| a stream that stops early — the sidecar dies mid-line, the operator dismisses the card | the browser plays **what arrived** and the cache keeps **nothing**. A half-line answering forever would be worse than a miss | `api/` + `speaker.ts` |
 
-**Prewarm is unconditional** (decided 2026-09-04) even though the audition ships muted, because the
-server cannot know whether any listener has it on without new plumbing that can go stale. The cost is
-CPU on a box that already holds the model in memory. If that ever bites, gating it is one env read —
-but it is not gated today, and that is a choice, not an oversight.
+~~**Prewarm is unconditional** (decided 2026-09-04)~~ — **the prewarm is gone (2026-09-05)**, message,
+handler and routing with it, for the measured reason in the struck row above: it never won the race
+with the browser and only ever doubled the CPU load on the one synthesis that mattered. What remains
+of this section is the client-side fetch-ahead of WAITING lines, which does not race anything — the
+line it fetches is not being asked for by anyone else — and the disk cache. Should a server-side
+head start ever be wanted again, it has to be single-flight (the browser's request joins the
+in-progress synthesis rather than starting a second), not a second request.
+
+**No holding of the text.** It was on the table to delay the card until the audio was ready so the
+two would land together. Not done: with first sound at 0.2–0.5 s there is nothing left to hide, and
+hard rule 1 (*motion may overlap an arrival, never gate one*) stands unchanged.
 
 ## Asking the agent from the UI — the judgement chip (added 2026-09-04)
 

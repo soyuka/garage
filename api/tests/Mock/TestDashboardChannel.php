@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace App\Tests\Mock;
 
 use App\Agent\Ui\DashboardChannel;
-use App\I18n\LocaleContext;
 use App\Security\OwnerContext;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\ServiceLocator;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 /**
@@ -27,15 +25,5 @@ final class TestDashboardChannel
         $channel->bindSession($sessionTopic);
 
         return $channel;
-    }
-
-    /**
-     * A {@see LocaleContext} for unit tests: no request in flight, so it reads as {@see
-     * \App\I18n\Locale::DEFAULT} unless a test explicitly calls {@see LocaleContext::set()} on it —
-     * exactly the shape {@see \App\Agent\Ui\RenderIntentTools}'s speech prewarm reads locale from.
-     */
-    public static function locale(): LocaleContext
-    {
-        return new LocaleContext(new RequestStack());
     }
 }

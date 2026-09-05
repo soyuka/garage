@@ -9,7 +9,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\ServerToolUseLogger;
 use App\Agent\Ui\RenderIntentTools;
-use App\Tests\Mock\RecordingMessageBus;
 use App\Tests\Mock\TestDashboardChannel;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
@@ -115,7 +114,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));

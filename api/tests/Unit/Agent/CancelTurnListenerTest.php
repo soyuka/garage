@@ -9,7 +9,6 @@ use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\TurnCancellations;
 use App\Agent\Ui\CancelTurnListener;
 use App\Agent\Ui\RenderIntentTools;
-use App\Tests\Mock\RecordingMessageBus;
 use App\Tests\Mock\TestDashboardChannel;
 use App\Tests\Mock\RecordingHub;
 use PHPUnit\Framework\TestCase;
@@ -27,7 +26,7 @@ final class CancelTurnListenerTest extends TestCase
         $cancellations->request('sess-abc');
 
         $hub = new RecordingHub();
-        $render = new RenderIntentTools($hub, new NullLogger(), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $render = new RenderIntentTools($hub, new NullLogger(), TestDashboardChannel::create());
         $render->bindSession(self::SESSION_TOPIC);
 
         $event = new ToolCallsExecuted([]);
@@ -45,7 +44,7 @@ final class CancelTurnListenerTest extends TestCase
     {
         $cancellations = new TurnCancellations(new ArrayAdapter());
 
-        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create());
         $render->bindSession(self::SESSION_TOPIC);
 
         $event = new ToolCallsExecuted([]);
@@ -59,7 +58,7 @@ final class CancelTurnListenerTest extends TestCase
         $cancellations = new TurnCancellations(new ArrayAdapter());
         $cancellations->request('sess-abc');
 
-        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create(), new RecordingMessageBus(), TestDashboardChannel::locale());
+        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create());
         $render->bindSession(self::SESSION_TOPIC);
 
         // A terminal tool (end_turn) already ended the turn this round — do not double-handle.
