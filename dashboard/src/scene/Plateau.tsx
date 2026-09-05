@@ -116,12 +116,12 @@ function CameraRig({
       return;
     }
     const held = g.held;
-    const nextSig = held ? `${held.region}:${held.mode ?? 'focus'}:${held.key}` : 'home';
+    const nextSig = held ? `${held.region}:${held.mode ?? 'focus'}:${held.legend ?? 'column'}:${held.key}` : 'home';
     if (nextSig !== sig.current) {
       sig.current = nextSig;
       // Compute the preset ONLY on a sig change (a fresh Record + Vec3 tuples per call) — a settled hold
       // re-enters this frame with nextSig === sig.current and skips it, so it costs zero allocation.
-      const pose = held ? presetForFocus(bodyClass, held.region, held.mode) : HOME;
+      const pose = held ? presetForFocus(bodyClass, held.region, held.mode, held.legend) : HOME;
       goalPos.current.set(pose.position[0], pose.position[1], pose.position[2]);
       goalTgt.current.set(pose.target[0], pose.target[1], pose.target[2]);
       if (reduced) {

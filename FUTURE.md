@@ -419,3 +419,4 @@ makes staleness readable, it does not prevent it.
 
 - History ring (2026-09-05): the car does not yet rescale to make room for the ring + the right-docked
   Carnet — both share the left ~60% of the viewport as-is, untested against a very long car (utilitaire).
+- tasks/visits focus has no body yet (CHOREOGRAPHY § Stations under both drivers).

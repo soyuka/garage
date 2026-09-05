@@ -26,7 +26,7 @@ import { VisitProjection } from './VisitProjection';
 import { ShoppingListOverlay } from './ShoppingList';
 import { buildWorklist } from './worklist';
 import { manifestFromCta } from './parts';
-import { rollupCarnet } from '../carnet';
+import { rollupCarnet, filterCarnetRecords } from '../carnet';
 import { deriveCameraFocus, holdIntent, type CameraFocus } from './cameraRig';
 import type { BodyRegion } from './anchors';
 import { FactsDrawer } from './FactsDrawer';
@@ -36,6 +36,8 @@ import { factConstellationLayout } from './factConstellation';
 import { fluidVolumesLayout } from './fluidVolumes';
 import { bodyClassFor } from './CarProxy';
 import { legendFocusReducer } from './picking';
+import { stationFor } from './stations';
+import { selectFacts } from './SpecConstellation';
 import type { Focus } from '../focus';
 import type { ForecastDue, Iri, MaintenanceRecord, PlannedPart, VehicleBundle } from '../types';
 
@@ -223,8 +225,22 @@ export function SceneView({
     return () => window.removeEventListener('keydown', onKey);
   }, [drawerOwnsEscape, focusOpen, onDismissFocus, cameraFocus, onCameraRelease]);
 
-  // `records` rarely changes while the ring holds, so this is cheap to recompute on every render.
-  const visits = useMemo(() => (historyOpen ? visitRingLayout(records) : null), [historyOpen, records]);
+  const focusKeys = focus?.keys;
+  // Which station's BODY belongs on the disc (CHOREOGRAPHY § "Stations under both drivers"): a docked
+  // legend (the full Carnet/Fiche drawer) wins outright; otherwise the focus decides (fluids checked
+  // before carnet/specs, since a specs focus carrying `nodes` is a fetched surface, never stored facts).
+  const station = stationFor({ historyOpen, factsDrawerOpen, focus });
+
+  // `records` rarely changes while the ring holds, so this is cheap to recompute on every render. A
+  // carnet FOCUS (the agent's/pilot's `showHistory`/`focusView{panel:'carnet'}`) rolls the ring too —
+  // cut to the same keys the legend applies (`filterCarnetRecords`, shared with `rollupCarnet` below),
+  // so "the legend shows exactly those, the ring shows exactly those: truth first".
+  const visits = useMemo(() => {
+    if (historyOpen) return visitRingLayout(records);
+    if (station === 'carnet') return visitRingLayout(filterCarnetRecords(records, focusKeys ?? []));
+    return null;
+  }, [historyOpen, station, records, focusKeys]);
+  const ringOpen = visits != null;
   const [hoveredVisit, setHoveredVisit] = useState<string | null>(null);
   // The body → legend pointer (§ "Picking — the body points back"): a body hover/leave/pick funnels
   // through ONE reducer shared by all three stations, scoped by `kind` so they never clear each other's
@@ -236,17 +252,26 @@ export function SceneView({
   }, []);
   const onPickVisit = useCallback((key: string) => dispatchLegendFocus({ type: 'pick', kind: 'visit', key }), []);
   useEffect(() => {
-    if (!historyOpen) {
+    if (!ringOpen) {
       setHoveredVisit(null);
       dispatchLegendFocus({ type: 'leave', kind: 'visit' });
     }
-  }, [historyOpen]);
-  // The fact constellation — same on-demand-only shape as the visit ring, keyed off factsDrawerOpen.
+  }, [ringOpen]);
+  // The fact constellation — same on-demand shape as the visit ring: the full sheet while the Fiche
+  // drawer is open, or a specs FOCUS's own cut (`selectFacts`, the same helper SpecConstellation uses)
+  // when the agent pointed at a few keys without a fetched `nodes` surface. An empty cut is no station,
+  // same as the fluids row below.
   const bodyClass = bundle ? bodyClassFor(bundle.vehicle.vehicleType) : null;
-  const facts = useMemo(
-    () => (factsDrawerOpen && bundle && bodyClass ? factConstellationLayout(bundle.vehicle.facts ?? [], bodyClass) : null),
-    [factsDrawerOpen, bundle, bodyClass],
-  );
+  const facts = useMemo(() => {
+    if (!bundle || !bodyClass) return null;
+    if (factsDrawerOpen) return factConstellationLayout(bundle.vehicle.facts ?? [], bodyClass);
+    if (station === 'specs') {
+      const selected = selectFacts(bundle.vehicle.facts ?? [], focusKeys ?? []);
+      return selected.length > 0 ? factConstellationLayout(selected, bodyClass) : null;
+    }
+    return null;
+  }, [factsDrawerOpen, station, bundle, bodyClass, focusKeys]);
+  const constellationOpen = facts != null;
   const [hoveredFact, setHoveredFact] = useState<string | null>(null);
   const onHoverFact = useCallback((key: string | null) => {
     setHoveredFact(key);
@@ -254,11 +279,11 @@ export function SceneView({
   }, []);
   const onPickFact = useCallback((key: string) => dispatchLegendFocus({ type: 'pick', kind: 'fact', key }), []);
   useEffect(() => {
-    if (!factsDrawerOpen) {
+    if (!constellationOpen) {
       setHoveredFact(null);
       dispatchLegendFocus({ type: 'leave', kind: 'fact' });
     }
-  }, [factsDrawerOpen]);
+  }, [constellationOpen]);
   // The fluid volumes station — third and last: only when no legend (Carnet/fiche) is docked, the specs
   // panel is showing PROJECTED nodes (a fetched surface, never the stored facts), and at least one of
   // those nodes carries a body (§ "Fluids — the volumes", precedence: legends win over the specs column).
@@ -282,28 +307,35 @@ export function SceneView({
       dispatchLegendFocus({ type: 'leave', kind: 'fluid' });
     }
   }, [fluidsOpen]);
+  // The carnet/specs FOCUS stations are open (for camera purposes) only when their cut is non-empty —
+  // same rule as fluids above. History/Data (the drawers) stay unconditionally "open" while docked: the
+  // drawer earns its dolly even showing "no records yet", unlike a focus with nothing to show.
+  const carnetStationOpen = station === 'carnet' && ringOpen;
+  const specsStationOpen = station === 'specs' && constellationOpen;
   // A drag breaking the hold (Plateau's onCameraRelease) must not re-dolly to the station pose on release
-  // — tracked separately from historyOpen/factsDrawerOpen/fluidsOpen so the drawer/carnet/column itself
-  // can stay open with the camera set free. History, Data and Fluids are mutually exclusive in practice
-  // (a legend closes the specs column; the driver closes history/data on opening the other), so ONE
-  // released flag covers whichever station is open.
+  // — tracked separately from the stations' own open flags so the drawer/carnet/column itself can stay
+  // open with the camera set free. The stations are mutually exclusive by precedence (`stationFor`), so
+  // ONE released flag covers whichever station is open.
   const [stationHoldReleased, setStationHoldReleased] = useState(false);
   useEffect(() => {
-    if (historyOpen || factsDrawerOpen || fluidsOpen) setStationHoldReleased(false);
-  }, [historyOpen, factsDrawerOpen, fluidsOpen]);
+    if (historyOpen || factsDrawerOpen || fluidsOpen || carnetStationOpen || specsStationOpen) setStationHoldReleased(false);
+  }, [historyOpen, factsDrawerOpen, fluidsOpen, carnetStationOpen, specsStationOpen]);
   const onPlateauCameraRelease = useCallback(() => {
     onCameraRelease?.();
     setStationHoldReleased(true);
   }, [onCameraRelease]);
-  // Station camera precedence: legends (history/data) first, fluids last — a docked legend already
-  // dismisses the fluids station's own focus (specs closes), but the order also matters mid-transition.
-  const plateauCameraFocus = historyOpen
-    ? deriveCameraFocus(cameraFocus, true, 'history', stationHoldReleased)
-    : factsDrawerOpen
-      ? deriveCameraFocus(cameraFocus, true, 'data', stationHoldReleased)
-      : deriveCameraFocus(cameraFocus, fluidsOpen, 'fluids', stationHoldReleased);
-
-  const focusKeys = focus?.keys;
+  // Station camera precedence lives in `station` (one tested place, `stations.ts`): legends first, then
+  // carnet/specs (history/data pose, projection shift), fluids last.
+  const plateauCameraFocus =
+    station === 'history'
+      ? deriveCameraFocus(cameraFocus, true, 'history', stationHoldReleased)
+      : station === 'data'
+        ? deriveCameraFocus(cameraFocus, true, 'data', stationHoldReleased)
+        : station === 'carnet'
+          ? deriveCameraFocus(cameraFocus, carnetStationOpen, 'carnet', stationHoldReleased)
+          : station === 'specs'
+            ? deriveCameraFocus(cameraFocus, specsStationOpen, 'specs', stationHoldReleased)
+            : deriveCameraFocus(cameraFocus, fluidsOpen, 'fluids', stationHoldReleased);
   // The constellation is a PROJECTED surface only: it exists when the agent (or a chip) answers a spec
   // question, and not otherwise. It used to double as a resting shelf of operator-pinned facts, which
   // gave one surface two meanings and left the column occupied by something nobody had asked for.
@@ -483,16 +515,34 @@ export function SceneView({
                   onDismiss={specsFocused ? onDismissFocus : undefined}
                   nodes={specsFocused ? focus?.nodes : undefined}
                   // The legend's OWN hover only marks the body (never touches legendFocus — that is the
-                  // body→legend direction only, § "Picking — the body points back").
-                  onHoverNode={specsFocused && focus?.nodes ? setHoveredFluid : undefined}
-                  focusKey={legendFocus?.kind === 'fluid' ? legendFocus.key : null}
+                  // body→legend direction only, § "Picking — the body points back"). Stored facts (no
+                  // `nodes`) mark the constellation body the same way the fluids nodes mark their cylinder.
+                  onHoverNode={!specsFocused ? undefined : focus?.nodes ? setHoveredFluid : setHoveredFact}
+                  focusKey={
+                    !specsFocused
+                      ? null
+                      : focus?.nodes
+                        ? legendFocus?.kind === 'fluid'
+                          ? legendFocus.key
+                          : null
+                        : legendFocus?.kind === 'fact'
+                          ? legendFocus.key
+                          : null
+                  }
                 />
               )}
               {showWorklist && worklist && (
                 <WorklistProjection model={worklist} reduced={reduced} onDismiss={onDismissFocus} />
               )}
               {showCarnet && carnet && (
-                <CarnetProjection model={carnet} reduced={reduced} onDismiss={onDismissFocus} onOpenAll={onOpenHistory} />
+                <CarnetProjection
+                  model={carnet}
+                  reduced={reduced}
+                  onDismiss={onDismissFocus}
+                  onOpenAll={onOpenHistory}
+                  onHoverRecord={setHoveredVisit}
+                  focusKey={legendFocus?.kind === 'visit' ? legendFocus.key : null}
+                />
               )}
               {showLadder && plan && (
                 <VisitProjection

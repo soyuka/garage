@@ -23,11 +23,15 @@ export interface CameraPose {
 
 /** A held camera focus. `key` re-triggers a dolly even for a repeat region (mirrors PulseRegion).
  * `mode` picks the pose family — absent means `focus`, so a reveal is a hold like any other. `region`
- * is absent only for `mode:'history'`/`'data'` — neither station is anchored to a body region. */
+ * is absent only for `mode:'history'`/`'data'` — neither station is anchored to a body region. `legend`
+ * applies only to `history`/`data`: `'column'` (default) is the full drawer's target shift, `'projection'`
+ * is the narrower shift a focus-only station (carnet, stored-facts specs) uses instead — same slabs/cards,
+ * same pose family, target shifted for the projection column rather than the 40vw drawer. */
 export interface CameraFocus {
   region?: BodyRegion;
   key: number;
   mode?: FocusMode;
+  legend?: LegendShift;
 }
 
 /** The resting framing — the single source (was inline in Plateau's Canvas camera + OrbitControls). */
@@ -192,10 +196,18 @@ export const FLUIDS_VIEW: StationView = {
   rightShift: 0.8,
 };
 
+/** The two target-shift widths a `history`/`data` station pose can use (§ "Stations under both
+ * drivers"): `column` is the full drawer's shift (Carnet/Fiche, 40vw of DOM); `projection` is the
+ * narrower shift a focus-only station borrows from the fluids row — same slabs/cards, target shifted
+ * for the right-edge projection column instead. */
+export const LEGEND_SHIFT = { column: 1.2, projection: 0.8 } as const;
+export type LegendShift = keyof typeof LEGEND_SHIFT;
+
 /** A station's camera pose, derived from `home`. Same azimuth as home, raised polar, pulled back,
  * target shifted along the view's right vector — the shared shape behind {@link historyPose} and
- * {@link dataPose}. */
-function stationPose(view: StationView, home: CameraPose = HOME): CameraPose {
+ * {@link dataPose}. `rightShiftOverride` lets a focus-only station reuse the same pose with a
+ * narrower target shift (see {@link LEGEND_SHIFT}) instead of `view`'s own. */
+function stationPose(view: StationView, home: CameraPose = HOME, rightShiftOverride?: number): CameraPose {
   const homeOffset: Vec3 = [home.position[0] - home.target[0], home.position[1] - home.target[1], home.position[2] - home.target[2]];
   const { radius, azimuth } = toSpherical(homeOffset);
   const polar = clampPolar(view.polar);
@@ -203,21 +215,22 @@ function stationPose(view: StationView, home: CameraPose = HOME): CameraPose {
   // Shifting the target along the camera's rightward ground-plane vector pushes the (fixed,
   // origin-centred) car left of screen-centre.
   const right: Vec3 = [Math.cos(azimuth), 0, -Math.sin(azimuth)];
-  const target: Vec3 = [right[0] * view.rightShift, view.targetY, right[2] * view.rightShift];
+  const rightShift = rightShiftOverride ?? view.rightShift;
+  const target: Vec3 = [right[0] * rightShift, view.targetY, right[2] * rightShift];
   return {
     position: [target[0] + offset[0], target[1] + offset[1], target[2] + offset[2]],
     target,
   };
 }
 
-/** The history-ring camera pose (see {@link HISTORY_VIEW}). */
-export function historyPose(home: CameraPose = HOME): CameraPose {
-  return stationPose(HISTORY_VIEW, home);
+/** The history-ring camera pose (see {@link HISTORY_VIEW}). `legend` picks the target shift width. */
+export function historyPose(home: CameraPose = HOME, legend: LegendShift = 'column'): CameraPose {
+  return stationPose(HISTORY_VIEW, home, LEGEND_SHIFT[legend]);
 }
 
-/** The fact-constellation camera pose (see {@link DATA_VIEW}). */
-export function dataPose(home: CameraPose = HOME): CameraPose {
-  return stationPose(DATA_VIEW, home);
+/** The fact-constellation camera pose (see {@link DATA_VIEW}). `legend` picks the target shift width. */
+export function dataPose(home: CameraPose = HOME, legend: LegendShift = 'column'): CameraPose {
+  return stationPose(DATA_VIEW, home, LEGEND_SHIFT[legend]);
 }
 
 /** The fluid-volumes camera pose (see {@link FLUIDS_VIEW}). */
@@ -226,10 +239,16 @@ export function fluidsPose(home: CameraPose = HOME): CameraPose {
 }
 
 /** The camera preset for a region on a body class, in the given pose family. `history`/`data`/`fluids`
- * ignore `bodyClass`/`region` — no station is anchored to a part of the car. */
-export function presetForFocus(bodyClass: BodyClass, region: BodyRegion | undefined, mode: FocusMode = 'focus'): CameraPose {
-  if (mode === 'history') return historyPose();
-  if (mode === 'data') return dataPose();
+ * ignore `bodyClass`/`region` — no station is anchored to a part of the car. `legend` (history/data
+ * only) picks the target-shift width; ignored by every other mode. */
+export function presetForFocus(
+  bodyClass: BodyClass,
+  region: BodyRegion | undefined,
+  mode: FocusMode = 'focus',
+  legend: LegendShift = 'column',
+): CameraPose {
+  if (mode === 'history') return historyPose(HOME, legend);
+  if (mode === 'data') return dataPose(HOME, legend);
   if (mode === 'fluids') return fluidsPose();
   const anchor: Anchor = regionAnchors(bodyClass)[region as BodyRegion];
   return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region as BodyRegion]);
@@ -289,12 +308,19 @@ export function dragBreaksHold(state: GateState): boolean {
 
 /** What Plateau's `cameraFocus` should be: an explicit hold always wins; otherwise the given station's
  * pose while it is open, unless a drag already released it (`stationHoldReleased`) — the same release
- * rule for every station (history, data, fluids, …), so a new one is a `mode` value, not new machinery. */
+ * rule for every station (history, data, fluids, carnet, specs, …), so a new one is a `mode` value, not
+ * new machinery. `carnet`/`specs` are focus-only stations (no drawer docked): they borrow the
+ * history/data pose family but with the narrower `'projection'` target shift (§ "Stations under both
+ * drivers") — same body, same camera family, only the shift differs from the drawer's `'column'`. */
 export function deriveCameraFocus(
   cameraFocus: CameraFocus | null,
   stationOpen: boolean,
-  stationMode: 'history' | 'data' | 'fluids',
+  stationMode: 'history' | 'data' | 'fluids' | 'carnet' | 'specs',
   stationHoldReleased: boolean,
 ): CameraFocus | null {
-  return cameraFocus ?? (stationOpen && !stationHoldReleased ? { key: 0, mode: stationMode } : null);
+  if (cameraFocus) return cameraFocus;
+  if (!stationOpen || stationHoldReleased) return null;
+  if (stationMode === 'carnet') return { key: 0, mode: 'history', legend: 'projection' };
+  if (stationMode === 'specs') return { key: 0, mode: 'data', legend: 'projection' };
+  return { key: 0, mode: stationMode };
 }

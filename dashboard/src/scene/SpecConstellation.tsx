@@ -117,7 +117,18 @@ export function SpecConstellation({
               </div>
             ))
           : factNodes.map((f, i) => (
-              <div key={f.key} className="at-spec-node" data-key={f.key} data-picked={focusKey === f.key ? 'true' : undefined} style={delay(i)}>
+              <div
+                key={f.key}
+                className="at-spec-node"
+                data-key={f.key}
+                data-picked={focusKey === f.key ? 'true' : undefined}
+                style={delay(i)}
+                tabIndex={onHoverNode ? 0 : undefined}
+                onMouseEnter={onHoverNode ? () => onHoverNode(f.key) : undefined}
+                onMouseLeave={onHoverNode ? () => onHoverNode(null) : undefined}
+                onFocus={onHoverNode ? () => onHoverNode(f.key) : undefined}
+                onBlur={onHoverNode ? () => onHoverNode(null) : undefined}
+              >
                 <span className="at-spec-label">{factLabel(f.key, locale)}</span>
                 <span className="at-spec-value">
                   {edit ? (

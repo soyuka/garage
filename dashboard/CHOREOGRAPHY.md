@@ -616,6 +616,24 @@ it wears on hover, for as long as the pointer stays on the body. Nothing is sele
 pick is a look, not an action. Owner: the station components (`VisitRing`, `FactConstellation`,
 `FluidVolumes`) → `Plateau` → `SceneView` → the legend (`HistoryLog`, `FactsDrawer`, `SpecConstellation`).
 
+### Stations under both drivers (2026-09-05)
+
+The three stations were keyed on the operator's chips (`historyOpen`, `factsDrawerOpen`, the fluids
+chip's `nodes`). The agent and the pilot never touch those: `focusView {panel:'carnet'}` / `showHistory`
+raise the **carnet projection** and `showFact {keys}` the **spec constellation**, both in the right
+projection column — and no body rose on the disc for either. Under the driver the conference is about,
+the stage stayed a DOM panel. Corrected: **a station belongs to the dataset, not to the surface that
+opened it.** The projection column already is a legend (right side, no scrim), so nothing about the DOM
+changes; the bodies follow:
+
+| Real frame / condition | Atelier motion | Owner layer |
+| --- | --- | --- |
+| `focus.panel === 'carnet'` (agent or pilot; `showHistory` too) and no legend docked | **the visit ring rises for the visits the projection covers** — with `keys`, only the visits carrying those services (one shared filter, `filterCarnetRecords`, feeds both). The projection stays a summary: it lists the three most recent and STATES the count (« 16 visites, 15 sans coût »), so the ring's sixteen slabs and the legend's three never contradict — the count is the bridge, « tout l'historique » opens the full Carnet (*worded at build, 2026-09-05*). Same slabs, same heights, same camera **history pose**, but the target shift is the projection column's (0.8 m, as the fluids row), not the 40 vw legend's. Hover on a carnet row marks its slab; a pick scrolls the row | `SceneView` + `CarnetProjection` |
+| `focus.panel === 'specs'` with `keys` (stored facts, `showFact`/`focusView`) and no legend docked | **a constellation of only those facts** — the agent points at a few things in the volume, not the whole sheet; empty `keys` (the whole sheet) gives the full constellation. Data pose with the projection shift. Hover/pick on the constellation cards as for the fiche | `SceneView` + `SpecConstellation` |
+| `focus.panel === 'specs'` with `nodes` | the fluid volumes, unchanged (row above) | — |
+| a chip legend opens while a focus station stands | the legend's station replaces it (legends win, existing rule); on the legend's close the focus station returns if the focus still stands | `SceneView` |
+| `tasks`, `visits`, `parts` focus | no body yet — the worklist and the ladder already speak through the pulse regions and the rail; a body for tasks is a later row | — |
+
 ## One stage — the lot and the podium (added 2026-09-05)
 
 The lot (`#/`) and the car page are two render trees with two canvases; a hard swap between them read as

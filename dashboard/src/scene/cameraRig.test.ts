@@ -23,6 +23,7 @@ import {
   HISTORY_VIEW,
   DATA_VIEW,
   FLUIDS_VIEW,
+  LEGEND_SHIFT,
   DOLLY_RADIUS_FACTOR,
   clampPolar,
   sineEaseInOut,
@@ -252,6 +253,18 @@ describe('historyPose — the visit-ring station camera', () => {
   it('is presetForFocus’s history mode', () => {
     expect(presetForFocus('berline', undefined, 'history')).toEqual(historyPose());
   });
+
+  it('defaults to the "column" legend shift — HISTORY_VIEW’s own rightShift', () => {
+    expect(HISTORY_VIEW.rightShift).toBe(LEGEND_SHIFT.column);
+  });
+
+  it('the "projection" legend narrows the target shift to the fluids row’s width', () => {
+    const narrow = historyPose(HOME, 'projection');
+    const right: Vec3 = [Math.cos(homeAz), 0, -Math.sin(homeAz)];
+    const dot = narrow.target[0] * right[0] + narrow.target[2] * right[2];
+    expect(dot).toBeCloseTo(LEGEND_SHIFT.projection);
+    expect(presetForFocus('berline', undefined, 'history', 'projection')).toEqual(narrow);
+  });
 });
 
 describe('dataPose — the fact-constellation station camera', () => {
@@ -269,6 +282,14 @@ describe('dataPose — the fact-constellation station camera', () => {
 
   it('is presetForFocus’s data mode', () => {
     expect(presetForFocus('berline', undefined, 'data')).toEqual(dataPose());
+  });
+
+  it('the "projection" legend narrows the target shift to the fluids row’s width', () => {
+    const narrow = dataPose(HOME, 'projection');
+    const right: Vec3 = [Math.cos(homeAz), 0, -Math.sin(homeAz)];
+    const dot = narrow.target[0] * right[0] + narrow.target[2] * right[2];
+    expect(dot).toBeCloseTo(LEGEND_SHIFT.projection);
+    expect(presetForFocus('berline', undefined, 'data', 'projection')).toEqual(narrow);
   });
 });
 
@@ -346,6 +367,30 @@ describe('deriveCameraFocus — a drag releases a station hold', () => {
 
   it('an explicit hold still wins over the fluids station', () => {
     expect(deriveCameraFocus(held, true, 'fluids', false)).toEqual(held);
+  });
+
+  it('a carnet focus with nothing else held earns the history pose, narrowed to the projection shift', () => {
+    expect(deriveCameraFocus(null, true, 'carnet', false)).toEqual({ key: 0, mode: 'history', legend: 'projection' });
+  });
+
+  it('a drag that already released the hold keeps the camera free while a carnet focus stands', () => {
+    expect(deriveCameraFocus(null, true, 'carnet', true)).toBeNull();
+  });
+
+  it('an explicit hold still wins over the carnet station', () => {
+    expect(deriveCameraFocus(held, true, 'carnet', false)).toEqual(held);
+  });
+
+  it('a specs-keys focus with nothing else held earns the data pose, narrowed to the projection shift', () => {
+    expect(deriveCameraFocus(null, true, 'specs', false)).toEqual({ key: 0, mode: 'data', legend: 'projection' });
+  });
+
+  it('a drag that already released the hold keeps the camera free while a specs focus stands', () => {
+    expect(deriveCameraFocus(null, true, 'specs', true)).toBeNull();
+  });
+
+  it('an explicit hold still wins over the specs station', () => {
+    expect(deriveCameraFocus(held, true, 'specs', false)).toEqual(held);
   });
 });
 

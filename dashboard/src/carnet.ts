@@ -39,15 +39,23 @@ function costSourceOf(r: MaintenanceRecord): 'bill' | 'estimated' | null {
 }
 
 /**
+ * The agent's CUT of the register, shared with the ring body (`SceneView`'s carnet-focus station) so
+ * the legend and the ring always agree — truth first. A visit is kept when it carries any requested
+ * type. Empty keys ⇒ the whole register.
+ */
+export function filterCarnetRecords(records: MaintenanceRecord[], keys: string[]): MaintenanceRecord[] {
+  if (keys.length === 0) return records;
+  const wanted = new Set(keys);
+  return records.filter((r) => r.items.some((it) => wanted.has(it.type)));
+}
+
+/**
  * The agent's CUT of the register. « quand la dernière vidange ? » asks about ONE service, and every
  * visit is not its answer — the same narrowing `focusView {panel:'tasks', keys}` already does for the
  * worklist. A visit is kept when it carries any requested type. Empty keys ⇒ the whole register.
  */
 export function rollupCarnet(records: MaintenanceRecord[], locale: Locale, limit = 3, keys: string[] = []): CarnetRollup {
-  if (keys.length > 0) {
-    const wanted = new Set(keys);
-    records = records.filter((r) => r.items.some((it) => wanted.has(it.type)));
-  }
+  records = filterCarnetRecords(records, keys);
   const sorted = [...records].sort((a, b) => (a.performedAt < b.performedAt ? 1 : a.performedAt > b.performedAt ? -1 : 0));
   const rows: CarnetRow[] = sorted.slice(0, limit).map((r) => ({
     id: r.id,
