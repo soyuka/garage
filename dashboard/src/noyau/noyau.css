@@ -13,7 +13,11 @@
 @property --nx-seam { syntax: '<color>'; inherits: true; initial-value: rgba(180, 196, 210, 0.35); }
 
 .noyau-stage {
-  transition: --nx-fil-core 600ms ease, --nx-fil-edge 600ms ease, --nx-emissive 600ms ease, --nx-seam 500ms ease;
+  /* one list, three declarations: `transition` is a shorthand, so a mount that transforms the stage (the
+     console socket scales it, scene.css) must not redeclare it — the filament cross-fade would go with it.
+     The transform step is the swap step and lives here beside the filament steps for that reason. */
+  --nx-fil-transitions: --nx-fil-core 600ms ease, --nx-fil-edge 600ms ease, --nx-emissive 600ms ease, --nx-seam 500ms ease;
+  transition: var(--nx-fil-transitions), transform var(--at-dur-swap) var(--at-ease-sine);
   --nx-void: #131210;
   --nx-chrome: #2a2d33;
   --nx-chrome-hi: #767b85;
@@ -310,6 +314,7 @@
   .noyau-orb, .noyau-pupil, .noyau-iris, .noyau-scan, .noyau-glint, .noyau-rim, .noyau-fault,
   .noyau-narration span, .noyau-ember { animation: none !important; }
   .noyau-pupil, .noyau-iris { transition: none; }
+  .noyau-stage { transition: var(--nx-fil-transitions); }
   .noyau-stage[data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
   .noyau-stage[data-phase='listening'] .noyau-scan,
   .noyau-stage[data-phase='idle'] .noyau-scan { opacity: 0.15; }
@@ -326,6 +331,9 @@
 .noyau-stage[data-reduced='true'] .noyau-ember { animation: none !important; }
 .noyau-stage[data-reduced='true'] .noyau-pupil,
 .noyau-stage[data-reduced='true'] .noyau-iris { transition: none; }
+/* the mount resize is a state change (CHOREOGRAPHY § The pilot driver, prefers-reduced-motion row); the
+   filament cross-fade keeps its step, as it always has under reduced motion here */
+.noyau-stage[data-reduced='true'] { transition: var(--nx-fil-transitions); }
 .noyau-stage[data-reduced='true'][data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
 .noyau-stage[data-reduced='true'] .noyau-scan { opacity: 0.15; }
 .noyau-stage[data-reduced='true'] .noyau-pulse-ring,

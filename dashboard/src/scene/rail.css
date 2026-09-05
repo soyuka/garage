@@ -49,6 +49,17 @@
   /* the bottom edge fades out over its last sliver — a strip that stops, not a panel that is cut off.
      Short enough (28px) that no line of text ever reads through it. */
   mask-image: linear-gradient(180deg, #000 0, #000 calc(100% - 28px), transparent 100%);
+  transition: max-height var(--at-dur-swap) var(--at-ease-sine), opacity var(--at-dur-swap) ease;
+}
+/* the freed orb (CHOREOGRAPHY § The pilot driver, 2026-09-04) makes the console 152px taller in veille
+   pilotée — socket 160 + gap 8 + composer 50 against the 66px row — and the clearance above is a literal
+   sized to that row, so it grows by the same amount. Keyed on the dock, the one element that reads
+   data-driver; the rail is its sibling, hence :has(). */
+.at-scene:has(.at-scene-dock[data-driver='pilot']) .at-rail {
+  max-height: calc(100% - 352px);
+}
+/* reduced motion cuts the resize (the row above); the [data-dim] fade predates it and is the rail's own */
+.at-scene:has(.at-scene-dock[data-reduced='true']) .at-rail {
   transition: opacity var(--at-dur-swap) ease;
 }
 .at-rail[data-dim] {

@@ -341,6 +341,87 @@ body {
   padding: 14px 20px 14px 10px;
 }
 
+/* ── the pilot frees Le Noyau (CHOREOGRAPHY § The pilot driver, rows dated 2026-09-04) ──
+   Under driver='pilot' the orb is not the operator's instrument beside their input — someone else is
+   driving — so it renders at native size ABOVE the console. Same DOM: the console becomes a column and
+   the socket box grows to match the orb, so the inbox/ember/cradle anchors, the notices/CTA rising above
+   it and the focus fallback all keep working. The orb stays absolute-centred in the socket in BOTH states:
+   only `transform` and the box animate (`position` cannot transition). The orb's transform step is NOT
+   declared here: `transition` is a shorthand, and one on `.noyau-stage` from this more specific selector
+   would replace noyau.css's registered-property list and cut the done filament — so noyau.css carries the
+   transform step beside the filament steps, and its own reduced-motion rule drops only that step. */
+.at-scene-console {
+  transition: padding var(--at-dur-swap) var(--at-ease-sine), background-color var(--at-dur-swap) var(--at-ease-sine), border-color var(--at-dur-swap) var(--at-ease-sine);
+}
+.at-scene-socket {
+  transition: width var(--at-dur-swap) var(--at-ease-sine), height var(--at-dur-swap) var(--at-ease-sine), border-color var(--at-dur-swap) var(--at-ease-sine), background-color var(--at-dur-swap) var(--at-ease-sine);
+}
+.at-scene-dock[data-driver='pilot'] .at-scene-console {
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border-color: transparent;
+  background-color: transparent;
+}
+.at-scene-dock[data-driver='pilot'] .at-scene-socket {
+  width: 138px;
+  height: 158px; /* orb-wrap 138 + cradle 26 − 6 cradle margin-top (noyau.css:71,237) */
+  border-color: transparent;
+  background-color: transparent;
+}
+.at-scene-dock[data-driver='pilot'] .at-scene-socket .noyau-stage {
+  transform: translate(-50%, -50%) scale(1);
+}
+/* the composer under the pilot: full width, its own box (the row layout's flex:1 above would otherwise size it) */
+.at-scene-dock[data-driver='pilot'] .at-scene-console .at-scene-composer {
+  flex: 0 0 auto;
+  width: min(680px, 86vw);
+  height: 48px;
+  overflow: hidden;
+  border: 1px solid var(--at-hairline);
+  border-radius: 999px;
+  background: rgba(20, 21, 24, 0.92); /* scrim law — same literal as the console */
+  transition: height var(--at-dur-swap) var(--at-ease-sine);
+}
+.at-scene-dock[data-driver='pilot'] .at-scene-console .at-scene-input {
+  height: 100%;
+  padding: 0 20px;
+  transition: opacity var(--at-dur-tint) var(--at-ease-sine);
+}
+/* under load (quiet absent): the LOCKED composer, collapsed to a hairline. Grayscale by construction;
+   hover does nothing (a locked control is not an invitation); keyboard focus on the composer itself
+   re-inflates it so a focused control is visible (WCAG 2.4.7). In veille pilotée (data-quiet) the rule
+   below does not match, so the composer is the full input — the unlock made visible. */
+.at-scene-dock[data-driver='pilot']:not([data-quiet='true']) .at-scene-console .at-scene-composer:not(:focus-within) {
+  height: 10px;
+}
+.at-scene-dock[data-driver='pilot']:not([data-quiet='true']) .at-scene-console .at-scene-composer:not(:focus-within) .at-scene-input {
+  opacity: 0;
+}
+/* veille pilotée — the handle inflates on its own the instant `quiet` flips (busy() → false, the unlock
+   made visible). Geometry is the 48px rule above; this selector exists so the state is named where the
+   choreography names it. */
+.at-scene-dock[data-driver='pilot'][data-quiet='true'] .at-scene-console .at-scene-composer {
+  height: 48px;
+}
+/* reduced motion: orb size and handle height encode who is driving / whether typing is allowed (state);
+   the transitions into them are attention — cut both (CHOREOGRAPHY row prefers-reduced-motion) */
+.at-scene-dock[data-reduced='true'] .at-scene-console,
+.at-scene-dock[data-reduced='true'] .at-scene-socket,
+.at-scene-dock[data-reduced='true'] .at-scene-composer,
+.at-scene-dock[data-reduced='true'] .at-scene-input {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .at-scene-dock .at-scene-console,
+  .at-scene-dock .at-scene-socket,
+  .at-scene-dock .at-scene-composer,
+  .at-scene-dock .at-scene-input {
+    transition: none;
+  }
+}
+
 /* deterministic quick-action chips — resolve client-side, never a postTurn. Orange hover marks the
    operator-focus role; cyan stays rationed to Le Noyau. Single line, nowrap, edge-masked scroll: no
    wrap means no dock-height jitter as the chip set changes. */

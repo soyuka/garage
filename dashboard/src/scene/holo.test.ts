@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { breathe01, podiumGlow, pulseEnvelope, regionAxisFraction, PULSE_DURATION } from './holo';
+import { breathe01, flickerEnvelope, podiumGlow, pulseEnvelope, regionAxisFraction, FLICKER_SECONDS, PULSE_DURATION } from './holo';
 import { NEON_RED, NEUTRAL_HEX, SIGNAL_HEX } from './signalColors';
 import type { ForecastDue } from '../types';
 
@@ -164,5 +164,25 @@ describe('ghostStep — the eased approach, clock injected', () => {
 
   it('snaps once it is within a pixel of the target (no infinite asymptote in useFrame)', () => {
     expect(ghostStep(0.9999, 1, 1 / 60)).toBe(1);
+  });
+});
+
+// The arrival flicker: a hologram etches itself in line by line when a mesh arrives, then rests. A decaying
+// one-shot on the etch step — never a texture the operator has to look at for six hours.
+describe('flickerEnvelope', () => {
+  it('starts full, decays quadratically, and is silent outside the window', () => {
+    expect(flickerEnvelope(0)).toBe(1);
+    expect(flickerEnvelope(0.18)).toBeCloseTo(0.25);
+    expect(flickerEnvelope(FLICKER_SECONDS)).toBe(0);
+    expect(flickerEnvelope(-1)).toBe(0);
+    expect(flickerEnvelope(5)).toBe(0);
+  });
+  it('never rises on [0, d]', () => {
+    let prev = flickerEnvelope(0);
+    for (let t = 0.01; t <= FLICKER_SECONDS; t += 0.01) {
+      const v = flickerEnvelope(t);
+      expect(v).toBeLessThanOrEqual(prev);
+      prev = v;
+    }
   });
 });

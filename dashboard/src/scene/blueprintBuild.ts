@@ -1,6 +1,8 @@
 import * as THREE from 'three';
-import { EDGE, FILL_OPACITY } from './CarProxy';
+import { EDGE } from './CarProxy';
 import { GHOST_EDGE_FLOOR } from './holo';
+import { buildHoloFill, type HoloFillControl } from './holoFill';
+import { HOLO_CYAN } from './signalColors';
 
 // Shared blueprint builder for any loaded glb scene — the faint paint-tinted volume under glowing
 // steel-blue edges. Extracted from VehicleMesh so the hero leaf and the parc-grid thumb share ONE copy
@@ -43,10 +45,10 @@ export interface PulseControl {
   halfLen: number;
 }
 
-/** The GHOST verb (C1): the shell steps out of the way of a reveal. One uniform dims the edges toward
- * {@link GHOST_EDGE_FLOOR}; the paint fill is a plain material opacity, so it needs no shader at all.
- * `apply` moves both together — a depth in [0,1], 0 = the untouched blueprint. Inert at 0, so a parc
- * thumb (which never calls it) is bit-for-bit what it was. */
+/** The GHOST verb (C1): the shell steps out of the way of a reveal. ONE uniform, `uGhost`, is shared by
+ * the edge patch (dims toward {@link GHOST_EDGE_FLOOR}) and the holo fill shader (body, fresnel and
+ * scanlines fade to zero); `apply` writes that one uniform — a depth in [0,1], 0 = the untouched
+ * blueprint. Inert at 0, so a parc thumb (which never calls it) is bit-for-bit what it was. */
 export interface GhostControl {
   uniforms: {
     uGhost: { value: number };
@@ -65,6 +67,8 @@ export interface Blueprint {
   pulse: PulseControl;
   /** The ghost control — animate via GhostRunner; inert at depth 0. */
   ghost: GhostControl;
+  /** The hologram fill's clock + arrival flicker — animate via HoloRunner; static at uTime 0, uFlicker 0. */
+  holo: HoloFillControl;
   /** Free per-instance resources on unmount. Never the cached edge geometry or the drei-cached glb. */
   dispose: () => void;
 }
@@ -103,11 +107,24 @@ function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseCont
   mat.needsUpdate = true;
 }
 
+// HDR line boost fed to the composer's bloom pass — the shell's default; a reveal part may lower it so
+// its bloomed hue matches the primitive's flat hue (CHOREOGRAPHY § The reveal, "Glow is not hue").
+export const EDGE_BOOST = 1.7;
+
 export function buildBlueprint(
   scene: THREE.Object3D,
-  { edgeAngle, paint, rotationY, cacheKey }: { edgeAngle: number; paint: string; rotationY?: number; cacheKey?: string },
+  {
+    edgeAngle,
+    paint,
+    edge,
+    edgeBoost,
+    rotationX,
+    rotationY,
+    cacheKey,
+  }: { edgeAngle: number; paint: string; edge?: string; edgeBoost?: number; rotationX?: number; rotationY?: number; cacheKey?: string },
 ): Blueprint {
   const clone = scene.clone(true);
+  if (rotationX) clone.rotation.x = rotationX;
   if (rotationY) clone.rotation.y = rotationY;
 
   // Re-centre to origin + floor (deterministic → cached edges line up across instances).
@@ -119,11 +136,15 @@ export function buildBlueprint(
   clone.position.y -= box.min.y;
   clone.updateMatrixWorld(true);
 
-  const fillMat = new THREE.MeshBasicMaterial({ color: paint, transparent: true, opacity: FILL_OPACITY, depthWrite: false });
   // HDR-boosted edge color (>1 channels, toneMapped off): in the hero's half-float composer this is
   // what feeds the bloom pass — the neon-tube core. Parc thumbs have no composer and just clamp to a
   // slightly brighter line, which is fine.
-  const edgeMat = new THREE.LineBasicMaterial({ color: new THREE.Color(EDGE).multiplyScalar(1.7), toneMapped: false });
+  // `edge` — the line/fresnel/scanline hue; the shell never passes it (blueprint blue); a highlighted
+  // reveal part passes OPERATOR_HEX (CHOREOGRAPHY § The reveal, 2026-09-04 row). `edgeBoost` — the HDR
+  // line boost, default EDGE_BOOST; a part may lower it so its bloomed hue matches the primitive's flat
+  // hue (row, "Glow is not hue").
+  const edgeHue = edge ?? EDGE;
+  const edgeMat = new THREE.LineBasicMaterial({ color: new THREE.Color(edgeHue).multiplyScalar(edgeBoost ?? EDGE_BOOST), toneMapped: false });
 
   // Scan-band uniforms: sweep the LONGER horizontal axis (a glb may lie along x or z), band ≈ 15% of it.
   const extentX = box.max.x - box.min.x;
@@ -136,7 +157,7 @@ export function buildBlueprint(
       uScanOn: { value: 0 },
       uScanWidth: { value: Math.max(0.35, halfLen * 0.3) },
       uScanAxis: { value: sweepZ ? 1 : 0 },
-      uScanColor: { value: new THREE.Color('#5fe0d9') }, // holo cyan (the agent's scanning light)
+      uScanColor: { value: new THREE.Color(HOLO_CYAN) }, // the agent's scanning light
     },
     halfLen,
   };
@@ -147,20 +168,21 @@ export function buildBlueprint(
       uPulseCenter: { value: 0 },
       uPulseOn: { value: 0 },
       uPulseWidth: { value: Math.max(0.5, halfLen * 0.32) },
-      uPulseColor: { value: new THREE.Color('#5fe0d9') }, // holo cyan — the agent acting (same as the scan)
+      uPulseColor: { value: new THREE.Color(HOLO_CYAN) }, // the agent acting (same as the scan)
     },
     halfLen,
   };
-  // The ghost: one uniform for the edges, plain opacity for the fill. `apply` is called from a useFrame
-  // driver, so it must not allocate.
+  // The ghost: uGhost is shared by the edge patch and the holo fill shader; `apply` writes the one uniform.
+  // Called from a useFrame driver, so it must not allocate.
   const ghost: GhostControl = {
     uniforms: { uGhost: { value: 0 } },
     apply: (depth: number) => {
       ghost.uniforms.uGhost.value = depth;
-      fillMat.opacity = FILL_OPACITY * (1 - depth);
     },
   };
-  patchHolo(edgeMat, scan.uniforms, pulse.uniforms, ghost.uniforms); // edges only — world-baked coords; the faint fill would misalign
+  patchHolo(edgeMat, scan.uniforms, pulse.uniforms, ghost.uniforms); // the pulse is edges-only (object-space slice)
+  // The fill reads the scan + ghost in WORLD space (its own shader), so it lines up with the baked edges.
+  const { material: fillMat, holo } = buildHoloFill(paint, scan.uniforms, ghost.uniforms, edgeHue);
 
   const key = cacheKey ? `${cacheKey}|${edgeAngle}` : undefined;
   const cached = key ? EDGES_CACHE.get(key) : undefined;
@@ -191,5 +213,5 @@ export function buildBlueprint(
     // Only free edge geometries we built AND did not cache (uncached one-offs).
     if (!key) geoms.forEach((g) => g.dispose());
   };
-  return { clone, edges, scan, pulse, ghost, dispose };
+  return { clone, edges, scan, pulse, ghost, holo, dispose };
 }

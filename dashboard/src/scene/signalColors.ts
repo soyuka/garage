@@ -16,6 +16,11 @@ export const NEUTRAL_HEX = '#5b5f66';
  * tuned for text that glows weakly as emissive; an overdue arc wants a hot alarm, not a blush. */
 export const NEON_RED = '#ff2418';
 
+/** The holo cyan — the agent's own light: the scan band, the region pulse, the two stage lights and the
+ * emitter lenses all wear it. Rationed to the agent (tokens/atelier.css `--at-cyan` comment); never a
+ * painted fill, and never a signal. */
+export const HOLO_CYAN = '#5fe0d9';
+
 /** The blueprint edge — electric blue, saturated (hue ~220°, deliberately bluer than Le Noyau's
  * rationed cyan ~190° so "cyan = the agent thinking" stays unambiguous). */
 export const BLUEPRINT_EDGE = '#6d9eff';

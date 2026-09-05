@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { DOLLY_SECONDS } from '../scene/cameraRig';
-import { PULSE_DURATION } from '../scene/holo';
+import { FLICKER_SECONDS, PULSE_DURATION } from '../scene/holo';
+import { FILAMENT_SECONDS } from '../scene/agentLight';
 import atelier from './atelier.css?raw';
 import { MOTION } from './motion';
 
@@ -27,6 +28,8 @@ describe('the motion scale', () => {
   it('keeps the JS-side motions (they run in useFrame, not CSS) on the same scale', () => {
     expect(DOLLY_SECONDS * 1000).toBe(MOTION.dolly);
     expect(PULSE_DURATION * 1000).toBe(MOTION.pulse);
+    expect(FILAMENT_SECONDS * 1000).toBe(MOTION.filament);
+    expect(FLICKER_SECONDS * 1000).toBe(MOTION.etch);
   });
 
   it('preserves Le Noyau’s ~4s sleeping-Mac breathe as the signature period', () => {

@@ -4,7 +4,8 @@ import { useFrame } from '@react-three/fiber';
 import { buildBlueprint, type GhostControl, type PulseControl, type ScanControl } from './blueprintBuild';
 import type { MeshSpec } from './vehicleMesh';
 import type { BodyRegion } from './anchors';
-import { PULSE_DURATION, ghostStep, pulseEnvelope, regionAxisFraction } from './holo';
+import { FLICKER_SECONDS, PULSE_DURATION, flickerEnvelope, ghostStep, pulseEnvelope, regionAxisFraction } from './holo';
+import type { HoloFillControl } from './holoFill';
 
 /** A one-shot region flare (PULSE verb): when `region`+`key` change, play the eased cyan envelope ONCE on
  * that region's slice, then rest. Idempotent per key — even if the prop lingers, it fires once. No-op
@@ -97,6 +98,30 @@ function GhostRunner({ ghost, depth, reduced }: { ghost: GhostControl; depth: nu
   return null;
 }
 
+// Drives the hologram fill: the scanline clock, and the ARRIVAL flicker — a per-scanline dropout decaying
+// over the etch step from the moment this mesh mounted (mount IS the arrival: VehicleBody keys on the
+// vehicle id, and ThumbThenFull mounts the thumb then the full glb, each an arrival that fires once). Age
+// runs on wall time in every mode so the window expires under reduced motion too — a later motion-on
+// toggle cannot replay it. Under reduced motion uTime is frozen (static scanlines) and the flicker never
+// fires (attention, not state).
+export function HoloRunner({ holo, reduced }: { holo: HoloFillControl; reduced: boolean }) {
+  const age = useRef(0);
+  useFrame((state, delta) => {
+    age.current += Math.min(delta, 0.05);
+    if (reduced) {
+      if (holo.uniforms.uFlicker.value !== 0) holo.uniforms.uFlicker.value = 0;
+      return;
+    }
+    holo.uniforms.uTime.value = state.clock.elapsedTime;
+    if (age.current >= FLICKER_SECONDS) {
+      if (holo.uniforms.uFlicker.value !== 0) holo.uniforms.uFlicker.value = 0;
+      return;
+    }
+    holo.uniforms.uFlicker.value = flickerEnvelope(age.current);
+  });
+  return null;
+}
+
 export function VehicleMesh({
   spec,
   paint,
@@ -127,6 +152,7 @@ export function VehicleMesh({
       <ScanRunner scan={built.scan} active={scanning} reduced={reduced} />
       <PulseRunner pulse={built.pulse} pulseRegion={pulseRegion} reduced={reduced} />
       <GhostRunner ghost={built.ghost} depth={ghostDepth} reduced={reduced} />
+      <HoloRunner holo={built.holo} reduced={reduced} />
     </>
   );
 }

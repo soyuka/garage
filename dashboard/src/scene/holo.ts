@@ -57,6 +57,37 @@ export function regionAxisFraction(region: BodyRegion): number {
   return REGION_AXIS[region];
 }
 
+// ── HOLOGRAM: scanlines, fresnel and the arrival flicker ─────────────────────
+// The fill is a projection, not a tinted box (CHOREOGRAPHY § "The hologram is the light", point 2). The
+// scanline drift is a LOOP period — a frequency, exempt from the duration steps like the breathe. The
+// flicker is a one-shot and takes the etch step: the hologram writes itself in line by line.
+
+/** The arrival flicker's decay — twin of MOTION.etch (motion.test.ts pins it). */
+export const FLICKER_SECONDS = 0.36;
+/** Max alpha dropout of a scanline on one noise tick. */
+export const FLICKER_DEPTH = 0.55;
+/** Noise re-rolls per second (the shader's floor(uTime · FLICKER_HZ)). */
+export const FLICKER_HZ = 24;
+/** Flicker amplitude inside the scan band while the sweep is on — the beam reading the shell. */
+export const SCAN_FLICKER = 0.35;
+/** World units between two scanlines. */
+export const HOLO_SCAN_SPACING = 0.09;
+/** Seconds for the scanlines to drift up by one spacing — a loop period. */
+export const HOLO_SCAN_PERIOD = 2.4;
+export const FRESNEL_POWER = 2.6;
+/** Alpha added at a grazing edge (× (1 − uGhost)). 0.35 keeps the grazing rim (≈ 0.29 luminance into the
+ *  composer) clear of Bloom's 0.5 ± 0.125 band — at 0.55 it half-bloomed and read as a pale haze, not glass. */
+export const FRESNEL_GAIN = 0.35;
+/** Slight fade with camera depth; |HOME.position| ≈ 11.9 (cameraRig.ts). */
+export const DEPTH_FADE = { near: 9.5, far: 14.5, floor: 0.7 } as const;
+
+/** Decaying one-shot: (1 − t/d)² on [0, d), 0 outside. */
+export function flickerEnvelope(t: number, duration: number = FLICKER_SECONDS): number {
+  if (duration <= 0 || t < 0 || t >= duration) return 0;
+  const k = 1 - t / duration;
+  return k * k;
+}
+
 // ── GHOST: the shell gets out of the way (C1) ─────────────────────────────────
 // The fourth verb, and the only one that SUBTRACTS. A reveal has to show what is under the body, and
 // the body is one merged mesh with no hood to open — so instead of animating panels that do not exist,

@@ -2,16 +2,19 @@ import { useState } from 'react';
 import { useT } from '../i18n/LocaleProvider';
 import { safeHref } from '../safeHref';
 
-// CC-BY attribution for the default blueprint meshes — required to ship. Each source is credited with
-// title + author + license + a link to Sketchfab. Where the full model UID is known the link is the
-// model page; otherwise (the docs truncate three UIDs) it is a title search that resolves to the model.
-// Source data: theming/BLUEPRINT-PIPELINE.md §0 + the default-mesh table; DEV-PROMPT licensing note.
+// CC-BY attribution for the default blueprint meshes and the generic part meshes — required to ship.
+// Each source is credited with title + author + license + a link to Sketchfab. Where the full model UID
+// is known the link is the model page; otherwise (the docs truncate three UIDs) it is a title search
+// that resolves to the model. Source data: theming/BLUEPRINT-PIPELINE.md §0 + the default-mesh table;
+// DEV-PROMPT licensing note; public/parts/SOURCES.md for the part meshes.
 
 interface Credit {
   title: string;
   author: string;
   /** Full 32-hex Sketchfab UID when known → links the model page; absent → links a title search. */
   uid?: string;
+  /** absent = CC-BY (the default for every vehicle source). */
+  licence?: string;
 }
 
 const CREDITS: Credit[] = [
@@ -20,6 +23,8 @@ const CREDITS: Credit[] = [
   { title: 'Motorcycle', author: 'Silas6' },
   { title: 'European Delivery Van', author: 'evan.hiltz' },
   { title: 'Lawn Tractor', author: 'mirrol' },
+  { title: 'Oil Filter', author: 'nodelet', uid: '0d26735d9cc04fd896fd8c20482bd764', licence: 'CC-BY-NC' },
+  { title: 'Old Engine', author: 'TraianDumbrava', uid: 'c9130ed48cee420186e06b83c4c880af' },
 ];
 
 export function creditUrl(c: Credit): string {
@@ -88,14 +93,14 @@ export function Credits() {
               ✕
             </button>
           </div>
-          <p style={{ margin: '0 0 8px' }}>Maquettes blueprint — sources Sketchfab, licence CC-BY :</p>
+          <p style={{ margin: '0 0 8px' }}>Maquettes blueprint et pièces génériques — sources Sketchfab :</p>
           <ul style={{ margin: 0, paddingLeft: 16 }}>
             {CREDITS.map((c) => (
               <li key={c.title} style={{ marginBottom: 4 }}>
                 <a href={safeHref(creditUrl(c))} target="_blank" rel="noreferrer noopener" style={{ color: 'inherit', textDecoration: 'underline' }}>
                   {c.title}
                 </a>{' '}
-                — {c.author}, via Sketchfab, CC-BY
+                — {c.author}, via Sketchfab, {c.licence ?? 'CC-BY'}
               </li>
             ))}
           </ul>

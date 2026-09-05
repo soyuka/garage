@@ -8,6 +8,7 @@ import { AmbientInbox } from '../noyau/AmbientInbox';
 import { NoticeStack } from '../noyau/NoticeStack';
 import type { DecisionItem, NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
+import { agentLightOf } from './agentLight';
 import type { RevealState } from './reveal';
 import type { PulseRegion } from './VehicleMesh';
 import { Cockpit } from './Cockpit';
@@ -340,6 +341,7 @@ export function SceneView({
               due={bundle.forecast.due}
               reduced={reduced}
               scanning={noyau.phase === 'working'}
+              agent={agentLightOf(noyau)}
               pulseRegion={pulseRegion}
               cameraFocus={cameraFocus}
               reveal={reveal}
@@ -431,7 +433,12 @@ export function SceneView({
           interactive console beside a modal is inconsistent; the modal carries its own close. The
           bottom Données drawer is a sheet, so the dock floats above it (--top). */}
       {!historyOpen && (
-        <div className={`at-scene-dock${factsDrawerOpen ? ' at-scene-dock--top' : ''}`}>
+        <div
+          className={`at-scene-dock${factsDrawerOpen ? ' at-scene-dock--top' : ''}`}
+          data-driver={noyau.driver ?? undefined}
+          data-quiet={noyau.quiet ? 'true' : undefined}
+          data-reduced={reduced ? 'true' : undefined}
+        >
           {/* 0. the retained notices — the agent's findings, which outlive the narration heartbeat that
               carried them. Above the CTA so a proposal (which needs a decision now) stays nearest the orb. */}
           <NoticeStack notices={noyau.notices} reduced={reduced} onDismiss={onDismissNotice} />

@@ -14,6 +14,7 @@ import { formatReading } from '../format';
 import { PULSE_DURATION } from './holo';
 import type { CameraFocus } from './cameraRig';
 import { focusForReveal, revealFor, revealSurvives, type RevealState } from './reveal';
+import type { BodyRegion } from './anchors';
 import type { PulseRegion } from './VehicleMesh';
 import type { MaintenanceRecord } from '../types';
 
@@ -98,13 +99,13 @@ export function AtelierScene() {
   // The reveal, offline: the same intent a `reveal_assembly` frame produces. Derived-from-the-hold
   // exactly like the live orchestrator, so the playground cannot drift from it.
   const liveReveal = revealSurvives(reveal, cameraFocus) ? reveal : null;
-  const toggleReveal = () => {
+  const toggleReveal = (region: BodyRegion, keys: string[]) => {
     if (liveReveal) {
       setCameraFocus(null);
       return;
     }
     flareKey.current += 1;
-    const next = revealFor('bay', ['fuel_filter'], flareKey.current);
+    const next = revealFor(region, keys, flareKey.current);
     if (!next) return;
     setReveal(next);
     setCameraFocus(focusForReveal(next));
@@ -281,7 +282,15 @@ export function AtelierScene() {
               className={`at-scene-sim${liveReveal ? ' at-scene-cross--on' : ''}`}
               title={liveReveal ? 'Refermer la carrosserie' : 'Simuler reveal_assembly (bay · filtre à carburant)'}
               aria-label={liveReveal ? 'Refermer la carrosserie' : 'Simuler une vue éclatée'}
-              onClick={toggleReveal}
+              onClick={() => toggleReveal('bay', ['fuel_filter'])}
+            >
+              ◉
+            </button>
+            <button
+              className={`at-scene-sim${liveReveal ? ' at-scene-cross--on' : ''}`}
+              title={liveReveal ? 'Refermer la carrosserie' : 'Simuler reveal_assembly (hood · filtre à huile + bougies)'}
+              aria-label="Simuler une vue éclatée (capot)"
+              onClick={() => toggleReveal('hood', ['oil_filter', 'spark_plug'])}
             >
               ◉
             </button>

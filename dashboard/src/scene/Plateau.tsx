@@ -1,7 +1,7 @@
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
-import { Bloom, EffectComposer, SMAA } from '@react-three/postprocessing';
+import { Bloom, EffectComposer, SMAA, Vignette } from '@react-three/postprocessing';
 import { Vector3, type MeshStandardMaterial } from 'three';
 import type { ForecastDue, Signal, VehicleSummary } from '../types';
 import { bodyClassFor, type BodyClass } from './CarProxy';
@@ -12,6 +12,8 @@ import { Assembly } from './Assembly';
 import type { RevealState } from './reveal';
 import { HoloPodium } from './HoloPodium';
 import { CuttingMat } from './CuttingMat';
+import { AgentLightRig } from './AgentLightRig';
+import { DISC, ROOM_AMBIENT, ROOM_AMBIENT_COLOR, ROOM_BACKGROUND, type AgentLight } from './agentLight';
 import { VehicleBody } from './VehicleBody';
 import type { PulseRegion } from './VehicleMesh';
 import {
@@ -158,13 +160,9 @@ function paintFor(v: VehicleSummary): string {
 }
 
 function SceneLights() {
-  // Blueprint edges are unlit; only the turntable disc needs light. A warm key keeps the §2 mood.
-  return (
-    <>
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[-5, 6, 4]} intensity={0.9} color="#ffe0b0" />
-    </>
-  );
+  // The room is dark; the hologram lights the disc and the mat ring (CHOREOGRAPHY § The hologram is the
+  // light). No key: the car is a projection, and a lit floor under it was a desk lamp left on.
+  return <ambientLight intensity={ROOM_AMBIENT} color={ROOM_AMBIENT_COLOR} />;
 }
 
 // A thin tron-like neon rim (was a fat 0.12-wide band that read too "slick"). Kept just wide enough to
@@ -180,8 +178,7 @@ const RING_SEGMENTS = 96;
 const CALM = { base: 1.4, amp: 0.9 };
 const URGENT = { base: 2.6, amp: 2.0 }; // red: much brighter floor + a bigger heartbeat swing
 
-// The rim + podium's additive glow was tuned to read against a dark void; on the cutting-mat floor it
-// must read as a reflection ON the mat, not fog flooding a lit floor — hence the flat cut to 0.55.
+// The rim + podium's additive glow — seen against the dark room and kept (CHOREOGRAPHY § Stage look, 2026-09-04).
 const PODIUM_INTENSITY = 0.55;
 
 function RingSegment({
@@ -228,7 +225,7 @@ function Turntable({ status, due, reduced }: { status: Signal | 'unknown'; due: 
     <group>
       <mesh receiveShadow position={[0, -0.04, 0]}>
         <cylinderGeometry args={[3.2, 3.2, 0.12, 96]} />
-        <meshStandardMaterial color="#1a1f26" metalness={0.78} roughness={0.38} />
+        <meshStandardMaterial color={DISC.color} metalness={DISC.metalness} roughness={DISC.roughness} />
       </mesh>
       {segments.map((seg, i) => (
         <RingSegment key={i} color={seg.overdue ? NEON_RED : rest} overdue={seg.overdue} thetaStart={seg.thetaStart} thetaLength={seg.thetaLength} reduced={reduced} intensity={PODIUM_INTENSITY} />
@@ -243,6 +240,7 @@ function Plateau3D({
   due,
   reduced,
   scanning,
+  agent,
   pulseRegion,
   cameraFocus,
   reveal,
@@ -252,6 +250,7 @@ function Plateau3D({
   due: ForecastDue[];
   reduced: boolean;
   scanning: boolean;
+  agent: AgentLight;
   pulseRegion: PulseRegion | null;
   cameraFocus: CameraFocus | null;
   reveal: RevealState | null;
@@ -272,7 +271,7 @@ function Plateau3D({
   const ghostDepth = reveal ? ghostTarget(landed.landed, landed.total) : 0;
   return (
     <Canvas shadows dpr={[1, 1.75]} camera={{ position: HOME.position, fov: 33 }} gl={{ antialias: true }}>
-      <color attach="background" args={['#131210']} />
+      <color attach="background" args={[ROOM_BACKGROUND]} />
       <SceneLights />
       <CuttingMat />
       <Suspense fallback={null}>
@@ -294,6 +293,7 @@ function Plateau3D({
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
         </group>
         <Turntable status={vehicle.health?.status ?? 'unknown'} due={due} reduced={reduced} />
+        <AgentLightRig agent={agent} reduced={reduced} />
       </Suspense>
       {/* Bloom is what makes "light is meaning" physical: emissive arcs, the electric-blue edges and
           the shaft cage all bleed into the void, and the shared breathe reads as a visible glow swell
@@ -303,6 +303,7 @@ function Plateau3D({
       <EffectComposer multisampling={0}>
         <SMAA />
         <Bloom mipmapBlur intensity={1.05} luminanceThreshold={0.5} luminanceSmoothing={0.25} radius={0.72} />
+        <Vignette eskil={false} offset={0.32} darkness={0.55} />
       </EffectComposer>
       <OrbitControls
         makeDefault
@@ -330,6 +331,7 @@ function PlateauImpl({
   due,
   reduced = false,
   scanning = false,
+  agent = 'rest',
   pulseRegion = null,
   cameraFocus = null,
   reveal = null,
@@ -340,6 +342,9 @@ function PlateauImpl({
   due: ForecastDue[];
   reduced?: boolean;
   scanning?: boolean;
+  /** Le Noyau's state on the stage lights (CHOREOGRAPHY § The hologram is the light). A primitive, so the
+   * memo below stays effective. Absent → rest (playground). */
+  agent?: AgentLight;
   pulseRegion?: PulseRegion | null;
   /** D1 earned camera: the region the view is dollied to (null = home framing). Absent → no dolly (playground). */
   cameraFocus?: CameraFocus | null;
@@ -370,6 +375,7 @@ function PlateauImpl({
         due={due}
         reduced={reduced}
         scanning={scanning}
+        agent={agent}
         pulseRegion={pulseRegion}
         cameraFocus={cameraFocus}
         reveal={reveal}

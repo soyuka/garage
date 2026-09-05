@@ -34,7 +34,7 @@ reversed rather than clarified, say what it was and why it changed, so the reaso
 | `showParts {service, taskId, parts?}` | projects the **parts manifest** into the RIGHT projection column (rows **unfurl** staggered), primary **Ajouter** = a deterministic `patchTask` merge. **Client-synthesized today** by the "Pièces dispo" wayfinder chip — the identical shape a real parts-bearing `proposeActions` produces (see below), so chip and agent answer are visually indistinguishable | scene overlay (`PartsManifest`) |
 | `showHistory` / `focusView {panel:'carnet'}` | raises the **carnet projection** (past visits + spend) into the same RIGHT column. The `showHistory` FRAME stays client-synthesized (the "Carnet · dépenses" chip), but the SURFACE is now a real server emission: the agent raises it with `focusView {panel:'carnet'}` after reading the history, instead of degrading to a prose toast. Both funnel through `focusForAction` into one focus state, so chip and agent answer are indistinguishable | scene overlay (`CarnetProjection`) |
 | `focusView {panel:'parts'}` | raises the **shopping list** — every reference ALREADY chosen across the open checklist, grouped by the job it belongs to — as a **CENTRED surface** (scrim + `aria-modal`, groups **unfurl** staggered). The one intent that does NOT use the right projection column, and the exception is the point: the column is ~270px and these rows carry a reference, a brand, a description, a price and two shop links each, which at column width wrapped to unreadable stubs. It is a working document the operator reads across and acts on, not a glance-answer. Read-only, and deliberately **without a primary action**: these refs are already on their tasks, so an "Ajouter" would merge what is already there — the idempotent no-op the old "Pièces dispo · <service>" chip offered behind an orange primary. Each line carries **Mister-Auto** and **Auto-Doc** searches in the rationed operator hue (restored from 44cb4fb; a reference you cannot go and buy is one you retype into a search box). An unpriced reference reads `—`, never `0,00 €`: free and unknown must not look the same | scene overlay (`ShoppingListOverlay`) |
-| `proposeActions {headline, finding?, actions}` | a plain proposal → a CTA card **rises from Le Noyau's cradle** (behind the composer, never over it); a **parts-bearing** proposal (an `actions[].patchTask` with `parts`) projects instead as the **parts manifest** in the RIGHT column with the primary **Ajouter** = that deterministic PATCH. `patchTask` → **no agent turn**; `instruction` → new turn. A proposal that arrives while one is already pending, or with no hero open (nowhere to raise a cradle), is **deferred into the à-décider queue** instead of dropped (`review` item — replays the same actions later) | CTA layer / `PartsManifest` / à-décider inbox |
+| `proposeActions {headline, finding?, actions}` | a plain proposal → a CTA card **rises from Le Noyau's cradle** (behind the composer, never over it — this describes the socketed layout; under the pilot, § The pilot driver row `driver` becomes `'pilot'`, the card rises **above the freed orb**, whose cradle is then its bottom edge — clause added 2026-09-04); a **parts-bearing** proposal (an `actions[].patchTask` with `parts`) projects instead as the **parts manifest** in the RIGHT column with the primary **Ajouter** = that deterministic PATCH. `patchTask` → **no agent turn**; `instruction` → new turn. A proposal that arrives while one is already pending, or with no hero open (nowhere to raise a cradle), is **deferred into the à-décider queue** instead of dropped (`review` item — replays the same actions later) | CTA layer / `PartsManifest` / à-décider inbox |
 | `toast {tone, message}` | **every** tone raises a **notice card** above the console (§ The notice stack) — dismissed by **vu**, or auto-closed after a read dwell once its spoken line has finished (corrected 2026-09-04; it used to stay until dismissed). On top of that: non-alarm also writes the narration line (Noyau heartbeat, transient); **alarm** also docks a `notify` item onto the à-décider queue | Le Noyau (`NoticeStack`) |
 | `status {message}` | one **Noyau pulse** (per narrated step, sparse) + the narration line etches; the same step also appends an **aria-hidden tool-step chip** (short verb + glyph) beside Le Noyau, collapsing into the journal on turn end — a silent companion, never a second announcement | Le Noyau |
 | `turn {phase}` | `start` → Noyau busy/working (aperture focuses, scan locks) + a **cyan scan-sweep** slides across the car; `end` → settle → green/amber/red | Le Noyau + scene overlay |
@@ -63,6 +63,11 @@ thinking. So the envelope gets one state a turn cannot reach, and one nameplate:
 | no pilot frame for `PILOT_QUIET_MS` (4 s) | **veille pilotée** — the run is still open, so the orb stays LIFTED and the aperture stays the working point, but the instrument stops claiming to read: the exertion gradient cools amber→cyan (amber = under load), the reticle drops from its 2 s lock to the resting 18 s drift, and the pupil resumes the protected ~4 s breathe. Beside the narration, a live **elapsed-silence** read (`· en attente · 2 min`) — the datum the state exists to show, because a breathing orb cannot say "two minutes". The composer UNLOCKS: a run that may hold for minutes must not hold the dashboard hostage, and typing takes the controls back | Le Noyau + the console |
 | any pilot frame after that | quiet clears, the instrument goes back under load. No animation of its own — the frame's own motion is the cue | Le Noyau |
 | `turn {phase:'end'}` from `settle_dashboard` | the existing done filament, unchanged | Le Noyau |
+| `driver` becomes `'pilot'` (the first pilot frame) — rows in this group added 2026-09-04 | **Le Noyau leaves the socket.** Under the in-app driver the orb is the operator's instrument and lives shrunk (`scale(0.36)`) in the console's 52 px socket beside the input they type into. Under the pilot the operator is not typing — someone else is driving — so the orb renders at its **native 138 px, centred above the console**, the cradle under it, and the console **thins to a hairline handle** beneath (next row). Same DOM, different geometry: the console turns into a column (orb, then handle); the **socket box itself grows to 138 × 158 px** (orb-wrap 138 + cradle 26 − 6 overlap, `noyau.css:71,237`) and the orb's `scale(0.36)` goes to `scale(1)`, both over `--at-dur-swap`, the orb staying absolute-centred in the box throughout — so the à-décider inbox (anchored `bottom: calc(100% + 10px)` on the socket, `ambientInbox.css`), the ember (orb-relative corner) and the cradle all anchor to a box that matches the orb, and the focus-restore fallback (`SceneView.tsx` `'.noyau-ember, .at-scene-input'`, scoped to the console) still finds both. The notice stack and the CTA **rise above the orb** (DOM order — they sit above the console, and the orb is now the console's top). Keyed on the dock (`.at-scene-dock[data-driver='pilot']`), forwarded from `noyau.driver` — the first CSS that reads `data-driver` anywhere. **Corrected 2026-09-04, at build:** the left rail is NOT untouched by this — its bottom clearance (`rail.css` `max-height: calc(100% - 200px)`) is a literal sized to the 66 px row console, and the freed orb makes the console up to 218 px tall (socket 160 + gap 8 + composer 50 in veille pilotée), so the chip row landed on the rail's « Plus tard » section at every viewport height. The clearance grows by the same 152 px under the pilot, same `--at-dur-swap`, keyed on the SAME dock attribute through `.at-scene:has(…)` so `data-driver` is still written in one place | `SceneView` + `scene.css` + `rail.css` (+ `ambientInbox.css` only if its anchor needs it) |
+| the hairline handle — `driver: 'pilot'`, `quiet: false` (the run is **under load**; added 2026-09-04) | the console is the **locked composer, collapsed**: a 10 px hairline capsule the width of the console, grayscale by construction (`--at-hairline` border, the console's own dark fill — no cyan, no orange), so it reads as "closed" without colour (hard rule 5). It is locked because `busy()` is true here (`state.ts:145`; `send()` no-ops, `Atelier.tsx:519`). **Hover does not inflate it** — a pointer over a control that cannot be used is not an intent, and a projector or touch surface has no hover. The input stays in the tab order (it is never `disabled`; the lock is the submit no-op), and on `:focus-within` **of the composer itself** — not of the console, so focusing the ember or the inbox inside the socket does nothing to the handle — it inflates to the full 48 px input, because a focused control the operator cannot see fails WCAG 2.4.7. What it must not do is *look* usable while it is not: the pre-existing gap that the locked input carries no visible lock affordance under either driver is not widened here; the same change records it in `FUTURE.md` | `scene.css` |
+| **veille pilotée** — `driver: 'pilot'`, `quiet: true` (added 2026-09-04) | the handle **inflates to the full input on its own**, over `--at-dur-swap`, the moment `quiet` flips: that is the exact instant `busy()` becomes false (`state.ts:145`) and the composer UNLOCKS (row above, § veille pilotée) — so the unlock is *seen*, not hidden behind a Tab press, during the one state that invites the operator to type and may hold for minutes. The freed orb stays where it is. A pilot frame that clears `quiet` collapses the handle again (same step); typing posts a turn → `driver: 'app'` → the orb returns to the socket (next row) | `scene.css` (keyed `[data-driver='pilot'][data-quiet='true']`, `data-quiet` forwarded onto the dock beside `data-driver`) |
+| `settle` after a pilot run (`driver` → `null`), or the operator typing (`driver` → `'app'`) (added 2026-09-04) | the orb **returns to the socket**, the console re-inflates — same `--at-dur-swap`. The app driver's turns never leave the socket: nothing changes under `driver: 'app'` | `SceneView` + `scene.css` |
+| `prefers-reduced-motion` (added 2026-09-04) | the resize is an **instant state change** in both directions, and so are the handle's collapse and inflate (`quiet` on/off, focus in/out). The orb's size and the handle's height encode who is driving and whether the operator may type — information; the transitions into them are not | `scene.css` |
 | liveness | **a pilot run never trips the 90 s watchdog.** "Le tour ne répond plus" is a claim the client cannot support here — it cannot tell a host reading code from a host that quit — so it says how long it has been silent instead and lets the operator judge. Only `settle_dashboard` (or the operator taking over) ends a pilot run | Atelier |
 
 **Burstiness (both drivers, pilot-shaped).** A pilot narrates, goes quiet for two minutes, then fires
@@ -90,6 +95,16 @@ the protected `--at-breathe` (4 s). `src/tokens/motion.ts` is the twin for the m
 reach (the 900 ms dolly, the 1.4 s pulse, the burst window) and for the DWELLs (settle hold, watchdog).
 `motion.test.ts` fails if the two drift, **and if any component stylesheet spells a one-shot duration
 out instead of using a step**. A loop PERIOD is a frequency, not a duration — exempt.
+
+Clarified 2026-09-04, with the hologram: the exemption covers every **continuous** loop on the stage —
+the breathe, the light-shaft drift (`HoloPodium` `SHAFT_FRAG`, already there), the scan-sweep's
+travelling wave, and now the hologram's scanline drift (`HOLO_SCAN_PERIOD`). What is NOT exempt is a
+one-shot that happens to run in `useFrame`: the arrival flicker's decay is a duration and takes the step
+whose INTENT it has — `--at-dur-etch`, *a line etches*: the hologram writes itself in line by line, which
+is an etch, not a fan (a fan is a SET of things arriving staggered; the flicker is one surface resolving).
+Its twin `FLICKER_SECONDS` ↔ `MOTION.etch` MUST be pinned by `motion.test.ts` in the same change, exactly
+as the dolly and the pulse are today (`motion.test.ts:29-31` pins only those two until then). The test
+is: does it end on its own? Then it is a duration and it takes a step.
 
 ## Le Noyau's à-décider queue (ember)
 
@@ -219,10 +234,58 @@ starts drawing a **diagram** — deliberately, because `public/mazda6-gh-web.glb
 geometry cannot back. Authored primitives in the region's anchor space say "circuit du filtre à
 carburant"; they never say "your car's fuel filter, photographed".
 
+**Corrected 2026-09-04 — generic part meshes.** The paragraph above said the reveal is *"the one place the
+stage stops drawing the car and starts drawing a diagram — deliberately, because `public/mazda6-gh-web.glb`
+is ONE node, ONE mesh … so any claim to be showing that specific engine bay would be a lie the geometry
+cannot back. Authored primitives in the region's anchor space say 'circuit du filtre à carburant'; they
+never say 'your car's fuel filter, photographed'."* Three things in it still hold and are not reopened:
+(1) the car's glb is one node — nothing is, or will be, extracted from it; (2) the authored primitives
+(`assembly.ts`, five shapes) stay the diagram's **vocabulary**: every part has one, and it is what draws
+whenever nothing better is on screen; (3) a part's `size` is chosen to READ at the reveal framing, never
+to be real-scale (a 95 mm plug at 1:1 beside a 4.3 m car is a dot). What changes is where the detail the
+low-poly shell cannot carry goes: **into the parts.** A part whose KIND has a generic mesh in
+`public/parts/` (`PART_MESHES` in `assembly.ts` — the one table) draws that mesh instead of its primitive,
+through the **same `buildBlueprint` pass as the shell** (bloomed edges over the holo fill), so it is visibly
+the same matter — a hologram of the thing you order — and it is **normalised to the primitive's box**:
+the mesh's LONGEST axis is scaled to the primitive's extent along THAT axis (`schematicBox(shape, size)` →
+`meshFit`), never to the raw `size` and never to the primitive's own longest axis. **Corrected 2026-09-05,
+at review:** this sentence first said "largest dimension equals the primitive's largest dimension
+(`schematicExtent`)" — a rule that defeats its own reason: `engine-block.glb` is tall (0.433 × 0.700 ×
+0.386) under a housing that is long (1.116 × 0.692 × 0.870), so fitting its height to the housing's length
+made a block 61 % taller than the shape it replaces, its top above the roofline (1.56 m vs a 1.48 m
+`cabinTop` on the berline), and the loading swap jumped the way the sentence said it must not. Fitted along
+the matched axis the block is 0.428 × 0.692 × 0.382 — inside its housing, top at 1.35 m as today; the
+battery fits its housing's depth, the plug its sphere, the filter its canister's height. The other axes
+fall where the part's own proportions put them (a disc's hub is deeper than a 0.16·`size` pancake — that is
+the true shape of a disc, not a jump). The mesh is centred on the same offset (floor at 0 → lifted by half
+its scaled height). This does not reopen the honesty
+argument, it obeys it: a generic spark plug says "a spark plug" exactly as the sphere did — more shape, no
+more claim. The line that is not crossed is **vehicle-specific detail**: `engine-v6.glb` is **refused** — a
+detailed V6 under a four-cylinder Mazda is the very lie the paragraph above forbids, and no vehicle carries
+an engine-layout datum that could select it — so the file stays on disk, unwired, and
+`public/parts/SOURCES.md` records why. Same rule, smaller: `spark-plug-worn.glb` is not wired (a WORN
+plug is a claim about the operator's plug the data does not hold); `fuel_filter` keeps its canister (the
+oil-filter mesh is a different part, so it would be a lie about a different thing); lines, circuits, pads,
+tyres, the airbox and the cockpit stay primitives. The "Out of scope" paragraph in § "The hologram is the
+light", which deferred "detailed part meshes" as a content decision, is corrected the same day to point
+here: the decision is taken, with the generic-only limit.
+
+**Corrected 2026-09-05 — the `disc` primitive stands on the axle.** Since C3 the `disc` shape has been a
+`cylinderGeometry` with no rotation (`Assembly.tsx`): its axis is vertical, so `brake_discs` drew as a flat
+pancake under the wheel — the wrong picture of a brake disc, unnoticed because from the axle's reveal pose
+a thin flat disc is a line. It was caught when the generic mesh arrived yawed onto the axle (`brake-disc.glb`
+has its axis along x; `rotationY: π/2` puts it along z, the axle) and the Suspense swap from the primitive
+would have been a 90° flip of a 0.6 m disc. Decision: correct the PRIMITIVE, not the mesh — the disc
+primitive now rotates `π/2` about x (`DISC_UPRIGHT`), axis along z, face in the wheel plane; its
+`schematicBox` is `[2·size, 2·size, 0.16·size]`. Both vocabularies now show a disc the way a wheel holds
+one. The alternative — keep the flat primitive and lay the mesh flat to match — was refused: it would have
+made the honest fallback and the mesh agree on a false picture.
+
 | Real frame / condition | Atelier motion | Owner layer |
 |---|---|---|
 | `revealAssembly {region, partKeys?}` | the shell **ghosts**: the paint-tinted fill fades out and the blueprint edges dim to a floor, so the body reads as a wireframe you can see through — never to nothing, because the operator must keep the car's shape to know where they are. Under it, the region's **schematic assembly** rises in that region's anchor space, parts unfurling staggered (`--at-dur-fan`, the manifest/rail vocabulary, capped at 4 steps). The camera takes the region's **reveal pose** — steeper than its focus pose and further BACK, not closer: a reveal is the same car seen through, and cropping to the part would throw away the context that makes the diagram locatable | `VehicleMesh` (`GhostRunner`) + `Assembly` + `cameraRig` |
 | a reveal whose parts have not all landed | **the ghost depth tracks how much of the assembly is on screen.** The shell dissolves as the parts arrive, so a slow catalogue lookup produces a slow dissolve rather than a finished dissolve held over an empty bay. The one thing that could have made C1 theatre — a fixed-length fade — is exactly what this removes: the duration is the fetch's | `VehicleMesh` + `Assembly` |
+| a part whose kind has a generic mesh (`PART_MESHES`; added 2026-09-04, corrected 2026-09-05) | **Arrival — same rise, same stagger.** The mesh rises from `RISE_FROM` over `--at-dur-rise` in the slot `assemblyDelay(i)` gives its primitive, reading the diagram's ONE clock: a glb that lands mid-rise joins the rise at the current instant, one that lands after it snaps to landed — never a second rise. Its fill fades in with the rise through a dedicated `uRise` uniform that scales the WHOLE alpha — fresnel included (corrected 2026-09-05: scrubbing `uFillOpacity` left the rim at full `FRESNEL_GAIN` from the first frame, so the fade was invisible under the glow and only the 7 cm lift carried the arrival; the shell leaves `uRise` at 1). The ghost's denominator counts slots, not glbs: the primitive standing in IS the part landed, so a slow part fetch never holds the shell. The fetch starts with the part's first render (`useGLTF`); nothing preloads — the only earlier moment would be idle, which § Priority forbids. **Highlight** — named by `partKeys` → the OPERATOR hue on its edges AND its fill, fresnel and scanlines (`buildBlueprint` `edge` + `paint`; `uEdge` drives fresnel and scanlines, holoFill.ts) — the callout hue the primitive already carries, not a third hue (§ The hologram is the light, "Truth before spectacle", corrected 2026-09-04); unnamed → blueprint blue, exactly the shell's. **Glow is not hue** (added 2026-09-05): a mesh part is the SHELL's matter — HDR-boosted edges, bloomed — while a primitive is the diagram's — flat `<Edges>`, never bloomed. The two may differ in glow, never in hue: an orange canister beside an orange mesh must read as ONE orange after Bloom; if the bloomed orange reads pink or white the part's edge boost comes down (`edgeBoost` on `buildBlueprint`, the shell's 1.7 untouched), the primitive is never brightened. **Loading fallback** — while the glb streams the primitive draws in its place (Suspense), so the reveal is never later or emptier than before. **Error fallback** — a 404 or decode failure falls back to the primitive for that part for the SESSION (corrected 2026-09-05; it said "the life of the reveal", but the loader caches the rejection, as it does for the shell), `MeshErrorBoundary`; the console error is the only signal. **Arrival flicker** — the glb landing is an arrival: its fill flickers once over `--at-dur-etch` (`HoloRunner`) as the shell's does, and its scanlines drift on the same clock sample the shell reads — one uniform write per mesh part per frame, only while a reveal holds (a hold is not idle; § Priority, cheap idle). **Reduced motion** — unchanged: cuts to landed (`uRise` = 1), no flicker, scanlines frozen. **Honesty check** — hide the canvas → the parts manifest still lists the reference and the rail still names the service; the mesh carries no datum the primitive did not, and nothing but the part's KIND selects it | `Assembly` (`MeshPart`) + `blueprintBuild` + `holoFill` |
 | a reveal is released (same controls as any hold: re-activating it, "vue libre", `Escape`, a drag) | ghost returns to 0 and the assembly sinks and clears on `--at-dur-swap`; the camera returns to the resting band. A drag during a reveal breaks it like any other hold — the operator grabbing the camera always wins | `VehicleMesh` + `Assembly` + `cameraRig` |
 | `prefers-reduced-motion` | the ghost and the assembly are **state, not attention**: both cut instantly to their end value and stay there. Nothing is lost — a wireframe shell with a diagram under it is the information, and the dissolve was only ever the transition into it. The reveal dolly cuts, like every other dolly | all three |
 
@@ -259,15 +322,170 @@ caliper and a whole engine bay identically, so the frame never said how big the 
 ## Stage look
 
 Le Plateau has one look — there is no mode/variant to pick. The floor is always the procedural
-cutting-mat workbench (`CuttingMat.tsx`, always mounted): a lit, graphite/blue-grey surface, **never
+cutting-mat workbench (`CuttingMat.tsx`, always mounted): a graphite/blue-grey surface, **never
 green** — green is reserved for the health signal (PRODUCT.md "light is meaning"), so the floor material
-can never be mistaken for a status read. The car itself keeps its original blueprint look everywhere it
+can never be mistaken for a status read. The car itself keeps its blueprint look everywhere it
 renders — the rung-b proxy (`CarProxy.tsx`), the rung-a real `.glb` (`blueprintBuild.ts`), and the
-parc-grid spinning thumbnails (`ParcThumb`/`ParcLot.tsx`): a faint paint-tinted unlit night-glass fill
-under glowing HDR-boosted electric-blue edges. Blueprint edges, the holo scan/pulse verbs, and the
-podium's rim/glow all carry the signals this map defines; the rim/podium additive glow is tuned to read
-as a reflection on the lit mat floor rather than fog in a void (`Plateau.tsx`'s `PODIUM_INTENSITY`
-constant, 0.55) — that tuning is the only thing the mat floor changed.
+parc-grid spinning thumbnails (`ParcThumb`/`ParcLot.tsx`): a faint paint-tinted night-glass fill — a
+shader that takes **no lighting input** at all (since 2026-09-04 a hologram shader, before that a
+`MeshBasicMaterial`; neither ever responded to a scene light) — under glowing HDR-boosted, equally unlit,
+electric-blue edges. Blueprint edges, the holo scan/pulse verbs, and the podium's rim/glow all carry
+the signals this map defines.
+
+**Corrected 2026-09-04 — the room is dark and the hologram is the light.** This section said the mat
+is *"a lit, graphite/blue-grey surface"*, lit by a fixed two-light rig (`SceneLights`: ambient 0.6 +
+one warm `#ffe0b0` directional at 0.9, `Plateau.tsx:160-168`), and that the podium glow was *"tuned
+to read as a reflection on the lit mat floor rather than fog in a void"* — the stated reason for the
+`PODIUM_INTENSITY` cut to 0.55. That rule was written when the void was the alternative and the mat
+needed a key light to exist at all. It is dropped, for two reasons that survive on their own:
+
+- **It contradicted the material.** The car is a projection — an unlit fill under unlit bloomed edges —
+  while the floor beneath it was lit like a photographed object by a warm key from nowhere. Two lighting
+  models on one stage, and the warm key was the one carrying no datum: nothing in the frame vocabulary
+  ever changed it.
+- **It spent the reference wrong.** Every source the redesign leans on (`docs/design-inspiration.md`
+  § 7) keeps the room dark and lets the hologram be the only luminous matter, its one hue spilling
+  softly onto the floor. A lit mat under a hologram reads as a desk lamp left on.
+
+So: the warm key is **gone**; the room keeps a cool, dim ambient fill only (`ROOM_AMBIENT`, pinned in
+`agentLight.ts`; low enough that the mat base reads as black mass and only its grid lines read at all).
+The hologram's own light is what else reaches the floor — two point lights, cyan, breathing on
+`breathe01` with the podium (§ "The hologram is the light"). Geometry the old wording ignored: the
+turntable disc (r 3.2, `Plateau.tsx` `Turntable`) covers the mat under the car, so "the mat under the
+car" was never a surface anyone could see. The acceptance is therefore: **the disc top reads a soft
+pool; the mat ring beyond the disc (r ≈ 3.2–6, where the grid's own falloff is brightest,
+`CuttingMat.tsx` `falloff`) keeps its grid faintly legible under a soft cyan tint**; the spill must
+never bleach either. The mat is the dark that makes the light visible, and a floor that competes with
+the car has stopped being a floor.
+
+What does not move: the floor is never green; the podium's rim arcs, echo rings and shafts carry the
+CAR's health. `PODIUM_INTENSITY` stays at 0.55 for now, but honestly: its stated reason is gone with the
+lit mat, and the number is kept only because it has not yet been seen against the dark room. The first
+screenshot decides it, as one dated correction here — not as a knob the implementer turns by taste.
+
+**Decided 2026-09-04, on the first dark-room screenshots (`3d-rest.jpeg`, `review-rest.jpeg`): 0.55
+holds.** The rim arcs read as the gauge against the dark room without bleaching the disc or the mat. What
+those screenshots also showed — the pool "present but very faint", the disc top near-black — is not a
+rim matter and is not fixed at the rim: the lever is the disc's diffuse term and the agent light's levels
+(§ "The hologram is the light", "Also in this change", corrected the same day).
+
+## The hologram is the light (added 2026-09-04)
+
+The Stark-workshop reading, taken literally: the room is dark, the car is a **projection**, and the
+only luminous matter on stage is the hologram and the emitters that project it. Three things follow,
+and none of them is a new verb — they are the existing verbs (scan, pulse, ghost, the done filament,
+the breathe) made physical:
+
+1. **The hologram lights the stage.** Two point lights, one `useFrame`, one shared breath (`breathe01`,
+   in phase with the rim and the podium), both lighting only what a scene light can light — the disc,
+   the mat, the emitter housings; the fill, edges, rim, rings and assembly are all unlit and ignore
+   them:
+   - the **agent light** sits at the car (`AGENT_LIGHT_POS`), with a short reach (`distance` tuned to die
+     at the rim, § numbers in `agentLight.ts`) so its pool is **confined to the disc's interior**. It
+     carries the orb's **phase as intensity** (rest / quiet / working, each `base + amp · breathe`) and
+     the orb's **result as colour** (cyan → `RESULT_LIGHT` on `done`, then back). It does **not** borrow
+     the orb's exertion amber (`noyau.css:46-50` — the orb IS amber under load; the light stays cyan).
+     Deliberate: amber on the stage is already spent twice, as health on the rim and as an amber
+     result in the pool, and a third amber would be read as one of those. So the light carries the
+     orb's state, not the orb's palette — that sentence replaces an earlier "the light is the orb's
+     colour", which was false.
+   - the **spill light** sits above the projection volume (`SPILL_POS`, roughly the shafts' height),
+     wide reach, **always `HOLO_CYAN`**, at a fixed ratio of the agent light's intensity (`SPILL_RATIO`),
+     on the same breath. It is the hologram's cast light on the mat ring — motif (c) — and carries no
+     value: cyan is the agent's hue and never a signal, so a tint of it on the floor cannot be misread.
+2. **The fill is a hologram, not a tinted box.** The `.glb` fill (`blueprintBuild.ts` `fillMat`, before
+   a flat `MeshBasicMaterial`) becomes a `ShaderMaterial` with no lighting input: a view-dependent
+   **fresnel** edge in the blueprint blue (the glass-like depth the references share), slow **horizontal
+   scanlines** always drifting upward (a loop period — a frequency, exempt from the duration tokens like
+   the breathe), a slight fade with camera depth, and a **noise flicker** that fires ONLY when a mesh
+   arrives and inside the scan band while Le Noyau reads — never at rest. A hologram that flickers
+   constantly is a hologram nobody can look at for six hours; the flicker is the moment of projection,
+   not the texture of it (cheap idle, `docs/prompt-pilot-motion.md` hard rule 6). The paint tint and the
+   ghost behaviour are unchanged in effect: `ghostDepth` still drives the fill to zero and the edges to
+   `GHOST_EDGE_FLOOR` — now via the one `uGhost` uniform both shaders read, instead of a material opacity
+   write.
+3. **Emitters root the projection.** Four small housings on the disc, inside the rim, each with a lens
+   that wears the agent light's colour: faint at rest, brighter under load, on the shared **breathe**
+   (never on the per-step pulse — see the `status` row). They are the hologram's visible origin — the
+   geometric reason the car is there — and they say who is projecting: the same light as Le Noyau, from
+   the same state.
+
+**Which surface carries what — the rule a still screenshot must satisfy.** Two signal systems light
+one podium, so each owns a surface: the podium's **perimeter** — rim arcs (`RingSegment`), echo rings
+and light shafts (`HoloPodium`, `podiumGlow`) — carries the **CAR's health**; the podium's **interior** —
+the disc pool and the four lenses — carries the **AGENT's turn**, exactly as the orb does at the same
+moment. The colour at the rim is the car; the colour inside the rim is the turn; a healthy car with an
+amber finding is a green rim around an amber pool, and that is legible because the two never share a
+surface. The spill on the mat ring is cyan and only cyan. The agent light's `distance` is what enforces
+this — it must fall to near nothing at the rim — and is pinned in `agentLight.test.ts` for that reason.
+
+**Truth before spectacle, checked.** Hide the canvas and nothing is lost: the lights and the emitters
+carry no value that is not already the orb's `phase`/`result` (announced on the aria-live line, printed
+as the signal word in the journal) and the rim's arcs. The result colour is the ONE place a signal hue
+is allowed off the rim/podium, and it is allowed because it *is* the result — the same green/amber/red
+the orb's filament shows, at the same moment, for the same reason. Nothing else on stage may take a
+third hue: the fresnel is blueprint blue, the scanlines are blueprint blue, the emitters and both lights
+are the agent's cyan. **Corrected 2026-09-04 (reveal part meshes; written 2026-09-05 at review):** a reveal
+part named by `partKeys` wears the OPERATOR hue on its fresnel and scanlines as well as its edges — `uEdge`
+drives all three in `holoFill.ts`, so a part built with `edge` = the callout colour cannot do otherwise.
+That is not a third hue: it is the callout hue the primitive has carried since C3 (§ The reveal), on
+standing state the operator asked to see. The SHELL's fresnel and scanlines stay blueprint blue — the
+default `uEdge` is `BLUEPRINT_EDGE` and `blueprintBuild.test.ts` pins it so the shell cannot drift.
+
+**Cyan, "never a fill" (`tokens/atelier.css:33`), checked.** The ration says cyan is Le Noyau's and never
+a fill. A cyan pool is not a painted fill: it is **light cast by the agent** — the role the ration gives
+cyan — falling on surfaces that stay their own dark colour, bounded by the disc for the agent light
+and by distance falloff on the ring for the spill, and low enough that the mat reads as black with a
+tinted grid (§ Stage look acceptance). The comment at `atelier.css:33` is amended in the same change
+to say so ("never a painted fill; the hologram's cast light is light, not fill"), so the two documents
+agree.
+
+| Real frame / condition | Atelier motion | Owner layer |
+|---|---|---|
+| rest — no turn, `phase: 'idle'` or `'listening'` | the room is dark (`ROOM_AMBIENT` only, no key). The agent light breathes faint cyan on `breathe01` — the **disc under the car** shows a soft cyan pool dying at the rim; the spill tints the mat ring, grid still legible through it. The four emitter lenses glow dim cyan on the same breath. Scanlines drift on the shell; fresnel rims the silhouette; **no flicker** | `Plateau.tsx` (`AgentLightRig`) + `holoFill.ts` |
+| `selectVehicle {id}` — a mesh **arrives** (the thumb, then the full `.glb`; each is an arrival) | the shell **flickers into being**: a per-scanline noise dropout decaying over `--at-dur-etch` (`FLICKER_SECONDS` — the hologram etches itself in line by line; § Motion scale says why etch and not fan), then rests. Fires on mount only, never on a clock or a re-render; the thumb→full swap is a second arrival and fires once more — caused by the data landing, so not theatre (hard rule 1). The arrival window expires on wall time even under reduced motion, so a later motion-on toggle cannot replay it | `VehicleMesh` (`HoloRunner`) |
+| `turn {phase:'start'}` / first `status` — `phase: 'working'` | both lights **brighten** (working level, still on the breath) and the emitter lenses go hot — the projector is under load; colour stays cyan (point 1). The existing cyan scan-sweep now also **flickers the fill inside its band** (`uScanOn` gates it), so the sweep reads as the beam reading the shell rather than a stripe painted on it. Cross-fades from the rest level over `--at-dur-filament`, the orb's own filament step | `AgentLightRig` + `holoFill.ts` + `ScanRunner` |
+| `status` — a narrated step (one orb pulse) | **nothing extra.** The lights and lenses are already at working level and stay on the breathe; a per-step flash would be the double-announcement the tool-step chips avoid. The region PULSE on the edges stays the per-step motion | — |
+| `turn {phase:'end'}` — `phase: 'done'`, `result: green\|amber\|red` | the agent light and the lenses **take the result colour** (`RESULT_LIGHT`: `SIGNAL_HEX.green` / `SIGNAL_HEX.amber` / `NEON_RED`, the podium's own red) over `--at-dur-filament`, in step with the orb's filament, and hold it steady (`amp` 0 — the filament does not breathe) for the settle dwell. The verdict is inside the rim, briefly, in the colour already on the orb; the rim keeps the car's health; the spill stays cyan | `AgentLightRig` |
+| `settle` — `phase` back to `'idle'` | the light **returns to cyan** over `--at-dur-filament` and falls back to the rest level. The result was never the light's to keep — the rim arcs are | `AgentLightRig` |
+| **veille pilotée** — `driver: 'pilot'`, `quiet: true` | the projector **dims** (it was never amber, so it does not "cool"): both lights drop to the quiet level, between rest and working, and the lenses dim with them, over `--at-dur-filament`. Still lit above rest — the run is open — but no longer claiming to read. A pilot frame that clears `quiet` brings them back to the working level over the same `--at-dur-filament` | `AgentLightRig` |
+| `revealAssembly` — `ghostDepth > 0` | the fill's body **and** its fresnel fade with the ghost (`uGhost` shared with the edges); scanlines fade with them. The lights are unaffected — a reveal is the operator looking inside, not the agent acting | `holoFill.ts` (`ghost.apply`) |
+| `prefers-reduced-motion` | **state stays, attention goes.** The dark room, the pool, the emitters, the fresnel and the current colour (rest / working / result) are all static and remain; the breathe freezes at mid-swell like every other breathing element (`b = 0.5`); the scanlines **freeze in place** (a static texture, still the hologram); the flicker **does not fire** (attention, not state — the pulse's rule); colour and level changes **cut** instead of cross-fading | all |
+| the Plateau prop | Le Noyau reaches the Canvas as **one** prop, `agent: AgentLight` — a primitive union (`'rest' \| 'working' \| 'quiet' \| 'done:green' \| 'done:amber' \| 'done:red'`) derived by the pure `agentLightOf({phase, result, quiet})`. A primitive, deliberately: `Plateau` is memo'd against per-keystroke re-renders (`Plateau.tsx`, `export const Plateau = memo(PlateauImpl)`) and an object prop rebuilt each render would defeat that. `scanning` stays as it is (it is derivable from `agent`; folding it is a later cleanup, not this change) | `SceneView.tsx` → `Plateau` |
+
+**Also in this change, small.** A subtle **vignette** in the composer (after Bloom; `multisampling`
+stays `0`, hard rule 3) — the dark room's edges go darker still, so the eye lands on the lit centre. The
+turntable disc is re-tuned (colour, metalness, roughness — pinned in `agentLight.ts` as `DISC`) so the
+cyan light gives it a specular edge instead of a black hole; a drei `Environment` was considered for it
+and is **deferred**: `scene.environment` is global and would re-light the mat (a `MeshStandardMaterial`),
+and a dark room wins over a pretty disc.
+
+**Corrected 2026-09-04, at review — the pool is diffuse, not specular.** "A specular edge" was the wrong
+target: `#232a33` is ≈ 0.02 linear albedo, `metalness 0.6` left 40 % of that for the diffuse term, and
+an overhead light's specular lobe points away from the HOME camera — so the disc centre computed to
+≈ 0.01 linear (black) and the screenshots agreed. The rest row's acceptance ("a soft cyan pool dying at
+the rim") is now met by two numbers, both pinned in `agentLight.test.ts`: `DISC` is **matte**
+(`metalness 0.2`, `roughness 0.7` — the diffuse fraction doubles) and `AGENT_LIGHT_LEVELS` rise
+(rest 28 / quiet 36 / working 50 / done 50, `amp` unchanged) to put the disc centre at ≈ 0.05 linear at
+rest. Confinement is untouched (`distance` is the pin) and the spill on the mat ring stays under
+bleaching (≈ 0.25–0.45 irradiance at r 4.5). Two smaller readings from the same screenshots, same day:
+the four **emitters read as four floating dots** — the housing (`#0f1216`, metalness 0.6) vanished into
+the disc and the rest lens (0.55 × HOLO_CYAN's 0.77 luminance = 0.42) sat under Bloom's 0.5 threshold — so
+the housing is lifted (`#2c3440`, metalness 0.3) and `LENS_HDR.rest` goes to 0.75 (0.58: a faint halo,
+still far under working's 2.2); and the **fresnel whitened the shell** — at `FRESNEL_GAIN 0.55` a grazing
+edge landed inside Bloom's smoothing band and half-bloomed into a pale haze — so the gain is 0.35
+(`FRESNEL_POWER` unchanged), which keeps the rim clear of the band and the body reading as night glass.
+
+**Out of scope, by decision** — two refused, two deferred pending a design of their own. Refused: depth
+of field (a focus pull is a camera verb this map does not have, and the dolly already carries "where the
+attention is"); a reflective podium (a second copy of the car under the car, doubling the luminous
+matter the dark room exists to ration). Deferred: data-as-geometry stations around the stage (a new
+surface — design before build, `docs/design-inspiration.md` § 6.6); detailed part meshes
+(`public/mazda6-gh-web.glb` is one node; § "The reveal" already says why the diagram is authored
+primitives, and a real part library is a content decision, not a motion one). **Corrected 2026-09-04,
+same day:** the part-mesh decision is taken — § "The reveal", "Corrected 2026-09-04 — generic part
+meshes". GENERIC meshes of a part's kind, drawn through this same blueprint pass; vehicle-specific
+meshes (`engine-v6.glb`) stay refused for the reason the reveal section gives.
 
 ## Domain frames (collection topic)
 
@@ -659,6 +877,20 @@ the two halves fail independently by construction.
   instant cut (and "vue libre" an instant return). **Veille pilotée** loses its breath the same way and
   keeps everything that carries the information: the lifted orb, the cooled cyan, the `PILOTE`
   nameplate and the elapsed-silence read are all static state, so nothing is lost with motion off.
+  The same split holds on the stage (§ "The hologram is the light", 2026-09-04): the dark room, the
+  hologram's fresnel, the emitters' colour and the freed orb's size are state and stay; the breathe
+  freezes mid-swell, the scanlines freeze in place, the flicker never fires, colour changes cut.
+- **Cheap idle** (`docs/prompt-pilot-motion.md` hard rule 6; added 2026-09-04) also bounds what a
+  hologram may do at rest. The stage's continuous motions all read ONE clock sample per frame
+  (`clock.elapsedTime`) and each costs a uniform write: the breathe (one period, protected), the
+  light-shaft drift (`HoloPodium`, already there), and now the hologram's scanline drift
+  (`HOLO_SCAN_PERIOD`) — the drift earns its frame because it is motif (b), the one visual that says
+  "projection" on a still car (`docs/design-inspiration.md` § 7). That is the whole idle budget: no
+  constant flicker, no per-frame allocation, no light hunting a target it has already reached (the rig
+  early-returns once its blend is complete), and no fourth continuous motion without its own row here.
+  A reveal's part meshes (2026-09-04) add no motion to that list: they read the SAME scanline clock
+  sample, one uniform write each, and exist only while a reveal holds — a hold is attention the operator
+  asked for, not idle. The idle budget is unchanged.
 - **The pilot's silence is read, not animated.** The elapsed counter is a leaf with its own interval:
   one second's tick re-renders that text node and nothing else (measured: 4 DOM mutations over 4 s of
   veille pilotée, all `characterData` on `.noyau-wait-clock`). Cheap idle is a hard rule, and a state

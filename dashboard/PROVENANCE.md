@@ -544,3 +544,69 @@ Verified live (admin owner): each card shows its mesh (Espace→specific, Peugeo
 Toro→groundscare tractor), normalized + spinning over the signal ring; click → hero; leaving `#/` releases
 the parc canvas. Hero progressive load verified in the network (5 thumbs preloaded → espace full glb
 fetched on demand → dense full mesh swapped in). tsc clean · 251 tests · anti-reuse 0.
+
+### Reveal part meshes — generic stand-ins (decided 2026-09-04, built 2026-09-05)
+
+- **`assembly.ts`** — one table `PART_MESHES` (oil_filter/spark_plug/battery/brake_discs/engine → their
+  generic mesh), `mesh?: PartMeshSpec` added to `AssemblyPart` (not `PartSpec` — `brake_discs` appears in
+  two regions, kept as ONE table). `DISC_UPRIGHT` corrects the `disc` primitive to stand on the axle
+  (`π/2` about x) after it was caught drawing flat since C3. New pure helpers: `partMeshUrl`,
+  `schematicBox`/`meshFit` (the fit rule — longest axis of the mesh matched to the primitive's extent on
+  THAT axis, corrected 2026-09-05 after a first draft matched largest-to-largest and stood the engine
+  block above the roofline), `riseT`/`ASSEMBLY_RISE`/`RISE_FROM` (moved out of `Assembly.tsx` so both
+  `Part` and the new `MeshPart` read one clock). `PartMeshSpec.rotationX` stands the spark plug up (it
+  lies along z on disk; a plug stands in its socket). 35 tests in `assembly.test.ts` (was 13).
+- **`Assembly.tsx`** — rewritten around ONE diagram clock (`clock`, a ref) owned by `Assembly` and read by
+  every part via `riseT`, so a glb that resolves mid-rise (Suspense swapping the primitive out) joins the
+  rise at the current instant instead of replaying it. `Part` (primitive) now clock-driven and draws the
+  disc upright (`DISC_UPRIGHT` on the mesh). New `MeshPart` runs a part's generic glb through the SAME
+  `buildBlueprint` pass as the shell (`edge`/`paint` = the highlight colour, so a highlighted part is
+  operator-hued on edges, fill, fresnel AND scanlines — CHOREOGRAPHY "Truth before spectacle"), fits it
+  into the primitive's `schematicBox` via `meshFit`, and drives its `uRise` from the same clock. New
+  `PartSlot` picks `Part` or `MeshErrorBoundary`+`Suspense` around `MeshPart`, with the PRIMITIVE as both
+  the loading and the error fallback — a slow or missing glb degrades to today's diagram, never to
+  nothing. No `useGLTF.preload` for parts (the fetch starts with `MeshPart`'s first render; an earlier
+  moment would be idle, which § Priority forbids).
+- **`blueprintBuild.ts`** — new `edge` (line/fresnel/scanline hue override) and `edgeBoost` (HDR line
+  boost override, default `EDGE_BOOST` = 1.7) options, plus `rotationX` (applied before the re-centre,
+  alongside the existing `rotationY`) for the spark plug. First unit test file for this module
+  (`blueprintBuild.test.ts`, 9 tests) — EdgesGeometry/Box3 are pure JS, so it is testable headless.
+- **`holoFill.ts`** — `uRise` driver uniform (default 1, the shell never touches it) scales the whole
+  fragment alpha, fresnel included — a `ShaderMaterial` has no `.opacity` to write, and scaling
+  `uFillOpacity` alone left the rim glowing at full `FRESNEL_GAIN` from the first frame. `buildHoloFill`
+  takes an `edge` hue (default `BLUEPRINT_EDGE`) so a highlighted part's fresnel/scanlines take the
+  operator hue too. 4 new tests.
+- **`VehicleMesh.tsx`** — `HoloRunner` exported so `MeshPart` can drive its own arrival flicker + scanline
+  clock (no ScanRunner/PulseRunner/GhostRunner mounted on a part: those uniforms stay inert at 0 and a
+  part is never ghosted — it is what appears as the shell ghosts).
+- **`Attribution.tsx`** — +2 credits (Oil Filter — nodelet, CC-BY-NC; Old Engine — TraianDumbrava,
+  CC-BY), `Credit.licence?` (absent = CC-BY) drives the panel's per-row suffix. spark-plug/brake-disc/
+  battery stay uncredited (author not captured) — an invented author is worse than none; tracked as a
+  `SOURCES.md` gap.
+- **Assets** — the 5 files under `public/parts/` are all wired (`oil-filter`, `spark-plug`, `battery`,
+  `brake-disc`, `engine-block`); `engine-v6.glb` refused (vehicle-specific detail no vehicle datum can
+  select) and `spark-plug-worn.glb` refused (a claim about the operator's own plug); both removed from
+  disk 2026-09-05, see `public/parts/SOURCES.md`.
+- **`AtelierScene.tsx`** — `toggleReveal` takes `(region, keys)`; a second simulate button added
+  (hood · oil filter + spark plugs) alongside the existing bay button. Dev harness only (`#/scene`).
+
+Verified live 2026-09-05: `curl` confirmed `/parts/oil-filter.glb` already serves 200 through Caddy (no
+`@frontend` matcher gap). Hood reveal (`#/scene`, admin owner, Chrome 1600×900): oil filter and spark
+plug render as recognisable meshes in operator orange, edges bloomed; the spark plug stands upright
+after wiring `rotationX` into `PART_MESHES.spark_plug` and `MeshPart`'s `buildBlueprint` call (a first
+pass had the `rotationX` OPTION in `blueprintBuild.ts` but never wired it into the diagram table — caught
+live, fixed, re-verified); the engine block renders inside the housing's former footprint, not above the
+roofline. Bay reveal: battery renders as a detailed blue mesh, fuel filter stays its orange canister
+primitive (the honesty line, visible side by side) — hue check (sampled pixels, `magick`) put both the
+hood meshes' bloomed edge (~254,80,30) and the bay primitive's flat fill (~226,83,79) within the same
+narrow red-orange hue band as `OPERATOR_HEX` (#ee4322) — no pink/white reading, so `PART_EDGE_BOOST`
+stayed at 1.7. `PART_EDGE_ANGLE` stayed at 40° — the plug read as a small recognisable dart, not a smear
+or hairball. Console clean apart from the pre-existing favicon.ico 404 and the pre-existing
+`glBlitFramebuffer` depth/stencil warning; no GLTFLoader or shader-compile errors. Reloading the hero
+(`#/v/01KVFEQA72XQMWSS3HPBD93ASR`) showed the unchanged rest state (edges, fill, no fade). The upright
+`disc` primitive (`DISC_UPRIGHT`) has no simulate button on `frontAxle`/`rearAxle` in this harness, so it
+was verified by the unit tests only (`schematicBox`/`meshFit`/`DISC_UPRIGHT` cases in `assembly.test.ts`),
+not by a live screenshot.
+
+tsc clean (whole project) · touched files only, never the full suite: `assembly.test.ts` 35,
+`blueprintBuild.test.ts` (new) 9, `holoFill.test.ts` 7, `Attribution.test.ts` 6 — all passing.

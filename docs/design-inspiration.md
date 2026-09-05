@@ -172,3 +172,41 @@ is written.
 6. **A parc surface, ranked and never enumerated.** `list_due_maintenance` already returns the whole
    garage. The design question is what a fleet answer *looks like* — a lot of cars where the ones that
    need work are simply nearer and lit. That is a new surface: design before build.
+
+---
+
+## 7. The hologram is the light (2026-09-04)
+
+The stage had a hologram standing on a lit desk. This pass reads the references again and takes the
+one thing they all agree on: **the room is dark, and the projection is the only luminous matter.**
+Binding rows in `dashboard/CHOREOGRAPHY.md` § "The hologram is the light" and the corrected § "Stage
+look"; this section is the source digest and the decisions.
+
+**The digest — verified sources, recurring motifs.**
+
+- Perception / Prologue, *Iron Man 2* — the Stark workshop holograms and the Expo model:
+  <https://www.experienceperception.com/work/iron-man-2/>. Zai Ortiz's suit-development frames for the
+  same film: <https://www.behance.net/gallery/570107/IRON-MAN-II-Hologram-Armor-Suit-Development>.
+- Cantina Creative, *Iron Man 3* — the Mark 42 assembly and the suit-gallery UI:
+  <https://www.cantinacreative.com/film/iron-man-3>; fxguide's making-of, with the volumetric
+  treatment discussed: <https://www.fxguide.com/fxfeatured/iron-man-3-more-suits-to-play-with/>.
+- Jayse Hansen's Avengers/Iron Man HUD work (§ 3 above) — the "complex to look at, instant to read" bar.
+- Mercedes-Benz USA on HoloLens 2 — a real workshop, a real car, a diagnostic overlay rooted on the
+  vehicle: <https://news.microsoft.com/source/features/digital-transformation/vroom-with-a-view-hololens-2-powers-faster-fixes-for-mercedes-benz-usa/>.
+
+Seven motifs recur across them: (a) a wireframe skeleton over a ghosted shell — **we have it**; (b)
+volumetric scan lines, always moving; (c) **one** hue, whose light spills softly onto the floor; (d)
+visible emitters that root the hologram geometrically; (e) a dark room with the hologram as its only
+light; (f) a glass-like fresnel edge that gives the shell depth; (g) exploded views and orbits with no
+cuts — **we have it** (the reveal, the earned camera). This pass adds b, c, d, e and f.
+
+**Props: rejected.** A workbench, tool chests, a lift, a hanging lamp — a garage rendered inside a
+garage, for an operator who is *in* one, and every prop a lit object competing with the one thing that
+should be lit. What replaces their function (grounding the car, "this is a place") is **dark mass and
+emitters**: the disc as black metal the cyan catches at its edge, the mat as the dark that makes the
+light visible, four lenses on the rim as the projection's geometric origin. Data is the only material.
+
+**Out of scope, deliberately.** Two are refused, with reasons, in the CHOREOGRAPHY section: depth of
+field and a reflective podium. Two are deferred pending a design of their own, not refused: data-as-geometry
+stations around the stage (§ 6.6 above — a new surface) and detailed part meshes (a content decision;
+the reveal's authored diagram stands). The same list, said the same way, in both files.

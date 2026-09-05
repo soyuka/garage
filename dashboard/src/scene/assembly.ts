@@ -2,6 +2,7 @@ import type { BodyRegion } from './anchors';
 import type { Locale } from '../i18n/locale';
 import { messages, type Messages } from '../i18n/messages';
 import { canonicalService } from '../labels';
+import { MOTION } from '../tokens/motion';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // C3 — the schematic assembly. The pure core: what a reveal DRAWS under the ghosted shell.
@@ -20,9 +21,25 @@ import { canonicalService } from '../labels';
 export type AssemblyShape =
   | 'canister' // a cylinder: filters, the things you unscrew and replace
   | 'housing' // a box: the block, an airbox, a battery, a caliper
-  | 'disc' // a flat cylinder seen as a disc: brake discs
+  | 'disc' // stands on the axle, axis along z (corrected 2026-09-05: it was drawn flat since C3, CHOREOGRAPHY § The reveal)
   | 'line' // a thin run: a circuit, a hose, a pipe
   | 'node'; // a small marker: a plug, a sensor, a bleed point
+
+/** The disc primitive's rotation: a CylinderGeometry's axis is y; a brake disc's is the axle (z). */
+export const DISC_UPRIGHT: readonly [number, number, number] = [Math.PI / 2, 0, 0];
+
+/** The generic meshes that may stand in for a primitive — file stems under public/parts/. Generic means a
+ * mesh of the part's KIND: never a vehicle-specific one (engine-v6.glb is refused, see SOURCES.md) and never
+ * a state (spark-plug-worn.glb). */
+export type PartMesh = 'oil-filter' | 'spark-plug' | 'battery' | 'brake-disc' | 'engine-block';
+export interface PartMeshSpec {
+  file: PartMesh;
+  /** yaw so the source's axis matches car-local space (+x = front, z = the axle). */
+  rotationY?: number;
+  /** pitch so the source's long axis stands vertical (the spark plug lies along z on disk; a plug
+   * stands in its socket, so it stands here too — CHOREOGRAPHY § The reveal). */
+  rotationX?: number;
+}
 
 export interface AssemblyPart {
   /** the service/part key this stands for — the same vocabulary `regionsForKeys` reads. */
@@ -38,6 +55,9 @@ export interface AssemblyPart {
   size: number;
   /** named by the reveal's `partKeys` — drawn in the operator hue instead of blueprint edge. */
   highlighted: boolean;
+  /** the generic mesh that stands in for `shape`, if the part's kind has one (`PART_MESHES`); absent →
+   * the primitive draws. */
+  mesh?: PartMeshSpec;
 }
 
 // The spec carries a label KEY, not a label: the diagram is geometry plus identity, and what those
@@ -79,6 +99,16 @@ const DIAGRAMS: Record<BodyRegion, PartSpec[]> = {
   ],
 };
 
+// The one table (exported; keys are DIAGRAMS keys) mapping a part's KIND to a generic mesh that stands in
+// for its primitive (CHOREOGRAPHY § The reveal, 2026-09-04 — corrected 2026-09-05, the fit rule).
+export const PART_MESHES: Readonly<Partial<Record<string, PartMeshSpec>>> = {
+  oil_filter: { file: 'oil-filter' },
+  spark_plug: { file: 'spark-plug', rotationX: Math.PI / 2 }, // source lies along z; stood up to sit in its socket
+  battery: { file: 'battery' },
+  brake_discs: { file: 'brake-disc', rotationY: Math.PI / 2 }, // source disc axis lies along x; the axle is z
+  engine: { file: 'engine-block' },
+};
+
 /**
  * The diagram for a region, with the parts named by `keys` marked. Every part of the region is always
  * drawn — the circuit is the answer to "where does this sit", and a lone floating filter answers
@@ -93,11 +123,12 @@ export function assemblyFor(region: BodyRegion, locale: Locale, keys: string[] =
   const labels = messages(locale).assembly;
   const wanted = new Set(keys.map(canonicalService));
 
-  return DIAGRAMS[region].map(({ labelKey, ...p }) => ({
-    ...p,
-    label: labels[labelKey],
-    highlighted: wanted.has(canonicalService(p.key)),
-  }));
+  return DIAGRAMS[region].map(({ labelKey, ...p }) => {
+    const label = labels[labelKey];
+    const highlighted = wanted.has(canonicalService(p.key));
+    const mesh = PART_MESHES[p.key];
+    return { ...p, label, highlighted, ...(mesh ? { mesh } : {}) };
+  });
 }
 
 /** Does this region have a diagram worth revealing? Total — every region does today, but a caller
@@ -119,4 +150,46 @@ export const ASSEMBLY_STAGGER_CAP = 4; // steps; past this every part shares the
 
 export function assemblyDelay(index: number): number {
   return Math.min(index, ASSEMBLY_STAGGER_CAP) * ASSEMBLY_STAGGER;
+}
+
+/** The url of the generic mesh a part stands in with, if it has one. */
+export function partMeshUrl(part: Pick<AssemblyPart, 'mesh'>): string | undefined {
+  return part.mesh ? `/parts/${part.mesh.file}.glb` : undefined;
+}
+
+export type Extent = readonly [number, number, number];
+
+/** The primitive's bounding box [x, y, z] — what a stand-in mesh is fitted to (CHOREOGRAPHY § The reveal,
+ * correction 2026-09-05). Mirrors PartGeometry in Assembly.tsx; the disc is the UPRIGHT disc (DISC_UPRIGHT). */
+export function schematicBox(shape: AssemblyShape, size: number): Extent {
+  switch (shape) {
+    case 'canister':
+      return [size * 2, size * 2.4, size * 2];
+    case 'disc':
+      return [size * 2, size * 2, size * 0.16];
+    case 'housing':
+      return [size, size * 0.62, size * 0.78];
+    case 'line':
+      return [size, 0.012, 0.012];
+    case 'node':
+      return [size * 2, size * 2, size * 2];
+  }
+}
+
+/** Fit a buildBlueprint output (floor at y=0, x/z centred) into the primitive's box: the mesh's LONGEST axis
+ * is scaled to the box's extent along THAT axis (never to the box's own longest — a tall block under a long
+ * housing is fitted to the housing's height), plus the y lift that puts the mesh's centre on the primitive's. */
+export function meshFit(extent: Extent, box: Extent): { scale: number; lift: number } {
+  let axis = 0;
+  for (let i = 1; i < 3; i++) if (extent[i] > extent[axis]) axis = i;
+  const scale = extent[axis] > 0 ? box[axis] / extent[axis] : 1;
+  return { scale, lift: -(extent[1] * scale) / 2 };
+}
+
+export const ASSEMBLY_RISE = MOTION.rise / 1000; // moved from Assembly.tsx `RISE`
+export const RISE_FROM = -0.07; // moved from Assembly.tsx
+
+/** Rise progress for the part in slot `delay` at diagram clock `clock`: 0 before its slot, 1 once landed. */
+export function riseT(clock: number, delay: number): number {
+  return Math.min(1, Math.max(0, (clock - delay) / ASSEMBLY_RISE));
 }

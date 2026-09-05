@@ -175,6 +175,10 @@ worked through in `docs/design-inspiration.md` § 5.
   tests. The fix is two rows in `SERVICE_ALIASES`, but front/rear are genuinely different parts on
   different axles, so folding both onto `brake_pads` throws away the axle — which is exactly the datum
   the region lookup needs. Decide whether the axle survives as a distinct region key before folding.
+- **The composer input carries no visible lock affordance while `busy()` is true** (`Composer.tsx` never
+  disables it; the lock is `send()`'s no-op, `Atelier.tsx:519`) — under either driver an operator can type
+  into an input that swallows Enter. Noticed 2026-09-04 while designing the pilot handle (CHOREOGRAPHY
+  § The pilot driver).
 
 ---
 
@@ -406,3 +410,5 @@ stamp and there is no wall clock to print. `whenLabel()` moved out of `AmbientIn
 
 **Still open:** nothing forces the agent to keep a card's numbers consistent with the panel — the stamp
 makes staleness readable, it does not prevent it.
+
+- 2026-09-04 (3D stage lane): the hero composer logs `GL_INVALID_OPERATION: glBlitFramebuffer: Read and write depth stencil attachments cannot be the same image` ×256 then silences itself — pre-existing (reproduced with the Vignette pass removed; `<Canvas shadows>` + EffectComposer `multisampling={0}` on r169 / postprocessing 6.39). Harmless on screen; find the blit and either drop `shadows` (nothing casts) or give the composer its own depth target.
