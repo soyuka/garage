@@ -20,4 +20,7 @@ describe('Plateau source', () => {
     expect(source).toContain('<VisitRing');
     expect(source.indexOf('<Assembly')).toBeLessThan(source.indexOf('<VisitRing'));
   });
+  it('mounts the fact constellation alongside the visit ring, in the same car group (§ Stations)', () => {
+    expect(source).toContain('<FactConstellation');
+  });
 });

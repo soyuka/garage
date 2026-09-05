@@ -505,6 +505,7 @@ export const fr = {
     unitPlaceholder: 'unité',
     unitLabel: 'Unité (optionnelle)',
     add: 'Ajouter',
+    unplaced: 'sans emplacement',
   },
 
   usage: {

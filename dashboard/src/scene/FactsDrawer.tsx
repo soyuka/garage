@@ -4,6 +4,7 @@ import './factsdrawer.css';
 import { NBSP } from '../format';
 import { factLabel } from '../labels';
 import { InlineEdit } from '../floor/InlineEdit';
+import { factRegion } from './factConstellation';
 import type { VehicleFact } from '../types';
 
 // The facts drawer — replaces the old always-on MOTEUR fact cards with an on-demand, full-sheet
@@ -17,6 +18,7 @@ export function FactsDrawer({
   facts,
   edit,
   reduced = false,
+  onHoverFact,
 }: {
   open: boolean;
   onClose: () => void;
@@ -24,6 +26,9 @@ export function FactsDrawer({
   /** Live-hero editing seam: present → each row is click-to-edit + removable. Absent → read-only. */
   edit?: { onEditValue: (key: string, value: string, unit?: string | null) => void; onRemove: (key: string) => void };
   reduced?: boolean;
+  /** A row hovered/focused marks its constellation node in the operator hue. Absent → the constellation
+   * wires to no ledger (the fixture playground). */
+  onHoverFact?: (key: string | null) => void;
 }) {
   const t = useT();
   const [locale] = useLocale();
@@ -64,9 +69,21 @@ export function FactsDrawer({
           ) : (
             <ul className="at-facts-list">
               {ordered.map((f) => {
+                const unplaced = factRegion(f.key) === 'unplaced';
                 return (
-                  <li key={f.key} className="at-facts-row">
-                    <span className="at-facts-label">{factLabel(f.key, locale)}</span>
+                  <li
+                    key={f.key}
+                    className="at-facts-row"
+                    tabIndex={onHoverFact ? 0 : undefined}
+                    onMouseEnter={onHoverFact ? () => onHoverFact(f.key) : undefined}
+                    onMouseLeave={onHoverFact ? () => onHoverFact(null) : undefined}
+                    onFocusCapture={onHoverFact ? () => onHoverFact(f.key) : undefined}
+                    onBlurCapture={onHoverFact ? () => onHoverFact(null) : undefined}
+                  >
+                    <span className="at-facts-label">
+                      {factLabel(f.key, locale)}
+                      {unplaced && <span className="at-facts-unplaced">{t.facts.unplaced}</span>}
+                    </span>
                     <span className="at-facts-value">
                       {edit ? (
                         <InlineEdit

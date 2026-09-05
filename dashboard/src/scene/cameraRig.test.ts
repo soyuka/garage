@@ -21,6 +21,7 @@ import {
   REGION_VIEWS,
   REVEAL_VIEWS,
   HISTORY_VIEW,
+  DATA_VIEW,
   DOLLY_RADIUS_FACTOR,
   clampPolar,
   sineEaseInOut,
@@ -30,6 +31,7 @@ import {
   presetForRegion,
   presetForFocus,
   historyPose,
+  dataPose,
   gateReduce,
   dragBreaksHold,
   deriveCameraFocus,
@@ -250,25 +252,55 @@ describe('historyPose — the visit-ring station camera', () => {
   });
 });
 
-describe('deriveCameraFocus — a drag releases the history hold', () => {
+describe('dataPose — the fact-constellation station camera', () => {
+  const homeRadius = dist(HOME.position, HOME.target);
+  const homeAz = toSpherical([HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]]).azimuth;
+  const pose = dataPose();
+
+  it('pulls back to distanceFactor × the home radius', () => {
+    expect(framing(pose).radius).toBeCloseTo(homeRadius * DATA_VIEW.distanceFactor);
+  });
+
+  it('keeps the same azimuth as home — the constellation does not swing around the car', () => {
+    expect(framing(pose).azimuth).toBeCloseTo(homeAz);
+  });
+
+  it('is presetForFocus’s data mode', () => {
+    expect(presetForFocus('berline', undefined, 'data')).toEqual(dataPose());
+  });
+});
+
+describe('deriveCameraFocus — a drag releases a station hold', () => {
   const held = { region: 'hood' as const, key: 1 };
 
-  it('an explicit hold always wins over history', () => {
-    expect(deriveCameraFocus(held, true, false)).toEqual(held);
-    expect(deriveCameraFocus(held, true, true)).toEqual(held);
+  it('an explicit hold always wins over a station', () => {
+    expect(deriveCameraFocus(held, true, 'history', false)).toEqual(held);
+    expect(deriveCameraFocus(held, true, 'history', true)).toEqual(held);
   });
 
   it('Historique open with nothing else held earns the history pose', () => {
-    expect(deriveCameraFocus(null, true, false)).toEqual({ key: 0, mode: 'history' });
+    expect(deriveCameraFocus(null, true, 'history', false)).toEqual({ key: 0, mode: 'history' });
   });
 
   it('a drag that already released the hold keeps the camera free while Historique stays open', () => {
-    expect(deriveCameraFocus(null, true, true)).toBeNull();
+    expect(deriveCameraFocus(null, true, 'history', true)).toBeNull();
   });
 
   it('closed Historique is free regardless of the released flag', () => {
-    expect(deriveCameraFocus(null, false, false)).toBeNull();
-    expect(deriveCameraFocus(null, false, true)).toBeNull();
+    expect(deriveCameraFocus(null, false, 'history', false)).toBeNull();
+    expect(deriveCameraFocus(null, false, 'history', true)).toBeNull();
+  });
+
+  it('the Données drawer open with nothing else held earns the data pose', () => {
+    expect(deriveCameraFocus(null, true, 'data', false)).toEqual({ key: 0, mode: 'data' });
+  });
+
+  it('a drag that already released the hold keeps the camera free while Données stays open', () => {
+    expect(deriveCameraFocus(null, true, 'data', true)).toBeNull();
+  });
+
+  it('an explicit hold still wins over the data station', () => {
+    expect(deriveCameraFocus(held, true, 'data', false)).toEqual(held);
   });
 });
 

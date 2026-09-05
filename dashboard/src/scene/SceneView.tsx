@@ -32,6 +32,8 @@ import type { BodyRegion } from './anchors';
 import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
 import { visitRingLayout } from './visitRing';
+import { factConstellationLayout } from './factConstellation';
+import { bodyClassFor } from './CarProxy';
 import type { Focus } from '../focus';
 import type { ForecastDue, Iri, MaintenanceRecord, PlannedPart, VehicleBundle } from '../types';
 
@@ -225,17 +227,31 @@ export function SceneView({
   useEffect(() => {
     if (!historyOpen) setHoveredVisit(null);
   }, [historyOpen]);
-  // A drag breaking the hold (Plateau's onCameraRelease) must not re-dolly to the history pose on release
-  // — tracked separately from historyOpen so the Carnet itself can stay open with the camera set free.
-  const [historyHoldReleased, setHistoryHoldReleased] = useState(false);
+  // The fact constellation — same on-demand-only shape as the visit ring, keyed off factsDrawerOpen.
+  const bodyClass = bundle ? bodyClassFor(bundle.vehicle.vehicleType) : null;
+  const facts = useMemo(
+    () => (factsDrawerOpen && bundle && bodyClass ? factConstellationLayout(bundle.vehicle.facts ?? [], bodyClass) : null),
+    [factsDrawerOpen, bundle, bodyClass],
+  );
+  const [hoveredFact, setHoveredFact] = useState<string | null>(null);
   useEffect(() => {
-    if (historyOpen) setHistoryHoldReleased(false);
-  }, [historyOpen]);
+    if (!factsDrawerOpen) setHoveredFact(null);
+  }, [factsDrawerOpen]);
+  // A drag breaking the hold (Plateau's onCameraRelease) must not re-dolly to the station pose on release
+  // — tracked separately from historyOpen/factsDrawerOpen so the drawer/carnet itself can stay open with
+  // the camera set free. History and Data are mutually exclusive (the driver closes one on opening the
+  // other), so ONE released flag covers whichever station is open.
+  const [stationHoldReleased, setStationHoldReleased] = useState(false);
+  useEffect(() => {
+    if (historyOpen || factsDrawerOpen) setStationHoldReleased(false);
+  }, [historyOpen, factsDrawerOpen]);
   const onPlateauCameraRelease = useCallback(() => {
     onCameraRelease?.();
-    setHistoryHoldReleased(true);
+    setStationHoldReleased(true);
   }, [onCameraRelease]);
-  const plateauCameraFocus = deriveCameraFocus(cameraFocus, historyOpen, historyHoldReleased);
+  const plateauCameraFocus = historyOpen
+    ? deriveCameraFocus(cameraFocus, true, 'history', stationHoldReleased)
+    : deriveCameraFocus(cameraFocus, factsDrawerOpen, 'data', stationHoldReleased);
 
   const focusKeys = focus?.keys;
   // The constellation is a PROJECTED surface only: it exists when the agent (or a chip) answers a spec
@@ -367,6 +383,8 @@ export function SceneView({
               reveal={reveal}
               visits={visits}
               hoveredVisit={hoveredVisit}
+              facts={facts}
+              hoveredFact={hoveredFact}
               onCameraRelease={onPlateauCameraRelease}
             />
           </div>
@@ -545,6 +563,7 @@ export function SceneView({
           facts={bundle.vehicle.facts ?? []}
           edit={edit?.facts && { onEditValue: edit.facts.onEditValue, onRemove: edit.facts.onRemove }}
           reduced={reduced}
+          onHoverFact={setHoveredFact}
         />
       )}
 

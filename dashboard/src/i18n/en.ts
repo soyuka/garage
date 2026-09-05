@@ -475,6 +475,7 @@ export const en: Messages = {
     unitPlaceholder: 'unit',
     unitLabel: 'Unit (optional)',
     add: 'Add',
+    unplaced: 'no location',
   },
 
   usage: {

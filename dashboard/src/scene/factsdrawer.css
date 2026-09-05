@@ -1,47 +1,58 @@
-/* Facts drawer — the on-demand FULL fact sheet, glowing glass docked to the bottom edge (VR-ready).
-   Replaces the old always-on MOTEUR cards: this stays unmounted until requested, then slides up over
-   a dim scrim. Neutral data only — no signal colours, no cyan (rationed to Le Noyau). */
+/* Facts drawer — the on-demand FULL fact sheet, glowing glass (VR-ready). Neutral data only — no
+   signal colours, no cyan (rationed to Le Noyau).
+
+   Correction, 2026-09-05 (CHOREOGRAPHY § "Data — the fact constellation"): this was a full-width
+   bottom sheet under a scrim ("#5 Fiche technique drawer"). With the constellation now standing on
+   the disc, a sheet over the stage would hide the very station it describes, so the drawer docks
+   right instead — same glass, same z-order as Le Carnet, no scrim over the scene. */
 
 .at-facts-overlay {
   position: fixed;
   inset: 0;
   z-index: 60;
-  background: rgba(8, 8, 7, 0.55);
+  /* no scrim — the station behind this panel must stay visible (§ "the panel must not cover the station") */
+  background: transparent;
   display: flex;
-  align-items: flex-end;
-  justify-content: center;
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: var(--at-space-5);
   animation: at-facts-scrim-in var(--at-dur-swap) var(--at-ease-sine) both;
 }
 
 .at-facts-drawer {
   position: relative;
   z-index: 61;
-  width: 100%;
-  max-height: 40vh;
+  width: min(460px, 40vw);
+  height: calc(100% - 2 * var(--at-space-5));
+  max-height: none;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   /* amped glowing glass (VR-ready): a cool steel sheen off the top edge over the glass fill, deeper blur,
      a luminous outer halo + an inset top highlight so the panel reads as lit glass, not a flat sheet. */
-  background: radial-gradient(140% 150% at 50% 0%, rgba(150, 175, 210, 0.11), rgba(0, 0, 0, 0) 58%), var(--at-glass-fill);
+  background: radial-gradient(130% 100% at 50% 0%, rgba(150, 175, 210, 0.11), rgba(0, 0, 0, 0) 55%), var(--at-glass-fill);
   backdrop-filter: blur(calc(var(--at-glass-blur) * 1.4));
-  border-top: 1px solid var(--at-glass-edge);
-  border-radius: var(--at-radius-glass) var(--at-radius-glass) 0 0;
+  border: 1px solid var(--at-glass-edge);
+  border-radius: var(--at-radius-glass);
   box-shadow:
-    0 -1px 0 var(--at-glass-edge),
-    0 -14px 32px rgba(0, 0, 0, 0.45),
-    0 -44px 96px rgba(0, 0, 0, 0.6),
+    0 24px 72px rgba(0, 0, 0, 0.6),
     0 0 64px rgba(150, 175, 210, 0.16),
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  /* a docked column arrives from its own edge, not a sheet rising off the bottom */
   animation: at-facts-rise var(--at-dur-rise) var(--at-ease-sine) both;
 }
 
 .at-facts-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: var(--at-space-4) var(--at-space-5) var(--at-space-3);
+  background: rgba(10, 11, 14, 0.96);
   border-bottom: 1px solid var(--at-hairline);
 }
 .at-facts-head h2 {
@@ -77,10 +88,11 @@
   font-size: 13px;
 }
 
+/* the dock is one column wide — the auto-fill multi-column grid was sized for the old full-width sheet */
 .at-facts-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 4px var(--at-space-4);
+  grid-template-columns: 1fr;
+  gap: 4px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -92,6 +104,13 @@
   gap: var(--at-space-2);
   padding: 9px 0;
   border-bottom: 1px solid var(--at-hairline);
+  outline: none;
+  transition: border-color var(--at-dur-tint) var(--at-ease-sine);
+}
+.at-facts-row:last-child { border-bottom: none; }
+.at-facts-row:hover,
+.at-facts-row:focus-within {
+  border-bottom-color: var(--at-orange);
 }
 
 .at-facts-label {
@@ -102,6 +121,22 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--at-text-dim);
+}
+/* the legend caption for a fact the constellation could not place — never guesses a location */
+.at-facts-unplaced {
+  margin-left: var(--at-space-2);
+  display: inline-block;
+  font-family: var(--at-font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: none;
+  color: var(--at-text-dim);
+  border: 1px solid var(--at-hairline);
+  border-radius: 999px;
+  padding: 1px 6px;
+  white-space: nowrap;
+  vertical-align: middle;
 }
 .at-facts-value {
   font-size: 15.5px;
@@ -168,8 +203,8 @@
   to { opacity: 1; }
 }
 @keyframes at-facts-rise {
-  from { transform: translateY(100%); }
-  to { transform: none; }
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 .at-facts-overlay[data-reduced='true'],

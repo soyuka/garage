@@ -23,7 +23,7 @@ export interface CameraPose {
 
 /** A held camera focus. `key` re-triggers a dolly even for a repeat region (mirrors PulseRegion).
  * `mode` picks the pose family — absent means `focus`, so a reveal is a hold like any other. `region`
- * is absent only for `mode:'history'` — the visit ring is not anchored to a body region. */
+ * is absent only for `mode:'history'`/`'data'` — neither station is anchored to a body region. */
 export interface CameraFocus {
   region?: BodyRegion;
   key: number;
@@ -103,8 +103,9 @@ export const REVEAL_VIEWS: Record<BodyRegion, RegionView> = {
 };
 
 /** Which pose family a hold uses. `reveal` is the cutaway (C1–C4); `history` is the visit-ring pose
- * (§ "History — the visit ring"); everything else is `focus`. */
-export type FocusMode = 'focus' | 'reveal' | 'history';
+ * (§ "History — the visit ring"); `data` is the fact-constellation pose (§ "Data — the fact
+ * constellation"); everything else is `focus`. */
+export type FocusMode = 'focus' | 'reveal' | 'history' | 'data';
 
 /** Dolly duration — matches the ~900ms sine ease the spec calls for. */
 export const DOLLY_SECONDS = 0.9;
@@ -153,36 +154,66 @@ export function derivePreset(anchor: Vec3, view: RegionView, home: CameraPose = 
   };
 }
 
+/** A station pose's shape — same four numbers for every station (history, data, …): how far back, how
+ * high, and how far the target shifts off-centre so the station's own DOM column has room on screen. */
+export interface StationView {
+  polar: number;
+  distanceFactor: number;
+  targetY: number;
+  rightShift: number;
+}
+
 // The target shift is computed from the home azimuth's own right vector rather than an eyeballed
 // screen-space nudge, so it stays correct if HOME ever moves.
-export const HISTORY_VIEW = {
+export const HISTORY_VIEW: StationView = {
   polar: Math.PI * 0.3,
   distanceFactor: 1.35,
   targetY: 0.3,
   rightShift: 1.2,
-} as const;
+};
 
-/** The history-ring camera pose, derived from `home`. Same azimuth as home, raised polar, pulled back,
- * target shifted along the view's right vector (see {@link HISTORY_VIEW}). */
-export function historyPose(home: CameraPose = HOME): CameraPose {
+/** The data-constellation station pose (§ "Data — the fact constellation"): a lower tilt than history
+ * so the stacks read against the dark room, target raised to the stack height. */
+export const DATA_VIEW: StationView = {
+  polar: Math.PI * 0.38,
+  distanceFactor: 1.3,
+  targetY: 0.9,
+  rightShift: 1.2,
+};
+
+/** A station's camera pose, derived from `home`. Same azimuth as home, raised polar, pulled back,
+ * target shifted along the view's right vector — the shared shape behind {@link historyPose} and
+ * {@link dataPose}. */
+function stationPose(view: StationView, home: CameraPose = HOME): CameraPose {
   const homeOffset: Vec3 = [home.position[0] - home.target[0], home.position[1] - home.target[1], home.position[2] - home.target[2]];
   const { radius, azimuth } = toSpherical(homeOffset);
-  const polar = clampPolar(HISTORY_VIEW.polar);
-  const offset = fromSpherical(radius * HISTORY_VIEW.distanceFactor, polar, azimuth);
+  const polar = clampPolar(view.polar);
+  const offset = fromSpherical(radius * view.distanceFactor, polar, azimuth);
   // Shifting the target along the camera's rightward ground-plane vector pushes the (fixed,
   // origin-centred) car left of screen-centre.
   const right: Vec3 = [Math.cos(azimuth), 0, -Math.sin(azimuth)];
-  const target: Vec3 = [right[0] * HISTORY_VIEW.rightShift, HISTORY_VIEW.targetY, right[2] * HISTORY_VIEW.rightShift];
+  const target: Vec3 = [right[0] * view.rightShift, view.targetY, right[2] * view.rightShift];
   return {
     position: [target[0] + offset[0], target[1] + offset[1], target[2] + offset[2]],
     target,
   };
 }
 
-/** The camera preset for a region on a body class, in the given pose family. `history` ignores
- * `bodyClass`/`region` — the ring is not anchored to a part of the car. */
+/** The history-ring camera pose (see {@link HISTORY_VIEW}). */
+export function historyPose(home: CameraPose = HOME): CameraPose {
+  return stationPose(HISTORY_VIEW, home);
+}
+
+/** The fact-constellation camera pose (see {@link DATA_VIEW}). */
+export function dataPose(home: CameraPose = HOME): CameraPose {
+  return stationPose(DATA_VIEW, home);
+}
+
+/** The camera preset for a region on a body class, in the given pose family. `history`/`data` ignore
+ * `bodyClass`/`region` — neither station is anchored to a part of the car. */
 export function presetForFocus(bodyClass: BodyClass, region: BodyRegion | undefined, mode: FocusMode = 'focus'): CameraPose {
   if (mode === 'history') return historyPose();
+  if (mode === 'data') return dataPose();
   const anchor: Anchor = regionAnchors(bodyClass)[region as BodyRegion];
   return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region as BodyRegion]);
 }
@@ -239,12 +270,14 @@ export function dragBreaksHold(state: GateState): boolean {
   return state.held != null || state.queued != null;
 }
 
-/** What Plateau's `cameraFocus` should be: an explicit hold always wins; otherwise the history pose while
- * Historique is open, unless a drag already released it (`historyHoldReleased`). */
+/** What Plateau's `cameraFocus` should be: an explicit hold always wins; otherwise the given station's
+ * pose while it is open, unless a drag already released it (`stationHoldReleased`) — the same release
+ * rule for every station (history, data, …), so a new one is a `mode` value, not new machinery. */
 export function deriveCameraFocus(
   cameraFocus: CameraFocus | null,
-  historyOpen: boolean,
-  historyHoldReleased: boolean,
+  stationOpen: boolean,
+  stationMode: 'history' | 'data',
+  stationHoldReleased: boolean,
 ): CameraFocus | null {
-  return cameraFocus ?? (historyOpen && !historyHoldReleased ? { key: 0, mode: 'history' } : null);
+  return cameraFocus ?? (stationOpen && !stationHoldReleased ? { key: 0, mode: stationMode } : null);
 }

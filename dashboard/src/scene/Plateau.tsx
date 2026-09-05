@@ -31,6 +31,8 @@ import {
 import { SilhouetteCar } from './SilhouetteCar';
 import { VisitRing } from './VisitRing';
 import type { VisitSlab } from './visitRing';
+import { FactConstellation } from './FactConstellation';
+import type { FactNode } from './factConstellation';
 import './scene.css';
 
 // The minimal imperative surface of the default OrbitControls (registered via makeDefault → r3f
@@ -248,6 +250,8 @@ function Plateau3D({
   reveal,
   visits,
   hoveredVisit,
+  facts,
+  hoveredFact,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -260,6 +264,8 @@ function Plateau3D({
   reveal: RevealState | null;
   visits: VisitSlab[] | null;
   hoveredVisit: string | null;
+  facts: FactNode[] | null;
+  hoveredFact: string | null;
   onCameraRelease: () => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
@@ -271,6 +277,13 @@ function Plateau3D({
   if (visits != null && !ringMounted) setRingMounted(true);
   const sinkingRing = visits == null && ringMounted;
   const onRingSunk = useCallback(() => setRingMounted(false), []);
+  // Same keep-mounted-while-sinking pattern for the fact constellation (§ "Data — the fact constellation").
+  const [constellationMounted, setConstellationMounted] = useState(facts != null);
+  const lastFacts = useRef<FactNode[]>(facts ?? []);
+  if (facts) lastFacts.current = facts;
+  if (facts != null && !constellationMounted) setConstellationMounted(true);
+  const sinkingConstellation = facts == null && constellationMounted;
+  const onConstellationSunk = useCallback(() => setConstellationMounted(false), []);
   // C1↔C3: the shell's ghost depth is the fraction of the diagram that has arrived, so the dissolve is
   // paced by the reveal's own parts. Kept in a ref-backed state that only changes on a landed-count
   // change (Assembly reports edge-triggered), so a settled reveal re-renders nothing.
@@ -307,6 +320,15 @@ function Plateau3D({
               panels around the disc, so the body stays a clean blueprint (no floating red halos). */}
           {ringMounted && (
             <VisitRing slabs={visits ?? lastVisits.current} hovered={hoveredVisit} reduced={reduced} sinking={sinkingRing} onSunk={onRingSunk} />
+          )}
+          {constellationMounted && (
+            <FactConstellation
+              nodes={facts ?? lastFacts.current}
+              hovered={hoveredFact}
+              reduced={reduced}
+              sinking={sinkingConstellation}
+              onSunk={onConstellationSunk}
+            />
           )}
         </group>
         <Turntable status={vehicle.health?.status ?? 'unknown'} due={due} reduced={reduced} />
@@ -354,6 +376,8 @@ function PlateauImpl({
   reveal = null,
   visits = null,
   hoveredVisit = null,
+  facts = null,
+  hoveredFact = null,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -373,6 +397,10 @@ function PlateauImpl({
   visits?: VisitSlab[] | null;
   /** The Carnet entry hovered/focused in the DOM — that slab's edges take the operator hue. */
   hoveredVisit?: string | null;
+  /** The fact constellation's nodes (§ "Data — the fact constellation") — non-null raises it. Absent → none. */
+  facts?: FactNode[] | null;
+  /** The fiche row hovered/focused in the DOM — that node's edges take the operator hue. */
+  hoveredFact?: string | null;
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
@@ -404,6 +432,8 @@ function PlateauImpl({
         reveal={reveal}
         visits={visits}
         hoveredVisit={hoveredVisit}
+        facts={facts}
+        hoveredFact={hoveredFact}
         onCameraRelease={onCameraRelease ?? (() => {})}
       />
     </div>
