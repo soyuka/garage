@@ -298,101 +298,61 @@ body {
   padding-bottom: 0;
 }
 
-/* console capsule — orb + input read as ONE object, not stacked strata */
+/* console capsule — Le Noyau's freed orb sits full native size above the composer (CHOREOGRAPHY § The
+   pilot driver; corrected 2026-09-05: this geometry is now UNCONDITIONAL under both drivers — only what
+   sits UNDER the orb keys on data-driver, below). */
 .at-scene-console {
   pointer-events: auto;
   display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 8px;
   width: min(680px, 86vw);
-  padding: 5px;
-  gap: 0;
-  border: 1px solid var(--at-hairline);
-  border-radius: 999px;
-  background: rgba(20, 21, 24, 0.92); /* same literal as .at-scene-sim / .at-scene-input — scrim law */
   margin-top: 10px;
 }
 .at-scene-socket {
   position: relative;
   flex: 0 0 auto;
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  border: 1px solid var(--at-hairline);
-  background: rgba(13, 14, 16, 0.9);
+  width: 138px;
+  height: 158px; /* orb-wrap 138 + cradle 26 − 6 cradle margin-top (noyau.css) */
 }
-/* the orb keeps its full native SVG geometry (138px) — scale it DOWN into the fixed socket box rather
-   than shrinking its own layout box, so internal geometry (ember corner, cradle) stays correct. */
+/* the orb keeps its full native SVG geometry (138px), absolute-centred in the socket box at scale(1) —
+   so the à-décider inbox, the ember (orb-relative corner) and the cradle all keep anchoring correctly. */
 .at-scene-socket .noyau-stage {
   position: absolute;
   left: 50%;
   top: 50%;
-  transform: translate(-50%, -50%) scale(0.36);
+  transform: translate(-50%, -50%) scale(1);
   transform-origin: center;
 }
+/* the composer: full width, its own box (the column layout above sizes it, not a row's flex:1) */
 .at-scene-console .at-scene-composer {
-  flex: 1;
-  width: auto;
-  margin-top: 0;
-}
-.at-scene-console .at-scene-input {
-  background: transparent;
-  border: none;
-  border-radius: 0 999px 999px 0;
-  padding: 14px 20px 14px 10px;
-}
-
-/* ── the pilot frees Le Noyau (CHOREOGRAPHY § The pilot driver, rows dated 2026-09-04) ──
-   Under driver='pilot' the orb is not the operator's instrument beside their input — someone else is
-   driving — so it renders at native size ABOVE the console. Same DOM: the console becomes a column and
-   the socket box grows to match the orb, so the inbox/ember/cradle anchors, the notices/CTA rising above
-   it and the focus fallback all keep working. The orb stays absolute-centred in the socket in BOTH states:
-   only `transform` and the box animate (`position` cannot transition). The orb's transform step is NOT
-   declared here: `transition` is a shorthand, and one on `.noyau-stage` from this more specific selector
-   would replace noyau.css's registered-property list and cut the done filament — so noyau.css carries the
-   transform step beside the filament steps, and its own reduced-motion rule drops only that step. */
-.at-scene-console {
-  transition: padding var(--at-dur-swap) var(--at-ease-sine), background-color var(--at-dur-swap) var(--at-ease-sine), border-color var(--at-dur-swap) var(--at-ease-sine);
-}
-.at-scene-socket {
-  transition: width var(--at-dur-swap) var(--at-ease-sine), height var(--at-dur-swap) var(--at-ease-sine), border-color var(--at-dur-swap) var(--at-ease-sine), background-color var(--at-dur-swap) var(--at-ease-sine);
-}
-.at-scene-dock[data-driver='pilot'] .at-scene-console {
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
-  border-color: transparent;
-  background-color: transparent;
-}
-.at-scene-dock[data-driver='pilot'] .at-scene-socket {
-  width: 138px;
-  height: 158px; /* orb-wrap 138 + cradle 26 − 6 cradle margin-top (noyau.css:71,237) */
-  border-color: transparent;
-  background-color: transparent;
-}
-.at-scene-dock[data-driver='pilot'] .at-scene-socket .noyau-stage {
-  transform: translate(-50%, -50%) scale(1);
-}
-/* the composer under the pilot: full width, its own box (the row layout's flex:1 above would otherwise size it) */
-.at-scene-dock[data-driver='pilot'] .at-scene-console .at-scene-composer {
   flex: 0 0 auto;
   width: min(680px, 86vw);
   height: 48px;
   overflow: hidden;
   border: 1px solid var(--at-hairline);
   border-radius: 999px;
-  background: rgba(20, 21, 24, 0.92); /* scrim law — same literal as the console */
+  background: rgba(20, 21, 24, 0.92); /* scrim law — same literal as the old console pill */
   transition: height var(--at-dur-swap) var(--at-ease-sine);
 }
-.at-scene-dock[data-driver='pilot'] .at-scene-console .at-scene-input {
+.at-scene-console .at-scene-input {
   height: 100%;
+  width: 100%;
   padding: 0 20px;
+  background: transparent;
+  border: none;
+  border-radius: 999px;
   transition: opacity var(--at-dur-tint) var(--at-ease-sine);
 }
-/* under load (quiet absent): the LOCKED composer, collapsed to a hairline. Grayscale by construction;
-   hover does nothing (a locked control is not an invitation); keyboard focus on the composer itself
-   re-inflates it so a focused control is visible (WCAG 2.4.7). In veille pilotée (data-quiet) the rule
-   below does not match, so the composer is the full input — the unlock made visible. */
+
+/* ── the pilot locks the composer (CHOREOGRAPHY § The pilot driver) ──
+   Under driver='pilot', while a run is under load (quiet absent), the composer is not the operator's to
+   use — someone else is driving — so it collapses to a 10px hairline handle: grayscale by construction,
+   hover does nothing (a locked control is not an invitation), keyboard focus on the composer itself
+   re-inflates it so a focused control stays visible (WCAG 2.4.7). Veille pilotée (data-quiet) leaves the
+   full 48px input — the unlock made visible. Under the in-app driver (no data-driver, or 'app') none of
+   this matches, so the composer stays the full input exactly as today. */
 .at-scene-dock[data-driver='pilot']:not([data-quiet='true']) .at-scene-console .at-scene-composer:not(:focus-within) {
   height: 10px;
 }
@@ -405,17 +365,12 @@ body {
 .at-scene-dock[data-driver='pilot'][data-quiet='true'] .at-scene-console .at-scene-composer {
   height: 48px;
 }
-/* reduced motion: orb size and handle height encode who is driving / whether typing is allowed (state);
-   the transitions into them are attention — cut both (CHOREOGRAPHY row prefers-reduced-motion) */
-.at-scene-dock[data-reduced='true'] .at-scene-console,
-.at-scene-dock[data-reduced='true'] .at-scene-socket,
+/* reduced motion: the handle's collapse/inflate is attention, not state (CHOREOGRAPHY row prefers-reduced-motion) */
 .at-scene-dock[data-reduced='true'] .at-scene-composer,
 .at-scene-dock[data-reduced='true'] .at-scene-input {
   transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .at-scene-dock .at-scene-console,
-  .at-scene-dock .at-scene-socket,
   .at-scene-dock .at-scene-composer,
   .at-scene-dock .at-scene-input {
     transition: none;

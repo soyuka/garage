@@ -185,129 +185,131 @@ export function EntretienRail({
 
   return (
     <aside className="at-rail" data-reduced={reduced ? 'true' : undefined} aria-label={t.rail.title} data-dim={dimmed ? 'true' : undefined}>
-      <div className="at-rail-head">
-        <h2 className="at-rail-title">{t.rail.title}</h2>
-        {lateCount > 0 && (
-          <span className="at-rail-count at-rail-count--late">
-            {lateCount} en retard
-          </span>
-        )}
-      </div>
+      <div className="at-rail-scroll">
+        <div className="at-rail-head">
+          <h2 className="at-rail-title">{t.rail.title}</h2>
+          {lateCount > 0 && (
+            <span className="at-rail-count at-rail-count--late">
+              {lateCount} en retard
+            </span>
+          )}
+        </div>
 
-      <div className="at-rail-actions">
-        <button type="button" className="at-check-btn" aria-expanded={adding} onClick={() => setAdding((a) => !a)}>
-          {adding ? t.rail.cancel : t.rail.addTask}
-        </button>
-        {doneCount > 0 && (
-          <button type="button" className="at-check-btn" onClick={checklist.onArchiveDone}>
-            {t.rail.archiveDone(doneCount)}
+        <div className="at-rail-actions">
+          <button type="button" className="at-check-btn" aria-expanded={adding} onClick={() => setAdding((a) => !a)}>
+            {adding ? t.rail.cancel : t.rail.addTask}
           </button>
+          {doneCount > 0 && (
+            <button type="button" className="at-check-btn" onClick={checklist.onArchiveDone}>
+              {t.rail.archiveDone(doneCount)}
+            </button>
+          )}
+        </div>
+
+        {adding && (
+          <AddTaskForm
+            defaultUnit={defaultUnit}
+            onSubmit={(input) => {
+              checklist.onAddTask(input);
+              setAdding(false);
+            }}
+          />
         )}
-      </div>
 
-      {adding && (
-        <AddTaskForm
-          defaultUnit={defaultUnit}
-          onSubmit={(input) => {
-            checklist.onAddTask(input);
-            setAdding(false);
-          }}
-        />
-      )}
-
-      {empty ? (
-        <p className="at-check-empty">{t.rail.empty}</p>
-      ) : (
-        <>
-          {/* The three horizons are NOT three equal headings. Emphasis is vibrancy + the card spine, never
-              another font size (CHOREOGRAPHY § Vibrancy tiers): tier 1 here, tier 2 for the next visit,
-              tier 3 for the tail. The red is spent only when something is ACTUALLY late — "Maintenant"
-              also holds decided-but-undated work, and colouring it red then is a false alarm. */}
-          {plan.now.length > 0 && (
-            <section className="at-rail-section at-rail-section--now" aria-label={t.rail.now}>
-              <h3 className="at-rail-section-title" data-late={lateCount > 0 ? 'true' : undefined}>
-                {t.rail.now}
-              </h3>
-              {plan.now.map((visit, i) => (
-                <VisitCard key={visit.id} visit={visit} index={i} held={heldRegion} onAim={onAimRegion}>
-                  {visit.items.map((item, n) => renderItem(visit, item, n, true))}
+        {empty ? (
+          <p className="at-check-empty">{t.rail.empty}</p>
+        ) : (
+          <>
+            {/* The three horizons are NOT three equal headings. Emphasis is vibrancy + the card spine, never
+                another font size (CHOREOGRAPHY § Vibrancy tiers): tier 1 here, tier 2 for the next visit,
+                tier 3 for the tail. The red is spent only when something is ACTUALLY late — "Maintenant"
+                also holds decided-but-undated work, and colouring it red then is a false alarm. */}
+            {plan.now.length > 0 && (
+              <section className="at-rail-section at-rail-section--now" aria-label={t.rail.now}>
+                <h3 className="at-rail-section-title" data-late={lateCount > 0 ? 'true' : undefined}>
+                  {t.rail.now}
+                </h3>
+                {plan.now.map((visit, i) => (
+                  <VisitCard key={visit.id} visit={visit} index={i} held={heldRegion} onAim={onAimRegion}>
+                    {visit.items.map((item, n) => renderItem(visit, item, n, true))}
+                  </VisitCard>
+                ))}
+              </section>
+            )}
+            {plan.next && (
+              <section className="at-rail-section at-rail-section--next" aria-label={t.rail.nextVisit}>
+                <h3 className="at-rail-section-title">{t.rail.nextVisit}</h3>
+                <VisitCard visit={plan.next} index={0} held={heldRegion} onAim={onAimRegion}>
+                  {plan.next.items.map((item, n) => renderItem(plan.next as Visit, item, n, false))}
                 </VisitCard>
-              ))}
-            </section>
-          )}
-          {plan.next && (
-            <section className="at-rail-section at-rail-section--next" aria-label={t.rail.nextVisit}>
-              <h3 className="at-rail-section-title">{t.rail.nextVisit}</h3>
-              <VisitCard visit={plan.next} index={0} held={heldRegion} onAim={onAimRegion}>
-                {plan.next.items.map((item, n) => renderItem(plan.next as Visit, item, n, false))}
-              </VisitCard>
-            </section>
-          )}
-          {plan.later.length > 0 && (
-            <section className="at-rail-section at-rail-section--later" aria-label={t.rail.later}>
-              {/* A count, not a list — and a CONTROL, because compression is only honest if there is a
-                  way to look closer. It projects the ladder into the right column. It also sits FAR from
-                  the next visit: distance is how the tail reads as far away rather than merely hidden
-                  (Gibson's rule, docs/design-inspiration.md § 4), the same language the ladder speaks. */}
-              {onShowLaterVisits ? (
-                <button type="button" className="at-rail-later" onClick={onShowLaterVisits}>
-                  <span className="at-rail-later-label">{t.rail.later}</span>
-                  <span className="at-rail-later-count">{plan.later.length}</span>
-                  <span className="at-rail-later-meta">
-                    {laterFrom(plan.later) ? t.rail.laterFrom(laterFrom(plan.later)!) : t.rail.laterServices(laterServices)}
-                  </span>
-                </button>
-              ) : (
-                <p className="at-rail-later at-rail-later--static">
-                  {t.rail.laterCount(plan.later.length)}
-                </p>
-              )}
-            </section>
-          )}
-          {plan.gaps.length > 0 && (
-            <ul className="at-rail-rows at-rail-rows--gaps" role="list">
-              {plan.gaps.map((item) => (
-                <li
-                  key={item.id}
-                  className="at-rail-row at-rail-row--gap"
-                  data-signal="unknown"
-                  data-lit={lit?.has(item.type) ? 'true' : undefined}
-                >
-                  <span className="at-rail-svc">{item.label}</span>
-                  <span className="at-rail-tag at-rail-tag--gap">{t.rail.untracked}</span>
-                </li>
+              </section>
+            )}
+            {plan.later.length > 0 && (
+              <section className="at-rail-section at-rail-section--later" aria-label={t.rail.later}>
+                {/* A count, not a list — and a CONTROL, because compression is only honest if there is a
+                    way to look closer. It projects the ladder into the right column. It also sits FAR from
+                    the next visit: distance is how the tail reads as far away rather than merely hidden
+                    (Gibson's rule, docs/design-inspiration.md § 4), the same language the ladder speaks. */}
+                {onShowLaterVisits ? (
+                  <button type="button" className="at-rail-later" onClick={onShowLaterVisits}>
+                    <span className="at-rail-later-label">{t.rail.later}</span>
+                    <span className="at-rail-later-count">{plan.later.length}</span>
+                    <span className="at-rail-later-meta">
+                      {laterFrom(plan.later) ? t.rail.laterFrom(laterFrom(plan.later)!) : t.rail.laterServices(laterServices)}
+                    </span>
+                  </button>
+                ) : (
+                  <p className="at-rail-later at-rail-later--static">
+                    {t.rail.laterCount(plan.later.length)}
+                  </p>
+                )}
+              </section>
+            )}
+            {plan.gaps.length > 0 && (
+              <ul className="at-rail-rows at-rail-rows--gaps" role="list">
+                {plan.gaps.map((item) => (
+                  <li
+                    key={item.id}
+                    className="at-rail-row at-rail-row--gap"
+                    data-signal="unknown"
+                    data-lit={lit?.has(item.type) ? 'true' : undefined}
+                  >
+                    <span className="at-rail-svc">{item.label}</span>
+                    <span className="at-rail-tag at-rail-tag--gap">{t.rail.untracked}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </>
+        )}
+
+        <div className="at-rail-foot">
+          <button type="button" className="at-check-btn at-check-btn--ghost" aria-pressed={showDismissed} onClick={onToggleDismissed}>
+            {showDismissed ? t.rail.hideClosed : t.rail.showClosed(closed.length)}
+          </button>
+          {showDismissed && closed.length > 0 && (
+            <ul className="at-rail-rows at-rail-rows--dismissed" role="list">
+              {closed.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  caption={taskCaption({ date: null, horizon: null }, false, t, locale)}
+                  task={t}
+                  defaultUnit={defaultUnit}
+                  // Both closed states reopen from here — that is what the drawer is for. `×` is the one
+                  // control that keeps its own meaning: on a DONE row it still retires the task rather
+                  // than reopening it, so the two closed states stay reachable from each other.
+                  onToggle={() => checklist.onSetStatus(t.id, 'open')}
+                  onDismiss={() => checklist.onSetStatus(t.id, t.status === 'done' ? 'dismissed' : 'open')}
+                  onRestore={() => checklist.onSetStatus(t.id, 'open')}
+                  onEdit={(fields) => checklist.onEditTask(t.id, fields)}
+                  onAddPart={(p) => checklist.onAddPart(t.id, p)}
+                  onEditPart={(pid, f) => checklist.onEditPart(t.id, pid, f)}
+                  onRemovePart={(pid) => checklist.onRemovePart(t.id, pid)}
+                />
               ))}
             </ul>
           )}
-        </>
-      )}
-
-      <div className="at-rail-foot">
-        <button type="button" className="at-check-btn at-check-btn--ghost" aria-pressed={showDismissed} onClick={onToggleDismissed}>
-          {showDismissed ? t.rail.hideClosed : t.rail.showClosed(closed.length)}
-        </button>
-        {showDismissed && closed.length > 0 && (
-          <ul className="at-rail-rows at-rail-rows--dismissed" role="list">
-            {closed.map((t) => (
-              <TaskRow
-                key={t.id}
-                caption={taskCaption({ date: null, horizon: null }, false, t, locale)}
-                task={t}
-                defaultUnit={defaultUnit}
-                // Both closed states reopen from here — that is what the drawer is for. `×` is the one
-                // control that keeps its own meaning: on a DONE row it still retires the task rather
-                // than reopening it, so the two closed states stay reachable from each other.
-                onToggle={() => checklist.onSetStatus(t.id, 'open')}
-                onDismiss={() => checklist.onSetStatus(t.id, t.status === 'done' ? 'dismissed' : 'open')}
-                onRestore={() => checklist.onSetStatus(t.id, 'open')}
-                onEdit={(fields) => checklist.onEditTask(t.id, fields)}
-                onAddPart={(p) => checklist.onAddPart(t.id, p)}
-                onEditPart={(pid, f) => checklist.onEditPart(t.id, pid, f)}
-                onRemovePart={(pid) => checklist.onRemovePart(t.id, pid)}
-              />
-            ))}
-          </ul>
-        )}
+        </div>
       </div>
     </aside>
   );

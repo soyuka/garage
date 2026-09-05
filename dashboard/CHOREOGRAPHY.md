@@ -70,6 +70,17 @@ thinking. So the envelope gets one state a turn cannot reach, and one nameplate:
 | `prefers-reduced-motion` (added 2026-09-04) | the resize is an **instant state change** in both directions, and so are the handle's collapse and inflate (`quiet` on/off, focus in/out). The orb's size and the handle's height encode who is driving and whether the operator may type — information; the transitions into them are not | `scene.css` |
 | liveness | **a pilot run never trips the 90 s watchdog.** "Le tour ne répond plus" is a claim the client cannot support here — it cannot tell a host reading code from a host that quit — so it says how long it has been silent instead and lets the operator judge. Only `settle_dashboard` (or the operator taking over) ends a pilot run | Atelier |
 
+**Corrected 2026-09-05 — the orb leaves the socket under BOTH drivers.** The 2026-09-04 rows above
+freed the orb only under the pilot, on the reasoning that under the in-app driver the operator is typing
+and the orb is their instrument, shrunk beside the input. That reasoning held the orb at 36 % on the one
+screen where it is the agent's only body, and the user's first note on the stage was that the orb should
+take more space. So the geometry rows (socket 138 × 158, `scale(1)`, console as a column with the orb on
+top, rail clearance grown) now apply **unconditionally**; `data-driver` keys only what sits UNDER the orb:
+the composer input under the in-app driver (unchanged, the operator still types), the hairline handle /
+veille-pilotée inflate under the pilot (rows above, unchanged). The `driver → null` "return to the
+socket" row is therefore void — there is no socket to return to; the orb stays where it is and only the
+console under it changes. Reduced motion: still an instant state change for the handle.
+
 **Burstiness (both drivers, pilot-shaped).** A pilot narrates, goes quiet for two minutes, then fires
 four intents in 300 ms. Two rules keep that legible, and both are pure + unit-tested (`src/pilot.ts`):
 
@@ -516,6 +527,39 @@ glass column** (same content, same glass, same z-order, no scrim over the scene)
 | Historique opens (`historyOpen` true) | **the visit ring rises.** One slab per visit stands on the disc on the outer echo-ring radius, upright, tangent to the ring, ordered by `performedAt` clockwise — oldest at the far end of the arc, newest nearest the camera. The arc is centred on the camera's home azimuth and spans at most ~200° so no visit hides behind the car; angular step shrinks with the count (≤ 14°). **Height is the visit's effective cost** (bill, else the parts-sum estimate — the same figure the Carnet prints), normalised to the dearest visit; a visit **without any cost is wire only** at the floor height — unknown is not zero. Slabs rise from the disc over `--at-dur-rise` each, staggered across `--at-dur-cascade` in total; the camera dollies (`--at-dur-dolly`) to a higher, wider pose that frames ring and car in the left part of the viewport, the Carnet column on the right. Reduced motion: slabs appear, camera cuts | `Plateau.tsx` (`VisitRing`) + `visitRing.ts` + `cameraRig.ts` |
 | a Carnet entry is hovered or focused | its slab takes the **operator hue** edge; every other slab stays cyan. The ring points at what the operator reads, nothing more | `HistoryLog` → `SceneView` → `Plateau` |
 | Historique closes | slabs sink over `--at-dur-rise` (reverse, no stagger), camera released as after a reveal | same |
+
+### Data — the fact constellation (2026-09-05)
+
+Second station. The Data chip opens the fiche (`FactsDrawer`): today a full-width bottom sheet under a
+scrim, unrelated to the car body. Every `VehicleFact` gets a **node** in the volume, standing over the
+part of the car it describes:
+
+- **placement** — a fact's region is derived, never stored: `<type>_ref` keys reuse the service-type map
+  (`anchors.ts` `TYPE_REGION`, `oil_filter_ref` → bay); the remaining keys go through a small curated
+  prefix table (`oil_`, `coolant_`, `engine_`, `battery`, `belt`, `spark` → bay; `brake_`, `tyre_`,
+  `wheel` → frontAxle, `rear_*` variants → rearAxle; `wiper`, `windshield` → windshield). A key no rule
+  places is **unplaced**: it stands on a sixth anchor above the roof centre and the legend says so
+  (`sans emplacement`) — the station never guesses a location;
+- **body** — nodes of one region stack in a column above the anchor (first node 0.35 m up, 0.22 m step),
+  one thin leader from the anchor to the lowest node. A **verified** fact is a filled holo node; an
+  **unverified** one is wire only — same law as the cost-less slab;
+- **arrival** — nodes etch in over `--at-dur-etch` each, staggered across `--at-dur-fan` per column, all
+  columns together; the camera takes the **data pose**: home azimuth, a lower tilt than the history pose
+  so the stacks read against the dark room, target raised to the stack height, shifted right as for the
+  ring. Close: nodes sink over `--at-dur-etch`, no stagger; camera released;
+- **legend** — the fiche becomes a **right-docked glass column** like the Carnet (same width, no scrim);
+  hovering or focusing a row marks its node in the operator hue. Rows keep their order and their inline
+  edit; grouping the legend by region is in `FUTURE.md`.
+
+**Correction, dated 2026-09-05:** the fiche was a bottom sheet (`factsdrawer.css`, "#5 Fiche technique
+drawer"). Under the station rule the sheet's scrim and its position over the disc are theatre; it docks
+right. Nothing else about editing facts changes.
+
+| Real frame / condition | Atelier motion | Owner layer |
+| --- | --- | --- |
+| Data opens (`factsDrawerOpen` true) | the constellation etches in (above), camera to the data pose | `Plateau.tsx` (`FactConstellation`) + `factConstellation.ts` + `cameraRig.ts` |
+| a fiche row is hovered or focused | its node takes the operator hue edge, nothing else changes | `FactsDrawer` → `SceneView` → `Plateau` |
+| Data closes | nodes sink, camera released as after the ring | same |
 
 ## Domain frames (collection topic)
 
