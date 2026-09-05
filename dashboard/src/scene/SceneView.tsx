@@ -33,6 +33,7 @@ import { FactsDrawer } from './FactsDrawer';
 import { HistoryLog } from './HistoryLog';
 import { visitRingLayout } from './visitRing';
 import { factConstellationLayout } from './factConstellation';
+import { fluidVolumesLayout } from './fluidVolumes';
 import { bodyClassFor } from './CarProxy';
 import type { Focus } from '../focus';
 import type { ForecastDue, Iri, MaintenanceRecord, PlannedPart, VehicleBundle } from '../types';
@@ -237,21 +238,41 @@ export function SceneView({
   useEffect(() => {
     if (!factsDrawerOpen) setHoveredFact(null);
   }, [factsDrawerOpen]);
+  // The fluid volumes station — third and last: only when no legend (Carnet/fiche) is docked, the specs
+  // panel is showing PROJECTED nodes (a fetched surface, never the stored facts), and at least one of
+  // those nodes carries a body (§ "Fluids — the volumes", precedence: legends win over the specs column).
+  // An empty layout (every node info-only) is treated as no station, same as the ring/constellation.
+  const fluidsStationCandidate = !historyOpen && !factsDrawerOpen && focus?.panel === 'specs' && focus.nodes ? focus.nodes : null;
+  const fluids = useMemo(() => {
+    if (!fluidsStationCandidate) return null;
+    const layout = fluidVolumesLayout(fluidsStationCandidate);
+    return layout.length > 0 ? layout : null; // an empty layout (every node info-only) is no station.
+  }, [fluidsStationCandidate]);
+  const fluidsOpen = fluids != null;
+  const [hoveredFluid, setHoveredFluid] = useState<string | null>(null);
+  useEffect(() => {
+    if (!fluidsOpen) setHoveredFluid(null);
+  }, [fluidsOpen]);
   // A drag breaking the hold (Plateau's onCameraRelease) must not re-dolly to the station pose on release
-  // — tracked separately from historyOpen/factsDrawerOpen so the drawer/carnet itself can stay open with
-  // the camera set free. History and Data are mutually exclusive (the driver closes one on opening the
-  // other), so ONE released flag covers whichever station is open.
+  // — tracked separately from historyOpen/factsDrawerOpen/fluidsOpen so the drawer/carnet/column itself
+  // can stay open with the camera set free. History, Data and Fluids are mutually exclusive in practice
+  // (a legend closes the specs column; the driver closes history/data on opening the other), so ONE
+  // released flag covers whichever station is open.
   const [stationHoldReleased, setStationHoldReleased] = useState(false);
   useEffect(() => {
-    if (historyOpen || factsDrawerOpen) setStationHoldReleased(false);
-  }, [historyOpen, factsDrawerOpen]);
+    if (historyOpen || factsDrawerOpen || fluidsOpen) setStationHoldReleased(false);
+  }, [historyOpen, factsDrawerOpen, fluidsOpen]);
   const onPlateauCameraRelease = useCallback(() => {
     onCameraRelease?.();
     setStationHoldReleased(true);
   }, [onCameraRelease]);
+  // Station camera precedence: legends (history/data) first, fluids last — a docked legend already
+  // dismisses the fluids station's own focus (specs closes), but the order also matters mid-transition.
   const plateauCameraFocus = historyOpen
     ? deriveCameraFocus(cameraFocus, true, 'history', stationHoldReleased)
-    : deriveCameraFocus(cameraFocus, factsDrawerOpen, 'data', stationHoldReleased);
+    : factsDrawerOpen
+      ? deriveCameraFocus(cameraFocus, true, 'data', stationHoldReleased)
+      : deriveCameraFocus(cameraFocus, fluidsOpen, 'fluids', stationHoldReleased);
 
   const focusKeys = focus?.keys;
   // The constellation is a PROJECTED surface only: it exists when the agent (or a chip) answers a spec
@@ -385,6 +406,8 @@ export function SceneView({
               hoveredVisit={hoveredVisit}
               facts={facts}
               hoveredFact={hoveredFact}
+              fluids={fluids}
+              hoveredFluid={hoveredFluid}
               onCameraRelease={onPlateauCameraRelease}
             />
           </div>
@@ -424,6 +447,7 @@ export function SceneView({
                   agentPlaced={specsFocused}
                   onDismiss={specsFocused ? onDismissFocus : undefined}
                   nodes={specsFocused ? focus?.nodes : undefined}
+                  onHoverNode={specsFocused && focus?.nodes ? setHoveredFluid : undefined}
                 />
               )}
               {showWorklist && worklist && (
@@ -474,7 +498,7 @@ export function SceneView({
           bottom Données drawer is a sheet, so the dock floats above it (--top). */}
       {!historyOpen && (
         <div
-          className={`at-scene-dock${factsDrawerOpen ? ' at-scene-dock--top' : ''}`}
+          className="at-scene-dock"
           data-driver={noyau.driver ?? undefined}
           data-quiet={noyau.quiet ? 'true' : undefined}
           data-reduced={reduced ? 'true' : undefined}

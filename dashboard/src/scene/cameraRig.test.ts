@@ -22,6 +22,7 @@ import {
   REVEAL_VIEWS,
   HISTORY_VIEW,
   DATA_VIEW,
+  FLUIDS_VIEW,
   DOLLY_RADIUS_FACTOR,
   clampPolar,
   sineEaseInOut,
@@ -32,6 +33,7 @@ import {
   presetForFocus,
   historyPose,
   dataPose,
+  fluidsPose,
   gateReduce,
   dragBreaksHold,
   deriveCameraFocus,
@@ -270,6 +272,37 @@ describe('dataPose — the fact-constellation station camera', () => {
   });
 });
 
+describe('fluidsPose — the fluid-volumes station camera', () => {
+  const homeRadius = dist(HOME.position, HOME.target);
+  const homeAz = toSpherical([HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]]).azimuth;
+  const pose = fluidsPose();
+
+  it('pulls back to distanceFactor × the home radius', () => {
+    expect(framing(pose).radius).toBeCloseTo(homeRadius * FLUIDS_VIEW.distanceFactor);
+  });
+
+  it('keeps the raised polar within the OrbitControls band', () => {
+    const { polar } = framing(pose);
+    expect(polar).toBeGreaterThanOrEqual(POLAR.min);
+    expect(polar).toBeLessThanOrEqual(POLAR.max);
+  });
+
+  it('keeps the same azimuth as home — the row does not swing around the car', () => {
+    expect(framing(pose).azimuth).toBeCloseTo(homeAz);
+  });
+
+  it('shifts the target along the RIGHT vector, less than the legends’ (clears the specs column only)', () => {
+    const right: Vec3 = [Math.cos(homeAz), 0, -Math.sin(homeAz)];
+    const dot = pose.target[0] * right[0] + pose.target[2] * right[2];
+    expect(dot).toBeCloseTo(FLUIDS_VIEW.rightShift);
+    expect(FLUIDS_VIEW.rightShift).toBeLessThan(HISTORY_VIEW.rightShift);
+  });
+
+  it('is presetForFocus’s fluids mode', () => {
+    expect(presetForFocus('berline', undefined, 'fluids')).toEqual(fluidsPose());
+  });
+});
+
 describe('deriveCameraFocus — a drag releases a station hold', () => {
   const held = { region: 'hood' as const, key: 1 };
 
@@ -301,6 +334,18 @@ describe('deriveCameraFocus — a drag releases a station hold', () => {
 
   it('an explicit hold still wins over the data station', () => {
     expect(deriveCameraFocus(held, true, 'data', false)).toEqual(held);
+  });
+
+  it('the fluids station with nothing else held earns the fluids pose', () => {
+    expect(deriveCameraFocus(null, true, 'fluids', false)).toEqual({ key: 0, mode: 'fluids' });
+  });
+
+  it('a drag that already released the hold keeps the camera free while fluids stays open', () => {
+    expect(deriveCameraFocus(null, true, 'fluids', true)).toBeNull();
+  });
+
+  it('an explicit hold still wins over the fluids station', () => {
+    expect(deriveCameraFocus(held, true, 'fluids', false)).toEqual(held);
   });
 });
 

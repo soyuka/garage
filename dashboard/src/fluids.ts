@@ -47,6 +47,23 @@ function toNumber(v: number | string | null | undefined): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+const LITRE_UNITS = new Set(['l', 'liter', 'liters', 'litre', 'litres']);
+// cm³/cm3/cc are all the cubic-centimeter — physically identical to a millilitre (1 cc = 1 mL).
+const MILLILITRE_UNITS = new Set(['ml', 'milliliter', 'milliliters', 'cm³', 'cm3', 'cc']);
+const CENTILITRE_UNITS = new Set(['cl', 'centiliter', 'centiliters', 'centilitre', 'centilitres']);
+
+// The fluid station's body seam (fluidVolumes.ts): a litre unit converts straight, ml/cm³/cc divide
+// down by 1000, cl by 100 — everything else (g/kg, or a unit the catalog didn't send) is not a
+// confirmed volume, so it is `null` rather than guessed (a mass gets a wire-only floor body, never an
+// invented height).
+function volumeLitresOf(amount: number, unit?: string | null): number | null {
+  const key = unit?.trim().toLowerCase() ?? '';
+  if (LITRE_UNITS.has(key)) return amount;
+  if (MILLILITRE_UNITS.has(key)) return amount / 1000;
+  if (CENTILITRE_UNITS.has(key)) return amount / 100;
+  return null;
+}
+
 export function fluidNodes(vols: FillVolume[], locale: Locale): SpecNode[] {
   const nodes: SpecNode[] = [];
   vols.forEach((v, i) => {
@@ -56,7 +73,7 @@ export function fluidNodes(vols: FillVolume[], locale: Locale): SpecNode[] {
     if (amount != null) {
       const unit = abbrevUnit(v.unit);
       const value = unit ? `${formatAmount(amount, locale)}${NBSP}${unit}` : formatAmount(amount, locale);
-      nodes.push({ key: `fluid:${v.id ?? i}`, label, value, verified: true, info });
+      nodes.push({ key: `fluid:${v.id ?? i}`, label, value, verified: true, info, volumeLitres: volumeLitresOf(amount, v.unit) });
     } else if (info) {
       // a spec-only entry (brake fluid grade, refrigerant) — the info IS the value.
       nodes.push({ key: `fluid:${v.id ?? i}`, label, value: info, verified: true });

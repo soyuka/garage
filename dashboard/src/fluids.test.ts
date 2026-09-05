@@ -49,3 +49,41 @@ describe('fluidNodes — FillVolume[] → constellation nodes', () => {
     expect(fluidNodes([], 'fr')).toEqual([]);
   });
 });
+
+describe('fluidNodes — volumeLitres (the fluid station body seam)', () => {
+  it('sets volumeLitres straight from a litre unit', () => {
+    const [n] = fluidNodes([{ label: 'huile moteur', volume: 4.3, unit: 'liter' }], 'fr');
+    expect(n.volumeLitres).toBe(4.3);
+  });
+
+  it('converts a milliliter unit down to litres', () => {
+    const [n] = fluidNodes([{ label: 'lave-glace', volume: 250, unit: 'ml' }], 'fr');
+    expect(n.volumeLitres).toBeCloseTo(0.25);
+  });
+
+  it('converts cm³/cm3/cc down to litres, same as ml', () => {
+    const [a] = fluidNodes([{ label: 'clim', volume: 150, unit: 'cm³' }], 'fr');
+    expect(a.volumeLitres).toBeCloseTo(0.15);
+    const [b] = fluidNodes([{ label: 'clim', volume: 150, unit: 'cm3' }], 'fr');
+    expect(b.volumeLitres).toBeCloseTo(0.15);
+    const [c] = fluidNodes([{ label: 'clim', volume: 150, unit: 'cc' }], 'fr');
+    expect(c.volumeLitres).toBeCloseTo(0.15);
+  });
+
+  it('converts a centilitre unit down to litres (÷100)', () => {
+    const [n] = fluidNodes([{ label: 'liquide de direction', volume: 80, unit: 'cl' }], 'fr');
+    expect(n.volumeLitres).toBeCloseTo(0.8);
+  });
+
+  it('sets volumeLitres to null for a mass unit (g/kg) — not a volume', () => {
+    const [g] = fluidNodes([{ label: 'clim', volume: 470, unit: 'gram' }], 'fr');
+    expect(g.volumeLitres).toBeNull();
+    const [kg] = fluidNodes([{ label: 'clim', volume: 1.2, unit: 'kg' }], 'fr');
+    expect(kg.volumeLitres).toBeNull();
+  });
+
+  it('leaves volumeLitres undefined for an info-only node (no volume at all)', () => {
+    const [n] = fluidNodes([{ label: 'liquide de frein', volume: null, unit: null, info: 'DOT 4' }], 'fr');
+    expect(n.volumeLitres).toBeUndefined();
+  });
+});

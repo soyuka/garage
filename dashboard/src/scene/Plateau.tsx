@@ -33,6 +33,8 @@ import { VisitRing } from './VisitRing';
 import type { VisitSlab } from './visitRing';
 import { FactConstellation } from './FactConstellation';
 import type { FactNode } from './factConstellation';
+import { FluidVolumes } from './FluidVolumes';
+import type { FluidCylinder } from './fluidVolumes';
 import './scene.css';
 
 // The minimal imperative surface of the default OrbitControls (registered via makeDefault → r3f
@@ -252,6 +254,8 @@ function Plateau3D({
   hoveredVisit,
   facts,
   hoveredFact,
+  fluids,
+  hoveredFluid,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -266,6 +270,8 @@ function Plateau3D({
   hoveredVisit: string | null;
   facts: FactNode[] | null;
   hoveredFact: string | null;
+  fluids: FluidCylinder[] | null;
+  hoveredFluid: string | null;
   onCameraRelease: () => void;
 }) {
   const bodyClass = bodyClassFor(vehicle.vehicleType);
@@ -284,6 +290,13 @@ function Plateau3D({
   if (facts != null && !constellationMounted) setConstellationMounted(true);
   const sinkingConstellation = facts == null && constellationMounted;
   const onConstellationSunk = useCallback(() => setConstellationMounted(false), []);
+  // Same keep-mounted-while-sinking pattern for the fluid volumes (§ "Fluids — the volumes").
+  const [fluidsMounted, setFluidsMounted] = useState(fluids != null);
+  const lastFluids = useRef<FluidCylinder[]>(fluids ?? []);
+  if (fluids) lastFluids.current = fluids;
+  if (fluids != null && !fluidsMounted) setFluidsMounted(true);
+  const sinkingFluids = fluids == null && fluidsMounted;
+  const onFluidsSunk = useCallback(() => setFluidsMounted(false), []);
   // C1↔C3: the shell's ghost depth is the fraction of the diagram that has arrived, so the dissolve is
   // paced by the reveal's own parts. Kept in a ref-backed state that only changes on a landed-count
   // change (Assembly reports edge-triggered), so a settled reveal re-renders nothing.
@@ -328,6 +341,15 @@ function Plateau3D({
               reduced={reduced}
               sinking={sinkingConstellation}
               onSunk={onConstellationSunk}
+            />
+          )}
+          {fluidsMounted && (
+            <FluidVolumes
+              cylinders={fluids ?? lastFluids.current}
+              hovered={hoveredFluid}
+              reduced={reduced}
+              sinking={sinkingFluids}
+              onSunk={onFluidsSunk}
             />
           )}
         </group>
@@ -378,6 +400,8 @@ function PlateauImpl({
   hoveredVisit = null,
   facts = null,
   hoveredFact = null,
+  fluids = null,
+  hoveredFluid = null,
   onCameraRelease,
 }: {
   vehicle: VehicleSummary;
@@ -401,6 +425,10 @@ function PlateauImpl({
   facts?: FactNode[] | null;
   /** The fiche row hovered/focused in the DOM — that node's edges take the operator hue. */
   hoveredFact?: string | null;
+  /** The fluid volumes' cylinders (§ "Fluids — the volumes") — non-null raises the row. Absent → none. */
+  fluids?: FluidCylinder[] | null;
+  /** The specs constellation node hovered/focused in the DOM — that cylinder's edges take the operator hue. */
+  hoveredFluid?: string | null;
   /** Clears the parent's cameraFocus when a user drag breaks the hold. Absent → no-op. */
   onCameraRelease?: () => void;
 }) {
@@ -434,6 +462,8 @@ function PlateauImpl({
         hoveredVisit={hoveredVisit}
         facts={facts}
         hoveredFact={hoveredFact}
+        fluids={fluids}
+        hoveredFluid={hoveredFluid}
         onCameraRelease={onCameraRelease ?? (() => {})}
       />
     </div>

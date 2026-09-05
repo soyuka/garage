@@ -125,6 +125,10 @@ only their car-region spotlight. `value` arrives display-ready (the server forma
 renders it verbatim) and a node surface is read-only — a fetched value is not the operator's to edit.
 Without `nodes`, `show_fact(['oil_capacity'])` after a successful lookup renders an EMPTY panel.
 
+`SpecNode` also carries an optional `volumeLitres?: number | null` (2026-09-05) — the fluid station's
+body seam (`fluidVolumes.ts`), not a display value: `fluids.ts` sets it from the raw `FillVolume`
+volume/unit (litres straight, `ml` divided down, `null` for a mass), absent for an info-only node.
+
 ⚠️ **`renderSuggestions` and `patchPanel` DO NOT EXIST** (a `docs/ui.md` sketch artifact). Never build
 against them.
 

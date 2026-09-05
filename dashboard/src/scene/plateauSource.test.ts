@@ -23,4 +23,7 @@ describe('Plateau source', () => {
   it('mounts the fact constellation alongside the visit ring, in the same car group (§ Stations)', () => {
     expect(source).toContain('<FactConstellation');
   });
+  it('mounts the fluid volumes alongside the ring and the constellation, in the same car group (§ Stations)', () => {
+    expect(source).toContain('<FluidVolumes');
+  });
 });

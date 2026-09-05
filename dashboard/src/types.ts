@@ -291,6 +291,10 @@ export interface SpecNode {
   value: string;
   verified: boolean;
   info?: string;
+  /** The fill volume in litres, when this node names one — a station body seam (`fluidVolumes.ts`),
+   *  not a display value (`value` is already the localised string). `null` = a mass or otherwise
+   *  non-volume reading; absent (undefined) = an info-only node with no volume at all. */
+  volumeLitres?: number | null;
 }
 
 export type UIAction =

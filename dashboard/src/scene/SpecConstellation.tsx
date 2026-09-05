@@ -34,6 +34,7 @@ export function SpecConstellation({
   agentPlaced = false,
   onDismiss,
   nodes,
+  onHoverNode,
 }: {
   facts: VehicleFact[];
   keys: string[];
@@ -49,6 +50,9 @@ export function SpecConstellation({
   /** Projected, already-formatted nodes (a fetched surface: fluid capacities, the SIV carte grise). When
    * set, these ARE the content — read-only, with an optional secondary spec line — bypassing facts/keys. */
   nodes?: SpecNode[];
+  /** Fired on a card's hover/focus in/out — the fluid station marks the matching cylinder in the
+   *  operator hue (§ "Fluids — the volumes"). Absent → no station hover wiring. */
+  onHoverNode?: (key: string | null) => void;
 }) {
   const [locale] = useLocale();
   const t = useT();
@@ -74,7 +78,16 @@ export function SpecConstellation({
       <div className="at-spec-nodes">
         {nodes
           ? nodes.map((n, i) => (
-              <div key={n.key} className="at-spec-node" style={delay(i)}>
+              <div
+                key={n.key}
+                className="at-spec-node"
+                style={delay(i)}
+                tabIndex={onHoverNode ? 0 : undefined}
+                onMouseEnter={onHoverNode ? () => onHoverNode(n.key) : undefined}
+                onMouseLeave={onHoverNode ? () => onHoverNode(null) : undefined}
+                onFocus={onHoverNode ? () => onHoverNode(n.key) : undefined}
+                onBlur={onHoverNode ? () => onHoverNode(null) : undefined}
+              >
                 <span className="at-spec-label">{n.label}</span>
                 <span className="at-spec-value">
                   {n.value}{' '}

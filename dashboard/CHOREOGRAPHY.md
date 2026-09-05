@@ -580,8 +580,10 @@ over `--at-dur-swap`; reduced motion cuts.
 Third station. « Capacités fluides » already projects the catalogue's fill volumes as `SpecNode`s into
 the specs column (`fluids.ts`, `focus.panel: 'specs'`). Each **volume** gets a body: a **cylinder
 standing on the disc in a row in front of the car**, facing the camera's home azimuth (row centre at
-radius 2.3, 0.42 m apart, radius 0.15 m), **height = litres × 0.14 m** — equal radius, so height IS the
-volume and 7.5 L of coolant visibly dwarfs 0.9 L of steering fluid. `ml` converts; a **mass** (`g`, `kg`,
+radius 2.3, 0.42 m apart, radius 0.15 m), **height = litres × 0.14 m, capped at 1.4 m; past the cap the
+radius grows so the cylinder's volume stays proportional** — the body IS the volume, 7.5 L of coolant
+visibly dwarfs 0.9 L of steering fluid and a 64 L tank is a squat drum, not a 9 m column (*corrected
+2026-09-05 at first light*). `ml`, `cm³` and `cl` convert; a **mass** (`g`, `kg`,
 refrigerant) is not a volume and stands **wire only at the floor height**, the legend carrying the number.
 Catalogue-sourced nodes are verified, so cylinders fill; an info-only node (a grade like `DOT 4`) has no
 body. Rise over `--at-dur-rise`, staggered across `--at-dur-fan`; the camera takes the **fluids pose**

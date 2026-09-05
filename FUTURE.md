@@ -414,6 +414,7 @@ makes staleness readable, it does not prevent it.
 - 2026-09-04 (3D stage lane): the hero composer logs `GL_INVALID_OPERATION: glBlitFramebuffer: Read and write depth stencil attachments cannot be the same image` ×256 then silences itself — pre-existing (reproduced with the Vignette pass removed; `<Canvas shadows>` + EffectComposer `multisampling={0}` on r169 / postprocessing 6.39). Harmless on screen; find the blit and either drop `shadows` (nothing casts) or give the composer its own depth target.
 
 ### Stations
+- Fluids: only the catalogue chip feeds volumes; a stored fact with a litre unit does not yet get a cylinder.
 - Narrow viewports (< ~1000 px wide, seen at 945): the freed orb (138 px, centred) sits over the constellation and the 40vw legend leaves the stage ~560 px; stations need a compact layout rule (orb aside, legend as a sheet?) — 2026-09-05
 
 - History ring (2026-09-05): the car does not yet rescale to make room for the ring + the right-docked

@@ -4,6 +4,7 @@ import { FLICKER_SECONDS, PULSE_DURATION } from '../scene/holo';
 import { FILAMENT_SECONDS } from '../scene/agentLight';
 import { RISE_SECONDS, CASCADE_SECONDS } from '../scene/VisitRing';
 import { ETCH_SECONDS, FAN_SECONDS } from '../scene/FactConstellation';
+import { FLUID_RISE_SECONDS, FLUID_FAN_SECONDS } from '../scene/FluidVolumes';
 import atelier from './atelier.css?raw';
 import { MOTION } from './motion';
 
@@ -36,6 +37,8 @@ describe('the motion scale', () => {
     expect(CASCADE_SECONDS * 1000).toBe(MOTION.cascade);
     expect(ETCH_SECONDS * 1000).toBe(MOTION.etch);
     expect(FAN_SECONDS * 1000).toBe(MOTION.fan);
+    expect(FLUID_RISE_SECONDS * 1000).toBe(MOTION.rise);
+    expect(FLUID_FAN_SECONDS * 1000).toBe(MOTION.fan);
   });
 
   it('preserves Le Noyau’s ~4s sleeping-Mac breathe as the signature period', () => {

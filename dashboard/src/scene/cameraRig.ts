@@ -104,8 +104,9 @@ export const REVEAL_VIEWS: Record<BodyRegion, RegionView> = {
 
 /** Which pose family a hold uses. `reveal` is the cutaway (C1–C4); `history` is the visit-ring pose
  * (§ "History — the visit ring"); `data` is the fact-constellation pose (§ "Data — the fact
- * constellation"); everything else is `focus`. */
-export type FocusMode = 'focus' | 'reveal' | 'history' | 'data';
+ * constellation"); `fluids` is the fluid-volumes pose (§ "Fluids — the volumes"); everything else is
+ * `focus`. */
+export type FocusMode = 'focus' | 'reveal' | 'history' | 'data' | 'fluids';
 
 /** Dolly duration — matches the ~900ms sine ease the spec calls for. */
 export const DOLLY_SECONDS = 0.9;
@@ -181,6 +182,16 @@ export const DATA_VIEW: StationView = {
   rightShift: 1.2,
 };
 
+/** The fluid-volumes station pose (§ "Fluids — the volumes"): closer than history/data, tilted lower
+ * still — the row stands right in front of the car, not raised above it. `rightShift` is smaller than
+ * the legends' (0.8 vs 1.2): it clears the specs column, not the wider Carnet/fiche docks. */
+export const FLUIDS_VIEW: StationView = {
+  polar: Math.PI * 0.4,
+  distanceFactor: 1.15,
+  targetY: 0.4,
+  rightShift: 0.8,
+};
+
 /** A station's camera pose, derived from `home`. Same azimuth as home, raised polar, pulled back,
  * target shifted along the view's right vector — the shared shape behind {@link historyPose} and
  * {@link dataPose}. */
@@ -209,11 +220,17 @@ export function dataPose(home: CameraPose = HOME): CameraPose {
   return stationPose(DATA_VIEW, home);
 }
 
-/** The camera preset for a region on a body class, in the given pose family. `history`/`data` ignore
- * `bodyClass`/`region` — neither station is anchored to a part of the car. */
+/** The fluid-volumes camera pose (see {@link FLUIDS_VIEW}). */
+export function fluidsPose(home: CameraPose = HOME): CameraPose {
+  return stationPose(FLUIDS_VIEW, home);
+}
+
+/** The camera preset for a region on a body class, in the given pose family. `history`/`data`/`fluids`
+ * ignore `bodyClass`/`region` — no station is anchored to a part of the car. */
 export function presetForFocus(bodyClass: BodyClass, region: BodyRegion | undefined, mode: FocusMode = 'focus'): CameraPose {
   if (mode === 'history') return historyPose();
   if (mode === 'data') return dataPose();
+  if (mode === 'fluids') return fluidsPose();
   const anchor: Anchor = regionAnchors(bodyClass)[region as BodyRegion];
   return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region as BodyRegion]);
 }
@@ -272,11 +289,11 @@ export function dragBreaksHold(state: GateState): boolean {
 
 /** What Plateau's `cameraFocus` should be: an explicit hold always wins; otherwise the given station's
  * pose while it is open, unless a drag already released it (`stationHoldReleased`) — the same release
- * rule for every station (history, data, …), so a new one is a `mode` value, not new machinery. */
+ * rule for every station (history, data, fluids, …), so a new one is a `mode` value, not new machinery. */
 export function deriveCameraFocus(
   cameraFocus: CameraFocus | null,
   stationOpen: boolean,
-  stationMode: 'history' | 'data',
+  stationMode: 'history' | 'data' | 'fluids',
   stationHoldReleased: boolean,
 ): CameraFocus | null {
   return cameraFocus ?? (stationOpen && !stationHoldReleased ? { key: 0, mode: stationMode } : null);
