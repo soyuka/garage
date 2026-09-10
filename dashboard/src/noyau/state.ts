@@ -166,6 +166,8 @@ function pushNotice(notices: Notice[], item: Notice): Notice[] {
 // name: two backend tools (facts + history) both read the carnet and earn the same chip. The label is
 // the SHORT verb — quieter than the full narration line it echoes.
 const CHIP: Record<string, { tool: string; label: keyof Messages['chipVerb'] }> = {
+  // Synthetic — the click-time acknowledgement `send()` dispatches itself (Atelier.tsx), not a server tool.
+  acknowledge: { tool: 'acknowledge', label: 'acknowledged' },
   get_motul_oil: { tool: 'get_motul_oil', label: 'motulOil' },
   get_service_parts: { tool: 'get_service_parts', label: 'parts' },
   lookup_plate: { tool: 'lookup_plate', label: 'plate' },

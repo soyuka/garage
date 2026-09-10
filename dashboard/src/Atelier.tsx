@@ -32,6 +32,7 @@ import {
   type TaskPartInput,
   type VehiclePatch,
 } from './garage';
+import { pickAcknowledgement } from './noyau/acknowledge';
 import { fluidNodes } from './fluids';
 import { carteGriseNodes } from './siv';
 import { defaultUsageUnit } from './edit';
@@ -266,6 +267,8 @@ export function Atelier() {
   // hang Le Noyau in 'working' forever if the worker dies / a frame is dropped after the 202 (the
   // cooperative cancel can't rescue a dead worker either). Any session frame re-arms it (a live worker
   // never trips it); only true silence settles the orb with a warn.
+  // Which acknowledgement variant spoke last, so `send()` never repeats it back-to-back (noyau/acknowledge.ts).
+  const lastAcknowledgement = useRef<number | null>(null);
   const watchdog = useRef<number | null>(null);
   const clearWatchdog = useCallback(() => {
     if (watchdog.current != null) {
@@ -538,6 +541,12 @@ export function Atelier() {
     setCta(null);
     setFocus(null);
     dispatch({ type: 'turn', phase: 'start' });
+    // The gesture that clicks is also the one that unlocks the AudioContext (useVoice.ts), so this is
+    // the first line a fresh session can actually play — spoken at once rather than 2.6s in, at the
+    // worker's first real frame. Superseded (latest wins) the moment that frame narrates a real step.
+    const { index, text } = pickAcknowledgement(t.atelier.acknowledgedPool, lastAcknowledgement.current, Math.random);
+    lastAcknowledgement.current = index;
+    dispatch({ type: 'status', message: text, tool: 'acknowledge' });
     armWatchdog();
     const v = heroBundle?.vehicle;
     const summary = v

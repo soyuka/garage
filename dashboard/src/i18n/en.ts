@@ -178,6 +178,8 @@ export const en: Messages = {
   },
 
   atelier: {
+    /** Drawn by `pickAcknowledgement` (noyau/acknowledge.ts), never the same twice in a row. */
+    acknowledgedPool: ['On it…', 'Let me look…', 'One moment, checking…', 'Right away…', 'Looking into it…'] as const,
     turnStalled: 'The turn stopped responding — try again.',
     answerDropped: (dropped: string) => `Answer dropped: the vehicle never arrived (${dropped}).`,
     requestFailed: (msg: string) => `Request failed: ${msg}`,
@@ -414,19 +416,20 @@ export const en: Messages = {
     seen: 'seen',
   },
 
-  credits: {
-    title: '3D model credits',
   pref: {
     voice: 'Voice',
     voiceDefault: 'default voice',
   },
 
+  credits: {
+    title: '3D model credits',
     short: 'credits',
     heading: '3D models',
     close: 'Close the credits',
   },
 
   chipVerb: {
+    acknowledged: 'heard',
     motulOil: 'Motul oil…',
     parts: 'parts search…',
     plate: 'plate…',

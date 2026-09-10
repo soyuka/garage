@@ -191,6 +191,8 @@ export const fr = {
   },
 
   atelier: {
+    /** Drawn by `pickAcknowledgement` (noyau/acknowledge.ts), never the same twice in a row. */
+    acknowledgedPool: ["Je m'en occupe…", 'Je regarde ça…', 'Un instant, je vérifie…', "C'est parti…", "Je m'y mets…"] as readonly string[],
     turnStalled: 'Le tour ne répond plus — réessayez.',
     answerDropped: (dropped: string) => `Réponse abandonnée : le véhicule n’est pas arrivé (${dropped}).`,
     requestFailed: (msg: string) => `Échec de la requête : ${msg}`,
@@ -443,14 +445,14 @@ export const fr = {
     seen: 'vu',
   },
 
-  credits: {
-    title: 'Crédits des modèles 3D',
   /** The voice-select control beside the audition toggle (Preferences.tsx `VoiceSelect`). */
   pref: {
     voice: 'Voix',
     voiceDefault: 'voix par défaut',
   },
 
+  credits: {
+    title: 'Crédits des modèles 3D',
     short: 'crédits',
     heading: 'Modèles 3D',
     close: 'Fermer les crédits',
@@ -458,6 +460,7 @@ export const fr = {
 
   /** The SHORT verb on a running tool-step chip — quieter than the narration line it echoes. */
   chipVerb: {
+    acknowledged: 'reçu',
     motulOil: 'huile Motul…',
     parts: 'recherche pièces…',
     plate: 'plaque…',

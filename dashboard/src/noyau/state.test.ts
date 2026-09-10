@@ -238,6 +238,13 @@ describe('classifyStep — the tool name on the frame wins over the prose', () =
     const s = R(initialNoyau, { type: 'status', message: 'Checking the parts catalogue…', tool: 'get_service_parts' }, 0);
     expect(s.steps[s.steps.length - 1].tool).toBe('get_service_parts');
   });
+
+  // The click-time acknowledgement (`send()`, Atelier.tsx) is a synthetic chip identity, not a server
+  // tool — same pattern as `get_history` folding two backend tools onto one chip.
+  it('classifies the click-time acknowledgement chip, in both locales', () => {
+    expect(classifyStep('', 'acknowledge', 'fr')).toEqual({ tool: 'acknowledge', label: 'reçu' });
+    expect(classifyStep('', 'acknowledge', 'en')).toEqual({ tool: 'acknowledge', label: 'heard' });
+  });
 });
 
 describe('Le Noyau — current-turn tool-step chips', () => {
