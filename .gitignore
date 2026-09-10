@@ -16,5 +16,12 @@ prompt.md
 /.claude/
 **/.claude/agent-memory/
 
+# Same posture for the other agent CLIs' local state: vendored skills, hooks, and AGENTS.md —
+# which is a machine-substituted copy of CLAUDE.md ("Codex.ai/code"), so tracking it would only
+# let the two drift.
+/.agents/
+/.codex/
+/AGENTS.md
+
 # Runtime logs of the stage rig (cloudflared).
 /stage/var/
