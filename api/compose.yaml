@@ -171,7 +171,9 @@ services:
   # Casdoor — OIDC authorization server protecting /mcp (and any future /api firewall).
   # Chosen over Zitadel because stock Goose (rmcp) self-registers via anonymous RFC 7591
   # Dynamic Client Registration, which Casdoor supports and Zitadel does not. Reuses the
-  # Postgres container (separate `casdoor` database, auto-created on first boot). Config lives
+  # Postgres container. NOTE: despite `dbName = casdoor` in app.conf, the tables land in the
+  # `postgres` database — the pg driver uses dataSourceName's `dbname=postgres` and no `casdoor`
+  # database is ever created (verified 2026-09-10; matters for backup/restore). Config lives
   # in docker/casdoor/app.conf — `origin` there MUST match the public URL so discovery
   # advertises the right authorization_endpoint (the production image serves the SPA on :8000,
   # unlike casdoor-all-in-one which splits it onto :7001 and breaks the browser redirect).
