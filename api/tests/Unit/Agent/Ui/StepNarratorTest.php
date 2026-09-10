@@ -19,8 +19,12 @@ final class StepNarratorTest extends TestCase
 {
     /**
      * @param \ArrayObject<int, array<string, mixed>> $published filled with each published frame
+     * @param null|\Closure(int $count): int           $picker    defaults to always picking the first
+     *                                                             variant, so tests that assert an exact
+     *                                                             sentence stay deterministic without
+     *                                                             caring about the randomised default
      */
-    private function narrator(\ArrayObject $published, Locale $locale = Locale::Fr): StepNarrator
+    private function narrator(\ArrayObject $published, Locale $locale = Locale::Fr, ?\Closure $picker = null): StepNarrator
     {
         $hub = $this->createStub(HubInterface::class);
         $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
@@ -35,7 +39,7 @@ final class StepNarratorTest extends TestCase
         $context = new LocaleContext(new RequestStack());
         $context->set($locale);
 
-        return new StepNarrator($tools, $context);
+        return new StepNarrator($tools, $context, $picker ?? static fn (int $n): int => 0);
     }
 
     /**
@@ -54,8 +58,12 @@ final class StepNarratorTest extends TestCase
         );
     }
 
-    /** Both history tools narrate the same sentence but stay distinguishable on the wire. */
-    public function testTheTwoHistoryToolsShareASentenceButKeepTheirOwnToolKey(): void
+    /**
+     * `get_vehicle_facts` (the spec sheet) and `get_maintenance_history` (the logbook) used to share
+     * the exact same sentence — an operator-flagged collision. They now narrate distinct wording, and
+     * still keep their own tool key on the wire.
+     */
+    public function testFactsAndHistoryNarrateDifferentSentencesAndKeepTheirOwnToolKey(): void
     {
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
@@ -64,11 +72,67 @@ final class StepNarratorTest extends TestCase
 
         $this->assertSame(
             [
-                ['type' => 'status', 'message' => "Je relis l'historique…", 'tool' => 'get_vehicle_facts'],
+                ['type' => 'status', 'message' => 'Je relis la fiche technique…', 'tool' => 'get_vehicle_facts'],
                 ['type' => 'status', 'message' => "Je relis l'historique…", 'tool' => 'get_maintenance_history'],
             ],
             $published->getArrayCopy(),
         );
+    }
+
+    /** With a picker that returns a fixed sequence, the same tool called twice varies its wording. */
+    public function testForToolVariesTheWordingAcrossTwoCallsWithAFixedSequencePicker(): void
+    {
+        $published = new \ArrayObject();
+        $sequence = [0, 1];
+        $picker = static function (int $n) use (&$sequence): int {
+            return array_shift($sequence);
+        };
+        $narrator = $this->narrator($published, picker: $picker);
+
+        $narrator->forTool('get_maintenance_history');
+        $narrator->forTool('get_maintenance_history');
+
+        $this->assertSame(
+            [
+                ['type' => 'status', 'message' => "Je relis l'historique…", 'tool' => 'get_maintenance_history'],
+                ['type' => 'status', 'message' => 'Je reprends le carnet…', 'tool' => 'get_maintenance_history'],
+            ],
+            $published->getArrayCopy(),
+        );
+    }
+
+    /**
+     * A picker that keeps returning the same index must still never narrate the same wording twice
+     * in a row — the narrator shifts the pick itself rather than trusting the picker's variety.
+     */
+    public function testForToolNeverRepeatsTheSameVariantEvenWhenThePickerAlwaysReturnsTheSameIndex(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published, picker: static fn (int $n): int => 0);
+
+        $narrator->forTool('get_maintenance_history');
+        $narrator->forTool('get_maintenance_history');
+        $narrator->forTool('get_maintenance_history');
+
+        $messages = array_map(static fn (array $frame): string => $frame['message'], $published->getArrayCopy());
+
+        $this->assertNotSame($messages[0], $messages[1]);
+        $this->assertNotSame($messages[1], $messages[2]);
+    }
+
+    /** reset() clears the per-tool variant memory too — a stale worker singleton starts fresh each turn. */
+    public function testResetClearsTheVariantMemorySoTheFirstVariantCanRepeatOnTheNextTurn(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published, picker: static fn (int $n): int => 0);
+
+        $narrator->forTool('get_maintenance_history');
+        $narrator->reset();
+        $narrator->forTool('get_maintenance_history');
+
+        $messages = array_map(static fn (array $frame): string => $frame['message'], $published->getArrayCopy());
+
+        $this->assertSame($messages[0], $messages[1]);
     }
 
     public function testStaysSilentForAnUnmappedTool(): void
@@ -132,5 +196,64 @@ final class StepNarratorTest extends TestCase
         $this->narrator($published, Locale::En)->forTool('some_tool_with_no_sentence');
 
         $this->assertSame([], $published->getArrayCopy());
+    }
+
+    /** announce() is forTool()'s early twin: same sentence, but the id is remembered as announced. */
+    public function testAnnounceNarratesAMappedToolAndRemembersTheId(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published);
+
+        $narrator->announce('call-1', 'get_service_parts');
+
+        $this->assertSame(
+            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…', 'tool' => 'get_service_parts']],
+            $published->getArrayCopy(),
+        );
+        $this->assertTrue($narrator->wasAnnounced('call-1'));
+    }
+
+    /** An unmapped tool stays silent, exactly as forTool(), but the id is still marked announced. */
+    public function testAnnounceStaysSilentForAnUnmappedToolButStillRemembersTheId(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published);
+
+        $narrator->announce('call-2', 'some_tool_with_no_sentence');
+
+        $this->assertSame([], $published->getArrayCopy());
+        $this->assertTrue($narrator->wasAnnounced('call-2'));
+    }
+
+    /** announceStep() carries the model's own sentence, with no tool key — narrate_step's shape. */
+    public function testAnnounceStepNarratesTheModelAuthoredLineWithNoToolKey(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published);
+
+        $narrator->announceStep('call-3', 'Je compare les marques…');
+
+        $this->assertSame([['type' => 'status', 'message' => 'Je compare les marques…']], $published->getArrayCopy());
+        $this->assertTrue($narrator->wasAnnounced('call-3'));
+    }
+
+    public function testWasAnnouncedIsFalseForAnUnknownId(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published);
+
+        $this->assertFalse($narrator->wasAnnounced('never-seen'));
+    }
+
+    /** reset() clears the per-turn memory — a stale worker singleton must not leak across turns. */
+    public function testResetClearsTheAnnouncedMemory(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published);
+
+        $narrator->announce('call-4', 'get_service_parts');
+        $narrator->reset();
+
+        $this->assertFalse($narrator->wasAnnounced('call-4'));
     }
 }

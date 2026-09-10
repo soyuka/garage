@@ -43,7 +43,7 @@ final class CompositeToolboxTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new CompositeToolbox($render, $mcp, new StepNarrator($tools, new LocaleContext(new RequestStack())));
+        return new CompositeToolbox($render, $mcp, new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0));
     }
 
     private function mcpToolboxExposing(string $name): McpToolbox
@@ -82,5 +82,97 @@ final class CompositeToolboxTest extends TestCase
         $toolbox->execute(new ToolCall('id-2', 'toast', ['message' => 'fait']));
 
         $this->assertSame([], $published->getArrayCopy());
+    }
+
+    /** A call the stream already announced (EarlyStepNarrationListener) must not narrate a second time here. */
+    public function testDoesNotReNarrateAnMcpCallAlreadyAnnouncedByTheStream(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = new StepNarrator($this->renderTools($published), new LocaleContext(new RequestStack()), static fn (int $n): int => 0);
+        $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator);
+        // Simulate what EarlyStepNarrationListener would already have done from the stream.
+        $narrator->announce('id-3', 'get_service_parts');
+        $published->exchangeArray([]);
+
+        $toolbox->execute(new ToolCall('id-3', 'get_service_parts', []));
+
+        $this->assertSame([], $published->getArrayCopy());
+    }
+
+    /** An MCP call the stream never announced still narrates at execute time — the fallback path. */
+    public function testStillNarratesAnMcpCallTheStreamNeverAnnounced(): void
+    {
+        $published = new \ArrayObject();
+        $toolbox = $this->toolbox($published, $this->mcpToolboxExposing('get_service_parts'));
+
+        $toolbox->execute(new ToolCall('id-4', 'get_service_parts', []));
+
+        $this->assertSame(
+            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…', 'tool' => 'get_service_parts']],
+            $published->getArrayCopy(),
+        );
+    }
+
+    /** An announced narrate_step acks without executing — its sentence is already on the ticker. */
+    public function testAnAnnouncedNarrateStepReturnsOkWithoutCallingTheRenderToolbox(): void
+    {
+        $published = new \ArrayObject();
+        $renderCalled = false;
+        $render = $this->createStub(ToolboxInterface::class);
+        $render->method('getTools')->willReturn([]);
+        $render->method('execute')->willReturnCallback(function (ToolCall $c) use (&$renderCalled): ToolResult {
+            $renderCalled = true;
+
+            return new ToolResult($c, 'render-ok');
+        });
+
+        $narrator = new StepNarrator($this->renderTools($published), new LocaleContext(new RequestStack()), static fn (int $n): int => 0);
+        $narrator->announceStep('id-5', 'Je compare les marques…');
+        $published->exchangeArray([]);
+        $toolbox = new CompositeToolbox($render, $this->mcpToolboxExposing('get_service_parts'), $narrator);
+
+        $result = $toolbox->execute(new ToolCall('id-5', 'narrate_step', ['message' => 'Je compare les marques…']));
+
+        $this->assertSame('ok', $result->getResult());
+        $this->assertFalse($renderCalled);
+    }
+
+    /** An unannounced narrate_step still executes as today — it is the one publishing its sentence. */
+    public function testAnUnannouncedNarrateStepStillExecutesAgainstTheRenderToolbox(): void
+    {
+        $published = new \ArrayObject();
+        $toolbox = $this->toolbox($published, $this->mcpToolboxExposing('get_service_parts'));
+
+        $result = $toolbox->execute(new ToolCall('id-6', 'narrate_step', ['message' => 'Je compare les marques…']));
+
+        $this->assertSame('render-ok', $result->getResult());
+    }
+
+    private function renderToolboxStub(): ToolboxInterface
+    {
+        $render = $this->createStub(ToolboxInterface::class);
+        $render->method('getTools')->willReturn([]);
+        $render->method('execute')->willReturnCallback(
+            static fn (ToolCall $c): ToolResult => new ToolResult($c, 'render-ok'),
+        );
+
+        return $render;
+    }
+
+    /**
+     * @param \ArrayObject<int, array<string, mixed>> $published
+     */
+    private function renderTools(\ArrayObject $published): RenderIntentTools
+    {
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+            $published->append(json_decode($update->getData(), true));
+
+            return 'id';
+        });
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        return $tools;
     }
 }

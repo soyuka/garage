@@ -16,8 +16,8 @@ final class AgentMessagesTest extends TestCase
     {
         $fr = AgentMessages::for(Locale::Fr);
 
-        $this->assertSame('Je consulte le catalogue de pièces…', $fr->narration['get_service_parts']);
-        $this->assertSame('Je cherche en ligne…', $fr->narration['web_search']);
+        $this->assertSame('Je consulte le catalogue de pièces…', $fr->narration['get_service_parts'][0]);
+        $this->assertSame('Je cherche en ligne…', $fr->narration['web_search'][0]);
         $this->assertSame('Demande interrompue.', $fr->cancelled);
     }
 
@@ -25,7 +25,7 @@ final class AgentMessagesTest extends TestCase
     {
         $en = AgentMessages::for(Locale::En);
 
-        $this->assertSame('Checking the parts catalogue…', $en->narration['get_service_parts']);
+        $this->assertSame('Checking the parts catalogue…', $en->narration['get_service_parts'][0]);
         $this->assertSame('Request stopped.', $en->cancelled);
     }
 
@@ -52,6 +52,36 @@ final class AgentMessagesTest extends TestCase
         }
     }
 
+    /**
+     * A one-variant tool would never vary — the whole point of the catalog (operator feedback
+     * 2026-09-05: the fixed heartbeat line reads as repetitive).
+     */
+    #[DataProvider('locales')]
+    public function testEveryToolHasAtLeastThreeVariantsInBothLanguages(Locale $locale): void
+    {
+        foreach (AgentMessages::for($locale)->narration as $tool => $variants) {
+            $this->assertGreaterThanOrEqual(3, \count($variants), $tool.' has fewer than 3 variants');
+            $this->assertLessThanOrEqual(4, \count($variants), $tool.' has more than 4 variants');
+        }
+    }
+
+    /**
+     * `get_vehicle_facts` and `get_maintenance_history` used to share their one sentence — a
+     * collision the operator flagged (facts is the spec sheet, history is the logbook). Pin it at
+     * the catalog level, and generalise: no sentence should read as belonging to two different steps.
+     */
+    #[DataProvider('locales')]
+    public function testNoTwoToolsShareAVariant(Locale $locale): void
+    {
+        $seen = [];
+        foreach (AgentMessages::for($locale)->narration as $tool => $variants) {
+            foreach ($variants as $sentence) {
+                $this->assertArrayNotHasKey($sentence, $seen, \sprintf('"%s" is used by both %s and %s', $sentence, $seen[$sentence] ?? '?', $tool));
+                $seen[$sentence] = $tool;
+            }
+        }
+    }
+
     #[DataProvider('locales')]
     public function testEveryUserFacingSentenceIsNonEmpty(Locale $locale): void
     {
@@ -60,8 +90,10 @@ final class AgentMessagesTest extends TestCase
         $this->assertNotSame('', trim($m->noOp));
         $this->assertNotSame('', trim($m->notConverged));
         $this->assertNotSame('', trim($m->cancelled));
-        foreach ($m->narration as $tool => $sentence) {
-            $this->assertNotSame('', trim($sentence), $tool.' narrates nothing');
+        foreach ($m->narration as $tool => $variants) {
+            foreach ($variants as $sentence) {
+                $this->assertNotSame('', trim($sentence), $tool.' narrates an empty variant');
+            }
         }
     }
 

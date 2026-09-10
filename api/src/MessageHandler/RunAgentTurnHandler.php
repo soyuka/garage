@@ -10,6 +10,7 @@ use App\Agent\SelectedVehicleContext;
 use App\Agent\TurnContextBuilder;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\RepeatedToolFailureGuard;
+use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
 use App\Agent\TurnCancellations;
 use App\Agent\WebSearchBudget;
@@ -55,6 +56,7 @@ final readonly class RunAgentTurnHandler
         private WebSearchBudget $webSearchBudget,
         private RepeatedToolFailureGuard $repeatedToolFailureGuard,
         private TurnActivityTracker $activityTracker,
+        private StepNarrator $stepNarrator,
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
@@ -96,6 +98,9 @@ final readonly class RunAgentTurnHandler
         // Reset the per-turn activity tracker so a no-op turn (prose exit, nothing rendered/written) is
         // detected against THIS turn only.
         $this->activityTracker->reset();
+        // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
+        // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
+        $this->stepNarrator->reset();
         // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so
         // the journal records exactly what the model saw (instruction + inlined facts/tasks).
         $context = $this->contextBuilder->build($message);

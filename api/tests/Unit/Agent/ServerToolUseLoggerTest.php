@@ -119,7 +119,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack())), $journal);
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0), $journal);
     }
 
     /**

@@ -23,6 +23,13 @@ use Symfony\AI\Platform\Result\ToolCall;
  * bundle Toolbox that dispatches ToolCallRequested — so it is where the running narration is emitted:
  * before delegating an MCP call, {@see StepNarrator} publishes its French step sentence to the
  * dashboard heartbeat. Render-intent calls are NOT narrated (they ARE the UI, not a work step).
+ *
+ * Narration here is now the FALLBACK: {@see \App\Agent\Ui\EarlyStepNarrationListener} announces most
+ * calls from the stream, well before they reach this method — see
+ * {@see StepNarrator::wasAnnounced()}. An MCP call narrates here only if the stream never announced it
+ * (a bridge that emits no `ToolCallStart`). `narrate_step` is the mirror case: if the stream already
+ * published its sentence, executing it again here would push a duplicate pulse/step chip through the
+ * dashboard reducer, so an already-announced call just acks without running.
  */
 final class CompositeToolbox implements ToolboxInterface
 {
@@ -44,10 +51,16 @@ final class CompositeToolbox implements ToolboxInterface
     public function execute(ToolCall $toolCall): ToolResult
     {
         if (!$this->ownsMcp($toolCall->getName())) {
+            if ('narrate_step' === $toolCall->getName() && $this->narrator->wasAnnounced($toolCall->getId())) {
+                return new ToolResult($toolCall, 'ok');
+            }
+
             return $this->renderToolbox->execute($toolCall);
         }
 
-        $this->narrator->forTool($toolCall->getName());
+        if (!$this->narrator->wasAnnounced($toolCall->getId())) {
+            $this->narrator->forTool($toolCall->getName());
+        }
 
         return $this->mcpToolbox->execute($toolCall);
     }

@@ -35,7 +35,7 @@ final class WebSearchBudgetStreamListenerTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new WebSearchBudgetStreamListener($budget, new StepNarrator($tools, new LocaleContext(new RequestStack())));
+        return new WebSearchBudgetStreamListener($budget, new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0));
     }
 
     private function deltaOf(TokenUsage $usage): DeltaEvent

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Agent;
 
 use App\Agent\Journal\TurnJournal;
+use App\Agent\Ui\EarlyStepNarrationListener;
 use App\Agent\Ui\StepNarrator;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Model;
@@ -30,6 +31,10 @@ use Symfony\AI\Platform\Result\StreamResult;
  * `TokenUsage` deltas the stream carries. Decorating the platform is the one seam every call passes
  * through — outer turn and each nested tool-loop pass — so attaching here covers them all. Queries are
  * not logged on this path (the stream drops the server_tool_use blocks that carry the query text).
+ *
+ * A second listener rides the same streamed result: {@see EarlyStepNarrationListener} narrates a garage
+ * tool call as soon as the model BEGINS it (`ToolCallStart`), rather than waiting for
+ * {@see \App\Agent\Toolbox\CompositeToolbox::execute()} at message end — see that listener's docblock.
  *
  * Best-effort: a failure is swallowed, never turning observability into a turn-killing error.
  */
@@ -79,6 +84,7 @@ final readonly class ServerToolUseLogger implements PlatformInterface
 
         if ($streamResult instanceof StreamResult) {
             $streamResult->addListener(new WebSearchBudgetStreamListener($this->budget, $this->narrator, $this->journal));
+            $streamResult->addListener(new EarlyStepNarrationListener($this->narrator));
         }
     }
 
