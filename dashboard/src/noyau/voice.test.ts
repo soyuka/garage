@@ -12,6 +12,7 @@ import {
   next,
   rearm,
   refused,
+  supersedeQueued,
   waiting,
   type VoiceState,
 } from './voice';
@@ -227,6 +228,22 @@ describe('the ticker line', () => {
 
     expect(cancel(s, NARRATION_ID).narration).toBeNull();
   });
+
+  // Unlike a card, a ticker utterance never joins `spoken` (2026-09-05): it is dedup'd only while
+  // speaking or pending, never once it is off the lips — a line the ticker shows again is news again.
+  it('speaks a ticker line again once it has finished, even though the exact text already played', () => {
+    let s = next(narrate(empty, 'un', 0), 1, true);
+    s = finish(s);
+    s = narrate(s, 'deux', 2);
+    s = next(s, 3, true);
+    s = finish(s);
+
+    s = narrate(s, 'un', 4);
+    expect(s.narration?.text).toBe('un');
+
+    s = next(s, 5, true);
+    expect(s.speaking?.text).toBe('un');
+  });
 });
 
 // Following the printed stack is a RULE, not plumbing: it is what makes a dismissal a cancellation, and
@@ -254,26 +271,51 @@ describe('following the printed cards', () => {
     expect(s.speaking?.text).toBe('je relis l’historique'); // not cut mid-word by the arriving card
     expect(s.queue.map((u) => u.text)).toEqual(['vidange enregistrée']);
   });
+
+  // `spoken` used to live for the whole tab, so a chip's second click was silent forever (2026-09-05).
+  // The rule now: a text counts as said only while its card is still on screen.
+  it('forgets a spoken text once its card is gone, so an identical text under a NEW id is queued again', () => {
+    let s = next(enqueue(empty, notice('vidange', 0), 0), 1, true);
+    s = finish(s);
+    expect(s.spoken).toEqual(['vidange']);
+
+    s = follow(s, [], 2); // the card is no longer printed
+
+    s = enqueue(s, { id: 'other:vidange', tone: 'warn', text: 'vidange', at: 3 }, 3);
+    expect(s.queue.map((u) => u.text)).toEqual(['vidange']);
+  });
+
+  it('still refuses a spoken text while its card is STILL on screen', () => {
+    let s = next(enqueue(empty, notice('vidange', 0), 0), 1, true);
+    s = finish(s);
+
+    s = follow(s, [notice('vidange', 0)], 2); // same card, still printed
+
+    s = enqueue(s, { id: 'other:vidange', tone: 'warn', text: 'vidange', at: 3 }, 3);
+    expect(s.queue).toHaveLength(0);
+  });
 });
 
 // The proposeActions card is often THE answer — a measured turn ("what tires should I get for front
 // wheels", 2026-08-17) published show_fact + propose_actions and NO toast at all, so the audition had
 // nothing to read and the operator heard only the turn's done label.
 describe('the answer card', () => {
-  it('reads the headline then the finding as one line', () => {
+  // The headline routinely restates the finding in fewer words ("Aucun entretien dans le carnet" atop
+  // "Aucun entretien n'a encore été enregistré…", turn 21:58:34) — reading both said the answer twice.
+  it('reads the finding alone, not the headline in front of it', () => {
     expect(cardLine('Front tires for Wheel Horse 246-H', 'Reference from your history: CA 23x1050x12 VD')).toBe(
-      'Front tires for Wheel Horse 246-H. Reference from your history: CA 23x1050x12 VD',
+      'Reference from your history: CA 23x1050x12 VD',
     );
   });
 
-  it('does not double the punctuation a headline already carries', () => {
-    expect(cardLine('Which tyres?', 'The history says CA 23x1050x12 VD')).toBe(
-      'Which tyres? The history says CA 23x1050x12 VD',
-    );
+  it('trims the finding it reads', () => {
+    expect(cardLine('Which tyres?', '  The history says CA 23x1050x12 VD  ')).toBe('The history says CA 23x1050x12 VD');
   });
 
-  it('is just the headline when the card carries no finding', () => {
+  it('falls back to the headline when the card carries no finding', () => {
     expect(cardLine('Front tires for Wheel Horse 246-H', null)).toBe('Front tires for Wheel Horse 246-H');
+    expect(cardLine('Front tires for Wheel Horse 246-H', undefined)).toBe('Front tires for Wheel Horse 246-H');
+    expect(cardLine('Front tires for Wheel Horse 246-H', '   ')).toBe('Front tires for Wheel Horse 246-H');
   });
 
   it('speaks the card before a ticker line, and only once', () => {
@@ -282,7 +324,7 @@ describe('the answer card', () => {
     s = enqueue(s, card, 0);
 
     s = next(s, 1, true);
-    expect(s.speaking?.text).toBe('Front tires. CA 23x1050x12 VD');
+    expect(s.speaking?.text).toBe('CA 23x1050x12 VD');
 
     s = enqueue(finish(s), card, 2);
     expect(s.queue).toHaveLength(0);
@@ -369,5 +411,45 @@ describe('a refused play', () => {
     s = rearm(refused(s));
 
     expect(next(s, VOICE_STALE_MS + 2, true).speaking).toBeNull();
+  });
+});
+
+// A `proposeActions` card is often ITSELF the answer a toast already tried to give — the operator
+// heard the toast, then heard the card say the same thing 5s later (turn 21:58:34). The card arriving
+// is the deterministic guard: whatever notice lines are still waiting behind it are dropped unspoken.
+describe('a card supersedes queued notice lines', () => {
+  it('keeps only the card line — the waiting notice lines are dropped', () => {
+    let s = enqueue(empty, notice('carnet vide', 0), 0);
+    s = enqueue(s, { id: 'review:Aucun entretien', tone: 'info', text: 'Aucun entretien', at: 0 }, 0);
+
+    s = supersedeQueued(s, 'review:Aucun entretien');
+
+    expect(s.queue.map((u) => u.id)).toEqual(['review:Aucun entretien']);
+  });
+
+  it('leaves the utterance already on the lips untouched', () => {
+    let s = next(enqueue(empty, notice('carnet vide', 0), 0), 1, true);
+    s = enqueue(s, { id: 'review:Aucun entretien', tone: 'info', text: 'Aucun entretien', at: 1 }, 1);
+
+    s = supersedeQueued(s, 'review:Aucun entretien');
+
+    expect(s.speaking?.text).toBe('carnet vide'); // finishes — never cut mid-word for a supersession
+    expect(s.queue.map((u) => u.id)).toEqual(['review:Aucun entretien']);
+  });
+
+  it('leaves the ticker slot untouched', () => {
+    let s = narrate(empty, 'je relis l’historique', 0);
+    s = enqueue(s, notice('carnet vide', 0), 0);
+
+    s = supersedeQueued(s, 'review:Aucun entretien');
+
+    expect(s.narration?.text).toBe('je relis l’historique');
+    expect(s.queue).toHaveLength(0);
+  });
+
+  it('is a no-op returning the same state reference when nothing is queued', () => {
+    const s = narrate(empty, 'je relis l’historique', 0);
+
+    expect(supersedeQueued(s, 'review:Aucun entretien')).toBe(s);
   });
 });

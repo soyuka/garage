@@ -80,6 +80,11 @@ export function enqueue(state: VoiceState, notice: Notice, now: number): VoiceSt
  * The ticker slot is exempt from the sweep. Its line has no card of its own, so a naive "cancel every
  * utterance whose id is not on screen" cuts the orb's commentary off mid-word the moment any card
  * arrives — which is the one thing the burst rule promises not to do.
+ *
+ * `spoken` is pruned to the texts of `cards` BEFORE enqueueing (2026-09-05): a text counts as said only
+ * while its card is still on screen, never for the life of the tab. Without this a repeatable action
+ * (a chip clicked twice, a generic step line) goes silent forever after its first run — `spoken` used
+ * to grow unbounded and `said()` consulted it for good.
  */
 export function follow(state: VoiceState, cards: Notice[], now: number): VoiceState {
   const live = new Set(cards.map((c) => c.id));
@@ -88,25 +93,27 @@ export function follow(state: VoiceState, cards: Notice[], now: number): VoiceSt
   for (const u of [state.speaking, ...state.queue]) {
     if (u && NARRATION_ID !== u.id && !live.has(u.id)) out = cancel(out, u.id);
   }
+
+  const liveTexts = new Set(cards.map((c) => c.text));
+  out = { ...out, spoken: out.spoken.filter((text) => liveTexts.has(text)) };
+
   for (const card of cards) out = enqueue(out, card, now);
 
   return out;
 }
 
 /**
- * The spoken form of an answer CARD (a `proposeActions` proposal): its headline, then its finding. The
- * headline names the subject, the finding carries the content — the reference, the number, the verdict —
- * so a headline alone is an answer that answers nothing. Both strings are printed on the card, which is
- * what keeps this a reading and not a rephrase (CHOREOGRAPHY § Binding rules specific to speech).
+ * The spoken form of an answer CARD (a `proposeActions` proposal): the finding ALONE when there is one,
+ * else the headline. Journal evidence (turn 21:58:34) caught the old headline-then-finding rule reading
+ * the same sentence twice — the agent's headline routinely restates the finding in fewer words ("Aucun
+ * entretien dans le carnet" atop "Aucun entretien n'a encore été enregistré…"), so speaking both was an
+ * answer said twice, not a reading of two distinct lines (CHOREOGRAPHY § "Audition — speech, for
+ * ANSWERS", corrected 2026-09-06). Both strings still print on the card — this only changes what the
+ * VOICE reads.
  */
 export function cardLine(headline: string, finding: string | null | undefined): string {
-  const head = headline.trim();
   const tail = (finding ?? '').trim();
-  if ('' === tail) return head;
-
-  // Its own sentence-ending punctuation is kept; otherwise one is added, because the voice reads the
-  // join and "Front tires CA 23x1050x12" is one run-on where the card had two lines.
-  return `${head}${/[.!?…]$/.test(head) ? '' : '.'} ${tail}`;
+  return '' === tail ? headline.trim() : tail;
 }
 
 /**
@@ -153,7 +160,9 @@ export function next(state: VoiceState, now: number, unlocked: boolean): VoiceSt
     speaking: promoted,
     queue: head ? rest : fresh,
     narration: head ? ticker : null,
-    spoken: [...state.spoken, promoted.text],
+    // Only a CARD utterance joins `spoken` (2026-09-05) — a ticker line has no card to keep it "on
+    // screen", so it is never remembered past speaking/pending: shown again later, it is news again.
+    spoken: head ? [...state.spoken, promoted.text] : state.spoken,
   };
 }
 
@@ -207,6 +216,21 @@ export function rearm(state: VoiceState): VoiceState {
 /** The utterance ended on its own. */
 export function finish(state: VoiceState): VoiceState {
   return state.speaking === null ? state : { ...state, speaking: null };
+}
+
+/**
+ * A `proposeActions` card just arrived (or changed to a different headline) — it IS the answer, so
+ * every notice-toast line still WAITING behind it is dropped unspoken; a toast that said the same
+ * thing the card now says is not read twice (CHOREOGRAPHY § "Audition — speech, for ANSWERS",
+ * 2026-09-06). `keepId` is the card's own queued utterance (if any) and survives the sweep. The line
+ * already ON THE LIPS is untouched — never cut mid-word for a supersession (binding rule) — and so is
+ * the ticker slot, which has no card behind it to be superseded by.
+ */
+export function supersedeQueued(state: VoiceState, keepId: string): VoiceState {
+  if (0 === state.queue.length) return state;
+
+  const queue = state.queue.filter((u) => u.id === keepId);
+  return queue.length === state.queue.length ? state : { ...state, queue };
 }
 
 /**

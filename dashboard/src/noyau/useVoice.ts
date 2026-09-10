@@ -12,6 +12,7 @@ import {
   next,
   rearm,
   refused,
+  supersedeQueued,
   waiting,
   type VoiceState,
 } from './voice';
@@ -194,6 +195,16 @@ export function useVoice(
     if (!enabled) return;
     setState((prev) => follow(prev, cards, performance.now()));
   }, [cards, enabled]);
+
+  // A `proposeActions` card arriving (or changing to a different headline) IS the answer — every
+  // notice-toast line still waiting behind it is dropped unspoken (voice.ts `supersedeQueued`,
+  // CHOREOGRAPHY § "Audition — speech, for ANSWERS", 2026-09-06). Keyed on the headline ALONE so an
+  // unrelated re-render (a finding edit under the same headline, a hover) never re-fires this — only
+  // the card's arrival or a genuinely different headline does.
+  useEffect(() => {
+    if (!enabled || null === cta) return;
+    setState((prev) => supersedeQueued(prev, `review:${cta.headline}`));
+  }, [enabled, cta?.headline]);
 
   // The orb's live line — the commentary, one slot, latest wins (voice.ts `narrate`).
   useEffect(() => {
