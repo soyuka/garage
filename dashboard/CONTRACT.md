@@ -74,7 +74,10 @@ major-unit euros the client converts.
 1. **Collection topic** `${VITE_API_BASE}/garage/vehicles` — the publisher fans the *same* full-vehicle
    payload to item + collection, so the collection subscription **alone covers every vehicle**. Do
    **not** add per-item subscriptions.
-2. **Session topic** `${VITE_API_BASE}/agent/sessions/<sessionId>`.
+2. **Session topic** `${VITE_API_BASE}/agent/sessions/<sessionId>`. The id is the **tab's**, held in
+   `sessionStorage` (`mpa.session`, since 2026-09-05) — a reload rejoins the same topic, so a turn that
+   is queued or running when the page reloads still lands. Two tabs are two sessions; a *duplicated* tab
+   inherits the storage and therefore the topic (both then render the same turns).
 
 **Frame types** (told apart by `kind` vs `type`):
 

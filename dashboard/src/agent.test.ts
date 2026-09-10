@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTurnBody, dashboardSubscriptions } from './agent';
+import { buildTurnBody, dashboardSubscriptions, SESSION_KEY, tabSessionId } from './agent';
 
 // The agent turn request shape (CONTRACT.md §Agent). The pure body-builder pins the exact field names
 // and the omit-when-absent behavior so an unset optional never reaches the wire as a null.
@@ -47,5 +47,59 @@ describe('dashboardSubscriptions', () => {
       { driver: 'app', topics: ['https://localhost/garage/vehicles', 'https://localhost/agent/sessions/s1'] },
       { driver: 'pilot', topics: ['https://localhost/agent/pilots/deadbeef'] },
     ]);
+  });
+});
+
+// The session id is the tab's, not the page instance's: it is what the turn's Mercure topic is keyed
+// on, so a reload mid-turn (F5, a Vite full reload) must come back on the SAME topic or every frame
+// the worker publishes after the reload lands on a topic nobody listens to (measured 2026-09-05:
+// a turn queued 40s, the operator reloaded 1s before it started, nothing was ever shown).
+describe('tabSessionId', () => {
+  const memoryStorage = (seed: Record<string, string> = {}) => {
+    const data = { ...seed };
+    return {
+      data,
+      getItem: (k: string) => data[k] ?? null,
+      setItem: (k: string, v: string) => {
+        data[k] = v;
+      },
+    };
+  };
+
+  it('reuses the id this tab already holds — a reload keeps its session topic', () => {
+    const storage = memoryStorage({ [SESSION_KEY]: 'kept-1' });
+    expect(tabSessionId(storage, () => 'fresh')).toBe('kept-1');
+    expect(storage.data[SESSION_KEY]).toBe('kept-1');
+  });
+
+  it('mints and stores one when the tab has none yet', () => {
+    const storage = memoryStorage();
+    expect(tabSessionId(storage, () => 'fresh-1')).toBe('fresh-1');
+    expect(storage.data[SESSION_KEY]).toBe('fresh-1');
+  });
+
+  it('treats an empty stored value as absent', () => {
+    const storage = memoryStorage({ [SESSION_KEY]: '' });
+    expect(tabSessionId(storage, () => 'fresh-2')).toBe('fresh-2');
+    expect(storage.data[SESSION_KEY]).toBe('fresh-2');
+  });
+
+  it('still yields a usable id when storage is unavailable or throws', () => {
+    expect(tabSessionId(null, () => 'fresh-3')).toBe('fresh-3');
+    const throwing = {
+      getItem: () => {
+        throw new Error('blocked');
+      },
+      setItem: () => {
+        throw new Error('blocked');
+      },
+    };
+    expect(tabSessionId(throwing, () => 'fresh-4')).toBe('fresh-4');
+  });
+
+  it('gives two tabs (two storages) two distinct ids', () => {
+    let n = 0;
+    const mint = () => `id-${++n}`;
+    expect(tabSessionId(memoryStorage(), mint)).not.toBe(tabSessionId(memoryStorage(), mint));
   });
 });

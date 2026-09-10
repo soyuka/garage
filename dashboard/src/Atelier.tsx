@@ -6,7 +6,7 @@ import './scene/scene.css';
 import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
 import { API, getIdentity, logout } from './auth';
-import { cancelTurn, dashboardSubscriptions, fetchPilotTopic, postTurn } from './agent';
+import { cancelTurn, dashboardSubscriptions, fetchPilotTopic, postTurn, tabSessionId } from './agent';
 import {
   addTaskPart,
   archiveTasks,
@@ -95,11 +95,12 @@ export function Atelier() {
   // the orb's ticker line — so it can never say anything that is not also on screen (CHOREOGRAPHY
   // § Audition — speech, for answers). The call itself sits below the `cta` state it reads.
   const [audition, toggleAudition] = useAudition();
-  // One session per tab — scopes the agent's render-intent topic (slice 5 posts turns onto it).
-  const [sessionId] = useState(() => crypto.randomUUID());
   // The second persisted voice preference (CHOREOGRAPHY § "the voice-select control", 2026-09-06) —
   // beside `audition`, since the picker that sets it only exists while the audition is on.
   const [voice, setVoice] = useVoicePreference();
+  // One session per TAB — scopes the agent's render-intent topic (slice 5 posts turns onto it). Kept in
+  // sessionStorage so a reload mid-turn rejoins its own topic instead of orphaning the reply (agent.ts).
+  const [sessionId] = useState(() => tabSessionId(window.sessionStorage, () => crypto.randomUUID()));
   // The owner's PILOT topic: render intents driven from an external MCP host (Claude Code, Goose…),
   // which has no tab and therefore no session. Resolved once from GET /agent/link — until then (and
   // when unauthenticated) the dashboard just runs without that channel.

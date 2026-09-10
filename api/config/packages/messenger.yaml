@@ -8,7 +8,17 @@ framework:
             # long as it needs — the 180s request limit that killed the in-request agent loop is
             # gone. The HTTP endpoint only enqueues and returns 202; render intents still stream to
             # the dashboard over Mercure as the worker produces them.
-            async: '%env(MESSENGER_TRANSPORT_DSN)%'
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    # On Postgres the consumer sleeps on LISTEN/NOTIFY and only re-reads the table when
+                    # this interval has elapsed since it last found the queue empty (bridge default:
+                    # 60000). A NOTIFY that does not reach the worker then costs up to a full minute
+                    # before the turn even starts — measured 2026-09-05: POST 21:02:00.9, picked up
+                    # 21:02:40.5, and the dashboard shows nothing until the worker's first frame. The
+                    # worker's first frame IS the operator's feedback, so bound the miss at 2 s; the
+                    # cost is one indexed SELECT every 2 s on an idle worker.
+                    check_delayed_interval: 2000
             failed: 'doctrine://default?queue_name=failed'
 
         routing:

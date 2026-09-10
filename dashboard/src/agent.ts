@@ -37,6 +37,28 @@ export function buildTurnBody(instruction: string, ctx: TurnContext): TurnBody {
   return body;
 }
 
+/** Where this tab keeps its session id — `sessionStorage`: per tab, survives a reload, never shared. */
+export const SESSION_KEY = 'mpa.session';
+
+/**
+ * The tab's session id. It keys the turn's Mercure topic, so it must outlive the PAGE: a reload while
+ * a turn is queued or running (F5, a Vite full reload) comes back on the same topic and still receives
+ * every frame the worker publishes afterwards. A fresh page instance used to mint a new id, which sent
+ * an in-flight turn's whole reply to a topic with no subscriber (2026-09-05). Storage that is absent or
+ * throws (privacy modes) degrades to a per-page id — the old behaviour, never a crash.
+ */
+export function tabSessionId(storage: Pick<Storage, 'getItem' | 'setItem'> | null, mint: () => string): string {
+  try {
+    const kept = storage?.getItem(SESSION_KEY);
+    if (kept) return kept;
+    const fresh = mint();
+    storage?.setItem(SESSION_KEY, fresh);
+    return fresh;
+  } catch {
+    return mint();
+  }
+}
+
 /**
  * Post one agent turn. The endpoint acks 202 (the turn runs on the worker); the reply streams over the
  * session topic. We only surface a transport failure (the caller clears the optimistic busy state).

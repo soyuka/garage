@@ -237,6 +237,42 @@ live terms — not from memory — before any generated asset lands in git.
 - **Optional later**: ElevenLabs websocket text-input API for one continuous voice stream per turn
   (needs a server-side relay; key stays in `api/`). Only if PCM streaming still feels chopped.
 
+### Agent turn transport — what the « la tondeuse » investigation left open (2026-09-05)
+
+Root cause of the "nothing happens" report is written up in the session report; two things were
+changed (`api/config/packages/messenger.yaml` `check_delayed_interval: 2000`, dashboard session id in
+`sessionStorage`). What is NOT done:
+
+- **A Postgres NOTIFY was lost once in ten turns and the logs cannot say why.** Nine turns today were
+  picked up within 20 ms of the POST; the 21:02:00.9 one waited for the 60 s fallback poll
+  (`PostgreSqlConnection::DEFAULT_OPTIONS`, doctrine-messenger v8.1). No connection drop in the
+  Postgres log (connection logging is off), nothing in the worker log. If it recurs after the 2 s
+  bound, enable `log_connections`/`log_disconnections` on the `database` service and correlate.
+- **`docker compose restart worker` mid-turn leaves the message DELIVERED but never acked**: rows 172
+  and 173 in `messenger_messages` (turns started 21:10:54 and 21:11:43, worker restarted at 21:11:21
+  and 21:12:21). The bridge redelivers after `redeliver_timeout` (3600 s) — those two turns will run
+  AGAIN around 22:11 UTC, publish into session topics nobody listens to, and pay two model turns.
+  Compose stops with a 10 s grace before SIGKILL, and a turn is 15–40 s. Options: `stop_grace_period`
+  ≥ 60 s on `worker` (messenger:consume finishes the in-flight message on SIGTERM), a shorter
+  `redeliver_timeout` paired with idempotent turn handling, or a startup sweep that drops delivered
+  rows older than the worker's own start. Decide, do not paper over.
+- **The queue wait is invisible.** Between the POST's 202 and the worker's `turn:start` the tab shows
+  only the orb working and the click-time acknowledgement; the liveness watchdog is 90 s. A turn that
+  has not started after ~5 s should say so on the ticker (« le moteur met du temps à démarrer… »),
+  distinct from « ne répond plus » — it is a queue state, not a fault.
+- **Mount-time re-subscribe window**: `useMercure` keys its effect on the subscription set, so when
+  `GET /agent/link` resolves the pilot topic it closes and reopens the session EventSource too
+  (`Atelier.tsx`, `useMercure.ts:76-90`). A frame published in that gap is lost. Only matters for a
+  turn posted within the first ~100 ms of a page — low, but structural: subscribe per driver
+  independently instead of one keyed effect.
+- **Duplicated tab = shared session.** With the id in `sessionStorage`, Chrome's "duplicate tab"
+  copies it: both tabs render each other's turns until one is reloaded... no, until one is closed —
+  a reload keeps it. Acceptable for now; if it bites, mint a new id when `performance.getEntriesByType
+  ('navigation')[0].type !== 'reload'` and the stored id is already held by another live tab
+  (BroadcastChannel handshake).
+- **`GET /agent/turns` took 3.04 s** at 21:02:31 (99 turns, `rawCalls` inlined). The journal drawer
+  should page, or the collection should drop `rawCalls`/`toolCalls` and leave them to the item read.
+
 ## Internationalisation — the app speaks fr and en (2026-08-16)
 
 The chrome, the formatting and the voice's pronunciation now follow `mpa.locale`. What follows is the
