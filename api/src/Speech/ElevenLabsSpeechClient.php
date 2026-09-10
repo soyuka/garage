@@ -7,12 +7,19 @@ namespace App\Speech;
 use App\I18n\Locale;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
+use Symfony\Contracts\HttpClient\ResponseInterface;
 
 /**
- * Speaks through ElevenLabs' text-to-speech endpoint.
+ * Speaks through ElevenLabs' streaming text-to-speech endpoint.
  *
- * `mp3_22050_32` on purpose: the payload is one sentence read once over a workshop speaker, so 32 kbps
- * mono is inaudibly different from anything larger and materially faster to reach the browser.
+ * `pcm_24000` wrapped in a placeholder {@see Wav} header, on purpose (2026-09-05): the dashboard's
+ * streaming decoder (`noyau/pcm.ts`) only knows how to read WAV, chunk by chunk — headerless PCM
+ * would fall to the non-WAV path (`speaker.ts`'s `decodeAudioData`), which cannot decode raw samples
+ * at all, and mp3 cannot be decoded incrementally either (no `MediaSource` codec for it exists,
+ * docs/voice.md). Wrapping the PCM in the same header {@see PocketTtsSpeechClient} emits means both
+ * backends ride the identical chunked path with ZERO dashboard change — the browser sees one header
+ * shape regardless of which backend spoke. 24 kHz is chosen to MATCH pocket-tts for the same reason:
+ * one client, one assumption about the sample rate.
  *
  * MEASURED CONSTRAINT (2026-08-16, docs/voice-plan.md § Prerequisite): a FREE-tier key cannot speak
  * French. Free keys see 21 voices, all `language: en`; every French voice is a shared-library voice
@@ -22,7 +29,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class ElevenLabsSpeechClient implements SpeechClient
 {
-    private const string ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech/%s';
+    private const string ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech/%s/stream';
+    private const string CONTENT_TYPE = 'audio/wav';
+    private const int SAMPLE_RATE = 24000;
 
     public function __construct(
         private HttpClientInterface $http,
@@ -41,7 +50,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
         try {
             $response = $this->http->request('POST', \sprintf(self::ENDPOINT, $this->voiceId), [
                 'headers' => ['xi-api-key' => $this->apiKey],
-                'query' => ['output_format' => 'mp3_22050_32'],
+                'query' => ['output_format' => \sprintf('pcm_%d', self::SAMPLE_RATE)],
                 'json' => [
                     'text' => $text,
                     'model_id' => $this->model,
@@ -52,18 +61,44 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
                 ],
             ]);
 
+            // Blocks until the headers are in, which is what surfaces "refused" HERE rather than from
+            // inside the generator, where no status could be chosen any more (mirrors
+            // PocketTtsSpeechClient).
             $status = $response->getStatusCode();
             if (200 !== $status) {
                 // 401 bad key, 402 free tier reaching for a library voice, 429 rate limit — all the
                 // caller's business only insofar as "no audio this time".
                 throw new SpeechUnavailable(\sprintf('ElevenLabs refused the request (HTTP %d).', $status));
             }
-
-            // Whole-body on purpose: ElevenLabs answers in one piece within its own latency budget and
-            // returns mp3, which the browser can only decode complete anyway (dashboard `speaker.ts`).
-            return SpeechStream::whole(new SpokenAudio($response->getContent(), 'audio/mpeg'));
         } catch (HttpClientException $e) {
             throw new SpeechUnavailable('ElevenLabs could not be reached.', previous: $e);
         }
+
+        return new SpeechStream(self::CONTENT_TYPE, $this->chunks($response));
+    }
+
+    /** @return \Generator<int, string, mixed, string> */
+    private function chunks(ResponseInterface $response): \Generator
+    {
+        $header = Wav::header(self::SAMPLE_RATE);
+        yield $header;
+
+        $body = '';
+
+        try {
+            foreach ($this->http->stream($response) as $chunk) {
+                $content = $chunk->getContent();
+                if ('' === $content) {
+                    continue;
+                }
+
+                $body .= $content;
+                yield $content;
+            }
+        } catch (HttpClientException $e) {
+            throw new SpeechUnavailable('ElevenLabs dropped the stream.', previous: $e);
+        }
+
+        return Wav::withRealLengths($header.$body);
     }
 }

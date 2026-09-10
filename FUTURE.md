@@ -222,6 +222,21 @@ live terms — not from memory — before any generated asset lands in git.
 
 ---
 
+### Voice / Atelier voice — follow-ups from the ElevenLabs PCM streaming swap (2026-09-05)
+
+- **pocket-tts edge artefacts**: clipped onsets and 0.3–1.1 s trailing silence per line (see
+  `docs/voice.md` § Edge silence). Candidates: trim trailing silence in `speaker.ts` once the stream
+  is `done` (stop future-scheduled silent pieces), file an upstream issue for the onset.
+- **`voice.ts` `spoken` is never pruned**: any sentence is spoken once per tab life (a second click on
+  a deterministic chip is silent; the generic `StepNarrator` line is said once per session). Bound the
+  dedup to "while its card / ticker slot is live".
+- **Click acknowledgement**: `send()` in `Atelier.tsx` dispatches `turn:start`, which nulls the
+  narration — a real agent turn prints and speaks nothing until the worker's first frame (2.6 s in the
+  measured turn). Print an acknowledgement line at the gesture (the gesture is also what unlocks the
+  AudioContext).
+- **Optional later**: ElevenLabs websocket text-input API for one continuous voice stream per turn
+  (needs a server-side relay; key stays in `api/`). Only if PCM streaming still feels chopped.
+
 ## Internationalisation — the app speaks fr and en (2026-08-16)
 
 The chrome, the formatting and the voice's pronunciation now follow `mpa.locale`. What follows is the

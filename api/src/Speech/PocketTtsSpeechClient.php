@@ -95,36 +95,12 @@ final readonly class PocketTtsSpeechClient implements SpeechClient
             throw new SpeechUnavailable('pocket-tts dropped the stream.', previous: $e);
         }
 
-        return self::withRealLengths($body);
-    }
-
-    /**
-     * Stamp the true byte counts into the COMPLETED body — the copy the cache keeps.
-     *
-     * `serve` streams, so it cannot know the length when it writes the header and emits a 2 GB
-     * placeholder in both the RIFF and `data` chunk sizes. The wire necessarily carries that
-     * placeholder (the browser's decoder reads the format and ignores the sizes — dashboard
-     * `noyau/pcm.ts`), but a file at rest with an 11-hour header is a broken artifact for anything
-     * that trusts headers: an `<audio>` element played it to the real EOF and then raised
-     * MEDIA_ERR_ABORTED. This is the only place that holds the vendor's bytes and knows they came from
-     * pocket-tts, so it belongs here. Anything that is not RIFF/WAVE passes through untouched.
-     */
-    private static function withRealLengths(string $wav): string
-    {
-        if (!str_starts_with($wav, 'RIFF') || !str_starts_with(substr($wav, 8, 4), 'WAVE')) {
-            return $wav;
-        }
-
-        $data = strpos($wav, 'data', 12);
-        if (false === $data) {
-            return $wav;
-        }
-
-        return substr_replace(
-            substr_replace($wav, pack('V', \strlen($wav) - 8), 4, 4),
-            pack('V', \strlen($wav) - $data - 8),
-            $data + 4,
-            4,
-        );
+        // Stamps the true byte counts into the COMPLETED body — the copy the cache keeps. `serve`
+        // streams, so it cannot know the length when it writes the header and emits a 2 GB
+        // placeholder in both the RIFF and `data` chunk sizes; a file at rest with an 11-hour header
+        // is a broken artifact for anything that trusts headers (an `<audio>` element played one to
+        // the real EOF and raised MEDIA_ERR_ABORTED). Moved to {@see Wav} (2026-09-05) so ElevenLabs'
+        // streamed PCM gets the identical treatment instead of a second copy of the same patch.
+        return Wav::withRealLengths($body);
     }
 }

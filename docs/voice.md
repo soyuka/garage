@@ -141,8 +141,10 @@ chunk because php.ini `output_buffering=4096` would otherwise hold a piece until
 it), the disk cache is written from the completed body once the stream has been consumed (the
 header-stamped copy: `pack('V')` real sizes, verified on the cached file), the prewarm is removed, and
 the browser decodes 16-bit PCM pieces and schedules each on the `AudioContext` clock
-(`dashboard/src/noyau/pcm.ts`, `speaker.ts`; a non-WAV body such as ElevenLabs mp3 is decoded whole
-via `decodeAudioData`). Same `curl -N` through Caddy/FrankenPHP, body-byte arrival timestamps:
+(`dashboard/src/noyau/pcm.ts`, `speaker.ts`; the non-WAV whole-body path remains only as the fallback
+for a future backend that cannot speak WAV — ElevenLabs itself now streams PCM wrapped in the same
+placeholder WAV header pocket-tts uses, see § Edge silence below and `docs/voice-plan.md`). Same
+`curl -N` through Caddy/FrankenPHP, body-byte arrival timestamps:
 
 | line | first body bytes | complete |
 | --- | --- | --- |
@@ -158,6 +160,29 @@ reader takes to glance at the card — so no holding of the text was needed and 
 Caddy needs nothing: its reverse proxy flushes immediately for a response without `Content-Length`,
 and `encode` does not match `audio/wav`. `<audio>` could not have done this — no `MediaSource` codec
 exists for WAV — which is why the element and its silent-frame blessing are gone.
+
+## Edge silence, measured (2026-09-05) — why the voice feels approximate at the start and end of a line
+
+Raw `POST /tts` on `pocket-tts-fr`, `french_24l --quantize`, warm. Silence = 20 ms windows with RMS
+< 0.005 full scale.
+
+| line | audio | gen | leading silence | trailing silence | RMS of first 20 ms |
+| --- | --- | --- | --- | --- | --- |
+| « Oui. » (4 ch) | 0.92 s | 0.53 s | 920 ms | 920 ms | 0.001 |
+| « Je planifie l'intervention… » (27 ch) | 1.56 s | 0.90 s | **0 ms** | 340 ms | **0.106** |
+| « Dernière vidange : 6 juillet 2026. » (34 ch) | 2.60 s | 1.48 s | **0 ms** | 640 ms | **0.100** |
+| « Le filtre à huile HERTH+BUSS J1313021 est la référence retenue pour ce moteur. » (78 ch) | 7.72 s | 4.60 s | 520 ms | 760 ms | 0.001 |
+| 183-char three-clause line | 10.84 s | 7.02 s | **0 ms** | 780 ms | **0.108** |
+| « Je recherche les causes de surchauffe et les vérifications à effectuer sur la Mazda6. » (85 ch) | 4.36 s | 2.68 s | **0 ms** | 760 ms | **0.131** |
+
+These artefacts are in the model's own output, not in `/tts` or the browser path. The onset is
+erratic — either 0.5–0.9 s of dead air, or speech already at full amplitude in the very first 20 ms
+(an onset clipped mid-phoneme, missing audio that no post-processing can restore). Every line then
+carries 340–1080 ms of trailing silence, which the queue plays before the next line can start. The
+model is Kyutai's undistilled `french_24l` preview.
+
+Decision 2026-09-05: try ElevenLabs Flash v2.5 (streamed PCM) for voice quality; pocket-tts remains
+the offline fallback. Follow-ups listed in `FUTURE.md`.
 
 ## The three routes
 

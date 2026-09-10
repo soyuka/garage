@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Speech\Wav;
 use App\Tests\Mock\RecordingSpeechHttpClient;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -27,6 +28,13 @@ final class SpeechTest extends AppTestCase
         $this->assertSame([], $this->transport()->requests, 'An unauthenticated caller must not reach the vendor.');
     }
 
+    /**
+     * ElevenLabs now streams `pcm_24000` wrapped in a placeholder WAV header (2026-09-05), the same
+     * shape `pocket-tts` wires, so `/tts` answers `audio/wav` regardless of the selected backend. The
+     * wire itself carries the PLACEHOLDER sizes — only the completed body the cache stores gets the
+     * real ones stamped in ({@see Wav::withRealLengths}) — so what the client receives here is the
+     * header verbatim followed by the vendor's fake mp3 stand-in bytes, concatenated.
+     */
     public function testAuthedRequestReturnsTheSynthesizedAudio(): void
     {
         $client = static::createClient();
@@ -36,8 +44,8 @@ final class SpeechTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(200);
-        $this->assertResponseHeaderSame('content-type', 'audio/mpeg');
-        $this->assertSame(RecordingSpeechHttpClient::AUDIO, $client->getResponse()->getContent());
+        $this->assertResponseHeaderSame('content-type', 'audio/wav');
+        $this->assertSame(Wav::header(24000).RecordingSpeechHttpClient::AUDIO, $client->getResponse()->getContent());
     }
 
     public function testOutgoingRequestCarriesTheKeyVoiceAndModel(): void

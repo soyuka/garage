@@ -8,7 +8,7 @@ ElevenLabs now, a paid plan later for the French voice.
 
 | | |
 |---|---|
-| Provider now | **ElevenLabs**, `eleven_flash_v2_5` (~75 ms, 0.5 credit/char) |
+| Provider now | **ElevenLabs**, `eleven_flash_v2_5` (~75 ms, 0.5 credit/char). Streams `pcm_24000` wrapped as WAV since 2026-09-05, so it rides the same chunked path as pocket-tts (`api/src/Speech/ElevenLabsSpeechClient.php`, `api/src/Speech/Wav.php`) — first sound after headers, not after the whole body |
 | Second backend | **pocket-tts**, local, shipped 2026-09-04 (`TTS_BACKEND=pockettts`) — it, not Google, is what proved the seam. Google Chirp 3 HD remains unimplemented |
 | What is spoken | the existing **`toast {tone, message}`** frame. **No new wire verb** |
 | Default state | **muted**, one persisted toggle |
