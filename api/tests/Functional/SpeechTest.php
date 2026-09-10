@@ -48,6 +48,26 @@ final class SpeechTest extends AppTestCase
         $this->assertSame(Wav::header(24000).RecordingSpeechHttpClient::AUDIO, $client->getResponse()->getContent());
     }
 
+    /**
+     * The card on screen keeps the agent's exact string; only what reaches the vendor is rewritten
+     * (docs/voice.md § Pronunciation layer, 2026-09-05) — otherwise the voice reads « 250 347 » as
+     * two numbers and « € » as a symbol nobody pronounces.
+     */
+    public function testTheOutgoingTextIsVerbalisedForTheVoice(): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/tts', [
+            'json' => ['text' => '250 347 km · 53,20 €'],
+            'headers' => static::authHeaders() + ['Accept-Language' => 'fr-FR,fr;q=0.9'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertSame(
+            'deux cent cinquante mille trois cent quarante-sept kilomètres. cinquante-trois euros vingt',
+            $this->transport()->lastBody()['text'],
+        );
+    }
+
     public function testOutgoingRequestCarriesTheKeyVoiceAndModel(): void
     {
         $client = static::createClient();

@@ -9,6 +9,7 @@ use App\I18n\Locale;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
+use App\Speech\Verbalizer;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -64,7 +65,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        $response = (new SpeechController($speech))(self::request());
+        $response = (new SpeechController($speech, new Verbalizer()))(self::request());
 
         $this->assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $response->getStatusCode());
     }
@@ -98,7 +99,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        return (new SpeechController($speech))(self::request());
+        return (new SpeechController($speech, new Verbalizer()))(self::request());
     }
 
     private static function request(): Request

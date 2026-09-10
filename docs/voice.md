@@ -184,6 +184,57 @@ model is Kyutai's undistilled `french_24l` preview.
 Decision 2026-09-05: try ElevenLabs Flash v2.5 (streamed PCM) for voice quality; pocket-tts remains
 the offline fallback. Follow-ups listed in `FUTURE.md`.
 
+### Pronunciation layer (2026-09-05)
+
+The vendor reads the printed string exactly, symbols included, and real cards read badly aloud: a
+spending summary chains « · » into one breathless run-on and reads « 250 347 km » as two numbers
+rather than one. `SpeechController::__invoke()` now runs the outgoing text through
+`App\Speech\Verbalizer` right before handing it to the backend — a deterministic pronunciation
+dictionary, not a rephraser: it rewrites symbols, units, digit grouping and separators for the ear
+and adds no content. The card on screen is untouched; only what reaches the vendor changes
+(`dashboard/CHOREOGRAPHY.md` § "Audition — speech, for ANSWERS", corrected the same day: "the same
+string" → "the same WORDS, pronounced").
+
+Before/after, first golden (`tests/Unit/Speech/VerbalizerTest.php`):
+
+```
+Dernière vidange : 6 juillet 2026 à 250 347 km (MANNOL Energy 5W-30 + filtres, 53,20 €). Dépenses
+2026 enregistrées : 53,20 € — les autres visites n'ont pas de montant saisi.
+```
+
+becomes
+
+```
+Dernière vidange : 6 juillet 2026 à 250347 kilomètres, MANNOL Energy 5W-30 plus filtres, 53,20
+euros. Dépenses 2026 enregistrées : 53,20 euros, les autres visites n'ont pas de montant saisi.
+```
+
+**Rule 7 — numbers spelled out (2026-09-06).** Reading digits as digits is itself a pronunciation
+bug: « 250347 kilomètres » still reads as a run of numerals, and « 53,20 euros » reads the currency
+as a bare figure followed by a unit word. A final rule, applied LAST, spells out every standalone
+number with `NumberFormatter::SPELLOUT` (`fr`/`en`) — a digit run is "standalone" when neither side
+touches a letter, another digit, a hyphen, an apostrophe or a slash, which is exactly what leaves an
+identifier such as `5W-30`, `246-H`, `J1313021`, `XB-301-ZB`, `16x650-8`, `A3/B3` untouched (the voice
+spells those letter by letter, which is the right read for a reference). Currency is spelled inside
+rule 2 itself — whole and cents spelled separately (« 53,20 € » → « cinquante-trois euros vingt »,
+never « … virgule … »), with French agreement singular for both 0 and 1 (« zéro euro », « un euro »)
+and English only for 1 (« zero euros », « one euro ») — so rule 7 never sees a currency digit at all.
+Feminine fr units (`heure`, `minute`) get « une » directly in the units rule rather than letting rule
+7 spell a gender-blind « un ». **Fixed 2026-09-06:** a bare integer 1 next to any other noun is left
+as the digit rather than spelled — only the numeral one is gendered in French, so a generic « un »
+was as likely to be wrong (« 1 visite » → « un visite », not the feminine « une visite ») as right; a
+unit already handled by rule 3 (« 1 h » → « une heure ») never reaches this exception, and a decimal
+(« 1,5 » → « un virgule cinq ») is unaffected since the gender question never arises before « virgule ».
+
+The same golden above now reads:
+
+```
+Dernière vidange : six juillet deux mille vingt-six à deux cent cinquante mille trois cent
+quarante-sept kilomètres, MANNOL Energy 5W-30 plus filtres, cinquante-trois euros vingt. Dépenses
+deux mille vingt-six enregistrées : cinquante-trois euros vingt, les autres visites n'ont pas de
+montant saisi.
+```
+
 ## The three routes
 
 | | How | First-load cost | Latency | Verdict |

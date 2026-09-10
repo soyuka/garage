@@ -9,6 +9,7 @@ use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
 use App\Speech\SpeechVoice;
+use App\Speech\Verbalizer;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -39,8 +40,10 @@ final class SpeechController
      */
     private const int MAX_CHARS = 400;
 
-    public function __construct(private readonly SpeechClient $speech)
-    {
+    public function __construct(
+        private readonly SpeechClient $speech,
+        private readonly Verbalizer $verbalizer,
+    ) {
     }
 
     #[Route('/tts', name: 'speech_synthesize', methods: ['POST'])]
@@ -64,7 +67,10 @@ final class SpeechController
             // the dashboard sending a field — the audition adds nothing to the wire (CONTRACT.md).
             $locale = Locale::resolve($request->getLocale());
             $voice = $this->resolveVoice($requestedVoice, $locale);
-            $stream = $this->speech->stream($text, $locale, $voice);
+            // The card on screen keeps $text verbatim; only the voice gets the pronunciation pass
+            // (docs/voice.md § Pronunciation layer) — « 250 347 km » read as one figure, not two.
+            $spoken = $this->verbalizer->verbalize($text, $locale);
+            $stream = $this->speech->stream($spoken, $locale, $voice);
         } catch (SpeechUnavailable) {
             // Silence is a degraded mode, never a broken one: the notice card is already on screen.
             return new Response(status: Response::HTTP_SERVICE_UNAVAILABLE);

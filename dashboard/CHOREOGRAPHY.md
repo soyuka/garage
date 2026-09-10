@@ -704,7 +704,7 @@ disagreeing about what was said. One frame, two modalities, no third source of t
 
 | Real frame / condition | The signal | Owner layer |
 |---|---|---|
-| any `toast {tone, message}`, **audition on** | the card's own sentence is **spoken once**, in the interface language, while its card is on screen. Never a summary, never a rephrase, and never a TRANSLATION — the spoken text and the printed text are the same string | `voice.ts` + `useVoice.ts` |
+| any `toast {tone, message}`, **audition on** | the card's own sentence is **spoken once**, in the interface language, while its card is on screen. Never a summary, never a rephrase, and never a TRANSLATION — the spoken text and the printed text are the same string. **Corrected 2026-09-05:** it said "the same string"; it now means the same WORDS, pronounced. The spending summary read « · » chains as one run-on and « 250 347 » as two numbers, so `POST /tts` now runs the outgoing text through a pronunciation layer (`api/src/Speech/Verbalizer.php`) that rewrites symbols, units, digit grouping and separators for the voice and adds no content — like a screen reader's pronunciation dictionary. The card on screen is untouched; since the same day, standalone numbers are read as words (« deux cent quatre-vingts euros quarante-neuf »), identifiers such as « 5W-30 » or a plate are left as written | `voice.ts` + `useVoice.ts` |
 | a second line arriving mid-utterance | it **waits**; one voice at a time, never a mix. Queue capped at **2** | `voice.ts` |
 | a third line arriving while two wait | the **oldest pending** is dropped unspoken. Overrun keeps the newest: never hearing the latest answer is the worse failure, and the dropped line is still on screen at full precision | `voice.ts` |
 | a line that waited longer than **10 s** | dropped **unread**. By the time it would be spoken it is no longer news, and a burst narrated a minute late is the alarm-flood failure with a delay bolted on | `voice.ts` |
@@ -814,6 +814,14 @@ exception it required, both collapse — there is nothing left for the ticker ru
   therefore spoken in French even while the chrome is English — correct, and the honest consequence
   of the same-string rule. Nothing about the queue, the cap, the staleness or the dedup key moves.
 - **Room-proof, not desk-proof.** 660/1980 Hz sits inside the 500–3000 Hz band the guidance prefers
+  **Corrected 2026-09-05.** It said: the spoken string is the printed string, byte for byte. It now
+  says: the spoken string is the printed string's WORDS, pronounced — `POST /tts` runs the text
+  through `api/src/Speech/Verbalizer.php`, a pronunciation layer that rewrites symbols, units, digit
+  grouping and separators for the ear (like a screen reader's pronunciation dictionary) and adds no
+  content, never rephrases. Why: real cards read badly aloud — « 250 347 km » as two numbers, a
+  « · »-separated spending summary as one breathless run-on. This is not a translation layer (still
+  no rephrasing, no summarising, no new content) and the card on screen stays byte-identical; only
+  what reaches the vendor changes.
   (HFDS §7.2.7.2, range 200–5000) and must clear a bay with a compressor in it — two pulses rather than
   one beep, because a single short beep in a garage is lost. It must **not** resemble a sound the room
   already makes (HFDS §7.2.3.4): no click, no impact, no phone-notification shape.
