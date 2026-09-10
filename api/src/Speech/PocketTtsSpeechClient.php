@@ -37,17 +37,22 @@ final readonly class PocketTtsSpeechClient implements SpeechClient
     private const string CONTENT_TYPE = 'audio/wav';
 
     /**
-     * @param array<string, string> $endpoints locale value => base URL of the server speaking it;
-     *                                         an empty or missing entry means that language is mute
+     * @param array<string, string> $endpoints  locale value => base URL of the server speaking it;
+     *                                           an empty or missing entry means that language is mute
+     * @param string                $voiceLabel the label {@see voices()} answers — one Kyutai model
+     *                                           per process, so this is the whole voice identity
      */
     public function __construct(
         private HttpClientInterface $http,
         private array $endpoints,
+        private string $voiceLabel,
     ) {
     }
 
-    public function stream(string $text, Locale $locale): SpeechStream
+    public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
     {
+        // $voice is ignored on purpose: `serve` binds ONE model per process, so there is nothing to
+        // select per request — the locale→endpoint map IS the voice choice, made at deploy time.
         $base = trim($this->endpoints[$locale->value] ?? '');
 
         if ('' === $base) {
@@ -74,6 +79,16 @@ final readonly class PocketTtsSpeechClient implements SpeechClient
         }
 
         return new SpeechStream(self::CONTENT_TYPE, $this->chunks($response));
+    }
+
+    /** One voice, the single model bound to this locale's server — id `'default'`, nothing to pick. */
+    public function voices(Locale $locale): array
+    {
+        if ('' === trim($this->endpoints[$locale->value] ?? '')) {
+            return [];
+        }
+
+        return [new SpeechVoice('default', $this->voiceLabel)];
     }
 
     /** @return \Generator<int, string, mixed, string> */

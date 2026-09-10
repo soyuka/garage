@@ -24,6 +24,16 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
     /** Stand-in for the mp3 body. Not valid audio — nothing in the stack decodes it. */
     public const string AUDIO = "ID3\x04\x00fake-mp3-bytes";
 
+    /**
+     * `GET /v1/voices` answer for the voice-selection tests. `test-voice-id` is the account's
+     * configured default (`ELEVENLABS_VOICE_ID` in `.env.test`), and sorts first for that reason —
+     * {@see \App\Speech\SpeechTest} relies on both facts.
+     */
+    public const array VOICES = [
+        ['voice_id' => 'test-voice-id', 'name' => 'Claire - Conversationnel', 'labels' => ['language' => 'fr']],
+        ['voice_id' => 'other-voice-id', 'name' => 'Louis', 'labels' => ['language' => 'fr']],
+    ];
+
     /** @var list<array{method: string, url: string, options: array<string, mixed>}> */
     public array $requests = [];
 
@@ -36,6 +46,13 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
     {
         $this->mock = new MockHttpClient(function (string $method, string $url, array $options): MockResponse {
             $this->requests[] = ['method' => $method, 'url' => $url, 'options' => $options];
+
+            if ('GET' === $method && str_contains($url, '/v1/voices')) {
+                return new MockResponse((string) json_encode(['voices' => self::VOICES]), [
+                    'http_code' => $this->status,
+                    'response_headers' => ['content-type' => 'application/json'],
+                ]);
+            }
 
             return new MockResponse(self::AUDIO, [
                 'http_code' => $this->status,

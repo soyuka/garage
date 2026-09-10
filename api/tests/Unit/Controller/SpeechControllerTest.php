@@ -53,9 +53,14 @@ final class SpeechControllerTest extends TestCase
     public function testABackendThatCannotStartIsA503(): void
     {
         $speech = new class implements SpeechClient {
-            public function stream(string $text, Locale $locale): SpeechStream
+            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
             {
                 throw new SpeechUnavailable('pocket-tts could not be reached.');
+            }
+
+            public function voices(Locale $locale): array
+            {
+                return [];
             }
         };
 
@@ -74,7 +79,7 @@ final class SpeechControllerTest extends TestCase
             {
             }
 
-            public function stream(string $text, Locale $locale): SpeechStream
+            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
             {
                 return new SpeechStream($this->contentType, (function (): \Generator {
                     yield from $this->chunks;
@@ -85,6 +90,11 @@ final class SpeechControllerTest extends TestCase
 
                     return implode('', $this->chunks);
                 })());
+            }
+
+            public function voices(Locale $locale): array
+            {
+                return [];
             }
         };
 

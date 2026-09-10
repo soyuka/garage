@@ -38,6 +38,8 @@ use Psr\Log\LoggerInterface;
  */
 final readonly class CachingSpeechClient implements SpeechClient
 {
+    private const int VOICES_TTL_SECONDS = 3600;
+
     public function __construct(
         private SpeechClient $inner,
         private string $backend,
@@ -48,9 +50,13 @@ final readonly class CachingSpeechClient implements SpeechClient
     ) {
     }
 
-    public function stream(string $text, Locale $locale): SpeechStream
+    public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
     {
-        $key = hash('sha256', implode('|', [$this->backend, $this->model, $this->voice, $locale->value, $text]));
+        // The REQUESTED voice, not just the configured default: a line spoken with voice A and the
+        // same line with voice B must be two different cache entries, or picking a voice on the
+        // dashboard would keep hearing whichever voice happened to be cached first.
+        $resolvedVoice = $voice ?? $this->voice;
+        $key = hash('sha256', implode('|', [$this->backend, $this->model, $resolvedVoice, $locale->value, $text]));
         $bytesPath = $this->path($key, 'bin');
         $typePath = $this->path($key, 'type');
 
@@ -59,9 +65,31 @@ final readonly class CachingSpeechClient implements SpeechClient
             return SpeechStream::whole($cached);
         }
 
-        $live = $this->inner->stream($text, $locale);
+        $live = $this->inner->stream($text, $locale, $voice);
 
         return new SpeechStream($live->contentType, $this->tee($live, $bytesPath, $typePath));
+    }
+
+    /**
+     * Cached for an hour, same disk directory, `.voices.<sha256(backend|model|voice|locale)>.json` —
+     * a vendor voice list changes rarely and is not worth a call on every picker render. Backend is in
+     * the key, not just locale: switching `TTS_BACKEND` must never serve the other backend's list off
+     * the same cache directory. Best-effort like the rest of this class: a cache miss on write just
+     * means the next call pays for a fresh vendor round trip.
+     */
+    public function voices(Locale $locale): array
+    {
+        $path = $this->voicesPath($locale);
+
+        $cached = $this->readVoices($path);
+        if (null !== $cached) {
+            return $cached;
+        }
+
+        $voices = $this->inner->voices($locale);
+        $this->writeVoices($path, $voices);
+
+        return $voices;
     }
 
     /** @return \Generator<int, string, mixed, string> */
@@ -105,5 +133,64 @@ final readonly class CachingSpeechClient implements SpeechClient
     private function path(string $key, string $extension): string
     {
         return rtrim($this->cacheDir, '/').'/'.$key.'.'.$extension;
+    }
+
+    /**
+     * Keyed on backend|model|voice|locale, same shape as {@see stream()}'s audio key: locale alone
+     * is not enough, or switching `TTS_BACKEND` would keep serving the previously configured
+     * backend's voice list under the same cache directory.
+     */
+    private function voicesPath(Locale $locale): string
+    {
+        $key = hash('sha256', implode('|', [$this->backend, $this->model, $this->voice, $locale->value]));
+
+        return rtrim($this->cacheDir, '/').'/.voices.'.$key.'.json';
+    }
+
+    /** @return ?list<SpeechVoice> null on a miss, an expired entry, or anything that fails to parse */
+    private function readVoices(string $path): ?array
+    {
+        if (!is_file($path)) {
+            return null;
+        }
+
+        $raw = file_get_contents($path);
+        $decoded = false !== $raw ? json_decode($raw, true) : null;
+        if (!\is_array($decoded) || !\is_int($decoded['at'] ?? null) || !\is_array($decoded['voices'] ?? null)) {
+            return null;
+        }
+
+        if (time() - $decoded['at'] > self::VOICES_TTL_SECONDS) {
+            return null;
+        }
+
+        $voices = [];
+        foreach ($decoded['voices'] as $entry) {
+            if (!\is_array($entry) || !\is_string($entry['id'] ?? null) || !\is_string($entry['label'] ?? null)) {
+                return null;
+            }
+            $voices[] = new SpeechVoice($entry['id'], $entry['label']);
+        }
+
+        return $voices;
+    }
+
+    /** @param list<SpeechVoice> $voices */
+    private function writeVoices(string $path, array $voices): void
+    {
+        if (!is_dir($this->cacheDir) && !@mkdir($this->cacheDir, 0775, true) && !is_dir($this->cacheDir)) {
+            $this->logger->warning('TTS cache directory {dir} could not be created; voices will not be cached.', ['dir' => $this->cacheDir]);
+
+            return;
+        }
+
+        $payload = json_encode([
+            'at' => time(),
+            'voices' => array_map(static fn (SpeechVoice $v): array => ['id' => $v->id, 'label' => $v->label], $voices),
+        ]);
+
+        if (false === $payload || false === @file_put_contents($path, $payload)) {
+            $this->logger->warning('TTS voices cache write failed for {path}; this list will not be cached.', ['path' => $path]);
+        }
     }
 }

@@ -445,6 +445,12 @@ export const fr = {
 
   credits: {
     title: 'Crédits des modèles 3D',
+  /** The voice-select control beside the audition toggle (Preferences.tsx `VoiceSelect`). */
+  pref: {
+    voice: 'Voix',
+    voiceDefault: 'voix par défaut',
+  },
+
     short: 'crédits',
     heading: 'Modèles 3D',
     close: 'Fermer les crédits',

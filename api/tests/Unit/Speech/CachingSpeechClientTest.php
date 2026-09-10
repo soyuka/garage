@@ -9,6 +9,7 @@ use App\Speech\CachingSpeechClient;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
+use App\Speech\SpeechVoice;
 use App\Speech\SpokenAudio;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -135,6 +136,98 @@ final class CachingSpeechClientTest extends TestCase
         $this->assertSame(2, $inner->calls, 'The truncated line must not have been cached.');
     }
 
+    /**
+     * The REQUESTED voice, not just the configured default, must be in the key — a `voice` picked
+     * on the dashboard must not be served the default voice's cached audio for the same line.
+     */
+    public function testARequestedVoiceIsADifferentCacheEntryFromTheConfiguredDefault(): void
+    {
+        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $cache = $this->client($inner); // configured default voice is 'test-voice-id'
+
+        self::body($cache->stream('Vidange enregistrée.', Locale::Fr));
+        self::body($cache->stream('Vidange enregistrée.', Locale::Fr, 'other-voice-id'));
+
+        $this->assertSame(2, $inner->calls, 'A requested voice must not share the default voice\'s cache entry.');
+    }
+
+    public function testTheSameRequestedVoiceIsACacheHit(): void
+    {
+        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $cache = $this->client($inner);
+
+        self::body($cache->stream('Vidange enregistrée.', Locale::Fr, 'other-voice-id'));
+        self::body($cache->stream('Vidange enregistrée.', Locale::Fr, 'other-voice-id'));
+
+        $this->assertSame(1, $inner->calls, 'The second identical request for the same voice must not reach the backend.');
+    }
+
+    public function testVoicesDelegatesToTheInnerClientAndCachesTheResult(): void
+    {
+        $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
+        $cache = $this->client($inner);
+
+        $first = $cache->voices(Locale::Fr);
+        $second = $cache->voices(Locale::Fr);
+
+        $this->assertEquals([new SpeechVoice('v1', 'Claire')], $first);
+        $this->assertEquals($first, $second);
+        $this->assertSame(1, $inner->voicesCalls, 'The second call must be served from the cache, not the backend.');
+    }
+
+    public function testVoicesAreCachedPerLocale(): void
+    {
+        $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
+        $cache = $this->client($inner);
+
+        $cache->voices(Locale::Fr);
+        $cache->voices(Locale::En);
+
+        $this->assertSame(2, $inner->voicesCalls, 'A different locale must not be served from the other locale\'s cached file.');
+    }
+
+    /**
+     * The bug this guards against: `TTS_BACKEND=pockettts` must never serve the voice list cached by
+     * `TTS_BACKEND=elevenlabs` merely because both share the same on-disk cache directory. Switching
+     * backends must be a cache miss, the same way switching locale already is.
+     */
+    public function testVoicesAreCachedPerBackend(): void
+    {
+        $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
+        $elevenlabs = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'test-voice-id', $this->cacheDir, new NullLogger());
+        $pockettts = new CachingSpeechClient($inner, 'pockettts', 'kyutai-pocket-tts', '', $this->cacheDir, new NullLogger());
+
+        $elevenlabs->voices(Locale::Fr);
+        $pockettts->voices(Locale::Fr);
+
+        $this->assertSame(2, $inner->voicesCalls, 'Switching TTS_BACKEND must not serve the other backend\'s cached voice list.');
+    }
+
+    /** @return SpeechClient&object{voicesCalls: int} */
+    private function voicesCountingClient(array $voices): SpeechClient
+    {
+        return new class($voices) implements SpeechClient {
+            public int $voicesCalls = 0;
+
+            /** @param list<SpeechVoice> $voices */
+            public function __construct(private readonly array $voices)
+            {
+            }
+
+            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
+            {
+                throw new \LogicException('Not exercised by the voices() tests.');
+            }
+
+            public function voices(Locale $locale): array
+            {
+                ++$this->voicesCalls;
+
+                return $this->voices;
+            }
+        };
+    }
+
     private function client(SpeechClient $inner): CachingSpeechClient
     {
         return new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'test-voice-id', $this->cacheDir, new NullLogger());
@@ -155,11 +248,16 @@ final class CachingSpeechClientTest extends TestCase
             {
             }
 
-            public function stream(string $text, Locale $locale): SpeechStream
+            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
             {
                 ++$this->calls;
 
                 return SpeechStream::whole($this->audio);
+            }
+
+            public function voices(Locale $locale): array
+            {
+                return [];
             }
         };
     }
@@ -180,7 +278,7 @@ final class CachingSpeechClientTest extends TestCase
             {
             }
 
-            public function stream(string $text, Locale $locale): SpeechStream
+            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
             {
                 $call = ++$this->calls;
 
@@ -193,6 +291,11 @@ final class CachingSpeechClientTest extends TestCase
 
                     return $this->completed;
                 })());
+            }
+
+            public function voices(Locale $locale): array
+            {
+                return [];
             }
         };
     }

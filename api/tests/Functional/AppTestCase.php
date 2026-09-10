@@ -52,10 +52,29 @@ abstract class AppTestCase extends ApiTestCase
         // assertion on the outgoing vendor request (e.g. SpeechTest expects a vendor call on a text
         // another test already caused to be cached). Computed without booting the kernel, same
         // reason as the Mongo client above.
-        $ttsCache = \dirname(__DIR__, 2).'/var/tts';
-        if (is_dir($ttsCache)) {
-            foreach (glob($ttsCache.'/*') ?: [] as $file) {
-                unlink($file);
+        //
+        // The cache dir is namespaced per environment (`var/tts/%kernel.environment%`, fixed
+        // 2026-09-06 — a shared path let this suite's fake voice list leak into the live cache), so
+        // the actual test cache lives under `var/tts/test`. `var/tts` itself is only wiped of stray
+        // FILES (never the `dev`/`prod`/`test` directories) in case something legacy still lands
+        // there; it must never recurse into another environment's live cache.
+        $ttsRoot = \dirname(__DIR__, 2).'/var/tts';
+        foreach ([$ttsRoot, $ttsRoot.'/test'] as $ttsCache) {
+            if (!is_dir($ttsCache)) {
+                continue;
+            }
+            // scandir, not glob('*') — the voices sidecar is `.voices.<hash>.json`, a dotfile, and
+            // shell-style glob('*') never matches those. That silently no-opped this whole sweep for
+            // every voices cache entry since it was introduced; audio `.bin`/`.type` files (no leading
+            // dot) were the only ones ever actually cleared.
+            foreach (scandir($ttsCache) ?: [] as $entry) {
+                if ('.' === $entry || '..' === $entry) {
+                    continue;
+                }
+                $file = $ttsCache.'/'.$entry;
+                if (is_file($file)) {
+                    unlink($file);
+                }
             }
         }
     }

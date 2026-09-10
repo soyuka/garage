@@ -8,6 +8,8 @@ use App\I18n\Locale;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
+use App\Speech\SpeechVoice;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -46,6 +48,7 @@ final class SpeechController
     {
         $payload = json_decode($request->getContent(), true);
         $text = trim(\is_array($payload) && \is_string($payload['text'] ?? null) ? $payload['text'] : '');
+        $requestedVoice = \is_array($payload) && \is_string($payload['voice'] ?? null) ? $payload['voice'] : null;
 
         if ('' === $text) {
             throw new BadRequestHttpException('Nothing to speak.');
@@ -59,7 +62,9 @@ final class SpeechController
             // The browser announces its language on every request (framework.yaml
             // `set_locale_from_accept_language`), so the spoken line follows the interface without
             // the dashboard sending a field — the audition adds nothing to the wire (CONTRACT.md).
-            $stream = $this->speech->stream($text, Locale::resolve($request->getLocale()));
+            $locale = Locale::resolve($request->getLocale());
+            $voice = $this->resolveVoice($requestedVoice, $locale);
+            $stream = $this->speech->stream($text, $locale, $voice);
         } catch (SpeechUnavailable) {
             // Silence is a degraded mode, never a broken one: the notice card is already on screen.
             return new Response(status: Response::HTTP_SERVICE_UNAVAILABLE);
@@ -74,6 +79,50 @@ final class SpeechController
             // on one URL, so the language has to be part of what a cache keys on.
             'Vary' => 'Accept-Language',
         ]);
+    }
+
+    /**
+     * GET /tts/voices — the dashboard's picker source. Never gated by ownership like the bill
+     * download (nothing stored is read), just by authentication, same as `/tts` itself.
+     */
+    #[Route('/tts/voices', name: 'speech_voices', methods: ['GET'])]
+    public function voices(Request $request): Response
+    {
+        $locale = Locale::resolve($request->getLocale());
+
+        $voices = array_map(
+            static fn (SpeechVoice $voice): array => ['id' => $voice->id, 'label' => $voice->label],
+            $this->speech->voices($locale),
+        );
+
+        return new JsonResponse($voices, headers: [
+            // The list rarely changes and is per-locale, same posture as CachingSpeechClient's own
+            // 1h voices cache — no reason for the browser to re-fetch it on every render.
+            // No manual `Vary: Accept-Language` here: `set_locale_from_accept_language` (framework.yaml)
+            // already makes Symfony's ResponseListener append it to every response whose locale came
+            // from the header (`_vary_by_language`) — setting it again here would only duplicate it.
+            'Cache-Control' => 'private, max-age=3600',
+        ]);
+    }
+
+    /**
+     * A stale or foreign voice id (a picker rendered before a vendor voice was retired, or one
+     * pasted by hand) must never 400 the endpoint — it just falls back to the backend default,
+     * exactly like requesting no voice at all.
+     */
+    private function resolveVoice(?string $requested, Locale $locale): ?string
+    {
+        if (null === $requested || '' === $requested) {
+            return null;
+        }
+
+        foreach ($this->speech->voices($locale) as $voice) {
+            if ($voice->id === $requested) {
+                return $requested;
+            }
+        }
+
+        return null;
     }
 
     private static function send(SpeechStream $stream): void

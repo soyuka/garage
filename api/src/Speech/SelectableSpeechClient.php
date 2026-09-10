@@ -24,9 +24,14 @@ final readonly class SelectableSpeechClient implements SpeechClient
     ) {
     }
 
-    public function stream(string $text, Locale $locale): SpeechStream
+    public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
     {
-        return $this->client()->stream($text, $locale);
+        return $this->client()->stream($text, $locale, $voice);
+    }
+
+    public function voices(Locale $locale): array
+    {
+        return $this->client()->voices($locale);
     }
 
     private function client(): SpeechClient

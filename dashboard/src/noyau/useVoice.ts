@@ -2,7 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { API, getToken } from '../auth';
 import { currentLocale } from '../i18n/locale';
 import { speak, type Speaking } from './speaker';
-import { cardLine, emptyVoice, finish, follow, narrate, next, rearm, refused, waiting, type VoiceState } from './voice';
+import { readVoicePreference, writeVoicePreference } from './voicePreference';
+import {
+  cardLine,
+  emptyVoice,
+  finish,
+  follow,
+  narrate,
+  next,
+  rearm,
+  refused,
+  waiting,
+  type VoiceState,
+} from './voice';
 import type { Notice } from './state';
 
 // The impure edge of the audition. Every RULE lives in voice.ts; what is left here is fetch and an
@@ -41,6 +53,23 @@ export function useAudition(): [boolean, () => void] {
 }
 
 /**
+ * The second persisted preference, same shape as `useAudition` (own storage key, `voicePreference.ts`
+ * — shared with `Preferences.tsx`'s picker and the fetch bodies below). `null` is the server default,
+ * not "unset": there is nothing to validate against a stale list here (`applyVoice`, `speechVoices.ts`
+ * — the picker's job), this hook only remembers what the operator last chose.
+ */
+export function useVoicePreference(): [string | null, (id: string | null) => void] {
+  const [voice, setVoiceState] = useState<string | null>(() => readVoicePreference(localStorage));
+
+  const setVoice = useCallback((id: string | null) => {
+    writeVoicePreference(localStorage, id);
+    setVoiceState(id);
+  }, []);
+
+  return [voice, setVoice];
+}
+
+/**
  * The answer card, as the audition sees it: a `proposeActions` proposal reduced to the two printed
  * strings it speaks. Structural only — `Cta` itself carries actions the ear has no use for.
  */
@@ -59,8 +88,11 @@ interface Prefetched {
  * Ask for one line. Resolves as soon as the headers are in — the body is a stream the speaker reads
  * while it is still being synthesized (`/tts` relays pocket-tts chunk for chunk). Null means "no
  * audio" (204 over budget, 503 vendor down, 401…) — always silent.
+ *
+ * `voice` is omitted from the body entirely when null — the server default, and the wire must not
+ * carry a literal `voice: null` for it (CONTRACT.md).
  */
-async function fetchTts(text: string): Promise<Response | null> {
+async function fetchTts(text: string, voice: string | null): Promise<Response | null> {
   const token = getToken();
   // Deliberately NOT authFetch: that bounces to the login flow on 401, and a garnish feature must
   // never seize the session. A voice that cannot authenticate is a voice that stays quiet.
@@ -73,7 +105,7 @@ async function fetchTts(text: string): Promise<Response | null> {
       // how to pronounce it, and a multilingual voice needs telling (api SpeechController).
       'Accept-Language': currentLocale(),
     },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text, ...(voice ? { voice } : {}) }),
   });
   return res.status === 200 && res.body ? res : null;
 }
@@ -95,8 +127,20 @@ function discard(response: Promise<Response | null>): void {
  * Reads `speaking`'s id back out, so `useNoticeAutoClose` (state.ts) knows whether a card's own line is
  * still on the lips — its dwell must not start until it isn't (CHOREOGRAPHY § "an answer that lands,
  * then clears"). Everything else about the audition stays this hook's own business.
+ *
+ * `voice` is read, never reacted to: it is deliberately absent from every effect's dependency array
+ * below, so a change lands only in the closure a later render captures — the next `fetchTts` call, for
+ * a line QUEUED or PROMOTED after the change. It is never a reason on its own to re-run an effect,
+ * which is what keeps it from cutting the utterance currently on the lips (CHOREOGRAPHY § "the
+ * voice-select control", 2026-09-06).
  */
-export function useVoice(notices: Notice[], narration: string | null, cta: SpokenCard | null, enabled: boolean): string | null {
+export function useVoice(
+  notices: Notice[],
+  narration: string | null,
+  cta: SpokenCard | null,
+  enabled: boolean,
+  voice: string | null,
+): string | null {
   const [state, setState] = useState<VoiceState>(emptyVoice);
   // ONE context for the tab's life. It is created — and resumed — inside the first real gesture, which
   // is the only place a browser lets it start (CHOREOGRAPHY § "The AudioContext trap"); a piloted
@@ -217,7 +261,7 @@ export function useVoice(notices: Notice[], narration: string | null, cta: Spoke
       if (have && have.text === target.text) continue; // already asked for this exact line
 
       // A dead network here just means no prefetch — the handover asks again itself.
-      prefetched.current.set(target.id, { text: target.text, response: fetchTts(target.text).catch(() => null) });
+      prefetched.current.set(target.id, { text: target.text, response: fetchTts(target.text, voice).catch(() => null) });
     }
   }, [enabled, state.speaking, state.queue, state.narration]);
 
@@ -239,7 +283,7 @@ export function useVoice(notices: Notice[], narration: string | null, cta: Spoke
 
     void (async () => {
       try {
-        const res = await (response ?? fetchTts(utterance.text));
+        const res = await (response ?? fetchTts(utterance.text, voice));
         if (stopped) {
           if (res) discard(Promise.resolve(res));
           return;

@@ -416,6 +416,11 @@ export const en: Messages = {
 
   credits: {
     title: '3D model credits',
+  pref: {
+    voice: 'Voice',
+    voiceDefault: 'default voice',
+  },
+
     short: 'credits',
     heading: '3D models',
     close: 'Close the credits',

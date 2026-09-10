@@ -2,6 +2,9 @@
 
 parameters:
     env(PARTSAPI_CALL_LIMIT): '50'
+    # PocketTtsSpeechClient::voices() label, when nothing sets the env var at all (never true once
+    # api/.env loads, which always sets it — this is the fallback for a stripped-down environment).
+    env(POCKET_TTS_VOICE_LABEL): 'Kyutai'
 
 services:
     # default configuration for services in *this* file
@@ -128,6 +131,7 @@ services:
             $endpoints:
                 fr: '%env(POCKET_TTS_FR_URL)%'
                 en: '%env(POCKET_TTS_EN_URL)%'
+            $voiceLabel: '%env(POCKET_TTS_VOICE_LABEL)%'
 
     # The disk cache (docs/voice-plan.md § Phase 2): a hit makes zero calls to the backend. Wraps
     # EACH backend individually, not the routed SpeechClient below — only here is the model/voice
@@ -144,7 +148,9 @@ services:
             $backend: 'elevenlabs'
             $model: '%env(ELEVENLABS_MODEL)%'
             $voice: '%env(ELEVENLABS_VOICE_ID)%'
-            $cacheDir: '%kernel.project_dir%/var/tts'
+            # Namespaced per environment — a shared path let the test suite's fake voice list
+            # (docs/voice-plan.md § Phase 2 note, defect 2026-09-06) leak into the live cache.
+            $cacheDir: '%kernel.project_dir%/var/tts/%kernel.environment%'
 
     speech.caching.pockettts:
         class: App\Speech\CachingSpeechClient
@@ -155,7 +161,7 @@ services:
             # IS the whole identity — so these are fixed labels, not read from env.
             $model: 'kyutai-pocket-tts'
             $voice: ''
-            $cacheDir: '%kernel.project_dir%/var/tts'
+            $cacheDir: '%kernel.project_dir%/var/tts/%kernel.environment%'
 
     App\Speech\SpeechClient:
         class: App\Speech\SelectableSpeechClient

@@ -54,6 +54,8 @@ Collections are hydra — read members from **`member` ?? `hydra:member`**. The 
 | Maintenance records | `GET/POST {iri}/maintenance-records` | newest first; each `@id`→`id` |
 | Record mutate | `PATCH/DELETE /garage/maintenance-records/{id}` | PATCH body replaces the whole visit |
 | Bill attachments | `POST {recordIri}/attachments` (multipart, **don't set Content-Type**) · `DELETE {url}` | owner-gated download → **fetch with Bearer + objectURL**, not `<img src>` |
+| Speak a line | `POST /tts` `{text, voice?}` | same-origin, same bearer as other reads — **not** `authFetch` (a 401 must stay silent, never bounce to login); `Accept-Language` picks pronunciation; optional `voice` is a `SpeechVoice.id` from `GET /tts/voices`, omitted (never `null`) for the server default; a stale/foreign id is silently ignored server-side, falling back to default |
+| Voice list | `GET /tts/voices` | same auth posture as `/tts`; returns `[{id, label}, …]` for the resolved `Accept-Language`, **first entry is the backend's default**; `Cache-Control: private, max-age=3600` + `Vary: Accept-Language` |
 
 Money is integer **minor units** (`costCents`, `priceCents`); the manual-form `price`/`cost` are
 major-unit euros the client converts.

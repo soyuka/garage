@@ -297,6 +297,13 @@ export interface SpecNode {
   volumeLitres?: number | null;
 }
 
+/** One voice a TTS backend can speak with (`GET /tts/voices`, `api/src/Speech/SpeechVoice.php`). The
+ *  first entry the server returns is its default — the id `POST /tts`'s optional `voice` field takes. */
+export interface SpeechVoice {
+  id: string;
+  label: string;
+}
+
 export type UIAction =
   | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: Iri }
   | { type: 'selectVehicle'; id: Iri }

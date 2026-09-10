@@ -57,7 +57,7 @@ import type { CameraFocus } from './scene/cameraRig';
 import { focusForReveal, revealFor, revealSurvives, type RevealState } from './scene/reveal';
 import type { PulseRegion } from './scene/VehicleMesh';
 import { useNoyau } from './noyau/useNoyau';
-import { useAudition, useVoice } from './noyau/useVoice';
+import { useAudition, useVoice, useVoicePreference } from './noyau/useVoice';
 import { useNoticeAutoClose } from './noyau/useNoticeAutoClose';
 import { busy } from './noyau/state';
 import type { DecisionItem } from './noyau/state';
@@ -68,10 +68,11 @@ import { DWELL, PILOT_QUIET_MS } from './tokens/motion';
 import { useRegionBurst } from './scene/useRegionBurst';
 import { useReducedMotion } from './scene/useReducedMotion';
 import { Credits } from './scene/Attribution';
-import { AuditionToggle, LocaleToggle } from './Preferences';
+import { AuditionToggle, LocaleToggle, VoiceSelect } from './Preferences';
+import { fetchVoices } from './noyau/speechVoices';
 import { serviceLabel } from './labels';
 import { focusForAction, type Focus } from './focus';
-import type { Iri, MercureFrame, PlannedPart, PlannedTask, UIAction, VehicleBundle, VehicleSummary } from './types';
+import type { Iri, MercureFrame, PlannedPart, PlannedTask, SpeechVoice, UIAction, VehicleBundle, VehicleSummary } from './types';
 
 // The LIVE Atelier orchestrator (Stage C). Parc-first: the fleet grid at #/, selecting a car drives
 // into the hero at #/v/<seg> (reload restores it). It owns the garage reads and Le Noyau's state, and
@@ -95,6 +96,9 @@ export function Atelier() {
   const [audition, toggleAudition] = useAudition();
   // One session per tab — scopes the agent's render-intent topic (slice 5 posts turns onto it).
   const [sessionId] = useState(() => crypto.randomUUID());
+  // The second persisted voice preference (CHOREOGRAPHY § "the voice-select control", 2026-09-06) —
+  // beside `audition`, since the picker that sets it only exists while the audition is on.
+  const [voice, setVoice] = useVoicePreference();
   // The owner's PILOT topic: render intents driven from an external MCP host (Claude Code, Goose…),
   // which has no tab and therefore no session. Resolved once from GET /agent/link — until then (and
   // when unauthenticated) the dashboard just runs without that channel.
@@ -110,7 +114,7 @@ export function Atelier() {
   // Reads the three printed surfaces: the notice stack, the orb's ticker line, and the answer card.
   // `narration` is now one string, printed and spoken alike (CHOREOGRAPHY § "What a finished action
   // says", 2026-09-04 — the "posé · X" visual label and its spoken twin collapsed into one sentence).
-  const speakingId = useVoice(state.notices, state.narration, cta, audition);
+  const speakingId = useVoice(state.notices, state.narration, cta, audition, voice);
   // Auto-close a retained notice card after its read dwell — never while its own line is still being
   // spoken (CHOREOGRAPHY § "an answer that lands, then clears", auto-close 2026-09-04).
   useNoticeAutoClose(state.notices, speakingId, DWELL.noticeRead, (id) => dispatch({ type: 'dismissNotice', id }));
@@ -939,7 +943,14 @@ export function Atelier() {
       <div className="at-scene">
         <div className="at-scene-top">
           <a href="#/" className="at-scene-back">{t.atelier.backToParc}</a>
-          <Identity onJournal={() => setJournalOpen(true)} onDossier={heroBundle ? () => setDossierOpen(true) : undefined} audition={audition} onToggleAudition={toggleAudition} />
+          <Identity
+            onJournal={() => setJournalOpen(true)}
+            onDossier={heroBundle ? () => setDossierOpen(true) : undefined}
+            audition={audition}
+            onToggleAudition={toggleAudition}
+            voice={voice}
+            onChangeVoice={setVoice}
+          />
           <span style={{ flex: 1 }} />
         </div>
 
@@ -1036,7 +1047,13 @@ export function Atelier() {
       <div className="at-parc-page">
         <div className="at-parc-page-top">
           <span style={{ flex: 1 }} />
-          <Identity onJournal={() => setJournalOpen(true)} audition={audition} onToggleAudition={toggleAudition} />
+          <Identity
+            onJournal={() => setJournalOpen(true)}
+            audition={audition}
+            onToggleAudition={toggleAudition}
+            voice={voice}
+            onChangeVoice={setVoice}
+          />
         </div>
         <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
         <div className="at-parc-console">
@@ -1133,14 +1150,37 @@ function Identity({
   onDossier,
   audition,
   onToggleAudition,
+  voice,
+  onChangeVoice,
 }: {
   onJournal: () => void;
   onDossier?: () => void;
   audition: boolean;
   onToggleAudition: () => void;
+  voice: string | null;
+  onChangeVoice: (id: string | null) => void;
 }) {
   const t = useT();
   const id = getIdentity();
+  const [locale] = useLocale();
+  // The picker's own list — fetched only while there is something to pick FOR (audition on), and
+  // again on a locale change since `GET /tts/voices` answers for the request's `Accept-Language`
+  // (CHOREOGRAPHY § "the voice-select control", 2026-09-06). An empty result hides the control below,
+  // never a picker with nothing in it.
+  const [voices, setVoices] = useState<SpeechVoice[]>([]);
+  useEffect(() => {
+    if (!audition) {
+      setVoices([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchVoices().then((list) => {
+      if (!cancelled) setVoices(list);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [audition, locale]);
   const chip: React.CSSProperties = {
     appearance: 'none',
     background: 'transparent',
@@ -1158,6 +1198,7 @@ function Identity({
           and not in the à-décider inbox. */}
       <LocaleToggle />
       <AuditionToggle on={audition} onToggle={onToggleAudition} />
+      {audition && voices.length > 0 && <VoiceSelect voices={voices} value={voice} onChange={onChangeVoice} />}
       {onDossier && (
         <button type="button" onClick={onDossier} className="at-identity-chip" title={t.atelier.dossierTitle} aria-label={t.atelier.dossierAria}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">

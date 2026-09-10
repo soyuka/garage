@@ -22,6 +22,30 @@ They can still diverge in *coverage* — the stack holds 3, the voice queue 2, a
 dropped unread — but never in *content*: the spoken string IS the printed string. The card is
 authoritative, the voice is best-effort, and nothing is ever only spoken.
 
+### Voice selection (2026-09-06)
+
+`api/` now exposes the operator's four French ElevenLabs voices instead of pinning one via
+`ELEVENLABS_VOICE_ID` alone. `SpeechClient::voices(Locale $locale): list<SpeechVoice>` (first
+element = the backend's default) sits beside `stream()`, which grew a third `?string $voice`
+parameter — `null` keeps meaning "the backend's own default".
+
+- `ElevenLabsSpeechClient::voices()` calls `GET /v1/voices`, keeps only voices whose
+  `labels.language` matches $locale (or that carry no `language` label at all), trims the name at
+  the first `-`/`–` for the label, and sorts the configured default first. Any HTTP/transport/JSON
+  failure falls back to `[new SpeechVoice($voiceId, 'ElevenLabs')]` — never a broken `/tts/voices`.
+- `PocketTtsSpeechClient::voices()` answers one voice, id `'default'`, labelled from a new
+  `POCKET_TTS_VOICE_LABEL` env var (`Estelle` in `api/.env`, matching the compose stack's voice);
+  `stream()` ignores the requested voice — one model per locale endpoint, nothing to pick per call.
+- `CachingSpeechClient` folds the REQUESTED voice (not just the configured default) into the audio
+  cache key, and caches `voices()` itself for 1h per locale as `.voices.<locale>.json` in the same
+  `var/tts` directory.
+- `SpeechController`: `POST /tts` accepts an optional `voice` id in the JSON body — a value absent
+  from `voices($locale)` is silently ignored (falls back to null/default), never a 400. New
+  `GET /tts/voices` returns `{"id","label"}[]` for the request's locale, `Cache-Control: private,
+  max-age=3600`; `Vary: Accept-Language` is NOT set manually — `set_locale_from_accept_language`
+  already makes Symfony's `ResponseListener` append it, and setting it again duplicates the header.
+- The dashboard picker itself is a separate `dashboard/` workstream, built on this surface.
+
 ## Prerequisite (blocks phase 1 only)
 
 An ElevenLabs account + API key, and one chosen French voice id. Everything below is buildable and
@@ -144,7 +168,9 @@ worker containers and restart both, or the worker keeps serving the old containe
   should be high, and the cache is what makes the free tier last. **`locale` is in the key** (added
   2026-08-16 with fr/en): the same sentence read as French and as English is two different audios, and
   a key without it would serve one for the other. `/tts` also answers `Vary: Accept-Language` for the
-  same reason at the HTTP layer.
+  same reason at the HTTP layer. **Path is namespaced per environment**, `var/tts/%kernel.environment%`
+  (fixed 2026-09-06): a single shared path let the functional suite's fake voice list ("Claire"/"Louis")
+  leak into the live cache and get served back to the operator by the next real `GET /tts/voices`.
 - **Monthly char budget** (`TTS_MONTHLY_CHAR_BUDGET`) counted in a cache pool keyed by `Y-m`. Over
   budget → **204 No Content**, not an error: the card is already on screen, so silence is a degraded
   mode, never a broken one. Log it once per month, not per call.

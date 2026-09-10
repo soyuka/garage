@@ -26,8 +26,10 @@ use App\I18n\Locale;
 interface SpeechClient
 {
     /**
-     * @param Locale $locale the language the text is IN — not a hint, a pronunciation instruction:
-     *                       a multilingual voice reads the same sentence differently depending on it
+     * @param Locale      $locale the language the text is IN — not a hint, a pronunciation instruction:
+     *                            a multilingual voice reads the same sentence differently depending on it
+     * @param ?string     $voice  a voice id as returned by {@see self::voices()}; null means "use the
+     *                            backend's own default" — a backend with one voice per locale ignores it
      *
      * @return SpeechStream the audio as the backend produces it, in the backend's own format
      *
@@ -35,5 +37,15 @@ interface SpeechClient
      *                           chunk is pulled, so the caller can still answer with a status; a
      *                           backend dying mid-line throws it from the generator instead
      */
-    public function stream(string $text, Locale $locale): SpeechStream;
+    public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream;
+
+    /**
+     * The voices this backend can speak $locale in. Never throws: a vendor call that fails here must
+     * degrade to whatever the backend can say about itself, never take down the picker (or `stream()`
+     * behind it) with it.
+     *
+     * @return list<SpeechVoice> the first element is the backend's own default — the one `stream()`
+     *                           uses when `$voice` is null
+     */
+    public function voices(Locale $locale): array;
 }

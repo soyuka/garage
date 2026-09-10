@@ -126,6 +126,63 @@ final class SpeechTest extends AppTestCase
         yield 'over the cap' => [str_repeat('a', self::OVER_CAP)];
     }
 
+    public function testGetVoicesRequiresAuthentication(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/tts/voices');
+
+        $this->assertResponseStatusCodeSame(401);
+    }
+
+    public function testGetVoicesReturnsTheLocalesVoiceList(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/tts/voices', [
+            'headers' => static::authHeaders() + ['Accept-Language' => 'fr-FR,fr;q=0.9'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        // Symfony's ResponseHeaderBag always re-renders Cache-Control directives in its own
+        // (alphabetical) order once any are set — this is the canonical wire form, not a rewrite bug.
+        $this->assertResponseHeaderSame('Cache-Control', 'max-age=3600, private');
+        // Appended by ResponseListener (framework.yaml `set_locale_from_accept_language`), not by the
+        // controller — see SpeechController::voices().
+        $this->assertResponseHeaderSame('Vary', 'Accept-Language');
+        $this->assertSame(
+            [
+                ['id' => 'test-voice-id', 'label' => 'Claire'],
+                ['id' => 'other-voice-id', 'label' => 'Louis'],
+            ],
+            json_decode($client->getResponse()->getContent(), true),
+        );
+    }
+
+    /** A voice id the picker actually offered must reach the vendor request, not just the default. */
+    public function testPostTtsWithAListedVoiceReachesTheVendorWithThatVoice(): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/tts', [
+            'json' => ['text' => 'Vidange enregistrée.', 'voice' => 'other-voice-id'],
+            'headers' => static::authHeaders() + ['Accept-Language' => 'fr-FR,fr;q=0.9'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertStringContainsString('/v1/text-to-speech/other-voice-id/stream', (string) $this->transport()->lastRequest()['url']);
+    }
+
+    /** A stale or foreign voice id must never 400 the endpoint — it just falls back to the default. */
+    public function testPostTtsWithAnUnlistedVoiceFallsBackToTheConfiguredDefault(): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/tts', [
+            'json' => ['text' => 'Vidange enregistrée.', 'voice' => 'not-a-real-voice'],
+            'headers' => static::authHeaders() + ['Accept-Language' => 'fr-FR,fr;q=0.9'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertStringContainsString('/v1/text-to-speech/test-voice-id/stream', (string) $this->transport()->lastRequest()['url']);
+    }
+
     public function testAVendorFailureIsSilentNotABrokenDashboard(): void
     {
         $client = static::createClient();
@@ -140,6 +197,34 @@ final class SpeechTest extends AppTestCase
         // Never a 500: the notice card is already on screen, so silence is a degraded mode.
         $this->assertResponseStatusCodeSame(503);
         $this->assertSame('', $client->getResponse()->getContent(false));
+    }
+
+    /**
+     * Regression for 2026-09-06: `$cacheDir` used to be one path shared by every Symfony environment,
+     * so this suite's test-double voice list ("Claire"/"Louis", test-voice-id/other-voice-id) wrote
+     * into the LIVE cache and the next real `GET /tts/voices` served test data to the operator. The
+     * kernel under test runs as `test`, so the cache must land under `var/tts/test/`, never directly
+     * under `var/tts/`.
+     */
+    public function testVoicesCacheWritesUnderTheTestEnvironmentDirOnly(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/tts/voices', [
+            'headers' => static::authHeaders() + ['Accept-Language' => 'fr-FR,fr;q=0.9'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+
+        $projectDir = static::getContainer()->getParameter('kernel.project_dir');
+        $this->assertSame(
+            [],
+            glob($projectDir.'/var/tts/.voices.*.json') ?: [],
+            'The voices cache must never be written directly under var/tts — that path is shared across every environment.',
+        );
+        $this->assertNotEmpty(
+            glob($projectDir.'/var/tts/test/.voices.*.json') ?: [],
+            'The voices cache must be written under the environment-namespaced directory.',
+        );
     }
 
     private function transport(): RecordingSpeechHttpClient

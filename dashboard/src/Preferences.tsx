@@ -1,5 +1,6 @@
 import { useLocale, useT } from './i18n/LocaleProvider';
 import type { Locale } from './i18n/locale';
+import type { SpeechVoice } from './types';
 
 // The operator's two STANDING preferences: which language the Atelier speaks, and whether it speaks
 // out loud. Both persist under `mpa.*`, both belong to the person rather than to the moment.
@@ -48,6 +49,34 @@ const LOCALE_TITLE: Record<Locale, string> = {
   fr: 'Afficher l’Atelier en français',
   en: 'Show the Atelier in English',
 };
+
+/**
+ * The four-ish ElevenLabs voices, chosen from the UI (CHOREOGRAPHY § "the voice-select control",
+ * 2026-09-06). A native `<select>`, not a menu of chips — the list is server-driven and its length is
+ * not this component's business. Rendered only while audition is on and only when the fetched list is
+ * non-empty; both calls are the caller's (`Identity`, Atelier.tsx), since only it knows both things.
+ */
+export function VoiceSelect({ voices, value, onChange }: { voices: SpeechVoice[]; value: string | null; onChange: (id: string | null) => void }) {
+  const t = useT();
+
+  return (
+    <select
+      className="at-identity-chip"
+      aria-label={t.pref.voice}
+      title={t.pref.voice}
+      value={value ?? ''}
+      onChange={(e) => onChange('' === e.target.value ? null : e.target.value)}
+    >
+      {/* The empty value IS null — the server default, never a voice id of its own. */}
+      <option value="">{t.pref.voiceDefault}</option>
+      {voices.map((v) => (
+        <option key={v.id} value={v.id}>
+          {v.label}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 /** Two languages, so a toggle rather than a menu. The label names the language you would GET. */
 export function LocaleToggle() {

@@ -30,6 +30,7 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 final readonly class ElevenLabsSpeechClient implements SpeechClient
 {
     private const string ENDPOINT = 'https://api.elevenlabs.io/v1/text-to-speech/%s/stream';
+    private const string VOICES_ENDPOINT = 'https://api.elevenlabs.io/v1/voices';
     private const string CONTENT_TYPE = 'audio/wav';
     private const int SAMPLE_RATE = 24000;
 
@@ -41,14 +42,16 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
     ) {
     }
 
-    public function stream(string $text, Locale $locale): SpeechStream
+    public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
     {
-        if ('' === $this->apiKey || '' === $this->voiceId) {
+        $voiceId = $voice ?? $this->voiceId;
+
+        if ('' === $this->apiKey || '' === $voiceId) {
             throw new SpeechUnavailable('ElevenLabs is selected but ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID are unset.');
         }
 
         try {
-            $response = $this->http->request('POST', \sprintf(self::ENDPOINT, $this->voiceId), [
+            $response = $this->http->request('POST', \sprintf(self::ENDPOINT, $voiceId), [
                 'headers' => ['xi-api-key' => $this->apiKey],
                 'query' => ['output_format' => \sprintf('pcm_%d', self::SAMPLE_RATE)],
                 'json' => [
@@ -75,6 +78,72 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
         }
 
         return new SpeechStream(self::CONTENT_TYPE, $this->chunks($response));
+    }
+
+    /**
+     * `GET /v1/voices` filtered to $locale (a voice with no `labels.language` at all — a cloned or
+     * multilingual voice — is kept regardless of locale, since it carries no language claim to
+     * contradict). Best-effort like everything else on this seam: a broken call must not take the
+     * whole picker, or the request it gates, down with it.
+     */
+    public function voices(Locale $locale): array
+    {
+        $fallback = [new SpeechVoice($this->voiceId, 'ElevenLabs')];
+
+        try {
+            $response = $this->http->request('GET', self::VOICES_ENDPOINT, [
+                'headers' => ['xi-api-key' => $this->apiKey],
+            ]);
+
+            if (200 !== $response->getStatusCode()) {
+                return $fallback;
+            }
+
+            $voices = $response->toArray()['voices'] ?? [];
+        } catch (HttpClientException) {
+            // Unreachable, refused, or the body wasn't valid JSON — toArray() throws for all three.
+            return $fallback;
+        }
+
+        $matched = [];
+        foreach ($voices as $voice) {
+            $id = $voice['voice_id'] ?? null;
+            $name = $voice['name'] ?? null;
+            if (!\is_string($id) || '' === $id || !\is_string($name) || '' === $name) {
+                continue;
+            }
+
+            $labels = \is_array($voice['labels'] ?? null) ? $voice['labels'] : [];
+            if (\array_key_exists('language', $labels) && $labels['language'] !== $locale->value) {
+                continue;
+            }
+
+            $matched[] = new SpeechVoice($id, self::label($name));
+        }
+
+        if ([] === $matched) {
+            return $fallback;
+        }
+
+        // The configured default sorts first — it is the one `stream()` falls back to when no voice
+        // is requested, so the picker built on top of this should offer it as the obvious choice.
+        $default = null;
+        $others = [];
+        foreach ($matched as $entry) {
+            if (null === $default && $entry->id === $this->voiceId) {
+                $default = $entry;
+                continue;
+            }
+            $others[] = $entry;
+        }
+
+        return null !== $default ? [$default, ...$others] : $matched;
+    }
+
+    /** "Claire - Conversationnel" → "Claire": the use-case suffix ElevenLabs names carry is noise here. */
+    private static function label(string $name): string
+    {
+        return trim(preg_split('/[-–]/u', $name, 2)[0]);
     }
 
     /** @return \Generator<int, string, mixed, string> */

@@ -8,6 +8,7 @@ use App\I18n\Locale;
 use App\Speech\PocketTtsSpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
+use App\Speech\SpeechVoice;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -85,7 +86,7 @@ final class PocketTtsSpeechClientTest extends TestCase
             return new MockResponse(self::AUDIO);
         });
 
-        $client = new PocketTtsSpeechClient($http, ['fr' => 'http://pocket-tts-fr:8000', 'en' => '']);
+        $client = new PocketTtsSpeechClient($http, ['fr' => 'http://pocket-tts-fr:8000', 'en' => ''], 'Estelle');
 
         $this->expectException(SpeechUnavailable::class);
 
@@ -185,6 +186,36 @@ final class PocketTtsSpeechClientTest extends TestCase
         $chunks->next();
     }
 
+    /** One Kyutai model per locale endpoint IS the whole voice identity — there is no per-request pick. */
+    public function testVoicesReturnsOneDefaultVoiceWithTheConfiguredLabel(): void
+    {
+        $voices = $this->client(new MockHttpClient())->voices(Locale::Fr);
+
+        $this->assertEquals([new SpeechVoice('default', 'Estelle')], $voices);
+    }
+
+    public function testVoicesIsEmptyForALocaleWithNoConfiguredServer(): void
+    {
+        $client = new PocketTtsSpeechClient(new MockHttpClient(), ['fr' => 'http://pocket-tts-fr:8000', 'en' => ''], 'Estelle');
+
+        $this->assertSame([], $client->voices(Locale::En));
+    }
+
+    /** One model per locale endpoint, bound at process start — no per-request voice to select. */
+    public function testStreamIgnoresTheRequestedVoiceParameter(): void
+    {
+        $urls = [];
+        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+            $urls[] = $url;
+
+            return new MockResponse(self::AUDIO);
+        });
+
+        $this->client($http)->stream('Vidange enregistrée.', Locale::Fr, 'some-voice-id');
+
+        $this->assertSame(['http://pocket-tts-fr:8000/tts'], $urls);
+    }
+
     /** 44-byte canonical header carrying the streaming placeholder pocket-tts actually emits. */
     private static function placeholderHeader(): string
     {
@@ -225,6 +256,6 @@ final class PocketTtsSpeechClientTest extends TestCase
         return new PocketTtsSpeechClient($http, [
             'fr' => 'http://pocket-tts-fr:8000',
             'en' => 'http://pocket-tts-en:8000',
-        ]);
+        ], 'Estelle');
     }
 }
