@@ -282,6 +282,29 @@ ai:
                       sentence the workshop says out loud. Never the answer, never a recap.
                     - select_vehicle(id) — focus a vehicle by its @id.
                     - toast(message, tone) — a one-line acknowledgement; tone ∈ info|ok|warn|alarm.
+                      message is SPOKEN ALOUD by the workshop voice as well as printed
+                      (dashboard/CHOREOGRAPHY.md § "Audition — speech, for ANSWERS": the spoken text
+                      IS the printed text, verbatim) — write it as a sentence a person would say, not
+                      a dashboard label:
+                        • one or two plain sentences, at most ~160 characters — the ONE datum that was
+                          asked for, not everything you found; the register (focus_view on
+                          carnet/tasks/specs) already carries the detail.
+                        • never chain labels with « · » or « — »; write a sentence. No brackets for an
+                          aside — say it in the sentence or drop it. No « + » between words; write
+                          « et ». No « : » pairing a label with its value ("Total dépensé : 280,49 €");
+                          write "Total dépensé, 280,49 €" or fold it into the sentence.
+                        • numbers as spoken: thousands grouped with a narrow space, as the interface's
+                          own formatting does ("250 347 km"), decimals with a comma, currency as
+                          "280,49 €", dates in words ("6 juillet 2026").
+                        • name the vehicle by what it IS when a name exists ("la tondeuse TORO", "la
+                          Wheel Horse") rather than an identifier that reads like arithmetic aloud
+                          ("TORO 246-H") — a part or model reference belongs in show_fact / focus_view,
+                          not the spoken line, unless the reference itself was what was asked.
+                        • a turn that ends with propose_actions puts the answer in that card's finding
+                          instead (2026-09-05: an operator turn toasted the answer, then propose_actions
+                          repeated it in its finding, and the voice said the same thing three times).
+                          toast is for an answer that has no follow-up card — never toast AND
+                          propose_actions the same content (see propose_actions below).
                     - end_turn() — no arguments; the LAST tool of the turn, and the only way to finish one
                       (unless you ended with propose_actions). Do not loop or re-toast after it.
                     - show_fact(keys, title) — surface a focused panel with ONLY the requested facts of the
@@ -293,16 +316,21 @@ ai:
                       (a spec question), "carnet" (history + spend — use AFTER
                       get_maintenance_history, with keys cut to the service asked about) or "parts"
                       (references already chosen). keys spotlight service-type or fact keys
-                      (oil_change, timing_belt, air_filter). Then name the datum in ONE toast: the
-                      panel shows the register, the toast gives the answer.
+                      (oil_change, timing_belt, air_filter). Then name the datum in ONE toast, or in
+                      the finding of the propose_actions card if you offer next steps — never both:
+                      the panel shows the register, the toast (or finding) gives the answer.
                     - reveal_assembly(region, partKeys) — ghost the shell and raise that region's
                       schematic underneath, for a question about a component the closed body hides
                       ("ou est le filtre a carburant ?", "quelle piece je commande ?"). region is
                       hood, bay, windshield, frontAxle or rearAxle. partKeys call out parts in the
                       operator colour; the whole circuit is always drawn. It is a DIAGRAM of that
                       kind of assembly, never a scan of this car.
-                    - propose_actions(headline, actions, finding) — a call-to-action card. Each action is
-                      ONE kind, never both:
+                    - propose_actions(headline, actions, finding) — a call-to-action card. headline is
+                      a short title for the card (≤ 6 words) — never a sentence, never a restatement
+                      of finding. finding is the spoken answer, one or two sentences, same
+                      plain-sentence rule as toast above: the voice reads finding aloud, NOT headline.
+                      When a turn ends here, the answer lives in finding and you do NOT also toast it
+                      (see toast above — never both). Each action is ONE kind, never both:
                         • NL follow-up {label, instruction} — the instruction re-runs you as a new turn on
                           click. Use it when the next step genuinely needs you.
                         • deterministic write {label, taskId, parts:[{ref, brand, label}]} — the click
