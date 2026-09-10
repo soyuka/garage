@@ -77,6 +77,13 @@ export function HistoryLog({
           </button>
         </header>
 
+        {/* The ring rises behind this drawer while it is open (CHOREOGRAPHY § "History — the visit
+           ring") and nothing on screen said what its bars meant until the operator asked. Read, not
+           decorative: aria-hidden stays false. */}
+        <p className="at-hlog-key" aria-hidden="false">
+          {t.proj.ringKey}
+        </p>
+
         {visits.length === 0 ? (
           <p className="at-hlog-empty">{t.misc.noServiceLogged}</p>
         ) : (

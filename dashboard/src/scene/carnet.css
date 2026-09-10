@@ -26,6 +26,17 @@
   color: var(--at-text-dim);
 }
 
+/* The ring's key: same tier-3 mono as the head, but no uppercase/tracking — this is a caption to read,
+   not a chrome label. Quiet on purpose; the bars are the point, not the legend explaining them. */
+.at-carnet-key {
+  margin: 8px 0 0;
+  font-family: var(--at-font-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}
+
 .at-carnet-rows {
   display: flex;
   flex-direction: column;

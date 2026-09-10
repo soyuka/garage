@@ -91,6 +91,8 @@ export const fr = {
     carnet: 'Carnet · dépenses',
     carnetHead: 'CARNET · DÉPENSES',
     withoutCost: (n: number) => `, ${n} sans coût`,
+    /** The visit ring's key — the operator asked why the bars are there (nothing on screen said so). */
+    ringKey: 'une barre par visite · hauteur = coût · fil de fer = coût inconnu · la plus récente près de vous',
     worklist: 'À faire',
     worklistHead: 'À FAIRE',
     neverLogged: 'jamais consigné — depuis quand ?',

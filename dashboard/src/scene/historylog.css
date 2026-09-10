@@ -81,6 +81,17 @@
 .at-hlog-close:hover { color: var(--at-text); border-color: var(--at-chrome-hi); }
 .at-hlog-close:focus-visible { outline: 2px solid var(--at-chrome-hi); outline-offset: 2px; }
 
+/* The ring's key — same tier-3 mono as the rest of the ledger's meta text, quiet and left-aligned
+   (unlike `.at-hlog-empty`, this is a caption under a real list, not a centred empty state). */
+.at-hlog-key {
+  margin: 0;
+  padding: var(--at-space-3) var(--at-space-5) 0;
+  font-family: var(--at-font-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--at-text-dim);
+}
+
 .at-hlog-empty {
   margin: 0;
   padding: var(--at-space-6) var(--at-space-5);

@@ -79,6 +79,8 @@ export const en: Messages = {
     carnet: 'Logbook · spend',
     carnetHead: 'LOGBOOK · SPEND',
     withoutCost: (n: number) => `, ${n} with no cost`,
+    /** The visit ring's key — the operator asked why the bars are there (nothing on screen said so). */
+    ringKey: 'one bar per visit · height = cost · wireframe = unknown cost · newest nearest you',
     worklist: 'To do',
     worklistHead: 'TO DO',
     neverLogged: 'never logged — since when?',
