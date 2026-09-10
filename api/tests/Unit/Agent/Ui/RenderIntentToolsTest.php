@@ -11,7 +11,9 @@ use App\Agent\Ui\SpecNode;
 use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Symfony\AI\Agent\Toolbox\Toolbox;
 use Symfony\AI\Platform\Contract\JsonSchema\Factory;
+use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\Component\Mercure\Exception\RuntimeException;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
@@ -122,9 +124,138 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertContains('null', (array) $items['properties']['instruction']['type']);
         $this->assertContains('null', (array) $items['properties']['taskId']['type']);
 
+        // parts is nullable too: a model filling the unused kind-(2) field sends null, not [].
+        $this->assertContains('null', (array) $items['properties']['parts']['type']);
         $part = $items['properties']['parts']['items'];
         $this->assertSame('object', $part['type']);
         $this->assertSame('string', $part['properties']['ref']['type']);
+    }
+
+    /**
+     * Builds the SAME {@see Toolbox} the bundle wires as `ai.toolbox.garage` (real
+     * {@see \Symfony\AI\Agent\Toolbox\ToolFactory\ReflectionToolFactory}, real
+     * {@see \Symfony\AI\Agent\Toolbox\ToolCallArgumentResolver}) so a test drives the exact
+     * hydration path production hit, instead of calling {@see RenderIntentTools::proposeActions()}
+     * directly with already-typed {@see ActionButton} objects.
+     */
+    private function realToolbox(RenderIntentTools $tools): Toolbox
+    {
+        return new Toolbox([$tools]);
+    }
+
+    /**
+     * Reproduces the live 2026-09-05 failure verbatim: claude-sonnet-4-6 called `propose_actions`
+     * with two NL-follow-up buttons, each carrying explicit `"taskId":null,"parts":null` for the
+     * unused deterministic-write side. `ActionButton::$parts` was a non-nullable `array`, so the real
+     * {@see \Symfony\AI\Agent\Toolbox\ToolCallArgumentResolver} threw
+     * `NotNormalizableValueException: Data expected to be "ActionPart[]", "null" given.` before
+     * {@see RenderIntentTools::proposeActions()} ever ran — Toolbox::execute() then wrapped it as
+     * `ToolExecutionException` ("Failed to execute tool ...").
+     */
+    public function testProposeActionsThroughTheRealToolboxAcceptsExplicitNullsForTheUnusedKind(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $result = $this->realToolbox($tools)->execute(new ToolCall('call_1', 'propose_actions', [
+            'headline' => 'Entretien à 250 000 km',
+            'actions' => [
+                ['label' => 'Liste de courses', 'instruction' => 'prépare la liste de courses pour la vidange', 'taskId' => null, 'parts' => null],
+                ['label' => 'Chercher au catalogue', 'instruction' => 'cherche les références', 'taskId' => null, 'parts' => null],
+            ],
+        ]));
+
+        $this->assertSame('ok', $result->getResult());
+        $this->assertNotNull($published);
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Entretien à 250 000 km',
+            'actions' => [
+                ['label' => 'Liste de courses', 'instruction' => 'prépare la liste de courses pour la vidange'],
+                ['label' => 'Chercher au catalogue', 'instruction' => 'cherche les références'],
+            ],
+        ], json_decode($published->getData(), true));
+    }
+
+    public function testProposeActionsThroughTheRealToolboxAcceptsExplicitNullInstructionForADeterministicWrite(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $result = $this->realToolbox($tools)->execute(new ToolCall('call_1', 'propose_actions', [
+            'headline' => 'Référence filtre à huile',
+            'actions' => [
+                ['label' => 'Ajouter MANN W 712/73', 'instruction' => null, 'taskId' => '01KVEF1TCCBTWQR5CV6V05PQ81', 'parts' => [
+                    ['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile'],
+                ]],
+            ],
+        ]));
+
+        $this->assertSame('ok', $result->getResult());
+        $this->assertNotNull($published);
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Référence filtre à huile',
+            'actions' => [[
+                'label' => 'Ajouter MANN W 712/73',
+                'patchTask' => [
+                    'id' => '/garage/planned-tasks/01KVEF1TCCBTWQR5CV6V05PQ81',
+                    'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile']],
+                ],
+            ]],
+        ], json_decode($published->getData(), true));
+    }
+
+    /**
+     * A taskId with an EMPTY parts list is not a deterministic write (nothing to merge) — the
+     * button falls back to its instruction. Existing behaviour, pinned through the real hydration
+     * path so the nullability fix above cannot flip it.
+     */
+    public function testProposeActionsThroughTheRealToolboxFallsBackToInstructionWhenPartsIsEmpty(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $result = $this->realToolbox($tools)->execute(new ToolCall('call_1', 'propose_actions', [
+            'headline' => 'Entretien à 250 000 km',
+            'actions' => [
+                ['label' => 'Voir le détail', 'instruction' => 'détaille la tâche', 'taskId' => '01KVEF1TCCBTWQR5CV6V05PQ81', 'parts' => []],
+            ],
+        ]));
+
+        $this->assertSame('ok', $result->getResult());
+        $this->assertNotNull($published);
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Entretien à 250 000 km',
+            'actions' => [
+                ['label' => 'Voir le détail', 'instruction' => 'détaille la tâche'],
+            ],
+        ], json_decode($published->getData(), true));
     }
 
     public function testShowFactSchemaDescribesEachProjectedNodeAsTypedObject(): void

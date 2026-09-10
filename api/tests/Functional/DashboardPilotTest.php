@@ -289,6 +289,92 @@ final class DashboardPilotTest extends AppTestCase
         ], $this->lastPilotFrame());
     }
 
+    /**
+     * Reproduces the live 2026-09-05 failure: claude-sonnet-4-6 filled BOTH kind-(2) fields with
+     * explicit `null` on every kind-(1) button, since the tool description names them as the unused
+     * side rather than as absent keys. `ActionButton::$parts` was a non-nullable `array`, so
+     * hydrating `"parts": null` through the real {@see \Symfony\AI\Agent\Toolbox\ToolCallArgumentResolver}
+     * threw a TypeError before {@see \App\Agent\Ui\RenderIntentTools::proposeActions()} ever ran.
+     */
+    public function testProposeActionsAcceptsExplicitNullsForTheUnusedKind(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'propose_actions',
+            'arguments' => [
+                'headline' => 'Entretien à 250 000 km',
+                'actions' => [
+                    ['label' => 'Liste de courses', 'instruction' => 'prépare la liste de courses pour la vidange', 'taskId' => null, 'parts' => null],
+                    ['label' => 'Chercher au catalogue', 'instruction' => 'cherche les références', 'taskId' => null, 'parts' => null],
+                ],
+            ],
+        ], 3);
+
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Entretien à 250 000 km',
+            'actions' => [
+                ['label' => 'Liste de courses', 'instruction' => 'prépare la liste de courses pour la vidange'],
+                ['label' => 'Chercher au catalogue', 'instruction' => 'cherche les références'],
+            ],
+        ], $this->lastPilotFrame());
+    }
+
+    public function testProposeActionsAcceptsExplicitNullInstructionForADeterministicWrite(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'propose_actions',
+            'arguments' => [
+                'headline' => 'Références filtre à huile',
+                'actions' => [
+                    ['label' => 'Ajouter MANN W 712/73', 'instruction' => null, 'taskId' => '01JTASK', 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]],
+                ],
+            ],
+        ], 3);
+
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Références filtre à huile',
+            'actions' => [
+                ['label' => 'Ajouter MANN W 712/73', 'patchTask' => ['id' => '/garage/planned-tasks/01JTASK', 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]]],
+            ],
+        ], $this->lastPilotFrame());
+    }
+
+    /**
+     * A taskId with an EMPTY parts list is not a deterministic write (nothing to merge) — the
+     * button falls back to its instruction. Existing behaviour, pinned so the nullability fix
+     * above cannot flip it.
+     */
+    public function testProposeActionsFallsBackToInstructionWhenPartsIsEmpty(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'propose_actions',
+            'arguments' => [
+                'headline' => 'Entretien à 250 000 km',
+                'actions' => [
+                    ['label' => 'Voir le détail', 'instruction' => 'détaille la tâche', 'taskId' => '01JTASK', 'parts' => []],
+                ],
+            ],
+        ], 3);
+
+        $this->assertSame([
+            'type' => 'proposeActions',
+            'headline' => 'Entretien à 250 000 km',
+            'actions' => [
+                ['label' => 'Voir le détail', 'instruction' => 'détaille la tâche'],
+            ],
+        ], $this->lastPilotFrame());
+    }
+
     public function testAgentLinkGivesTheDashboardItsPilotTopic(): void
     {
         $client = static::createClient();

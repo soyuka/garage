@@ -21,13 +21,15 @@ namespace App\Agent\Ui;
 final readonly class ActionButton
 {
     /**
-     * @param list<ActionPart> $parts parts merged onto $taskId when the button is a deterministic write
+     * @param ?list<ActionPart> $parts parts merged onto $taskId when the button is a deterministic
+     *                                 write; nullable because the model fills the unused kind-(2)
+     *                                 field with an explicit `null`, not an absent key or `[]`
      */
     public function __construct(
         public string $label,
         public ?string $instruction = null,
         public ?string $taskId = null,
-        public array $parts = [],
+        public ?array $parts = null,
     ) {
     }
 }

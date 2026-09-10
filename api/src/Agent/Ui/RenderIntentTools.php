@@ -197,12 +197,13 @@ final class RenderIntentTools
         $buttons = array_map(static function (ActionButton $action): array {
             Assert::stringNotEmpty($action->label);
 
-            if (null !== $action->taskId && [] !== $action->parts) {
+            $parts = $action->parts ?? [];
+            if (null !== $action->taskId && [] !== $parts) {
                 return [
                     'label' => $action->label,
                     'patchTask' => [
                         'id' => self::taskIri($action->taskId),
-                        'parts' => array_map(static fn (ActionPart $p): array => $p->toArray(), $action->parts),
+                        'parts' => array_map(static fn (ActionPart $p): array => $p->toArray(), $parts),
                     ],
                 ];
             }
