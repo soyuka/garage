@@ -19,6 +19,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class MotulClient
 {
+    /** Model-facing name of the service — never the vendor host. */
+    private const SOURCE = 'the Motul oil advisor';
+
     private const SEARCH_URI = 'https://gateway-apim.motul.com/oil-advisor/search-vehicle';
     private const PAGE_BASE = 'https://www.motul.com';
     private const HEADERS = [
@@ -102,11 +105,15 @@ final class MotulClient
             $status = $response->getStatusCode();
             $body = $response->getContent(false);
         } catch (ExceptionInterface $e) {
-            throw new UpstreamException(sprintf('motul.com: %s', $e->getMessage()), previous: $e);
+            throw UpstreamException::transient(self::SOURCE, sprintf('motul.com: %s', $e->getMessage()), $e);
         }
 
         if (200 !== $status) {
-            throw new UpstreamException(sprintf('motul.com failed (HTTP %d)', $status));
+            $reason = sprintf('motul.com failed (HTTP %d)', $status);
+
+            throw $status >= 500 || 429 === $status
+                ? UpstreamException::transient(self::SOURCE, $reason)
+                : UpstreamException::definitive(self::SOURCE, $reason);
         }
 
         return $body;

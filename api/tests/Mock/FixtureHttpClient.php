@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Mock;
 
+use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -22,6 +23,8 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
  */
 final class FixtureHttpClient implements HttpClientInterface
 {
+    public const TIMEOUT_PLATE = 'TT000TT';
+
     private readonly MockHttpClient $mock;
 
     public function __construct(private readonly string $fixturesDir)
@@ -67,6 +70,12 @@ final class FixtureHttpClient implements HttpClientInterface
 
     private function sivResponse(string $plate): MockResponse
     {
+        // Sentinel: the upstream accepts the connection then never answers — the shape of the
+        // 2026-09-14 production failure. Lets a test drive the transient path end to end.
+        if (self::TIMEOUT_PLATE === $plate) {
+            return new MockResponse(self::idleTimeout());
+        }
+
         $file = $this->fixturesDir.'/siv/'.$plate.'.json';
         if (is_file($file)) {
             return self::json(file_get_contents($file));
@@ -138,6 +147,13 @@ final class FixtureHttpClient implements HttpClientInterface
         }
 
         return new MockResponse('not found', ['http_code' => 404]);
+    }
+
+    private static function idleTimeout(): \Generator
+    {
+        throw new TransportException('Idle timeout reached for "https://api.apiplaqueimmatriculation.com/plaque".');
+
+        yield '';
     }
 
     private static function json(string $body, int $status = 200): MockResponse

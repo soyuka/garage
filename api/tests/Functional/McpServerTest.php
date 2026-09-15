@@ -80,35 +80,79 @@ final class McpServerTest extends AppTestCase
     }
 
     /**
-     * Pins the LLM-visible failure mode of pending-token tools: currently a JSON-RPC
-     * protocol-level error (-32603), NOT a CallToolResult with isError. If an
-     * api-platform/mcp or mcp/sdk upgrade changes this shape, this test must fail so
-     * the change is a conscious decision (see docs/TODO.md, MCP error mapping).
+     * Domain errors reach the model as a CallToolResult it can read and act on, NOT as a
+     * JSON-RPC -32603 protocol error whose message the agent layer discards
+     * (Symfony\AI ToolExecutionException::getToolCallResult() throws the message away, so
+     * every failure otherwise collapses to the same opaque sentence).
+     *
+     * Supersedes testPendingTokenToolSurfacesAsJsonRpcError / testUnknownPlateToolCall-
+     * SurfacesAsJsonRpcError, which pinned the -32603 shape precisely so that changing it
+     * would be a conscious decision. It is: see docs/archive/TODO.md "MCP error mapping".
      */
-    public function testPendingTokenToolSurfacesAsJsonRpcError(): void
+    public function testMissingApiKeySurfacesAsAStructuredResultWithoutLeakingTheEnvVar(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $error = $this->callExpectingError($client, $sessionId, 'tools/call', [
+        $result = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_models',
             'arguments' => ['makeId' => 55],
         ], 5);
 
-        $this->assertSame(-32603, $error['code']);
-        $this->assertStringContainsString('getModels', $error['message']);
+        $this->assertArrayNotHasKey('error', $result, 'a missing key is a tool error, not a protocol error');
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('not_configured', $content['status']);
+        $this->assertFalse($content['retryable'], 'no amount of retrying configures a key');
+        $this->assertTrue($result['result']['isError']);
+
+        $encoded = json_encode($result, \JSON_THROW_ON_ERROR);
+        $this->assertStringNotContainsString('PARTSAPI_KEY', $encoded, 'never leak env var names to the model');
     }
 
-    public function testUnknownPlateToolCallSurfacesAsJsonRpcError(): void
+    /**
+     * An unknown plate is a MISS, not a failure — same contract the garage read tools keep
+     * ({@see \App\Garage\ToolResult}), so isError stays false.
+     */
+    public function testUnknownPlateSurfacesAsANotFoundResult(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $error = $this->callExpectingError($client, $sessionId, 'tools/call', [
+        $result = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'lookup_plate',
             'arguments' => ['plate' => 'ZZ-999-ZZ'],
         ], 6);
 
-        $this->assertStringContainsString('No vehicle found', $error['message']);
+        $this->assertArrayNotHasKey('error', $result);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('not_found', $content['status']);
+        $this->assertFalse($content['retryable']);
+        $this->assertFalse($result['result']['isError'], 'a miss is a result, not an error');
+    }
+
+    /**
+     * The 2026-09-14 regression: the SIV stalled, the model was handed an opaque error, and it
+     * told the user the plate did not exist. The model must now be able to tell the two apart.
+     */
+    public function testSivTimeoutSurfacesAsRetryableAndIsNotConfusedWithAnUnknownPlate(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'lookup_plate',
+            'arguments' => ['plate' => 'TT-000-TT'],
+        ], 7);
+
+        $this->assertArrayNotHasKey('error', $result);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('upstream_unavailable', $content['status']);
+        $this->assertTrue($content['retryable'], 'the whole point: a stall is retryable, an unknown plate is not');
+        $this->assertTrue($result['result']['isError']);
+        $this->assertNotSame('not_found', $content['status']);
     }
 }
+

@@ -24,6 +24,9 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final class PartsApiClient
 {
+    /** Model-facing name of the service — never the vendor host or the env var. */
+    private const SOURCE = 'the parts catalog';
+
     private const BASE_URI = 'https://api.partsapi.ru/';
 
     /**
@@ -67,7 +70,7 @@ final class PartsApiClient
             $status = $response->getStatusCode();
             $body = $response->getContent(false);
         } catch (ExceptionInterface $e) {
-            throw new UpstreamException(sprintf('partsapi.ru %s: %s', $method, $e->getMessage()), previous: $e);
+            throw UpstreamException::transient(self::SOURCE, sprintf('partsapi.ru %s: %s', $method, $e->getMessage()), $e);
         }
 
         $data = json_decode($body, true);
@@ -82,7 +85,12 @@ final class PartsApiClient
             // message flows to MCP clients and logs in every environment.
             $message = \is_array($data) ? (string) ($data['message'] ?? '') : mb_substr($body, 0, 200);
 
-            throw new UpstreamException(sprintf('partsapi.ru %s failed (HTTP %d): %s', $method, $status, $message));
+            $reason = sprintf('partsapi.ru %s failed (HTTP %d): %s', $method, $status, $message);
+
+            // A quota/auth rejection is final; a 5xx or a throttle is worth another turn.
+            throw $status >= 500 || 429 === $status
+                ? UpstreamException::transient(self::SOURCE, $reason)
+                : UpstreamException::definitive(self::SOURCE, $reason);
         }
 
         $this->cache->save($cacheItem->set($data));

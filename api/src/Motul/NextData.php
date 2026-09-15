@@ -19,12 +19,12 @@ final class NextData
     public static function extract(string $html): array
     {
         if (!preg_match('#<script id="__NEXT_DATA__"[^>]*>(.*?)</script>#s', $html, $m)) {
-            throw new UpstreamException('Motul page carried no __NEXT_DATA__ payload.');
+            throw UpstreamException::definitive('the Motul oil advisor', 'Motul page carried no __NEXT_DATA__ payload.');
         }
 
         $data = json_decode($m[1], true);
         if (!\is_array($data)) {
-            throw new UpstreamException('Motul __NEXT_DATA__ was not valid JSON.');
+            throw UpstreamException::definitive('the Motul oil advisor', 'Motul __NEXT_DATA__ was not valid JSON.');
         }
 
         return $data;

@@ -8,6 +8,7 @@ use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
+use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
@@ -21,10 +22,15 @@ final class SivClient
 {
     private const BASE_URI = 'https://api.apiplaqueimmatriculation.com/plaque';
 
+    /** Model-facing name of the service — never the vendor host or the env var. */
+    private const SOURCE = 'the French vehicle registry (SIV)';
+
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly string $token,
         private readonly CacheItemPoolInterface $cache,
+        private readonly int $maxRetries = 2,
+        private readonly int $retryDelayMs = 1000,
     ) {
     }
 
@@ -53,22 +59,7 @@ final class SivClient
             throw MissingApiKeyException::forSiv();
         }
 
-        try {
-            $response = $this->httpClient->request('POST', self::BASE_URI, [
-                'query' => ['immatriculation' => $plate, 'token' => $this->token, 'pays' => 'FR'],
-                'headers' => ['Accept' => 'application/json'],
-                'timeout' => 15,
-            ]);
-            $status = $response->getStatusCode();
-            $body = $response->getContent(false);
-        } catch (ExceptionInterface $e) {
-            throw new UpstreamException('apiplaqueimmatriculation.com: '.$e->getMessage(), previous: $e);
-        }
-
-        $envelope = json_decode($body, true);
-        if (!\is_array($envelope) || 200 !== $status) {
-            throw new UpstreamException(sprintf('apiplaqueimmatriculation.com bad response (HTTP %d)', $status));
-        }
+        $envelope = $this->fetch($plate);
 
         $errorCode = (int) ($envelope['code_erreur'] ?? 200);
         $dataError = (string) ($envelope['data']['erreur'] ?? '');
@@ -89,6 +80,62 @@ final class SivClient
             return null;
         }
 
-        throw new UpstreamException(sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, $envelope['message'] ?? ''));
+        $message = sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, $envelope['message'] ?? '');
+
+        throw $errorCode >= 500
+            ? UpstreamException::transient(self::SOURCE, $message)
+            : UpstreamException::definitive(self::SOURCE, $message);
+    }
+
+    /**
+     * One lookup, retried on transport failure only.
+     *
+     * The retry has to live here: Symfony's RetryableHttpClient yields a bare idle-timeout chunk
+     * and returns BEFORE consulting the retry strategy (RetryableHttpClient.php:88), so the scoped
+     * client's `retry_failed` never sees it — measured 2026-09-14, 1 TCP connection with
+     * max_retries=2. HTTP-status retries are deliberately NOT done here: the scoped client owns
+     * those, and doing both would multiply attempts against a per-call billed API.
+     *
+     * @return array<string, mixed>
+     */
+    private function fetch(string $plate): array
+    {
+        for ($attempt = 0; ; ++$attempt) {
+            try {
+                $response = $this->httpClient->request('POST', self::BASE_URI, [
+                    'query' => ['immatriculation' => $plate, 'token' => $this->token, 'pays' => 'FR'],
+                    'headers' => ['Accept' => 'application/json'],
+                    'timeout' => 15,
+                ]);
+                $status = $response->getStatusCode();
+                $body = $response->getContent(false);
+            } catch (ExceptionInterface $e) {
+                if (!$e instanceof TransportExceptionInterface || $attempt >= $this->maxRetries) {
+                    throw UpstreamException::transient(self::SOURCE, 'apiplaqueimmatriculation.com: '.$e->getMessage(), $e);
+                }
+
+                $this->pause($attempt);
+
+                continue;
+            }
+
+            $envelope = json_decode($body, true);
+            if (\is_array($envelope) && 200 === $status) {
+                return $envelope;
+            }
+
+            $message = sprintf('apiplaqueimmatriculation.com bad response (HTTP %d)', $status);
+
+            throw $status >= 500 || 429 === $status
+                ? UpstreamException::transient(self::SOURCE, $message)
+                : UpstreamException::definitive(self::SOURCE, $message);
+        }
+    }
+
+    private function pause(int $attempt): void
+    {
+        if ($this->retryDelayMs > 0) {
+            usleep($this->retryDelayMs * 2 ** $attempt * 1000);
+        }
     }
 }

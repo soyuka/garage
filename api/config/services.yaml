@@ -19,6 +19,7 @@ services:
 
     App\Siv\SivClient:
         arguments:
+            $httpClient: '@siv.client'
             $token: '%env(API_PLAQUE_TOKEN)%'
             $cache: '@cache.siv'
 
@@ -235,6 +236,15 @@ services:
 
 when@test:
     services:
+        # Back to the plain client: `siv.client` is a scoped RetryableHttpClient, and a test must
+        # never be one wiring slip away from billing the real SIV API.
+        App\Siv\SivClient:
+            arguments:
+                $httpClient: '@http_client'
+                $token: '%env(API_PLAQUE_TOKEN)%'
+                $cache: '@cache.siv'
+                $retryDelayMs: 0
+
         App\Tests\Mock\FixtureHttpClient:
             decorates: http_client
             arguments:

@@ -219,6 +219,15 @@ a chime or a kitchen timer reads domestic, and a sci-fi UI blip is forbidden out
 non-commercial. The icon would be *committed into the product*, so this must be checked against the
 live terms — not from memory — before any generated asset lands in git.
 
+**Re-read 2026-09-11, and the re-read failed.** The noise that disqualifies generation for the *icon*
+looked like the specification for a *room bed*, and one was built on that reading — then removed the
+same day as annoying (`docs/voice.md` § The room bed, `CHOREOGRAPHY.md` § "The bed that was built and
+removed"). Everything above still stands for the échéance icon, which remains unbuilt. The generated
+asset is no longer in the tree, but the gate is **live again and for real**: `dashboard/public/audio/`
+now carries two generated cues (`select.wav`, `card.wav`) plus three files downloaded from the
+ElevenLabs library. Provenance per file, the redistribution clause and the unread plan tier are written
+up in `docs/voice.md` § "Transition cues — provenance and licensing". Resolve it before release.
+
 
 ---
 
@@ -471,3 +480,35 @@ makes staleness readable, it does not prevent it.
 - History ring (2026-09-05): the car does not yet rescale to make room for the ring + the right-docked
   Carnet — both share the left ~60% of the viewport as-is, untested against a very long car (utilitaire).
 - tasks/visits focus has no body yet (CHOREOGRAPHY § Stations under both drivers).
+
+## MCP error mapping — CLOSED (2026-09-14), with one loose end
+
+Domain errors no longer leave ApiPlatform's MCP handler as a JSON-RPC `-32603` carrying the raw
+exception message. `App\Mcp\DomainErrorHandler` (decorates `api_platform.mcp.handler`) maps them to a
+`CallToolResult` with `status` + `retryable`; anything unmapped still throws, so real bugs stay loud.
+
+This closes the "MCP error mapping" entry in `docs/archive/TODO.md:109`. What decided it: on the
+in-app agent path the message was *structurally* unreachable — Symfony AI's
+`ToolExecutionException::getToolCallResult()` replaces it with a fixed sentence — so a stalled SIV and
+an unknown plate were the same string to the model. On 2026-09-14 it guessed, and told the user a
+possibly-valid plate did not exist.
+
+Statuses: `upstream_unavailable` (retryable), `upstream_rejected`, `not_configured`,
+`budget_exhausted`, `not_found` (the only one with `isError=false` — a miss is a result, matching
+`App\Garage\ToolResult`). `MissingApiKeyException` / `BudgetExhaustedException` messages name env
+vars and are deliberately NOT forwarded; only their `source` label is.
+
+**Loose end:** `App\Mcp\Agent\McpToolbox::execute()` still branches on a JSON-RPC `error` key. Mapped
+failures no longer produce one, so they now reach the model through the normal `structuredContent`
+path — which is the intent, but it means the agent turn journal records them as successful tool calls.
+Worth a `isError` check there so the journal stays honest.
+
+## partsapi fixture tests are red on `main` (found 2026-09-14, NOT caused by the MCP error work)
+
+Eight tests fail on an unmodified tree, all asserting *successful* partsapi fixture data:
+`PartsResourceTest` (5 failures + `testFillVolumesMappedToFrenchLabelsAndSiUnits` erroring),
+`CatalogResourceTest::testListMakes`, `McpServerTest::testGetFillVolumesTool`. The last one was
+verified failing with `src/` untouched. Symptom in `testListMakes`: the returned makes list is
+*shorter* than the fixture (IVECO id 55, RENAULT id 93 missing); `testGetFillVolumesTool` gets
+`structuredContent === null`. Smells like a fixture/response-shape drift or a stale cache row rather
+than a logic bug. Attribution is settled; the cause is not.
