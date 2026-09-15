@@ -13,8 +13,8 @@ final class CatalogResourceTest extends AppTestCase
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains([
-            'totalItems' => 3,
-            'member' => [
+            'hydra:totalItems' => 3,
+            'hydra:member' => [
                 ['id' => 3854, 'name' => 'ABARTH'],
                 ['id' => 55, 'name' => 'IVECO'],
                 ['id' => 93, 'name' => 'RENAULT'],
@@ -22,6 +22,16 @@ final class CatalogResourceTest extends AppTestCase
         ]);
         // Cache key signature must stay stable with the already-paid live response
         $this->assertTrue(self::partsApiCache()->getItem('getMakes.8dfd0ff78534b11449383e60daa7f02a758cdf60')->isHit());
+    }
+
+    public function testListMakesFilteredBySearch(): void
+    {
+        $client = static::createClient();
+        $response = $client->request('GET', '/makes?search=ive');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame(1, $response->toArray()['hydra:totalItems']);
+        $this->assertSame('IVECO', $response->toArray()['hydra:member'][0]['name']);
     }
 
     public function testListModelsAnswers501UntilTokenIsProvided(): void

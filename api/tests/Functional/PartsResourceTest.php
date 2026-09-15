@@ -15,11 +15,11 @@ final class PartsResourceTest extends AppTestCase
         $data = $response->toArray();
 
         // IVECO DAILY tree: 60 nodes, exactly 34 leaves (live-verified, see docs/PLAN.md)
-        $this->assertSame(34, $data['totalItems']);
-        $paths = array_column($data['member'], 'path');
+        $this->assertSame(34, $data['hydra:totalItems']);
+        $paths = array_column($data['hydra:member'], 'path');
         $this->assertContains('Filters > Air Filter', $paths);
 
-        foreach ($data['member'] as $node) {
+        foreach ($data['hydra:member'] as $node) {
             $this->assertTrue($node['leaf']);
         }
 
@@ -33,7 +33,7 @@ final class PartsResourceTest extends AppTestCase
         $response = $client->request('GET', '/cars/34247/part-categories?carType=CV&leafOnly=false');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSame(60, $response->toArray()['totalItems']);
+        $this->assertSame(60, $response->toArray()['hydra:totalItems']);
     }
 
     public function testPartCategoriesFilteredBySearchOnPath(): void
@@ -45,10 +45,10 @@ final class PartsResourceTest extends AppTestCase
         $data = $response->toArray();
 
         // search narrows the 34 leaves down to filter-path nodes only
-        $this->assertGreaterThan(0, $data['totalItems']);
-        $this->assertLessThan(34, $data['totalItems']);
+        $this->assertGreaterThan(0, $data['hydra:totalItems']);
+        $this->assertLessThan(34, $data['hydra:totalItems']);
 
-        $paths = array_column($data['member'], 'path');
+        $paths = array_column($data['hydra:member'], 'path');
         $this->assertContains('Filters > Air Filter', $paths);
         // path is the match field (superset of name): every result carries the term
         foreach ($paths as $path) {
@@ -62,7 +62,7 @@ final class PartsResourceTest extends AppTestCase
         $lower = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=filter')->toArray();
         $upper = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=FILTER')->toArray();
 
-        $this->assertSame($lower['totalItems'], $upper['totalItems']);
+        $this->assertSame($lower['hydra:totalItems'], $upper['hydra:totalItems']);
     }
 
     public function testArticlesForCategory(): void
@@ -72,13 +72,27 @@ final class PartsResourceTest extends AppTestCase
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains([
-            'totalItems' => 4,
-            'member' => [
+            'hydra:totalItems' => 4,
+            'hydra:member' => [
                 ['number' => 'EK-1522', 'brand' => 'ELOFIC', 'productGroup' => 'Air Filter'],
             ],
         ]);
         // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
         $this->assertTrue(self::partsApiCache()->getItem('getArticles.3d7aa63567129c07408d60598fd5bcab162d4379')->isHit());
+    }
+
+    public function testArticlesFallBackToTheDeclaredCarTypeDefault(): void
+    {
+        $client = static::createClient();
+        // No ?carType: the value must come from the declared QueryParameter's schema default (PC).
+        // A wrong carType reaches partsapi as an unknown pair and comes back empty, not 404.
+        $response = $client->request('GET', '/cars/19107/part-categories/100259/articles');
+
+        $this->assertResponseIsSuccessful();
+        $data = $response->toArray();
+
+        $this->assertGreaterThan(0, $data['hydra:totalItems']);
+        $this->assertSame('Oil Filter', $data['hydra:member'][0]['productGroup']);
     }
 
     public function testFillVolumesMappedToFrenchLabelsAndSiUnits(): void
@@ -89,13 +103,13 @@ final class PartsResourceTest extends AppTestCase
         $this->assertResponseIsSuccessful();
         $data = $response->toArray();
 
-        $byLabel = array_column($data['member'], null, 'label');
+        $byLabel = array_column($data['hydra:member'], null, 'label');
         $this->assertArrayHasKey('Huile moteur (avec filtre)', $byLabel);
         $this->assertSame(5.5, $byLabel['Huile moteur (avec filtre)']['volume']);
         $this->assertSame('liter', $byLabel['Huile moteur (avec filtre)']['unit']);
 
         // Russian-unit duplicate rows (л., гр.) must be filtered out
-        $units = array_unique(array_column($data['member'], 'unit'));
+        $units = array_unique(array_column($data['hydra:member'], 'unit'));
         $this->assertNotContains('л.', $units);
         $this->assertNotContains('гр.', $units);
     }
@@ -145,7 +159,7 @@ final class PartsResourceTest extends AppTestCase
 
         // Already-paid data keeps flowing at 50/50: cache is checked BEFORE the budget
         $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['totalItems' => 17]);
+        $this->assertJsonContains(['hydra:totalItems' => 17]);
     }
 
     public function testUpstreamErrorIsNeitherCachedNorCounted(): void
