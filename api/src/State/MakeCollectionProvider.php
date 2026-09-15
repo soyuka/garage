@@ -23,9 +23,13 @@ final class MakeCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
+        $parameters = $operation->getParameters();
+        $carType = $parameters?->get('carType')?->getValue();
+        $search = $parameters?->get('search')?->getValue();
+
         return $this->catalog->makes(
-            CarTypeResolver::fromString($context['filters']['carType'] ?? null),
-            $context['filters']['search'] ?? null,
+            CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
+            \is_string($search) ? $search : null,
         );
     }
 }

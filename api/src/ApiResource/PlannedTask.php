@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\QueryParameter;
 use App\Dto\ArchiveTasksOutput;
 use App\Dto\PlannedTaskInput;
 use App\Entity\PlannedMaintenance;
@@ -37,6 +38,12 @@ use Symfony\Component\Uid\Ulid;
                 'vehicleId' => new Link(fromClass: GarageVehicle::class, identifiers: ['id']),
             ],
             provider: VehiclePlannedTaskCollectionProvider::class,
+            parameters: [
+                'includeDismissed' => new QueryParameter(
+                    description: 'Also return the soft-removed tasks (the dashboard\'s "voir les retirées" view). Default false.',
+                    schema: ['type' => 'boolean', 'default' => false],
+                ),
+            ],
         ),
         // The dashboard's manual task add: a checklist item keyed by hand (source "user").
         new Post(

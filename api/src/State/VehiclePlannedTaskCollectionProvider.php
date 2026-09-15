@@ -47,7 +47,7 @@ final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
 
         // ?includeDismissed=true is the dashboard's "see all" toggle — soft-removed tasks ride along
         // beneath the live list so the user can review (and reopen) what was dropped.
-        $includeDismissed = filter_var($context['filters']['includeDismissed'] ?? false, \FILTER_VALIDATE_BOOL);
+        $includeDismissed = $operation->getParameters()?->get('includeDismissed')?->getValue();
 
         // The fluid line ("which oil, what quantity") is derived from the vehicle facts once and shared
         // across every task in the checklist.
@@ -58,7 +58,7 @@ final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
                 $task,
                 $this->fluids->enrich($task->getType(), $task->getParts(), $facts),
             ),
-            $this->tasks->checklistForVehicle($vehicle, $includeDismissed),
+            $this->tasks->checklistForVehicle($vehicle, filter_var($includeDismissed, \FILTER_VALIDATE_BOOL, \FILTER_NULL_ON_FAILURE) ?? false),
         );
     }
 }

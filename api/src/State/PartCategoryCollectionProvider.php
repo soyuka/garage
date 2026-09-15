@@ -23,13 +23,16 @@ final class PartCategoryCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
-        $leafOnly = filter_var($context['filters']['leafOnly'] ?? true, \FILTER_VALIDATE_BOOL, \FILTER_NULL_ON_FAILURE) ?? true;
+        $parameters = $operation->getParameters();
+        $carType = $parameters?->get('carType')?->getValue();
+        $leafOnly = $parameters?->get('leafOnly')?->getValue();
+        $search = $parameters?->get('search')?->getValue();
 
         return $this->catalog->partCategories(
             (int) $uriVariables['carId'],
-            CarTypeResolver::fromString($context['filters']['carType'] ?? null),
-            $leafOnly,
-            $context['filters']['search'] ?? null,
+            CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
+            filter_var($leafOnly, \FILTER_VALIDATE_BOOL, \FILTER_NULL_ON_FAILURE) ?? true,
+            \is_string($search) ? $search : null,
         );
     }
 }

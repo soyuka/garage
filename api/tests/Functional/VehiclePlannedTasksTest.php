@@ -83,6 +83,17 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $this->assertSame('L', $spec['unit']);
     }
 
+    public function testTheSeeAllToggleIsADeclaredQueryParameter(): void
+    {
+        static::createClient();
+        $openApi = static::getContainer()->get('api_platform.openapi.factory')();
+
+        $get = $openApi->getPaths()->getPath('/garage/vehicles/{vehicleId}/planned-tasks')->getGet();
+        $names = array_map(static fn ($parameter): string => $parameter->getName(), $get->getParameters());
+
+        $this->assertContains('includeDismissed', $names);
+    }
+
     public function testDismissedTasksAreHiddenByDefaultButSurfacedOnDemand(): void
     {
         $client = static::createClient();

@@ -23,9 +23,11 @@ final class ModelCollectionProvider implements ProviderInterface
      */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
+        $carType = $operation->getParameters()?->get('carType')?->getValue();
+
         return $this->catalog->models(
             (int) $uriVariables['makeId'],
-            CarTypeResolver::fromString($context['filters']['carType'] ?? null),
+            CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
         );
     }
 }
