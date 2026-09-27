@@ -46,8 +46,28 @@ final class VerbalizerTest extends TestCase
         ];
 
         yield 'plain text is untouched' => [
+            'Je consulte le catalogue',
+            'Je consulte le catalogue',
+        ];
+
+        /**
+         * The trailing « … » reaches the voice VERBATIM, and that is the decision — see the long note in
+         * {@see \App\Speech\Verbalizer::rewriteSeparators()}. It is a prosody cue the model obeys with
+         * ~0.3–0.5 s of trail-off, which is the bridge into the next line now that the seam is gapless
+         * (CHOREOGRAPHY § "The seam between two lines is gapless"). It was briefly rewritten to a full
+         * stop on 2026-09-11, while the seam was still a hole; this golden pins the restoration, so that
+         * a future reader finding the measurement in docs/voice.md does not "fix" it back without also
+         * reading why it came back.
+         */
+        yield 'a trailing ellipsis is left for the model to trail off on' => [
             'Je consulte le catalogue…',
             'Je consulte le catalogue…',
+        ];
+
+        /** The ASCII spelling is NOT the same thing — it collapses to a full stop, as it always has. */
+        yield 'an ASCII ellipsis still collapses to a single full stop' => [
+            'Ouverture du dossier... lecture des données',
+            'Ouverture du dossier. lecture des données',
         ];
 
         yield 'a plus with no surrounding spaces stays inside the token' => [
@@ -67,14 +87,14 @@ final class VerbalizerTest extends TestCase
             'Reste un euro sur la carte, zéro euro en espèces, deux euros en jetons',
         ];
 
-        /**
-         * A digit run touching a letter, hyphen, apostrophe or slash on EITHER side is an
-         * identifier, not a quantity — the voice spells those letter by letter, which is the right
-         * read for a reference, and `NumberFormatter` must never see them.
-         */
-        yield 'reference identifiers are never spelled out' => [
+        yield 'grades dimensions and unhyphenated identifiers are never mistaken for part references' => [
             "Huile 5W-30, ampoule 246-H, filtre J1313021, référence XB-301-ZB, pneu 16x650-8, indice A3/B3, lot 01M1SM29",
-            "Huile 5W-30, ampoule 246-H, filtre J1313021, référence XB-301-ZB, pneu 16x650-8, indice A3/B3, lot 01M1SM29",
+            "Huile 5W-30, ampoule 246-H, filtre J1313021, référence iks bé, trois zéro un, zède bé, pneu 16x650-8, indice A3/B3, lot 01M1SM29",
+        ];
+
+        yield 'hyphenated part references become distinct French letter and digit groups' => [
+            'Références B593-18-840A et B3C8-18-840.',
+            'Références bé cinq neuf trois, dix-huit, huit quatre zéro a et bé trois cé huit, dix-huit, huit quatre zéro.',
         ];
 
         /**
@@ -118,6 +138,11 @@ final class VerbalizerTest extends TestCase
         yield 'euro sign written BEFORE the amount' => [
             'Last oil change: 6 July 2026 at 250 347 km (MANNOL Energy 5W-30 + filters, €53.20).',
             'Last oil change: six July two thousand twenty-six at two hundred fifty thousand three hundred forty-seven kilometres, MANNOL Energy 5W-30 plus filters, fifty-three euros twenty.',
+        ];
+
+        yield 'hyphenated part references become distinct English letter and digit groups' => [
+            'References B593-18-840A and B3C8-18-840.',
+            'References bee five nine three, eighteen, eight four zero ay and bee three cee eight, eighteen, eight four zero.',
         ];
 
         /**

@@ -129,6 +129,7 @@ services:
             $apiKey: '%env(ELEVENLABS_API_KEY)%'
             $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
             $model: '%env(ELEVENLABS_MODEL)%'
+            $speed: '%env(float:ELEVENLABS_SPEED)%'
 
     # One `pocket-tts serve` per language: the model is bound at process start, so a locale with no
     # server configured stays mute rather than borrowing another language's phonetics.
@@ -154,6 +155,7 @@ services:
             $backend: 'elevenlabs'
             $model: '%env(ELEVENLABS_MODEL)%'
             $voice: '%env(ELEVENLABS_VOICE_ID)%'
+            $speed: '%env(float:ELEVENLABS_SPEED)%'
             # Namespaced per environment — a shared path let the test suite's fake voice list
             # (docs/voice-plan.md § Phase 2 note, defect 2026-09-06) leak into the live cache.
             $cacheDir: '%kernel.project_dir%/var/tts/%kernel.environment%'
@@ -167,6 +169,7 @@ services:
             # IS the whole identity — so these are fixed labels, not read from env.
             $model: 'kyutai-pocket-tts'
             $voice: ''
+            $speed: 1.0
             $cacheDir: '%kernel.project_dir%/var/tts/%kernel.environment%'
 
     App\Speech\SpeechClient:
@@ -289,6 +292,7 @@ when@test:
                 $apiKey: '%env(ELEVENLABS_API_KEY)%'
                 $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
                 $model: '%env(ELEVENLABS_MODEL)%'
+                $speed: '%env(float:ELEVENLABS_SPEED)%'
 
         # The vendor STT transport. Its own double, same reasoning as the TTS one: these tests assert
         # on the OUTGOING request — that the recording arrives byte for byte and carries the resolved

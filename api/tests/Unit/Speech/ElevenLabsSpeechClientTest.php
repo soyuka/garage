@@ -9,6 +9,7 @@ use App\Speech\ElevenLabsSpeechClient;
 use App\Speech\SpeechUnavailable;
 use App\Speech\SpeechVoice;
 use App\Speech\Wav;
+use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -50,6 +51,23 @@ final class ElevenLabsSpeechClientTest extends TestCase
 
         $body = json_decode((string) $sent['body'], true);
         $this->assertSame('en', $body['language_code']);
+    }
+
+    public function testTheJsonBodyCarriesTheConfiguredSpeedForElevenV3French(): void
+    {
+        $sent = [];
+        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$sent): MockResponse {
+            $sent = $options;
+
+            return new MockResponse(['one']);
+        });
+
+        $this->client($http)->stream('La Mazda 6 prend 7,5 litres.', Locale::Fr);
+
+        $body = json_decode((string) $sent['body'], true);
+        $this->assertSame('eleven_v3', $body['model_id']);
+        $this->assertSame('fr', $body['language_code']);
+        $this->assertSame(1.05, $body['voice_settings']['speed']);
     }
 
     public function testContentTypeIsWav(): void
@@ -111,6 +129,13 @@ final class ElevenLabsSpeechClientTest extends TestCase
         $this->expectException(SpeechUnavailable::class);
 
         (new ElevenLabsSpeechClient($http, '', 'voice-id', 'eleven_flash_v2_5'))->stream('x', Locale::Fr);
+    }
+
+    public function testSpeedOutsideElevenLabsSupportedRangeIsRejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new ElevenLabsSpeechClient(new MockHttpClient(), 'api-key', 'voice-id', 'eleven_v3', 1.21);
     }
 
     public function testStreamUsesTheRequestedVoiceOverTheConfiguredOne(): void
@@ -196,6 +221,6 @@ final class ElevenLabsSpeechClientTest extends TestCase
 
     private function client(MockHttpClient $http, string $voiceId = 'voice-id'): ElevenLabsSpeechClient
     {
-        return new ElevenLabsSpeechClient($http, 'api-key', $voiceId, 'eleven_flash_v2_5');
+        return new ElevenLabsSpeechClient($http, 'api-key', $voiceId, 'eleven_v3', 1.05);
     }
 }

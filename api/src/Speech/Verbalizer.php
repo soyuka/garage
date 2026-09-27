@@ -30,6 +30,31 @@ final readonly class Verbalizer
     /** Plain space, NBSP, narrow NBSP, thin space — the separators a French number uses between groups. */
     private const string GROUP_SEPARATOR = '[ \x{00A0}\x{202F}\x{2009}]';
 
+    /** A hyphenated SKU starts with a letter; this deliberately excludes grades (5W-30), dimensions and ratios. */
+    private const string PART_REFERENCE = '/(?<![\p{L}\p{N}-])(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z][A-Z0-9]*(?:-[A-Z0-9]+)+(?![\p{L}\p{N}-])/u';
+
+    /** @var array<value-of<Locale>, array<string, string>> */
+    private const array SPOKEN_LETTERS = [
+        'fr' => [
+            'A' => 'a', 'B' => 'bé', 'C' => 'cé', 'D' => 'dé', 'E' => 'e', 'F' => 'èf', 'G' => 'gé',
+            'H' => 'ache', 'I' => 'i', 'J' => 'ji', 'K' => 'ka', 'L' => 'èl', 'M' => 'èm', 'N' => 'èn',
+            'O' => 'o', 'P' => 'pé', 'Q' => 'ku', 'R' => 'èr', 'S' => 'ès', 'T' => 'té', 'U' => 'u',
+            'V' => 'vé', 'W' => 'double vé', 'X' => 'iks', 'Y' => 'i grec', 'Z' => 'zède',
+        ],
+        'en' => [
+            'A' => 'ay', 'B' => 'bee', 'C' => 'cee', 'D' => 'dee', 'E' => 'ee', 'F' => 'eff', 'G' => 'gee',
+            'H' => 'aitch', 'I' => 'eye', 'J' => 'jay', 'K' => 'kay', 'L' => 'ell', 'M' => 'em', 'N' => 'en',
+            'O' => 'oh', 'P' => 'pee', 'Q' => 'cue', 'R' => 'are', 'S' => 'ess', 'T' => 'tee', 'U' => 'you',
+            'V' => 'vee', 'W' => 'double you', 'X' => 'ex', 'Y' => 'why', 'Z' => 'zee',
+        ],
+    ];
+
+    /** @var array<value-of<Locale>, array<string, string>> */
+    private const array SPOKEN_DIGITS = [
+        'fr' => ['0' => 'zéro', '1' => 'un', '2' => 'deux', '3' => 'trois', '4' => 'quatre', '5' => 'cinq', '6' => 'six', '7' => 'sept', '8' => 'huit', '9' => 'neuf'],
+        'en' => ['0' => 'zero', '1' => 'one', '2' => 'two', '3' => 'three', '4' => 'four', '5' => 'five', '6' => 'six', '7' => 'seven', '8' => 'eight', '9' => 'nine'],
+    ];
+
     /**
      * fr units that are grammatically feminine — French agreement needs « une » rather than the
      * masculine default `NumberFormatter::SPELLOUT` gives "1" ("un"). English has no such split.
@@ -94,6 +119,7 @@ final readonly class Verbalizer
         $text = $this->spellUnits($text, $locale);
         $text = $this->rewriteSeparators($text, $locale);
         $text = $this->rewriteBrackets($text);
+        $text = $this->speakPartReferences($text, $locale);
         $text = $this->spellNumbers($text, $locale);
 
         return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
@@ -189,6 +215,26 @@ final readonly class Verbalizer
     {
         $text = str_replace('·', '.', $text);
 
+        // « … » is deliberately LEFT for the model to interpret, and this is a decision with a history.
+        //
+        // It is a screen convention here — "this line is not the end" — carried by 28 French lines, all
+        // of them steps, acknowledgements and loading notices; answers and greetings end in a full stop
+        // or a question mark. The model reads it as a prosody cue and trails off: measured on the
+        // shipped voice, « Je regarde ça… » runs 1.16 s with its last word ending at 0.68 s — 0.48 s of
+        // breathy sustain — against 0.20 s for a line ending in a full stop. The words themselves are
+        // identical either way (Scribe transcribes both the same, last word at the same timestamp), so
+        // the ellipsis buys nothing but the tail.
+        //
+        // It was briefly rewritten to a full stop on 2026-09-11, when that tail was followed by a HOLE:
+        // the next line only began once the previous had finished playing, so the operator heard the
+        // sustain, then ~190 ms of nothing, then a cold start — « un euh entre les phrases ». The seam is
+        // gapless since the same day (CHOREOGRAPHY § "The seam between two lines is gapless"), so the
+        // sustain now runs straight into the following line, which is what a hesitation is for. Restored.
+        //
+        // What it still costs, stated plainly: a line carrying « … » that turns out to be LAST — a turn
+        // ending on a step, or a successor whose body arrives late — trails into silence exactly as
+        // before. That case is the residue of this decision, not an argument against it.
+
         // Only a dash WITH spaces on both sides is a clause break; one glued to its neighbours is a
         // hyphen-like compound (kept as-is — there is no such case in the goldens, but the rule says
         // "with spaces around it" for a reason).
@@ -235,6 +281,28 @@ final readonly class Verbalizer
         // at the very end of the string (no closing punctuation follows it) would otherwise leave a
         // dangling trailing comma.
         return preg_replace('/\s*,\s*$/u', '', $text) ?? $text;
+    }
+
+    private function speakPartReferences(string $text, Locale $locale): string
+    {
+        return preg_replace_callback(self::PART_REFERENCE, function (array $match) use ($locale): string {
+            return implode(', ', array_map(
+                fn (string $group): string => $this->speakPartReferenceGroup($group, $locale),
+                explode('-', $match[0]),
+            ));
+        }, $text) ?? $text;
+    }
+
+    private function speakPartReferenceGroup(string $group, Locale $locale): string
+    {
+        if (ctype_digit($group) && strlen($group) <= 2 && !str_starts_with($group, '0')) {
+            return (new \NumberFormatter($locale->value, \NumberFormatter::SPELLOUT))->format((int) $group);
+        }
+
+        $letters = self::SPOKEN_LETTERS[$locale->value];
+        $digits = self::SPOKEN_DIGITS[$locale->value];
+
+        return implode(' ', array_map(static fn (string $character): string => $letters[$character] ?? $digits[$character], str_split($group)));
     }
 
     /**

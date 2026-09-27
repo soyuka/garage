@@ -100,6 +100,18 @@ final class CachingSpeechClientTest extends TestCase
         $this->assertSame(2, $inner->calls, 'A different voice must not share the other voice\'s cache entry.');
     }
 
+    public function testADifferentSpeedForTheSameTextAndVoiceIsAMiss(): void
+    {
+        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $natural = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', 'voice-a', $this->cacheDir, new NullLogger(), speed: 1.0);
+        $faster = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', 'voice-a', $this->cacheDir, new NullLogger(), speed: 1.05);
+
+        self::body($natural->stream('Vidange enregistrée.', Locale::Fr));
+        self::body($faster->stream('Vidange enregistrée.', Locale::Fr));
+
+        $this->assertSame(2, $inner->calls, 'A different speed must not serve stale audio generated at another pace.');
+    }
+
     /**
      * A miss is a TEE, not a buffer: the backend's chunks pass through to the caller with their
      * boundaries intact — the browser starts playing on the first one — and what gets cached is the

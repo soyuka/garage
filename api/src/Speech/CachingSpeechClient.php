@@ -19,10 +19,11 @@ use Psr\Log\LoggerInterface;
  * that dies part-way writes nothing: a half-line answering the same text forever would be worse than
  * a miss.
  *
- * Key: `sha256(backend|model|voice|locale|text)`. `locale` MUST be in it: the same sentence read as
+ * Key: `sha256(backend|model|voice|settings|locale|text)`. `locale` MUST be in it: the same sentence read as
  * French and as English is two different audios, and a key without locale would serve one for the
- * other. `backend|model|voice` guards the other direction — swap the model or upgrade the ElevenLabs
- * voice and the old audio must not keep answering for text that also existed under the old config.
+ * other. `backend|model|voice|settings` guards the other direction — swap the model, upgrade the
+ * ElevenLabs voice, or change its speed and the old audio must not keep answering for text that also
+ * existed under the old config.
  *
  * Wraps each backend INDIVIDUALLY (config/services.yaml `speech.caching.*`), not the routed
  * {@see SelectableSpeechClient}: only at that point is the model/voice identifying the coming audio
@@ -47,6 +48,7 @@ final readonly class CachingSpeechClient implements SpeechClient
         private string $voice,
         private string $cacheDir,
         private LoggerInterface $logger,
+        private float $speed = 1.0,
     ) {
     }
 
@@ -56,7 +58,7 @@ final readonly class CachingSpeechClient implements SpeechClient
         // same line with voice B must be two different cache entries, or picking a voice on the
         // dashboard would keep hearing whichever voice happened to be cached first.
         $resolvedVoice = $voice ?? $this->voice;
-        $key = hash('sha256', implode('|', [$this->backend, $this->model, $resolvedVoice, $locale->value, $text]));
+        $key = hash('sha256', implode('|', [$this->backend, $this->model, $resolvedVoice, $this->settingsKey(), $locale->value, $text]));
         $bytesPath = $this->path($key, 'bin');
         $typePath = $this->path($key, 'type');
 
@@ -135,10 +137,15 @@ final readonly class CachingSpeechClient implements SpeechClient
         return rtrim($this->cacheDir, '/').'/'.$key.'.'.$extension;
     }
 
+    private function settingsKey(): string
+    {
+        return json_encode(['speed' => $this->speed], JSON_THROW_ON_ERROR);
+    }
+
     /**
-     * Keyed on backend|model|voice|locale, same shape as {@see stream()}'s audio key: locale alone
-     * is not enough, or switching `TTS_BACKEND` would keep serving the previously configured
-     * backend's voice list under the same cache directory.
+     * Keyed on backend|model|voice|locale. Speed is deliberately absent: it changes generated audio,
+     * not the list of voices. Locale alone is not enough, or switching `TTS_BACKEND` would keep
+     * serving the previously configured backend's voice list under the same cache directory.
      */
     private function voicesPath(Locale $locale): string
     {

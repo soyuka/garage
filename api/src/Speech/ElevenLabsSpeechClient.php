@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Speech;
 
 use App\I18n\Locale;
+use InvalidArgumentException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -33,13 +34,19 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
     private const string VOICES_ENDPOINT = 'https://api.elevenlabs.io/v1/voices';
     private const string CONTENT_TYPE = 'audio/wav';
     private const int SAMPLE_RATE = 24000;
+    private const float MIN_SPEED = 0.7;
+    private const float MAX_SPEED = 1.2;
 
     public function __construct(
         private HttpClientInterface $http,
         private string $apiKey,
         private string $voiceId,
         private string $model,
+        private float $speed = 1.0,
     ) {
+        if (!is_finite($this->speed) || self::MIN_SPEED > $this->speed || self::MAX_SPEED < $this->speed) {
+            throw new InvalidArgumentException(sprintf('ELEVENLABS_SPEED must be between %.1f and %.1f.', self::MIN_SPEED, self::MAX_SPEED));
+        }
     }
 
     public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
@@ -61,6 +68,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
                     // differently depending on this. Omitted, the voice's own language wins — which
                     // is how a French line ends up read as though it were English.
                     'language_code' => $locale->value,
+                    'voice_settings' => ['speed' => $this->speed],
                 ],
             ]);
 
