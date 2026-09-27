@@ -177,6 +177,22 @@ services:
                 pockettts: '@speech.caching.pockettts'
             $backend: '%env(enum:App\Speech\SpeechBackend:TTS_BACKEND)%'
 
+    # The ear (docs/dictation-plan.md). The SAME seam shape as the voice above — router over a
+    # !service_locator — so a local whisper sidecar drops in later as one class, one enum case and one
+    # line here. No caching decorator on this side on purpose: two recordings are never byte-identical,
+    # so a cache would be a disk full of single-use entries.
+    App\Transcription\ElevenLabsTranscriptionClient:
+        arguments:
+            $apiKey: '%env(ELEVENLABS_API_KEY)%'
+            $model: '%env(ELEVENLABS_STT_MODEL)%'
+
+    App\Transcription\TranscriptionClient:
+        class: App\Transcription\SelectableTranscriptionClient
+        arguments:
+            $clients: !service_locator
+                elevenlabs: '@App\Transcription\ElevenLabsTranscriptionClient'
+            $backend: '%env(enum:App\Transcription\TranscriptionBackend:STT_BACKEND)%'
+
     # Qwen counterpart: record the live model on the debug journal off each call.
     # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.
     App\Agent\QwenModelLogger:
@@ -273,6 +289,18 @@ when@test:
                 $apiKey: '%env(ELEVENLABS_API_KEY)%'
                 $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
                 $model: '%env(ELEVENLABS_MODEL)%'
+
+        # The vendor STT transport. Its own double, same reasoning as the TTS one: these tests assert
+        # on the OUTGOING request — that the recording arrives byte for byte and carries the resolved
+        # language — which a fixture-file router cannot express.
+        App\Tests\Mock\RecordingTranscriptionHttpClient:
+            public: true
+
+        App\Transcription\ElevenLabsTranscriptionClient:
+            arguments:
+                $http: '@App\Tests\Mock\RecordingTranscriptionHttpClient'
+                $apiKey: '%env(ELEVENLABS_API_KEY)%'
+                $model: '%env(ELEVENLABS_STT_MODEL)%'
 
         # A default tenant for the suite: garage reads that send no token resolve to the same owner
         # the tests seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.
