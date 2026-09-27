@@ -39,6 +39,9 @@ final class RenderIntentTools
      */
     public const BODY_REGIONS = ['hood', 'bay', 'windshield', 'frontAxle', 'rearAxle'];
 
+    /** @var array{type: 'toast', tone: string, message: string}|null */
+    private ?array $pendingToast = null;
+
     public function __construct(
         private readonly HubInterface $hub,
         private readonly LoggerInterface $logger,
@@ -71,6 +74,19 @@ final class RenderIntentTools
     public function signalTurnPhase(string $phase): void
     {
         Assert::inArray($phase, ['start', 'end']);
+
+        if ('start' === $phase) {
+            $this->pendingToast = null;
+            $this->publish(['type' => 'turn', 'phase' => $phase]);
+
+            return;
+        }
+
+        if (null !== $this->pendingToast) {
+            $this->publish($this->pendingToast);
+            $this->pendingToast = null;
+        }
+
         $this->publish(['type' => 'turn', 'phase' => $phase]);
     }
 
@@ -113,7 +129,12 @@ final class RenderIntentTools
     public function toast(string $message, string $tone = 'info'): string
     {
         Assert::inArray($tone, ['info', 'ok', 'warn', 'alarm']);
-        $this->publish(['type' => 'toast', 'tone' => $tone, 'message' => $message]);
+        $toast = ['type' => 'toast', 'tone' => $tone, 'message' => $message];
+        if (null !== $this->channel->sessionId()) {
+            $this->pendingToast = $toast;
+        } else {
+            $this->publish($toast);
+        }
 
         return 'ok';
     }
@@ -220,6 +241,7 @@ final class RenderIntentTools
         if (null !== $finding && '' !== trim($finding)) {
             $payload['finding'] = $finding;
         }
+        $this->pendingToast = null;
         $this->publish($payload);
 
         return 'ok';

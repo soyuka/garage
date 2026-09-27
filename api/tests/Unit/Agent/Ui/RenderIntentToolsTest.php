@@ -29,7 +29,6 @@ final class RenderIntentToolsTest extends TestCase
         $logger->expects($this->once())->method('warning');
 
         $tools = new RenderIntentTools($hub, $logger, TestDashboardChannel::create());
-        $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $this->assertSame('ok', $tools->toast('Entretien enregistré', 'ok'));
     }
@@ -52,6 +51,82 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertNotNull($published);
         $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
         $this->assertSame(['type' => 'selectVehicle', 'id' => '/garage/vehicles/01J'], json_decode($published->getData(), true));
+    }
+
+    public function testBoundTurnPublishesOnlyItsLatestToastImmediatelyBeforeItEnds(): void
+    {
+        $published = [];
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published[] = json_decode($update->getData(), true);
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->signalTurnPhase('start');
+        $tools->toast('Je regarde les tâches en cours.');
+        $tools->focusView('tasks', ['coolant']);
+        $tools->toast('La sonde est dans la maintenance en cours, il faut 7,5 l de liquide de refroidissement.', 'ok');
+        $tools->signalTurnPhase('end');
+
+        $this->assertSame([
+            ['type' => 'turn', 'phase' => 'start'],
+            ['type' => 'focusView', 'panel' => 'tasks', 'keys' => ['coolant']],
+            ['type' => 'toast', 'tone' => 'ok', 'message' => 'La sonde est dans la maintenance en cours, il faut 7,5 l de liquide de refroidissement.'],
+            ['type' => 'turn', 'phase' => 'end'],
+        ], $published);
+    }
+
+    public function testUnboundPilotToastPublishesImmediately(): void
+    {
+        $published = [];
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published[] = json_decode($update->getData(), true);
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+
+        $tools->toast('Entretien enregistré.', 'ok');
+
+        $this->assertSame([
+            ['type' => 'toast', 'tone' => 'ok', 'message' => 'Entretien enregistré.'],
+        ], $published);
+    }
+
+    public function testProposeActionsDiscardsAPendingBoundTurnToast(): void
+    {
+        $published = [];
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published[] = json_decode($update->getData(), true);
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->signalTurnPhase('start');
+        $tools->toast('Une première réponse.');
+        $tools->proposeActions('Choisir une référence', [new ActionButton('Ajouter', 'ajoute cette référence')], 'La réponse est dans cette carte.');
+        $tools->signalTurnPhase('end');
+
+        $this->assertSame([
+            ['type' => 'turn', 'phase' => 'start'],
+            [
+                'type' => 'proposeActions',
+                'headline' => 'Choisir une référence',
+                'actions' => [['label' => 'Ajouter', 'instruction' => 'ajoute cette référence']],
+                'finding' => 'La réponse est dans cette carte.',
+            ],
+            ['type' => 'turn', 'phase' => 'end'],
+        ], $published);
     }
 
     /**
