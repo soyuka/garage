@@ -1,6 +1,11 @@
 # yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
 
 parameters:
+    # The token claim that identifies a tenant. NOT `sub`: Casdoor mints a fresh uuid for the
+    # built-in `admin` user every time it re-applies init_data.json, so a sub-keyed owner loses the
+    # whole garage on a restart (verified 2026-09-19). The email is the stable seam across reseeds.
+    app.owner_claim: 'email'
+
     env(PARTSAPI_CALL_LIMIT): '50'
     # PocketTtsSpeechClient::voices() label, when nothing sets the env var at all (never true once
     # api/.env loads, which always sets it — this is the fallback for a stripped-down environment).
@@ -215,6 +220,7 @@ services:
             $discoveryCache: '@cache.app'
             $oidcConfigurationCacheKey: 'casdoor_oidc_config'
             $issuers: ['%env(CASDOOR_ISSUER)%']
+            $claim: '%app.owner_claim%'
 
     # Replace symfony/mcp-bundle's controller so the MCP DNS-rebinding allowlist is configurable:
     # the bundle hardcodes `middleware: null`, which pins it to localhost-only and 403s every
@@ -250,8 +256,11 @@ when@test:
             arguments:
                 $fixturesDir: '%kernel.project_dir%/tests/Fixtures'
 
-        # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler.
-        App\Tests\Security\FakeOidcTokenHandler: ~
+        # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler. Reads the same
+        # claim as production so the suite covers the tenancy key, not a hardcoded `sub`.
+        App\Tests\Security\FakeOidcTokenHandler:
+            arguments:
+                $claim: '%app.owner_claim%'
 
         # The vendor TTS transport. Its own double rather than FixtureHttpClient because the speech
         # tests assert on the OUTGOING request (key header, voice in the path, model in the body).
