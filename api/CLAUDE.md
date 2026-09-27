@@ -24,11 +24,17 @@ Persistence is split on purpose:
 docker compose exec php vendor/bin/phpunit
 docker compose exec php vendor/bin/phpunit tests/Functional/McpOpenVehicleTest.php
 docker compose exec php vendor/bin/phpunit --filter testOpensByQuery
-docker compose exec php php -d memory_limit=1G vendor/bin/phpunit    # full suite
+docker compose exec php php -d memory_limit=1G vendor/bin/phpunit    # ALWAYS — see below
 ```
 
 **No php-cs-fixer and no phpstan in this repo** — the global pre-push gate does not apply here.
 `vendor/bin/phpunit` is the whole toolchain.
+
+**Always raise the memory limit**, not just for the full suite (corrected 2026-09-11): the container's
+`memory_limit` is 128M and building the MCP registry alone costs ~120 MB, so even a single functional
+file dies with `Fatal error: Premature end of PHP process` on a stack ending in `apcu_fetch` — which
+reads as a cache bug and is really OOM. `tests/Functional/SpeechTest.php` alone reproduces it, and is
+green at 1G. Clearing `var/cache` inside the containers does not help; only the limit does.
 
 After touching code, the worker still holds the compiled container and the MCP tool schemas in
 memory. Clear the cache **inside** both containers — `compose.override.yaml:14,49` mount `/app/var`
