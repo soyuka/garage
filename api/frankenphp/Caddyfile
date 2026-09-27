@@ -24,29 +24,6 @@
 	root /app/public
 	encode zstd br gzip
 
-	mercure {
-		# Mercure 1.0 dropped the top-level publisher_jwt/subscriber_jwt directives: keys now hang off
-		# the issuer that signed the token. `iss` must equal this identifier and `aud` must equal
-		# resource_identifier, both minted by config/packages/mercure.yaml.
-		issuer {$MERCURE_JWT_ISSUER:https://mon-parc-auto.fr} {
-			publisher {
-				jwt {env.MERCURE_PUBLISHER_JWT_KEY}
-			}
-			subscriber {
-				jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
-			}
-		}
-		# We publish through the internal URL but tokens carry the public one, so the audience the hub
-		# expects has to be pinned instead of derived per request.
-		resource_identifier {$MERCURE_PUBLIC_URL:https://localhost/.well-known/mercure}
-		# Allow anonymous subscribers (double-check that it's what you want)
-		anonymous
-		# Enable the subscription API (double-check that it's what you want)
-		subscriptions
-		# Extra directives
-		{$MERCURE_EXTRA_DIRECTIVES}
-	}
-
 	vulcain
 
 	{$CADDY_SERVER_EXTRA_DIRECTIVES}
@@ -88,6 +65,13 @@
 		# requests then 502 only when something actually matches @frontend.
 		reverse_proxy @frontend http://{$FRONTEND_UPSTREAM:dashboard:5173}
 
+		# The hub itself lives on the internal site below, declared exactly once. Browser subscribers
+		# arrive here, so this address forwards to it; Caddy streams an SSE response through
+		# reverse_proxy without buffering.
+		reverse_proxy /.well-known/mercure* http://{$MERCURE_HUB_UPSTREAM:php:80} {
+			header_up Host {$MERCURE_HUB_HOST:php}
+		}
+
 		@phpRoute {
 			not path /.well-known/mercure*
 			not file {path}
@@ -107,7 +91,12 @@
 						# publishing then: this module does no replay and sends no Last-Event-ID, so a
 						# frame published before this point is gone.
 						lifecycle_url {$MCP_STREAM_LIFECYCLE_URL:http://php/_mcp/stream-lifecycle}
-						lifecycle_token {env.MCP_STREAM_LIFECYCLE_TOKEN}
+						# {$...}, not {env....}: this module keeps the configured string as-is and never runs
+						# it through Caddy's replacer, so a runtime placeholder is sent verbatim as the
+						# bearer and the callback answers 401. The mercure directive below resolves
+						# {env....} itself, which is why the two forms differ. Substituting at parse time
+						# does put the token in the adapted config that the admin API serves on localhost.
+						lifecycle_token {$MCP_STREAM_LIFECYCLE_TOKEN}
 						timeout {$MCP_STREAM_TIMEOUT:5m}
 						idle_timeout {$MCP_STREAM_IDLE_TIMEOUT:60s}
 					}
@@ -131,17 +120,49 @@
 	}
 }
 
-# The in-network entry point: the app publishes to the hub here, and Caddy posts the stream
-# lifecycle callback here. Mercure 1.0 allows one unnamed hub per HTTP app and each `mercure`
-# directive provisions its own, so declaring the hub again on this address would create a second one
-# that never sees the first's updates. Everything is forwarded to the single site above instead.
-# The certificate is Caddy's own, on a hop that never leaves the compose network.
+# The single Mercure hub, on the in-network address the app publishes to and `mercure_stream`
+# subscribes to. Mercure 1.0 refuses a second unnamed hub anywhere in the configuration, and each
+# `mercure` directive provisions its own. SERVER_NAME can carry several addresses (stage serves
+# https://localhost and http://garage.soyuka.me), and addresses that differ in scheme land in
+# different Caddy servers, so a hub on the public site is instantiated once per server and the
+# config is rejected. Declaring it here keeps it to one, whatever SERVER_NAME holds; the public
+# addresses reverse_proxy to it.
 http://php:80 {
-	reverse_proxy https://{$MERCURE_INTERNAL_HOST:localhost} {
-		transport http {
-			tls
-			tls_insecure_skip_verify
+	handle /.well-known/mercure* {
+		mercure {
+			# Mercure 1.0 dropped the top-level publisher_jwt/subscriber_jwt directives: keys now hang off
+			# the issuer that signed the token. `iss` must equal this identifier and `aud` must equal
+			# resource_identifier, both minted by config/packages/mercure.yaml.
+			issuer {$MERCURE_JWT_ISSUER:https://mon-parc-auto.fr} {
+				publisher {
+					jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+				}
+				subscriber {
+					jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+				}
+			}
+			# Subscribers reach this hub through the public address, so the audience tokens carry is the
+			# public URL and cannot be derived from the request.
+			resource_identifier {$MERCURE_PUBLIC_URL:https://localhost/.well-known/mercure}
+			# Allow anonymous subscribers (double-check that it's what you want)
+			anonymous
+			# Enable the subscription API (double-check that it's what you want)
+			subscriptions
+			# Extra directives
+			{$MERCURE_EXTRA_DIRECTIVES}
 		}
-		header_up Host {$MERCURE_INTERNAL_HOST:localhost}
+	}
+
+	# The stream lifecycle callback also arrives on this address. It is the app, not the hub, so
+	# everything that is not the hub path goes back to the public site. The certificate is Caddy's
+	# own, on a hop that never leaves the container.
+	handle {
+		reverse_proxy https://{$MERCURE_INTERNAL_HOST:localhost} {
+			transport http {
+				tls
+				tls_insecure_skip_verify
+			}
+			header_up Host {$MERCURE_INTERNAL_HOST:localhost}
+		}
 	}
 }

@@ -55,6 +55,8 @@ final readonly class McpStreamLifecycleController
             default => null,
         };
 
-        return new JsonResponse(['state' => $state], Response::HTTP_OK);
+        // 204 exactly. The Caddy handler compares the status to http.StatusNoContent and aborts the
+        // stream with a 502 on anything else, body unread (mercure-stream-delegation delegate.go:264).
+        return new Response(status: Response::HTTP_NO_CONTENT);
     }
 }

@@ -17,9 +17,10 @@ use Symfony\AI\McpBundle\Http\MiddlewareFactory;
  * Runs a delegated tool call and publishes its answer to the stream's topic.
  *
  * The call is replayed through the same {@see Server} the endpoint uses, so a delegated answer and a
- * synchronous one come from one code path. The SDK writes a streamed answer to the output buffer
- * rather than returning it ({@see StreamableHttpTransport::flushOutgoingMessages()} echoes), so the
- * run is buffered and the captured SSE is re-published frame by frame.
+ * synchronous one come from one code path. {@see StreamableHttpTransport::createJsonResponse()}
+ * returns every outgoing message on the response body, batched into a JSON array when there is more
+ * than one; only a suspended fiber takes the branch that echoes
+ * ({@see StreamableHttpTransport::flushOutgoingMessages()}), which is captured when it can be.
  */
 final readonly class McpStreamRunner
 {
@@ -71,12 +72,18 @@ final readonly class McpStreamRunner
             middleware: $this->middleware->create(),
         );
 
-        ob_start();
+        // A delegated call runs on kernel.terminate, after the response has been sent, and PHP then
+        // refuses a new output buffer ("ob_start(): Failed to create buffer"). Capturing is therefore
+        // best-effort: the SDK only echoes when a fiber suspends, and every other answer — including a
+        // multi-message one, which it batches into a JSON array — comes back on the response body.
+        $depth = ob_get_level();
+        $capturing = @ob_start();
+
         try {
             $response = $this->server->run($transport);
             $returned = (string) $response->getBody();
         } finally {
-            $echoed = (string) ob_get_clean();
+            $echoed = $capturing && ob_get_level() > $depth ? (string) ob_get_clean() : '';
         }
 
         if ('text/event-stream' === strtolower(explode(';', $response->getHeaderLine('Content-Type'))[0])) {

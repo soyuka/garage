@@ -54,6 +54,10 @@ final class McpStreamLifecycleTest extends AppTestCase
     }
 
     /**
+     * 204 exactly, not any 2xx: the Caddy handler compares the status to http.StatusNoContent and
+     * treats everything else as a failed callback, which aborts the stream with a 502
+     * (mercure-stream-delegation delegate.go:264).
+     *
      * An unknown topic is the normal shape of a late or duplicated callback: the call has already
      * been taken, so there is nothing left to run and nothing to report.
      */
@@ -66,7 +70,7 @@ final class McpStreamLifecycleTest extends AppTestCase
             'json' => ['topic' => self::TOPIC, 'state' => 'ready'],
         ]);
 
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(204);
     }
 
     public function testAcceptsTheTerminalStates(): void
@@ -79,7 +83,7 @@ final class McpStreamLifecycleTest extends AppTestCase
                 'json' => ['topic' => self::TOPIC, 'state' => $state],
             ]);
 
-            $this->assertResponseIsSuccessful();
+            $this->assertResponseStatusCodeSame(204);
         }
     }
 
