@@ -46,7 +46,7 @@ final class PlannedTaskCreateTest extends AppTestCase
         $this->assertJsonContains(['type' => 'brakes', 'label' => 'plaquettes avant', 'status' => 'open']);
 
         // It shows on the checklist subresource as a real, open, tick-offable task.
-        $members = $client->request('GET', $iri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', $iri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $members);
         $this->assertSame('brakes', $members[0]['type']);
         $this->assertStringStartsWith('/garage/planned-tasks/', $members[0]['@id']);

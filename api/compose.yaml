@@ -7,7 +7,7 @@ services:
       # TLS/redirect, so MCP clients without a trusted cert (Goose Flatpak's reqwest) reach
       # /mcp. The OAuth metadata + WWW-Authenticate challenge derive scheme/host from the
       # request, so http://localhost/mcp self-configures. DEFAULT_URI follows from .env.
-      SERVER_NAME: ${SERVER_NAME:-localhost}, php:80
+      SERVER_NAME: ${SERVER_NAME:-localhost}
       DEFAULT_URI: ${DEFAULT_URI:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
@@ -28,6 +28,10 @@ services:
       MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}/.well-known/mercure}
       MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      # Mercure 1.0 speaks RFC 9068 access tokens: the hub matches the token's `iss` against its
+      # `issuer` block and its `aud` against `resource_identifier`. Both sides read these.
+      MERCURE_JWT_ISSUER: ${MERCURE_JWT_ISSUER:-https://mon-parc-auto.fr}
+      MCP_STREAM_LIFECYCLE_TOKEN: ${MCP_STREAM_LIFECYCLE_TOKEN:-!ChangeThisMcpStreamLifecycleToken!}
       ###> dunglas/symfony-docker ###
       # Next lines are only used during initial installation
       # This block will remove itself after the installation

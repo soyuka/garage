@@ -4,11 +4,11 @@ Guidance for Claude Code inside the API surface. Repo-wide rules live in `../CLA
 
 ## Stack
 
-API Platform 4.3 on Symfony / PHP 8.4+, FrankenPHP. **MCP-first**: every capability is an
+API Platform 5.0 on Symfony / PHP 8.4+, FrankenPHP 1.12 (custom build). **MCP-first**: every capability is an
 `ApiResource` DTO carrying both HTTP operations and `mcp:` tools, backed by a thin
 `State/` provider (reads) or processor (tool calls) over a domain service. Adding a capability means
 adding a DTO + processor, not a controller — plain `#[Route]` controllers exist only where API
-Platform cannot express the thing (bill up/download, the MCP endpoint override).
+Platform cannot express the thing (bill up/download, the MCP stream lifecycle callback).
 
 Persistence is split on purpose:
 
@@ -16,7 +16,11 @@ Persistence is split on purpose:
 - **Postgres** — DBAL HTTP caches (`cache.siv`, `cache.partsapi`) and Casdoor's own store. Never the
   domain model.
 - **MinIO / S3** — maintenance bill binaries; metadata stays on the Mongo record.
-- **Mercure** — render frames to the dashboard.
+- **Mercure** — render frames to the dashboard, and the transport for delegated MCP streams.
+
+The FrankenPHP binary is **rebuilt** (`Dockerfile` builder stage): stock modules plus Mercure 1.0.2
+and `mercure_stream`, the handler that serves an MCP tool call's SSE straight from the hub. Details
+and the rules that design depends on: `../docs/mcp-mercure-stream.md`.
 
 ## Commands
 
@@ -75,8 +79,9 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   `tests/bootstrap.php` + `AppTestCase` guard it now — do not weaken them.
 - **MCP host allowlist.** The SDK's DNS-rebinding middleware is localhost-only and the bundle exposes
   no hook, so on a public hostname authenticated `/mcp` calls 403 "Invalid Host header." while
-  unauthenticated ones still 401 — reads exactly like an OAuth failure. Fixed by overriding
-  `mcp.server.controller` with `App\Controller\Mcp\McpEndpointController` + `MCP_ALLOWED_HOSTS`.
+  unauthenticated ones still 401 — reads exactly like an OAuth failure. mcp-bundle 0.14 made this a
+  config option, so the hand-written controller is gone: set `http.allowed_hosts` in
+  `config/packages/mcp.yaml` (it reads `MCP_ALLOWED_HOSTS`).
 - **New nullable ODM fields 500 on legacy documents** when constructor-promoted: hydration uses
   `newInstanceWithoutConstructor`, which skips promoted defaults. Declare a class-level default.
 - **Clearing a value** goes through `$set: null`, never `$unset` — `$unset` breaks hydration.
@@ -86,6 +91,14 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   died at the 180 s limit.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
   `TypeInfoDescriber`.
+- **One Mercure hub per Caddy HTTP app.** Mercure 1.0 refuses a second unnamed hub, and each
+  `mercure` directive builds its own — two of them never see each other's updates. The site on
+  `php:80` forwards to the public site rather than declaring the hub again.
+- **Delegated MCP streams need Caddy.** Every real client sends `Accept: application/json,
+  text/event-stream`, so with `MCP_STREAM_DELEGATION=1` every `tools/call` goes through the hub and
+  the lifecycle callback. The suite runs none of that and sets `MCP_STREAM_DELEGATION=0`.
+- **The owner is the email claim** (55bf873), so a seeded `setOwner()` takes an address. The test
+  fallback in `config/services.yaml` and `AppTestCase::TEST_OWNER` must stay equal.
 
 ## Docs
 

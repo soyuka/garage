@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use ApiPlatform\Test\Client;
 
 /**
  * JSON-RPC over Streamable HTTP plumbing for the /mcp endpoint, shared by the
@@ -28,7 +28,9 @@ trait McpClientTrait
     private function mcpHeaders(array $extra = []): array
     {
         return self::MCP_HEADERS + [
-            'Authorization' => 'Bearer '.FakeOidcToken::for(AppTestCase::TEST_OWNER, 'mcp@example.com'),
+            // The owner IS the email claim (55bf873), so this must be TEST_OWNER or an MCP write
+            // lands on a different tenant than the seeds.
+            'Authorization' => 'Bearer '.FakeOidcToken::for('mcp-user', AppTestCase::TEST_OWNER),
         ] + $extra;
     }
 

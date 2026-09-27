@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\ApiTestCase;
+use ApiPlatform\Test\ApiTestCase;
 use MongoDB\Client;
 use Psr\Cache\CacheItemPoolInterface;
 
@@ -15,7 +15,7 @@ abstract class AppTestCase extends ApiTestCase
      * test env (config/services.yaml when@test), so a write seeded in-process and an anonymous read
      * resolve to the same owner. {@see authHeaders()} and {@see McpClientTrait} issue tokens for it.
      */
-    public const string TEST_OWNER = 'test-user';
+    public const string TEST_OWNER = 'dashboard@example.com';
 
     protected static ?bool $alwaysBootKernel = true;
 
@@ -91,7 +91,7 @@ abstract class AppTestCase extends ApiTestCase
      *
      * @return array{Authorization: string}
      */
-    protected static function authHeaders(string $sub = self::TEST_OWNER, string $email = 'dashboard@example.com'): array
+    protected static function authHeaders(string $sub = 'test-user', string $email = self::TEST_OWNER): array
     {
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];
     }

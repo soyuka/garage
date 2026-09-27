@@ -27,7 +27,7 @@ final class GarageVehiclePatchTest extends AppTestCase
         ]));
 
         $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])
-            ->toArray()['member'];
+            ->toArray()['hydra:member'];
 
         return $member[0]['@id'];
     }

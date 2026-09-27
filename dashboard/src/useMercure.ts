@@ -18,10 +18,15 @@ const HUB = import.meta.env.VITE_MERCURE_URL ?? '';
 
 // ── Pure core (unit-tested) ───────────────────────────────────────────────────
 
-/** Build the hub URL with one repeated `?topic=` param per subscribed topic, against the page origin. */
+/**
+ * Build the hub URL with one repeated `?match=` param per subscribed topic, against the page origin.
+ * Mercure 1.0 (non-compatibility mode) renamed the exact-match query parameter from `topic` to
+ * `match` (a URI-template/pattern subscription would instead use `match_urlpattern`, unused here —
+ * every subscription in this app is an exact absolute-IRI topic).
+ */
 export function buildHubUrl(hub: string, origin: string, topics: string[]): string {
   const url = new URL(hub, origin);
-  topics.forEach((t) => url.searchParams.append('topic', t));
+  topics.forEach((t) => url.searchParams.append('match', t));
   return url.toString();
 }
 

@@ -75,7 +75,7 @@ final class McpServerTest extends AppTestCase
             'arguments' => ['carId' => 34247],
         ], 4);
 
-        $labels = array_column($result['result']['structuredContent']['member'], 'label');
+        $labels = array_column($result['result']['structuredContent']['hydra:member'], 'label');
         $this->assertContains('Huile moteur (avec filtre)', $labels);
     }
 

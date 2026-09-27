@@ -3,6 +3,13 @@ mercure:
         default:
             url: '%env(default::MERCURE_URL)%'
             public_url: '%env(default::MERCURE_PUBLIC_URL)%'
+            # RFC 9068 tokens: typ at+jwt, authorization_details instead of the 0.x `mercure` claim.
+            protocol_version: '1.0'
             jwt:
                 secret: '%env(MERCURE_JWT_SECRET)%'
                 publish: '*'
+                # `aud` is left to default to public_url, which the hub pins as resource_identifier.
+                claims:
+                    iss: '%env(MERCURE_JWT_ISSUER)%'
+                    sub: 'mon-parc-auto'
+                    client_id: 'mon-parc-auto'

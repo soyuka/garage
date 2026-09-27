@@ -8,6 +8,7 @@ use App\Agent\WebSearchBudget;
 use App\Agent\WebSearchInputProcessor;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Agent\Input;
+use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
@@ -108,7 +109,7 @@ final class WebSearchInputProcessorTest extends TestCase
     {
         return new MessageBag(
             Message::ofUser('quelle huile ?'),
-            new ToolCallMessage(new ToolCall('c1', 'get_vehicle_facts', []), '{"facts":[]}'),
+            new ToolCallMessage(new ToolCall('c1', 'get_vehicle_facts', []), new Text('{"facts":[]}')),
         );
     }
 }

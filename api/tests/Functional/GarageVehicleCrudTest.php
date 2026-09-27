@@ -43,7 +43,7 @@ final class GarageVehicleCrudTest extends AppTestCase
         $this->assertArrayHasKey('@id', $created);
         $this->assertSame('user', $created['source']);
 
-        $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $member, 'the freshly-created vehicle shows in the parc');
     }
 
@@ -91,7 +91,7 @@ final class GarageVehicleCrudTest extends AppTestCase
         $this->assertResponseStatusCodeSame(204);
 
         // Gone from the parc listing…
-        $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(0, $member, 'a soft-deleted vehicle drops off the parc');
 
         // …and from its own item read.
@@ -115,7 +115,7 @@ final class GarageVehicleCrudTest extends AppTestCase
         // A new vehicle of the same identity is not shadowed by the tombstoned one.
         $fresh = $this->seedVehicle();
         $this->assertNotSame((string) $vehicle->getId(), (string) $fresh->getId());
-        $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $member = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $member, 'only the live row shows');
     }
 }

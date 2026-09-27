@@ -9,7 +9,7 @@ final class PlannedTaskEditTest extends AppTestCase
     use McpClientTrait;
 
     /**
-     * @return array{client: \ApiPlatform\Symfony\Bundle\Test\Client, taskIri: string}
+     * @return array{client: \ApiPlatform\Test\Client, taskIri: string}
      */
     private function planTask(array $arguments): array
     {

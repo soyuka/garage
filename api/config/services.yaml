@@ -5,6 +5,8 @@ parameters:
     # built-in `admin` user every time it re-applies init_data.json, so a sub-keyed owner loses the
     # whole garage on a restart (verified 2026-09-19). The email is the stable seam across reseeds.
     app.owner_claim: 'email'
+    # One source of truth: config/packages/mcp.yaml routes it, the stream runner replays against it.
+    app.mcp_path: '/mcp'
 
     env(PARTSAPI_CALL_LIMIT): '50'
     # PocketTtsSpeechClient::voices() label, when nothing sets the env var at all (never true once
@@ -52,11 +54,46 @@ services:
             $locale: '%env(MOTUL_LOCALE)%'
             $bu: '%env(MOTUL_BU)%'
 
-    # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server,
+    # ── Delegated MCP streams (docs/mcp-mercure-stream.md) ───────────────────────────────────────
+    # A tool call answers with a topic instead of a body; Caddy's mercure_stream handler serves the
+    # SSE from the hub, so no PHP thread stays parked on the client connection.
+    App\Mcp\Stream\MercureStreamResponseFactory:
+        arguments:
+            $streams: '@mcp.psr17_factory'
+
+    App\Mcp\Stream\PendingCallStore:
+        arguments:
+            $cache: '@cache.app'
+
+    App\Mcp\Stream\McpStreamRunner:
+        arguments:
+            $server: '@mcp.server.garage'
+            $requests: '@mcp.psr17_factory'
+            $streams: '@mcp.psr17_factory'
+            $responses: '@mcp.psr17_factory'
+            $middleware: '@mcp.server.garage.middleware_factory'
+            $path: '%app.mcp_path%'
+            $logger: '@logger'
+        tags:
+            - { name: 'monolog.logger', channel: 'mcp' }
+
+    # Wraps the bundle's controller rather than replacing it: everything but tools/call still goes
+    # through the stock path.
+    App\Controller\Mcp\DelegatingMcpController:
+        decorates: 'mcp.server.garage.controller'
+        public: true
+        arguments:
+            $inner: '@.inner'
+            $responses: '@mcp.psr17_factory'
+            $httpFoundation: '@mcp.http_foundation_factory'
+        tags:
+            - 'controller.service_arguments'
+
+    # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server.garage,
     # not autowireable by FQCN), so the agent reuses the garage tools without HTTP/OAuth.
     App\Mcp\Agent\McpToolbox:
         arguments:
-            $server: '@mcp.server'
+            $server: '@mcp.server.garage'
 
     # Web-search mechanism follows the agent's platform (anthropic|qwen|off) — see
     # config/packages/ai.yaml + docs/AGENT_PROVIDER.md.
@@ -241,23 +278,6 @@ services:
             $issuers: ['%env(CASDOOR_ISSUER)%']
             $claim: '%app.owner_claim%'
 
-    # Replace symfony/mcp-bundle's controller so the MCP DNS-rebinding allowlist is configurable:
-    # the bundle hardcodes `middleware: null`, which pins it to localhost-only and 403s every
-    # authenticated request on a public hostname. See the class docblock.
-    mcp.server.controller:
-        class: App\Controller\Mcp\McpEndpointController
-        public: true
-        arguments:
-            - '@mcp.server'
-            - '@mcp.psr_http_factory'
-            - '@mcp.http_foundation_factory'
-            - '@mcp.psr17_factory'
-            - '@mcp.psr17_factory'
-            - '%env(csv:MCP_ALLOWED_HOSTS)%'
-            - '@logger'
-        tags:
-            - 'controller.service_arguments'
-            - { name: 'monolog.logger', channel: 'mcp' }
 
 when@test:
     services:
@@ -311,7 +331,9 @@ when@test:
         App\Security\OwnerContext:
             autowire: true
             arguments:
-                $fallback: 'test-user'
+                # Must equal AppTestCase::TEST_OWNER. Since 55bf873 the owner IS the email claim,
+                # so it is an address, not the sub.
+                $fallback: 'dashboard@example.com'
 
         # Capture Mercure publishes (no HTTP) so tests can assert streamed intents/events.
         App\Tests\Mock\RecordingHub:

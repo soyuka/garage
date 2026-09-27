@@ -28,7 +28,7 @@ final class GarageWriteAuthTest extends AppTestCase
         ]));
 
         return $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])
-            ->toArray()['member'][0]['@id'];
+            ->toArray()['hydra:member'][0]['@id'];
     }
 
     public function testAnonymousVehiclePatchIsRejected(): void

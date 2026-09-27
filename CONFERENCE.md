@@ -162,9 +162,9 @@ truth: the token was issued, so authorization was never the problem. Check that 
    (`vendor/symfony/mcp-bundle/src/Controller/McpController.php:38`), which selects it. On a public
    hostname the endpoint answers **403 `Forbidden: Invalid Host header.` to every AUTHENTICATED
    request while unauthenticated ones still 401 correctly** — which reads exactly like a credentials
-   problem. Fix: `src/Controller/Mcp/McpEndpointController.php` replaces service
-   `mcp.server.controller` and drives the allowlist from **`MCP_ALLOWED_HOSTS`** (csv). The guard is
-   kept, not disabled. Covered by `tests/Functional/McpAllowedHostsTest.php` (accept + reject).
+   problem. Fix: `http.allowed_hosts` in `api/config/packages/mcp.yaml`, driven by
+   **`MCP_ALLOWED_HOSTS`** (csv). The guard is kept, not disabled. (Until mcp-bundle 0.14 this
+   needed a hand-written controller; the bundle exposes it as an option now.) Covered by `tests/Functional/McpAllowedHostsTest.php` (accept + reject).
 
    Two traps inside that fix, both already paid for:
    - `MCP_ALLOWED_HOSTS` must be **container env** in `compose.stage.yaml`; a value only in

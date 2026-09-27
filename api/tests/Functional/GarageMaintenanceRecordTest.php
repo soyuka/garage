@@ -49,7 +49,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         $this->assertResponseStatusCodeSame(201);
         $this->assertJsonContains(['items' => [['type' => 'oil_change', 'parts' => []]], 'performedAt' => '2025-09-12', 'usageValue' => 138000]);
 
-        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $members);
         $this->assertSame('oil_change', $members[0]['items'][0]['type']);
         $this->assertStringStartsWith('/garage/maintenance-records/', $members[0]['@id']);
@@ -67,7 +67,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
             ]);
         }
 
-        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(2, $members);
         $this->assertSame('2025-06-01', $members[0]['performedAt'], 'newest service first');
     }
@@ -102,7 +102,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
             'json' => ['type' => 'inspection', 'performedAt' => '2025-07-01'],
         ]);
 
-        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(3, $members);
 
         $byDate = [];
@@ -279,7 +279,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         $client->request('DELETE', $created['@id'], ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
         $this->assertResponseStatusCodeSame(204);
 
-        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(0, $members);
     }
 
@@ -294,12 +294,12 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         ])->toArray();
 
         $client->request('PATCH', $created['@id'], [
-            'headers' => self::authHeaders('intruder') + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders('intruder', 'intruder@example.com') + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
             'json' => ['label' => 'hijack'],
         ]);
         $this->assertResponseStatusCodeSame(404);
 
-        $client->request('DELETE', $created['@id'], ['headers' => self::authHeaders('intruder') + ['Accept' => 'application/ld+json']]);
+        $client->request('DELETE', $created['@id'], ['headers' => self::authHeaders('intruder', 'intruder@example.com') + ['Accept' => 'application/ld+json']]);
         $this->assertResponseStatusCodeSame(404);
     }
 }

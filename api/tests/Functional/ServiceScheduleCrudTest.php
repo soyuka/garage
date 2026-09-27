@@ -45,7 +45,7 @@ final class ServiceScheduleCrudTest extends AppTestCase
         $body = $client->request('GET', '/garage/vehicles/'.$vehicle->getId().'/service-schedule', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
 
         $this->assertResponseIsSuccessful();
-        $rules = $body['member'];
+        $rules = $body['hydra:member'];
         $this->assertCount(1, $rules);
         $this->assertSame('oil_change', $rules[0]['type']);
         $this->assertSame('change', $rules[0]['action']);
@@ -86,7 +86,7 @@ final class ServiceScheduleCrudTest extends AppTestCase
         ]);
         $this->assertResponseIsSuccessful();
 
-        $rules = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $rules = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $rules);
         $this->assertSame(60, $rules[0]['everyUsage']['value']);
     }
@@ -99,11 +99,11 @@ final class ServiceScheduleCrudTest extends AppTestCase
         });
         $base = '/garage/vehicles/'.$vehicle->getId().'/service-schedule';
 
-        $id = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'][0]['id'];
+        $id = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'][0]['id'];
         $client->request('DELETE', $base.'/'.$id, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
         $this->assertResponseStatusCodeSame(204);
 
-        $rules = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $rules = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(0, $rules, 'Tombstoned rule leaves the editable list.');
     }
 }

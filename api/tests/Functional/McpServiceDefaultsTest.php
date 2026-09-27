@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use ApiPlatform\Test\Client;
 
 /**
  * The read-only `list_service_defaults` tool: the generic-baseline catalogue the agent must consult

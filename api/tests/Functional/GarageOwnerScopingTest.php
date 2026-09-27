@@ -10,15 +10,15 @@ use Symfony\AI\Platform\Result\ToolCall;
 
 /**
  * Root 2 of the 2026-06-19 review: per-user tenant isolation. Every garage row carries an `owner`
- * (the authenticated Casdoor `sub`); reads are scoped to the current owner and a row created by one
+ * (the authenticated Casdoor email claim); reads are scoped to the current owner and a row created by one
  * user is invisible to another. Pins that boundary end to end.
  */
 final class GarageOwnerScopingTest extends AppTestCase
 {
-    /** Seed one vehicle owned by $sub (the in-process write path mirrors the agent worker binding). */
-    private function seedVehicleFor(string $sub, string $make, string $model): void
+    /** Seed one vehicle owned by $owner (the in-process write path mirrors the agent worker binding). */
+    private function seedVehicleFor(string $owner, string $make, string $model): void
     {
-        static::getContainer()->get(OwnerContext::class)->set($sub);
+        static::getContainer()->get(OwnerContext::class)->set($owner);
 
         static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'plan_maintenance', [
             'make' => $make,
@@ -31,24 +31,25 @@ final class GarageOwnerScopingTest extends AppTestCase
     }
 
     /** @return list<array<string, mixed>> */
-    private function listAs(object $client, string $sub): array
+    private function listAs(object $client, string $owner): array
     {
         return $client->request('GET', '/garage/vehicles', [
-            'headers' => self::authHeaders($sub) + ['Accept' => 'application/ld+json'],
-        ])->toArray()['member'];
+            // Since 55bf873 the owner is the email claim, so the tenant varies on the second argument.
+            'headers' => self::authHeaders('sub-of-'.$owner, $owner) + ['Accept' => 'application/ld+json'],
+        ])->toArray()['hydra:member'];
     }
 
     public function testCollectionIsScopedToTheAuthenticatedOwner(): void
     {
         $client = static::createClient();
-        $this->seedVehicleFor('alice-sub', 'MAZDA', 'MAZDA6');
-        $this->seedVehicleFor('bob-sub', 'RENAULT', 'CLIO');
+        $this->seedVehicleFor('alice@example.com', 'MAZDA', 'MAZDA6');
+        $this->seedVehicleFor('bob@example.com', 'RENAULT', 'CLIO');
 
-        $alice = $this->listAs($client, 'alice-sub');
+        $alice = $this->listAs($client, 'alice@example.com');
         self::assertCount(1, $alice);
         self::assertSame('MAZDA6', $alice[0]['model']);
 
-        $bob = $this->listAs($client, 'bob-sub');
+        $bob = $this->listAs($client, 'bob@example.com');
         self::assertCount(1, $bob);
         self::assertSame('CLIO', $bob[0]['model']);
     }
@@ -56,17 +57,17 @@ final class GarageOwnerScopingTest extends AppTestCase
     public function testCrossOwnerItemReadIs404(): void
     {
         $client = static::createClient();
-        $this->seedVehicleFor('alice-sub', 'MAZDA', 'MAZDA6');
+        $this->seedVehicleFor('alice@example.com', 'MAZDA', 'MAZDA6');
 
-        $aliceIri = $this->listAs($client, 'alice-sub')[0]['@id'];
+        $aliceIri = $this->listAs($client, 'alice@example.com')[0]['@id'];
 
         $client->request('GET', $aliceIri, [
-            'headers' => self::authHeaders('bob-sub') + ['Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders('sub-of-bob', 'bob@example.com') + ['Accept' => 'application/ld+json'],
         ]);
         $this->assertResponseStatusCodeSame(404);
 
         $client->request('GET', $aliceIri, [
-            'headers' => self::authHeaders('alice-sub') + ['Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders('sub-of-alice', 'alice@example.com') + ['Accept' => 'application/ld+json'],
         ]);
         $this->assertResponseIsSuccessful();
     }

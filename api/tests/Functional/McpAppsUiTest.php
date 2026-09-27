@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Symfony\Bundle\Test\Client;
+use ApiPlatform\Test\Client;
 
 /**
  * The MCP Apps extension (io.modelcontextprotocol/ui) wiring: the server advertises the

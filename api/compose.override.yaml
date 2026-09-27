@@ -22,7 +22,8 @@ services:
       # `docker compose restart php`.
       FRANKENPHP_WORKER_CONFIG: ""
       FRANKENPHP_SITE_CONFIG: hot_reload
-      MERCURE_EXTRA_DIRECTIVES: demo
+      # Mercure 1.0 renamed `demo` to `playground`; its echo endpoints moved to /playground/.
+      MERCURE_EXTRA_DIRECTIVES: playground
       # Caddy reverse-proxies @frontend requests here (the Atelier dev server on the compose network).
       FRONTEND_UPSTREAM: dashboard:5173
       # See https://xdebug.org/docs/all_settings#mode

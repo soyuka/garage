@@ -42,7 +42,7 @@ final class GarageVehicleNextDueTest extends AppTestCase
         $this->seed('BLANKMAKE', static function (): void {});
 
         $client = static::createClient();
-        $members = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $byMake = array_column($members, null, 'make');
 
         $this->assertArrayHasKey('OVERDUEMAKE', $byMake);

@@ -25,10 +25,20 @@
 	encode zstd br gzip
 
 	mercure {
-		# Publisher JWT key
-		publisher_jwt {env.MERCURE_PUBLISHER_JWT_KEY} {env.MERCURE_PUBLISHER_JWT_ALG}
-		# Subscriber JWT key
-		subscriber_jwt {env.MERCURE_SUBSCRIBER_JWT_KEY} {env.MERCURE_SUBSCRIBER_JWT_ALG}
+		# Mercure 1.0 dropped the top-level publisher_jwt/subscriber_jwt directives: keys now hang off
+		# the issuer that signed the token. `iss` must equal this identifier and `aud` must equal
+		# resource_identifier, both minted by config/packages/mercure.yaml.
+		issuer {$MERCURE_JWT_ISSUER:https://mon-parc-auto.fr} {
+			publisher {
+				jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+			}
+			subscriber {
+				jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+			}
+		}
+		# We publish through the internal URL but tokens carry the public one, so the audience the hub
+		# expects has to be pinned instead of derived per request.
+		resource_identifier {$MERCURE_PUBLIC_URL:https://localhost/.well-known/mercure}
 		# Allow anonymous subscribers (double-check that it's what you want)
 		anonymous
 		# Enable the subscription API (double-check that it's what you want)
@@ -84,6 +94,27 @@
 		}
 		rewrite @phpRoute index.php
 
+		# An MCP response carrying Mercure-Stream is a promise, not a body: the endpoint returns an
+		# empty 200 and this handler swaps it for the hub's SSE, so no PHP thread stays parked on the
+		# connection. Without the intercept the header reaches the client and no stream ever opens.
+		# The hub is this same Caddy; MERCURE_URL is the in-container address the publisher already uses.
+		intercept {
+			@mercureStream header Mercure-Stream *
+			handle_response @mercureStream {
+				route {
+					mercure_stream {$MERCURE_URL:http://php/.well-known/mercure} {
+						# "ready" fires once the hub has accepted the subscription. The app only starts
+						# publishing then: this module does no replay and sends no Last-Event-ID, so a
+						# frame published before this point is gone.
+						lifecycle_url {$MCP_STREAM_LIFECYCLE_URL:http://php/_mcp/stream-lifecycle}
+						lifecycle_token {env.MCP_STREAM_LIFECYCLE_TOKEN}
+						timeout {$MCP_STREAM_TIMEOUT:5m}
+						idle_timeout {$MCP_STREAM_IDLE_TIMEOUT:60s}
+					}
+				}
+			}
+		}
+
 		@frontController path index.php
 		php @frontController {
 			{$FRANKENPHP_SITE_CONFIG}
@@ -97,5 +128,20 @@
 		file_server {
 			hide *.php
 		}
+	}
+}
+
+# The in-network entry point: the app publishes to the hub here, and Caddy posts the stream
+# lifecycle callback here. Mercure 1.0 allows one unnamed hub per HTTP app and each `mercure`
+# directive provisions its own, so declaring the hub again on this address would create a second one
+# that never sees the first's updates. Everything is forwarded to the single site above instead.
+# The certificate is Caddy's own, on a hop that never leaves the compose network.
+http://php:80 {
+	reverse_proxy https://{$MERCURE_INTERNAL_HOST:localhost} {
+		transport http {
+			tls
+			tls_insecure_skip_verify
+		}
+		header_up Host {$MERCURE_INTERNAL_HOST:localhost}
 	}
 }

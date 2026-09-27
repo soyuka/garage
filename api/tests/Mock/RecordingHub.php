@@ -6,6 +6,7 @@ namespace App\Tests\Mock;
 
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Jwt\TokenFactoryInterface;
+use Symfony\Component\Mercure\ProtocolVersion;
 use Symfony\Component\Mercure\Update;
 
 /**
@@ -27,6 +28,16 @@ final class RecordingHub implements HubInterface
     public function getFactory(): ?TokenFactoryInterface
     {
         return null;
+    }
+
+    public function getProtocolVersion(): ProtocolVersion
+    {
+        return ProtocolVersion::V1;
+    }
+
+    public function getCookieName(): string
+    {
+        return '__Secure-mercure_access_token';
     }
 
     public function publish(Update $update): string

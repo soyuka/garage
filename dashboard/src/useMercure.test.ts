@@ -11,11 +11,12 @@ function vehicle(iri: string, over: Partial<VehicleSummary> = {}): VehicleSummar
 }
 
 describe('buildHubUrl', () => {
-  it('appends each topic as a repeated ?topic= param against the page origin', () => {
+  it('appends each topic as a repeated ?match= param against the page origin', () => {
     const url = buildHubUrl('/.well-known/mercure', 'https://localhost', ['https://localhost/garage/vehicles', 'https://localhost/agent/sessions/abc']);
     const u = new URL(url);
     expect(u.origin + u.pathname).toBe('https://localhost/.well-known/mercure');
-    expect(u.searchParams.getAll('topic')).toEqual(['https://localhost/garage/vehicles', 'https://localhost/agent/sessions/abc']);
+    expect(u.searchParams.getAll('match')).toEqual(['https://localhost/garage/vehicles', 'https://localhost/agent/sessions/abc']);
+    expect(u.searchParams.has('topic')).toBe(false);
   });
 });
 

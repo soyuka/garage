@@ -68,7 +68,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
 
         // The two done tasks are filed as ONE entretien passé (a single visit), each task an item,
         // stamped with the vehicle's current reading.
-        $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $records);
         $visit = $records[0];
         $types = array_column($visit['items'], 'type');
@@ -89,7 +89,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
             'json' => (object) [],
         ]);
 
-        $members = $client->request('GET', $iri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $members = $client->request('GET', $iri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $types = array_column($members, 'type');
         $this->assertContains('tyres', $types, 'the open task remains on the checklist');
         $this->assertNotContains('oil_change', $types, 'an archived task leaves the current checklist');
@@ -108,7 +108,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
         $this->assertResponseIsSuccessful();
         $this->assertSame(0, $second->toArray()['archived'], 'a re-run archives nothing — no duplicate records');
 
-        $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $records, 'the done tasks are filed as a single visit; a re-run adds no duplicate');
     }
 
@@ -122,7 +122,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
             'json' => (object) [],
         ]);
 
-        $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['member'];
+        $records = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $loggedTypes = array_merge(...array_map(static fn ($r): array => array_column($r['items'], 'type'), $records));
         $this->assertNotContains('wipers', $loggedTypes, 'a dismissed task is discarded, never filed as history');
     }
@@ -146,7 +146,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
 
         // A different tenant must not archive (nor even see) this owner's vehicle.
         $client->request('POST', $iri.'/planned-tasks/archive', [
-            'headers' => self::authHeaders('other-user') + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'headers' => self::authHeaders('other-user', 'other@example.com') + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => (object) [],
         ]);
 
