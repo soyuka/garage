@@ -24,6 +24,7 @@ describe('manifestFromCta — derive a parts manifest from a parts-bearing propo
     expect(m!.taskId).toBe('/planned-tasks/oil');
     expect(m!.parts).toHaveLength(2);
     expect(m!.service).toBe('Vidange à prévoir');
+    expect(m!.canAdd).toBe(true);
   });
 
   it('is null for a proposal whose actions carry only instructions (no parts)', () => {
@@ -50,6 +51,26 @@ describe('manifestFromCta — derive a parts manifest from a parts-bearing propo
       ],
     };
     expect(manifestFromCta(cta)!.taskId).toBe('/first');
+  });
+
+  it('renders compactly when every proposed reference already belongs to the target task', () => {
+    const cta: Cta = {
+      headline: 'Vidange à prévoir',
+      actions: [{ label: 'Planifier', patchTask: { id: '/planned-tasks/oil', parts } }],
+    };
+    const task = { id: '/planned-tasks/oil', type: 'oil', status: 'open', parts: [{ ...parts[0], ref: ' W 712/75 ' }, parts[1]] };
+
+    expect(manifestFromCta(cta, [task])!.canAdd).toBe(false);
+  });
+
+  it('keeps the action when a reference differs only by case', () => {
+    const cta: Cta = {
+      headline: 'Vidange à prévoir',
+      actions: [{ label: 'Planifier', patchTask: { id: '/planned-tasks/oil', parts } }],
+    };
+    const task = { id: '/planned-tasks/oil', type: 'oil', status: 'open', parts: [{ ...parts[0], ref: 'w 712/75' }, parts[1]] };
+
+    expect(manifestFromCta(cta, [task])!.canAdd).toBe(true);
   });
 });
 

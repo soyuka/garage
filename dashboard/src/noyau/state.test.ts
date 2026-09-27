@@ -17,6 +17,55 @@ describe('Le Noyau frame→state machine', () => {
     expect(s2.phase).toBe('idle');
   });
 
+  /**
+   * The MIC is not typing. Both used to dispatch `typing`, which is refused while a result is still on
+   * the orb — so pressing the mic inside the 1.6 s done dwell showed no cue at all, and the orb then
+   * settled itself to veille with the microphone still open (2026-09-11, reported live). An open mic
+   * is a state the operator has a right to see, and it outranks a finished turn's lamp.
+   */
+  describe('listening — an open microphone takes the orb', () => {
+    const workingThen = (ev: Parameters<typeof R>[1]) => R(R(initialNoyau, { type: 'turn', phase: 'start' }, 0), ev, 1);
+
+    it('dilates from rest', () => {
+      expect(R(initialNoyau, { type: 'listening', active: true }, 0).phase).toBe('listening');
+    });
+
+    it('takes the orb from a finished turn, and puts out its result lamp', () => {
+      let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+      s = R(s, { type: 'concern', message: 'Contrôle technique dépassé.' }, 10);
+      s = R(s, { type: 'turn', phase: 'end' }, 20);
+      expect(s).toMatchObject({ phase: 'done', result: 'red' });
+
+      const open = R(s, { type: 'listening', active: true }, 30);
+
+      expect(open.phase).toBe('listening');
+      expect(open.result).toBeNull(); // the red fault lamp is keyed on phase+result
+    });
+
+    // A turn genuinely in progress owns the orb; the mic is inert while busy anyway, so this is only
+    // reachable from a pilot-driven turn.
+    it('never interrupts a running turn', () => {
+      const running = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+
+      expect(R(running, { type: 'listening', active: true }, 1)).toBe(running);
+    });
+
+    it('returns to veille when the mic closes', () => {
+      const open = R(initialNoyau, { type: 'listening', active: true }, 0);
+
+      expect(R(open, { type: 'listening', active: false }, 1).phase).toBe('idle');
+    });
+
+    /**
+     * The mic closing and the turn starting are the SAME gesture now that a transcript submits itself
+     * (`dictation.ts` `submission`). If the close lands after the turn has begun, it must not drag the
+     * working orb back to veille.
+     */
+    it('leaves a turn that has already started alone', () => {
+      expect(workingThen({ type: 'listening', active: false })).toMatchObject({ phase: 'working' });
+    });
+  });
+
   it('turn start → working, pulse count reset, result cleared', () => {
     const s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
     expect(s.phase).toBe('working');

@@ -126,12 +126,25 @@ export function isAuthenticated(): boolean {
   return getToken() !== null;
 }
 
-/** Display identity decoded from the held token (name/email/sub). Empty when signed out. */
+/**
+ * Display identity decoded from the held token (name/email/sub). Empty when signed out.
+ *
+ * `name` prefers Casdoor's `displayName` claim over `name`, because `name` is the LOGIN — on this
+ * stack the sole user is the built-in `admin`, so greeting by `name` says "bonjour admin" while the
+ * person is called Soyuka (measured on a live token, 2026-09-11). `displayName` is the human-facing
+ * field and the one the operator can actually change; `name` stays the fallback for an IdP that sends
+ * no display name at all.
+ */
 export function getIdentity(): { name?: string; email?: string; sub?: string } {
   const token = getToken();
   if (!token) return {};
   const c = decodeJwtClaims(token);
-  return { name: c.name as string | undefined, email: c.email as string | undefined, sub: c.sub as string | undefined };
+  const display = typeof c.displayName === 'string' && c.displayName.trim() !== '' ? c.displayName : undefined;
+  return {
+    name: display ?? (c.name as string | undefined),
+    email: c.email as string | undefined,
+    sub: c.sub as string | undefined,
+  };
 }
 
 // ── Flow glue ─────────────────────────────────────────────────────────────────

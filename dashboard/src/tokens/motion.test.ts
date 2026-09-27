@@ -6,7 +6,8 @@ import { RISE_SECONDS, CASCADE_SECONDS } from '../scene/VisitRing';
 import { ETCH_SECONDS, FAN_SECONDS } from '../scene/FactConstellation';
 import { FLUID_RISE_SECONDS, FLUID_FAN_SECONDS } from '../scene/FluidVolumes';
 import atelier from './atelier.css?raw';
-import { MOTION } from './motion';
+import noyau from '../noyau/noyau.css?raw';
+import { DWELL, MOTION } from './motion';
 
 // Every stylesheet under src/, read as text. The Noyau instrument's own `--nx-*` layer is exempt:
 // atelier.css documents it as a separate scale that migrates onto these tokens later.
@@ -26,6 +27,21 @@ describe('the motion scale', () => {
       expect(MOTION, `--at-dur-${name} has no MOTION twin`).toHaveProperty(name);
       expect(value, `--at-dur-${name}`).toBe(MOTION[name as keyof typeof MOTION]);
     }
+  });
+
+  /**
+   * `noyau.css` is exempt from the token sweep above (its `--nx-*` layer migrates later), but this one
+   * relationship crosses the two files and broke silently: the red fault lamp ran `0.9s infinite`
+   * inside a 1600 ms `done` dwell, so it was cut mid-fade at ~half opacity EVERY time — a lamp that
+   * could never finish a blink, which reads as a rendering artifact rather than a signal (reported
+   * live 2026-09-11). Whichever side moves, the blinks must still land exactly on the dwell.
+   */
+  it('lets the red fault lamp finish whole blinks inside the done dwell', () => {
+    const shorthand = /animation:\s*nx-fault\s+([\d.]+m?s)\s+[a-z-]+\s+(\d+)\s*;/.exec(noyau);
+
+    expect(shorthand, 'the nx-fault animation is no longer `<duration> <easing> <iterations>;`').not.toBeNull();
+    const [, duration, iterations] = shorthand!;
+    expect(ms(duration) * Number(iterations)).toBe(DWELL.settle);
   });
 
   it('keeps the JS-side motions (they run in useFrame, not CSS) on the same scale', () => {

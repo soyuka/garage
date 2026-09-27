@@ -59,7 +59,7 @@
 		|| path(
 			'/@vite/*', '/@react-refresh', '/@id/*', '/@fs/*', '/src/*', '/node_modules/*',
 			'/vite-hmr*', '/__vite_ping', '/favicon.ico',
-			'*.glb', '/draco/*'
+			'*.glb', '/draco/*', '/audio/*'
 		)`
 
 	# route {} enforces strict first-match-wins in file order, so the @frontend proxy is tried

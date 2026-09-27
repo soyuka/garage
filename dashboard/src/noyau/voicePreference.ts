@@ -1,10 +1,10 @@
 import type { SpeechVoice } from '../types';
 
-// The operator's ElevenLabs voice choice — pure core, mirroring `useAudition`'s storage pattern
-// (useVoice.ts) so the two persisted preferences read the same way. `null` is not "no preference
-// recorded", it is a positive choice: the server default.
+// The operator's ElevenLabs voice choice — pure core, mirroring `useVoicePreference`'s own storage
+// pattern (useVoice.ts). `null` is not "no preference recorded", it is a positive choice: the server
+// default.
 
-/** Reserved beside `mpa.audition`, `mpa.recency` and `mpa.locale` — one namespace for the operator's kit. */
+/** Reserved beside `mpa.recency` and `mpa.locale` — one namespace for the operator's kit. */
 export const VOICE_KEY = 'mpa.voice';
 
 /** Tolerant of a storage that throws (private mode / storage denied) — never a crash, just no memory. */

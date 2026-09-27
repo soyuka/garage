@@ -17,7 +17,7 @@ export function PartsManifest({
 }: {
   model: PartsManifestModel;
   reduced?: boolean;
-  onAdd: (patch: { id: Iri; parts: PlannedPart[] }) => void;
+  onAdd?: (patch: { id: Iri; parts: PlannedPart[] }) => void;
   onDismiss: () => void;
 }) {
   const [locale] = useLocale();
@@ -33,7 +33,7 @@ export function PartsManifest({
         </button>
       </div>
       {model.finding && <div className="at-parts-finding">{model.finding}</div>}
-      <div className="at-parts-rows">
+      {model.canAdd && <div className="at-parts-rows">
         {model.parts.map((p, i) => {
           const qty = p.qty ?? 1;
           const lineCents = (p.priceCents ?? 0) * qty;
@@ -56,8 +56,8 @@ export function PartsManifest({
             </div>
           );
         })}
-      </div>
-      <div className="at-parts-foot">
+      </div>}
+      {model.canAdd && onAdd && <div className="at-parts-foot">
         <span className="at-parts-total">{formatEuros(total, locale)}</span>
         <div className="at-parts-actions">
           <button
@@ -68,7 +68,7 @@ export function PartsManifest({
             {t.proj.addToTask}
           </button>
         </div>
-      </div>
+      </div>}
       <span className="at-parts-lead" aria-hidden="true" />
     </aside>
   );

@@ -10,7 +10,7 @@ import { MOTION } from '../tokens/motion';
 import './parclot.css';
 
 // CHOREOGRAPHY § "One stage — the lot and the podium", row 1: the departure ghost. A `position: fixed`
-// clone of the clicked card, fixed at its OWN rect, that drives forward to the stage centre while
+// clone of the clicked card, fixed at its OWN rect, whose silhouette drives to the hero podium while
 // growing (~1.6x) and fading to 0. Rendered at the Atelier root — independent of which route is
 // currently mounted, so it survives the hash change that swaps the lot for the hero underneath it.
 //
@@ -80,7 +80,9 @@ export function Departure({
       style={style}
       data-departing="true"
       data-driven={driven ? 'true' : undefined}
-      onTransitionEnd={() => driven && onDone()}
+      onTransitionEnd={(event) => {
+        if (driven && event.target === event.currentTarget && event.propertyName === 'transform') onDone();
+      }}
       aria-hidden="true"
     >
       <div className="at-parc-stage">

@@ -16,6 +16,13 @@ export interface Focus {
   nodes?: SpecNode[];
 }
 
+export function sameFocus(left: Focus | null, right: Focus): boolean {
+  return left?.panel === right.panel
+    && left.title === right.title
+    && left.keys.join('\0') === right.keys.join('\0')
+    && JSON.stringify(left.nodes) === JSON.stringify(right.nodes);
+}
+
 /** Maps an agent UIAction to a focus state, or null when the action does not change focus. */
 export function focusForAction(action: UIAction): Focus | null {
   if (action.type === 'focusView') {

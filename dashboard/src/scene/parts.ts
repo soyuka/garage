@@ -1,4 +1,4 @@
-import type { Iri, PlannedPart } from '../types';
+import type { Iri, PlannedPart, PlannedTask } from '../types';
 import type { Locale } from '../i18n/locale';
 import { messages } from '../i18n/messages';
 import type { Cta } from './CtaCard';
@@ -16,14 +16,18 @@ export interface PartsManifestModel {
   service: string;
   finding?: string;
   parts: PlannedPart[];
+  /** False when every proposed ref is already stored on this task, making PATCH a no-op. */
+  canAdd: boolean;
 }
 
 /** Derive a manifest from a parts-bearing proposal, or null when the CTA carries no parts to itemise. */
-export function manifestFromCta(cta: Cta | null): PartsManifestModel | null {
+export function manifestFromCta(cta: Cta | null, tasks: PlannedTask[] = []): PartsManifestModel | null {
   if (!cta) return null;
   const action = cta.actions.find((a) => a.patchTask && a.patchTask.parts.length > 0);
   if (!action || !action.patchTask) return null;
-  return { taskId: action.patchTask.id, service: cta.headline, finding: cta.finding, parts: action.patchTask.parts };
+  const target = tasks.find((task) => task.id === action.patchTask!.id);
+  const canAdd = !target || !action.patchTask.parts.every((part) => target.parts.some((existing) => existing.ref.trim() === part.ref.trim()));
+  return { taskId: action.patchTask.id, service: cta.headline, finding: cta.finding, parts: action.patchTask.parts, canAdd };
 }
 
 /** The manifest total in cents: Σ (unit price × qty). Missing price → 0, missing qty → 1 (never NaN). */

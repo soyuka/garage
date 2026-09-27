@@ -32,6 +32,8 @@ export interface CameraFocus {
   key: number;
   mode?: FocusMode;
   legend?: LegendShift;
+  /** A right-column projection shares the reveal; keep the diagram left of its DOM surface. */
+  avoidProjection?: boolean;
 }
 
 /** The resting framing — the single source (was inline in Plateau's Canvas camera + OrbitControls). */
@@ -105,6 +107,8 @@ export const REVEAL_VIEWS: Record<BodyRegion, RegionView> = {
   frontAxle: { azimuth: 0.3, polar: Math.PI * 0.32, factor: 0.66 },
   rearAxle: { azimuth: -0.36, polar: Math.PI * 0.32, factor: 0.66 },
 };
+
+export const REVEAL_MANIFEST_SHIFT = 0.8;
 
 /** Which pose family a hold uses. `reveal` is the cutaway (C1–C4); `history` is the visit-ring pose
  * (§ "History — the visit ring"); `data` is the fact-constellation pose (§ "Data — the fact
@@ -246,12 +250,22 @@ export function presetForFocus(
   region: BodyRegion | undefined,
   mode: FocusMode = 'focus',
   legend: LegendShift = 'column',
+  avoidProjection: boolean = false,
 ): CameraPose {
   if (mode === 'history') return historyPose(HOME, legend);
   if (mode === 'data') return dataPose(HOME, legend);
   if (mode === 'fluids') return fluidsPose();
   const anchor: Anchor = regionAnchors(bodyClass)[region as BodyRegion];
-  return derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region as BodyRegion]);
+  const pose = derivePreset(anchor as Vec3, (mode === 'reveal' ? REVEAL_VIEWS : REGION_VIEWS)[region as BodyRegion]);
+  if (!avoidProjection || mode !== 'reveal') return pose;
+  const homeOffset: Vec3 = [HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]];
+  const { azimuth } = toSpherical(homeOffset);
+  const right: Vec3 = [Math.cos(azimuth), 0, -Math.sin(azimuth)];
+  const shift: Vec3 = [right[0] * REVEAL_MANIFEST_SHIFT, 0, right[2] * REVEAL_MANIFEST_SHIFT];
+  return {
+    position: [pose.position[0] + shift[0], pose.position[1], pose.position[2] + shift[2]],
+    target: [pose.target[0] + shift[0], pose.target[1], pose.target[2] + shift[2]],
+  };
 }
 
 /** The plain focus preset — what every non-reveal call site means. */

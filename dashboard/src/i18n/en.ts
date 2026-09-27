@@ -61,6 +61,8 @@ export const en: Messages = {
     freeViewShort: 'free view',
     speak: 'Talk to the workshop',
     speakPlaceholder: 'Talk to the workshop…',
+    dictate: 'Dictate an instruction',
+    dictating: 'Listening…',
   },
 
   proj: {
@@ -332,10 +334,28 @@ export const en: Messages = {
     signal: { green: 'green', amber: 'amber', red: 'red' },
   },
 
-  /** The opening ticker lines (CHOREOGRAPHY § "The opening — the workshop speaks first"). */
+  /** The opening ticker lines — pools, drawn from by `noyau/greeting.ts`. Shape and rules: `fr.ts`. */
   greeting: {
-    none: 'Which car are we working on today?',
-    vehicle: (name: string) => `${name} selected. What would you like to know?`,
+    hello: (name?: string) => (name ? `Hello ${name}` : 'Hello'),
+    welcome: [
+      'which car are we working on?',
+      'what do you need to know today?',
+      'what are we looking at today?',
+      'which one do we start with?',
+      'which car is in the shop today?',
+    ],
+    welcomeVehicle: [
+      (name: string) => `picking the ${name} back up?`,
+      (name: string) => `the ${name} is open, what do you need?`,
+      (name: string) => `the ${name} is waiting, what are we looking at?`,
+      (name: string) => `what do you need on the ${name}?`,
+    ],
+    vehicle: [
+      (name: string) => `${name} selected, what would you like to know?`,
+      (name: string) => `On to the ${name} — what do you need?`,
+      (name: string) => `${name} — tell me what you are after.`,
+      (name: string) => `The ${name} is open, what are we looking at?`,
+    ],
   },
 
   notice: {
@@ -408,10 +428,6 @@ export const en: Messages = {
     minutesAgo: (m: number) => `${m} min ago`,
     hoursAgo: (h: number) => `${h} h ago`,
     empty: 'Nothing to decide.',
-    muteVoice: 'Mute the voice',
-    unmuteVoice: 'Read the answers aloud',
-    voiceOn: 'voice',
-    voiceOff: 'muted',
     plan: 'plan ○',
     seen: 'seen',
   },

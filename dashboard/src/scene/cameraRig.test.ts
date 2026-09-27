@@ -20,6 +20,7 @@ import {
   POLAR,
   REGION_VIEWS,
   REVEAL_VIEWS,
+  REVEAL_MANIFEST_SHIFT,
   HISTORY_VIEW,
   DATA_VIEW,
   FLUIDS_VIEW,
@@ -218,6 +219,21 @@ describe('presetForFocus — the reveal pose family', () => {
   it('a reveal still targets the region anchor — the diagram sits where the part does', () => {
     const anchors = regionAnchors('berline');
     expect(presetForFocus('berline', 'hood', 'reveal').target).toEqual(anchors.hood);
+  });
+
+  it('shifts a reveal left of the projection column without changing its framing', () => {
+    const reveal = presetForFocus('berline', 'bay', 'reveal');
+    const besideManifest = presetForFocus('berline', 'bay', 'reveal', 'column', true);
+    const revealFrame = framing(reveal);
+    const manifestFrame = framing(besideManifest);
+    const homeAzimuth = toSpherical([HOME.position[0] - HOME.target[0], HOME.position[1] - HOME.target[1], HOME.position[2] - HOME.target[2]]).azimuth;
+    const right: Vec3 = [Math.cos(homeAzimuth), 0, -Math.sin(homeAzimuth)];
+
+    expect(manifestFrame.radius).toBeCloseTo(revealFrame.radius);
+    expect(manifestFrame.polar).toBeCloseTo(revealFrame.polar);
+    expect(manifestFrame.azimuth).toBeCloseTo(revealFrame.azimuth);
+    expect(besideManifest.target[0] - reveal.target[0]).toBeCloseTo(right[0] * REVEAL_MANIFEST_SHIFT);
+    expect(besideManifest.target[2] - reveal.target[2]).toBeCloseTo(right[2] * REVEAL_MANIFEST_SHIFT);
   });
 
   it('presetForRegion is the focus mode (the existing call sites keep their meaning)', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { focusForAction } from './focus';
+import { focusForAction, sameFocus } from './focus';
 import type { UIAction } from './types';
 
 describe('focusForAction', () => {
@@ -62,5 +62,14 @@ describe('focusForAction', () => {
       { type: 'selectVehicle', id: '/garage/vehicles/01J' },
     ];
     for (const a of others) expect(focusForAction(a)).toBeNull();
+  });
+});
+
+describe('sameFocus', () => {
+  it('suppresses only a repeated visible panel, not changed projected content', () => {
+    const first = focusForAction({ type: 'showFact', keys: [], title: 'Fluides', nodes: [{ key: 'oil', label: 'Huile', value: '4 l', verified: true }] })!;
+    expect(sameFocus(first, { ...first })).toBe(true);
+    expect(sameFocus(first, { ...first, title: 'Capacités' })).toBe(false);
+    expect(sameFocus(first, { ...first, nodes: [{ key: 'oil', label: 'Huile', value: '4,3 l', verified: true }] })).toBe(false);
   });
 });

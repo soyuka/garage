@@ -513,6 +513,43 @@ body {
 .at-scene-cross:disabled { opacity: 0.4; cursor: not-allowed; }
 .at-scene-cross--on { color: var(--at-red-hi); border-color: rgba(252, 165, 165, 0.5); text-shadow: var(--at-glow-red); }
 
+/* ── la dictée: the push-to-talk mic (CHOREOGRAPHY § "La dictée") ──
+   Sized and shaped like .at-scene-sim so the composer keeps one control language. It is HELD, not
+   latched, and the held state has to be unmistakable on a still screen: the ring is the mic being
+   open, and it is a border + color change, never colour alone. Gone entirely from the DOM once the
+   permission is refused, so there is no disabled-forever state to style. */
+.at-scene-mic {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid var(--at-hairline);
+  background: rgba(20, 21, 24, 0.92);
+  color: var(--at-text-mono);
+  font-size: 13px;
+  cursor: pointer;
+  transition:
+    color var(--at-dur-tint) var(--at-ease-sine),
+    border-color var(--at-dur-tint) var(--at-ease-sine);
+}
+.at-scene-mic:disabled { opacity: 0.4; cursor: not-allowed; }
+/* asked for, not open yet: the permission prompt may still be on screen and the room is NOT being
+   heard. Amber but dimmed and unglowing — a promise of the recording state, never mistakable for it. */
+.at-scene-mic[data-phase='arming'] {
+  color: var(--at-amber-hi);
+  opacity: 0.55;
+}
+/* open: the mic is latched on and the room IS being heard, until the next press. Amber, the app's
+   "under way" hue. */
+.at-scene-mic[data-phase='recording'] {
+  color: var(--at-amber-hi);
+  border-color: var(--at-amber-hi);
+  text-shadow: var(--at-glow-amber);
+}
+/* in flight: no turn has started, nothing is being computed on the garage — so this is a quiet wait,
+   not the working state. No spinner: the glyph itself says "…" and the composer stays usable. */
+.at-scene-mic[data-phase='transcribing'] { color: var(--at-text-dim); }
+
 .at-scene-input {
   flex: 1;
   background: rgba(20, 21, 24, 0.92);

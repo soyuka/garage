@@ -6,8 +6,8 @@ import { messages, type Messages } from './messages';
 // context plumbing plus the three side effects a change has to carry out together — persist it, stamp
 // <html lang>, and update the module-level value the fetch wrappers read.
 //
-// Shaped like useAudition() in noyau/useVoice.ts: a `[value, set]` pair, the repo's house form for a
-// persisted operator preference.
+// Shaped like useVoicePreference() in noyau/useVoice.ts: a `[value, set]` pair, the repo's house form
+// for a persisted operator preference.
 
 type LocaleControl = readonly [Locale, (next: Locale) => void];
 

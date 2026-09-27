@@ -104,9 +104,21 @@ function join(a: Uint8Array, b: Uint8Array): Uint8Array {
  * heard, so the caller can reason about it instead of scheduling into the past.
  */
 export class ChunkClock {
-  private next: number | null = null;
+  private next: number | null;
 
-  constructor(private readonly leadIn: number) {}
+  /**
+   * @param startAt the audio-clock time the FIRST piece should land on — the previous line's last
+   *                sample, for a gapless seam (CHOREOGRAPHY § "The seam between two lines is
+   *                gapless"). Null starts the line `leadIn` after whatever `place()` is first told
+   *                the clock is. A `startAt` already in the past degrades to exactly that, because
+   *                `place()` never schedules behind the clock.
+   */
+  constructor(
+    private readonly leadIn: number,
+    startAt: number | null = null,
+  ) {
+    this.next = startAt;
+  }
 
   /** the audio-clock time the last placed piece ends, or null before the first placement */
   get end(): number | null {

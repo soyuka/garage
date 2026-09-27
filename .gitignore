@@ -25,3 +25,11 @@ prompt.md
 
 # Runtime logs of the stage rig (cloudflared).
 /stage/var/
+
+# Audition masters and the superseded first cue palette — same posture as /theming/ above: the
+# listening set (mp3 + wav masters, their metadata, the generate*.sh recipes and index.html) is
+# design scratch, ~5 MB that no code loads. The runtime palette IS tracked, under its dated
+# directory dashboard/public/audio/spatial-2026-09-11/. The links to the audition index from
+# docs/transition-sound-direction.md and docs/voice.md therefore only resolve locally.
+/docs/audio-candidates-2026-09-11/
+/dashboard/public/audio/*.wav

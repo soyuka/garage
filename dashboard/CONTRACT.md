@@ -56,6 +56,12 @@ Collections are hydra — read members from **`member` ?? `hydra:member`**. The 
 | Bill attachments | `POST {recordIri}/attachments` (multipart, **don't set Content-Type**) · `DELETE {url}` | owner-gated download → **fetch with Bearer + objectURL**, not `<img src>` |
 | Speak a line | `POST /tts` `{text, voice?}` | same-origin, same bearer as other reads — **not** `authFetch` (a 401 must stay silent, never bounce to login); `Accept-Language` picks pronunciation; optional `voice` is a `SpeechVoice.id` from `GET /tts/voices`, omitted (never `null`) for the server default; a stale/foreign id is silently ignored server-side, falling back to default |
 | Voice list | `GET /tts/voices` | same auth posture as `/tts`; returns `[{id, label}, …]` for the resolved `Accept-Language`, **first entry is the backend's default**; `Cache-Control: private, max-age=3600` + `Vary: Accept-Language` |
+| Transcribe a line | `POST /stt` (raw audio body) | same auth posture as `/tts` — bearer, **not** `authFetch` (a 401 must stay silent, never bounce to login). Body is the recorder's blob as-is with its own `Content-Type` (`audio/webm;codecs=opus`), **not** multipart: one part, no filename, so `post_max_size` is the only limit to check. `Accept-Language` picks the transcription language. → `{text}`, the operator's words **verbatim** (no cleanup, no rephrase); `{text:''}` on silence. Empty or over-cap body → 400 with no backend call; backend refusing/unreachable → **503 empty**, never a 500 — the composer keeps what it had and the operator types |
+
+**The opening line is deliberately NOT on this table.** It had a row here for a few hours on
+2026-09-11 (`GET /agent/greeting?name=`, a model-written welcome); the endpoint was deleted the same day
+and the line is drawn from the i18n catalogs in the browser (`noyau/greeting.ts`, CHOREOGRAPHY § "The
+opening"). Nothing is fetched, so there is nothing to contract.
 
 Money is integer **minor units** (`costCents`, `priceCents`); the manual-form `price`/`cost` are
 major-unit euros the client converts.

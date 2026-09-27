@@ -15,6 +15,7 @@ import { Cockpit } from './Cockpit';
 import { SpecConstellation } from './SpecConstellation';
 import { EntretienRail, type ChecklistHandlers } from './EntretienRail';
 import { Composer } from './Composer';
+import type { ArmedMicCue } from '../noyau/useCues';
 import { buildRail } from './rail';
 import { buildVisits } from './visits';
 import { buildShoppingList } from './shopping';
@@ -99,6 +100,11 @@ interface SceneViewProps {
   onSubmit?: (instruction: string) => void;
   /** Driver-injected controls rendered before the composer input (the playground's ▶/⚠ sims). */
   composerExtras?: ReactNode;
+  /** The composer's mic is open — the caller holds the audition while it is (§ "La dictée"). */
+  onListening?: (active: boolean) => void;
+  /** A turn is running: the composer's mic is inert, exactly as its submit is. */
+  composerBusy?: boolean;
+  armMicCue?: () => ArmedMicCue;
   /** A `proposeActions` card rising from the cradle (live orchestrator only). */
   cta?: Cta | null;
   onCtaInstruction?: (instruction: string) => void;
@@ -160,6 +166,9 @@ export function SceneView({
   onComposerFocus,
   onSubmit,
   composerExtras,
+  onListening,
+  composerBusy,
+  armMicCue,
   cta,
   onCtaInstruction,
   onCtaPatch,
@@ -324,9 +333,11 @@ export function SceneView({
     onCameraRelease?.();
     setStationHoldReleased(true);
   }, [onCameraRelease]);
+  const manifest = manifestFromCta(cta ?? null, bundle?.vehicle.plannedTasks ?? []);
+  const showManifest = !!manifest && rung !== 'd';
   // Station camera precedence lives in `station` (one tested place, `stations.ts`): legends first, then
   // carnet/specs (history/data pose, projection shift), fluids last.
-  const plateauCameraFocus =
+  const baseCameraFocus =
     station === 'history'
       ? deriveCameraFocus(cameraFocus, true, 'history', stationHoldReleased)
       : station === 'data'
@@ -336,6 +347,7 @@ export function SceneView({
           : station === 'specs'
             ? deriveCameraFocus(cameraFocus, specsStationOpen, 'specs', stationHoldReleased)
             : deriveCameraFocus(cameraFocus, fluidsOpen, 'fluids', stationHoldReleased);
+  const plateauCameraFocus = reveal && showManifest && baseCameraFocus?.mode === 'reveal' ? { ...baseCameraFocus, avoidProjection: true } : baseCameraFocus;
   // The constellation is a PROJECTED surface only: it exists when the agent (or a chip) answers a spec
   // question, and not otherwise. It used to double as a resting shelf of operator-pinned facts, which
   // gave one surface two meanings and left the column occupied by something nobody had asked for.
@@ -414,11 +426,6 @@ export function SceneView({
           { label: t.scene.close, onClick: () => onCloseHistory?.() },
         ]
       : [];
-
-  // A parts-bearing proposal projects as the rich manifest at the car's right (3D rungs); a plain proposal
-  // stays the dock CtaCard. On the canvas-off rung d the CtaCard carries every proposal (no overlay there).
-  const manifest = manifestFromCta(cta ?? null);
-  const showManifest = !!manifest && rung !== 'd';
 
   // The chip rail is a single horizontal line; a mouse wheel only emits deltaY, so translate it to
   // horizontal scroll (trackpads already scroll X). The stage is a fixed full-bleed surface with no
@@ -501,7 +508,7 @@ export function SceneView({
               never moves). A specs focus fans the facts as the constellation (agent-placed → cyan tick + ✕). A parts-bearing
               proposal stacks the manifest below. Empty → nothing renders. (The cyan scan is a 3D holo band
               sweeping THROUGH the car via Plateau `scanning`, not a DOM bar.) */}
-          {(showConstellation || showCarnet || showWorklist || showLadder || (showManifest && manifest && onCtaPatch && onCtaDismiss)) && (
+          {(showConstellation || showCarnet || showWorklist || showLadder || (showManifest && manifest && onCtaDismiss && (!manifest.canAdd || onCtaPatch))) && (
             <div className="at-projection">
               {showConstellation && (
                 <SpecConstellation
@@ -553,7 +560,7 @@ export function SceneView({
                   heldRegion={cameraFocus?.region ?? null}
                 />
               )}
-              {showManifest && manifest && onCtaPatch && onCtaDismiss && (
+              {showManifest && manifest && onCtaDismiss && (!manifest.canAdd || onCtaPatch) && (
                 <PartsManifest model={manifest} reduced={reduced} onAdd={onCtaPatch} onDismiss={onCtaDismiss} />
               )}
             </div>
@@ -663,7 +670,14 @@ export function SceneView({
                 onSchedule={onScheduleDecision}
               />
             </div>
-            <Composer onComposerFocus={onComposerFocus} onSubmit={onSubmit} composerExtras={composerExtras} />
+            <Composer
+              onComposerFocus={onComposerFocus}
+              onSubmit={onSubmit}
+              composerExtras={composerExtras}
+              onListening={onListening}
+              busy={composerBusy}
+              armMicCue={armMicCue}
+            />
           </div>
         </div>
       )}

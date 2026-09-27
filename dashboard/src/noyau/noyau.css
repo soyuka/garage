@@ -162,9 +162,13 @@
 }
 @keyframes nx-trace { to { stroke-dashoffset: -160; } }
 
-/* red done: the reticle flares as a fault lamp */
+/* red done: the reticle flares as a fault lamp — TWO whole blinks, landing exactly on `DWELL.settle`
+   (1600 ms, tokens/motion.ts), which is how long the orb stays in `done`. It ran `0.9s infinite` and
+   was therefore chopped mid-fade at ~half opacity every single time: a lamp that never finished a
+   blink, which reads as a rendering artifact and not as a signal (corrected 2026-09-11).
+   `motion.test.ts` pins the two together. */
 .noyau-fault { opacity: 0; }
-.noyau-stage[data-phase='done'][data-result='red'] .noyau-fault { animation: nx-fault 0.9s ease-in-out infinite; }
+.noyau-stage[data-phase='done'][data-result='red'] .noyau-fault { animation: nx-fault 0.8s ease-in-out 2; }
 @keyframes nx-fault {
   0%, 100% { opacity: 0.2; }
   50% { opacity: 0.9; }

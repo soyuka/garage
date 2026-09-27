@@ -17,6 +17,31 @@ export interface Utterance {
   id: string;
   text: string;
   at: number;
+  /**
+   * Said once per session, then never again. The ordinary ticker line is the opposite by design (see
+   * {@see next}: a heartbeat shown again later is news again), which is right for a tool step and
+   * wrong for a greeting — the operator heard the welcome repeat on every click of the composer
+   * (2026-09-11). A one-shot line joins {@see VoiceState.saidOnce} when promoted, and nothing prunes
+   * that list, so {@see narrate} refuses the same text for the rest of the session.
+   */
+  once?: boolean;
+}
+
+/**
+ * What the impure edge files a line under: its own identity, which `id` is NOT.
+ *
+ * Since the seam, two lines sit on the clock at once and both may be ticker lines — the ticker's id is
+ * the constant {@see NARRATION_ID}, so a map keyed by `id` collapses them into one. `useVoice.ts` keyed
+ * its in-flight fetch, its audio source and its "fully placed" signal that way and therefore never
+ * started the second ticker line, never saw it end, and left it at the head of `onAir` for good: the
+ * pipeline stayed full at {@see ON_AIR_CAP} and every later answer was queued and never read aloud
+ * (2026-09-18).
+ *
+ * The text is enough to separate them because no two LIVE lines ever share one: `said()` is what
+ * {@see enqueue} and {@see narrate} both refuse on, and it compares texts.
+ */
+export function utteranceKey(utterance: Utterance): string {
+  return `${utterance.id}\u0000${utterance.text}`;
 }
 
 /**
@@ -30,9 +55,32 @@ export interface VoiceState {
   queue: Utterance[];
   /** The ticker's ONE pending line: the orb's commentary, latest wins. */
   narration: Utterance | null;
-  speaking: Utterance | null;
+  /**
+   * The lines PLACED on the audio clock, in the order they will be heard — at most two.
+   *
+   * `onAir[0]` is what the operator is hearing; `onAir[1]` is committed flush behind it, scheduled
+   * while the first was still playing so the two are one continuous signal (CHOREOGRAPHY § "The seam
+   * between two lines is gapless"). The distinction is the whole point of the array: this used to be a
+   * single `speaking`, which meant "placed" and "audible" at once, and a seam needs them apart — a
+   * notice card's read-dwell may only start when its own line is off the LIPS ({@see heard}), not when
+   * the next one is merely scheduled.
+   *
+   * One line of lookahead and no more: committing further would tie up lines the burst rules (the cap,
+   * the stale drop) exist to be able to drop.
+   */
+  onAir: Utterance[];
   /** Texts already spoken — the same sentence re-arriving is one utterance, whichever surface sent it. */
   spoken: string[];
+  /**
+   * The texts of ONE-SHOT lines that have been spoken. Deliberately a second list rather than a flag
+   * on {@see spoken}: that one is pruned to what is still printed ({@see follow}) and wiped when the
+   * audition goes off ({@see silence}), and both happen constantly — an arriving toast prunes it, and
+   * every mic press mutes the audition (`Atelier.tsx`: `audition && !listening`). A greeting kept
+   * there was therefore forgotten seconds after it was said and the operator heard it again on the
+   * next click (2026-09-11). Nothing prunes this list: once a sentence has been spoken, it is never
+   * spoken a second time in that session.
+   */
+  saidOnce: string[];
   /**
    * The browser refused to play. A property of the PAGE, not of the line: nothing is promoted until a
    * real gesture re-arms it ({@see rearm}), because retrying against an autoplay policy that will not
@@ -52,11 +100,48 @@ export const VOICE_CAP = 2;
 /** A line older than this is dropped unread — by the time it would be spoken it is no longer news. */
 export const VOICE_STALE_MS = 10_000;
 
-export const emptyVoice: VoiceState = { queue: [], narration: null, speaking: null, spoken: [], blocked: false };
+/** At most two lines are ever placed on the audio clock — one audible, one committed behind it. */
+export const ON_AIR_CAP = 2;
 
-/** Already said, already pending, already on the lips — by TEXT, so one sentence is one utterance. */
+export const emptyVoice: VoiceState = {
+  queue: [],
+  narration: null,
+  onAir: [],
+  spoken: [],
+  saidOnce: [],
+  blocked: false,
+};
+
+/**
+ * The audition just went off — a mute, or the mic opening (the microphone must never transcribe our own
+ * voice). Everything PENDING goes: the line on the lips was cut mid-word and the ones behind it will be
+ * stale by the time the audition comes back, so resuming them would read old news aloud.
+ *
+ * What crosses is the MEMORY of what has been said — both lists. A mute is not an un-saying, and the
+ * cost of treating it as one is not subtle: `follow()` re-enqueues every card still printed, so an
+ * audition that came back with an empty `spoken` read the whole visible notice stack out again. Since
+ * the audition goes off on every mic press, the operator heard "everything twice" (2026-09-11, the
+ * second report of this shape — the first was the greeting, remembered in the wrong list).
+ *
+ * `spoken` stays pruned to what is still on screen by `follow()`, so carrying it across a mute does not
+ * make it grow: a text is still said only while its card is.
+ */
+/** What the operator is HEARING — the head of the pipeline. Null when the audition is idle. */
+export function heard(state: VoiceState): Utterance | null {
+  return state.onAir[0] ?? null;
+}
+
+export function silence(state: VoiceState): VoiceState {
+  return { ...emptyVoice, spoken: state.spoken, saidOnce: state.saidOnce };
+}
+
+/** Already said, already pending, already on the clock — by TEXT, so one sentence is one utterance. */
 function said(state: VoiceState, text: string): boolean {
-  return state.spoken.includes(text) || state.speaking?.text === text || state.queue.some((u) => u.text === text);
+  return (
+    state.spoken.includes(text) ||
+    state.onAir.some((u) => u.text === text) ||
+    state.queue.some((u) => u.text === text)
+  );
 }
 
 /** Queue a notice. Already spoken, already queued or already on the lips → nothing happens. */
@@ -90,8 +175,8 @@ export function follow(state: VoiceState, cards: Notice[], now: number): VoiceSt
   const live = new Set(cards.map((c) => c.id));
   let out = state;
 
-  for (const u of [state.speaking, ...state.queue]) {
-    if (u && NARRATION_ID !== u.id && !live.has(u.id)) out = cancel(out, u.id);
+  for (const u of [...state.onAir, ...state.queue]) {
+    if (NARRATION_ID !== u.id && !live.has(u.id)) out = cancel(out, u.id);
   }
 
   const liveTexts = new Set(cards.map((c) => c.text));
@@ -121,15 +206,23 @@ export function cardLine(headline: string, finding: string | null | undefined): 
  * than queueing three of them to be read after the run is over. A line already being spoken is left to
  * finish — a replacement is the next heartbeat, not a dismissal (CHOREOGRAPHY § Binding rules).
  */
-export function narrate(state: VoiceState, text: string, now: number): VoiceState {
+export function narrate(state: VoiceState, text: string, now: number, once = false): VoiceState {
   const line = text.trim();
   if ('' === line || said(state, line)) return state;
+  if (once && state.saidOnce.includes(line)) return state;
 
-  return { ...state, narration: { id: NARRATION_ID, text: line, at: now } };
+  return { ...state, narration: { id: NARRATION_ID, text: line, at: now, once } };
 }
 
 /**
- * Promote the next fresh line, if nothing is speaking. Stale heads are discarded, not spoken late.
+ * Promote the next fresh line onto the clock. Stale heads are discarded, not spoken late.
+ *
+ * `canChain` is the gapless seam (CHOREOGRAPHY § "The seam between two lines is gapless"): the impure
+ * edge sets it once the audible line's body is **fully placed** on the audio clock, which is ~0.3 s
+ * into a 3.2 s line because the body arrives ~12× faster than realtime. Promoting then — while the
+ * first line is still being heard — is what lets its successor be scheduled flush against its last
+ * sample instead of after a React round-trip and a fresh 190 ms of priming. Without it a second line
+ * would simply overlap the first, which is why it defaults to false.
  *
  * `unlocked` is the browser's autoplay permission — a page that has had no real interaction cannot
  * play audio, and a PILOTED session produces no gesture in this tab at all. While it is false the
@@ -139,8 +232,11 @@ export function narrate(state: VoiceState, text: string, now: number): VoiceStat
  *
  * Staleness still applies while locked: waiting on a gesture does not make old news new.
  */
-export function next(state: VoiceState, now: number, unlocked: boolean): VoiceState {
-  if (state.speaking || state.blocked) return state;
+export function next(state: VoiceState, now: number, unlocked: boolean, canChain = false): VoiceState {
+  if (state.blocked) return state;
+  // Full, or audible-but-not-yet-placed: nothing may be promoted, and nothing ages either — a line
+  // cannot go stale while the one in front of it is still being heard.
+  if (state.onAir.length >= ON_AIR_CAP || (state.onAir.length > 0 && !canChain)) return state;
 
   const stale = (u: Utterance): boolean => now - u.at > VOICE_STALE_MS;
   const fresh = state.queue.filter((u) => !stale(u));
@@ -157,12 +253,14 @@ export function next(state: VoiceState, now: number, unlocked: boolean): VoiceSt
 
   return {
     ...state,
-    speaking: promoted,
+    onAir: [...state.onAir, promoted],
     queue: head ? rest : fresh,
     narration: head ? ticker : null,
     // Only a CARD utterance joins `spoken` (2026-09-05) — a ticker line has no card to keep it "on
-    // screen", so it is never remembered past speaking/pending: shown again later, it is news again.
+    // screen", so it is never remembered past the clock: shown again later, it is news again.
     spoken: head ? [...state.spoken, promoted.text] : state.spoken,
+    // A ONE-SHOT ticker line is remembered for the session instead, in the list nothing prunes.
+    saidOnce: !head && promoted.once ? [...state.saidOnce, promoted.text] : state.saidOnce,
   };
 }
 
@@ -174,12 +272,12 @@ export function next(state: VoiceState, now: number, unlocked: boolean): VoiceSt
  * these can still be superseded, cap-evicted or go stale before its turn actually comes, and none of
  * that may be decided here — only the real promotion in `next()` may consume a line.
  *
- * Only meaningful while something is ALREADY on the lips: if nothing is speaking, `next()` promotes
+ * Only meaningful while something is ALREADY on the clock: with nothing playing, `next()` promotes
  * immediately and there is nothing to get ahead of. Ordered head-first (the queue, then the ticker —
  * `next()`'s own promotion order), though a fetch-ahead caller has no reason to care about the order.
  */
 export function waiting(state: VoiceState, now: number): Utterance[] {
-  if (!state.speaking) return [];
+  if (0 === state.onAir.length) return [];
 
   const stale = (u: Utterance): boolean => now - u.at > VOICE_STALE_MS;
   const fresh = state.queue.filter((u) => !stale(u));
@@ -194,18 +292,26 @@ export function waiting(state: VoiceState, now: number): Utterance[] {
  * property of the page, so the same sentence would play fine one click later, and consuming it here is
  * how a permission the operator can still grant becomes a line they can never hear. A refused ticker
  * line that was meanwhile superseded stays superseded.
+ *
+ * The refusal is the PAGE's, not the line's, so a line committed BEHIND the refused one cannot play
+ * either: the whole pipeline is unscheduled. Only the head goes back into the queue — the one behind it
+ * was never consumed from anywhere it could be returned to, and `blocked` holds everything until a
+ * gesture re-arms it anyway.
  */
 export function refused(state: VoiceState): VoiceState {
-  const utterance = state.speaking;
+  const utterance = heard(state);
   if (!utterance) return state.blocked ? state : { ...state, blocked: true };
 
   const spoken = state.spoken.filter((text) => text !== utterance.text);
+  // A refusal is not a hearing: the FIRST line of a session is the one that meets the autoplay policy,
+  // and a one-shot line left in `saidOnce` here could never be said at all.
+  const saidOnce = state.saidOnce.filter((text) => text !== utterance.text);
   const back =
     NARRATION_ID === utterance.id
       ? { narration: state.narration ?? utterance }
       : { queue: [utterance, ...state.queue].slice(-VOICE_CAP) };
 
-  return { ...state, ...back, speaking: null, spoken, blocked: true };
+  return { ...state, ...back, onAir: [], spoken, saidOnce, blocked: true };
 }
 
 /** A real gesture arrived — the page may be allowed to play now, so try again. */
@@ -213,9 +319,12 @@ export function rearm(state: VoiceState): VoiceState {
   return state.blocked ? { ...state, blocked: false } : state;
 }
 
-/** The utterance ended on its own. */
+/**
+ * The audible line ended on its own — the head leaves the clock and whatever was committed behind it
+ * (already sounding, flush against it) becomes what the operator is hearing.
+ */
 export function finish(state: VoiceState): VoiceState {
-  return state.speaking === null ? state : { ...state, speaking: null };
+  return 0 === state.onAir.length ? state : { ...state, onAir: state.onAir.slice(1) };
 }
 
 /**
@@ -238,10 +347,12 @@ export function supersedeQueued(state: VoiceState, keepId: string): VoiceState {
  * audio-only, which the audition binding rule forbids outright.
  */
 export function cancel(state: VoiceState, id: string): VoiceState {
-  const speaking = state.speaking?.id === id ? null : state.speaking;
+  // A line COMMITTED to the clock is still cancellable: a scheduled source can be stopped before it
+  // starts. "Committed" means it will not be silently dropped, never that the operator cannot cut it.
+  const onAir = state.onAir.filter((u) => u.id !== id);
   const queue = state.queue.filter((u) => u.id !== id);
   const narration = state.narration?.id === id ? null : state.narration;
-  return speaking === state.speaking && queue.length === state.queue.length && narration === state.narration
+  return onAir.length === state.onAir.length && queue.length === state.queue.length && narration === state.narration
     ? state
-    : { ...state, speaking, queue, narration };
+    : { ...state, onAir, queue, narration };
 }

@@ -122,6 +122,12 @@ Gotchas that will eat an hour if nobody tells you:
 
 ## Taste
 
+**Amended 2026-09-11 — the audio half of this rule is retired.** It forbade a sci-fi UI blip outright,
+and the operator has decided the Atelier should sound its state changes in exactly that register
+(`CHOREOGRAPHY.md` § "Audition — transition cues"). The rule below still governs **motion**, unchanged:
+no glow, sweep or parallax that fires on a timer and encodes nothing. What is withdrawn is its reach
+over the ear. Recorded here rather than quietly contradicted, because `FUTURE.md` § 9 cites it.
+
 The reference is a well-instrumented machine, not a sci-fi movie UI: an aircraft PFD, a mixing desk,
 a hospital monitor. Those earn their motion — a needle moves because a value moved. The failure mode
 to avoid is the opposite one: glows, sweeps and parallax that fire on a timer and tell the operator

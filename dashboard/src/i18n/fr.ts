@@ -72,6 +72,8 @@ export const fr = {
     freeViewShort: 'vue libre',
     speak: "Parlez à l'atelier",
     speakPlaceholder: "Parlez à l'atelier…",
+    dictate: "Dicter une instruction",
+    dictating: "J’écoute…",
   },
 
   proj: {
@@ -357,10 +359,36 @@ export const fr = {
     signal: { green: 'vert', amber: 'ambre', red: 'rouge' } as Record<string, string>,
   },
 
-  /** The opening ticker lines (CHOREOGRAPHY § "The opening — the workshop speaks first"). */
+  /**
+   * The opening ticker lines (CHOREOGRAPHY § "The opening — the workshop speaks first"). POOLS, drawn
+   * from by `noyau/greeting.ts` — the model that briefly wrote this line was removed the same day it
+   * shipped (2026-09-11) and these replace it, so the variety has to come from the number of lines.
+   *
+   * `welcome` and `welcomeVehicle` are fragments completed AFTER `hello`, hence lowercase and no final
+   * period; `vehicle` lines stand alone and are capitalised. The register is `tu` — the operator asked
+   * for it, and it is the register a workshop uses.
+   */
   greeting: {
-    none: 'Sur quelle voiture travaille-t-on aujourd’hui ?',
-    vehicle: (name: string) => `${name} sélectionnée. Que souhaitez-vous savoir ?`,
+    hello: (name?: string) => (name ? `Bonjour ${name}` : 'Bonjour'),
+    welcome: [
+      'sur quelle voiture travaille-t-on ?',
+      'de quelle info as-tu besoin aujourd’hui ?',
+      'qu’est-ce qu’on regarde aujourd’hui ?',
+      'on commence par quelle voiture ?',
+      'quelle voiture passe à l’atelier ?',
+    ] as readonly string[],
+    welcomeVehicle: [
+      (name: string) => `on reprend la ${name} ?`,
+      (name: string) => `la ${name} est ouverte, qu’est-ce qu’il te faut ?`,
+      (name: string) => `la ${name} t’attend, on regarde quoi ?`,
+      (name: string) => `tu veux quoi sur la ${name} ?`,
+    ] as readonly ((name: string) => string)[],
+    vehicle: [
+      (name: string) => `${name} sélectionnée, que veux-tu savoir ?`,
+      (name: string) => `On passe à la ${name}, qu’est-ce qu’il te faut ?`,
+      (name: string) => `${name} — dis-moi ce que tu cherches.`,
+      (name: string) => `La ${name} est ouverte, on regarde quoi ?`,
+    ] as readonly ((name: string) => string)[],
   },
 
   /** The retained toast cards — the chrome around an answer that stays until the operator says "vu". */
@@ -437,10 +465,6 @@ export const fr = {
     minutesAgo: (m: number) => `il y a ${m} min`,
     hoursAgo: (h: number) => `il y a ${h} h`,
     empty: 'Rien à décider.',
-    muteVoice: 'Couper la voix',
-    unmuteVoice: 'Lire les réponses à voix haute',
-    voiceOn: 'voix',
-    voiceOff: 'muet',
     plan: 'planifier ○',
     seen: 'vu',
   },

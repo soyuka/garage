@@ -63,6 +63,12 @@ export const NOTICE_CAP = 3;
 export interface NoyauState {
   phase: NoyauPhase;
   narration: string | null; // the single ticker line — never stacks
+  /**
+   * The current ticker line is the opening GREETING, which is said once per session and must never be
+   * re-spoken (`voice.ts` `Utterance.once`). Every other narration — a tool step, a toast, a concern —
+   * leaves this false, keeping the documented ticker rule: shown again later, it is news again.
+   */
+  narrationOnce: boolean;
   notices: Notice[]; // the retained toast cards — outlive the turn; only "vu" removes one
   pulseCount: number; // pulses fired this turn (one per narrated status step)
   result: Signal | null; // set on 'done'
@@ -107,6 +113,7 @@ export type NoyauEvent =
   // local: the pilot run has been silent past PILOT_QUIET_MS — stop claiming it is working
   | { type: 'quiet' }
   | { type: 'concern'; message: string; serviceType?: string; vehicleIri?: string } // §9 overdue DOMAIN push (no turn): dock a notify + murmur, hands-off
+  | { type: 'listening'; active: boolean } // local: the MICROPHONE is open — outranks a finished turn's lamp, never a running one
   | { type: 'greet'; message: string } // local: the opening ticker line — a murmur with no turn, no notice card, no decision
   | { type: 'defer'; id: string; text: string; finding?: string; actions: CtaAction[] } // a proposal seen elsewhere/superseded → a REVIEW item in the inbox
   | { type: 'resolve'; id: string } // the operator decided a queue item (acted / dismissed) → remove it
@@ -118,6 +125,7 @@ export type NoyauEvent =
 export const initialNoyau: NoyauState = {
   phase: 'idle',
   narration: null,
+  narrationOnce: false,
   notices: [],
   pulseCount: 0,
   result: null,
@@ -265,9 +273,28 @@ function append(state: NoyauState, entry: Omit<JournalEntry, 'id' | 'elapsedMs'>
 export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, locale: Locale = DEFAULT_LOCALE): NoyauState {
   switch (ev.type) {
     case 'typing':
-      // Busy orb is never interrupted by typing; listening only toggles from rest.
+      // Busy orb is never interrupted by typing; listening only toggles from rest. A finished turn's
+      // RESULT is protected here too — a caret landing in the composer must not cut the done filament
+      // short. The microphone is the exception, and it has its own event for exactly that reason.
       if (state.phase === 'working' || state.phase === 'done') return state;
       return { ...state, phase: ev.active ? 'listening' : 'idle' };
+
+    case 'listening':
+      // An open microphone is a state the operator has a right to SEE, so it outranks the done dwell
+      // and puts out its result lamp with it (`result` is half the fault-lamp's CSS key). It does not
+      // outrank a running turn: that turn owns the orb and its own motion, and the mic is inert while
+      // busy anyway (`Composer.tsx`) — only a pilot-driven turn can even reach that case.
+      //
+      // Split from `typing` on 2026-09-11: both used to dispatch `typing`, so pressing the mic inside
+      // the 1.6 s done dwell showed no cue at all and the orb then settled itself to veille with the
+      // microphone still open. Reported live, the same day a transcript started submitting itself —
+      // which is what made "finish a turn, press the mic again" the ordinary path.
+      if ('working' === state.phase) return state;
+      if (ev.active) return { ...state, phase: 'listening', result: null };
+
+      // The close and the turn's start are one gesture now (`dictation.ts` `submission`): if the turn
+      // is already under way, the mic closing must not drag the orb back to veille.
+      return 'listening' === state.phase ? { ...state, phase: 'idle' } : state;
 
     case 'turn':
       if (ev.phase === 'start') {
@@ -275,6 +302,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
           ...state,
           phase: 'working',
           narration: null,
+          narrationOnce: false,
           pulseCount: 0,
           result: null,
           worstTone: null,
@@ -300,6 +328,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
           phase: 'done',
           result: signal,
           narration,
+          narrationOnce: false,
           // resolve the last in-flight chip: 'error' ("échec") only on an agent-lifecycle failure —
           // an amber/red FINDING is a legitimate outcome, so it still resolves to 'done'.
           steps: closeRunning(state.steps, ev.failed ? 'error' : 'done'),
@@ -331,6 +360,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       return {
         ...base,
         narration: ev.message,
+        narrationOnce: false,
         pulseCount: base.pulseCount + 1,
         steps,
         stepSeq: state.stepSeq + 1,
@@ -370,6 +400,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
         worstTone,
         notices,
         narration: ev.message,
+        narrationOnce: false,
         journal: append(state, { kind: 'narration', message: ev.message }, at),
         entrySeq: state.entrySeq + 1,
       };
@@ -392,6 +423,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       return {
         ...state,
         narration: ev.message,
+        narrationOnce: false,
         queue,
         emberSeen,
         ember: emberOf(queue, emberSeen),
@@ -409,6 +441,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       return {
         ...state,
         narration: ev.message,
+        narrationOnce: true,
         journal: append(state, { kind: 'narration', message: ev.message }, at),
         entrySeq: state.entrySeq + 1,
       };

@@ -15,6 +15,17 @@ export type Outcome = 'ended' | 'refused' | 'failed';
 export interface Speaking {
   /** settles when the line has been heard to its end, was refused by the page, or could not be played */
   outcome: Promise<Outcome>;
+  /**
+   * The audio-clock time this line's LAST sample lands on — settled as soon as the whole body has been
+   * placed, which is long before it has been heard (the body arrives ~12× faster than realtime, so a
+   * 3.2 s line is fully scheduled ~0.3 s in). Feed it to the next line's `startAt` and the two are one
+   * continuous signal; it is also the "this line is fully placed" signal that lets the queue promote
+   * its successor early (CHOREOGRAPHY § "The seam between two lines is gapless").
+   *
+   * Settles with the context's current time when nothing could be placed at all, so a line that failed
+   * never makes the one behind it wait.
+   */
+  placed: Promise<number>;
   /** cut it now — a dismissal, a mute, a superseded line. The outcome is then meaningless. */
   stop(): void;
 }
@@ -35,13 +46,25 @@ async function running(ctx: AudioContext): Promise<boolean> {
   return state() === 'running';
 }
 
-export function speak(ctx: AudioContext, body: ReadableStream<Uint8Array>): Speaking {
+export function speak(ctx: AudioContext, body: ReadableStream<Uint8Array>, startAt: number | null = null): Speaking {
   let stopped = false;
   const sources = new Set<AudioBufferSourceNode>();
   const reader = body.getReader();
 
+  // Settled once the body is fully placed — see {@see Speaking.placed}. Resolved exactly once, on
+  // every exit path including the failures, so a caller chaining behind this line is never left
+  // waiting on a promise that will not settle.
+  let settlePlaced: (at: number) => void = () => undefined;
+  const placed = new Promise<number>((resolve) => {
+    settlePlaced = (at: number) => {
+      resolve(at);
+      settlePlaced = () => undefined;
+    };
+  });
+
   const stop = (): void => {
     stopped = true;
+    settlePlaced(ctx.currentTime);
     void reader.cancel().catch(() => undefined);
     for (const source of sources) {
       try {
@@ -86,7 +109,7 @@ export function speak(ctx: AudioContext, body: ReadableStream<Uint8Array>): Spea
     const head: Uint8Array[] = [];
     let isWav: boolean | null = null;
     const decoder = new PcmDecoder();
-    const clock = new ChunkClock(SPEECH.leadInSeconds);
+    const clock = new ChunkClock(SPEECH.leadInSeconds, startAt);
     let primed: Float32Array<ArrayBuffer>[][] = [];
     let primedSeconds = 0;
     let started = false;
@@ -146,19 +169,27 @@ export function speak(ctx: AudioContext, body: ReadableStream<Uint8Array>): Spea
           buffer.sampleRate,
           clock,
         );
+        settlePlaced(clock.end ?? ctx.currentTime);
         return heard;
       } catch {
+        settlePlaced(ctx.currentTime);
         return 'failed';
       }
     }
 
     if (primed.length > 0 && decoder.format) place(concatPlanes(primed), decoder.format.sampleRate, clock);
     finished = true;
+    // The whole body is on the clock now: whoever is queued behind this line can be scheduled flush.
+    settlePlaced(clock.end ?? ctx.currentTime);
     if (sources.size === 0) return started || primed.length > 0 ? 'ended' : 'failed';
     return heard;
   })();
 
-  return { outcome, stop };
+  // A refusal or an early return leaves nothing on the clock; settle so nothing chains onto a promise
+  // that will not resolve.
+  void outcome.then((o) => ('ended' === o ? undefined : settlePlaced(ctx.currentTime)));
+
+  return { outcome, placed, stop };
 }
 
 function concatBytes(parts: Uint8Array[]): Uint8Array {

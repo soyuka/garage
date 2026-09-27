@@ -219,6 +219,24 @@
   pointer-events: none;
 }
 
+.at-parc-card[data-departing='true'] {
+  gap: 0;
+  padding: 0;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.at-parc-card[data-departing='true'] .at-parc-stage {
+  height: 100%;
+  padding: 0;
+}
+.at-parc-card[data-departing='true'] .at-parc-head,
+.at-parc-card[data-departing='true'] .at-parc-meta,
+.at-parc-card[data-departing='true'] .at-parc-due {
+  display: none;
+}
+
 /* ── departure echo: the SAME grid, echoed as a fixed overlay above the hero while the ghost is
    mid-flight (Atelier.tsx `DepartureEcho`) — the hero is never gated on the ghost, so this is what keeps
    the lot receding on screen instead of a hard cut. Above the scene shell (canvas/pins/cockpit/top, all
