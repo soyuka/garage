@@ -7,6 +7,7 @@ namespace App\Mcp;
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use App\Exception\BudgetExhaustedException;
 use App\Exception\MissingApiKeyException;
+use App\Exception\RecordNotFoundException;
 use App\Exception\UpstreamException;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\JsonRpc\Error;
@@ -99,7 +100,7 @@ final class DomainErrorHandler implements RequestHandlerInterface
                 'source' => 'the parts catalog',
                 'hint' => 'The call allowance for this upstream is spent. Do not retry; work from what is already known.',
             ],
-            $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
+            $e instanceof RecordNotFoundException, $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
                 'status' => self::MISS,
                 'retryable' => false,
                 'reason' => $e->getMessage(),

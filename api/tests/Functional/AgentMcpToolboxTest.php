@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Mcp\Agent\McpToolbox;
-use Symfony\AI\Agent\Toolbox\Exception\ToolExecutionException;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\Tool;
 
@@ -86,14 +85,17 @@ final class AgentMcpToolboxTest extends AppTestCase
         $toolbox = static::getContainer()->get(McpToolbox::class);
 
         // carId 500200 makes the parts-API fixture answer HTTP 401 (auth/rate-limit) — the upstream
-        // failure that once aborted a whole agent turn with an uncaught exception. execute() must
-        // raise a ToolExecutionException, the catchable type FaultTolerantToolbox turns into an error
-        // tool-result for the model, instead of letting the raw UpstreamException escape the loop.
-        $this->expectException(ToolExecutionException::class);
-
-        $toolbox->execute(new ToolCall('x', 'get_service_parts', [
+        // failure that once aborted a whole agent turn with an uncaught exception. Since 4a9dc77 it
+        // comes back as a structured result rather than a ToolExecutionException: that exception's
+        // getToolCallResult() discards the message, which is what made a dead upstream and an unknown
+        // plate the same string to the model. The status is what lets it tell them apart.
+        $result = $toolbox->execute(new ToolCall('x', 'get_service_parts', [
             'carId' => 500200,
             'service' => 'oil_change',
-        ]));
+        ]))->getResult();
+
+        $this->assertSame('upstream_rejected', $result['status']);
+        $this->assertFalse($result['retryable'], 'a rejected upstream is not worth retrying');
+        $this->assertSame('the parts catalog', $result['source']);
     }
 }
