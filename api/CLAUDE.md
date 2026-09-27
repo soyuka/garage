@@ -91,12 +91,26 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   died at the 180 s limit.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
   `TypeInfoDescriber`.
-- **One Mercure hub per Caddy HTTP app.** Mercure 1.0 refuses a second unnamed hub, and each
-  `mercure` directive builds its own — two of them never see each other's updates. The site on
-  `php:80` forwards to the public site rather than declaring the hub again.
-- **Delegated MCP streams need Caddy.** Every real client sends `Accept: application/json,
-  text/event-stream`, so with `MCP_STREAM_DELEGATION=1` every `tools/call` goes through the hub and
-  the lifecycle callback. The suite runs none of that and sets `MCP_STREAM_DELEGATION=0`.
+- **One unnamed Mercure hub per *configuration*.** Mercure 1.0 refuses a second one anywhere, and
+  each `mercure` directive builds its own. Addresses that differ in scheme land in different Caddy
+  servers, so a hub on the `{$SERVER_NAME}` site is built once per address: the stage profile
+  (`https://localhost, http://garage.soyuka.me`) would not boot. The hub is declared once on the
+  internal `http://php:80` site, which forwards everything but `/.well-known/mercure*` back to the
+  public site; the public site proxies the hub path to it. FrankenPHP hot reload must stay off, as it
+  wants a hub in its own server (`FRANKENPHP_SITE_CONFIG` is empty in `compose.override.yaml`).
+- **Delegated MCP streams are off by default** (`MCP_STREAM_DELEGATION=0`), because they cost
+  throughput and return nothing today: 0.917 s against 0.407 s at 24 concurrent `tools/call`. No
+  garage tool yields progress, elicitation or sampling, so the SDK never takes the streaming branch
+  that parks a thread, and the deferred run still holds one on `kernel.terminate`. Turned on, every
+  real client sends `Accept: application/json, text/event-stream`, so every `tools/call` goes
+  through the hub and the lifecycle callback, which must answer **204** exactly, with
+  `lifecycle_token` written `{$VAR}` and not `{env.VAR}`. All verified end to end in
+  `../docs/mcp-mercure-stream.md`. The
+  callback must answer **204** exactly, and `lifecycle_token` must use `{$VAR}` rather than
+  `{env.VAR}` — both are verified end to end and explained in `../docs/mcp-mercure-stream.md`.
+  Delegation currently costs about 2x throughput at 24 concurrent calls and buys nothing measurable:
+  an ordinary `tools/call` never took the SDK's streaming branch, and the tool still runs on a PHP
+  thread in `kernel.terminate`. Same doc, § What it costs.
 - **The owner is the email claim** (55bf873), so a seeded `setOwner()` takes an address. The test
   fallback in `config/services.yaml` and `AppTestCase::TEST_OWNER` must stay equal.
 
