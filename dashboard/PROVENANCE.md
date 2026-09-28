@@ -610,3 +610,52 @@ not by a live screenshot.
 
 tsc clean (whole project) · touched files only, never the full suite: `assembly.test.ts` 35,
 `blueprintBuild.test.ts` (new) 9, `holoFill.test.ts` 7, `Attribution.test.ts` 6 — all passing.
+
+---
+
+## Peugeot 206 blueprint mesh (2026-09-28)
+
+A second make/model specific vehicle mesh, and the first asset built without Blender. Source:
+Sketchfab `Peugeot-206` by bimboit34, CC-BY-4.0, UID `2a41b3b90a2f464192787d7a5567c04b`, 172k
+triangles, no textures, real scale already (3.91 m along its long axis).
+
+- **`scene/vehicleMesh.ts`** — `specificUrl` gained a Peugeot 206 branch. It tests `\b206\b` against the
+  model, so a 2008 or a 406 still falls back to the car default. `ROTATION_Y` is no longer empty. It
+  carries `-Math.PI / 2` for this asset, because the source glb has its front at `+z`.
+- **The facing convention is `-x`, not the `+x` that `anchors.ts:13` claims.** Measured in the shipped
+  glbs: the Espace lies along x with its `r_glass` taillights at `+x`, and the Mazda6 lies along z with
+  its `redglass` taillights at `-z` under a 180° x node rotation. Both therefore point nose left under
+  the hero camera, and a new asset must match them. The anchors table stays `+x` based because it only
+  drives the `CarProxy` primitive, so the two never met. Left as it is, and recorded here.
+- **`scene/VehicleMesh.tsx` / `scene/ParcThumb.tsx`** — the thumb preload lists gained the new file.
+- **`scene/Attribution.tsx`** — an eighth CC-BY credit. The test count moves from 7 to 8 sources.
+- **Assets** — `public/peugeot-206-web.glb` (271 KB) and `public/peugeot-206-thumb.glb` (116 KB).
+
+### The build, and the gotcha that cost the most time
+
+The source is a clean glTF, so the Blender leg of `theming/BLUEPRINT-PIPELINE.md` was not needed. The
+asset was built with `@gltf-transform/cli` alone. Two deltas from the thumb recipe in that document:
+
+1. **Bake every node transform into the vertex data first** (`theming/bake-flat.py`). The same script
+   drops primitives by material name and drops non-triangle primitives, which a `LineSegments` in the
+   source would otherwise render as stray lines (`blueprintBuild.ts` only walks `isMesh`).
+2. Then run `optimize --compress draco --simplify true --simplify-ratio 0.75 --simplify-error 0.005
+   --texture-compress false`, and the same command at ratio 0.2 on the result for the thumb.
+
+Step 1 is not cosmetic. Without it, `optimize` leaves several unmerged nodes whose transforms it cannot
+flatten, one of them below the floor. `buildBlueprint` then recentres on `box.min.y`
+(`blueprintBuild.ts:132`) and the whole car floats a body height above the plateau. Passing
+`--instance false` does not fix it. Verified twice in the browser, once floating and once seated.
+
+Detail was cut because the wireframe reads through the body. 41% of the source triangles are the brake
+discs and calipers behind the rims, which no viewer can name and which turn the wheels into noise. The
+materials `disk`, `Matte__FFB50000__env_50_spec` and `Matte__FF20A3FF__env_5_spec` are dropped at step 1.
+The interior stays, so the 206 reads like the Espace and the Mazda6 next to it.
+
+An edge threshold of 45° was tried and rejected. It removes the door and roof lines before it removes the
+wheel clutter, so this asset keeps the car default of 30°.
+
+Verified live 2026-09-28 (Chrome, admin owner, `#/v/01M3KFPM06Y3EGGPQGMCQ1NAPJ`): the 206 resolves to its
+own mesh, sits on the plateau, and points nose left like the Mazda6 and the Espace. The parc grid card
+shows the same silhouette from the thumb. tsc clean. Touched files only, never the full suite:
+`vehicleMesh.test.ts` 15, `Attribution.test.ts` 6, all passing.

@@ -31,9 +31,16 @@ const DEFAULT_URL: Record<DefaultType, string> = {
   groundscare: '/groundscare-default-web.glb',
 };
 
-// Per-asset yaw correction, keyed by url. Empty until each glb's facing is verified in-browser; an
-// off-axis source gets `Math.PI` / `±Math.PI/2` here. Anchors stay DIMS-based (+x=front).
-const ROTATION_Y: Record<string, number> = {};
+// Per-asset yaw correction, keyed by url. Both Blender-exported assets land FRONT AT −x (espace lies
+// along x with its taillights at +x; mazda6 lies along z, rear −z, and reads the same on screen), so
+// −x is the house facing a new asset must match — NOT the +x the anchors comment claims (2026-09-28:
+// anchors are DIMS-based and only drive the proxy, so the two never met; left as-is, flagged here).
+//
+// peugeot-206: Sketchfab glTF, front at +z (source node bounds — `engine__spec` z∈[1.23,1.77],
+// `Boot__spec` z∈[-1.82,-1.13]). −π/2 about y maps +z→−x. Verified in-browser against the mazda6.
+const ROTATION_Y: Record<string, number> = {
+  '/peugeot-206-web.glb': -Math.PI / 2,
+};
 
 function normalizeType(vehicleType: string): DefaultType {
   switch (vehicleType.trim().toLowerCase()) {
@@ -55,6 +62,9 @@ function normalizeType(vehicleType: string): DefaultType {
 function specificUrl(make: string, model: string): string | null {
   const m = `${make} ${model}`.trim().toLowerCase();
   if (m.includes('espace')) return '/renault-espace-iv-web.glb';
+  // `\b206\b` and not `includes`, so a 2008 / 306 / 406 keeps the generic car default.
+  if (make.trim().toLowerCase() === 'peugeot' && /\b206\b/.test(model.trim().toLowerCase()))
+    return '/peugeot-206-web.glb';
   if (make.trim().toLowerCase() === 'mazda' && /\b(mazda\s*)?6\b/.test(model.trim().toLowerCase()))
     return '/mazda6-gh-web.glb';
   return null;

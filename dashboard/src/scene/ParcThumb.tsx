@@ -13,7 +13,7 @@ import type { MeshSpec } from './vehicleMesh';
 // (MeshBasicMaterial), so the shared Canvas needs no light for this leaf.
 
 // Warm the drei cache for the parc grid (small thumbs; the cache dedups across same-type cards).
-['/mazda6-gh-thumb.glb', '/moto-default-thumb.glb', '/cv-default-thumb.glb', '/groundscare-default-thumb.glb', '/renault-espace-iv-thumb.glb'].forEach(
+['/mazda6-gh-thumb.glb', '/moto-default-thumb.glb', '/cv-default-thumb.glb', '/groundscare-default-thumb.glb', '/renault-espace-iv-thumb.glb', '/peugeot-206-thumb.glb'].forEach(
   (u) => useGLTF.preload(u),
 );
 

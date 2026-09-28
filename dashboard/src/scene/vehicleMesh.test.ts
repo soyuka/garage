@@ -17,6 +17,15 @@ describe('resolveMesh — make/model specifics win', () => {
     expect(resolveMesh(v('car', 'Mazda', 'Mazda 6')).url).toBe('/mazda6-gh-web.glb');
     expect(resolveMesh(v('car', 'Mazda', 'Mazda6')).url).toBe('/mazda6-gh-web.glb');
   });
+  it('a Peugeot 206 in its spellings → the 206 mesh, yawed to the house facing (front at −x)', () => {
+    expect(resolveMesh(v('car', 'PEUGEOT', '206')).url).toBe('/peugeot-206-web.glb');
+    expect(resolveMesh(v('car', 'Peugeot', '206 SW')).url).toBe('/peugeot-206-web.glb');
+    expect(resolveMesh(v('car', 'PEUGEOT', '206')).rotationY).toBeCloseTo(-Math.PI / 2);
+  });
+  it('another Peugeot is NOT the 206 — it falls back to the car default', () => {
+    expect(resolveMesh(v('car', 'PEUGEOT', '406')).url).toBe('/mazda6-gh-web.glb');
+    expect(resolveMesh(v('car', 'PEUGEOT', '2008')).url).toBe('/mazda6-gh-web.glb');
+  });
   it('a make/model match wins even when the vehicleType would route elsewhere', () => {
     expect(resolveMesh(v('cv', 'Renault', 'Espace V')).url).toBe('/renault-espace-iv-web.glb');
   });
@@ -78,6 +87,7 @@ describe('resolveMesh — thumbUrl (low-poly parc-grid variant)', () => {
     expect(resolveMesh(v('cv')).thumbUrl).toBe('/cv-default-thumb.glb');
     expect(resolveMesh(v('groundscare')).thumbUrl).toBe('/groundscare-default-thumb.glb');
     expect(resolveMesh(v('car')).thumbUrl).toBe('/mazda6-gh-thumb.glb');
+    expect(resolveMesh(v('car', 'PEUGEOT', '206')).thumbUrl).toBe('/peugeot-206-thumb.glb');
   });
   it('thumbUrl honours make/model specificity exactly like url', () => {
     const espaceTypedCv = resolveMesh(v('cv', 'Renault', 'Espace V'));

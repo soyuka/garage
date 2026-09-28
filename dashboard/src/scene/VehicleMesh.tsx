@@ -58,6 +58,7 @@ useGLTF.setDecoderPath('/draco/');
   '/cv-default-thumb.glb',
   '/groundscare-default-thumb.glb',
   '/renault-espace-iv-thumb.glb',
+  '/peugeot-206-thumb.glb',
 ].forEach((u) => useGLTF.preload(u));
 
 // Drives the holo scan band: ping-pongs the cyan brightening front↔tail along the car while `active`, and

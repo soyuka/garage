@@ -5,8 +5,8 @@ import { safeHref } from '../safeHref';
 // CC-BY requires shipping a credit per source mesh. These invariants guard the data, not the rendering.
 
 describe('CREDITS — model attribution data', () => {
-  it('credits all seven blueprint + part sources', () => {
-    expect(CREDITS).toHaveLength(7);
+  it('credits all eight blueprint + part sources', () => {
+    expect(CREDITS).toHaveLength(8);
     expect(CREDITS.map((c) => c.title)).toEqual(
       expect.arrayContaining([
         '2008 Renault Espace',
@@ -14,6 +14,7 @@ describe('CREDITS — model attribution data', () => {
         'Motorcycle',
         'European Delivery Van',
         'Lawn Tractor',
+        'Peugeot-206',
         'Oil Filter',
         'Old Engine',
       ]),
@@ -37,6 +38,8 @@ describe('CREDITS — model attribution data', () => {
     expect(creditUrl(espace)).toBe('https://sketchfab.com/3d-models/b8e7c65711134fca865f635ccddafcf5');
     const moto = CREDITS.find((c) => c.title === 'Motorcycle')!;
     expect(creditUrl(moto)).toContain('/search?');
+    const p206 = CREDITS.find((c) => c.title === 'Peugeot-206')!;
+    expect(creditUrl(p206)).toBe('https://sketchfab.com/3d-models/2a41b3b90a2f464192787d7a5567c04b');
   });
   it('links the part-mesh model pages', () => {
     const oilFilter = CREDITS.find((c) => c.title === 'Oil Filter')!;

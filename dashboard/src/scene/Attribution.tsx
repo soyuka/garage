@@ -23,6 +23,7 @@ const CREDITS: Credit[] = [
   { title: 'Motorcycle', author: 'Silas6' },
   { title: 'European Delivery Van', author: 'evan.hiltz' },
   { title: 'Lawn Tractor', author: 'mirrol' },
+  { title: 'Peugeot-206', author: 'bimboit34', uid: '2a41b3b90a2f464192787d7a5567c04b' },
   { title: 'Oil Filter', author: 'nodelet', uid: '0d26735d9cc04fd896fd8c20482bd764', licence: 'CC-BY-NC' },
   { title: 'Old Engine', author: 'TraianDumbrava', uid: 'c9130ed48cee420186e06b83c4c880af' },
 ];
