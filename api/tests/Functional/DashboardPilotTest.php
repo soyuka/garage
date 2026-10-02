@@ -102,7 +102,7 @@ final class DashboardPilotTest extends AppTestCase
         $schemas = array_column($tools, 'inputSchema', 'name');
 
         $this->assertSame(
-            ['tasks', 'specs', 'carnet', 'parts'],
+            ['tasks', 'specs', 'carnet', 'parts', 'docs'],
             $schemas['focus_view']['properties']['panel']['enum'] ?? null,
             'focus_view must advertise every panel the client can render — a surface the wire cannot name is one the agent answers in prose instead.',
         );
@@ -124,6 +124,19 @@ final class DashboardPilotTest extends AppTestCase
         ], 3);
 
         $this->assertSame(['type' => 'focusView', 'panel' => 'carnet'], $this->lastPilotFrame());
+    }
+
+    public function testFocusViewRaisesTheDocumentationPanel(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'focus_view',
+            'arguments' => ['panel' => 'docs'],
+        ], 3);
+
+        $this->assertSame(['type' => 'focusView', 'panel' => 'docs'], $this->lastPilotFrame());
     }
 
     public function testFocusViewStillRejectsAPanelTheDashboardCannotRaise(): void

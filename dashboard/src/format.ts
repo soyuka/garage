@@ -141,3 +141,19 @@ const OVERDUE: Record<Locale, (amount: string) => string> = {
 export function formatOverdue(value: number, unit: string | null | undefined, locale: Locale): string {
   return OVERDUE[locale](formatReading(Math.abs(value), unit, locale));
 }
+
+const BYTE_UNITS: Record<Locale, readonly string[]> = { fr: ['o', 'ko', 'Mo', 'Go'], en: ['B', 'kB', 'MB', 'GB'] };
+
+/** A file size in decimal (SI) units, one decimal below 10: 1536000 → "1,5 Mo" / "1.5 MB". */
+export function formatBytes(bytes: number, locale: Locale): string {
+  const units = BYTE_UNITS[locale];
+  let value = Math.max(0, bytes);
+  let i = 0;
+  while (value >= 1000 && i < units.length - 1) {
+    value /= 1000;
+    i++;
+  }
+  const shown = i === 0 || value >= 10 ? Math.round(value).toString() : value.toFixed(1).replace(/\.0$/, '').replace('.', DECIMAL[locale]);
+
+  return `${shown}${NBSP}${units[i]}`;
+}

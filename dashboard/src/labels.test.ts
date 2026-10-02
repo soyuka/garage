@@ -51,6 +51,8 @@ describe('canonicalService + alias-folded labels', () => {
     expect(serviceLabel('ignition_coil', 'fr')).toBe("Bobine d'allumage");
     expect(serviceLabel('engine_mount', 'en')).toBe('Engine mount');
     expect(serviceLabel('water_pump', 'en')).toBe('Water pump');
+    expect(serviceLabel('clutch', 'fr')).toBe('Embrayage');
+    expect(serviceLabel('clutch', 'en')).toBe('Clutch');
   });
 
   it('labels a variant the same as its canonical key', () => {

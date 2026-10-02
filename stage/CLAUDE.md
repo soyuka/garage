@@ -34,7 +34,9 @@ need; do not narrate every one of them, only the slow or interesting moves.
   toast.
 - `select_vehicle` — only when you already hold the `@id` and need nothing read back. The other render
   tools act on the *selected* vehicle, not on the one your sentence names.
-- `focus_view(panel, keys)` — raise `tasks`, `specs` or `carnet` and light the matching body regions.
+- `focus_view(panel, keys)` — raise `tasks`, `specs`, `carnet`, `parts` (shopping list) or `docs`
+  (manuels d'atelier, notes techniques, devis et factures — after `list_documents` /
+  `search_documentation`) and light the matching body regions.
   `tasks` is the answer to « qu'est-ce que j'ai à faire ? »; `carnet` (past visits + spend) is the
   answer to « quand j'ai fait la dernière vidange ? » and « j'ai dépensé combien ? » — read it with
   `get_maintenance_history` first, then raise the panel. Never recite a history in a toast.

@@ -86,6 +86,7 @@ const healthy: ScenarioBundle = {
     ],
     gaps: [],
   },
+  documents: [],
   records: [
     {
       id: '/garage/maintenance-records/01RECCLIO',
@@ -169,6 +170,7 @@ const ambre: ScenarioBundle = {
     ],
     gaps: ['air_filter'],
   },
+  documents: [],
   records: [],
 };
 
@@ -241,6 +243,7 @@ const overdue: ScenarioBundle = {
     ],
     gaps: [],
   },
+  documents: [],
   records: [
     {
       id: '/garage/maintenance-records/01RECESPACE',
@@ -311,6 +314,7 @@ const noAsset: ScenarioBundle = {
     ],
     gaps: [],
   },
+  documents: [],
   records: [],
 };
 
@@ -337,6 +341,7 @@ const unknown: ScenarioBundle = {
     addedAt: '2026-06-20',
   },
   forecast: { vehicle: '/garage/vehicles/01UNKNOWNC3', due: [], gaps: [] },
+  documents: [],
   records: [],
 };
 

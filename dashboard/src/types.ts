@@ -88,6 +88,29 @@ export interface MaintenanceAttachment {
   url: Iri;
 }
 
+/** What a vehicle document is, as the documents API classifies it (`App\Documentation\VehicleDocumentKind`). */
+export type VehicleDocumentKind = 'manual' | 'technical_note' | 'quote' | 'other';
+
+/**
+ * One document filed on a vehicle (`GET /garage/vehicles/{id}/documents`, newest first) — a workshop
+ * manual, a technical note, a quote, anything else. NOT a visit bill: those ride `MaintenanceRecord.attachments`.
+ * `id` and `plannedTaskId` are bare ULIDs (not IRIs). `url` is owner-gated — fetch with the Bearer.
+ */
+export interface VehicleDocument {
+  id: string;
+  kind: VehicleDocumentKind;
+  title: string;
+  source: 'dialogys' | 'upload';
+  sourceRef: string | null;
+  plannedTaskId: string | null;
+  filename: string;
+  contentType: string;
+  size: number;
+  pageCount: number;
+  addedAt: string; // ATOM
+  url: Iri;
+}
+
 /** One past service event — a VISIT carrying one or many service items + visit-level fields. */
 export interface MaintenanceRecord {
   id: Iri;
@@ -244,6 +267,8 @@ export interface VehicleBundle {
   vehicle: VehicleSummary;
   forecast: VehicleForecast;
   records: MaintenanceRecord[];
+  /** `null` = the documents read failed — unknown, which the documentation panel must not show as "none". */
+  documents: VehicleDocument[] | null;
 }
 
 // ── The headless agent → UI vocabulary (the "chat hidden" contract) ───────────
@@ -273,10 +298,12 @@ export interface CtaAction {
  *  `parts` is the shopping list across the open checklist — what « prochaines pièces à commander ? »
  *  needed and the single-task manifest could not carry.
  *
+ *  `docs` is the vehicle's documentation — manuals, technical notes, quotes, and the visit bills.
+ *
  *  `visits` is CLIENT-SYNTHESIZED — raised by the rail's « Plus tard · n » control, never emitted by
- *  the agent (`focus_view` accepts specs/tasks/carnet server-side). Same status `carnet` held until
+ *  the agent (`focus_view` accepts specs/tasks/carnet/parts/docs server-side). Same status `carnet` held until
  *  2026-08-15; if a tool ever needs to project the ladder, the enum is the only thing in the way. */
-export type PanelKind = 'specs' | 'tasks' | 'carnet' | 'visits' | 'parts';
+export type PanelKind = 'specs' | 'tasks' | 'carnet' | 'visits' | 'parts' | 'docs';
 
 /**
  * A projected constellation node — an already-formatted line the spec panel renders as-is, instead of

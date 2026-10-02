@@ -758,6 +758,18 @@ export function Atelier() {
           }),
       });
     }
+    chips.push({
+      label: t.chip.docs,
+      disabled: locked,
+      zone: 'centre',
+      onClick: () =>
+        runLocalAnswer({
+          steps: t.chip.docsSteps,
+          failMessage: t.chip.docsFail,
+          resolve: async () => ({ focus: { panel: 'docs', keys: [] } }),
+          spokenResult: t.chip.docsResult,
+        }),
+    });
     if (b.vehicle.plate) {
       const plate = b.vehicle.plate;
       chips.push({
@@ -865,6 +877,13 @@ export function Atelier() {
   const alarm = (message: string) => {
     dispatch({ type: 'toast', tone: 'alarm', message });
     cues.play('blocked');
+  };
+
+  // A Dossier / documentation write: re-read the open bundle now (the vehicle domain frame re-reads it too).
+  const afterFileWrite = () => {
+    const iri = selectedIriRef.current;
+    if (iri) getVehicleBundle(iri).then((b) => patchCurrentBundle(iri, () => b)).catch(() => undefined);
+    cues.play('complete');
   };
 
   const onAddVehicle = () => {
@@ -1056,11 +1075,7 @@ export function Atelier() {
             vehicleIri={heroBundle.vehicle['@id']}
             records={heroBundle.records}
             defaultUnit={maintUnitFor(heroBundle.vehicle.usageUnit)}
-            onChanged={() => {
-              const iri = selectedIriRef.current;
-              if (iri) getVehicleBundle(iri).then((b) => patchCurrentBundle(iri, () => b)).catch(() => undefined);
-              cues.play('complete');
-            }}
+            onChanged={afterFileWrite}
             onError={alarm}
           />
         )}
@@ -1118,6 +1133,11 @@ export function Atelier() {
             }}
             records={heroBundle.records}
             historyOpen={historyOpen}
+            documentation={{
+              vehicleIri: heroBundle.vehicle['@id'],
+              onChanged: afterFileWrite,
+              onError: alarm,
+            }}
             onOpenHistory={openHistory}
             onCloseHistory={() => {
               setHistoryOpen(false);

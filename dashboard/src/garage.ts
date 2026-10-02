@@ -23,6 +23,8 @@ import type {
   ServiceRule,
   UsageUnit,
   VehicleBundle,
+  VehicleDocument,
+  VehicleDocumentKind,
   VehicleForecast,
   VehicleSummary,
 } from './types';
@@ -103,17 +105,20 @@ export async function getVehicleTasks(iri: string, includeDismissed = false): Pr
 
 /**
  * Load the full Atelier bundle for one vehicle: the item read-model + forecast + past visits + the
- * checklist, in parallel. The checklist comes from the subresource (authoritative) and overrides the
+ * checklist + the filed documents, in parallel. The checklist comes from the subresource (authoritative) and overrides the
  * item GET's inline `plannedTasks`, so the établi reflects open-task parts (incl. a CTA patchTask merge).
  */
 export async function getVehicleBundle(iri: string): Promise<VehicleBundle> {
-  const [vehicle, forecast, records, plannedTasks] = await Promise.all([
+  const [vehicle, forecast, records, plannedTasks, documents] = await Promise.all([
     getVehicle(iri),
     getForecast(iri),
     getMaintenanceRecords(iri),
     getVehicleTasks(iri),
+    // A documents outage must not take the car page down with it: null reads as "unavailable" in the
+    // documentation panel, never as an empty file.
+    listVehicleDocuments(iri).catch(() => null),
   ]);
-  return { vehicle: { ...vehicle, plannedTasks }, forecast, records };
+  return { vehicle: { ...vehicle, plannedTasks }, forecast, records, documents };
 }
 
 // ── Catalog / SIV reads (net-new §5.1 + §5.8 — feed the deterministic wayfinder chips) ─────────────
@@ -437,4 +442,52 @@ export async function fetchAttachmentObjectUrl(attachmentUrl: string): Promise<s
   const res = await authFetch(`${API}${attachmentUrl}`);
   okVoid(res, 'attachment fetch');
   return URL.createObjectURL(await res.blob());
+}
+
+// ── Vehicle documents (manuals, technical notes, quotes…) ───────────────────────
+
+/** GET a vehicle's documents, newest first. A plain JSON array (not hydra); ids are bare ULIDs. */
+export async function listVehicleDocuments(vehicleIri: string): Promise<VehicleDocument[]> {
+  const res = await authFetch(`${API}${vehicleIri}/documents`, { headers: { Accept: 'application/json' } });
+  return okJson<VehicleDocument[]>(res, 'documents fetch');
+}
+
+export interface VehicleDocumentUpload {
+  file: File;
+  kind: VehicleDocumentKind;
+  title?: string | null;
+  sourceRef?: string | null;
+  /** The planned task's bare ULID (not its IRI) — what the documents API stores. */
+  plannedTaskId?: string | null;
+}
+
+/** The multipart body for a document upload; blank optional fields are left out, never sent empty. */
+export function documentUploadBody(input: VehicleDocumentUpload): FormData {
+  const body = new FormData();
+  body.append('file', input.file);
+  body.append('kind', input.kind);
+  for (const field of ['title', 'sourceRef', 'plannedTaskId'] as const) {
+    const value = input[field]?.trim();
+    if (value) body.append(field, value);
+  }
+  return body;
+}
+
+/** File one document on a vehicle (multipart POST — never set Content-Type, the browser sets the boundary). */
+export async function uploadVehicleDocument(vehicleIri: string, input: VehicleDocumentUpload): Promise<VehicleDocument> {
+  const res = await authFetch(`${API}${vehicleIri}/documents`, { method: 'POST', body: documentUploadBody(input) });
+  if (!res.ok) {
+    const detail = await res
+      .json()
+      .then((d: { detail?: string; message?: string }) => d.detail ?? d.message)
+      .catch(() => undefined);
+    throw new Error(detail ?? `document upload failed: ${res.status}`);
+  }
+  return res.json() as Promise<VehicleDocument>;
+}
+
+/** Remove one document by its bare ULID. */
+export async function deleteVehicleDocument(vehicleIri: string, documentId: string): Promise<void> {
+  const res = await authFetch(`${API}${vehicleIri}/documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
+  okVoid(res, 'document delete');
 }

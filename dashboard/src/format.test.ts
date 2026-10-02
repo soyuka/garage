@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { THIN as SRC_THIN, NBSP as SRC_NBSP } from './format';
 import {
   formatAmount,
+  formatBytes,
   formatDate,
   formatEuros,
   formatHealthPct,
@@ -180,5 +181,17 @@ describe('formatPower (SIV carte grise)', () => {
   it('is empty when neither is known', () => {
     expect(formatPower(null, null, 'fr')).toBe('');
     expect(formatPower(undefined, undefined, 'en')).toBe('');
+  });
+});
+
+describe('formatBytes (document sizes)', () => {
+  it('renders French sizes — comma decimal, NBSP before the unit, « o » not « B »', () => {
+    expect(formatBytes(512, 'fr')).toBe(`512${NBSP}o`);
+    expect(formatBytes(2048, 'fr')).toBe(`2${NBSP}ko`);
+    expect(formatBytes(1536000, 'fr')).toBe(`1,5${NBSP}Mo`);
+  });
+  it('renders English sizes', () => {
+    expect(formatBytes(512, 'en')).toBe(`512${NBSP}B`);
+    expect(formatBytes(1536000, 'en')).toBe(`1.5${NBSP}MB`);
   });
 });

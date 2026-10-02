@@ -1,0 +1,129 @@
+/* « Documentation » — rides the shopping list's centred shell (shopping.css: overlay, glass, head, group,
+   row, operator-hue action). Only what a document row and the upload form add lives here. */
+
+/* The dock (z70, scene.css) stays above every surface on purpose, so a centred surface that ends in a
+   form must stop above it or the chips cover the submit. 300px = the freed-orb console (socket 158 + gap 8
+   + composer 48, rail.css) plus the chip rail above it, measured live at 2026-10-02. */
+.at-docs-overlay {
+  align-items: flex-start;
+  padding-top: 64px;
+  padding-bottom: 300px;
+}
+.at-docs {
+  max-height: 100%;
+}
+
+.at-docs-row {
+  align-items: center;
+}
+
+.at-docs-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.at-docs-title {
+  font-size: 15px;
+  color: var(--at-text);
+  opacity: var(--at-vib-1);
+  overflow-wrap: anywhere;
+}
+
+.at-docs-meta {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+}
+.at-docs-meta:empty {
+  display: none;
+}
+
+.at-docs-size {
+  flex: 0 0 auto;
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+  white-space: nowrap;
+}
+
+.at-docs .at-shop-shop {
+  background: transparent;
+  cursor: pointer;
+}
+.at-docs .at-shop-shop:disabled {
+  cursor: default;
+  opacity: var(--at-vib-3);
+}
+
+.at-docs-del {
+  flex: 0 0 auto;
+  appearance: none;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--at-text-dim);
+  font-size: 15px;
+  cursor: pointer;
+}
+.at-docs-del:hover,
+.at-docs-del:focus-visible {
+  color: var(--at-red-hi);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.at-docs-note {
+  margin: var(--at-space-4) 0 0;
+  font-size: 13px;
+  font-style: italic;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+}
+
+.at-docs-form {
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--at-space-2);
+}
+
+.at-docs-input,
+.at-docs-file {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text);
+  background: var(--at-void-lift);
+  border: 1px solid var(--at-hairline);
+  border-radius: var(--at-radius-chip);
+  padding: 5px 8px;
+  min-width: 0;
+  max-width: 22ch;
+  box-sizing: border-box;
+}
+.at-docs-input:focus-visible,
+.at-docs-file:focus-visible {
+  outline: none;
+  border-color: var(--at-chrome-hi);
+}
+
+.at-docs-file {
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--at-text-dim);
+}
+
+.at-docs-hint {
+  flex: 1 0 100%;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-3);
+}

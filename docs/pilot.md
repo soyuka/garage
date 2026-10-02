@@ -33,7 +33,7 @@ each one as a session-bound `#[AsTool]`.
 | `narrate_step(message)` | one running step sentence on the heartbeat; the first one lifts the orb |
 | `select_vehicle(vehicle)` | drives that car into the workshop — **call it first** if your answer is about another vehicle |
 | `show_fact(keys, title, nodes)` | focused spec panel for the SELECTED vehicle: `keys` filters its STORED facts, `nodes` projects lines you FETCHED (fill volumes, oil grade, carte grise) |
-| `focus_view(panel, keys)` | raise "tasks", "specs" or "carnet" (history + spend) and light the matching body regions |
+| `focus_view(panel, keys)` | raise "tasks", "specs", "carnet" (history + spend), "parts" (shopping list) or "docs" (manuals, technical notes, quotes, bills) and light the matching body regions |
 | `propose_actions(headline, actions, finding)` | CTA card; buttons are NL follow-ups OR direct part-writes |
 | `reveal_assembly(region, part_keys)` | look INSIDE: the shell ghosts to a wireframe, the region's schematic assembly rises under it, camera descends into the reveal pose. `part_keys` call parts out, they never filter the diagram |
 | `toast(message, tone)` | one-line acknowledgement, French |

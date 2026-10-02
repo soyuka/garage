@@ -25,6 +25,8 @@ import { CarnetProjection } from './CarnetProjection';
 import { WorklistProjection } from './WorklistProjection';
 import { VisitProjection } from './VisitProjection';
 import { ShoppingListOverlay } from './ShoppingList';
+import { DocumentationPanel, type DocumentationHandlers } from './DocumentationPanel';
+import { buildDocumentation } from './documentation';
 import { buildWorklist } from './worklist';
 import { manifestFromCta } from './parts';
 import { rollupCarnet, filterCarnetRecords } from '../carnet';
@@ -135,6 +137,8 @@ interface SceneViewProps {
   historyOpen: boolean;
   onOpenHistory?: () => void;
   onCloseHistory?: () => void;
+  /** Writes from the documentation panel (open / delete / upload). Absent → the panel is read-only. */
+  documentation?: DocumentationHandlers;
 }
 
 /** The chip destination micro-map: 3 neutral cells in a fixed rail/centre/colonne order, so the eye
@@ -188,6 +192,7 @@ export function SceneView({
   historyOpen,
   onOpenHistory,
   onCloseHistory,
+  documentation,
 }: SceneViewProps) {
   // C2: the à-décider inbox opens from the ember. Auto-closes once the queue drains (last item resolved).
   const [inboxOpen, setInboxOpen] = useState(false);
@@ -370,6 +375,10 @@ export function SceneView({
   // « Pièces à commander » — the references already chosen across the OPEN checklist, grouped by job. A
   // side projection like the others, so it never dims the stage.
   const shopFocused = focus?.panel === 'parts';
+  // « Documentation » — the vehicle's paper (manuals, notes, quotes, bills). Same centred surface as the
+  // shopping list, so it never dims the stage either. An empty file still opens: it is where the first
+  // document gets added.
+  const docsFocused = focus?.panel === 'docs';
   // The carnet, the fiche technique (specs) and the worklist are side-column projections, not blocking
   // surfaces — they read as integrated with the scene, so none of them dims it. Each closes on its own
   // ✕ + Escape.
@@ -377,7 +386,7 @@ export function SceneView({
   // 'tasks' used to fall through to `true` here and dim the scene for a panel that did not exist: the
   // car went to 45 % and NOTHING replaced it, which is what the operator saw on 2026-08-15 (a blurred
   // stage with no answer). A focus that dims must fill the attention it took.
-  const dimScene = !!focus && !carnetFocused && !specsFocused && !tasksFocused && !ladderFocused && !shopFocused;
+  const dimScene = !!focus && !carnetFocused && !specsFocused && !tasksFocused && !ladderFocused && !shopFocused && !docsFocused;
 
   // "Planifier" (#10): a hotspot forecast row → a concrete planned task pegged to the predicted-due
   // reading. Uses the checklist's add path (so it re-reads), and the vehicle's garage-spelling axis unit
@@ -410,6 +419,7 @@ export function SceneView({
   const showLadder = ladderFocused && !!plan && plan.later.length > 0;
   const shopping = shopFocused && bundle ? buildShoppingList(bundle, locale) : null;
   const showShopping = !!shopping && shopping.groups.length > 0;
+  const docs = docsFocused && bundle ? buildDocumentation(bundle.documents, bundle.records, bundle.vehicle.plannedTasks ?? [], locale) : null;
 
   // When a full surface (Données drawer / Le Carnet) is open, the dock slides to the LEFT free column so
   // Le Noyau + its narration + the composer stay visible beside it, and the chips swap to that surface's
@@ -587,6 +597,8 @@ export function SceneView({
       {showShopping && shopping && (
         <ShoppingListOverlay model={shopping} reduced={reduced} onDismiss={onDismissFocus} />
       )}
+
+      {docs && <DocumentationPanel model={docs} handlers={documentation} reduced={reduced} onDismiss={onDismissFocus} />}
 
       {/* The dock hides while Le Carnet (a true aria-modal popup) owns the screen — relocating an
           interactive console beside a modal is inconsistent; the modal carries its own close. The

@@ -442,6 +442,25 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertSame(['type' => 'focusView', 'panel' => 'carnet'], json_decode($published->getData(), true));
     }
 
+    public function testFocusViewRaisesTheDocumentationPanel(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->focusView('docs');
+
+        $this->assertNotNull($published);
+        $this->assertSame(['type' => 'focusView', 'panel' => 'docs'], json_decode($published->getData(), true));
+    }
+
     public function testShowFactProjectsFetchedNodesAlongsideTheSpotlightKeys(): void
     {
         $published = null;

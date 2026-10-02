@@ -106,7 +106,7 @@ major-unit euros the client converts.
 
 `setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `revealAssembly` `{region, partKeys?}` ·
 `showFact` `{keys[], title?, nodes?}` ·
-`focusView` `{panel: "specs"|"tasks"|"carnet", keys?[]}` (raises one panel into the centre slot +
+`focusView` `{panel: "specs"|"tasks"|"carnet"|"parts"|"docs", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
 CtaAction[]}` · `toast` `{tone, message}` · `status` `{message, tool?}` · `turn` `{phase}`.
 
