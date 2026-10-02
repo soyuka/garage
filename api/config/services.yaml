@@ -269,6 +269,10 @@ services:
         arguments:
             $filesystem: '@maintenance.storage'
 
+    App\Storage\VehicleDocumentStorage:
+        arguments:
+            $filesystem: '@vehicle_documents.storage'
+
     # Validates Casdoor JWTs for the /mcp firewall (dev/prod). Audience is intentionally
     # unpinned — see the class docblock. JWKS discovered from CASDOOR_ISSUER, cached in cache.app.
     App\Security\CasdoorTokenHandler:

@@ -10,6 +10,14 @@ flysystem:
                 client: 'maintenance.s3_client'
                 bucket: '%env(S3_BUCKET)%'
                 prefix: 'maintenance-bills'
+        # Vehicle documentation (workshop manuals, notes, quotes): same bucket and client as the bills,
+        # separate prefix.
+        vehicle_documents.storage:
+            adapter: 'asyncaws'
+            options:
+                client: 'maintenance.s3_client'
+                bucket: '%env(S3_BUCKET)%'
+                prefix: 'vehicle-documents'
 
 # The suite must stay hermetic — no MinIO/S3 dependency to run `php bin/phpunit` on the host. A
 # local adapter under the cache dir gives the same FilesystemOperator contract; setUp drops Mongo,
@@ -21,3 +29,7 @@ when@test:
                 adapter: 'local'
                 options:
                     directory: '%kernel.cache_dir%/maintenance-storage'
+            vehicle_documents.storage:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.cache_dir%/vehicle-documents-storage'

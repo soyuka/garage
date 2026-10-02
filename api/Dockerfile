@@ -57,6 +57,7 @@ RUN <<-EOF
 	apt-get update
 	apt-get install -y --no-install-recommends \
 		file \
+		poppler-utils \
 		git
 	install-php-extensions \
 		@composer \
