@@ -512,3 +512,43 @@ verified failing with `src/` untouched. Symptom in `testListMakes`: the returned
 *shorter* than the fixture (IVECO id 55, RENAULT id 93 missing); `testGetFillVolumesTool` gets
 `structuredContent === null`. Smells like a fixture/response-shape drift or a stale cache row rather
 than a logic bug. Attribution is settled; the cause is not.
+
+## Stage token — `mint-token` mints nothing (found 2026-10-02)
+
+`stage/bin/mint-token` selects the newest `claude-desktop` row from Casdoor's `token` table and
+prints it; it never issues or refreshes a token. Its header ("re-run at every Atelier launch rather
+than cached") reads as if a re-run renews it — it does not. Once the newest row passes its 168 h
+`exp`, `stage/bin/atelier` exports an expired `MPA_STAGE_TOKEN` and the pilot session gets
+`401 invalid_token` on both `https://localhost/mcp` and `https://garage.soyuka.me/mcp` (verified
+2026-10-02: exp 1790941722, ~3 h past). Only a fresh OAuth (`/mcp` reconnect) unblocks it.
+
+Fix options: exchange the row's `refresh_token` against Casdoor (`grant_type=refresh_token`) when
+`exp` is past, or at minimum decode `exp` and fail loudly instead of exporting a dead token.
+
+## Documentation search — variant-blind ranking (found 2026-10-02)
+
+`search_documentation` (`api/src/Documentation/DocumentationSearcher.php`) ranks on query terms
+only. Renault MR pages are per engine/gearbox variant (header « MOTEUR G9T », « MOTEURS F TOUS
+TYPES », « BOITE DE VITESSES AUTOMATIQUE P9X »), so on the Espace IV F4R/PK6 the query
+« joint de sortie de différentiel » returns the BVA pages 23A-26/23A-27 and not the BVM page 21A-28,
+and « vis de volant couple » ranks the G9T page 20A-11 above the F-engine 20A-12 (verified live
+2026-10-02 against MR 361 Transmission). Fix: boost/penalise pages whose header names an engine or
+gearbox code that matches / contradicts the vehicle's `engine_code` / `gearbox_code` facts.
+
+Also: the page label is the LAST `\d{2}[A-Z]-\d+` match on the page, so a sommaire page is labelled
+with whatever entry comes last (the MR 361 sommaire reads as `29A-9`). Prefer the footer line.
+
+Also: the MR→vehicle mapping is manual (`app:documentation:import <vehicle> …`). Dialogys
+(`<server>:~/downloads/dialogys 4.90/dvd{2..6}.iso`, `data/mrnt/fr/d3k/1-MR`) names
+MRs by number + model (`MR-361-ESPACE-2.pdf`) and lists the covered type codes (JK0B…JK0K) on the
+intro page — enough to map a VIN's type code to its MR set automatically.
+
+## Centred surfaces vs the dock (found 2026-10-02)
+
+The dock is `z-index: 70` (`dashboard/src/scene/scene.css:284`) on purpose — Le Noyau is never cut off
+while a surface is open. But the centred surfaces (`.at-shop`, `shopping.css`) are vertically centred at
+`max-height: 82vh`, so a tall shopping list runs under the chip rail and the freed orb. The documentation
+panel (`focusView {panel:'docs'}`) ends in an upload form, so it got its own clearance
+(`documentation.css` `.at-docs-overlay`: top-aligned, 300px bottom padding, verified live at 945×994).
+The shopping list still has the overlap; the clean fix is one shared clearance token for every centred
+surface, not a per-panel literal.
