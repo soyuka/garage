@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Mcp;
 
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
-use App\Exception\BudgetExhaustedException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\RecordNotFoundException;
 use App\Exception\UpstreamException;
@@ -93,12 +92,6 @@ final class DomainErrorHandler implements RequestHandlerInterface
                 'retryable' => false,
                 'source' => $e->source,
                 'hint' => sprintf('%s is not configured on this server. Tell the user this capability is unavailable; do not retry and do not guess an answer.', $e->source),
-            ],
-            $e instanceof BudgetExhaustedException => [
-                'status' => 'budget_exhausted',
-                'retryable' => false,
-                'source' => 'the parts catalog',
-                'hint' => 'The call allowance for this upstream is spent. Do not retry; work from what is already known.',
             ],
             $e instanceof RecordNotFoundException, $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
                 'status' => self::MISS,

@@ -8,7 +8,6 @@ parameters:
     # One source of truth: config/packages/mcp.yaml routes it, the stream runner replays against it.
     app.mcp_path: '/mcp'
 
-    env(PARTSAPI_CALL_LIMIT): '50'
     # PocketTtsSpeechClient::voices() label, when nothing sets the env var at all (never true once
     # api/.env loads, which always sets it — this is the fallback for a stripped-down environment).
     env(POCKET_TTS_VOICE_LABEL): 'Kyutai'
@@ -41,7 +40,6 @@ services:
                 getArticles: '%env(PARTSAPI_KEY_getArticles)%'
                 GetFillVolumes: '%env(PARTSAPI_KEY_GetFillVolumes)%'
             $cache: '@cache.partsapi'
-            $callLimit: '%env(int:PARTSAPI_CALL_LIMIT)%'
 
     App\Catalog\PartsCatalog:
         arguments:

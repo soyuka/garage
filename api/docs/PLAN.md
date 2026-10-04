@@ -29,10 +29,9 @@ Same id keys `getSearchTree`, `getArticles` **and** `GetFillVolumes`. Steps 1–
 ```
 src/
   Siv/SivClient.php            plate → SIV payload. Disk cache <PLATE>.json (never re-pay a plate).
-  PartsApi/PartsApiClient.php  method+params → JSON. Per-method key, hard disk cache,
-                               per-method call budget (default 50, env PARTSAPI_CALL_LIMIT).
+  PartsApi/PartsApiClient.php  method+params → JSON. Per-method key, hard disk cache.
   PartsApi/CarType.php         enum PC|CV
-  Exception/                   MissingApiKeyException(501), BudgetExhaustedException(429),
+  Exception/                   MissingApiKeyException(501),
                                UpstreamException(502) — mapped via api_platform.exception_to_status
   ApiResource/                 DTOs, each with HTTP operation(s) + `mcp:` tools
   State/                       thin providers (HTTP reads) + processors (MCP tools) over shared services

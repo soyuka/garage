@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\PartsApi;
 
-use App\Exception\BudgetExhaustedException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use Psr\Cache\CacheItemPoolInterface;
@@ -12,15 +11,14 @@ use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * partsapi.ru (TecDoc 2025 Q4) client — hard-cached, call-budgeted.
+ * partsapi.ru (TecDoc 2025 Q4) client — hard-cached.
  *
  * Guarantees (carried over from prototype_1, verified against the live API):
  *  - cache key excludes the secret key, so rotating a token never invalidates the cache
  *    and secrets never get persisted; the signature is identical to prototype_1
  *    so already-paid responses can be imported as-is;
  *  - successful responses are cached forever and never re-fetched;
- *  - auth/network/API errors are neither cached nor counted against the budget;
- *  - the budget is enforced per method (each method has its own ~50-call allowance).
+ *  - auth/network/API errors are never cached.
  */
 final class PartsApiClient
 {
@@ -36,7 +34,6 @@ final class PartsApiClient
         private readonly HttpClientInterface $httpClient,
         private readonly array $keys,
         private readonly CacheItemPoolInterface $cache,
-        private readonly int $callLimit,
     ) {
     }
 
@@ -55,10 +52,6 @@ final class PartsApiClient
         $key = $this->keys[$method] ?? '';
         if ('' === $key) {
             throw MissingApiKeyException::forPartsApiMethod($method);
-        }
-
-        if ($this->spent($method) >= $this->callLimit) {
-            throw BudgetExhaustedException::forPartsApiMethod($method, $this->callLimit);
         }
 
         try {
@@ -94,7 +87,6 @@ final class PartsApiClient
         }
 
         $this->cache->save($cacheItem->set($data));
-        $this->bump($method);
 
         return $data;
     }
@@ -112,18 +104,5 @@ final class PartsApiClient
         $signature = $method.'?'.http_build_query($params);
 
         return $method.'.'.sha1($signature);
-    }
-
-    private function spent(string $method): int
-    {
-        $item = $this->cache->getItem('calls.'.$method);
-
-        return $item->isHit() ? (int) $item->get() : 0;
-    }
-
-    private function bump(string $method): void
-    {
-        $item = $this->cache->getItem('calls.'.$method);
-        $this->cache->save($item->set(($item->isHit() ? (int) $item->get() : 0) + 1));
     }
 }

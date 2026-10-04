@@ -16,7 +16,6 @@ api_platform:
     enable_scalar: true
     exception_to_status:
         App\Exception\MissingApiKeyException: !php/const Symfony\Component\HttpFoundation\Response::HTTP_NOT_IMPLEMENTED
-        App\Exception\BudgetExhaustedException: !php/const Symfony\Component\HttpFoundation\Response::HTTP_TOO_MANY_REQUESTS
         App\Exception\UpstreamException: !php/const Symfony\Component\HttpFoundation\Response::HTTP_BAD_GATEWAY
     defaults:
         stateless: true

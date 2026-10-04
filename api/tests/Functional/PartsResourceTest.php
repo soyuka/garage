@@ -114,7 +114,7 @@ final class PartsResourceTest extends AppTestCase
         $this->assertNotContains('гр.', $units);
     }
 
-    public function testSuccessfulPartsCallIsCachedAndCountedOnce(): void
+    public function testSuccessfulPartsCallIsCached(): void
     {
         $client = static::createClient();
         $client->request('GET', '/cars/34247/fill-volumes');
@@ -122,47 +122,9 @@ final class PartsResourceTest extends AppTestCase
 
         $pool = self::partsApiCache();
         $this->assertTrue($pool->getItem('GetFillVolumes.9082864561dcc88578d6b6c1925d0f43870e3a97')->isHit());
-        $counter = $pool->getItem('calls.GetFillVolumes');
-        $this->assertTrue($counter->isHit());
-        $this->assertSame(1, $counter->get());
-
-        // Second hit: served from cache, counter untouched
-        $client->request('GET', '/cars/34247/fill-volumes');
-        $this->assertResponseIsSuccessful();
-        $this->assertSame(1, $pool->getItem('calls.GetFillVolumes')->get());
     }
 
-    public function testBudgetExhaustedAnswers429WithoutUpstreamCall(): void
-    {
-        $pool = self::partsApiCache();
-        $pool->save($pool->getItem('calls.getSearchTree')->set(50));
-
-        $client = static::createClient();
-        $client->request('GET', '/cars/99999/part-categories?carType=PC');
-
-        $this->assertResponseStatusCodeSame(429);
-        // "Without upstream call": nothing was paid, cached or counted
-        $this->assertSame(50, $pool->getItem('calls.getSearchTree')->get());
-        // key for getSearchTree?carId=99999&carType=PC&lang=4 — must remain a miss
-        $this->assertFalse($pool->getItem('getSearchTree.a4978da61eb844415eb9694bb4f06d31433372d0')->isHit());
-    }
-
-    public function testCachedResponseIsStillServedWhenBudgetIsExhausted(): void
-    {
-        $pool = self::partsApiCache();
-        $pool->save($pool->getItem('calls.GetFillVolumes')->set(50));
-        $data = json_decode((string) file_get_contents(\dirname(__DIR__).'/Fixtures/partsapi/GetFillVolumes_34247.json'), true);
-        $pool->save($pool->getItem('GetFillVolumes.9082864561dcc88578d6b6c1925d0f43870e3a97')->set($data));
-
-        $client = static::createClient();
-        $client->request('GET', '/cars/34247/fill-volumes');
-
-        // Already-paid data keeps flowing at 50/50: cache is checked BEFORE the budget
-        $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['hydra:totalItems' => 17]);
-    }
-
-    public function testUpstreamErrorIsNeitherCachedNorCounted(): void
+    public function testUpstreamErrorIsNotCached(): void
     {
         $client = static::createClient();
         // carId 500200 = mock sentinel for the real 5002 "bad key" error envelope
@@ -172,7 +134,6 @@ final class PartsResourceTest extends AppTestCase
         $pool = self::partsApiCache();
         // key for getSearchTree?carId=500200&carType=PC&lang=4 — must remain a miss
         $this->assertFalse($pool->getItem('getSearchTree.c668305e64deefb873dec5a84f559c5468af8e41')->isHit());
-        $this->assertFalse($pool->getItem('calls.getSearchTree')->isHit());
     }
 
     public function testInvalidCarTypeIsRejected(): void

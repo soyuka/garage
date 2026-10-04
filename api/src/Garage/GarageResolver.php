@@ -8,7 +8,6 @@ use App\Catalog\PartsCatalog;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
-use App\Exception\BudgetExhaustedException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use App\Repository\VehicleRepository;
@@ -194,7 +193,7 @@ class GarageResolver
     {
         try {
             $volumes = $this->catalog->fillVolumes($carId);
-        } catch (UpstreamException|BudgetExhaustedException|MissingApiKeyException $e) {
+        } catch (UpstreamException|MissingApiKeyException $e) {
             $this->logger->warning($skipReason, [
                 'reason' => $e->getMessage(),
                 'kType' => $carId,
