@@ -235,6 +235,17 @@ deux mille vingt-six enregistrées : cinquante-trois euros vingt, les autres vis
 montant saisi.
 ```
 
+**Rule 0 — digits-only part references are not spoken (2026-10-05).** Spelled out, « volant 623 3150 33
++ 415 0463 10 » or « Valeo 836538 » is a string of millions read as noise; the card keeps them, the voice
+says « volant » and « volant Valeo ». `Verbalizer::dropNumericReferences()` runs first (before digit
+grouping glues « 623 315 » into one figure) and drops a digit run that is neither a quantity (a unit or
+€ beside it) nor a number: space-separated groups that are not a thousands grouping, or a single run of
+5+ digits. The `+`, `/`, `,` or « et » joining two dropped references goes with them. Kept on purpose:
+« 15 000 km », « 250347 km », « 12500 € », « 2026 ». Known cost: a bare 5+ digit figure with no unit
+(« à 250347 », a postcode) is dropped too. Hyphenated or lettered references (`B593-18-840A`,
+`J1313021`) are unchanged by this rule. This is the one rule that removes words rather than rewriting
+them.
+
 ## The three routes
 
 | | How | First-load cost | Latency | Verdict |

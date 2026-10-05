@@ -92,6 +92,21 @@ final class VerbalizerTest extends TestCase
             "Huile 5W-30, ampoule 246-H, filtre J1313021, référence iks bé, trois zéro un, zède bé, pneu 16x650-8, indice A3/B3, lot 01M1SM29",
         ];
 
+        yield 'space-grouped numeric part references are shown but not spoken, with their connectors' => [
+            'Kit LuK (embrayage + volant 623 3150 33 + 415 0463 10).',
+            'Kit LuK, embrayage plus volant.',
+        ];
+
+        yield 'a bare numeric part reference after a brand is not spoken' => [
+            'Volant Valeo 836538 à la place du LuK',
+            'Volant Valeo à la place du LuK',
+        ];
+
+        yield 'quantities that look like long digit runs are still spoken' => [
+            'À 250347 km puis 15 000 km, budget 12500 €, année 2026',
+            'À deux cent cinquante mille trois cent quarante-sept kilomètres puis quinze mille kilomètres, budget douze mille cinq cents euros, année deux mille vingt-six',
+        ];
+
         yield 'hyphenated part references become distinct French letter and digit groups' => [
             'Références B593-18-840A et B3C8-18-840.',
             'Références bé cinq neuf trois, dix-huit, huit quatre zéro a et bé trois cé huit, dix-huit, huit quatre zéro.',

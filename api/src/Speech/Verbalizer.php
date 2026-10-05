@@ -114,6 +114,7 @@ final readonly class Verbalizer
 
     public function verbalize(string $text, Locale $locale): string
     {
+        $text = $this->dropNumericReferences($text, $locale);
         $text = $this->groupDigits($text);
         $text = $this->spellCurrency($text, $locale);
         $text = $this->spellUnits($text, $locale);
@@ -123,6 +124,35 @@ final readonly class Verbalizer
         $text = $this->spellNumbers($text, $locale);
 
         return trim(preg_replace('/\s+/u', ' ', $text) ?? $text);
+    }
+
+    /**
+     * Operator decision 2026-10-05: a digits-only part reference (« 623 3150 33 », « Valeo 836538 »)
+     * stays on the card but is not spoken, spelled out it is noise. Runs first, before
+     * {@see groupDigits()} glues « 623 315 » into one figure. A digit run is a reference when it is
+     * neither a quantity (unit or € next to it) nor a number: space-separated groups that are not a
+     * thousands grouping, or a single run of 5+ digits. The `+`, `/`, `,` or « et » between two
+     * dropped references goes with them.
+     */
+    private function dropNumericReferences(string $text, Locale $locale): string
+    {
+        $units = implode('|', array_map(static fn (string $t): string => preg_quote($t, '/'), [...array_keys(self::UNITS[$locale->value]), '€']));
+        $digits = '(?<![\p{L}\p{N}\-\'\x{2019}\/,.€])(?<!€ )\d+(?:'.self::GROUP_SEPARATOR.'\d+)*(?![\p{L}\p{N}\-\/]|[,.]\d)';
+        $reference = '/'.$digits.'(?!'.self::GROUP_SEPARATOR.'?(?:'.$units.')(?![\p{L}\p{N}]))/u';
+
+        $marker = "\u{E000}";
+        $text = preg_replace_callback($reference, static function (array $m) use ($marker): string {
+            $groups = preg_split('/'.self::GROUP_SEPARATOR.'/u', $m[0]) ?: [$m[0]];
+            $isNumber = 1 === \count($groups)
+                ? \strlen($m[0]) < 5
+                : 1 === preg_match('/^\d{1,3}$/', $groups[0]) && [] === array_filter(\array_slice($groups, 1), static fn (string $g): bool => 3 !== \strlen($g));
+
+            return $isNumber ? $m[0] : $marker;
+        }, $text) ?? $text;
+
+        $connector = Locale::Fr === $locale ? 'et' : 'and';
+
+        return preg_replace('/\s*'.$marker.'(?:\s*(?:[+\/,]|'.$connector.')\s*'.$marker.')*/u', '', $text) ?? $text;
     }
 
     /** « 250 347 » → « 250347 »; « 6 juillet 2026 » and « 5W-30 » have no run of exact-3 groups, so they pass through. */
