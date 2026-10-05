@@ -246,6 +246,12 @@ grouping glues « 623 315 » into one figure) and drops a digit run that is neit
 `J1313021`) are unchanged by this rule. This is the one rule that removes words rather than rewriting
 them.
 
+**Approximations and ranges (2026-10-05).** « ~ » / « ≈ » before a figure reads « environ » (en
+"about"), and an unspaced en dash between two figures is a range: « 90–100 € » → « quatre-vingt-dix à
+cent euros », « €90–100 » → "ninety to one hundred euros". A spaced dash stays a clause break and a
+hyphen stays a reference (`5W-30`). `Verbalizer::rewriteApproximationsAndRanges()`, run right before
+currency.
+
 ## The three routes
 
 | | How | First-load cost | Latency | Verdict |

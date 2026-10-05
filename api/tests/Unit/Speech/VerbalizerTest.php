@@ -107,6 +107,16 @@ final class VerbalizerTest extends TestCase
             'À deux cent cinquante mille trois cent quarante-sept kilomètres puis quinze mille kilomètres, budget douze mille cinq cents euros, année deux mille vingt-six',
         ];
 
+        yield 'a tilde before a figure reads as « environ »' => [
+            'Volant (~328 €), soit ≈ 4 h',
+            'Volant, environ trois cent vingt-huit euros, soit environ quatre heures',
+        ];
+
+        yield 'an en dash between two figures is a range' => [
+            'Consommables : 90–100 €, huile 4–4,5 L, de 15 000–20 000 km',
+            'Consommables : quatre-vingt-dix à cent euros, huile quatre à quatre virgule cinq litres, de quinze mille à vingt mille kilomètres',
+        ];
+
         yield 'hyphenated part references become distinct French letter and digit groups' => [
             'Références B593-18-840A et B3C8-18-840.',
             'Références bé cinq neuf trois, dix-huit, huit quatre zéro a et bé trois cé huit, dix-huit, huit quatre zéro.',
@@ -153,6 +163,11 @@ final class VerbalizerTest extends TestCase
         yield 'euro sign written BEFORE the amount' => [
             'Last oil change: 6 July 2026 at 250 347 km (MANNOL Energy 5W-30 + filters, €53.20).',
             'Last oil change: six July two thousand twenty-six at two hundred fifty thousand three hundred forty-seven kilometres, MANNOL Energy 5W-30 plus filters, fifty-three euros twenty.',
+        ];
+
+        yield 'tilde and en-dash range' => [
+            'Parts ~€90–100',
+            'Parts about ninety to one hundred euros',
         ];
 
         yield 'hyphenated part references become distinct English letter and digit groups' => [

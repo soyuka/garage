@@ -116,6 +116,7 @@ final readonly class Verbalizer
     {
         $text = $this->dropNumericReferences($text, $locale);
         $text = $this->groupDigits($text);
+        $text = $this->rewriteApproximationsAndRanges($text, $locale);
         $text = $this->spellCurrency($text, $locale);
         $text = $this->spellUnits($text, $locale);
         $text = $this->rewriteSeparators($text, $locale);
@@ -163,6 +164,26 @@ final readonly class Verbalizer
         return preg_replace_callback(
             $pattern,
             static fn (array $m): string => preg_replace('/'.self::GROUP_SEPARATOR.'/u', '', $m[0]) ?? $m[0],
+            $text,
+        ) ?? $text;
+    }
+
+    /**
+     * « ~328 € » → « environ 328 € », « 90–100 € » → « 90 à 100 € ». Only an unspaced en dash is a
+     * range, a spaced one stays a clause break ({@see rewriteSeparators()}) and a hyphen stays a
+     * reference. Runs before currency so « €90–100 » becomes « 90 to 100 € » and both figures read
+     * as one amount.
+     */
+    private function rewriteApproximationsAndRanges(string $text, Locale $locale): string
+    {
+        $about = Locale::Fr === $locale ? 'environ' : 'about';
+        $to = Locale::Fr === $locale ? 'à' : 'to';
+
+        $text = preg_replace('/[~≈]\s*(?=€?\s*\d)/u', $about.' ', $text) ?? $text;
+
+        return preg_replace_callback(
+            '/(?<![\p{L}\p{N}\-\/])(€\s*)?(\d+(?:[,.]\d+)?)–(\d+(?:[,.]\d+)?)(?![\p{L}\p{N}\-\/])/u',
+            static fn (array $m): string => $m[2].' '.$to.' '.$m[3].('' !== $m[1] ? ' €' : ''),
             $text,
         ) ?? $text;
     }
