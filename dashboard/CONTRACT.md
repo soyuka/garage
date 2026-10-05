@@ -108,7 +108,31 @@ major-unit euros the client converts.
 `showFact` `{keys[], title?, nodes?}` ·
 `focusView` `{panel: "specs"|"tasks"|"carnet"|"parts"|"docs", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
-CtaAction[]}` · `toast` `{tone, message}` · `status` `{message, tool?}` · `turn` `{phase}`.
+CtaAction[]}` · `showDocument` `{url, title, contentType, filename, page?, highlight?}` ·
+`toast` `{tone, message}` · `status` `{message, tool?}` · `turn` `{phase}`.
+
+**`showDocument` `{url, title, contentType, filename, page?, highlight?}` (2026-10-05)** — opens the
+in-Atelier **document viewer** on one vehicle document. A REAL server emission: the MCP tool
+`show_document` (`api/src/ApiResource/Dashboard.php`, `ShowDocumentProcessor`) takes `vehicle` (IRI) +
+`document` (the bare ULID from `list_documents` / a `search_documentation` hit) + optional `page` +
+`highlight`, resolves the document **owner-scoped**, checks `1 ≤ page ≤ pageCount`, and publishes the
+frame with `url`/`title`/`contentType`/`filename` taken from `VehicleDocumentView` — the agent never
+types a URL. A miss (`not_found`) or a page out of range (`invalid_input`) is a tool RESULT and
+publishes nothing. Unlike the other render intents it is NOT on `McpToolbox::EXCLUDED` and has no
+`#[AsTool]` twin: it needs the domain to resolve, so — like `open_vehicle` — the single MCP tool serves
+both drivers; inside an in-app turn `DashboardChannel` routes its frame to the bound session topic,
+outside one to the pilot topic.
+- `url` is the owner-gated download path (`/garage/vehicles/{id}/documents/{documentId}/file`, or a
+  bill's attachment IRI when the operator opens a bill) — fetched with the Bearer (`authFetch`), never
+  handed to the browser as a bare href.
+- `page` is the **1-based physical page** (the `page` of a search hit), not the manual's printed label.
+- `highlight` is free text (typically the search query): the client folds it exactly like
+  `DocumentationSearcher` (NFD, strip marks, lowercase; split on non-letter/digit; drop the same French
+  stopwords; keep terms ≥ 2 chars) and marks every occurrence in the PDF text layer.
+- It PLACES a per-vehicle surface, so the pilot staging gate holds it while a car drives in, and
+  navigating to another vehicle closes it.
+- The same surface is opened locally (no frame) by « Ouvrir » in the documentation panel and by a bill
+  chip in Le Dossier.
 
 **`revealAssembly` `{region, partKeys?}` (2026-08-16)** — a REAL server emission (`reveal_assembly`,
 `api/src/ApiResource/Dashboard.php` + the `#[AsTool]` twin, so both drivers reach it). It ghosts the

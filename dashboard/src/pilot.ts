@@ -84,6 +84,7 @@ function placesSurface(action: UIAction): boolean {
     case 'showParts':
     case 'focusRegion':
     case 'proposeActions':
+    case 'showDocument':
       return true;
     default:
       return false;

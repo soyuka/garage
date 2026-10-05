@@ -3,8 +3,8 @@ import './documentation.css';
 import { useRef, useState } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatBytes, formatDate } from '../format';
-import { deleteMaintenanceAttachment, deleteVehicleDocument, fetchAttachmentObjectUrl, uploadVehicleDocument } from '../garage';
-import type { VehicleDocumentKind } from '../types';
+import { deleteMaintenanceAttachment, deleteVehicleDocument, uploadVehicleDocument } from '../garage';
+import type { DocumentSpec, VehicleDocumentKind } from '../types';
 import type { DocRow, Documentation } from './documentation';
 
 // « Documentation » — the vehicle's paper (`focusView {panel:'docs'}`). A CENTRED surface on the shopping
@@ -19,6 +19,8 @@ export interface DocumentationHandlers {
   /** Re-read the open bundle after a write (the vehicle domain frame does it too; this is the instant path). */
   onChanged: () => void;
   onError: (message: string) => void;
+  /** Open a row in the document viewer, stacked above this panel (closing it returns here). */
+  onOpenDocument: (doc: DocumentSpec) => void;
 }
 
 export function DocumentationPanel({
@@ -35,15 +37,8 @@ export function DocumentationPanel({
   const [locale] = useLocale();
   const t = useT();
 
-  const open = (row: DocRow) => {
-    // Owner-gated: fetch with the Bearer → object URL → new tab; revoke after a grace window (the bill path).
-    fetchAttachmentObjectUrl(row.url)
-      .then((url) => {
-        window.open(url, '_blank', 'noopener');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      })
-      .catch((e) => handlers?.onError(t.docs.openFailed((e as Error).message)));
-  };
+  const open = (row: DocRow) =>
+    handlers?.onOpenDocument({ url: row.url, title: row.title, contentType: row.contentType, filename: row.filename });
   const remove = (row: DocRow) => {
     if (!handlers || !window.confirm(t.docs.confirmRemove(row.title))) return;
     const op = row.remove.type === 'document' ? deleteVehicleDocument(handlers.vehicleIri, row.remove.id) : deleteMaintenanceAttachment(row.remove.url);
@@ -85,8 +80,8 @@ export function DocumentationPanel({
                       {row.pageCount ? `${t.docs.pages(row.pageCount)} · ` : ''}
                       {formatBytes(row.size, locale)}
                     </span>
-                    <button type="button" className="at-shop-shop" onClick={() => open(row)} aria-label={t.docs.openAria(row.title)}>
-                      {t.docs.open} ↗
+                    <button type="button" className="at-shop-shop" onClick={() => open(row)} disabled={!handlers} aria-label={t.docs.openAria(row.title)}>
+                      {t.docs.open}
                     </button>
                     {handlers && (
                       <button type="button" className="at-docs-del" onClick={() => remove(row)} aria-label={t.docs.remove(row.title)} title={t.dossier.deleteShort}>

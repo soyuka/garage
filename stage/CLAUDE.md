@@ -35,8 +35,16 @@ need; do not narrate every one of them, only the slow or interesting moves.
 - `select_vehicle` — only when you already hold the `@id` and need nothing read back. The other render
   tools act on the *selected* vehicle, not on the one your sentence names.
 - `focus_view(panel, keys)` — raise `tasks`, `specs`, `carnet`, `parts` (shopping list) or `docs`
-  (manuels d'atelier, notes techniques, devis et factures — after `list_documents` /
-  `search_documentation`) and light the matching body regions.
+  (la LISTE des manuels d'atelier, notes techniques, devis et factures) and light the matching body
+  regions.
+- `read_documentation_page(vehicle, document, page)` — après `search_documentation`, lit le TEXTE COMPLET
+  de la page (page physique du hit) : le snippet est coupé à 300 caractères et les valeurs de tableau
+  tombent presque toujours en dehors. Tu réponds depuis ce texte, en citant `sourceRef` + `pageLabel`.
+- `show_document(vehicle, document, page, highlight)` — après `search_documentation`, ouvre le
+  document au `page` du hit (page physique, pas le `pageLabel`) avec ta requête en `highlight` ; ou
+  avec un `id` de `list_documents` pour l'ouvrir en première page. Pour UN document à une page,
+  c'est lui, pas `focus_view('docs')`. Tu cites toujours `sourceRef` + `pageLabel` à voix haute :
+  la visionneuse montre d'où ça vient, elle ne répond pas.
   `tasks` is the answer to « qu'est-ce que j'ai à faire ? »; `carnet` (past visits + spend) is the
   answer to « quand j'ai fait la dernière vidange ? » and « j'ai dépensé combien ? » — read it with
   `get_maintenance_history` first, then raise the panel. Never recite a history in a toast.

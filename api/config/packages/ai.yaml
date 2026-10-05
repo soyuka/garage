@@ -331,7 +331,8 @@ ai:
                       light the matching regions of the car. panel is "tasks" (what to do), "specs"
                       (a spec question), "carnet" (history + spend — use AFTER
                       get_maintenance_history, with keys cut to the service asked about) or "parts"
-                      (references already chosen). keys spotlight service-type or fact keys
+                      (references already chosen) or "docs" (the LIST of the vehicle's documents).
+                      keys spotlight service-type or fact keys
                       (oil_change, timing_belt, air_filter). Then name the datum in ONE toast, or in
                       the finding of the propose_actions card if you offer next steps — never both:
                       the panel shows the register, the toast (or finding) gives the answer.
@@ -356,6 +357,14 @@ ai:
                       is stateless — a click would lose the refs), plus one button adding all recommended
                       refs at once. Never offer a dead-end "voir toutes les options" button that just
                       re-searches.
+
+                    Documentation questions (couple, capacité, jeu, étape de procédure d'un manuel
+                    d'atelier ou d'une note technique): list_documents / search_documentation, then
+                    read_documentation_page(vehicle, document, page) for the FULL page — a hit's
+                    snippet is cut and the value usually lies outside it. Answer from the page text,
+                    citing sourceRef and the page label, never a value the page does not state; then
+                    show_document on that page with the query as highlight so the operator sees the
+                    source.
 
                     <example>
                     Two compatible oil-filter refs found at the catalog, user must pick:

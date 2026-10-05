@@ -46,6 +46,7 @@ import { Noyau } from './noyau/Noyau';
 import type { TruthPanelEdit } from './floor/TruthPanel';
 import { JournalPanel } from './JournalPanel';
 import { DossierPanel } from './DossierPanel';
+import { DocumentViewer } from './scene/DocumentViewer';
 import { maintUnitFor } from './units';
 import type { Cta } from './scene/CtaCard';
 import { partsCtaFor } from './scene/parts';
@@ -74,7 +75,7 @@ import { LocaleToggle, VoiceSelect } from './Preferences';
 import { fetchVoices } from './noyau/speechVoices';
 import { serviceLabel } from './labels';
 import { focusForAction, sameFocus, type Focus } from './focus';
-import type { Iri, MercureFrame, PlannedPart, PlannedTask, SpeechVoice, UIAction, VehicleBundle, VehicleSummary } from './types';
+import type { DocumentSpec, Iri, MercureFrame, PlannedPart, PlannedTask, SpeechVoice, UIAction, VehicleBundle, VehicleSummary } from './types';
 
 // The LIVE Atelier orchestrator (Stage C). Parc-first: the fleet grid at #/, selecting a car drives
 // into the hero at #/v/<seg> (reload restores it). It owns the garage reads and Le Noyau's state, and
@@ -163,6 +164,24 @@ export function Atelier() {
   const [departure, setDeparture] = useState<DepartureOrigin | null>(null);
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
+  // The document viewer stacks above whatever opened it; one at a time — a new document REPLACES it
+  // (keyed remount), and focus returns to the control that opened the FIRST one (CHOREOGRAPHY 2026-10-05).
+  const [viewer, setViewer] = useState<{ doc: DocumentSpec; key: number } | null>(null);
+  const viewerOpener = useRef<HTMLElement | null>(null);
+  const viewerKey = useRef(0);
+  const openDocument = useCallback((doc: DocumentSpec) => {
+    setViewer((prev) => {
+      if (!prev) viewerOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      viewerKey.current += 1;
+      return { doc, key: viewerKey.current };
+    });
+  }, []);
+  const closeDocument = useCallback(() => {
+    setViewer(null);
+    const opener = viewerOpener.current;
+    viewerOpener.current = null;
+    if (opener?.isConnected) opener.focus();
+  }, []);
   const [factsDrawerOpen, setFactsDrawerOpen] = useState(false); // #5 "Fiche technique" drawer (per-vehicle)
   const [historyOpen, setHistoryOpen] = useState(false); // #7 "Historique" carnet popup (per-vehicle)
   // #10 checklist: "voir les tâches retirées" pulls a includeDismissed list (the bundle carries open+done).
@@ -229,6 +248,7 @@ export function Atelier() {
     setShowDismissed(false); // each vehicle's checklist starts collapsed (open+done only)
     setDismissedTasks([]);
     setDossierOpen(false); // the dossier is per-vehicle — close it on navigation
+    setViewer(null); // so is its paper — the viewer shows that car's document
     setFactsDrawerOpen(false); // the facts drawer is per-vehicle too — close it on navigation
     setHistoryOpen(false); // the carnet is per-vehicle too — close it on navigation
     if (!selectedIri) {
@@ -461,6 +481,10 @@ export function Atelier() {
           setCta(partsCtaFor(frame.service, frame.taskId, parts, locale));
           cues.play('panel');
         }
+      } else if (frame.type === 'showDocument') {
+        const { type: _type, ...doc } = frame;
+        openDocument(doc);
+        cues.play('panel');
       } else if (frame.type === 'revealAssembly') {
         if (revealRegion(frame.region, frame.partKeys)) cues.play('reveal');
       } else if (frame.type === 'focusRegion') {
@@ -487,7 +511,7 @@ export function Atelier() {
         }
       }
     },
-    [cues.cancelOpening, cues.play, dispatch, requestFlare, revealRegion],
+    [cues.cancelOpening, cues.play, dispatch, openDocument, requestFlare, revealRegion],
   );
 
   /** Run the gate over an event and apply whatever it releases; narrate anything it had to drop. */
@@ -1077,8 +1101,10 @@ export function Atelier() {
             defaultUnit={maintUnitFor(heroBundle.vehicle.usageUnit)}
             onChanged={afterFileWrite}
             onError={alarm}
+            onOpenDocument={openDocument}
           />
         )}
+        {viewer && <DocumentViewer key={viewer.key} doc={viewer.doc} reduced={reduced} onClose={closeDocument} />}
 
         {vehicleMissing ? (
           <div className="at-scene-main">
@@ -1137,6 +1163,7 @@ export function Atelier() {
               vehicleIri: heroBundle.vehicle['@id'],
               onChanged: afterFileWrite,
               onError: alarm,
+              onOpenDocument: openDocument,
             }}
             onOpenHistory={openHistory}
             onCloseHistory={() => {

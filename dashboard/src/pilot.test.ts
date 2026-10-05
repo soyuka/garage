@@ -67,6 +67,16 @@ describe('the render-intent staging gate', () => {
     expect(emitted).toEqual([select(KANGOO), status]);
   });
 
+  it('holds a document the pilot opens while its car is still driving in — it is that car\'s paper', () => {
+    const doc: UIAction = { type: 'showDocument', url: '/garage/vehicles/kangoo/documents/01D/file', title: 'MR 361', contentType: 'application/pdf', filename: 'mr361.pdf', page: 2, highlight: 'huile' };
+    const { state, emitted } = run([
+      { type: 'frame', action: select(KANGOO), shownIri: CLIO, at: 0 },
+      { type: 'frame', action: doc, shownIri: CLIO, at: 200 },
+    ]);
+    expect(emitted).toEqual([select(KANGOO)]);
+    expect(stageReduce(state, { type: 'arrived', iri: KANGOO, at: 900 }).emit).toEqual([doc]);
+  });
+
   it('does not stage anything when the pilot re-selects the car already on screen', () => {
     const { state, emitted } = run([
       { type: 'frame', action: select(CLIO), shownIri: CLIO, at: 0 },

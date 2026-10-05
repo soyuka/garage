@@ -22,7 +22,7 @@ export interface DocRow {
   size: number;
   contentType: string;
   filename: string;
-  /** Owner-gated — open through `fetchAttachmentObjectUrl`, never a bare href. */
+  /** Owner-gated — opened in the document viewer (bytes through `authFetch`), never a bare href. */
   url: string;
   /** The open planned task a quote is linked to, by its title; null when unlinked or no longer open. */
   taskLabel: string | null;

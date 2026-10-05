@@ -13,6 +13,7 @@ use App\Dto\Dashboard\ProposeActionsInput;
 use App\Dto\Dashboard\RevealAssemblyInput;
 use App\Dto\Dashboard\SelectVehicleInput;
 use App\Dto\Dashboard\SettleDashboardInput;
+use App\Dto\Dashboard\ShowDocumentInput;
 use App\Dto\Dashboard\ShowFactInput;
 use App\Dto\Dashboard\ToastInput;
 use App\State\Dashboard\FocusViewProcessor;
@@ -22,6 +23,7 @@ use App\State\Dashboard\ProposeActionsProcessor;
 use App\State\Dashboard\RevealAssemblyProcessor;
 use App\State\Dashboard\SelectVehicleProcessor;
 use App\State\Dashboard\SettleDashboardProcessor;
+use App\State\Dashboard\ShowDocumentProcessor;
 use App\State\Dashboard\ShowFactProcessor;
 use App\State\Dashboard\ToastProcessor;
 
@@ -95,10 +97,18 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'focus_view' => new McpTool(
             title: 'Focus View',
-            description: 'Point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel) or "carnet" (past visits + spend — use after get_maintenance_history for "quand ai-je fait la vidange ?" or "combien ai-je dépensé cette année ?", instead of answering in prose) or "parts" (the shopping list of every reference ALREADY chosen across the open checklist — the answer to "quelles pieces commander ?"; raise it BEFORE reaching for the catalogue, because the operator has usually already picked refs) or "docs" (manuels d\'atelier, notes techniques, devis et factures du véhicule — raise it after list_documents / search_documentation, so the operator sees the document the answer came from). keys are service-type or fact keys to spotlight (oil_change, timing_belt, air_filter…); each lights its body region on the car and etches the matching panel rows. On "carnet", keys CUT the register to the visits carrying those services — pass the type you were asked about (["oil_change"] for "quand ai-je fait la vidange ?") so the answer is the top row, not every visit. Then say the answer in ONE toast ("Derniere vidange : 6 juillet 2026") — the panel shows the register, the toast names the datum that was asked for. Omit keys to just raise the panel.',
+            description: 'Point the operator at what matters: bring ONE panel to the centre of the workshop and light the matching areas of the car. panel is "tasks" (the maintenance to-do list — use for "que dois-je faire ?"), "specs" (the spec/échéance panel) or "carnet" (past visits + spend — use after get_maintenance_history for "quand ai-je fait la vidange ?" or "combien ai-je dépensé cette année ?", instead of answering in prose) or "parts" (the shopping list of every reference ALREADY chosen across the open checklist — the answer to "quelles pieces commander ?"; raise it BEFORE reaching for the catalogue, because the operator has usually already picked refs) or "docs" (the LIST of the vehicle\'s documents — manuels d\'atelier, notes techniques, devis et factures; to open ONE document at a page use show_document instead). keys are service-type or fact keys to spotlight (oil_change, timing_belt, air_filter…); each lights its body region on the car and etches the matching panel rows. On "carnet", keys CUT the register to the visits carrying those services — pass the type you were asked about (["oil_change"] for "quand ai-je fait la vidange ?") so the answer is the top row, not every visit. Then say the answer in ONE toast ("Derniere vidange : 6 juillet 2026") — the panel shows the register, the toast names the datum that was asked for. Omit keys to just raise the panel.',
             input: FocusViewInput::class,
             structuredContent: false,
             processor: FocusViewProcessor::class,
+            annotations: ['readOnlyHint' => true],
+        ),
+        'show_document' => new McpTool(
+            title: 'Show Document',
+            description: 'Open a vehicle document IN the operator\'s workshop — the document viewer, centred, at the right page, with your words highlighted — so the operator reads the source you are citing. Call it right after search_documentation, with the hit\'s documentId and page and your query as highlight; or with a list_documents id to open a manual, note or quote from its first page. vehicle is the @id the document belongs to. A wrong documentId returns not_found and a page past the end returns invalid_input — nothing opens. It does not answer for you: still say the answer (cite sourceRef + pageLabel); this shows where it comes from.',
+            input: ShowDocumentInput::class,
+            structuredContent: false,
+            processor: ShowDocumentProcessor::class,
             annotations: ['readOnlyHint' => true],
         ),
         'reveal_assembly' => new McpTool(

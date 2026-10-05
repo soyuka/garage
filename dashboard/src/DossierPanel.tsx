@@ -15,7 +15,6 @@ import {
   deleteMaintenanceAttachment,
   deleteMaintenanceRecord,
   deleteServiceRule,
-  fetchAttachmentObjectUrl,
   getServiceSchedule,
   saveServiceRule,
   updateMaintenanceRecord,
@@ -23,7 +22,7 @@ import {
   type MaintenanceRecordInput,
   type ServiceRuleInput,
 } from './garage';
-import type { MaintenanceAttachment, MaintenanceRecord, ServiceAction, ServiceRule } from './types';
+import type { DocumentSpec, MaintenanceAttachment, MaintenanceRecord, ServiceAction, ServiceRule } from './types';
 
 // Le Dossier — the vehicle's deeper file (#11): past maintenance visits (with bills) + the recurring
 // service-schedule that drives the forecast. A right-side glass drawer mirroring the journal idiom;
@@ -41,9 +40,11 @@ interface DossierProps {
   /** Re-read the open vehicle bundle (records + forecast) after a write. */
   onChanged: () => void;
   onError: (message: string) => void;
+  /** Open a bill in the document viewer, stacked above the drawer. */
+  onOpenDocument: (doc: DocumentSpec) => void;
 }
 
-export function DossierPanel({ open, onClose, vehicleIri, records, defaultUnit, onChanged, onError }: DossierProps) {
+export function DossierPanel({ open, onClose, vehicleIri, records, defaultUnit, onChanged, onError, onOpenDocument }: DossierProps) {
   const t = useT();
   useEffect(() => {
     if (!open) return;
@@ -62,7 +63,7 @@ export function DossierPanel({ open, onClose, vehicleIri, records, defaultUnit, 
             ✕
           </button>
         </header>
-        <RecordsSection vehicleIri={vehicleIri} records={records} defaultUnit={defaultUnit} onChanged={onChanged} onError={onError} />
+        <RecordsSection vehicleIri={vehicleIri} records={records} defaultUnit={defaultUnit} onChanged={onChanged} onError={onError} onOpenDocument={onOpenDocument} />
         <ScheduleSection vehicleIri={vehicleIri} onChanged={onChanged} onError={onError} />
       </aside>
     </div>
@@ -77,12 +78,14 @@ function RecordsSection({
   defaultUnit,
   onChanged,
   onError,
+  onOpenDocument,
 }: {
   vehicleIri: string;
   records: MaintenanceRecord[];
   defaultUnit: string;
   onChanged: () => void;
   onError: (m: string) => void;
+  onOpenDocument: (doc: DocumentSpec) => void;
 }) {
   const [locale] = useLocale();
   const t = useT();
@@ -140,6 +143,7 @@ function RecordsSection({
                   onDelete={() => remove(r)}
                   onChanged={onChanged}
                   onError={onError}
+                  onOpenDocument={onOpenDocument}
                 />
               </li>
             ),
@@ -156,12 +160,14 @@ function RecordCard({
   onDelete,
   onChanged,
   onError,
+  onOpenDocument,
 }: {
   record: MaintenanceRecord;
   onEdit: () => void;
   onDelete: () => void;
   onChanged: () => void;
   onError: (m: string) => void;
+  onOpenDocument: (doc: DocumentSpec) => void;
 }) {
   const [locale] = useLocale();
   const t = useT();
@@ -206,26 +212,28 @@ function RecordCard({
         </ul>
       )}
       {record.notes && <p className="at-rec-notes">{record.notes}</p>}
-      <BillChips record={record} onChanged={onChanged} onError={onError} />
+      <BillChips record={record} onChanged={onChanged} onError={onError} onOpenDocument={onOpenDocument} />
     </div>
   );
 }
 
-function BillChips({ record, onChanged, onError }: { record: MaintenanceRecord; onChanged: () => void; onError: (m: string) => void }) {
+function BillChips({
+  record,
+  onChanged,
+  onError,
+  onOpenDocument,
+}: {
+  record: MaintenanceRecord;
+  onChanged: () => void;
+  onError: (m: string) => void;
+  onOpenDocument: (doc: DocumentSpec) => void;
+}) {
   const t = useT();
   const fileInput = useRef<HTMLInputElement>(null);
   const bills = record.attachments ?? [];
 
-  const view = (att: MaintenanceAttachment) => {
-    // Owner-gated: fetch with the Bearer → object URL → open; revoke after a grace window (a plain
-    // <a href>/<img src> would 404). A non-critical failure is surfaced, never silently swallowed.
-    fetchAttachmentObjectUrl(att.url)
-      .then((url) => {
-        window.open(url, '_blank', 'noopener');
-        window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-      })
-      .catch((e) => onError(t.dossier.billOpenFailed((e as Error).message)));
-  };
+  const view = (att: MaintenanceAttachment) =>
+    onOpenDocument({ url: att.url, title: att.filename, contentType: att.contentType, filename: att.filename });
   const remove = (att: MaintenanceAttachment) => {
     if (!window.confirm(t.dossier.confirmDeleteBill(att.filename))) return;
     deleteMaintenanceAttachment(att.url)

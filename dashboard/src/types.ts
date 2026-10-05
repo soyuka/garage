@@ -356,6 +356,10 @@ export type UIAction =
   // operator hue); they never filter it — the circuit is what answers "where does this sit". A region
   // with no diagram declines, leaving the shell alone (`reveal.ts` revealFor).
   | { type: 'revealAssembly'; region: BodyRegion; partKeys?: string[] }
+  // Open the document viewer on one vehicle document (CONTRACT.md § showDocument). `url` is owner-gated
+  // (fetch with the Bearer); `page` is the 1-based physical page; `highlight` is free text folded like
+  // the API searcher. Also built locally by « Ouvrir » / a bill chip — same surface, no frame.
+  | { type: 'showDocument'; url: string; title: string; contentType: string; filename: string; page?: number; highlight?: string }
   | { type: 'toast'; tone: Tone; message: string }
   // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
   // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.
@@ -367,6 +371,9 @@ export type UIAction =
   | { type: 'status'; message: string; tool?: string }
   // Turn lifecycle — drives the busy/working state. Carries no reducer state.
   | { type: 'turn'; phase: 'start' | 'end' };
+
+/** What the document viewer opens — a `showDocument` frame's payload, or one built from a row/bill. */
+export type DocumentSpec = Omit<Extract<UIAction, { type: 'showDocument' }>, 'type'>;
 
 // ── Mercure frames ────────────────────────────────────────────────────────────
 

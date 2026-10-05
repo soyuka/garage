@@ -435,13 +435,13 @@ export async function deleteMaintenanceAttachment(attachmentUrl: string): Promis
 }
 
 /**
- * Fetch a bill's bytes WITH the Bearer and hand back an object URL (the endpoint is owner-gated, so a
- * plain <img src> would 404). The caller MUST URL.revokeObjectURL when done to avoid leaking the blob.
+ * Fetch an owner-gated file's bytes (a bill or a vehicle document) WITH the Bearer — a bare
+ * <a href>/<img src> would 404. The document viewer reads them; nothing is handed to the browser as a URL.
  */
-export async function fetchAttachmentObjectUrl(attachmentUrl: string): Promise<string> {
-  const res = await authFetch(`${API}${attachmentUrl}`);
-  okVoid(res, 'attachment fetch');
-  return URL.createObjectURL(await res.blob());
+export async function fetchDocumentBlob(fileUrl: string, signal?: AbortSignal): Promise<Blob> {
+  const res = await authFetch(`${API}${fileUrl}`, { signal });
+  okVoid(res, 'document fetch');
+  return res.blob();
 }
 
 // ── Vehicle documents (manuals, technical notes, quotes…) ───────────────────────

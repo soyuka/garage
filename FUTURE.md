@@ -552,3 +552,49 @@ panel (`focusView {panel:'docs'}`) ends in an upload form, so it got its own cle
 (`documentation.css` `.at-docs-overlay`: top-aligned, 300px bottom padding, verified live at 945×994).
 The shopping list still has the overlap; the clean fix is one shared clearance token for every centred
 surface, not a per-panel literal.
+
+## Shopping list — short names, notes and consumables (found 2026-10-02)
+
+The Espace IV clutch task (`/garage/planned-tasks/01M3YJZCW8ZYZ6ST6HV0KQK7VQ`) showed the problem: a
+`PlannedPart` has only `ref` / `brand` / `label` / `qty`, so every caveat (MR page, price seen, « valider
+au VIN », OE cross-reference) went into `label`, and `ShoppingList.tsx` renders a wall of text. The
+operator's preferred format, verbatim from the session:
+
+```
+LUK      623 3150 33   kit embrayage SAC + butée hydraulique
+LUK      415 0463 10   volant moteur bimasse
+CORTECO  12017115B     joint spi de sortie de boîte droite (OE Renault 7701474122)
+CORTECO  19036867B     joint spi d'entrée de boîte (arbre d'embrayage)
+3x       vis normales  bac batterie, à la place des vis d'inviolabilité, taille à relever
+
+Consommables : Loctite 243, Loctite 270, graisse Molykote BR2, Rhodorseal 5661, Elf Tranself NFJ 75W-80, DOT4, ATF Dexron II D, nettoyant frein
+```
+
+Needs two fields on `PlannedPart` (api `PlannedMaintenance.parts` EmbedMany + `plan_maintenance` input +
+`/planned-tasks/{id}/parts` subresource) and in `dashboard/src/types.ts`: a `note` (the caveat/source,
+shown on hover or in the task panel, never in the row) and a `kind: part | consumable` (parts render as
+the brand/ref/name table, consumables collapse to one comma-separated line). One cross-surface task,
+owned by whoever holds `types.ts`. Once shipped, move the clutch task's long labels into `note`.
+
+Also seen on the same task: re-calling `plan_maintenance` for the same type MERGES parts by ref; it never
+drops a line, so retiring placeholder refs (`A-CONFIRMER…`) took manual DELETEs on the subresource. The
+tool description says it "UPDATES the existing open task", which reads like a replace.
+
+## Document viewer (`showDocument`, 2026-10-05) — found, not fixed
+
+- **Not verified in a browser.** The viewer (`dashboard/src/scene/DocumentViewer.tsx`) passed tsc,
+  `npm run build` and its pure-core vitest, and `show_document` was exercised live over the public MCP
+  (`rendered` / `invalid_input` / `not_found`), but nobody has yet watched a PDF render, the highlight land
+  on the cited page, or the download save under its filename. Check it on https://localhost with the Espace's
+  « MR 361 Transmission » (28 p.) and the Mazda6 workshop manual (1 248 p. — the background text indexing
+  is the stress case for the find counter).
+- **The in-app agent is never told about the documentation flow.** `api/config/packages/ai.yaml`'s system
+  prompt mentions neither `list_documents`, `search_documentation`, `show_document` nor the `docs` panel
+  (and describes `focus_view` without `docs`). The tools reach it through `McpToolbox`, but only their
+  descriptions teach it to use them.
+- `TurnActivityTracker::PRODUCTIVE_TOOLS` lists `select_vehicle`/`toast`/`show_fact`/`propose_actions` but not
+  `focus_view`, `reveal_assembly` or `show_document` — a turn whose only answer is one of those may read as
+  unproductive. Intended or drift: undecided.
+- The viewer's page indicator shows the physical page only; the Renault label (`21A-6`) lives in
+  `VehicleDocumentPage.label` and never reaches the client (would need it on the frame or a pages endpoint).
+- No pdf.js annotation layer (links inside a PDF are not clickable), no outline/thumbnails, no rotation.

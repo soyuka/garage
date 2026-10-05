@@ -155,4 +155,102 @@ final class McpDocumentationTest extends AppTestCase
 
         self::assertSame('not_found', $result['status']);
     }
+
+    /**
+     * @param array<string, mixed> $arguments
+     *
+     * @return array<string, mixed>
+     */
+    private function read(Client $client, string $sessionId, array $arguments): array
+    {
+        return $this->call($client, $sessionId, 'tools/call', ['name' => 'read_documentation_page', 'arguments' => $arguments], 9)['result']['structuredContent'] ?? [];
+    }
+
+    private function documentId(Client $client, string $sessionId, string $iri): string
+    {
+        $listed = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_documents', 'arguments' => ['vehicle' => $iri]], 8)['result']['structuredContent'];
+
+        return $listed['documents'][0]['id'];
+    }
+
+    public function testReadDocumentationPageIsAdvertisedWithItsArguments(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+        $byName = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], null, 'name');
+
+        self::assertArrayHasKey('read_documentation_page', $byName);
+        self::assertEqualsCanonicalizing(['vehicle', 'document', 'page'], array_keys($byName['read_documentation_page']['inputSchema']['properties']));
+    }
+
+    public function testReadDocumentationPageReturnsTheFullPageText(): void
+    {
+        $filler = array_fill(0, 8, 'Rappel de securite avant intervention sur la boite.');
+        $pdf = PdfFixture::build([
+            ['Page une'],
+            ['Boite JH3', ...$filler, 'Couple de serrage vis demarreur 44 Nm', '21A-9'],
+        ]);
+        [$client, $sessionId, $iri] = $this->seedManual($pdf);
+        $documentId = $this->documentId($client, $sessionId, $iri);
+
+        $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 2]);
+
+        self::assertSame('ok', $result['status']);
+        self::assertSame($documentId, $result['documentId']);
+        self::assertSame('MR 361', $result['title']);
+        self::assertSame('manual', $result['kind']);
+        self::assertSame('MR 361 — Transmission', $result['sourceRef']);
+        self::assertSame(2, $result['page']);
+        self::assertSame('21A-9', $result['pageLabel']);
+        self::assertSame(2, $result['pageCount']);
+        self::assertGreaterThan(300, mb_strpos($result['text'], 'Couple de serrage vis demarreur 44 Nm'));
+        self::assertStringEndsWith('/documents/'.$documentId.'/file', $result['url']);
+    }
+
+    public function testReadDocumentationPageRejectsAPageOutOfRange(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+        $documentId = $this->documentId($client, $sessionId, $iri);
+
+        foreach ([0, 3] as $page) {
+            $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => $page]);
+            self::assertSame('invalid_input', $result['status']);
+            self::assertStringContainsString('between 1 and 2', $result['reason']);
+        }
+    }
+
+    public function testReadDocumentationPageRequiresItsArguments(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+        $documentId = $this->documentId($client, $sessionId, $iri);
+
+        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId])['status']);
+        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'page' => 1])['status']);
+        self::assertSame('invalid_input', $this->read($client, $sessionId, ['document' => $documentId, 'page' => 1])['status']);
+    }
+
+    public function testReadDocumentationPageUnknownDocumentIsNotFound(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+
+        $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => '01JZZZZZZZZZZZZZZZZZZZZZZZ', 'page' => 1]);
+
+        self::assertSame('not_found', $result['status']);
+    }
+
+    public function testReadDocumentationPageOfAnotherOwnersVehicleIsNotFound(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+        $documentId = $this->documentId($client, $sessionId, $iri);
+        $dm = static::getContainer()->get(DocumentManager::class);
+        \assert($dm instanceof DocumentManager);
+        $vehicle = new Vehicle('RENAULT', 'ESPACE', VehicleType::Car, 'user', year: 2010);
+        $vehicle->setOwner('someone-else@example.com');
+        $dm->persist($vehicle);
+        $dm->flush();
+
+        $result = $this->read($client, $sessionId, ['vehicle' => '/garage/vehicles/'.$vehicle->getId(), 'document' => $documentId, 'page' => 1]);
+
+        self::assertSame('not_found', $result['status']);
+    }
 }

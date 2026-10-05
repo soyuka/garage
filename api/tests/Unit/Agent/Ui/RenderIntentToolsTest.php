@@ -403,6 +403,59 @@ final class RenderIntentToolsTest extends TestCase
         );
     }
 
+    public function testShowDocumentPublishesTheViewerFrame(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $this->assertSame('ok', $tools->showDocument('/garage/vehicles/01J/documents/02K/file', 'MR 361', 'application/pdf', 'mr361.pdf', 2, ' capacité huile '));
+
+        $this->assertNotNull($published);
+        $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
+        $this->assertSame([
+            'type' => 'showDocument',
+            'url' => '/garage/vehicles/01J/documents/02K/file',
+            'title' => 'MR 361',
+            'contentType' => 'application/pdf',
+            'filename' => 'mr361.pdf',
+            'page' => 2,
+            'highlight' => 'capacité huile',
+        ], json_decode($published->getData(), true));
+    }
+
+    public function testShowDocumentOmitsAnAbsentPageAndABlankHighlight(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools->bindSession('https://localhost/agent/sessions/abc');
+
+        $tools->showDocument('/garage/vehicles/01J/documents/02K/file', 'MR 361', 'application/pdf', 'mr361.pdf', null, '  ');
+
+        $this->assertNotNull($published);
+        $this->assertSame([
+            'type' => 'showDocument',
+            'url' => '/garage/vehicles/01J/documents/02K/file',
+            'title' => 'MR 361',
+            'contentType' => 'application/pdf',
+            'filename' => 'mr361.pdf',
+        ], json_decode($published->getData(), true));
+    }
+
     public function testFocusViewOmitsKeysWhenNoneGiven(): void
     {
         $published = null;
