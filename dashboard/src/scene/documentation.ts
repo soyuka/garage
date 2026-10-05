@@ -24,6 +24,8 @@ export interface DocRow {
   filename: string;
   /** Owner-gated — opened in the document viewer (bytes through `authFetch`), never a bare href. */
   url: string;
+  /** Manual page labels endpoint; absent for a bill. */
+  pagesUrl?: string;
   /** The open planned task a quote is linked to, by its title; null when unlinked or no longer open. */
   taskLabel: string | null;
   date: string | null;
@@ -67,6 +69,7 @@ export function buildDocumentation(
     contentType: d.contentType,
     filename: d.filename,
     url: d.url,
+    pagesUrl: d.pagesUrl,
     taskLabel: d.plannedTaskId ? openTasks.get(d.plannedTaskId) ?? null : null,
     date: d.addedAt.slice(0, 10),
     remove: { type: 'document', id: d.id },

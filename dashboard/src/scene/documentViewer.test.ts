@@ -6,10 +6,12 @@ import {
   fitWidthScale,
   fold,
   highlightTerms,
+  labelForPage,
   layoutPages,
   outputScale,
   pageAt,
   pagesToRender,
+  resolvePageInput,
   segmentsByItem,
   viewerKind,
   zoomStep,
@@ -162,5 +164,41 @@ describe('viewerKind', () => {
     expect(viewerKind('IMAGE/PNG')).toBe('image');
     expect(viewerKind('application/zip')).toBe('other');
     expect(viewerKind('')).toBe('other');
+  });
+});
+
+describe('page labels', () => {
+  const pages = [
+    { number: 1, label: '23A-1' },
+    { number: 2, label: null },
+    { number: 3, label: '23A-19' },
+  ];
+
+  it('labelForPage reads the manual label of a physical page, null when absent', () => {
+    expect(labelForPage(pages, 3)).toBe('23A-19');
+    expect(labelForPage(pages, 2)).toBeNull();
+    expect(labelForPage(pages, 9)).toBeNull();
+    expect(labelForPage([], 1)).toBeNull();
+  });
+
+  it('resolvePageInput treats digits as a physical page', () => {
+    expect(resolvePageInput(' 2 ', pages, 3)).toBe(2);
+  });
+
+  it('matches a label case-insensitively, trimmed', () => {
+    expect(resolvePageInput(' 23a-19 ', pages, 3)).toBe(3);
+    expect(resolvePageInput('23A-1', pages, 3)).toBe(1);
+  });
+
+  it('rejects an unknown label, an out-of-range number and blank input', () => {
+    expect(resolvePageInput('99Z-1', pages, 3)).toBeNull();
+    expect(resolvePageInput('0', pages, 3)).toBeNull();
+    expect(resolvePageInput('4', pages, 3)).toBeNull();
+    expect(resolvePageInput('  ', pages, 3)).toBeNull();
+  });
+
+  it('still resolves numbers when no labels are loaded', () => {
+    expect(resolvePageInput('2', [], 3)).toBe(2);
+    expect(resolvePageInput('23A-19', [], 3)).toBeNull();
   });
 });

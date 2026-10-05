@@ -15,6 +15,7 @@ const doc = (over: Partial<VehicleDocument>): VehicleDocument => ({
   pageCount: 1,
   addedAt: '2026-10-01T10:00:00+00:00',
   url: '/garage/vehicles/01V/documents/01DOC/file',
+  pagesUrl: '/garage/vehicles/01V/documents/01DOC/pages',
   ...over,
 });
 

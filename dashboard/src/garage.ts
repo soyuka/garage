@@ -13,6 +13,7 @@
 
 import { API, authFetch } from './auth';
 import type { FillVolume } from './fluids';
+import type { PageLabel } from './scene/documentViewer';
 import type { SivVehicle } from './siv';
 import type {
   MaintenanceAttachment,
@@ -442,6 +443,12 @@ export async function fetchDocumentBlob(fileUrl: string, signal?: AbortSignal): 
   const res = await authFetch(`${API}${fileUrl}`, { signal });
   okVoid(res, 'document fetch');
   return res.blob();
+}
+
+/** The manual's own page labels (« 23A-19 ») beside each physical page number — no page text. */
+export async function fetchDocumentPages(pagesUrl: string, signal?: AbortSignal): Promise<PageLabel[]> {
+  const res = await authFetch(`${API}${pagesUrl}`, { headers: { Accept: 'application/json' }, signal });
+  return okJson<PageLabel[]>(res, 'document pages fetch');
 }
 
 // ── Vehicle documents (manuals, technical notes, quotes…) ───────────────────────

@@ -87,6 +87,18 @@
   border-color: var(--at-orange);
 }
 
+.at-dv-label {
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+  white-space: nowrap;
+}
+
+.at-dv-page[aria-invalid='true'] {
+  border-color: var(--at-red-hi);
+}
+
 .at-dv-of {
   font-family: var(--at-font-mono);
   font-size: 12px;

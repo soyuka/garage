@@ -191,7 +191,7 @@ final class RenderIntentTools
      * know the file url, so the `show_document` processor resolves it and calls this publisher on both
      * drivers (pilot topic, or the bound turn session).
      */
-    public function showDocument(string $url, string $title, string $contentType, string $filename, ?int $page = null, ?string $highlight = null): string
+    public function showDocument(string $url, string $title, string $contentType, string $filename, ?int $page = null, ?string $highlight = null, ?string $pagesUrl = null): string
     {
         Assert::stringNotEmpty($url);
         Assert::stringNotEmpty($title);
@@ -208,6 +208,9 @@ final class RenderIntentTools
         $highlight = null === $highlight ? '' : trim($highlight);
         if ('' !== $highlight) {
             $action['highlight'] = $highlight;
+        }
+        if (null !== $pagesUrl && '' !== $pagesUrl) {
+            $action['pagesUrl'] = $pagesUrl;
         }
         $this->publish($action);
 

@@ -108,10 +108,10 @@ major-unit euros the client converts.
 `showFact` `{keys[], title?, nodes?}` ·
 `focusView` `{panel: "specs"|"tasks"|"carnet"|"parts"|"docs", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
-CtaAction[]}` · `showDocument` `{url, title, contentType, filename, page?, highlight?}` ·
+CtaAction[]}` · `showDocument` `{url, title, contentType, filename, page?, highlight?, pagesUrl?}` ·
 `toast` `{tone, message}` · `status` `{message, tool?}` · `turn` `{phase}`.
 
-**`showDocument` `{url, title, contentType, filename, page?, highlight?}` (2026-10-05)** — opens the
+**`showDocument` `{url, title, contentType, filename, page?, highlight?, pagesUrl?}` (2026-10-05)** — opens the
 in-Atelier **document viewer** on one vehicle document. A REAL server emission: the MCP tool
 `show_document` (`api/src/ApiResource/Dashboard.php`, `ShowDocumentProcessor`) takes `vehicle` (IRI) +
 `document` (the bare ULID from `list_documents` / a `search_documentation` hit) + optional `page` +
@@ -126,6 +126,10 @@ outside one to the pilot topic.
   bill's attachment IRI when the operator opens a bill) — fetched with the Bearer (`authFetch`), never
   handed to the browser as a bare href.
 - `page` is the **1-based physical page** (the `page` of a search hit), not the manual's printed label.
+- `pagesUrl` (optional) is the owner-gated labels endpoint (`/garage/vehicles/{id}/documents/{documentId}/pages`,
+  `[{number, label|null}]`, no page text) from `VehicleDocumentView::pagesUrl()`. The viewer fetches it once,
+  non-blocking (failure = no labels), shows the current page's manual label after « p. N / total » and lets
+  the page field jump to a label (`23A-19`) as well as a number. Bills carry none: label absent.
 - `highlight` is free text (typically the search query): the client folds it exactly like
   `DocumentationSearcher` (NFD, strip marks, lowercase; split on non-letter/digit; drop the same French
   stopwords; keep terms ≥ 2 chars) and marks every occurrence in the PDF text layer.

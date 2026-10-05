@@ -3,7 +3,7 @@ import './documentviewer.css';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 import { useT } from '../i18n/LocaleProvider';
-import { fetchDocumentBlob } from '../garage';
+import { fetchDocumentBlob, fetchDocumentPages } from '../garage';
 import type { DocumentSpec } from '../types';
 import { loadPdfJs } from './pdfjs';
 import {
@@ -11,12 +11,15 @@ import {
   findMatches,
   fitWidthScale,
   highlightTerms,
+  labelForPage,
   layoutPages,
   type Match,
   outputScale,
+  type PageLabel,
   type PageSize,
   pageAt,
   pagesToRender,
+  resolvePageInput,
   segmentsByItem,
   viewerKind,
   zoomStep,
@@ -128,7 +131,7 @@ export function DocumentViewer({ doc, reduced = false, onClose }: { doc: Documen
         {load.status === 'loading' && <p className="at-dv-state" role="status">{t.viewer.loading}</p>}
         {load.status === 'error' && <Failure message={load.message} onRetry={() => setAttempt((n) => n + 1)} />}
         {load.status === 'ready' && kind === 'pdf' && (
-          <PdfPane key={attempt} blob={load.blob} initialPage={doc.page} highlight={doc.highlight} onRetry={() => setAttempt((n) => n + 1)} />
+          <PdfPane key={attempt} blob={load.blob} initialPage={doc.page} highlight={doc.highlight} pagesUrl={doc.pagesUrl} onRetry={() => setAttempt((n) => n + 1)} />
         )}
         {load.status === 'ready' && kind === 'image' && <ImagePane blob={load.blob} alt={t.viewer.imageAlt(doc.title)} />}
         {load.status === 'ready' && kind === 'other' && (
@@ -173,7 +176,7 @@ function itemStrings(items: readonly unknown[]): string[] {
   return out;
 }
 
-function PdfPane({ blob, initialPage, highlight, onRetry }: { blob: Blob; initialPage?: number; highlight?: string; onRetry: () => void }) {
+function PdfPane({ blob, initialPage, highlight, pagesUrl, onRetry }: { blob: Blob; initialPage?: number; highlight?: string; pagesUrl?: string; onRetry: () => void }) {
   const t = useT();
   const scroller = useRef<HTMLDivElement>(null);
   const findInput = useRef<HTMLInputElement>(null);
@@ -188,8 +191,19 @@ function PdfPane({ blob, initialPage, highlight, onRetry }: { blob: Blob; initia
   const [current, setCurrent] = useState<MatchRef | null>(null);
   const [reveal, setReveal] = useState(0);
   const [pageField, setPageField] = useState('');
+  const [invalidPage, setInvalidPage] = useState(false);
+  const [labels, setLabels] = useState<PageLabel[]>([]);
   const textCache = useRef(new Map<number, Promise<string[]>>());
   const touched = useRef(false);
+
+  useEffect(() => {
+    if (!pagesUrl) return;
+    const abort = new AbortController();
+    fetchDocumentPages(pagesUrl, abort.signal)
+      .then(setLabels)
+      .catch(() => undefined);
+    return () => abort.abort();
+  }, [pagesUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -276,6 +290,7 @@ function PdfPane({ blob, initialPage, highlight, onRetry }: { blob: Blob; initia
   const contentWidth = Math.max(box.width, Math.max(0, ...layout.widths) + SIDE_GUTTER);
   const visible = useMemo(() => new Set(pagesToRender(layout, scrollTop, box.height, box.height)), [layout, scrollTop, box.height]);
   const currentPage = numPages > 0 ? pageAt(layout, scrollTop, box.height) : 1;
+  const pageLabel = labelForPage(labels, currentPage);
 
   const scrollToPage = useCallback(
     (n: number) => {
@@ -415,23 +430,35 @@ function PdfPane({ blob, initialPage, highlight, onRetry }: { blob: Blob; initia
           </button>
           <input
             className="at-dv-page"
-            inputMode="numeric"
+            aria-invalid={invalidPage || undefined}
             value={pageField !== '' ? pageField : String(currentPage)}
             onFocus={(e) => {
               setPageField(String(currentPage));
               e.target.select();
             }}
-            onChange={(e) => setPageField(e.target.value.replace(/[^0-9]/g, ''))}
-            onBlur={() => setPageField('')}
+            onChange={(e) => {
+              setInvalidPage(false);
+              setPageField(e.target.value);
+            }}
+            onBlur={() => {
+              setPageField('');
+              setInvalidPage(false);
+            }}
             onKeyDown={(e) => {
               if (e.key !== 'Enter') return;
-              gotoPage(Number(pageField));
+              const target = resolvePageInput(pageField, labels, numPages);
+              if (target === null) {
+                setInvalidPage(true);
+                return;
+              }
+              gotoPage(target);
               setPageField('');
               e.currentTarget.blur();
             }}
             aria-label={t.viewer.pageInput}
           />
           <span className="at-dv-of">{numPages > 0 ? t.viewer.ofTotal(numPages) : ''}</span>
+          {pageLabel && <span className="at-dv-label">{`· ${pageLabel}`}</span>}
           <button type="button" className="at-dv-btn" onClick={() => gotoPage(currentPage + 1)} disabled={currentPage >= numPages} aria-label={t.viewer.nextPage}>
             ›
           </button>

@@ -109,6 +109,7 @@ export interface VehicleDocument {
   pageCount: number;
   addedAt: string; // ATOM
   url: Iri;
+  pagesUrl: string;
 }
 
 /** One past service event — a VISIT carrying one or many service items + visit-level fields. */
@@ -359,7 +360,7 @@ export type UIAction =
   // Open the document viewer on one vehicle document (CONTRACT.md § showDocument). `url` is owner-gated
   // (fetch with the Bearer); `page` is the 1-based physical page; `highlight` is free text folded like
   // the API searcher. Also built locally by « Ouvrir » / a bill chip — same surface, no frame.
-  | { type: 'showDocument'; url: string; title: string; contentType: string; filename: string; page?: number; highlight?: string }
+  | { type: 'showDocument'; url: string; title: string; contentType: string; filename: string; page?: number; highlight?: string; pagesUrl?: string }
   | { type: 'toast'; tone: Tone; message: string }
   // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
   // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.

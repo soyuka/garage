@@ -91,6 +91,7 @@ final class VehicleDocumentTest extends AppTestCase
         self::assertSame(2, $doc['pageCount']);
         self::assertNull($doc['plannedTaskId']);
         self::assertSame('/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'].'/file', $doc['url']);
+        self::assertSame('/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'].'/pages', $doc['pagesUrl']);
 
         $browser->request('GET', '/garage/vehicles/'.$vehicle->getId().'/documents', [], [], $this->bearer());
         self::assertSame(200, $browser->getResponse()->getStatusCode());
@@ -128,6 +129,36 @@ final class VehicleDocumentTest extends AppTestCase
         self::assertSame('application/pdf', $browser->getResponse()->headers->get('Content-Type'));
         self::assertStringContainsString('inline', (string) $browser->getResponse()->headers->get('Content-Disposition'));
         self::assertSame($pdf, $browser->getInternalResponse()->getContent());
+    }
+
+    public function testPagesEndpointListsNumbersAndLabelsWithoutText(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $vehicle = $this->seedVehicle();
+        $doc = $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'mr361.pdf', 'application/pdf'));
+
+        $browser->request('GET', $doc['pagesUrl'], [], [], $this->bearer());
+
+        self::assertSame(200, $browser->getResponse()->getStatusCode());
+        $content = (string) $browser->getResponse()->getContent();
+        self::assertSame([['number' => 1, 'label' => '21A-5'], ['number' => 2, 'label' => '21A-6']], json_decode($content, true, flags: \JSON_THROW_ON_ERROR));
+        self::assertStringNotContainsString('Couple de serrage', $content);
+    }
+
+    public function testPagesEndpointIs404ForForeignOwnerAndUnknownDocument(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $vehicle = $this->seedVehicle();
+        $doc = $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'mr361.pdf', 'application/pdf'));
+        $base = '/garage/vehicles/'.$vehicle->getId().'/documents';
+
+        $browser->request('GET', $doc['pagesUrl'], [], [], $this->bearer('intruder@example.com'));
+        self::assertSame(404, $browser->getResponse()->getStatusCode());
+
+        $browser->request('GET', $base.'/unknown/pages', [], [], $this->bearer());
+        self::assertSame(404, $browser->getResponse()->getStatusCode());
     }
 
     public function testDeleteRemovesTheDocument(): void

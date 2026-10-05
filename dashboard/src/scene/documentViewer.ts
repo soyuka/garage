@@ -112,6 +112,27 @@ export function firstMatchAtOrAfter(matchPages: readonly number[], page: number)
   return at === -1 ? 0 : at;
 }
 
+export interface PageLabel {
+  number: number;
+  label: string | null;
+}
+
+export function labelForPage(pages: readonly PageLabel[], page: number): string | null {
+  return pages.find((p) => p.number === page)?.label ?? null;
+}
+
+/** What the page field accepts: digits are a physical page, anything else an exact manual label (« 23A-19 »). */
+export function resolvePageInput(input: string, pages: readonly PageLabel[], numPages: number): number | null {
+  const value = input.trim();
+  if (value === '') return null;
+  if (/^\d+$/.test(value)) {
+    const n = Number(value);
+    return n >= 1 && n <= numPages ? n : null;
+  }
+  const wanted = value.toLowerCase();
+  return pages.find((p) => p.label !== null && p.label.toLowerCase() === wanted)?.number ?? null;
+}
+
 export function clampPage(page: number, total: number): number {
   if (!Number.isFinite(page)) return 1;
   return Math.min(Math.max(1, Math.round(page)), Math.max(1, total));

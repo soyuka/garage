@@ -315,7 +315,7 @@ export const fr = {
     toolbar: 'Outils du document',
     pagePrefix: 'p.',
     ofTotal: (total: number) => `/ ${total}`,
-    pageInput: 'Aller à la page',
+    pageInput: 'Aller à une page ou à un repère du manuel (ex. 23A-19)',
     prevPage: 'Page précédente',
     nextPage: 'Page suivante',
     zoomIn: 'Zoom avant',

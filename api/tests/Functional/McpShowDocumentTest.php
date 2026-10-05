@@ -87,6 +87,7 @@ final class McpShowDocumentTest extends AppTestCase
             'filename' => 'mr361.pdf',
             'page' => 2,
             'highlight' => 'capacité huile',
+            'pagesUrl' => $iri.'/documents/'.$documentId.'/pages',
         ], $this->lastPilotFrame());
     }
 
@@ -115,6 +116,7 @@ final class McpShowDocumentTest extends AppTestCase
             'title' => 'MR 361',
             'contentType' => 'application/pdf',
             'filename' => 'mr361.pdf',
+            'pagesUrl' => $iri.'/documents/'.$documentId.'/pages',
         ], $this->lastPilotFrame());
     }
 

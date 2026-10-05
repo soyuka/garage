@@ -70,6 +70,7 @@ final readonly class ShowDocumentProcessor implements ProcessorInterface
             $document->getFilename(),
             $data->page,
             $data->highlight,
+            $this->view->pagesUrl($document),
         );
 
         return ToolResult::of([

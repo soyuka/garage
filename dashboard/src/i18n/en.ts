@@ -296,7 +296,7 @@ export const en: Messages = {
     toolbar: 'Document tools',
     pagePrefix: 'p.',
     ofTotal: (total: number) => `/ ${total}`,
-    pageInput: 'Go to page',
+    pageInput: 'Go to a page number or a manual page label (e.g. 23A-19)',
     prevPage: 'Previous page',
     nextPage: 'Next page',
     zoomIn: 'Zoom in',

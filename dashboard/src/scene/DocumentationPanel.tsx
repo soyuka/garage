@@ -38,7 +38,7 @@ export function DocumentationPanel({
   const t = useT();
 
   const open = (row: DocRow) =>
-    handlers?.onOpenDocument({ url: row.url, title: row.title, contentType: row.contentType, filename: row.filename });
+    handlers?.onOpenDocument({ url: row.url, title: row.title, contentType: row.contentType, filename: row.filename, pagesUrl: row.pagesUrl });
   const remove = (row: DocRow) => {
     if (!handlers || !window.confirm(t.docs.confirmRemove(row.title))) return;
     const op = row.remove.type === 'document' ? deleteVehicleDocument(handlers.vehicleIri, row.remove.id) : deleteMaintenanceAttachment(row.remove.url);
