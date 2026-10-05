@@ -13,8 +13,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * having called nothing but READ tools — then "replies" in prose — is a silent no-op: nothing saved,
  * nothing rendered, the user sees the model "look at the data" and then… nothing.
  *
- * A turn is PRODUCTIVE if it called at least one write tool (log_maintenance / plan_maintenance /
- * update_vehicle / dismiss_maintenance), one render-intent tool ({@see RenderIntentTools}), or a
+ * A turn is PRODUCTIVE if it called at least one write tool, one render-intent tool ({@see RenderIntentTools}), or a
  * terminal tool ({@see EndTurnTool} / propose_actions). {@see \App\MessageHandler\RunAgentTurnHandler}
  * checks {@see wasProductive()} after the loop drains and, if false, marks the turn NoOp and nudges the
  * user instead of leaving the UI silently unchanged. Complements the loop-forever guards
@@ -28,8 +27,9 @@ final class TurnActivityTracker
 {
     /** Tools that make a turn count: a write, a render intent, or a terminal stop. */
     private const PRODUCTIVE_TOOLS = [
-        'log_maintenance', 'plan_maintenance', 'update_vehicle', 'dismiss_maintenance',
-        'select_vehicle', 'toast', 'show_fact', 'propose_actions', 'end_turn',
+        'log_maintenance', 'plan_maintenance', 'edit_maintenance', 'set_maintenance_schedule', 'update_vehicle', 'dismiss_maintenance',
+        'select_vehicle', 'open_vehicle', 'toast', 'show_fact', 'focus_view', 'reveal_assembly', 'show_document',
+        'propose_actions', 'end_turn',
     ];
 
     private bool $productive = false;
