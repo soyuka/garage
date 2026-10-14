@@ -14,6 +14,7 @@ use App\Dto\ListPlannedMaintenanceInput;
 use App\Dto\ListServiceDefaultsInput;
 use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
+use App\Dto\RemovePlannedPartInput;
 use App\Dto\SetMaintenanceScheduleInput;
 use App\Mcp\UiResourceLoader;
 use App\State\DismissMaintenanceProcessor;
@@ -24,6 +25,7 @@ use App\State\ListPlannedMaintenanceProcessor;
 use App\State\ListServiceDefaultsProcessor;
 use App\State\LogMaintenanceProcessor;
 use App\State\PlanMaintenanceProcessor;
+use App\State\RemovePlannedPartProcessor;
 use App\State\SetMaintenanceScheduleProcessor;
 
 /**
@@ -77,6 +79,16 @@ use App\State\SetMaintenanceScheduleProcessor;
             // Upsert keyed on (vehicle, type, label): re-sending the same plan updates one task, never
             // deletes — idempotent and non-destructive.
             annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
+        ),
+        'remove_planned_part' => new McpTool(
+            title: 'Remove Planned Part',
+            description: 'Remove ONE line (a part or a consumable) from a planned task\'s shopping list — use it for "enlève le joint de la liste" / "I already have the oil filter". Pass the task\'s @id (`task`) and the line\'s `id` (`part`); both come from list_planned_maintenance (or the plan_maintenance result): task @id and parts[].id. It removes only that line and NEVER deletes the task itself — to drop a whole task from the checklist use dismiss_maintenance. Returns the updated task with its remaining parts. An unknown or foreign task/part returns a not_found result (NOT an error).',
+            input: RemovePlannedPartInput::class,
+            structuredContent: false,
+            processor: RemovePlannedPartProcessor::class,
+            // Drops a line: writes, destructive in intent; removing an already-gone line is a no-op
+            // not_found, so idempotent. Hosts should gate it behind confirmation.
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => true, 'idempotentHint' => true],
         ),
         'set_maintenance_schedule' => new McpTool(
             title: 'Set Maintenance Schedule',
