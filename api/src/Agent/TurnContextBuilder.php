@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Agent;
 
+use App\Entity\MakeKnowledge;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
 use App\Garage\GarageResolver;
 use App\I18n\Locale;
 use App\Maintenance\VehicleFactsProjector;
 use App\Message\RunAgentTurn;
+use App\Repository\MakeKnowledgeRepository;
 use App\Repository\PlannedMaintenanceRepository;
 use Symfony\Component\Uid\Ulid;
 
@@ -30,6 +32,7 @@ final readonly class TurnContextBuilder
         private GarageResolver $garage,
         private VehicleFactsProjector $factsProjector,
         private PlannedMaintenanceRepository $tasks,
+        private ?MakeKnowledgeRepository $knowledge = null,
     ) {
     }
 
@@ -43,7 +46,7 @@ final readonly class TurnContextBuilder
 
             $vehicle = $this->resolve($turn->selectedId);
             if (null !== $vehicle) {
-                $context .= $this->identity($vehicle).$this->knownFacts($vehicle).$this->openTasks($vehicle);
+                $context .= $this->identity($vehicle).$this->knownFacts($vehicle).$this->openTasks($vehicle).$this->makeKnowledge($vehicle);
             }
         }
 
@@ -157,5 +160,19 @@ final readonly class TurnContextBuilder
         }, $open);
 
         return "\n\nTâches en cours (réfère-toi à l'id pour clore une tâche via log_maintenance) :\n".implode("\n", $lines);
+    }
+
+    private function makeKnowledge(Vehicle $vehicle): string
+    {
+        $entries = $this->knowledge?->findForMake($vehicle->getMake()) ?? [];
+        if ([] === $entries) {
+            return '';
+        }
+
+        return \sprintf(
+            "\n\nSavoir constructeur disponible pour %s (détail via get_make_knowledge) : %s.",
+            $vehicle->getMake(),
+            implode(' ; ', array_map(static fn (MakeKnowledge $entry): string => $entry->getTitle(), $entries)),
+        );
     }
 }

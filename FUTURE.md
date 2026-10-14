@@ -598,3 +598,19 @@ tool description says it "UPDATES the existing open task", which reads like a re
 - The viewer's page indicator shows the physical page only; the Renault label (`21A-6`) lives in
   `VehicleDocumentPage.label` and never reaches the client (would need it on the frame or a pages endpoint).
 - No pdf.js annotation layer (links inside a PDF are not clickable), no outline/thumbnails, no rotation.
+
+## Make knowledge + build-code decoders (2026-10-14) — deferred
+
+Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `MakeKnowledge` (global, synced from
+`api/config/knowledge/psa.yaml`), and a titles-only line in the turn context. Deferred:
+
+- **Agent-proposed knowledge with review.** Agents cannot write entries today (file → sync only). A proposal queue
+  (unverified entry + reviewer promotion) would let a turn that finds a new fact on the web leave it for review.
+- **More makes' decoders.** Only PSA implements `BuildCodeDecoder`; Renault, VAG, etc. each need a verified formula
+  before a decoder is added (never guess a date). Knowledge entries exist for PSA only.
+- **Auto-derived per-vehicle facts.** When a build code is decoded for a vehicle, project `opr`, `build_date`, `plant`
+  and `paint_code` facts onto it (through `VehicleFactsProjector`, source `decode_build_code`, verified) so the next
+  turn does not re-ask. The tool is vehicle-agnostic today and writes nothing.
+- The decoded date may be the order date, not the build date (one forum poster; surfaced as a caveat). Unresolved.
+- partsapi `getArticleCriteria` (no key yet) is what would expose the catalogue's own « n° d'organisation » split
+  per article; until then the model gets the threshold from the catalogue text or the user.

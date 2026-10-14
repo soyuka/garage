@@ -828,3 +828,16 @@ The `McpResource` attribute accepts all standard [operation options](operations.
 | `annotations`        | MCP resource annotations                                                   |
 | `icons`              | List of icon URLs                                                          |
 | `meta`               | Arbitrary metadata                                                         |
+
+## Make knowledge tools (this app)
+
+This file is the API Platform MCP reference; the app's own brand-knowledge tools are listed here.
+Both are read-only, owner-independent, and reach the in-app agent automatically through `McpToolbox`.
+
+| Tool                 | Purpose                                                                                                   |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `decode_build_code`  | `make` + `code` (OPR / DAM / APV) or `date` (YYYY-MM-DD) → organisation number, date, plant, caveats, sources. PSA (Peugeot, Citroën, DS) only; decoders implement `App\Knowledge\BuildCode\BuildCodeDecoder` and are collected by tag. |
+| `get_make_knowledge` | `make` → topic list; `make` + `topic` → full sourced entry. Global data (the one exception to owner tenancy). |
+
+The knowledge is versioned in `api/config/knowledge/*.yaml` and loaded by
+`bin/console app:make-knowledge:sync` (upsert by makes + topic, removes what disappeared). There is no write tool.

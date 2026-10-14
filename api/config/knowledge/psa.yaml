@@ -1,0 +1,115 @@
+# Source de vérité des fiches "savoir constructeur" PSA (Peugeot, Citroën, DS), vérifiées le 2026-10-14.
+# Synchronisé en base par `bin/console app:make-knowledge:sync` (upsert par makes+topic, supprime ce qui disparaît d'ici).
+entries:
+  - makes: [PEUGEOT, CITROËN, DS]
+    topic: numero-organisation
+    title: Numéro d'organisation (OPR) PSA et date de fabrication
+    verified: true
+    body: |
+      Le numéro d'organisation (OPR, parfois appelé RPO) est un compteur de jours de production PSA :
+      date = 1976-11-08 + OPR jours (OPR 00001 = 1976-11-09). Il comporte 5 chiffres, le zéro de tête est
+      souvent omis (9256 = 09256).
+
+      Repères vérifiés : 9256 = 2002-03-13 ; 7969 = 1998-09-03 ; 8701 = 2000-09-04 ; 10006 = 2004-04-01 ;
+      10310 = 2005-01-30 ; 10311 = 2005-01-31 ; 10537 = 2005-09-14.
+
+      Les catalogues de pièces (TecDoc, partsapi.ru) découpent les références sur ce numéro : « jusqu'à n°
+      d'organisation 10310 / à partir de 10311 ». Pour choisir la bonne pièce, décoder le code de la voiture
+      (outil decode_build_code) et le comparer au seuil du catalogue ; le seuil lui-même se convertit en date
+      avec le même outil.
+
+      Réserve : un intervenant du forum Peugeot soutient que la date obtenue est la date de commande de la
+      voiture et non sa date de fabrication ; à quelques jours près, donc, et à vérifier si le choix de la
+      pièce se joue sur un seuil très proche.
+    sources:
+      - url: https://www.forum-peugeot.com/Forum/threads/que-signifie-le-opr-le-dam-et-le-apv-pr-dun-v%C3%A9hicule.7579/
+        label: Forum Peugeot — Que signifie le OPR, le DAM et le APV/PR d'un véhicule
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/num%C3%A9ro-opr.71837/latest
+        label: Forum Peugeot — Numéro OPR
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/num%C3%A9ro-dorganisation-svp.52633/latest
+        label: Forum Peugeot — Numéro d'organisation svp
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/date-de-fabrication-de-la-voiture.77502/latest
+        label: Forum Peugeot — Date de fabrication de la voiture
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/date-de-fabrication-de-ma-307.55611/latest
+        label: Forum Peugeot — Date de fabrication de ma 307
+        verified: true
+
+  - makes: [PEUGEOT, CITROËN, DS]
+    topic: ou-trouver-opr
+    title: Où trouver le DAM / OPR sur la voiture
+    verified: true
+    body: |
+      Voitures des années 2000 : l'étiquette de pressions de pneus, sur le montant de porte, porte le DAM
+      (OPR + code usine), la fin de l'APV et le code peinture. Exemple relevé sur une 307 1.4 KFW :
+      « 982488 / 331 / EWPA » — 982488 est le DAM (OPR 09824, usine 88 Mulhouse, soit le 2003-10-02),
+      EWPA est le code peinture.
+
+      La plaque constructeur rivetée (VIN, poids, charges par essieu) des voitures des années 2000 ne porte
+      pas d'OPR : inutile de la chercher.
+
+      Voitures plus anciennes : l'OPR est peint sur la tour d'amortisseur. Le manuel du propriétaire,
+      rubrique « éléments d'identification », peut aussi le mentionner.
+
+      Sans accès à la voiture : un concessionnaire peut le lire depuis le VIN dans les bases PSA (accès payant
+      depuis 2022 environ). Le VIN seul ne permet pas de le déduire (voir vin-decodage).
+    sources:
+      - url: https://www.forum-peugeot.com/Forum/threads/que-signifie-le-opr-le-dam-et-le-apv-pr-dun-v%C3%A9hicule.7579/
+        label: Forum Peugeot — Que signifie le OPR, le DAM et le APV/PR d'un véhicule
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/date-de-fabrication-de-ma-307.55611/latest
+        label: Forum Peugeot — Date de fabrication de ma 307
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/code-opr-%C3%A0-partir-du-vin.130430/
+        label: Forum Peugeot — Code OPR à partir du VIN
+        verified: true
+
+  - makes: [PEUGEOT, CITROËN, DS]
+    topic: codes-usine
+    title: Codes usine PSA (deux derniers chiffres du DAM)
+    verified: true
+    body: |
+      Le DAM est l'OPR suivi d'un code usine à 2 chiffres ; l'APV/PR est le DAM suivi de 5 caractères
+      (chiffre de ligne + séquence journalière à 4 chiffres). Exemple : 102638910232 = OPR 10263
+      (2004-12-14), usine 89, séquence 10232.
+
+      Codes usine : 88 Mulhouse ; 89 Sochaux ; 83 Ryton ; 81 Poissy ; 78 Porto Real ; 82 Madrid ;
+      84 Dijon ; 87 Lille.
+
+      Certaines étiquettes de 407 portent des lettres à la place du code usine (« 10823CJ 20494 ») : l'usine
+      est alors inconnue, mais l'OPR reste les 5 premiers chiffres. Un code absent de cette liste se conserve
+      tel quel, sans nom d'usine.
+    sources:
+      - url: https://www.forum-peugeot.com/Forum/threads/que-signifie-le-opr-le-dam-et-le-apv-pr-dun-v%C3%A9hicule.7579/
+        label: Forum Peugeot — Que signifie le OPR, le DAM et le APV/PR d'un véhicule
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/d%C3%A9coder-un-num%C3%A9ro-de-chassis.48207/latest
+        label: Forum Peugeot — Décoder un numéro de châssis
+        verified: true
+
+  - makes: [PEUGEOT, CITROËN, DS]
+    topic: vin-decodage
+    title: Le VIN ne donne pas l'OPR (et ce que renvoie partsapi.ru)
+    verified: true
+    body: |
+      Le VIN ne permet pas de retrouver l'OPR : seules les bases constructeur (payantes depuis 2022 environ)
+      le font, via un concessionnaire.
+
+      partsapi.ru, vérifié le 2026-10-14 sur une 307 1.4 KFW (voir api/docs/PARTSAPI.md) :
+      - VINdecode ne compare que les 8 premiers caractères du VIN ; il renvoie le VIN d'une autre voiture et la
+        plage de kType du type générique (ici 16182, 307 1.4 75 ch 08/2000–09/2003, pour une voiture mise en
+        circulation en 09/2004). Ni date de fabrication ni OPR.
+      - VINdecodeOE ne couvre pas PSA (réponse vide).
+
+      Pour départager une rupture « n° d'organisation » du catalogue, lire le DAM sur la voiture
+      (voir ou-trouver-opr) puis utiliser decode_build_code.
+    sources:
+      - url: https://www.forum-peugeot.com/Forum/threads/code-opr-%C3%A0-partir-du-vin.130430/
+        label: Forum Peugeot — Code OPR à partir du VIN
+        verified: true
+      - url: https://www.forum-peugeot.com/Forum/threads/d%C3%A9coder-un-num%C3%A9ro-de-chassis.48207/latest
+        label: Forum Peugeot — Décoder un numéro de châssis
+        verified: true

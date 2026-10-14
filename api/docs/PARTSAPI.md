@@ -44,6 +44,14 @@ getFullInfoCV, searchArticles, tecdocCrosses, getEngine, getPassengerCarInfo, ge
 
 VIN: VINdecode, decodeVINus, VINdecodeOE, getPartsbyVIN, gosnomer2vin (RU plates only).
 
+VIN, verified 2026-10-14 on a 307 1.4 KFW (`VF33CKFWB83471925`), keys in `.env.local`:
+- `VINdecode` (`vin`, `lang` both required; `lang=fr` → `{"statusMsg":"Failed"}`, `lang=en` works).
+  Matches on the 8-char VIN prefix only (`vin8`) and echoes ANOTHER car's VIN: returned kType 16182
+  (307 3A/C 1.4 75 ch, 08/2000–09/2003) for a car first registered 09/2004. No build date, no PSA RPO.
+- `VINdecodeOE` → `{"data":{"Schema":null,"Vehicles":null},"status":"success"}`: no PSA coverage.
+- `getArticles` payload is 6 fields (ART_ID, brand, number, group, PT_ID, SUP_ID): no fitment criteria,
+  so TecDoc "jusqu'à / à partir de n° d'organisation" splits need `getArticleCriteria` (no key yet).
+
 AUTONORMS: GetNormsMakes, GetNormsModels, GetNormsMotors, GetNormsTimes, GetFillVolumes ✅.
 
 Maintenance (ТО): toMakes, toModels, toTypes, toParts, toDoPass, toOils —
