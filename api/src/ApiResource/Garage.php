@@ -8,16 +8,19 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\McpTool;
 use App\Dto\GetVehicleFactsInput;
 use App\Dto\ListVehiclesInput;
+use App\Dto\RemoveVehicleFactsInput;
+use App\Dto\SetVehicleFactsInput;
 use App\Dto\UpdateVehicleInput;
 use App\State\GetVehicleFactsProcessor;
 use App\State\ListVehiclesProcessor;
+use App\State\RemoveVehicleFactsProcessor;
+use App\State\SetVehicleFactsProcessor;
 use App\State\UpdateVehicleProcessor;
 
 /**
  * The garage: a self-strengthening vehicle store exposed as MCP tools (no HTTP operations
- * in phase 1). get_vehicle_facts reads shared garage → upstream (write-through) → miss. Facts
- * have no write tool of their own: they are recorded as `attributes` on maintenance items
- * (plan_maintenance) and read back here as a projection over those items.
+ * in phase 1). get_vehicle_facts reads shared garage → upstream (write-through) → miss. Facts are
+ * written with set_vehicle_facts / remove_vehicle_facts and read back here as a projection.
  */
 #[ApiResource(
     mcp: [
@@ -35,7 +38,7 @@ use App\State\UpdateVehicleProcessor;
         // content processor — so they still populate structuredContent at runtime.
         'get_vehicle_facts' => new McpTool(
             title: 'Vehicle Facts',
-            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Facts are a projection over the vehicle\'s maintenance items — the specs recorded as `attributes` on the tasks you planned. Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result telling you to record the data as attributes on a plan_maintenance call — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
+            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Facts are a projection: catalog specs, parts fitted on logged visits, and whatever was recorded with set_vehicle_facts. Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result pointing at set_vehicle_facts — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
             input: GetVehicleFactsInput::class,
             structuredContent: false,
             processor: GetVehicleFactsProcessor::class,
@@ -45,13 +48,29 @@ use App\State\UpdateVehicleProcessor;
         ),
         'update_vehicle' => new McpTool(
             title: 'Update Vehicle',
-            description: 'Patch a vehicle\'s OWN scalar fields: usage reading (usageValue + usageUnit km/mi/h), plate, vin, year, engineVariant (the engine/trim label, NEVER a fluid grade). Omitted fields are left unchanged. This does NOT store maintenance facts (oil type/capacity, coolant…) — record those as `attributes` on a plan_maintenance call. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its @id (the `vehicle` argument). Dedup: if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating — re-call with the chosen candidate\'s @id in `vehicle`, or confirmNew:true if it is genuinely a different vehicle. usageValue and usageUnit must be provided together.',
+            description: 'Patch a vehicle\'s OWN scalar fields: usage reading (usageValue + usageUnit km/mi/h), plate, vin, year, engineVariant (the engine/trim label, NEVER a fluid grade). Omitted fields are left unchanged. This does NOT store facts (oil type/capacity, coolant, paint code, build date, tyre size…) — record those with set_vehicle_facts. Identify the vehicle by make+model (its row is created if unknown) OR, to update one you already saw in list_vehicles, by its @id (the `vehicle` argument). Dedup: if make+model has no exact match but a stored vehicle looks like the same one (same model, or same carId/plate/vin), the call returns status "ambiguous_match" with candidates instead of creating — re-call with the chosen candidate\'s @id in `vehicle`, or confirmNew:true if it is genuinely a different vehicle. usageValue and usageUnit must be provided together.',
             input: UpdateVehicleInput::class,
             structuredContent: false,
             processor: UpdateVehicleProcessor::class,
             // Patches the vehicle's own columns in place; re-sending the same values is a no-op
             // and it never deletes data, so idempotent and non-destructive.
             annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
+        ),
+        'set_vehicle_facts' => new McpTool(
+            title: 'Set Vehicle Facts',
+            description: 'Record facts about a vehicle: identity and spec data such as build date, paint code, tyre size, engine/gearbox code, fuel type, oil grade/capacity, coolant, part references. This is the ONLY way to store a fact — plan_maintenance does not take them. Identify the vehicle by its @id (from list_vehicles). Each fact is {key, value, unit?, source, url?}. KEYS are snake_case, subject first then aspect: oil_type, oil_capacity, coolant_type, tyre_front_size, paint_code, build_date, engine_code, gearbox_code, fuel_type, distribution_type, oil_filter_ref (a part reference is {part}_ref). Call get_vehicle_facts first and REUSE an existing key instead of inventing a synonym; writing an existing key REPLACES its value. source: "user" when the owner told you the value (it then outranks every other source), "web" with the cited url, "llm" for general knowledge, "motul" for a Motul recommendation. A fact can come back listed in `shadowed`: a verified catalog value or a bill-derived part still wins for that key, so do not tell the owner your value is the one on file. Returns the stored facts. Invalid input (bad key, blank value, unknown source) returns status "invalid_input" with the reason and writes nothing.',
+            input: SetVehicleFactsInput::class,
+            structuredContent: false,
+            processor: SetVehicleFactsProcessor::class,
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => false, 'idempotentHint' => true],
+        ),
+        'remove_vehicle_facts' => new McpTool(
+            title: 'Remove Vehicle Facts',
+            description: 'Remove facts from a vehicle by key (soft-delete: the fact leaves the card, writing the key again restores it). Identify the vehicle by its @id. Returns `removed` and `notFound` key lists. Use it to retract a wrong value, not to change one — to change a value call set_vehicle_facts, which replaces.',
+            input: RemoveVehicleFactsInput::class,
+            structuredContent: false,
+            processor: RemoveVehicleFactsProcessor::class,
+            annotations: ['readOnlyHint' => false, 'destructiveHint' => true, 'idempotentHint' => true],
         ),
     ],
 )]

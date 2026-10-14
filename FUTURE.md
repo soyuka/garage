@@ -610,7 +610,9 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
   before a decoder is added (never guess a date). Knowledge entries exist for PSA only.
 - **Auto-derived per-vehicle facts.** When a build code is decoded for a vehicle, project `opr`, `build_date`, `plant`
   and `paint_code` facts onto it (through `VehicleFactsProjector`, source `decode_build_code`, verified) so the next
-  turn does not re-ask. The tool is vehicle-agnostic today and writes nothing.
+  turn does not re-ask. The tool is vehicle-agnostic today and writes nothing. Agents can now record such facts by hand with `set_vehicle_facts`
+  (keys unreserved, sources `user|web|llm|motul`); a verified `decode_build_code` source would need adding to the
+  reserved list in `VehicleFactWriter`.
 - The decoded date may be the order date, not the build date (one forum poster; surfaced as a caveat). Unresolved.
 - partsapi `getArticleCriteria` (no key yet) is what would expose the catalogue's own « n° d'organisation » split
   per article; until then the model gets the threshold from the catalogue text or the user.

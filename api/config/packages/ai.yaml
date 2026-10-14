@@ -28,7 +28,7 @@ ai:
             # request body. The agent config has no dedicated options/max_tokens node. 4096 (up from 2048):
             # the program-first flow runs a web_search whose cited result bloats the loop context, and the
             # turn must still have room to synthesise the schedule into plan_maintenance calls (carrying
-            # both parts and attributes) afterwards — 2048 truncated that tail. WebSearchBudget caps the
+            # parts) and set_vehicle_facts afterwards — 2048 truncated that tail. WebSearchBudget caps the
             # turn to two searches (one happy-path + one retry on an empty result) so context cannot balloon.
             #
             # Raised Haiku → Sonnet: narrate_step and the propose_actions/toast copy are now
@@ -76,8 +76,8 @@ ai:
                     - dashboard   = the live UI the user is looking at AND the render-intent DASHBOARD TOOLS.
                     - checklist   = a vehicle's open planned tasks (created by plan_maintenance).
                     - shopping list = the parts attached to those tasks.
-                    - fact        = a stored spec (oil_type, capacity, a part ref…); facts are simply
-                                    plan_maintenance attributes, read back by get_vehicle_facts.
+                    - fact        = a stored spec (oil_type, capacity, a part ref…); written with
+                                    set_vehicle_facts, read back by get_vehicle_facts.
                     - schedule    = a vehicle's recurring service cadences (set_maintenance_schedule); the
                                     forecast is computed from these.
                     </vocabulary>
@@ -120,13 +120,13 @@ ai:
                        question (the question is answered afterwards, on the now-updated vehicle):
                        - a usage reading (odometer km/mi, engine hours h: "passé les 250 000 km",
                          "compteur à 80 000", "120 h") ⇒ update_vehicle with usageValue+usageUnit together.
-                         A reading is NEVER a maintenance attribute.
+                         A reading is NEVER a fact.
                        - a plate / vin / year / owner ⇒ update_vehicle.
                        - a stated or discovered engine / motorisation / trim ("2.0 16V Coupé", "1.9 TDI")
                          ⇒ update_vehicle engineVariant:"<that label>". It pins the oil-grade variant, so
                          store it the moment you learn it (from the user, a plate lookup, or a web finding).
                          engineVariant is the ENGINE label only — never a fluid/oil grade (a viscosity
-                         like 5W-30 is an oil_viscosity attribute, not the engine).
+                         like 5W-30 is an oil_viscosity fact, not the engine).
 
                     B. Then classify the demand and act:
                        - a service / parts / "what do I need at N km / entretien" question ⇒ run the
@@ -164,10 +164,10 @@ ai:
                              part — a "must choose" case under <output_contract>, not a bolted-on card.
                          NEVER justify a brand by availability, durability or OE supply: we hold no such data.
                        - a fluid / spec VALUE (oil_type, coolant_type, distribution_type, a procedure
-                         detail) ⇒ a plan_maintenance attribute (facts have no separate tool).
+                         detail) ⇒ set_vehicle_facts (vehicle = its @id, facts:[{key, value, source}]).
                        - nothing local answers it ⇒ web_search, then route the finding: about the vehicle
                          itself (year, motorisation) ⇒ update_vehicle; a spec/part/fluid/procedure ⇒
-                         plan_maintenance attribute (source:"web", url:…); a service due at a milestone ⇒
+                         set_vehicle_facts (source:"web", url:…); a service due at a milestone ⇒
                          plan_maintenance; a RECURRING interval (every N km / months / hours) ⇒
                          set_maintenance_schedule.
 
@@ -182,8 +182,9 @@ ai:
                       often stored under another label (a "TORO" and a "Wheel Horse 246-H" can be one
                       mower). When you already hold a vehicle @id (e.g. the selected one), pass it directly
                       to the read tools instead of listing first.
-                    - plan_maintenance — records intended work AND its specs in one call: parts (the
-                      shopping list) plus attributes (oil_type, capacity, part ref, coolant_type…). Upsert
+                    - plan_maintenance — records intended work: its parts (the shopping list), a
+                      target and a due date. Facts (oil_type, capacity, part ref, coolant_type…) go through
+                      set_vehicle_facts (vehicle @id; key snake_case, an existing key is replaced). Upsert
                       keyed on (vehicle, type, label): re-planning the same service updates the open task
                       and MERGES new parts onto it — read the task's exact `type` from "Tâches en cours" in
                       the turn context to add a part to one already on the checklist. Creates the vehicle on
@@ -239,7 +240,7 @@ ai:
                     instruction calls get_motul_oil(motulId:"<id>"), which pins the row and converges — do
                     not fall back to web_search for a grade. On a matched grade, also update_vehicle
                     engineVariant:"<the variant's engine label>" so the next viscosity question pins on the
-                    first call, and persist what you use as plan_maintenance attributes source:"motul" + the
+                    first call, and persist what you use with set_vehicle_facts source:"motul" + the
                     sourceUrl (oil_viscosity; oil_change_interval if asked about timing). Motul values are
                     recommendations, recorded unverified. Prefer get_motul_oil over web_search for a grade.
 
@@ -251,7 +252,7 @@ ai:
                     interval. So "Mazda 6 2007 2.0 MZR programme entretien distribution liquide
                     refroidissement" is right; a generic "entretien à 250 000 km" is not. Make one precise
                     call; a second is allowed only if the first returns the NO_RESULTS token (two per turn, no
-                    more). Persist findings as plan_maintenance attributes source:"web" + the cited url (the
+                    more). Persist findings with set_vehicle_facts source:"web" + the cited url (the
                     garage records web facts unverified automatically). Do not web-search a part reference the
                     catalog gives, nor a fact already under "Faits connus" in the turn context.
                     </garage_tools>
@@ -272,15 +273,15 @@ ai:
                       2. PROGRAM — web_search the manufacturer schedule for THIS engine at this usage, to
                          learn which schedule-only items are due and (for distribution) whether it is a belt
                          or a chain. One precise call (a second only on NO_RESULTS). Note each spec you
-                         find (oil grade/capacity, coolant type, belt-vs-chain) — you record them as
-                         attributes in step 4.
+                         find (oil grade/capacity, coolant type, belt-vs-chain) — you record them with
+                         set_vehicle_facts in step 4.
                       3. PRICE — get_service_parts(carId, service) for each catalog service ⇒ part refs +
                          fluid specs. One call per service, in parallel.
                       4. RECORD THE CHECKLIST — plan_maintenance for every due item (catalog services from
                          step 3 AND schedule-only items from step 2). On each, attach the parts
-                         (parts:[{ref, brand, label}]) and the specs you learned (attributes:[{key, value,
-                         source:"web", url}]); that is how facts are stored. Schedule-only items carry no
-                         parts but still carry their attributes (distribution_type, coolant_type). Pass the
+                         (parts:[{ref, brand, label}]). Then ONE set_vehicle_facts call with the specs you
+                         learned (facts:[{key, value, source:"web", url}], e.g. distribution_type,
+                         coolant_type) — schedule-only items need no parts. Pass the
                          target the user gave (targetUsageValue/targetUsageUnit, e.g. 250000 km). One call
                          per item; the upsert makes re-running safe.
                       5. STORE THE CADENCES — when step 2 yielded recurring intervals ("every 10 000 km /

@@ -65,8 +65,8 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
                 'vehicle' => $identity,
                 'missing' => $data->keys,
                 'how_to_add' => [
-                    'tool' => 'plan_maintenance',
-                    'hint' => 'Facts are recorded as `attributes` on a maintenance item — plan the relevant service and pass attributes:[{key, value, source, url}]. There is no separate add-fact tool.',
+                    'tool' => 'set_vehicle_facts',
+                    'hint' => 'Record facts with set_vehicle_facts (vehicle = the vehicle @id, facts:[{key, value, source, url}]).',
                 ],
             ]);
         }

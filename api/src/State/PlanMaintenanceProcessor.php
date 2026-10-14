@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\PlanMaintenanceInput;
 use App\Entity\PlannedMaintenance;
-use App\Entity\VehicleFact;
 use App\Garage\ToolResult;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleIriResolver;
@@ -80,7 +79,6 @@ final class PlanMaintenanceProcessor implements ProcessorInterface
             targetUsageUnit: null !== $data->targetUsageUnit ? UsageUnit::from($data->targetUsageUnit) : null,
             dueDate: null !== $data->dueDate ? new \DateTimeImmutable($data->dueDate) : null,
             parts: $data->parts,
-            attributes: $this->attributes($data),
             addedBy: $data->addedBy,
         );
 
@@ -93,27 +91,6 @@ final class PlanMaintenanceProcessor implements ProcessorInterface
         }
 
         return $this->publishedTask($outcome->task);
-    }
-
-    /**
-     * Build the spec envelopes from the input. A spec with no explicit source inherits the plan's
-     * source; `verified` is derived from the source (see {@see VehicleFact::fromSource}).
-     *
-     * @return list<VehicleFact>
-     */
-    private function attributes(PlanMaintenanceInput $data): array
-    {
-        return array_map(
-            static fn (array $a): VehicleFact => VehicleFact::fromSource(
-                key: $a['key'],
-                value: $a['value'],
-                source: $a['source'] ?? $data->source,
-                unit: $a['unit'] ?? null,
-                addedBy: $data->addedBy,
-                url: $a['url'] ?? null,
-            ),
-            $data->attributes,
-        );
     }
 
     private function publishedTask(PlannedMaintenance $task): CallToolResult

@@ -841,3 +841,22 @@ Both are read-only, owner-independent, and reach the in-app agent automatically 
 
 The knowledge is versioned in `api/config/knowledge/*.yaml` and loaded by
 `bin/console app:make-knowledge:sync` (upsert by makes + topic, removes what disappeared). There is no write tool.
+
+## Vehicle fact tools (this app)
+
+Facts (build date, paint code, tyre size, oil grade/capacity, part references…) have their own write tools;
+`plan_maintenance` no longer takes them. Both address the vehicle by its `@id` (as `update_vehicle` does), are
+owner-scoped, and reach the in-app agent through `McpToolbox` untouched. Both return a structured
+`invalid_input` / `not_found` result rather than an error. The write path is `App\Maintenance\VehicleFactWriter`,
+shared with the dashboard's `POST|DELETE /garage/vehicles/{id}/facts`.
+
+| Tool                   | Purpose                                                                                                   |
+| ---------------------- | --------------------------------------------------------------------------------------------------------- |
+| `set_vehicle_facts`    | `vehicle` + `facts[]{key, value, unit?, source, url?}`. A key already on the vehicle is replaced. Returns the stored facts and `shadowed` (keys where a verified catalog value, a bill part or an owner edit still wins the projection). |
+| `remove_vehicle_facts` | `vehicle` + `keys[]` → `removed` / `notFound`. Soft-delete (tombstone), writing the key again restores it. |
+
+Keys are free-form `snake_case`, subject first then aspect (`oil_type`, `oil_capacity`, `coolant_type`,
+`paint_code`, `tires_front_dimensions`; a part reference is `{part}_ref`, which is also what `VehicleFactsProjector`
+derives from logged bills). `source` is one of `user`, `web`, `llm`, `motul`; `partsapi`, `siv` and `log` are
+reserved, so `verified` is derived and never supplied. Facts land as attributes on the vehicle's `user_facts`
+carrier item (off the checklist).

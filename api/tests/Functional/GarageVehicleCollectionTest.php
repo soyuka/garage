@@ -17,21 +17,19 @@ final class GarageVehicleCollectionTest extends AppTestCase
     {
         $client = static::createClient();
 
-        // Facts ride on a plan_maintenance item's attributes now — there is no add-fact tool.
         static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'plan_maintenance', [
             'make' => 'TORO',
             'model' => '246-H',
             'vehicleType' => 'groundscare',
             'type' => 'oil_change',
-            'attributes' => [['key' => 'oil_type', 'value' => 'SAE 5W-30', 'source' => 'llm']],
         ]));
 
         $response = $client->request('GET', '/garage/vehicles');
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains([
-            'totalItems' => 1,
-            'member' => [['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare']],
+            'hydra:totalItems' => 1,
+            'hydra:member' => [['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare']],
         ]);
     }
 }

@@ -112,7 +112,7 @@ class GarageResolver
      * on the row chosen by the shared {@see VehicleWriteResolver} (matched, addressed by id, or
      * freshly created). Surfaces the resolver's ambiguous/not_found verdicts as outcomes rather
      * than writing. Only the provided (non-null) fields are applied — omitted ones are untouched.
-     * This never writes facts (those are recorded via plan_maintenance attributes).
+     * This never writes facts (those are recorded via set_vehicle_facts).
      */
     public function updateVehicle(
         ?Ulid $vehicleId,

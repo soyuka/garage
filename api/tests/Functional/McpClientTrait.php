@@ -84,11 +84,10 @@ trait McpClientTrait
     }
 
     /**
-     * Seed a spec onto a vehicle. Facts have no write tool of their own anymore — they are recorded
-     * as `attributes` on a maintenance item (plan_maintenance). Takes the OLD add_vehicle_fact shape
-     * (make/model/.../key/value/unit/source/url) and folds key/value/unit/source/url into one
-     * attribute on a maintenance item, so the seed reads back through the facts projection. The item
-     * gets no parts/target, so it is a KNOWN spec carrier (off the checklist).
+     * Seed a spec onto a vehicle through set_vehicle_facts. Takes the old add_vehicle_fact shape
+     * (identity fields + key/value/unit/source/url): the vehicle is resolved or created through
+     * update_vehicle first (unless `vehicle` carries its @id), so an ambiguous_match/not_found comes
+     * back as the response instead of a write.
      *
      * @param array<string, mixed> $args add_vehicle_fact-style arguments
      *
@@ -96,18 +95,26 @@ trait McpClientTrait
      */
     private function planFact(Client $client, string $sessionId, array $args, int $id): array
     {
-        $attribute = ['key' => $args['key'], 'value' => $args['value']];
-        foreach (['unit', 'source', 'url'] as $field) {
+        $fact = ['key' => $args['key'], 'value' => $args['value'], 'source' => $args['source'] ?? 'user'];
+        foreach (['unit', 'url'] as $field) {
             if (isset($args[$field])) {
-                $attribute[$field] = $args[$field];
+                $fact[$field] = $args[$field];
             }
         }
-        unset($args['key'], $args['value'], $args['unit'], $args['url'], $args['source']);
+        unset($args['key'], $args['value'], $args['unit'], $args['url'], $args['source'], $args['type']);
 
-        $args['type'] = $args['type'] ?? 'oil_change';
-        $args['attributes'] = [$attribute];
+        if (!isset($args['vehicle'])) {
+            $update = $this->call($client, $sessionId, 'tools/call', ['name' => 'update_vehicle', 'arguments' => $args], $id);
+            if ('ok' !== ($update['result']['structuredContent']['status'] ?? null)) {
+                return $update;
+            }
+            $args = ['vehicle' => $update['result']['structuredContent']['vehicle']['@id']];
+        }
 
-        return $this->call($client, $sessionId, 'tools/call', ['name' => 'plan_maintenance', 'arguments' => $args], $id);
+        return $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'set_vehicle_facts',
+            'arguments' => ['vehicle' => $args['vehicle'], 'facts' => [$fact]],
+        ], $id);
     }
 
     /**

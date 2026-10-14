@@ -13,13 +13,14 @@ mcp:
                 list_part_categories, list_articles and get_fill_volumes with that carId. Alternatively
                 browse by brand with list_makes, list_models and list_cars.
 
-                GARAGE (read + write): the user keeps their own vehicles here. To plan intended work and
-                record its specs use plan_maintenance — it carries the parts (the shopping list) AND
-                `attributes` (oil type, capacity, part reference, spark plug...): facts have no separate
-                tool, they are attributes on maintenance items. To record a dated service event use
-                log_maintenance. BOTH create the vehicle on first write, so you never need a separate
-                "create vehicle" step. Inspect with list_vehicles, get_vehicle_facts (a projection over
-                those item attributes), get_maintenance_history and forecast with list_due_maintenance.
+                GARAGE (read + write): the user keeps their own vehicles here. To plan intended work use
+                plan_maintenance — it carries the parts (the shopping list). To record facts about a vehicle
+                (oil type/capacity, part reference, paint code, build date, tyre size...) use
+                set_vehicle_facts, addressed by the vehicle @id; remove_vehicle_facts retracts one. To
+                record a dated service event use log_maintenance. plan_maintenance and log_maintenance
+                create the vehicle on first write, so you never need a separate "create vehicle" step.
+                Inspect with list_vehicles, get_vehicle_facts (a projection of catalog specs, logged
+                parts and recorded facts), get_maintenance_history and forecast with list_due_maintenance.
 
                 AVOID DUPLICATES: before writing, call list_vehicles to see what already exists — the same
                 machine is often known under another label (e.g. a TORO and a Wheel Horse 246-H are one
@@ -31,7 +32,7 @@ mcp:
                 IMPORTANT: the garage accepts ANY vehicle, including ones absent from TecDoc — lawn
                 tractors, motorcycles, generators, imports without a French plate. A catalog miss
                 (not_in_catalog) is a normal outcome, not an error: fall back to plan_maintenance with the
-                spec recorded as an attribute sourced from documentation or web lookup. Never refuse to
+                spec recorded with set_vehicle_facts, sourced from documentation or web lookup. Never refuse to
                 save a vehicle just because it is not in the parts catalog.
             transports:
                 stdio: false

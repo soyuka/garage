@@ -57,12 +57,6 @@ final class PlanMaintenanceInput
     #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'label' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'qty' => ['type' => 'integer'], 'price' => ['type' => 'number', 'description' => 'Unit price in major units (12.50 for €12.50); stored as integer cents (priceCents) like the visit cost.'], 'supplier' => ['type' => 'string', 'description' => 'Where the part is bought, e.g. "trodo.fr".']], 'required' => ['ref']], 'description' => 'Parts/fluids the task needs — the shopping list. Each has a part number "ref" and optional "label", "brand", "qty", "price", "supplier". Re-planning an existing ref updates only the keys supplied.'])]
     public array $parts = [];
 
-    /**
-     * @var list<array{key: string, value: string, unit?: string, source?: string, url?: string}>
-     */
-    #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['key' => ['type' => 'string'], 'value' => ['type' => 'string'], 'unit' => ['type' => 'string'], 'source' => ['type' => 'string', 'enum' => ['web', 'llm', 'user']], 'url' => ['type' => 'string']], 'required' => ['key', 'value']], 'description' => 'Specs about the vehicle learned for this service — oil grade/capacity, coolant type, a part reference worth keeping, distribution belt-vs-chain. Each {key (snake_case, e.g. oil_type, oil_capacity, coolant_type), value, optional unit, source (web|llm|user, defaults to the plan source), url when web-sourced}. These ARE the vehicle facts — get_vehicle_facts reads them back; there is NO separate add-fact tool. Record what is worth remembering here.'])]
-    public array $attributes = [];
-
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['user', 'llm', 'web'], 'description' => 'Where the plan came from. Defaults to "user".'])]
     public string $source = 'user';
 

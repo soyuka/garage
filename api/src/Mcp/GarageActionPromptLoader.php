@@ -194,7 +194,7 @@ final class GarageActionPromptLoader implements LoaderInterface
             Identify the vehicle with French plate "{$plate}". Run every step:
             1. Call lookup_plate (plate="{$plate}").
             2. Present its identity and technical data (make, model, engine code, fuel, power, the TecDoc carId/carType).
-            3. Identifying a plate saves the vehicle to my garage so I can track it: record its useful, stable specs (engine code, fuel type) as attributes via plan_maintenance (attributes:[{key, value}]) — facts live on maintenance items, there is no separate add-fact tool.
+            3. Identifying a plate saves the vehicle to my garage so I can track it: record its useful, stable specs (engine code, fuel type) with set_vehicle_facts (vehicle = its @id from list_vehicles, facts:[{key, value, source}]).
             Do not invent values the lookup did not return.
             PROMPT);
     }

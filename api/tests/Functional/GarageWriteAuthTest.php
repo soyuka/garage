@@ -24,7 +24,6 @@ final class GarageWriteAuthTest extends AppTestCase
             'year' => 2007,
             'vehicleType' => 'car',
             'type' => 'oil_change',
-            'attributes' => [['key' => 'oil_type', 'value' => 'SAE 5W-30', 'source' => 'llm']],
         ]));
 
         return $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])

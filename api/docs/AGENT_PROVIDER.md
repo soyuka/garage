@@ -47,7 +47,7 @@ carries no provider-native web search**.
 garage agent (any platform)
   └─ tool call: web_search(query)
        └─ WebSearchClient.search()  → out-of-band side call (Anthropic|Gemini) → answer + citations
-  └─ agent persists the finding (plan_maintenance attribute, source:"web", url:…)
+  └─ agent persists the finding (set_vehicle_facts, source:"web", url:…)
 ```
 
 ### Switching the web-search backend (`WEB_SEARCH_BACKEND`)

@@ -22,7 +22,7 @@ final class McpGarageTest extends AppTestCase
 
         $this->assertContains('get_vehicle_facts', $tools);
         $this->assertContains('list_vehicles', $tools);
-        $this->assertNotContains('add_vehicle_fact', $tools, 'Facts are recorded via plan_maintenance attributes — there is no add-fact tool.');
+        $this->assertNotContains('add_vehicle_fact', $tools, 'Facts are written with set_vehicle_facts — there is no add-fact tool.');
     }
 
     public function testListVehiclesReturnsStoredVehiclesWithFactCount(): void
@@ -225,7 +225,7 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('TORO', $content['vehicle']['make']);
         $this->assertSame('246-H', $content['vehicle']['model']);
         $this->assertSame(['oil_type', 'oil_capacity'], $content['missing']);
-        $this->assertSame('plan_maintenance', $content['how_to_add']['tool']);
+        $this->assertSame('set_vehicle_facts', $content['how_to_add']['tool']);
         $this->assertArrayHasKey('hint', $content['how_to_add']);
     }
 
@@ -426,7 +426,6 @@ final class McpGarageTest extends AppTestCase
             'unit' => 'liter',
             'source' => 'web',
             'url' => 'https://www.toro.com/manual/246-H',
-            'addedBy' => 'support-agent',
         ], 3);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -442,7 +441,6 @@ final class McpGarageTest extends AppTestCase
         $fact = $this->factByKey($result['result']['structuredContent']['facts'], 'oil_capacity');
         $this->assertSame('web', $fact['source']);
         $this->assertSame('https://www.toro.com/manual/246-H', $fact['url']);
-        $this->assertSame('support-agent', $fact['addedBy']);
     }
 
     public function testVehicleTypeIsPartOfIdentity(): void
