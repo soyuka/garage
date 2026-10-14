@@ -65,6 +65,7 @@ export function ShoppingListOverlay({
                   <li className="at-shop-row" key={p.id ?? `${p.ref}-${i}`}>
                     <span className="at-shop-ref">{p.ref}</span>
                     {p.brand && <span className="at-shop-brand">{p.brand}</span>}
+                    {p.supplier && <span className="at-shop-supplier">{p.supplier}</span>}
                     {p.label && <span className="at-shop-label">{p.label}</span>}
                     {p.qty != null && p.qty > 1 && <span className="at-shop-qty">×{p.qty}</span>}
                     <span className="at-shop-price" data-unknown={p.priceCents == null ? 'true' : undefined}>

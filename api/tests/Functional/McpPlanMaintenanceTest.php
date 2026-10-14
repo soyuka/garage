@@ -54,6 +54,51 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $this->assertCount(1, $body['member'] ?? $body['hydra:member'] ?? []);
     }
 
+    public function testPlanCarriesPartPriceAndSupplierAndReplanKeepsThemWhenOmitted(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+        $base = ['make' => 'MAZDA', 'model' => 'MAZDA6', 'confirmNew' => true, 'type' => 'oil_filter'];
+
+        $first = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => $base + ['parts' => [['ref' => 'W 712/75', 'brand' => 'MANN', 'price' => 12.5, 'supplier' => 'trodo.fr']]],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame(1250, $first['task']['parts'][0]['priceCents']);
+        $this->assertSame('trodo.fr', $first['task']['parts'][0]['supplier']);
+
+        $omitted = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => $base + ['parts' => [['ref' => 'W 712/75', 'qty' => 2]]],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertCount(1, $omitted['task']['parts']);
+        $this->assertSame(1250, $omitted['task']['parts'][0]['priceCents'], 'a re-plan omitting price must not wipe it');
+        $this->assertSame('trodo.fr', $omitted['task']['parts'][0]['supplier'], 'a re-plan omitting supplier must not wipe it');
+
+        $updated = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => $base + ['parts' => [['ref' => 'W 712/75', 'price' => 9.99, 'supplier' => 'oscaro.com']]],
+        ], 5)['result']['structuredContent'];
+
+        $this->assertSame(999, $updated['task']['parts'][0]['priceCents']);
+        $this->assertSame('oscaro.com', $updated['task']['parts'][0]['supplier']);
+    }
+
+    public function testPlanMaintenancePartsSchemaAdvertisesPriceAndSupplier(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $tool = current(array_filter($tools, static fn (array $t): bool => 'plan_maintenance' === $t['name']));
+        $props = $tool['inputSchema']['properties']['parts']['items']['properties'];
+
+        $this->assertSame('number', $props['price']['type']);
+        $this->assertSame('string', $props['supplier']['type']);
+    }
+
     public function testPlanAcceptsAFreeFormTypeNotInTheKnownSet(): void
     {
         // The agent should label a service for what it is (timing belt, gearbox oil…) instead of

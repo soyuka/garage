@@ -87,7 +87,7 @@ final class PlannedTask
     #[ApiProperty(description: 'Usage reading the work is pegged to, e.g. {"value":250000,"unit":"km"}.')]
     public ?array $target = null;
     public ?string $dueDate = null;
-    /** @var list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
+    /** @var list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
     #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list. A PATCH MERGES the supplied parts in (dedup by ref); it never replaces or clears the list. A ref-less fluid line carries a read-only derived `spec` (which oil, what quantity) projected from the vehicle facts.')]
     public array $parts = [];
     #[ApiProperty(description: 'Lifecycle: "open" | "done" | "dismissed". Set "done" to tick the task off.')]

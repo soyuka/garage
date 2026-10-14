@@ -66,9 +66,11 @@ final class PlannedTaskPart
     public ?int $qty = null;
     #[ApiProperty(description: 'Unit price, integer minor units (cents).')]
     public ?int $priceCents = null;
+    #[ApiProperty(description: 'Where the part is bought, free text (e.g. "trodo.fr").')]
+    public ?string $supplier = null;
 
     /**
-     * @param array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int} $part
+     * @param array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string} $part
      */
     public static function fromArray(array $part, Ulid $taskId): self
     {
@@ -80,6 +82,7 @@ final class PlannedTaskPart
         $resource->brand = $part['brand'] ?? null;
         $resource->qty = $part['qty'] ?? null;
         $resource->priceCents = $part['priceCents'] ?? null;
+        $resource->supplier = $part['supplier'] ?? null;
 
         return $resource;
     }

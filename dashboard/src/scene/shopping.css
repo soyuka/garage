@@ -133,6 +133,14 @@
   opacity: var(--at-vib-2);
 }
 
+.at-shop-supplier {
+  flex: 0 0 auto;
+  font-family: var(--at-font-mono);
+  font-size: 12px;
+  color: var(--at-text-dim);
+  opacity: var(--at-vib-2);
+}
+
 /* the description WRAPS rather than truncating: a shopping list whose lines end in "…" makes the
    operator open each one to find out what it is. Two lines cost less than a hidden word. */
 .at-shop-label {

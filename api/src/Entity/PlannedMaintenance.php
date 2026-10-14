@@ -84,7 +84,7 @@ class PlannedMaintenance
         private ?UsageUnit $targetUsageUnit = null,
         #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $dueDate = null,
-        /** @var list<array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, id?: string}> */
+        /** @var list<array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> */
         array $parts = [],
         #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $completedAt = null,
@@ -177,7 +177,7 @@ class PlannedMaintenance
     }
 
     /**
-     * @return list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int}>
+     * @return list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string}>
      */
     public function getParts(): array
     {
@@ -185,7 +185,7 @@ class PlannedMaintenance
     }
 
     /**
-     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, id?: string}> $parts
+     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> $parts
      */
     public function setParts(array $parts): void
     {
@@ -201,7 +201,7 @@ class PlannedMaintenance
      * an incremental plan ("ajoute l'huile à la liste") must add to the shopping list, never clobber
      * the parts a prior pass resolved (e.g. the oil filter when only the oil is re-sent).
      *
-     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int}> $parts
+     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string}> $parts
      */
     public function mergeParts(array $parts): void
     {
@@ -219,7 +219,7 @@ class PlannedMaintenance
      * Append a part to the shopping list (the parts-subresource POST). Upserts by `ref` like
      * {@see self::mergeParts()} so adding a known ref twice updates it rather than stacking a dupe.
      *
-     * @param array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int} $part
+     * @param array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string} $part
      */
     public function addPart(array $part): PlannedPart
     {

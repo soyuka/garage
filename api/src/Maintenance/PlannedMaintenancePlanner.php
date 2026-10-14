@@ -33,7 +33,7 @@ final class PlannedMaintenancePlanner
     }
 
     /**
-     * @param list<array{ref: string, label?: string, brand?: string, qty?: int}> $parts
+     * @param list<array{ref: string, label?: string, brand?: string, qty?: int, price?: float, supplier?: string}> $parts
      * @param list<VehicleFact>                                                    $attributes specs to upsert onto the item (additive — never clears unmentioned keys)
      */
     public function plan(

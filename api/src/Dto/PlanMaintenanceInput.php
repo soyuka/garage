@@ -52,9 +52,9 @@ final class PlanMaintenanceInput
     public ?string $dueDate = null;
 
     /**
-     * @var list<array{ref: string, label?: string, brand?: string, qty?: int}>
+     * @var list<array{ref: string, label?: string, brand?: string, qty?: int, price?: float, supplier?: string}>
      */
-    #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'label' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'qty' => ['type' => 'integer']], 'required' => ['ref']], 'description' => 'Parts/fluids the task needs — the shopping list. Each has a part number "ref" and optional "label", "brand", "qty".'])]
+    #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'object', 'properties' => ['ref' => ['type' => 'string'], 'label' => ['type' => 'string'], 'brand' => ['type' => 'string'], 'qty' => ['type' => 'integer'], 'price' => ['type' => 'number', 'description' => 'Unit price in major units (12.50 for €12.50); stored as integer cents (priceCents) like the visit cost.'], 'supplier' => ['type' => 'string', 'description' => 'Where the part is bought, e.g. "trodo.fr".']], 'required' => ['ref']], 'description' => 'Parts/fluids the task needs — the shopping list. Each has a part number "ref" and optional "label", "brand", "qty", "price", "supplier". Re-planning an existing ref updates only the keys supplied.'])]
     public array $parts = [];
 
     /**

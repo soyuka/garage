@@ -51,7 +51,7 @@ export function PartsManifest({
                 {p.priceCents != null && <span className="at-parts-price">{formatEuros(lineCents, locale)}</span>}
               </div>
               <div className="at-parts-meta">
-                {[p.brand, p.ref].filter(Boolean).join(' ')}
+                {[[p.brand, p.ref].filter(Boolean).join(' '), p.supplier].filter(Boolean).join(' · ')}
               </div>
             </div>
           );

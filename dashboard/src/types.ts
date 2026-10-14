@@ -55,6 +55,8 @@ export interface PlannedPart {
   qty?: number;
   /** unit price, integer minor units (cents). */
   priceCents?: number;
+  /** where the part is bought, free text (e.g. "trodo.fr"). */
+  supplier?: string;
 }
 
 // ── Planned tasks (the open checklist) ────────────────────────────────────────

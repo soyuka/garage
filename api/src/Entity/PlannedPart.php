@@ -37,6 +37,8 @@ class PlannedPart
     private ?int $qty = null;
     #[ODM\Field(type: 'int', nullable: true)]
     private ?int $priceCents = null;
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $supplier = null;
 
     public function __construct(
         string $ref = '',
@@ -45,20 +47,24 @@ class PlannedPart
         ?int $qty = null,
         ?int $priceCents = null,
         ?string $id = null,
+        ?string $supplier = null,
     ) {
         $this->ref = $ref;
         $this->label = $label;
         $this->brand = $brand;
         $this->qty = $qty;
         $this->priceCents = $priceCents;
+        $this->supplier = $supplier;
         $this->id = $id ?? (string) new Ulid();
     }
 
     /**
-     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, id?: string|null} $part
+     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, id?: string|null} $part
      */
     public static function fromArray(array $part): self
     {
+        $part = self::normalisePrice($part);
+
         return new self(
             ref: (string) ($part['ref'] ?? ''),
             label: $part['label'] ?? null,
@@ -66,6 +72,7 @@ class PlannedPart
             qty: isset($part['qty']) ? (int) $part['qty'] : null,
             priceCents: isset($part['priceCents']) ? (int) $part['priceCents'] : null,
             id: $part['id'] ?? null,
+            supplier: $part['supplier'] ?? null,
         );
     }
 
@@ -83,10 +90,12 @@ class PlannedPart
      * Merge-patch a single line: only the supplied keys overwrite (a `ref` is never blanked by an
      * absent key). The shape mirrors {@see self::fromArray()} minus `id` (identity is immutable).
      *
-     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null} $part
+     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null} $part
      */
     public function update(array $part): void
     {
+        $part = self::normalisePrice($part);
+
         if (\array_key_exists('ref', $part)) {
             $this->ref = (string) $part['ref'];
         }
@@ -102,10 +111,13 @@ class PlannedPart
         if (\array_key_exists('priceCents', $part)) {
             $this->priceCents = null !== $part['priceCents'] ? (int) $part['priceCents'] : null;
         }
+        if (\array_key_exists('supplier', $part)) {
+            $this->supplier = null !== $part['supplier'] ? (string) $part['supplier'] : null;
+        }
     }
 
     /**
-     * @return array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int}
+     * @return array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string}
      */
     public function toArray(): array
     {
@@ -122,7 +134,30 @@ class PlannedPart
         if (null !== $this->priceCents) {
             $out['priceCents'] = $this->priceCents;
         }
+        if (null !== $this->supplier) {
+            $out['supplier'] = $this->supplier;
+        }
 
         return $out;
+    }
+
+    /**
+     * Wire `price` is major units; a null/blank one counts as absent so a re-plan never wipes a stored price.
+     *
+     * @param array<string, mixed> $part
+     *
+     * @return array<string, mixed>
+     */
+    private static function normalisePrice(array $part): array
+    {
+        if (\array_key_exists('price', $part)) {
+            $price = $part['price'];
+            unset($part['price']);
+            if (null !== $price && '' !== $price) {
+                $part['priceCents'] = (int) round(((float) $price) * 100);
+            }
+        }
+
+        return $part;
     }
 }

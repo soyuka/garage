@@ -43,6 +43,7 @@ final class PlannedTaskPartProcessor implements ProcessorInterface
             'brand' => $data->brand,
             'qty' => $data->qty,
             'priceCents' => $data->priceCents,
+            'supplier' => $data->supplier,
         ];
 
         if (isset($uriVariables['id'])) {

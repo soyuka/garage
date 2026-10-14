@@ -106,6 +106,28 @@ final class PlannedTaskEditTest extends AppTestCase
         $this->assertSame('W 712/73', $patched['ref'], 'untouched fields survive the merge');
     }
 
+    public function testPartSupplierAndPriceCanBePatchedThroughTheSubresource(): void
+    {
+        ['client' => $client, 'taskIri' => $taskIri] = $this->planTask([
+            'type' => 'oil_filter',
+            'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']],
+        ]);
+
+        $task = $client->request('GET', $taskIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $partIri = $task['parts'][0]['@id'] ?? ($taskIri.'/parts/'.$task['parts'][0]['id']);
+
+        $patched = $client->request('PATCH', $partIri, [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
+            'json' => ['supplier' => 'trodo.fr', 'priceCents' => 1250],
+        ])->toArray();
+
+        $this->assertSame('trodo.fr', $patched['supplier']);
+        $this->assertSame(1250, $patched['priceCents']);
+
+        $after = $client->request('GET', $taskIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertSame('trodo.fr', $after['parts'][0]['supplier']);
+    }
+
     public function testPartCanBeRemovedThroughTheSubresource(): void
     {
         ['client' => $client, 'taskIri' => $taskIri] = $this->planTask([

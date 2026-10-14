@@ -281,6 +281,7 @@ export interface TaskPartInput {
   brand?: string | null;
   qty?: number | null;
   priceCents?: number | null;
+  supplier?: string | null;
 }
 
 /** Append a part line (POST the parts subresource; upserts by ref server-side). */
