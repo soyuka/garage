@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Maintenance\PartRefRewriter;
 use App\Maintenance\UsageUnit;
 use App\Repository\MaintenanceRecordRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -142,6 +143,8 @@ class MaintenanceRecord
      */
     private static function normaliseParts(array $parts): array
     {
+        $parts = PartRefRewriter::rewrite(array_values($parts))->parts;
+
         return array_map(static function (array $part): array {
             if (\array_key_exists('price', $part)) {
                 $price = $part['price'];
@@ -152,7 +155,7 @@ class MaintenanceRecord
             }
 
             return $part;
-        }, array_values($parts));
+        }, $parts);
     }
 
     public function getId(): Ulid

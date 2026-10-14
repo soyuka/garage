@@ -169,7 +169,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         $this->assertJsonContains([
             'label' => 'Entretien complet',
             'items' => [
-                ['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'brand' => 'Motul', 'label' => 'Huile 5W30', 'qty' => 5]]],
+                ['type' => 'oil_change', 'parts' => [['ref' => 'SAE 5W-30', 'brand' => 'Motul', 'label' => 'Huile 5W30', 'qty' => 5]]],
                 ['type' => 'oil_filter', 'parts' => [['ref' => 'W712/52', 'brand' => 'MANN']]],
                 ['type' => 'inspection', 'parts' => []],
             ],
@@ -200,7 +200,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         $this->assertJsonContains([
             'items' => [
                 ['type' => 'oil_change', 'parts' => [
-                    ['ref' => '5W30', 'brand' => 'Motul', 'qty' => 5, 'priceCents' => 1250],
+                    ['ref' => 'SAE 5W-30', 'brand' => 'Motul', 'qty' => 5, 'priceCents' => 1250],
                     ['ref' => 'W712/52', 'brand' => 'MANN'],
                 ]],
             ],
@@ -263,7 +263,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         ]);
 
         $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['items' => [['type' => 'oil_change', 'parts' => [['ref' => '5W30', 'priceCents' => 1490]]]]]);
+        $this->assertJsonContains(['items' => [['type' => 'oil_change', 'parts' => [['ref' => 'SAE 5W-30', 'priceCents' => 1490]]]]]);
     }
 
     public function testDeleteRemovesRecord(): void

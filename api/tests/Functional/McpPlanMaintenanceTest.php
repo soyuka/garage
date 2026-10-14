@@ -164,4 +164,89 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $body = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
         $this->assertCount(1, $body['member'] ?? $body['hydra:member'] ?? []);
     }
+
+    public function testRefLessPartsWithDistinctLabelsAreKeptAndReplanUpdatesByLabel(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $first = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => [
+                'make' => 'IVECO',
+                'model' => 'DAILY',
+                'vehicleType' => 'cv',
+                'confirmNew' => true,
+                'type' => 'brake_service',
+                'parts' => [
+                    ['ref' => '', 'label' => 'Huile boîte 75W-80'],
+                    ['ref' => '', 'label' => 'Liquide de frein DOT 4'],
+                    ['ref' => '', 'label' => 'Loctite Frenbloc'],
+                ],
+            ],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertCount(3, $first['task']['parts']);
+
+        $second = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => [
+                'vehicle' => $first['task']['vehicle'],
+                'type' => 'brake_service',
+                'parts' => [['ref' => '', 'label' => 'liquide de frein dot 4', 'qty' => 2]],
+            ],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertCount(3, $second['task']['parts']);
+        $this->assertSame(
+            ['Huile boîte 75W-80', 'liquide de frein dot 4', 'Loctite Frenbloc'],
+            array_column($second['task']['parts'], 'label'),
+            'a ref-less re-plan must update its own line, not the first ref-less one',
+        );
+        $this->assertSame([null, 2, null], array_map(static fn (array $part): ?int => $part['qty'] ?? null, $second['task']['parts']));
+    }
+
+    public function testConsumableRefIsStoredCanonicalAndReplanWithAnotherSpellingUpdatesSameLine(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+        $base = ['make' => 'MAZDA', 'model' => 'MAZDA6', 'confirmNew' => true, 'type' => 'brakes'];
+
+        $first = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => $base + ['parts' => [['ref' => 'dot4', 'label' => 'Liquide de frein Motul', 'qty' => 1], ['ref' => '623 3150 33']]],
+        ], 3)['result']['structuredContent'];
+
+        $this->assertSame('DOT 4', $first['task']['parts'][0]['ref']);
+        $this->assertSame('623 3150 33', $first['task']['parts'][1]['ref']);
+        $lineId = $first['task']['parts'][0]['id'];
+
+        $second = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'plan_maintenance',
+            'arguments' => $base + ['parts' => [['ref' => 'DOT-4', 'qty' => 2]]],
+        ], 4)['result']['structuredContent'];
+
+        $this->assertCount(2, $second['task']['parts']);
+        $this->assertSame($lineId, $second['task']['parts'][0]['id']);
+        $this->assertSame('DOT 4', $second['task']['parts'][0]['ref']);
+        $this->assertSame(2, $second['task']['parts'][0]['qty']);
+    }
+
+    public function testPlanAndLogPartsSchemasAdvertiseTheConsumableStandards(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $tools = [];
+        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+            $tools[$tool['name']] = $tool;
+        }
+
+        $plan = $tools['plan_maintenance']['inputSchema']['properties']['parts']['description'];
+        $this->assertStringContainsString('DOT 4', $plan);
+        $this->assertStringContainsString('SAE 5W-30', $plan);
+
+        $log = $tools['log_maintenance']['inputSchema']['properties']['items']['items']['properties']['parts']['description'] ?? '';
+        $this->assertStringContainsString('DOT 4', $log);
+    }
 }

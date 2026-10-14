@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Entity;
 
 use App\Garage\UsageUnit;
+use App\Maintenance\ConsumableStandard;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Repository\PlannedMaintenanceRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -190,14 +191,12 @@ class PlannedMaintenance
     public function setParts(array $parts): void
     {
         $this->parts->clear();
-        foreach ($parts as $part) {
-            $this->parts->add(PlannedPart::fromArray($part));
-        }
+        $this->mergeParts($parts);
     }
 
     /**
-     * Additively upsert parts by `ref` — an incoming part updates a same-ref line in place (its ULID
-     * survives), a new ref appends, unmentioned lines stay. Symmetric with {@see self::setAttribute()}:
+     * Additively upsert parts — an incoming part updates its matching line in place (its ULID
+     * survives, identity per {@see self::partMatching()}), a new one appends, unmentioned lines stay. Symmetric with {@see self::setAttribute()}:
      * an incremental plan ("ajoute l'huile à la liste") must add to the shopping list, never clobber
      * the parts a prior pass resolved (e.g. the oil filter when only the oil is re-sent).
      *
@@ -206,7 +205,7 @@ class PlannedMaintenance
     public function mergeParts(array $parts): void
     {
         foreach ($parts as $incoming) {
-            $existing = $this->partByRef((string) ($incoming['ref'] ?? ''));
+            $existing = $this->partMatching($incoming);
             if (null !== $existing) {
                 $existing->update($incoming);
             } else {
@@ -216,14 +215,14 @@ class PlannedMaintenance
     }
 
     /**
-     * Append a part to the shopping list (the parts-subresource POST). Upserts by `ref` like
+     * Append a part to the shopping list (the parts-subresource POST). Upserts like
      * {@see self::mergeParts()} so adding a known ref twice updates it rather than stacking a dupe.
      *
      * @param array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string} $part
      */
     public function addPart(array $part): PlannedPart
     {
-        $existing = $this->partByRef((string) ($part['ref'] ?? ''));
+        $existing = $this->partMatching($part);
         if (null !== $existing) {
             $existing->update($part);
 
@@ -260,10 +259,22 @@ class PlannedMaintenance
         return true;
     }
 
-    private function partByRef(string $ref): ?PlannedPart
+    /**
+     * A refed line is identified by its ref; a ref-less line (a bare fluid) by its normalised label,
+     * so several ref-less lines coexist. A ref-less line never matches a refed one.
+     *
+     * @param array{ref?: string, label?: string|null} $incoming
+     */
+    private function partMatching(array $incoming): ?PlannedPart
     {
+        $ref = ConsumableStandard::normalise((string) ($incoming['ref'] ?? ''));
+        $label = PlannedPart::normaliseLabel($incoming['label'] ?? null);
+
         foreach ($this->parts as $part) {
-            if ($part->getRef() === $ref) {
+            if ($part->getRef() !== $ref) {
+                continue;
+            }
+            if ('' !== $ref || PlannedPart::normaliseLabel($part->getLabel()) === $label) {
                 return $part;
             }
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Maintenance\ConsumableStandard;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
 use Symfony\Component\Uid\Ulid;
 
@@ -65,9 +66,11 @@ class PlannedPart
     {
         $part = self::normalisePrice($part);
 
+        [$ref, $label] = ConsumableStandard::resolve((string) ($part['ref'] ?? ''), $part['label'] ?? null);
+
         return new self(
-            ref: (string) ($part['ref'] ?? ''),
-            label: $part['label'] ?? null,
+            ref: $ref,
+            label: $label,
             brand: $part['brand'] ?? null,
             qty: isset($part['qty']) ? (int) $part['qty'] : null,
             priceCents: isset($part['priceCents']) ? (int) $part['priceCents'] : null,
@@ -86,6 +89,16 @@ class PlannedPart
         return $this->ref;
     }
 
+    public function getLabel(): ?string
+    {
+        return $this->label;
+    }
+
+    public static function normaliseLabel(?string $label): string
+    {
+        return mb_strtolower(trim((string) $label));
+    }
+
     /**
      * Merge-patch a single line: only the supplied keys overwrite (a `ref` is never blanked by an
      * absent key). The shape mirrors {@see self::fromArray()} minus `id` (identity is immutable).
@@ -97,7 +110,11 @@ class PlannedPart
         $part = self::normalisePrice($part);
 
         if (\array_key_exists('ref', $part)) {
-            $this->ref = (string) $part['ref'];
+            $current = \array_key_exists('label', $part) ? $part['label'] : $this->label;
+            [$this->ref, $label] = ConsumableStandard::resolve((string) $part['ref'], $current);
+            if ($label !== $current) {
+                $part['label'] = $label;
+            }
         }
         if (\array_key_exists('label', $part)) {
             $this->label = null !== $part['label'] ? (string) $part['label'] : null;
