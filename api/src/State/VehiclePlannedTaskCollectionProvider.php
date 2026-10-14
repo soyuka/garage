@@ -7,10 +7,10 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\PlannedTask;
+use App\Documentation\OwnedVehicleLocator;
 use App\Maintenance\PlannedTaskFluidEnricher;
 use App\Maintenance\VehicleFactsProjector;
 use App\Repository\PlannedMaintenanceRepository;
-use App\Repository\VehicleRepository;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -18,7 +18,7 @@ use Symfony\Component\Uid\Ulid;
  * "Tâches & liste de courses" card reads it on select. Returns the Open AND Done PlannedTask
  * resources (each with its own tick-off IRI); done tasks ride along so the card renders them
  * greyed-out instead of vanishing on tick-off. The checklist is a first-class subresource rather
- * than an array embedded on the vehicle item. An unknown vehicle yields an empty collection (not a
+ * than an array embedded on the vehicle item. An unknown or foreign vehicle yields an empty collection (not a
  * 404): the vehicle dereferences fine, it simply has nothing planned.
  *
  * @implements ProviderInterface<PlannedTask>
@@ -26,7 +26,7 @@ use Symfony\Component\Uid\Ulid;
 final class VehiclePlannedTaskCollectionProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
+        private readonly OwnedVehicleLocator $vehicles,
         private readonly PlannedMaintenanceRepository $tasks,
         private readonly VehicleFactsProjector $facts,
         private readonly PlannedTaskFluidEnricher $fluids,

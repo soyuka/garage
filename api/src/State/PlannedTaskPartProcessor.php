@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTaskPart;
 use App\Mercure\DomainPublisher;
-use App\Repository\PlannedMaintenanceRepository;
+use App\Maintenance\OwnedPlannedTaskLocator;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -23,7 +23,7 @@ use Symfony\Component\Uid\Ulid;
 final class PlannedTaskPartProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PlannedMaintenanceRepository $tasks,
+        private readonly OwnedPlannedTaskLocator $locator,
         private readonly DocumentManager $em,
         private readonly DomainPublisher $publisher,
     ) {
@@ -32,7 +32,7 @@ final class PlannedTaskPartProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): PlannedTaskPart
     {
         $taskId = $uriVariables['taskId'];
-        $task = $this->tasks->find($taskId instanceof Ulid ? $taskId : Ulid::fromString((string) $taskId));
+        $task = $this->locator->find($taskId instanceof Ulid ? $taskId : Ulid::fromString((string) $taskId));
         if (null === $task) {
             throw new NotFoundHttpException('No planned task at this IRI.');
         }

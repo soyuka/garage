@@ -7,7 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\PlannedTaskPart;
-use App\Repository\PlannedMaintenanceRepository;
+use App\Maintenance\OwnedPlannedTaskLocator;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -20,14 +20,14 @@ use Symfony\Component\Uid\Ulid;
 final class PlannedTaskPartProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly PlannedMaintenanceRepository $tasks,
+        private readonly OwnedPlannedTaskLocator $locator,
     ) {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?PlannedTaskPart
     {
         $taskId = $uriVariables['taskId'];
-        $task = $this->tasks->find($taskId instanceof Ulid ? $taskId : Ulid::fromString((string) $taskId));
+        $task = $this->locator->find($taskId instanceof Ulid ? $taskId : Ulid::fromString((string) $taskId));
         if (null === $task) {
             return null;
         }

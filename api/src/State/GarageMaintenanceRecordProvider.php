@@ -7,25 +7,23 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageMaintenanceRecord;
-use App\Repository\MaintenanceRecordRepository;
-use Symfony\Component\Uid\Ulid;
+use App\Maintenance\OwnedRecordLocator;
 
 /**
- * Dereferences /garage/maintenance-records/{id} by ULID. Returns null (→ 404) on no match.
+ * Dereferences /garage/maintenance-records/{id} by ULID. Returns null (→ 404) on no match or a foreign owner.
  *
  * @implements ProviderInterface<GarageMaintenanceRecord>
  */
 final class GarageMaintenanceRecordProvider implements ProviderInterface
 {
-    public function __construct(private readonly MaintenanceRecordRepository $records)
+    public function __construct(private readonly OwnedRecordLocator $records)
     {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?GarageMaintenanceRecord
     {
         $id = $uriVariables['id'];
-        $record = $this->records->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        return null === $record ? null : GarageMaintenanceRecord::fromEntity($record);
+        return GarageMaintenanceRecord::fromEntity($this->records->require((string) $id));
     }
 }

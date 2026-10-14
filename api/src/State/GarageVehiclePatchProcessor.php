@@ -9,10 +9,9 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
+use App\Documentation\OwnedVehicleLocator;
 use App\Mercure\DomainPublisher;
-use App\Repository\VehicleRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
 
@@ -27,7 +26,7 @@ use Symfony\Component\Uid\Ulid;
 final class GarageVehiclePatchProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
+        private readonly OwnedVehicleLocator $vehicles,
         private readonly DocumentManager $em,
         private readonly DomainPublisher $publisher,
     ) {
@@ -36,11 +35,7 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): GarageVehicle
     {
         $id = $uriVariables['id'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
-
-        if (null === $vehicle || $vehicle->isDeleted()) {
-            throw new NotFoundHttpException('No vehicle at this IRI.');
-        }
+        $vehicle = $this->vehicles->require($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
         // A usage reading is meaningless without its unit (km/mi/h) — and vice versa.
         if ((null === $data->usageValue) !== (null === $data->usageUnit)) {

@@ -9,10 +9,9 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\VehicleFactInput;
 use App\Entity\VehicleFact;
+use App\Documentation\OwnedVehicleLocator;
 use App\Garage\GarageVehicleView;
 use App\Maintenance\VehicleFactWriter;
-use App\Repository\VehicleRepository;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -27,7 +26,7 @@ use Symfony\Component\Uid\Ulid;
 final class GarageVehicleFactProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
+        private readonly OwnedVehicleLocator $vehicles,
         private readonly GarageVehicleView $view,
         private readonly VehicleFactWriter $writer,
     ) {
@@ -36,11 +35,7 @@ final class GarageVehicleFactProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): GarageVehicle
     {
         $id = $uriVariables['id'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
-
-        if (null === $vehicle) {
-            throw new NotFoundHttpException('No vehicle at this IRI.');
-        }
+        $vehicle = $this->vehicles->require($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
         $this->writer->set($vehicle, [VehicleFact::fromSource(
             key: $data->key,

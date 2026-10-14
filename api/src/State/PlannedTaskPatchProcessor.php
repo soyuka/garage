@@ -9,8 +9,8 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
 use App\Garage\UsageUnit;
 use App\Maintenance\PlannedMaintenanceStatus;
+use App\Maintenance\OwnedPlannedTaskLocator;
 use App\Mercure\DomainPublisher;
-use App\Repository\PlannedMaintenanceRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -26,7 +26,7 @@ use Symfony\Component\Uid\Ulid;
 final class PlannedTaskPatchProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PlannedMaintenanceRepository $tasks,
+        private readonly OwnedPlannedTaskLocator $locator,
         private readonly DocumentManager $em,
         private readonly DomainPublisher $publisher,
     ) {
@@ -35,7 +35,7 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): PlannedTask
     {
         $id = $uriVariables['id'];
-        $task = $this->tasks->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $task = $this->locator->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
         if (null === $task) {
             throw new NotFoundHttpException('No planned task at this IRI.');
