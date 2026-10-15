@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { vehicleShortName } from '../garage';
 import type { MyVehicle } from '../my-vehicles';
 import type { Vehicle } from '../types';
@@ -31,13 +32,31 @@ export function ContextToken({ vehicle, onRemove }: { vehicle: Vehicle; onRemove
 
 // Logged-in home, under the composer: one click opens a saved car with the composer scoped to it.
 export function MyVehicles({ vehicles, busy, onPick }: { vehicles: readonly MyVehicle[]; busy: boolean; onPick: (v: MyVehicle) => void }) {
-  if (vehicles.length === 0) return null;
+  const row = useRef<HTMLDivElement>(null);
+  const count = vehicles.length;
+  useEffect(() => {
+    const el = row.current;
+    if (!el) return;
+    const sync = () => {
+      if (el.scrollWidth - el.clientWidth - el.scrollLeft > 1) el.setAttribute('data-fade', '');
+      else el.removeAttribute('data-fade');
+    };
+    sync();
+    el.addEventListener('scroll', sync, { passive: true });
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener('scroll', sync);
+      observer.disconnect();
+    };
+  }, [count]);
+  if (count === 0) return null;
   return (
     <div className="home-pick" role="group" aria-labelledby="mine-label">
       <span id="mine-label" className="home-pick-label">
         Mes véhicules
       </span>
-      <div className="home-pick-row">
+      <div ref={row} className="home-pick-row">
         {vehicles.map((v) => (
           <button key={v.iri} type="button" className="btn btn--quiet" disabled={busy} onClick={() => onPick(v)}>
             {v.plate && <span className="plate m">{v.plate}</span>}

@@ -318,15 +318,16 @@ button {
   align-items: center;
   gap: clamp(48px, 8vh, 80px);
   padding: clamp(32px, 9vh, 96px) var(--gutter) 64px;
+  --home-col: 880px;
 }
 
 .home .history {
-  width: min(760px, 100%);
+  width: min(var(--home-col), 100%);
   margin-top: 0;
 }
 
 .home-hero {
-  width: min(760px, 100%);
+  width: min(var(--home-col), 100%);
   display: flex;
   flex-direction: column;
 }
@@ -402,25 +403,35 @@ button {
 
 .home-pick-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   min-width: 0;
-  overflow-x: auto;
   padding: 2px;
   margin: -2px;
 }
 
-.home-pick-row:not(.home-pick-row--wrap) {
-  padding-bottom: 6px;
-}
-
-.home-pick-row--wrap {
-  flex-wrap: wrap;
-  overflow: visible;
-}
-
-@media (pointer: coarse) {
+@media (max-width: 767px) {
   .home-pick-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 2px;
     scrollbar-width: none;
+  }
+  .home-pick-row::-webkit-scrollbar {
+    display: none;
+  }
+  .home-pick-row--wrap {
+    flex-wrap: wrap;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+  .home-pick-row > .btn--quiet {
+    scroll-snap-align: start;
+  }
+  .home-pick-row[data-fade] {
+    -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
+    mask-image: linear-gradient(to right, #000 calc(100% - 28px), transparent);
   }
 }
 
@@ -441,7 +452,7 @@ button {
 
 /* logged-out home: one cached answer drawn as a result sheet */
 .show {
-  width: min(1040px, 100%);
+  width: min(var(--home-col), 100%);
 }
 
 .show-sheet {
