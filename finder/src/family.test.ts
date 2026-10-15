@@ -95,6 +95,40 @@ describe('partFamily', () => {
       ['Moteur > Cylindre et piston', 'piston'],
       ['Moteur > Alimentation en air > Filtre à air / carter', 'air-filter'],
       ['Alimentation carburant > Boîtier/filtre à carburant', 'fuel-filter'],
+      ["Suspension d'essieu/Guidage des roues/Roues > Rotules > Rotule de suspension", 'outer-tie-rod-end'],
+      ['Direction > Barre de connexion / composants > Composants de barre de connexion', 'outer-tie-rod-end'],
+      ['Direction > Colonne de direction / arbre', 'steering-column'],
+      ['Direction > Suspension de la direction', 'steering-rack-bracket'],
+      ['Entraînement des roues > Arbre de transmission', 'axles'],
+      ['Entraînement des roues > Tripode', 'axles'],
+      ['Entraînement des roues > Soufflet', 'axles'],
+      ['Entraînement des roues > Rotules/ jeu', 'axles'],
+      ['Entraînement des essieux > Arbre de transmission > Arbre de transmission', 'drive-shaft'],
+      ["Suspension d'essieu/Guidage des roues/Roues > Moyeu de roue / fixation > Moyeu de roue", 'front-hub'],
+      ["Suspension d'essieu/Guidage des roues/Roues > Moyeu de roue / fixation > Roulement de roue", 'rear-wheel-bearing'],
+      ["Suspension d'essieu/Guidage des roues/Roues > Moyeu de roue / fixation > Bout d'essieu", 'axle-nut'],
+      ["Suspension d'essieu/Guidage des roues/Roues > Roue / fixation de la roue", 'wheel-stud'],
+      ['Moteur > Support du moteur > Support moteur', 'engine-mount'],
+      ['Moteur > Support du moteur > Amortisseurs de support moteur', 'engine-mount'],
+      ['Moteur > Distribution moteur > Arbre à cames', 'intake-cam'],
+      ['Moteur > Distribution moteur > Soupape / réglage de soupape > Soupapes / accessoires', 'intake-valve'],
+      ['Moteur > Distribution moteur > Soupape / réglage de soupape > Réglage de soupape', 'hla'],
+      ['Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Culbuteur/levier oscillant/pièce de press°', 'hla'],
+      ['Moteur > Culasse / pieces de montage > Guide de soupape / joint / réglage', 'valve-spring'],
+      ['Moteur > Alimentation en air > Papillon des gaz /-capteur > Corps papillon', 'itb-tb'],
+      ['Carburation > Mélange air-carburant > Papillon des gaz / tubulure / tuyau de dépression', 'itb-tb'],
+      ['Échappement > Turbocompresseur', 'efr-turbo'],
+      ['Moteur > Alimentation en air > Suralimentation > Compresseur/composants', 'efr-turbo'],
+      ['Échappement > Collecteur', 'stock-manifold'],
+      ['Échappement > Tuyaux', 'oem-mid-pipe'],
+      ['Alimentation carburant > Réservoir de carburant / accessoires', 'fuel-tank'],
+      ["Alimentation carburant > Unité d'alimentation complète", 'fuel-sender'],
+      ["Alimentation carburant > Pompe / accessoires > Pompe d'alimentation", 'fuel-sender'],
+      ['Embrayage / composants > Butée d’embrayage/butée hydraulique > Butée de débrayage', 'throwout-bearing'],
+      ['Commande à courroie > Accessoires', 'alternator-tensioner'],
+      ['Système électrique > Démarreur > Composants du démarreur', 'starter-gear'],
+      ['Dispositif de freinage > Frein à disque > Accessoires / composants', 'brake-hardware-1'],
+      ['Entraînement hybride/électrique > Refroidissement > Tuyauterie et brides', 'cooling-hardpipe'],
     ];
     for (const [path, mesh] of expected) expect([path, meshOf(real(path))]).toEqual([path, mesh]);
   });
@@ -129,18 +163,26 @@ describe('partFamily', () => {
       ["Moteur > Piston > Segment d'étanchéité", 'scraper-ring'],
       ['Moteur > Piston > Axe de piston', 'wrist-pin'],
       ['Moteur > Bielle', 'connecting-rod'],
+      ['Moteur > Système bielle-manivelle > Vilebrequin', 'crankshaft'],
+      ['Moteur > Arbre à cames d’échappement', 'exhaust-cam'],
+      ['Moteur > Soupapes d’échappement / accessoires', 'exhaust-valve'],
+      ['Suspension > Moyeu de roue arrière', 'rear-hub'],
+      ['Freinage > Accessoires / composants arrière', 'rear-pad-hardware'],
     ];
     for (const [path, mesh] of expected) expect([path, meshOf(cat(path))]).toEqual([path, mesh]);
   });
 
   it('keeps look-alike categories off the wrong mesh', () => {
     for (const path of [
-      "Suspension d'essieu/Guidage des roues/Roues > Rotules > Rotule de suspension",
-      'Entraînement des roues > Rotules/ jeu',
       'Outils spéciaux > Outils spéciaux suspension d’essieu/guidage des roues/roues > Rotules',
       'Moteur > Système bielle-manivelle > Vilebrequin > Poulies de vilebrequin',
+      'Moteur > Système bielle-manivelle > Vilebrequin > Coussinet de vilebrequin',
+      "Suspension d'essieu/Guidage des roues/Roues > Fusée d'essieu / kit de réparation > Fusée d'essieu",
+      'Alimentation carburant > Soupapes',
+      'Moteur > Joints > Joint de tige de soupape',
+      'Moteur > Épuration des gaz d\'échappement > Recyclage des gaz d\'échappement > Soupape, recyclage des gaz d\'échappement',
+      'Entraînement des essieux > Arbre de transmission > Paliers/suspension',
       'Moteur > Système bielle-manivelle > Bielle > Coussinet de bielle',
-      'Moteur > Support du moteur > Amortisseurs de support moteur',
       'Échappement > Pièces de montage > Pièces détachées de montage > Amortisseur-caoutchouc',
       'Échappement > Pièces de montage > Pièces détachées de montage > Ressort',
       'Nettoyage des vitres > Pompe-à-eau / essuie-glaces',
@@ -160,6 +202,7 @@ describe('partFamily', () => {
 
   it('captions a family-generic shape as an approximation, a like-for-like part not', () => {
     expect(partFamily(real('Direction > Rotules'))).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: false });
+    expect(partFamily(real("Suspension d'essieu/Guidage des roues/Roues > Rotules > Rotule de suspension"))).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: true });
     expect(partFamily(cat('Direction > Rotule axiale'))).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: true });
     expect(partFamily(real("Allumage / préchauffage > Bougie d'allumage"))).toEqual({ kind: 'mesh', mesh: 'spark-plug', approximate: false });
     expect(partFamily(real("Suspension d'essieu/Guidage des roues/Roues > Bras oscillant / suspension > Bras (transversal, longitudinal, oblique)"))).toMatchObject({ approximate: true });
@@ -172,6 +215,12 @@ describe('partFamily', () => {
 });
 
 describe('mesh table', () => {
+  it('maps a Mazda tree leaf to a mesh, never to a missing file', () => {
+    const shipped = new Set(Object.keys(import.meta.glob('../public/parts/*.glb', { query: '?url' })).map((k) => k.split('/').at(-1)));
+    const mapped = tree.map((c) => partFamily({ path: c.path, name: c.name })).filter((f) => f.kind === 'mesh');
+    expect(mapped.filter((f) => !shipped.has(meshFile(f.mesh)))).toEqual([]);
+  });
+
   it('points every rule at a mesh that ships in public/parts', () => {
     const shipped = new Set(Object.keys(import.meta.glob('../public/parts/*.glb', { query: '?url' })).map((k) => k.split('/').at(-1)));
     expect(MESHES.filter((id) => !shipped.has(meshFile(id)))).toEqual([]);

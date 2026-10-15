@@ -30,17 +30,28 @@ export interface MeshRule {
 
 export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /./, within: /outils|boite de vitesse|nettoyage des vitres|carburateur/, mesh: null },
+  { leaf: /^composants du demarreur/, mesh: 'starter-gear' },
+  { leaf: /^composants de barre de connexion/, mesh: 'outer-tie-rod-end' },
   { leaf: /^(joint|kit de reparation|pieces? de fixation|vis\b|coussinet|regulateur|contacteur|composants)/, mesh: null },
   { leaf: /^tendeur de chaine|chaine de/, mesh: null },
 
   { leaf: /plaquette/, mesh: 'front-brake-pad', variants: [{ when: 'rear', mesh: 'rear-brake-pad' }] },
   { leaf: /maitre-cylindre de frein|servofrein/, mesh: 'brake-master-booster' },
 
-  { leaf: /rotule de suspension|rotule de bras|rotules?\/ ?jeu/, mesh: null },
-  { leaf: /rotule axiale/, mesh: 'outer-tie-rod-end' },
+  { leaf: /rotules?\/ ?jeu|^tripode|^soufflet$/, within: /entrainement des roues/, mesh: 'axles' },
+  { leaf: /rotule de suspension|rotule de bras|rotule axiale/, mesh: 'outer-tie-rod-end' },
   { leaf: /barre de connexion|barre d'accouplement|biellette de direction/, mesh: 'outer-tie-rod-end' },
   { leaf: /rotule/, within: /direction/, mesh: 'outer-tie-rod-end', approximate: false },
   { leaf: /cremaillere/, mesh: 'steering-rack' },
+  { leaf: /^suspension de la direction/, mesh: 'steering-rack-bracket' },
+  { leaf: /^colonne de direction/, mesh: 'steering-column' },
+
+  { leaf: /^arbre de transmission$/, within: /entrainement des roues/, mesh: 'axles' },
+  { leaf: /^arbre de transmission$/, within: /entrainement des essieux/, mesh: 'drive-shaft' },
+  { leaf: /^moyeu de roue/, mesh: 'front-hub', variants: [{ when: 'rear', mesh: 'rear-hub' }] },
+  { leaf: /roulement de roue/, mesh: 'rear-wheel-bearing' },
+  { leaf: /^bout d'essieu/, mesh: 'axle-nut' },
+  { leaf: /^roue \/ fixation de la roue/, mesh: 'wheel-stud' },
 
   { leaf: /butee d'amortisseur|silent-?bloc d'amortisseur|palier de coupelle/, mesh: 'front-shock-bushing' },
   { leaf: /^pieces de montage$/, within: /jambe de suspension\/amortisseur/, mesh: 'front-shock-bushing' },
@@ -96,6 +107,23 @@ export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /axe de piston/, mesh: 'wrist-pin', approximate: false },
   { leaf: /piston/, mesh: 'piston' },
   { leaf: /^bielles?\b/, mesh: 'connecting-rod' },
+  { leaf: /^vilebrequin$/, mesh: 'crankshaft' },
+
+  { leaf: /^support moteur|amortisseurs? de support moteur/, mesh: 'engine-mount' },
+  { leaf: /^arbre a cames/, mesh: 'intake-cam', variants: [{ when: /echappement/, mesh: 'exhaust-cam' }] },
+  { leaf: /^soupapes?\b.*accessoires/, within: /distribution|moteur/, mesh: 'intake-valve', variants: [{ when: /echappement/, mesh: 'exhaust-valve' }] },
+  { leaf: /^reglage de soupape|^culbuteur/, mesh: 'hla' },
+  { leaf: /^guide de soupape/, mesh: 'valve-spring' },
+  { leaf: /^corps papillon|^papillon des gaz/, mesh: 'itb-tb' },
+  { leaf: /^turbocompresseur|^compresseur\/composants/, mesh: 'efr-turbo' },
+  { leaf: /^collecteur$/, within: /^echappement/, mesh: 'stock-manifold' },
+  { leaf: /^tuyaux$/, within: /^echappement/, mesh: 'oem-mid-pipe' },
+  { leaf: /^reservoir de carburant/, mesh: 'fuel-tank' },
+  { leaf: /^unite d'alimentation|^pompe d'alimentation/, mesh: 'fuel-sender' },
+  { leaf: /^butee de debrayage/, mesh: 'throwout-bearing' },
+  { leaf: /^accessoires$/, within: /commande a courroie/, mesh: 'alternator-tensioner' },
+  { leaf: /^accessoires \/ composants/, within: /frein|freinage/, mesh: 'brake-hardware-1', variants: [{ when: 'rear', mesh: 'rear-pad-hardware' }] },
+  { leaf: /^tuyauterie et brides$/, mesh: 'cooling-hardpipe' },
 ];
 
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = []): Family {
