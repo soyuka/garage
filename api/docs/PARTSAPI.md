@@ -56,12 +56,14 @@ merged: on the Mazda 6 the 85 mm and 93 mm filters both cross to MAZDA LF10-14-3
 spends at most 8 criteria + 1 crosses per initial physical cluster, then nothing once cached. A quota refusal
 degrades the answer (`narrowed: false`, `degradedReason`) instead of failing it.
 
-## Wanted next (user can provide tokens)
+## Browse methods (verified live 2026-10-15)
 
-| Method | Why |
-|---|---|
-| getModels | step 2 — brand/model browse entry |
-| getCars | step 3 — modifications + kType for browse entry |
+| Method | Params | Response |
+|---|---|---|
+| getModels | `makeId`, `carType` (PC\|CV), `lang` (`manuId` is rejected: "Error converting request parameters") | `[{makeId, modelId, modelName, shortModelName, shortModelName2, yearsFrom, yearsTo}]`, camelCase, dates RFC 1123 (`Thu, 01 Aug 2002 00:00:00 GMT`). Mazda (72) = 247 rows. The same modelId can repeat with a different name (6987: "6 ULTRA…" / "ATENZA…") and some rows are exact duplicates: `PartsCatalog::models()` collapses on modelId + modelName. |
+| getCars | `makeId`, `modelId`, `carType`, `lang` | `[{BODY, CAPACITY "1999/2.0 l", CAR_ID, CAR_NAME, CAR_TYPES, ENGINE_TYPE, FULL_MODEL_NAME, MAKE_ID, MAKE_NAME, MODEL_ID, MODEL_NAME, POWER_KW "104.0000", POWER_PS "141.0000", YEAR_START, YEAR_END}]`, UPPER_SNAKE, same date format. Mazda 6 Hatchback GG (4887) = 14 rows. `CAPACITY` is `cm3/litres`, mapped to `capacityCc`. |
+
+Fixtures: `getModels_72_PC.json`, `getCars_72_4887_PC.json` (real responses). Dates are exposed as `yyyy-mm`.
 
 ## Full catalog (from partsapi.ru store, for reference)
 

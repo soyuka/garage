@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Dto\CarsInput;
+use App\PartsApi\PartsApiDate;
 use App\State\CarCollectionProvider;
 use App\State\CarsProcessor;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -19,7 +20,6 @@ use Symfony\Component\Validator\Constraints as Assert;
  * A TecDoc vehicle modification (step 3). Its id is the kType used by all parts/fluids
  * endpoints. Plate lookups resolve to a Car id directly — this browse route is the
  * alternative entry when no plate is available.
- * Answers 501 until PARTSAPI_KEY_getCars is configured — see the root TODO.md.
  */
 #[ApiResource(
     operations: [
@@ -42,7 +42,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     mcp: [
         'list_cars' => new McpToolCollection(
             title: 'List Vehicle Variants',
-            description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts and fluids tools. Currently answers an error until the getCars API token is configured.',
+            description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts and fluids tools.',
             input: CarsInput::class,
             processor: CarsProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
@@ -55,17 +55,43 @@ final class Car
         #[ApiProperty(identifier: true, description: 'TecDoc kType (carId) — key for part categories, articles and fill volumes')]
         public int $id,
         public string $name,
+        public ?string $fullName = null,
+        public ?string $body = null,
+        public ?string $engineType = null,
+        #[ApiProperty(description: 'Engine displacement in cm3')]
+        public ?int $capacityCc = null,
+        public ?int $powerKw = null,
+        public ?int $powerPs = null,
+        #[ApiProperty(description: 'First production month, yyyy-mm')]
+        public ?string $yearFrom = null,
+        #[ApiProperty(description: 'Last production month, yyyy-mm; null while still produced')]
+        public ?string $yearTo = null,
     ) {
     }
 
     /**
      * @param array<string, mixed> $row
-     *
-     * TODO field names unverified — no getCars token yet. Guessed from getMakes's
-     * camelCase convention ({makeId, makeName}, verified live). Adjust on first live call.
      */
     public static function fromPartsApi(array $row): self
     {
-        return new self((int) ($row['carId'] ?? 0), (string) ($row['carName'] ?? ''));
+        $capacity = (string) ($row['CAPACITY'] ?? '');
+
+        return new self(
+            (int) ($row['CAR_ID'] ?? 0),
+            (string) ($row['CAR_NAME'] ?? ''),
+            self::text($row['FULL_MODEL_NAME'] ?? null),
+            self::text($row['BODY'] ?? null),
+            self::text($row['ENGINE_TYPE'] ?? null),
+            1 === preg_match('#^(\d+)#', $capacity, $m) ? (int) $m[1] : null,
+            isset($row['POWER_KW']) && is_numeric($row['POWER_KW']) ? (int) round((float) $row['POWER_KW']) : null,
+            isset($row['POWER_PS']) && is_numeric($row['POWER_PS']) ? (int) round((float) $row['POWER_PS']) : null,
+            PartsApiDate::yearMonth($row['YEAR_START'] ?? null),
+            PartsApiDate::yearMonth($row['YEAR_END'] ?? null),
+        );
+    }
+
+    private static function text(mixed $value): ?string
+    {
+        return \is_string($value) && '' !== $value ? $value : null;
     }
 }

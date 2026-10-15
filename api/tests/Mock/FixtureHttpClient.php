@@ -106,6 +106,8 @@ final class FixtureHttpClient implements HttpClientInterface
 
         $file = match ($method) {
             'getMakes' => sprintf('getMakes_%s.json', $query['carType'] ?? 'PC'),
+            'getModels' => sprintf('getModels_%s_%s.json', $query['makeId'] ?? '', $query['carType'] ?? ''),
+            'getCars' => sprintf('getCars_%s_%s_%s.json', $query['makeId'] ?? '', $query['modelId'] ?? '', $query['carType'] ?? ''),
             'getSearchTree' => sprintf('getSearchTree_%s_%s.json', $query['carId'] ?? '', $query['carType'] ?? ''),
             'getArticles' => sprintf('getArticles_%s_%s_%s.json', $query['carId'] ?? '', $query['carType'] ?? '', $query['strId'] ?? ''),
             'GetFillVolumes' => sprintf('GetFillVolumes_%s.json', $query['carId'] ?? ''),

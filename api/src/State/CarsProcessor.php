@@ -9,11 +9,13 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Car;
 use App\Catalog\PartsCatalog;
 use App\Dto\CarsInput;
+use App\Mcp\CappedResult;
+use Mcp\Schema\Result\CallToolResult;
 
 /**
  * MCP `list_cars` tool.
  *
- * @implements ProcessorInterface<CarsInput, list<Car>>
+ * @implements ProcessorInterface<CarsInput, CallToolResult>
  */
 final class CarsProcessor implements ProcessorInterface
 {
@@ -21,11 +23,15 @@ final class CarsProcessor implements ProcessorInterface
     {
     }
 
-    /**
-     * @return list<Car>
-     */
-    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): array
+    public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        return $this->catalog->cars($data->makeId, $data->modelId, CarTypeResolver::fromString($data->carType));
+        $cars = $this->catalog->cars($data->makeId, $data->modelId, CarTypeResolver::fromString($data->carType));
+
+        return CappedResult::of(
+            array_map(static fn (Car $car): array => (array) $car, $cars),
+            'vehicle variants',
+            null,
+            $data->offset,
+        );
     }
 }

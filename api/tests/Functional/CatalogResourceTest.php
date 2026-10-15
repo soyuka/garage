@@ -34,21 +34,45 @@ final class CatalogResourceTest extends AppTestCase
         $this->assertSame('IVECO', $response->toArray()['hydra:member'][0]['name']);
     }
 
-    public function testListModelsAnswers501UntilTokenIsProvided(): void
+    public function testListModelsReturnsTheMazdaLines(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/makes/55/models');
+        $response = $client->request('GET', '/makes/72/models?carType=PC');
 
-        $this->assertResponseStatusCodeSame(501);
-        $this->assertJsonContains(['detail' => 'No partsapi.ru API key configured for method "getModels" (env PARTSAPI_KEY_getModels).']);
+        $this->assertResponseIsSuccessful();
+
+        $members = $response->toArray()['hydra:member'];
+        $row = array_values(array_filter($members, static fn (array $m): bool => 4887 === $m['id']))[0] ?? null;
+        $this->assertNotNull($row);
+        $this->assertSame(['name' => '6 Hatchback (GG)', 'yearFrom' => '2002-08', 'yearTo' => '2008-12'], array_intersect_key($row, array_flip(['name', 'yearFrom', 'yearTo'])));
+        $keys = array_map(static fn (array $m): string => $m['id'].'|'.$m['name'], $members);
+        $this->assertSame($keys, array_values(array_unique($keys)), 'rows are deduplicated on modelId + modelName');
+        $this->assertCount(1, array_filter($members, static fn (array $m): bool => 6987 === $m['id'] && '6 ULTRA A trois volumes (GH)' === $m['name']));
     }
 
-    public function testListCarsAnswers501UntilTokenIsProvided(): void
+    public function testListCarsReturnsTheMazda6Variants(): void
     {
         $client = static::createClient();
-        $client->request('GET', '/makes/55/models/9523/cars');
+        $response = $client->request('GET', '/makes/72/models/4887/cars?carType=PC');
 
-        $this->assertResponseStatusCodeSame(501);
-        $this->assertJsonContains(['detail' => 'No partsapi.ru API key configured for method "getCars" (env PARTSAPI_KEY_getCars).']);
+        $this->assertResponseIsSuccessful();
+        $this->assertSame(14, $response->toArray()['hydra:totalItems']);
+        $this->assertJsonContains([
+            'hydra:member' => [
+                ['id' => 16680, 'name' => '1.8', 'capacityCc' => 1798],
+                [
+                    'id' => 16681,
+                    'name' => '2.0 (GGES)',
+                    'fullName' => 'MAZDA 6 Hatchback (GG) 2.0 (GGES)',
+                    'body' => 'Hatchback',
+                    'engineType' => 'Petrol Engine',
+                    'capacityCc' => 1999,
+                    'powerKw' => 104,
+                    'powerPs' => 141,
+                    'yearFrom' => '2002-08',
+                    'yearTo' => '2007-08',
+                ],
+            ],
+        ]);
     }
 }

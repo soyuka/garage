@@ -90,13 +90,19 @@ final class McpServerTest extends AppTestCase
      */
     public function testMissingApiKeySurfacesAsAStructuredResultWithoutLeakingTheEnvVar(): void
     {
-        $client = static::createClient();
-        $sessionId = $this->initialize($client);
+        $_SERVER['PARTSAPI_KEY_getModels'] = $_ENV['PARTSAPI_KEY_getModels'] = '';
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'list_models',
-            'arguments' => ['makeId' => 55],
-        ], 5);
+        try {
+            $client = static::createClient();
+            $sessionId = $this->initialize($client);
+
+            $result = $this->call($client, $sessionId, 'tools/call', [
+                'name' => 'list_models',
+                'arguments' => ['makeId' => 55],
+            ], 5);
+        } finally {
+            $_SERVER['PARTSAPI_KEY_getModels'] = $_ENV['PARTSAPI_KEY_getModels'] = 'test-key';
+        }
 
         $this->assertArrayNotHasKey('error', $result, 'a missing key is a tool error, not a protocol error');
 

@@ -215,4 +215,42 @@ final class McpCatalogTest extends AppTestCase
         // filters carry no fluid spec
         $this->assertSame([], $content['fluids']);
     }
+
+    public function testListModelsReturnsMappedRows(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_models',
+            'arguments' => ['makeId' => 72, 'carType' => 'PC', 'search' => '6 Hatchback'],
+        ], 2)['result']['structuredContent'];
+
+        $this->assertSame('ok', $content['status']);
+        $this->assertArrayNotHasKey('@id', $content['items'][0]);
+        $row = array_values(array_filter($content['items'], static fn (array $m): bool => 4887 === $m['id']))[0] ?? null;
+        $this->assertNotNull($row);
+        $this->assertSame('6 Hatchback (GG)', $row['name']);
+        $this->assertSame('2002-08', $row['yearFrom']);
+    }
+
+    public function testListCarsReturnsMappedRows(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_cars',
+            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC'],
+        ], 2)['result']['structuredContent'];
+
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame(14, $content['totalItems']);
+        $row = array_values(array_filter($content['items'], static fn (array $c): bool => 16681 === $c['id']))[0] ?? null;
+        $this->assertNotNull($row);
+        $this->assertSame('2.0 (GGES)', $row['name']);
+        $this->assertSame(141, $row['powerPs']);
+        $this->assertSame('2002-08', $row['yearFrom']);
+        $this->assertSame('2007-08', $row['yearTo']);
+    }
 }

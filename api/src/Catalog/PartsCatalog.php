@@ -42,25 +42,29 @@ final class PartsCatalog
     }
 
     /**
-     * @return list<Model>
+     * Upstream repeats rows (same modelId and modelName), so they are collapsed on that pair.
      *
-     * TODO params unverified — no getModels token yet (see the root TODO.md).
+     * @return list<Model>
      */
     public function models(int $makeId, CarType $carType): array
     {
-        $rows = $this->client->fetch('getModels', ['manuId' => $makeId, 'carType' => $carType->value, 'lang' => $this->lang]);
+        $rows = $this->client->fetch('getModels', ['makeId' => $makeId, 'carType' => $carType->value, 'lang' => $this->lang]);
 
-        return array_map(Model::fromPartsApi(...), $rows);
+        $models = [];
+        foreach ($rows as $row) {
+            $model = Model::fromPartsApi($row);
+            $models[$model->id.'|'.$model->name] ??= $model;
+        }
+
+        return array_values($models);
     }
 
     /**
      * @return list<Car>
-     *
-     * TODO params unverified — no getCars token yet (see the root TODO.md).
      */
     public function cars(int $makeId, int $modelId, CarType $carType): array
     {
-        $rows = $this->client->fetch('getCars', ['manuId' => $makeId, 'modelId' => $modelId, 'carType' => $carType->value, 'lang' => $this->lang]);
+        $rows = $this->client->fetch('getCars', ['makeId' => $makeId, 'modelId' => $modelId, 'carType' => $carType->value, 'lang' => $this->lang]);
 
         return array_map(Car::fromPartsApi(...), $rows);
     }
