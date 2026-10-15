@@ -1,3 +1,4 @@
+import { formatPlateInput, isPlate } from './format';
 import { vehicleShortName } from './garage';
 import { outcomeOf, type JournalRow } from './journal';
 import { parseRoute, routeToHash } from './route';
@@ -44,7 +45,7 @@ export function historyEntries(rows: readonly JournalRow[]): HistoryEntry[] {
       continue;
     }
     if (out.length === MAX) continue;
-    const entry: HistoryEntry = { id: row.id, ids: [row.id], hash, input: label(row), vehicle: { plate: row.vehicle?.plate ?? null, name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt };
+    const entry: HistoryEntry = { id: row.id, ids: [row.id], hash, input: label(row), vehicle: { plate: sivPlate(row.vehicle?.plate ?? null), name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt };
     seen.set(hash, entry);
     out.push(entry);
   }
@@ -74,4 +75,10 @@ export function formatRelative(iso: string, now: Date = new Date()): string {
   if (days === 1) return 'hier';
   if (days < 7) return `il y a ${days} jours`;
   return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+}
+
+function sivPlate(plate: string | null): string | null {
+  if (plate === null) return null;
+  const formatted = formatPlateInput(plate);
+  return isPlate(formatted) ? formatted : plate;
 }

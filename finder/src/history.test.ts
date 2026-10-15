@@ -49,6 +49,11 @@ describe('historyEntries', () => {
     expect(search!.ids).toEqual(['/agent/turns/1', '/agent/turns/4']);
   });
 
+  it('prints the plate in the SIV form whatever the stored casing', () => {
+    const [entry] = historyEntries(mapRows({ member: [row('9', '2026-10-15T10:00:00+02:00', { route: 'p/XB301ZB', vehicle: { plate: 'XB301ZB', carId: 19107, carType: 'PC', make: 'MAZDA', model: 'MAZDA6' } })] }));
+    expect(entry?.vehicle.plate).toBe('XB-301-ZB');
+  });
+
   it('caps the list', () => {
     const many = mapRows({ member: Array.from({ length: 30 }, (_, i) => row(String(i), `2026-10-${String(i % 28 + 1).padStart(2, '0')}T10:00:00+02:00`, { route: `p/XB-301-ZB/c/${100000 + i}` })) });
     expect(historyEntries(many)).toHaveLength(10);
