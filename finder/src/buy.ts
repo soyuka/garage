@@ -14,6 +14,7 @@ export function buyLinks({ brand, number }: BuyReference): BuyLink[] {
   return [
     { shop: 'Oscaro', url: `https://www.oscaro.com/fr/search?q=${q}` },
     { shop: 'Autodoc', url: `https://www.auto-doc.fr/search?keyword=${q}` },
+    { shop: 'Mister-Auto', url: `https://www.mister-auto.com/rechercher/?q=${q}` },
     { shop: 'Rechercher sur le web', url: `https://www.google.com/search?q=${web}` },
   ];
 }
