@@ -6,7 +6,7 @@ import type { Category } from '../types';
 import { useMedia } from './hooks';
 
 interface Props {
-  variant: 'dock';
+  variant: 'dock' | 'home';
   categories: readonly Category[] | null;
   loading?: boolean;
   initial: string;

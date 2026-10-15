@@ -34,7 +34,7 @@ export const APPROXIMATE_CAPTION = 'Forme type de la famille, pas la pièce exac
 export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, notes, children }: Props) {
   return (
     <div className="sheet">
-      <div className="sheet-label m">{viewLabel}</div>
+      {viewLabel && <div className="sheet-label m">{viewLabel}</div>}
       {notes && <div className="sheet-notes">{notes}</div>}
       {family.kind === 'none' ? (
         <div className="sheet-placeholder" style={overlayWidth ? { right: overlayWidth } : undefined}>

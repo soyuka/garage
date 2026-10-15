@@ -1,4 +1,4 @@
-import { formatRelative, formatWhen, historyEntries, withoutRemoved } from './history';
+import { formatRelative, formatWhen, historyEntries, historyFor, withoutRemoved } from './history';
 import { mapRows } from './journal';
 
 const row = (id: string, startedAt: string, extra: Record<string, unknown>) => ({
@@ -104,5 +104,13 @@ describe('history vehicle name', () => {
 
   it('falls back to the kType only when nothing else names the car', () => {
     expect(name({ plate: null, carId: 16182, carType: 'PC', make: null, model: null })).toBe('kType 16182');
+  });
+});
+
+describe('historyFor', () => {
+  it('keeps the searches made on this vehicle only', () => {
+    expect(historyFor(historyEntries(rows), 'XB-301-ZB').map((e) => e.id)).toEqual(['/agent/turns/1']);
+    expect(historyFor(historyEntries(rows), 'k16182-PC').map((e) => e.id)).toEqual(['/agent/turns/2']);
+    expect(historyFor(historyEntries(rows), 'AB-123-CD')).toEqual([]);
   });
 });

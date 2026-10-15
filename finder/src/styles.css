@@ -312,39 +312,167 @@ button {
 
 /* ── entry ─────────────────────────────────────────────────────────────── */
 
-.entry-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  justify-items: center;
-  gap: 32px;
-  align-content: start;
-  padding: clamp(32px, 8vh, 88px) 16px 40px;
-}
-
-.entry {
-  width: min(720px, 100%);
+.home {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: clamp(48px, 8vh, 80px);
+  padding: clamp(32px, 9vh, 96px) var(--gutter) 64px;
 }
 
-.entry h1 {
-  font-size: 32px;
+.home .history {
+  width: min(760px, 100%);
+  margin-top: 0;
+}
+
+.home-hero {
+  width: min(760px, 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.home-hero h1 {
+  font-size: clamp(28px, 1.6vw + 16px, 40px);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.1;
+  text-wrap: balance;
 }
 
 .entry-lede {
+  margin-top: 12px;
+  max-width: 64ch;
   color: var(--mute);
   font-size: 15px;
-  margin-top: -6px;
   text-wrap: pretty;
 }
 
+.home-hero .intake {
+  margin-top: 28px;
+  gap: 6px;
+}
+
+.intake--home input[type='search'] {
+  height: 52px;
+  padding: 0 16px;
+  font-size: 17px;
+}
+
+.intake--home .intake-go {
+  height: 42px;
+  padding: 0 18px;
+}
+
+.home-hero > .field-error,
+.home-hero > .dock-status,
+.home-hero > .dock-line {
+  margin-top: 8px;
+}
 
 .entry-panel {
-  padding-top: 12px;
+  padding-top: 20px;
+}
+
+/* under the home composer: saved cars and examples, label column + one row each */
+.home-picks {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-pick {
+  display: grid;
+  grid-template-columns: 7.5em minmax(0, 1fr);
+  align-items: center;
+  column-gap: 12px;
+  min-width: 0;
+}
+
+.home-pick--pending {
+  min-height: 32px;
+}
+
+.home-pick-label {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--mute);
+}
+
+.home-pick-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 2px;
+  margin: -2px;
+}
+
+.home-pick-row:not(.home-pick-row--wrap) {
+  padding-bottom: 6px;
+}
+
+.home-pick-row--wrap {
+  flex-wrap: wrap;
+  overflow: visible;
+}
+
+@media (pointer: coarse) {
+  .home-pick-row {
+    scrollbar-width: none;
+  }
+}
+
+.home-pick-row .btn--quiet {
+  flex: none;
+  gap: 8px;
+  font-weight: 400;
+}
+
+.home-pick-row .btn--quiet:has(.plate) {
+  padding-left: 4px;
+}
+
+.home-pick-row .plate {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
+/* logged-out home: one cached answer drawn as a result sheet */
+.show {
+  width: min(1040px, 100%);
+}
+
+.show-sheet {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 440px;
+  border: 1px solid var(--ink);
+  background: var(--bg);
+  overflow: hidden;
+}
+
+.show-canvas {
+  position: relative;
+  min-height: 360px;
+}
+
+.show-canvas > canvas,
+.show-canvas > div {
+  position: absolute !important;
+  inset: 0;
+}
+
+.show-canvas canvas {
+  touch-action: pan-y !important;
+}
+
+.tb.tb--show {
+  position: static;
+  width: auto;
+  border: 0;
+  border-left: 1.5px solid var(--ink);
 }
 
 .field-label {
@@ -1352,15 +1480,13 @@ button {
   overflow-wrap: anywhere;
 }
 
-.dock-quick,
-.dock-starters {
+.dock-quick {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.dock-quick .btn--quiet,
-.dock-starters .btn--quiet {
+.dock-quick .btn--quiet {
   font-weight: 400;
 }
 
@@ -1417,54 +1543,6 @@ button {
 
 .intake--dock .ctx + input[type='search'] {
   padding-left: 10px;
-}
-
-/* logged-in home: saved cars under the composer, one scrolling line */
-.dock-mine {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.dock-mine-label {
-  flex: none;
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  color: var(--mute);
-}
-
-.dock-mine-row {
-  display: flex;
-  gap: 6px;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--hair) transparent;
-  padding: 2px;
-  margin: -2px;
-}
-
-@media (pointer: coarse) {
-  .dock-mine-row {
-    scrollbar-width: none;
-  }
-}
-
-.dock-mine-row .btn--quiet {
-  flex: none;
-  gap: 8px;
-  font-weight: 400;
-}
-
-.dock-mine-row .btn--quiet:has(.plate) {
-  padding-left: 4px;
-}
-
-.dock-mine-row .plate {
-  padding: 2px 6px;
-  font-size: 12px;
 }
 
 .dock .field-error {
@@ -1608,6 +1686,9 @@ button {
 }
 
 .history-remove {
+  border: 0;
+  background: none;
+  cursor: pointer;
   position: absolute;
   top: 50%;
   right: 4px;
@@ -1690,6 +1771,21 @@ button {
 .history .tag[data-tone='warn'] {
   background: var(--warn-tint);
   color: var(--warn);
+}
+
+.history--compact a {
+  grid-template-columns: minmax(0, 1fr) auto 7.5em;
+}
+
+.sheet-message:has(.history) {
+  width: min(560px, 100%);
+  max-width: none;
+}
+
+.sheet-message .history {
+  width: 100%;
+  margin-top: 24px;
+  text-align: left;
 }
 
 .history-loading {
@@ -2139,6 +2235,17 @@ button {
 }
 
 @media (max-width: 1099px) {
+  .show-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .show-canvas {
+    min-height: 0;
+    height: 320px;
+  }
+  .tb.tb--show {
+    border-left: 0;
+    border-top: 1.5px solid var(--ink);
+  }
   .sheet-wrap {
     display: flex;
     flex-direction: column;
@@ -2157,6 +2264,13 @@ button {
 @media (max-width: 759px) {
   :root {
     --gutter: 16px;
+  }
+  .home-pick {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+  }
+  .show-canvas {
+    height: 260px;
   }
   .app {
     grid-template-rows: auto minmax(0, 1fr) auto;
@@ -2283,9 +2397,6 @@ button {
   }
   .facts div:nth-child(-n + 2) {
     border-bottom: 1px solid var(--ink);
-  }
-  .entry h1 {
-    font-size: 28px;
   }
   .foot {
     padding: 8px var(--gutter);

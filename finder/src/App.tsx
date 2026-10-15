@@ -5,7 +5,7 @@ import { ApiError } from './api';
 import { liveApi, newTrace, type FinderApi, type Trace } from './client';
 import { partFamily } from './family';
 import { resultSummary } from './followup';
-import { historyEntries, type HistoryEntry } from './history';
+import { historyEntries, historyFor, type HistoryEntry } from './history';
 import { STARTERS } from './home';
 import { listMyVehicles, pickTarget, type MyVehicle } from './my-vehicles';
 import { MediaError, pickSharpest, prepareImage, sampleVideo, type Frame } from './media';
@@ -17,9 +17,10 @@ import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
-import { CardResult, Entry, VinResult } from './ui/Entry';
+import { CardResult, VinResult } from './ui/Entry';
 import { SaveVehicle } from './ui/Garage';
 import { History } from './ui/History';
+import { Home, Showcase } from './ui/Home';
 import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Async, type Navigate } from './ui/hooks';
 import { Journal } from './ui/Journal';
 import { useAgentTurn, type AgentTurn, type AskOptions } from './ui/useAgentTurn';
@@ -37,7 +38,7 @@ const viewLabel = (family: Family, category: Category | null): string => {
   if (family.kind === 'filter') return `VUE 3D — ${(category?.label ?? 'filtre').toUpperCase()}`;
   if (family.kind === 'brake') return FAMILY_VIEW[family.axle] ?? 'VUE 3D';
   if ((family.kind === 'generic' || family.kind === 'mesh') && category) return `VUE 3D — ${category.label.toUpperCase()}`;
-  return category ? category.label.toUpperCase() : 'PLANCHE';
+  return category ? category.label.toUpperCase() : '';
 };
 
 const MAX_FRAMES = 3;
@@ -113,7 +114,7 @@ function Finder({ api }: { api: FinderApi }) {
     if (agentActive && !held && !agentOwns && route.view === 'result' && turn.state.parts.length > 0) navigate({ view: 'vehicle', ref: route.ref });
   }, [held, turn.state.parts]);
 
-  const history = useAsync<HistoryEntry[]>(route.view === 'entry' && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.history()));
+  const history = useAsync<HistoryEntry[]>((route.view === 'entry' || route.view === 'vehicle') && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.history()));
   const mine = useAsync<MyVehicle[]>(route.view === 'entry' && !agentActive && authed ? 'mine' : null, listMyVehicles);
 
   useEffect(() => {
@@ -252,6 +253,13 @@ function Finder({ api }: { api: FinderApi }) {
 
   const busyReading = panel.kind === 'reading';
   const entry = (route.view === 'entry' && !agentActive) || vehicle.status === 'error';
+  // Leaving the home unmounts its composer: the docked one takes the focus so typing carries on.
+  const wasEntry = useRef(entry);
+  const handoff = wasEntry.current && !entry;
+  useEffect(() => {
+    wasEntry.current = entry;
+  }, [entry]);
+  const reducedMotion = useReducedMotion();
   const cats = categories.status === 'ok' ? categories.data : null;
 
   const quick: QuickAction[] = [];
@@ -317,27 +325,31 @@ function Finder({ api }: { api: FinderApi }) {
       note={note}
       slot={setSlot}
       quick={quick}
-      starters={entry && mine.status !== 'loading' ? STARTERS : []}
-      context={entry ? null : v}
-      mine={entry && mine.status === 'ok' ? mine.data : []}
+      context={v}
       onClearContext={() => openVehicle('')}
-      onPick={pickMine}
-      categories={entry ? null : cats}
+      categories={cats}
       loading={categories.status === 'loading'}
       busy={busyReading}
-      hasVehicle={!entry && v !== null}
-      autoFocus={entry || (route.view === 'vehicle' && !agentActive)}
+      hasVehicle={v !== null}
+      autoFocus={handoff || (route.view === 'vehicle' && !agentActive)}
       onText={onText}
       onFiles={(f) => void onFiles(f)}
     />
   );
+
+  const openHistory = () => {
+    turn.reset();
+    setPanel({ kind: 'none' });
+    trace.current = null;
+  };
+  const historyList = history.status === 'ok' ? history.data : [];
 
   const journal = <Journal api={api} open={journalOpen} authed={authed} docked={docked} onClose={closeJournal} />;
   const shell = (main: ReactNode, mode: 'entry' | 'work') => (
     <div className={['app', `app--${mode}`, journalOpen && docked && 'app--journal'].filter(Boolean).join(' ')}>
       {header}
       <main className="main">{main}</main>
-      {dock}
+      {mode === 'work' && dock}
       {journal}
     </div>
   );
@@ -349,30 +361,32 @@ function Finder({ api }: { api: FinderApi }) {
           ? `Plaque ${ref} introuvable. Vérifiez-la ou envoyez la carte grise en photo.`
           : vehicle.error.message
         : null;
+    const showHistory = authed && (history.status === 'loading' || historyList.length > 0);
     return shell(
-      <div className="entry-main">
-        <Entry>
-          {error && (
-            <p className="field-error" role="alert">
-              {error}
-            </p>
-          )}
-          {panel.kind === 'vin' && <VinResult decode={panel.decode} />}
-          {panel.kind === 'card' && <CardResult data={panel.registration} onPlate={(p) => goVehicle(p, 'carte-grise', p)} onReset={() => setPanel({ kind: 'none' })} />}
-        </Entry>
-        {authed && (
-          <History
-            api={api}
-            entries={history.status === 'ok' ? history.data : []}
-            loading={history.status === 'loading'}
-            onOpen={() => {
-              turn.reset();
-              setPanel({ kind: 'none' });
-              trace.current = null;
-            }}
-          />
-        )}
-      </div>,
+      <Home
+        starters={STARTERS}
+        mine={mine.status === 'ok' ? mine.data : []}
+        mineLoading={authed && mine.status === 'loading'}
+        busy={busyReading}
+        note={note}
+        panel={
+          error || panel.kind === 'vin' || panel.kind === 'card' ? (
+            <>
+              {error && (
+                <p className="field-error" role="alert">
+                  {error}
+                </p>
+              )}
+              {panel.kind === 'vin' && <VinResult decode={panel.decode} />}
+              {panel.kind === 'card' && <CardResult data={panel.registration} onPlate={(p) => goVehicle(p, 'carte-grise', p)} onReset={() => setPanel({ kind: 'none' })} />}
+            </>
+          ) : null
+        }
+        below={showHistory ? <History api={api} entries={historyList} loading={history.status === 'loading'} onOpen={openHistory} /> : <Showcase reducedMotion={reducedMotion} />}
+        onPick={pickMine}
+        onText={onText}
+        onFiles={(f) => void onFiles(f)}
+      />,
       'entry',
     );
   }
@@ -391,6 +405,8 @@ function Finder({ api }: { api: FinderApi }) {
         slot={slot}
         followUp={followUp}
         turn={held ? turn : null}
+        recent={authed && route.view === 'vehicle' ? historyFor(historyList, route.ref) : []}
+        onOpenHistory={openHistory}
         onAsk={askAgent}
       />
     ),
@@ -421,10 +437,13 @@ interface WorkspaceProps {
   followUp: MutableRefObject<FollowUp | null>;
   // A follow-up turn holding this result on screen until it shows parts of its own.
   turn: AgentTurn | null;
+  // Searches already made on this vehicle, offered on its empty sheet.
+  recent: HistoryEntry[];
+  onOpenHistory: () => void;
   onAsk: (text: string, options?: AskOptions) => void;
 }
 
-function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, onAsk }: WorkspaceProps) {
+function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, recent, onOpenHistory, onAsk }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const v = vehicle.status === 'ok' ? vehicle.data : null;
@@ -470,7 +489,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
     placeholder = (
       <div className="sheet-message">
         <p className="sheet-big">Quelle pièce ?</p>
-        <p>Nom, référence ou photo, dans le champ en bas.</p>
+        {recent.length > 0 && <History api={api} entries={recent.slice(0, 5)} loading={false} onOpen={onOpenHistory} title="Recherches sur ce véhicule" compact />}
       </div>
     );
   } else if (categories.status === 'error') {

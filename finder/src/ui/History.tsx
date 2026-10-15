@@ -5,7 +5,17 @@ import { useToast } from './Toast';
 
 // Logged-in home: the last searches from the journal; one click re-reads the cached result.
 // Removing only hides a row from this list: the journal drawer keeps every one.
-export function History({ api, entries, loading, onOpen }: { api: FinderApi; entries: HistoryEntry[]; loading: boolean; onOpen: (e: HistoryEntry) => void }) {
+interface Props {
+  api: FinderApi;
+  entries: HistoryEntry[];
+  loading: boolean;
+  onOpen: (e: HistoryEntry) => void;
+  title?: string;
+  // One vehicle's searches: the vehicle column says nothing there.
+  compact?: boolean;
+}
+
+export function History({ api, entries, loading, onOpen, title = 'Recherches récentes', compact = false }: Props) {
   const toast = useToast();
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
   const shown = withoutRemoved(entries, removed);
@@ -27,9 +37,9 @@ export function History({ api, entries, loading, onOpen }: { api: FinderApi; ent
   };
 
   return (
-    <section className="history" aria-labelledby="history-title" aria-busy={loading}>
+    <section className={compact ? 'history history--compact' : 'history'} aria-labelledby="history-title" aria-busy={loading}>
       <div className="history-head">
-        <h2 id="history-title">Recherches récentes</h2>
+        <h2 id="history-title">{title}</h2>
       </div>
       {loading ? (
         <p className="history-loading">Chargement…</p>
@@ -39,10 +49,12 @@ export function History({ api, entries, loading, onOpen }: { api: FinderApi; ent
             <li key={e.id}>
               <a href={e.hash} onClick={() => onOpen(e)}>
                 <span className="history-input">{e.input || '—'}</span>
-                <span className="history-vehicle">
-                  {e.vehicle.plate && <span className="m">{e.vehicle.plate}</span>}
-                  {e.vehicle.name && <span>{e.vehicle.name}</span>}
-                </span>
+                {!compact && (
+                  <span className="history-vehicle">
+                    {e.vehicle.plate && <span className="m">{e.vehicle.plate}</span>}
+                    {e.vehicle.name && <span>{e.vehicle.name}</span>}
+                  </span>
+                )}
                 <span className="tag" data-tone={e.outcome.tone}>
                   {e.outcome.label}
                 </span>

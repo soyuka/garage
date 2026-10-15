@@ -29,15 +29,15 @@ export function ContextToken({ vehicle, onRemove }: { vehicle: Vehicle; onRemove
   );
 }
 
-// Logged-in home, under the composer: one click puts a saved car in the composer.
+// Logged-in home, under the composer: one click opens a saved car with the composer scoped to it.
 export function MyVehicles({ vehicles, busy, onPick }: { vehicles: readonly MyVehicle[]; busy: boolean; onPick: (v: MyVehicle) => void }) {
   if (vehicles.length === 0) return null;
   return (
-    <div className="dock-mine" role="group" aria-labelledby="mine-label">
-      <span id="mine-label" className="dock-mine-label">
+    <div className="home-pick" role="group" aria-labelledby="mine-label">
+      <span id="mine-label" className="home-pick-label">
         Mes véhicules
       </span>
-      <div className="dock-mine-row">
+      <div className="home-pick-row">
         {vehicles.map((v) => (
           <button key={v.iri} type="button" className="btn btn--quiet" disabled={busy} onClick={() => onPick(v)}>
             {v.plate && <span className="plate m">{v.plate}</span>}

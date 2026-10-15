@@ -17,6 +17,8 @@ interface Props {
   ghost: boolean;
   reducedMotion: boolean;
   extent: number;
+  // false: a display (home example) that turns on its own and never takes the pointer or the page scroll.
+  interactive?: boolean;
 }
 
 const FILL = 0.62;
@@ -31,7 +33,7 @@ const familyKey = (f: Props['family']): string =>
 // Orbit target = the drawn part's bounding-box centre (the paper fills HiddenLine tags `fit`), camera
 // distance = the framing extent fitted to the drawing area's aspect. Measured on the first frame after
 // a change, once the part's own frame hooks (the filter's scale) have run.
-function Rig({ part, fitKey, extent }: { part: RefObject<Group>; fitKey: string; extent: number }) {
+function Rig({ part, fitKey, extent, display }: { part: RefObject<Group>; fitKey: string; extent: number; display: boolean }) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null;
@@ -54,7 +56,7 @@ function Rig({ part, fitKey, extent }: { part: RefObject<Group>; fitKey: string;
       const target: Vec3 = box.isEmpty() ? [0, 0, 0] : (box.getCenter(new Vector3()).toArray() as Vec3);
       const distance = fitDistance(extent / 2, FOV, size.width / Math.max(size.height, 1), FILL);
       home.current = { target, distance };
-      const dir = taken ? camera.position.clone().sub(controls.target).normalize() : new Vector3(...orbitPosition([0, 0, 0], 1, HOME.azimuth, HOME.polar));
+      const dir = taken && !display ? camera.position.clone().sub(controls.target).normalize() : new Vector3(...orbitPosition([0, 0, 0], 1, HOME.azimuth, HOME.polar));
       controls.target.set(...target);
       camera.position.set(...target).addScaledVector(dir, distance);
       camera.near = distance / 50;
@@ -66,21 +68,21 @@ function Rig({ part, fitKey, extent }: { part: RefObject<Group>; fitKey: string;
   return null;
 }
 
-function Turntable({ reducedMotion }: { reducedMotion: boolean }) {
+function Turntable({ reducedMotion, display }: { reducedMotion: boolean; display: boolean }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null;
-  const stopped = useRef(taken);
+  const stopped = useRef(taken && !display);
   const offset = useRef(new Vector3());
 
   useEffect(() => {
-    if (!controls) return;
+    if (!controls || display) return;
     const take = () => {
       taken = true;
       stopped.current = true;
     };
     controls.addEventListener('start', take);
     return () => controls.removeEventListener('start', take);
-  }, [controls]);
+  }, [controls, display]);
 
   useFrame((_, delta) => {
     const step = turntableStep(delta, { reducedMotion, stopped: stopped.current });
@@ -92,7 +94,7 @@ function Turntable({ reducedMotion }: { reducedMotion: boolean }) {
   return null;
 }
 
-export function Blueprint({ family, dimensions, ghost, reducedMotion, extent }: Props) {
+export function Blueprint({ family, dimensions, ghost, reducedMotion, extent, interactive = true }: Props) {
   const part = useRef<Group>(null);
   const fitKey = familyKey(family);
   return (
@@ -110,10 +112,11 @@ export function Blueprint({ family, dimensions, ghost, reducedMotion, extent }: 
           {family.kind === 'mesh' && <MeshPart mesh={family.mesh} ghost={ghost} />}
           {family.kind === 'generic' && <GenericPart ghost={ghost} />}
         </group>
-        <Rig part={part} fitKey={fitKey} extent={extent} />
+        <Rig part={part} fitKey={fitKey} extent={extent} display={!interactive} />
       </Suspense>
       <OrbitControls
         makeDefault
+        enabled={interactive}
         enablePan={false}
         enableZoom={false}
         enableDamping={!reducedMotion}
@@ -122,7 +125,7 @@ export function Blueprint({ family, dimensions, ghost, reducedMotion, extent }: 
         minPolarAngle={POLAR_MARGIN}
         maxPolarAngle={Math.PI - POLAR_MARGIN}
       />
-      <Turntable reducedMotion={reducedMotion} />
+      <Turntable reducedMotion={reducedMotion} display={!interactive} />
     </Canvas>
   );
 }

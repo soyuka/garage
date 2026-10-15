@@ -1,16 +1,4 @@
-import type { ReactNode } from 'react';
-import { HOME } from '../home';
 import type { Registration, VinDecode } from '../types';
-
-export function Entry({ children }: { children?: ReactNode }) {
-  return (
-    <section className="entry" aria-labelledby="entry-title">
-      <h1 id="entry-title">{HOME.headline}</h1>
-      <p className="entry-lede">{HOME.lede}</p>
-      {children && <div className="entry-panel">{children}</div>}
-    </section>
-  );
-}
 
 export function VinResult({ decode }: { decode: VinDecode }) {
   if (!decode.valid) {

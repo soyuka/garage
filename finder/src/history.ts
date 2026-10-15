@@ -82,3 +82,10 @@ function sivPlate(plate: string | null): string | null {
   const formatted = formatPlateInput(plate);
   return isPlate(formatted) ? formatted : plate;
 }
+
+// The searches already made on one vehicle (its route ref), for that vehicle's empty sheet.
+export const historyFor = (entries: readonly HistoryEntry[], ref: string): HistoryEntry[] =>
+  entries.filter((e) => {
+    const route = parseRoute(e.hash);
+    return route.view === 'result' && route.ref === ref;
+  });
