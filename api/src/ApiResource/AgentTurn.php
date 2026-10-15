@@ -39,6 +39,10 @@ use Symfony\Component\Validator\Constraints as Assert;
                     schema: ['type' => 'string', 'enum' => ['finder', 'garage']],
                     constraints: [new Assert\Choice(choices: ['finder', 'garage'])],
                 ),
+                'history' => new QueryParameter(
+                    description: 'The finder home history: leaves out rows the owner hid or cleared. The journal (no flag) lists everything.',
+                    schema: ['type' => 'boolean'],
+                ),
             ],
         ),
         new Get(uriTemplate: '/agent/turns/{id}', provider: AgentTurnProvider::class),

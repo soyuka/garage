@@ -20,6 +20,10 @@ class User implements UserInterface
     #[ODM\Id]
     private ?string $id = null;
 
+    // Class-level default: a constructor-promoted nullable field 500s on documents written before it existed.
+    #[ODM\Field(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $historyClearedAt = null;
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         #[ODM\UniqueIndex]
@@ -50,6 +54,17 @@ class User implements UserInterface
     public function setEmail(?string $email): void
     {
         $this->email = $email;
+    }
+
+    /** Finder home history: journal rows started before this moment are hidden from it. */
+    public function getHistoryClearedAt(): ?\DateTimeImmutable
+    {
+        return $this->historyClearedAt;
+    }
+
+    public function setHistoryClearedAt(?\DateTimeImmutable $historyClearedAt): void
+    {
+        $this->historyClearedAt = $historyClearedAt;
     }
 
     public function getUserIdentifier(): string

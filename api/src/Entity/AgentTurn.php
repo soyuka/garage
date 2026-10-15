@@ -130,6 +130,10 @@ class AgentTurn
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $categoryLabel = null;
 
+    // Hides the row from the finder home history only; the journal still lists it.
+    #[ODM\Field(type: 'bool')]
+    private bool $hiddenFromHistory = false;
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $owner,
@@ -267,6 +271,16 @@ class AgentTurn
         if ('show_parts' === $toolCall->getName() && \is_string($label) && '' !== trim($label) && !str_contains($toolCall->getResult(), '"status":"refused"')) {
             $this->categoryLabel = trim($label);
         }
+    }
+
+    public function isHiddenFromHistory(): bool
+    {
+        return $this->hiddenFromHistory;
+    }
+
+    public function hideFromHistory(): void
+    {
+        $this->hiddenFromHistory = true;
     }
 
     public function getCategoryLabel(): ?string

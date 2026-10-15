@@ -22,15 +22,25 @@ final class AgentTurnRepository extends ServiceDocumentRepository
 
     /**
      * The journal listing: an owner's turns, newest first. The {owner, startedAt desc} index covers
-     * both the scope and the sort, so a limited read early-cuts instead of sorting in memory.
+     * both the scope and the sort, so a limited read early-cuts instead of sorting in memory. With
+     * $history, the finder home's view: rows the owner hid or cleared are left out (the journal drawer
+     * never passes it, so it stays complete).
      *
      * @return list<AgentTurn>
      */
-    public function findForOwner(string $owner, int $limit = 50, ?TurnSurface $surface = null): array
+    public function findForOwner(string $owner, int $limit = 50, ?TurnSurface $surface = null, bool $history = false, ?\DateTimeImmutable $clearedAt = null): array
     {
         $qb = $this->createQueryBuilder()->field('owner')->equals($owner);
         if (null !== $surface) {
             $qb->field('surface')->equals($surface->value);
+        }
+
+        if ($history) {
+            // $ne (not equals(false)): rows written before the flag existed carry no such field.
+            $qb->field('hiddenFromHistory')->notEqual(true);
+            if (null !== $clearedAt) {
+                $qb->field('startedAt')->gt($clearedAt);
+            }
         }
 
         return array_values(
