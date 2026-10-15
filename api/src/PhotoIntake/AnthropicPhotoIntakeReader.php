@@ -6,6 +6,7 @@ namespace App\PhotoIntake;
 
 use App\RegistrationDocument\AnthropicRegistrationDocumentReader;
 use App\RegistrationDocument\RegistrationDocumentUnreadable;
+use App\RegistrationDocument\RegistrationWarning;
 use Symfony\AI\Platform\Exception\ExceptionInterface;
 use Symfony\AI\Platform\Message\Content\Image;
 use Symfony\AI\Platform\Message\Content\Text;
@@ -49,7 +50,7 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
 
         For a build_label, fill buildLabel: printedCodes (every code printed on the label, each copied verbatim, character for character, one entry per printed code or line; only what is legible, never a guess), opr (on a Peugeot / Citroën / DS label: the OPR, also called "numéro d'organisation", a 4 or 5 digit production-day counter, often printed right after "DAM" or "OPR", e.g. "DAM 12345", or a DAM such as "1234588" whose first 4-5 digits are the OPR followed by a 2-digit plant code; copy those digits exactly, or null when absent, unreadable or when you are not sure which code it is). Paint codes and tyre pressures are not needed. Never guess, never compute. For any other kind, buildLabel has null/empty values.
 
-        Set legible to false when the photo is too blurry, cropped or dark to read reliably. Use warnings for short remarks about doubtful readings; never put personal data in a warning.
+        Set legible to false when the photo is too blurry, cropped or dark to read reliably. Use warnings only with these codes, as many as apply, and nothing else: blurry, cropped, dark, glare (photo quality), plate_doubtful, vin_doubtful, date_doubtful (a field you read but doubt). Never write free text in warnings.
         PROMPT;
 
     public function __construct(
@@ -108,7 +109,7 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
             'additionalProperties' => false,
         ];
         $properties['legible'] = ['type' => 'boolean'];
-        $properties['warnings'] = ['type' => 'array', 'items' => ['type' => 'string']];
+        $properties['warnings'] = ['type' => 'array', 'items' => ['type' => 'string', 'enum' => RegistrationWarning::modelCodes()]];
 
         return [
             'type' => 'json_schema',

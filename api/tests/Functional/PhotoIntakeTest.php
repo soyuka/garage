@@ -47,6 +47,22 @@ final class PhotoIntakeTest extends AppTestCase
         $this->assertSame(self::PNG, $this->reader()->lastContent);
     }
 
+    public function testACarteGriseSpeaksFrenchAndDropsFreeTextWarnings(): void
+    {
+        $client = static::createClient();
+        $this->reader()->response = [
+            'kind' => 'carte_grise',
+            'A' => 'ab123cd',
+            'E' => 'VF33CKFWB8347',
+            'legible' => false,
+            'warnings' => ['blurry', 'E: last characters hard to read'],
+        ];
+        $this->post($client, self::PNG, 'image/png');
+
+        $body = json_decode($client->getResponse()->getContent(), true);
+        $this->assertSame(['VIN invalide (somme de contrôle)', 'Photo floue : reprenez-la de face', 'Lecture incomplète, vérifiez les champs'], $body['registration']['warnings']);
+    }
+
     public function testAPartPhotoComesBackWithItsPrintedReferences(): void
     {
         $client = static::createClient();

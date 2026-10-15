@@ -28,8 +28,7 @@ final class RegistrationDocumentExtractorTest extends TestCase
     {
         $result = $this->extract(['E' => 'VF33CKFWB8325463', 'legible' => true])->toArray();
 
-        $this->assertCount(1, $result['warnings']);
-        $this->assertStringContainsString('E', $result['warnings'][0]);
+        $this->assertSame(['VIN invalide (somme de contrôle)'], $result['warnings']);
     }
 
     public function testWarnsOnAPlateOutsideTheSivFormatAndKeepsIt(): void
@@ -37,7 +36,7 @@ final class RegistrationDocumentExtractorTest extends TestCase
         $result = $this->extract(['A' => '1234 ab 56', 'legible' => true])->toArray();
 
         $this->assertSame('1234AB56', $result['A']);
-        $this->assertCount(1, $result['warnings']);
+        $this->assertSame(['Plaque illisible'], $result['warnings']);
     }
 
     public function testDropsAnUnparseableDate(): void
@@ -45,7 +44,22 @@ final class RegistrationDocumentExtractorTest extends TestCase
         $result = $this->extract(['B' => 'last spring', 'legible' => true])->toArray();
 
         $this->assertNull($result['B']);
-        $this->assertCount(1, $result['warnings']);
+        $this->assertSame(['Date de première immatriculation illisible'], $result['warnings']);
+    }
+
+    public function testMapsKnownModelWarningCodesToFrench(): void
+    {
+        $result = $this->extract(['legible' => false, 'warnings' => ['blurry', 'glare']])->toArray();
+
+        $this->assertSame(['Photo floue : reprenez-la de face', 'Reflet sur le document : changez l’angle'], $result['warnings']);
+    }
+
+    public function testFreeTextModelWarningsNeverReachTheUi(): void
+    {
+        $result = $this->extract(['legible' => true, 'warnings' => ['blurry', 'E: last characters hard to read', 'DUPONT looks smudged']])->toArray();
+
+        $this->assertSame(['Photo floue : reprenez-la de face', 'Lecture incomplète, vérifiez les champs'], $result['warnings']);
+        $this->assertStringNotContainsString('DUPONT', json_encode($result, \JSON_THROW_ON_ERROR));
     }
 
     public function testNeverCarriesHolderDataEvenIfTheModelReturnsIt(): void

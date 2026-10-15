@@ -58,7 +58,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
         $this->post($client, self::PNG, 'image/png');
 
         $body = json_decode($client->getResponse()->getContent(), true);
-        $this->assertCount(1, $body['warnings']);
+        $this->assertSame(['VIN invalide (somme de contrôle)'], $body['warnings']);
     }
 
     public function testRefusesAnUnsupportedType(): void

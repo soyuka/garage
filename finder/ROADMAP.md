@@ -72,10 +72,6 @@ break / 2.0 DI) instead of guessing.
 - Mesh view on a real non-filter category not yet seen in the app (every uncached category costs
   partsapi calls); verified only on the dev contact sheet. No cotes are drawn on these meshes yet:
   each family would need its own anchor logic, from fingerprint data only.
-- History rows restored from a category pick show the raw category id as their input (`100259`)
-  instead of the category label (seen on the home capture, 2026-10-15).
-- Carte grise warnings come from the server in English (`RegistrationDocumentExtractor`: `A: not in
-  the AA-123-AA format.`) and print as is in the French card result.
 - Oil caps (HeadAcc_OilCap, OilCap_Type1) have no web build: not shipped.
 - Garage: picker only, no fleet management; several same-model cars are told apart by plate only.
 - Data source: partsapi test keys (50/day/method). Going public = TecAlliance licence (below) AND

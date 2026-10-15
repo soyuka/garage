@@ -49,17 +49,25 @@ final readonly class RegistrationDocumentExtractor
             $vin = $this->vinDecoder->decode($fields['E']);
             $fields['E'] = $vin->vin;
             if (!$vin->valid) {
-                $warnings[] = 'E: not a valid VIN, check the chassis number.';
+                $warnings[] = RegistrationWarning::VinInvalid;
             }
         }
 
-        $modelWarnings = array_filter(\is_array($raw['warnings'] ?? null) ? $raw['warnings'] : [], \is_string(...));
+        // The model's free text never reaches the UI: only known codes, anything else is one generic line.
+        foreach (\is_array($raw['warnings'] ?? null) ? $raw['warnings'] : [] as $reported) {
+            $known = \is_string($reported) && \in_array($reported, RegistrationWarning::modelCodes(), true) ? RegistrationWarning::tryFrom($reported) : null;
+            $warnings[] = $known ?? RegistrationWarning::Incomplete;
+        }
 
-        return new RegistrationDocumentExtraction($fields, true === ($raw['legible'] ?? false), [...$warnings, ...array_values($modelWarnings)]);
+        return new RegistrationDocumentExtraction(
+            $fields,
+            true === ($raw['legible'] ?? false),
+            array_values(array_unique(array_map(static fn (RegistrationWarning $w): string => $w->message(), $warnings))),
+        );
     }
 
     /**
-     * @param list<string> $warnings
+     * @param list<RegistrationWarning> $warnings
      */
     private function plate(string $raw, array &$warnings): string
     {
@@ -69,13 +77,13 @@ final readonly class RegistrationDocumentExtractor
             return \sprintf('%s-%s-%s', $m[1], $m[2], $m[3]);
         }
 
-        $warnings[] = 'A: not in the AA-123-AA format.';
+        $warnings[] = RegistrationWarning::PlateFormat;
 
         return $plate;
     }
 
     /**
-     * @param list<string> $warnings
+     * @param list<RegistrationWarning> $warnings
      */
     private function date(string $raw, array &$warnings): ?string
     {
@@ -86,7 +94,7 @@ final readonly class RegistrationDocumentExtractor
             }
         }
 
-        $warnings[] = 'B: not a readable date.';
+        $warnings[] = RegistrationWarning::DateUnreadable;
 
         return null;
     }

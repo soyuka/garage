@@ -40,7 +40,7 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
         - P.3: fuel / energy type
         - P.6: national administrative power (puissance fiscale)
 
-        Set legible to false when the image is not a registration certificate or too blurry, cropped or dark to read reliably. Use warnings for short remarks about doubtful fields (for example "E: last characters hard to read"); never put personal data in a warning.
+        Set legible to false when the image is not a registration certificate or too blurry, cropped or dark to read reliably. Use warnings only with these codes, as many as apply, and nothing else: blurry, cropped, dark, glare (photo quality), plate_doubtful, vin_doubtful, date_doubtful (a field you read but doubt). Never write free text in warnings.
         PROMPT;
 
     public function __construct(
@@ -81,7 +81,7 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
     {
         $properties = array_fill_keys(self::FIELDS, ['type' => ['string', 'null']]);
         $properties['legible'] = ['type' => 'boolean'];
-        $properties['warnings'] = ['type' => 'array', 'items' => ['type' => 'string']];
+        $properties['warnings'] = ['type' => 'array', 'items' => ['type' => 'string', 'enum' => RegistrationWarning::modelCodes()]];
 
         return [
             'type' => 'json_schema',
