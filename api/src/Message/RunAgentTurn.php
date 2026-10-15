@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Message;
 
+use App\Agent\Finder\BuildLabelHints;
 use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\Finder\PartPhotoHints;
@@ -45,6 +46,7 @@ final readonly class RunAgentTurn
         public ?string $imageStash = null,
         /** @var list<array{mimeType: string, bytes: int}> */
         public array $images = [],
+        public ?BuildLabelHints $buildLabel = null,
     ) {
     }
 }

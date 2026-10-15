@@ -14,6 +14,8 @@ use App\Message\RunAgentTurn;
  */
 final class FinderContextBuilder
 {
+    private const int MAX_SUMMARY_LENGTH = 2000;
+
     public function build(RunAgentTurn $turn): string
     {
         $vehicle = $turn->vehicle;
@@ -21,8 +23,9 @@ final class FinderContextBuilder
         if (null !== $vehicle) {
             $identity = array_filter([$vehicle->make, $vehicle->model, $vehicle->engine]);
             $context = \sprintf(
-                "Véhicule (déjà identifié, ne le redemande pas) : %s — carId %d, carType %s.\n\n",
+                "Véhicule (déjà identifié, ne le redemande pas) : %s — %scarId %d, carType %s.\n\n",
                 [] === $identity ? 'inconnu' : implode(' ', $identity),
+                null === $vehicle->plate ? '' : 'plaque '.$vehicle->plate.', ',
                 $vehicle->carId,
                 $vehicle->carType->value,
             );
@@ -50,6 +53,20 @@ final class FinderContextBuilder
                 $context .= "\n- marque : ".$hints->brandGuess;
             }
             $context .= "\n\n";
+        }
+
+        if (null !== $turn->buildLabel && !$turn->buildLabel->isEmpty()) {
+            $read = array_filter([
+                null === $turn->buildLabel->opr ? null : 'OPR '.$turn->buildLabel->opr,
+                [] === $turn->buildLabel->printedCodes ? null : 'codes : '.implode(' ; ', $turn->buildLabel->printedCodes),
+            ]);
+            $context .= 'Vignette constructeur lue sur la photo (copie verbatim) : '.implode(' ; ', $read)
+                ." — décode-la avec decode_build_code avant de choisir entre les pièces.\n\n";
+        }
+
+        $summary = trim($turn->summary);
+        if ('' !== $summary) {
+            $context .= "Résultat affiché à l'écran (la demande le poursuit) : ".mb_substr($summary, 0, self::MAX_SUMMARY_LENGTH)."\n\n";
         }
 
         if ('' !== $turn->pendingContext) {

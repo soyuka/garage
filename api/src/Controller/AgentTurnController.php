@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Agent\Finder\BuildLabelHints;
 use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\Finder\InvalidTurnImage;
@@ -108,6 +109,7 @@ final class AgentTurnController
             photoHints: TurnSurface::Finder === $surface ? PartPhotoHints::fromPayload($payload['photoHints'] ?? null) : null,
             imageStash: [] === $images ? null : $this->imageStash->put($images),
             images: array_map(static fn (TurnImage $i): array => $i->shape(), $images),
+            buildLabel: TurnSurface::Finder === $surface ? BuildLabelHints::fromPayload($payload['buildLabel'] ?? null) : null,
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);

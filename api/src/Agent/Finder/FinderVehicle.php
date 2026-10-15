@@ -13,12 +13,15 @@ use App\PartsApi\CarType;
  */
 final readonly class FinderVehicle
 {
+    private const int MAX_PLATE_LENGTH = 20;
+
     public function __construct(
         public int $carId,
         public CarType $carType = CarType::PassengerCar,
         public ?string $make = null,
         public ?string $model = null,
         public ?string $engine = null,
+        public ?string $plate = null,
     ) {
     }
 
@@ -45,6 +48,7 @@ final readonly class FinderVehicle
             make: $text('make'),
             model: $text('model'),
             engine: $text('engine'),
+            plate: null !== ($plate = $text('plate')) && mb_strlen($plate) <= self::MAX_PLATE_LENGTH ? $plate : null,
         );
     }
 }

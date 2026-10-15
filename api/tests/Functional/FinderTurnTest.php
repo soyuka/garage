@@ -153,6 +153,35 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('Avant', $seen['context']);
     }
 
+    public function testAFollowUpCarriesTheScreenTheQuestionAndTheBuildCode(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+
+        $seen = ['context' => ''];
+        $container->set('ai.platform.anthropic', self::script([new ToolCall('b1', 'end_turn', [])], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => [
+                'instruction' => 'voici la vignette, OPR 10512',
+                'sessionId' => 'sess-buildcode',
+                'surface' => 'finder',
+                'vehicle' => ['carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'plate' => 'XB-301-ZB'],
+                'summary' => 'Rotule axiale (100123) — 2 groupes : TRW JAR123 / TRW JAR456',
+                'pendingContext' => 'rotule axiale 307 : deux montages selon le n° d\'organisation',
+                'buildLabel' => ['opr' => '10512', 'printedCodes' => ['DAM 10512', "\u{0}"]],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        self::assertStringContainsString('rotule axiale 307 : deux montages selon le n° d\'organisation', $seen['context']);
+        self::assertStringContainsString('OPR 10512', $seen['context']);
+        self::assertStringContainsString('decode_build_code', $seen['context']);
+        self::assertStringContainsString('Rotule axiale (100123) — 2 groupes', $seen['context']);
+        self::assertStringContainsString('plaque XB-301-ZB', $seen['context']);
+    }
+
     public function testAProseOnlyFinderTurnTellsTheUserInFinderTerms(): void
     {
         static::createClient();
