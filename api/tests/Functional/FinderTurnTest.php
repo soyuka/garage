@@ -148,6 +148,22 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('Avant', $seen['context']);
     }
 
+    public function testAProseOnlyFinderTurnTellsTheUserInFinderTerms(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([], $seen));
+
+        self::runFinderTurn('filtre à huile', 'sess-noop');
+
+        $toasts = array_values(array_filter(self::frames('sess-noop'), static fn (array $f): bool => 'toast' === $f['type']));
+        self::assertCount(1, $toasts);
+        self::assertStringContainsString('pièce', $toasts[0]['message']);
+        self::assertStringNotContainsString('enregistrer', $toasts[0]['message']);
+    }
+
     public function testGarageAgentDoesNotSeeTheFinderTools(): void
     {
         static::createClient();

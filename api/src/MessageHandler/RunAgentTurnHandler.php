@@ -142,7 +142,7 @@ final readonly class RunAgentTurnHandler
                 $status = AgentTurnStatus::NoOp;
                 $error = 'Turn ended without any write or render action (prose-only exit).';
                 $this->logger->warning('Garage turn was a no-op: {error}', ['error' => $error]);
-                $this->renderTools->toast($messages->noOp, 'warn');
+                $this->renderTools->toast(TurnSurface::Finder === $message->surface ? $messages->finderNoOp : $messages->noOp, 'warn');
             }
         } catch (MaxIterationsExceededException | RepeatedToolFailureException $e) {
             $status = AgentTurnStatus::Capped;

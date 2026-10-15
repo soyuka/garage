@@ -33,6 +33,7 @@ final readonly class AgentMessages
         public string $noOp,
         public string $notConverged,
         public string $cancelled,
+        public string $finderNoOp,
     ) {
     }
 
@@ -125,6 +126,7 @@ final readonly class AgentMessages
             noOp: "Je n'ai pas pu traiter ta demande. Reformule ou précise ce que tu veux enregistrer.",
             notConverged: "Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.",
             cancelled: 'Demande interrompue.',
+            finderNoOp: "Je n'ai trouvé aucune pièce pour cette demande. Reformule-la, ou choisis une catégorie dans la liste.",
         );
     }
 
@@ -213,6 +215,7 @@ final readonly class AgentMessages
             noOp: 'I could not handle that. Rephrase it, or say more precisely what you want recorded.',
             notConverged: 'I could not finish that. Rephrase it, or narrow the question.',
             cancelled: 'Request stopped.',
+            finderNoOp: 'I found no part for that request. Rephrase it, or pick a category from the list.',
         );
     }
 }
