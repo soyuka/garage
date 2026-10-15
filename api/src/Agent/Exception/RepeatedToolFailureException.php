@@ -8,7 +8,7 @@ namespace App\Agent\Exception;
  * Thrown when the agent calls the SAME tool with the SAME arguments and it fails the SAME way too many
  * times in one turn — a model stuck in a loop on a call it cannot get right (e.g. a weak model that
  * keeps sending a wrong field name despite the corrective error result). It aborts the turn well before
- * the blunt {@see \App\DependencyInjection\Compiler\AgentMaxToolCallsPass} ceiling, so the loop does not
+ * the blunt `max_tool_calls` ceiling, so the loop does not
  * keep re-sending an ever-growing context for nothing.
  */
 final class RepeatedToolFailureException extends \RuntimeException

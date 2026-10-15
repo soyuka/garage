@@ -17,7 +17,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * terminal tool ({@see EndTurnTool} / propose_actions). {@see \App\MessageHandler\RunAgentTurnHandler}
  * checks {@see wasProductive()} after the loop drains and, if false, marks the turn NoOp and nudges the
  * user instead of leaving the UI silently unchanged. Complements the loop-forever guards
- * ({@see RepeatedToolFailureGuard}, {@see \App\DependencyInjection\Compiler\AgentMaxToolCallsPass}) by
+ * ({@see RepeatedToolFailureGuard}, the `max_tool_calls` cap) by
  * catching the opposite failure: a turn that stops too early and does nothing.
  *
  * Singleton in the consume worker, so {@see reset()} is called per turn by the handler.

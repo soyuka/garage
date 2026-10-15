@@ -626,11 +626,6 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
 
 ## Agent guardrails + flaky agent tests (found 2026-10-15, finder agent work)
 
-- **`AgentMaxToolCallsPass` is a no-op.** It sets argument 5 of `ai.tool.agent_processor.garage`, a
-  service this ai-bundle no longer defines (`debug:container` finds nothing): the garage runs on the
-  bundle default `max_tool_calls: 50`, not 25. The finder uses the bundle option directly
-  (`config/packages/ai.yaml`, agent `finder`, `max_tool_calls: 25`); the garage should too, and the
-  pass be deleted. Left untouched to keep the garage path unchanged in the finder commit.
 - **`AgentTurnTest::testTheInterfaceLanguageReachesTheWorkerAndTheModel` is flaky**: it expects
   `'Checking your garage…'` while `StepNarrator` picks one of four `list_vehicles` variants at random
   (2/5 green in a row on unchanged code). Assert membership in the variant list instead.

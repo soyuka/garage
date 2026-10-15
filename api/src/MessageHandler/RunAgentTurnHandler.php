@@ -147,7 +147,7 @@ final readonly class RunAgentTurnHandler
         } catch (MaxIterationsExceededException | RepeatedToolFailureException $e) {
             $status = AgentTurnStatus::Capped;
             $error = $e->getMessage();
-            // The turn could not converge: either the blunt tool-call cap fired (AgentMaxToolCallsPass)
+            // The turn could not converge: either the blunt tool-call cap fired (`max_tool_calls`)
             // or the agent looped on the same failing call (RepeatedToolFailureGuard) — both mean a model
             // that wouldn't converge.
             // Tell the user, then dead-letter WITHOUT retrying: UnrecoverableMessageHandlerException

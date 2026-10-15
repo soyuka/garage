@@ -27,7 +27,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  *  - `ask_question` — the finder's twin of propose_actions: the answer arrives as the next turn.
  *
  * The empty text is never shown (the generative-UI has no prose channel). Complements the hard cap in
- * {@see \App\DependencyInjection\Compiler\AgentMaxToolCallsPass}, which is the backstop for a model
+ * `max_tool_calls` in config/packages/ai.yaml, which is the backstop for a model
  * that ignores even this.
  */
 #[AsEventListener(event: ToolCallsExecuted::class)]

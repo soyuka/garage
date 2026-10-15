@@ -13,7 +13,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 /**
  * Aborts a turn when the agent retries the SAME failing tool call too many times — the targeted
  * backstop for a model looping on a call it cannot fix (e.g. Qwen repeating a wrong field name even
- * after the corrective error result). Unlike the blunt {@see \App\DependencyInjection\Compiler\AgentMaxToolCallsPass}
+ * after the corrective error result). Unlike the blunt `max_tool_calls`
  * count, this keys on (tool name + arguments + that the result failed), so it leaves a legitimately long
  * but PROGRESSING turn alone and only fires on genuine non-convergence.
  *
