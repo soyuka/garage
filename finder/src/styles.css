@@ -1497,18 +1497,6 @@ button {
   color: var(--mute);
 }
 
-.history-clear {
-  font-size: 12px;
-  color: var(--mute);
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  padding: 4px 2px;
-}
-
-.history-clear:hover {
-  color: var(--ink);
-}
-
 .history li {
   position: relative;
 }

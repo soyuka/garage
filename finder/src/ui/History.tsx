@@ -4,37 +4,13 @@ import { formatRelative, formatWhen, withoutRemoved, type HistoryEntry } from '.
 import { useToast } from './Toast';
 
 // Logged-in home: the last searches from the journal; one click re-reads the cached result.
-// Clearing and removing only hide rows from this list: the journal drawer keeps every one.
+// Removing only hides a row from this list: the journal drawer keeps every one.
 export function History({ api, entries, loading, onOpen }: { api: FinderApi; entries: HistoryEntry[]; loading: boolean; onOpen: (e: HistoryEntry) => void }) {
   const toast = useToast();
-  const [cleared, setCleared] = useState(false);
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
-  const shown = cleared ? [] : withoutRemoved(entries, removed);
+  const shown = withoutRemoved(entries, removed);
 
   if (!loading && shown.length === 0) return null;
-
-  const clear = async () => {
-    setCleared(true);
-    try {
-      const { previous } = await api.clearHistory();
-      toast({
-        text: 'Historique effacé',
-        action: {
-          label: 'Annuler',
-          onClick: () => {
-            setCleared(false);
-            api.clearHistory(previous).catch(() => {
-              setCleared(true);
-              toast('Historique non restauré. Réessayez.');
-            });
-          },
-        },
-      });
-    } catch {
-      setCleared(false);
-      toast('Historique non effacé. Réessayez.');
-    }
-  };
 
   const remove = async (e: HistoryEntry) => {
     setRemoved((r) => new Set(r).add(e.id));
@@ -54,11 +30,6 @@ export function History({ api, entries, loading, onOpen }: { api: FinderApi; ent
     <section className="history" aria-labelledby="history-title" aria-busy={loading}>
       <div className="history-head">
         <h2 id="history-title">Recherches récentes</h2>
-        {!loading && (
-          <button type="button" className="history-clear" onClick={clear}>
-            Effacer
-          </button>
-        )}
       </div>
       {loading ? (
         <p className="history-loading">Chargement…</p>

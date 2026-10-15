@@ -16,11 +16,13 @@ export interface HistoryEntry {
   startedAt: string;
 }
 
+// "Make Model engine", else the bare model, else the kType: never empty once a carId is known.
 function vehicleName(row: JournalRow): string | null {
   const v = row.vehicle;
   if (!v) return null;
   const shape: Vehicle = { plate: v.plate, make: v.make, model: v.model, modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId: v.carId, carType: v.carType === 'CV' ? 'CV' : 'PC' };
-  return vehicleShortName(shape);
+  const name = vehicleShortName(shape) ?? v.model ?? (v.carId !== null ? `kType ${v.carId}` : null);
+  return name === null ? null : [name, v.engine].filter(Boolean).join(' ');
 }
 
 // A page opened by URL journals the bare category id as its input: never show that.

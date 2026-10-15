@@ -1,17 +1,27 @@
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapVehicle, mapVin } from './api';
 import { authFetch } from './auth';
 import { planPart, saveVehicle, type PlanBody, type PlannedTask, type SaveBody, type SavedVehicle } from './garage';
-import { clearHistory, getHistory, getJournal, getJournalDetail, hideFromHistory, type HistoryCursor, type JournalDetail, type JournalRow } from './journal';
+import { getHistory, getJournal, getJournalDetail, hideFromHistory, type JournalDetail, type JournalRow } from './journal';
 import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, VinDecode } from './types';
+import { vehicleEngine } from './ui/VehicleChip';
 
-// Which rule of the single input led to a catalogue read. Sent as headers so an authenticated
-// search lands in the journal (api/src/Finder/FinderSearchJournalListener.php); the URL, and so
-// every cache in front of it, stays the same.
+// A user-initiated submit (composer or chip click): which rule of the single input led to a catalogue
+// read, the exact text typed, and one id shared by every request of that submit. Sent as headers so an
+// authenticated search lands in the journal as one row (api/src/Finder/FinderSearchJournalListener.php);
+// the URL, and so every cache in front of it, stays the same. Restores, hash loads, retries and
+// background fetches carry no Trace and are never journaled.
 export interface Trace {
   rule: string;
   input: string;
+  searchId: string;
   plate?: string | null;
+  vehicle?: Vehicle | null;
 }
+
+export const newTrace = (rule: string, input: string): Trace => ({ rule, input, searchId: crypto.randomUUID() });
+
+// The vehicle exactly as its chip shows it, for the rows that only know a carId.
+export const vehicleDescriptor = (v: Vehicle) => ({ plate: v.plate, carId: v.carId, carType: v.carType, make: v.make, model: v.modelEn ?? v.model, engine: vehicleEngine(v) || null });
 
 export interface FinderApi {
   vehicle(plate: string, trace?: Trace): Promise<Vehicle>;
@@ -23,7 +33,6 @@ export interface FinderApi {
   journal(): Promise<JournalRow[]>;
   journalEntry(id: string): Promise<JournalDetail>;
   history(): Promise<JournalRow[]>;
-  clearHistory(restore?: string | null): Promise<HistoryCursor>;
   hideFromHistory(id: string): Promise<void>;
   planPart(body: PlanBody): Promise<PlannedTask>;
   saveVehicle(body: SaveBody): Promise<SavedVehicle>;
@@ -34,8 +43,9 @@ const LD = { Accept: 'application/ld+json' };
 export const traced = (trace?: Trace): RequestInit => ({
   headers: {
     ...LD,
-    ...(trace ? { 'X-Finder-Rule': trace.rule, 'X-Finder-Input': encodeURIComponent(trace.input.slice(0, 200)) } : {}),
+    ...(trace ? { 'X-Finder-Rule': trace.rule, 'X-Finder-Input': encodeURIComponent(trace.input.slice(0, 200)), 'X-Finder-Search': trace.searchId } : {}),
     ...(trace?.plate ? { 'X-Finder-Plate': encodeURIComponent(trace.plate) } : {}),
+    ...(trace?.vehicle ? { 'X-Finder-Vehicle': encodeURIComponent(JSON.stringify(vehicleDescriptor(trace.vehicle))) } : {}),
   },
 });
 
@@ -76,7 +86,6 @@ export const liveApi: FinderApi = {
   journal: getJournal,
   journalEntry: getJournalDetail,
   history: getHistory,
-  clearHistory,
   hideFromHistory,
   planPart,
   saveVehicle,

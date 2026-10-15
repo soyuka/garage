@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { createPortal } from 'react-dom';
 import { isAuthenticated, login } from './auth';
 import { ApiError } from './api';
-import { liveApi, type FinderApi, type Trace } from './client';
+import { liveApi, newTrace, type FinderApi, type Trace } from './client';
 import { partFamily } from './family';
 import { resultSummary } from './followup';
 import { historyEntries, type HistoryEntry } from './history';
@@ -79,7 +79,7 @@ function Finder({ api }: { api: FinderApi }) {
 
   const vehicle = useAsync<Vehicle>(ref === '' ? null : ref, () => {
     if (parsed?.kind === 'car') return Promise.resolve(carVehicle(parsed.carId, parsed.carType));
-    const t = trace.current ?? { rule: 'url', input: ref };
+    const t = trace.current ?? undefined;
     trace.current = null;
     return api.vehicle(parsed?.kind === 'plate' ? parsed.plate : ref, t);
   });
@@ -96,9 +96,9 @@ function Finder({ api }: { api: FinderApi }) {
 
   const categoryId = route.view === 'result' && !agentOwns ? route.categoryId : null;
   const narrowing = useAsync<Narrowing>(v?.carId && categoryId ? `${v.carId}-${categoryId}` : null, () => {
-    const t = trace.current ?? { rule: 'url', input: String(categoryId) };
+    const t = trace.current;
     trace.current = null;
-    return api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make, { ...t, plate: v!.plate });
+    return api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make, t ? { ...t, plate: v!.plate, vehicle: v } : undefined);
   });
 
   // A route the turn does not own (back button, history link, typed URL) closes a finished turn.
@@ -124,7 +124,7 @@ function Finder({ api }: { api: FinderApi }) {
     (plate: string, rule: string, input: string) => {
       turn.reset();
       setPanel({ kind: 'none' });
-      trace.current = { rule, input };
+      trace.current = newTrace(rule, input);
       navigate({ view: 'vehicle', ref: plate });
     },
     [turn, navigate],
@@ -153,7 +153,7 @@ function Finder({ api }: { api: FinderApi }) {
         turn.reset();
         if (route.view !== 'entry') navigate({ view: 'entry' });
         api
-          .vin(r.vin, { rule: 'vin', input: typed })
+          .vin(r.vin, newTrace('vin', typed))
           .then((decode) => setPanel({ kind: 'vin', decode }))
           .catch((e: unknown) => setPanel({ kind: 'error', message: e instanceof ApiError ? e.message : 'Décodage du VIN impossible. Vérifiez la case E de la carte grise.' }));
         return;
@@ -161,7 +161,7 @@ function Finder({ api }: { api: FinderApi }) {
         if (!v) return askAgent(typed);
         turn.reset();
         setPanel({ kind: 'none' });
-        trace.current = { rule: 'category', input: typed };
+        trace.current = newTrace('category', typed);
         navigate({ view: 'result', ref, categoryId: r.category.id, clusterId: null });
         return;
       case 'reference':
@@ -347,10 +347,10 @@ function Finder({ api }: { api: FinderApi }) {
             api={api}
             entries={history.status === 'ok' ? history.data : []}
             loading={history.status === 'loading'}
-            onOpen={(e) => {
+            onOpen={() => {
               turn.reset();
               setPanel({ kind: 'none' });
-              trace.current = { rule: 'history', input: e.input };
+              trace.current = null;
             }}
           />
         )}

@@ -84,3 +84,16 @@ describe('withoutRemoved', () => {
     expect(withoutRemoved(entries, new Set([entries[0]!.id])).map((e) => e.id)).toEqual([entries[1]!.id]);
   });
 });
+
+describe('history vehicle name', () => {
+  const name = (vehicle: Record<string, unknown>) =>
+    historyEntries(mapRows({ member: [row('9', '2026-10-15T10:00:00+02:00', { route: 'k/16182-PC', vehicle })] }))[0]!.vehicle.name;
+
+  it('shows make, model and engine', () => {
+    expect(name({ plate: null, carId: 16182, carType: 'PC', make: 'PEUGEOT', model: '307', engine: '1.6 HDi' })).toBe('Peugeot 307 1.6 HDi');
+  });
+
+  it('never leaves a known carId unnamed', () => {
+    expect(name({ plate: null, carId: 16182, carType: 'PC', make: null, model: null })).toBe('kType 16182');
+  });
+});
