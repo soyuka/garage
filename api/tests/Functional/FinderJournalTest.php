@@ -8,6 +8,7 @@ use App\Agent\TurnSurface;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnKind;
 use App\Entity\AgentTurnStatus;
+use App\Entity\AgentTurnToolCall;
 use App\Repository\AgentTurnRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 
@@ -23,6 +24,8 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame(['filtre à huile'], array_column($finder, 'instruction'));
         self::assertSame('finder', $finder[0]['surface']);
         self::assertSame('agent', $finder[0]['kind']);
+        self::assertNull($finder[0]['route'] ?? null, 'JSON-LD skips null values: no vehicle, no route key');
+        self::assertNull($finder[0]['vehicle'] ?? null);
 
         $garage = $this->members($client->request('GET', '/agent/turns?surface=garage', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
         self::assertSame(['vidange'], array_column($garage, 'instruction'));
@@ -70,6 +73,7 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame([
             'rule' => 'category',
             'carId' => 19107,
+            'carType' => 'PC',
             'categoryId' => 100259,
             'clusterCount' => \count($narrowed['clusters']),
             'totalArticles' => $narrowed['totalArticles'],
@@ -82,6 +86,40 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame('search', $listed[0]['kind']);
         self::assertSame($narrowed['upstreamCalls'], $listed[0]['partsApiCalls']);
         self::assertSame('category', $listed[0]['search']['rule']);
+        self::assertSame('k/19107-PC/c/100259', $listed[0]['route']);
+        self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null], $listed[0]['vehicle']);
+    }
+
+    public function testAPlateLookupRowRoutesToThePlate(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'plate', 'X-Finder-Input' => 'XC-302-ZC']]);
+        self::assertResponseIsSuccessful();
+
+        $search = $this->rows()[0]->getSearch();
+        self::assertSame(['XC302ZC', 34247, 'CV', 'IVECO', 'DAILY'], [$search['plate'], $search['carId'], $search['carType'], $search['make'], $search['model']]);
+
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame('p/XC302ZC', $listed[0]['route']);
+        self::assertSame(['plate' => 'XC302ZC', 'carId' => 34247, 'carType' => 'CV', 'make' => 'IVECO', 'model' => 'DAILY'], $listed[0]['vehicle']);
+    }
+
+    public function testAnAgentRowRoutesToTheVehicleAndCategoryItShowed(): void
+    {
+        $client = static::createClient();
+        $this->seed('rotule axiale 307 XB-301-ZB', TurnSurface::Finder, static function (AgentTurn $t): void {
+            $t->setVehicle(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6']);
+            $t->addToolCall(new AgentTurnToolCall(0, 'set_vehicle', ['carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'plate' => 'XB-301-ZB'], 'ok', new \DateTimeImmutable()));
+            $t->addToolCall(new AgentTurnToolCall(1, 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Rotule', 'rationale' => 'x'], '{}', new \DateTimeImmutable()));
+        });
+        $this->seed('filtre à huile', TurnSurface::Finder, static fn (AgentTurn $t) => $t->setVehicle(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6']));
+
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        $byInstruction = array_column($listed, null, 'instruction');
+        self::assertSame('p/XB-301-ZB/c/100259', $byInstruction['rotule axiale 307 XB-301-ZB']['route']);
+        self::assertSame(['plate' => 'XB-301-ZB', 'carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307'], $byInstruction['rotule axiale 307 XB-301-ZB']['vehicle']);
+        self::assertSame('k/19107-PC', $byInstruction['filtre à huile']['route']);
     }
 
     public function testAPlateLookupIsJournaledWithItsOutcome(): void

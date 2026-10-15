@@ -10,6 +10,8 @@ use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Agent\Journal\TurnCostEstimator;
+use App\Agent\Journal\TurnRoute;
+use App\Entity\AgentTurnKind;
 use App\Entity\AgentTurn as AgentTurnEntity;
 use App\State\AgentTurnCollectionProvider;
 use App\State\AgentTurnProvider;
@@ -78,6 +80,11 @@ final class AgentTurn
     /** @var array<string, mixed>|null */
     #[ApiProperty(description: 'For a deterministic finder search (kind search): rule, carId, categoryId, clusterCount, totalArticles, unclassifiedCount, outcome, httpStatus.')]
     public ?array $search = null;
+    #[ApiProperty(description: 'The finder hash path (without "#/") that reopens what the row searched: p/<plate> or k/<carId>-<carType>, then /c/<categoryId> when a category is known; null when no vehicle is known.')]
+    public ?string $route = null;
+    /** @var array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string}|null */
+    #[ApiProperty(description: 'The vehicle the row was about: the last set_vehicle of an agent turn, else the vehicle the page sent; for a search, what it resolved.')]
+    public ?array $vehicle = null;
 
     /** Inlined on the item read only. The exact context handed to the LLM. */
     #[ApiProperty(description: 'The server-built context handed to the LLM (item read only).')]
@@ -123,6 +130,11 @@ final class AgentTurn
         $resource->partsApiCalls = $turn->getPartsApiCalls();
         $resource->partsApiCallsByMethod = $turn->getPartsApiCallsByMethod();
         $resource->search = [] === $turn->getSearch() ? null : $turn->getSearch();
+        $route = AgentTurnKind::Search === $turn->getKind()
+            ? TurnRoute::forSearch($turn->getSearch())
+            : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments()], $turn->getToolCalls()));
+        $resource->route = $route->route;
+        $resource->vehicle = $route->vehicle;
         $resource->cacheReadTokens = $turn->getCacheReadTokens();
         $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
         $resource->estimatedCostUsd = $cost?->estimate($turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());

@@ -9,11 +9,13 @@ use App\ApiResource\Vehicle;
 use App\ApiResource\VinDecoding;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
+use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\Event\TerminateEvent;
 use Symfony\Component\HttpKernel\KernelEvents;
@@ -70,7 +72,7 @@ final class FinderSearchJournalListener
 
         $status = $event->getResponse()->getStatusCode();
         $data = $request->attributes->get('data');
-        $search = ['rule' => mb_substr((string) $request->headers->get(self::RULE_HEADER), 0, 40)] + $this->describe($data) + [
+        $search = ['rule' => mb_substr((string) $request->headers->get(self::RULE_HEADER), 0, 40)] + $this->describe($data, $request) + [
             'outcome' => match (true) {
                 404 === $status => 'not_found',
                 $status >= 400 => 'error',
@@ -107,17 +109,25 @@ final class FinderSearchJournalListener
     /**
      * @return array<string, mixed>
      */
-    private function describe(mixed $data): array
+    private function describe(mixed $data, Request $request): array
     {
         return match (true) {
             $data instanceof NarrowedParts => [
                 'carId' => $data->carId,
+                // NarrowedParts carries no carType: the route reads it from the query, PC by default.
+                'carType' => (CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar)->value,
                 'categoryId' => $data->categoryId,
                 'clusterCount' => \count($data->clusters),
                 'totalArticles' => $data->totalArticles,
                 'unclassifiedCount' => $data->unclassifiedCount,
             ],
-            $data instanceof Vehicle => ['carId' => $data->carId],
+            $data instanceof Vehicle => [
+                'plate' => $data->plate,
+                'carId' => $data->carId,
+                'carType' => $data->carType,
+                'make' => $data->make,
+                'model' => $data->model,
+            ],
             default => [],
         };
     }

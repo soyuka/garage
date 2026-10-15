@@ -80,6 +80,7 @@ final class FinderTurnTest extends AppTestCase
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(TurnSurface::Finder, $turns[0]->getSurface());
+        self::assertSame(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6'], $turns[0]->getVehicle());
         self::assertNotNull($turns[0]->getPartsApiCalls(), "the agent turn journals its catalogue spend");
     }
 

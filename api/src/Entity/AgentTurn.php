@@ -118,6 +118,14 @@ class AgentTurn
     #[ODM\Field(type: 'hash')]
     private array $search = [];
 
+    /**
+     * Finder agent turns: the vehicle the page sent with the turn, so the journal can reopen it.
+     *
+     * @var array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string}|null
+     */
+    #[ODM\Field(type: 'hash', nullable: true)]
+    private ?array $vehicle = null;
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $owner,
@@ -407,6 +415,22 @@ class AgentTurn
         $turn->durationMs = $durationMs;
 
         return $turn;
+    }
+
+    /**
+     * @return array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string}|null
+     */
+    public function getVehicle(): ?array
+    {
+        return $this->vehicle;
+    }
+
+    /**
+     * @param array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string}|null $vehicle
+     */
+    public function setVehicle(?array $vehicle): void
+    {
+        $this->vehicle = $vehicle;
     }
 
     /**

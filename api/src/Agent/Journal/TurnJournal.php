@@ -63,6 +63,15 @@ final class TurnJournal implements WebSearchTracer
         );
         $this->current->setSurface($message->surface);
         $this->current->setImages($message->images);
+        if (null !== $message->vehicle) {
+            $this->current->setVehicle([
+                'carId' => $message->vehicle->carId,
+                'carType' => $message->vehicle->carType->value,
+                'plate' => $message->vehicle->plate,
+                'make' => $message->vehicle->make,
+                'model' => $message->vehicle->model,
+            ]);
+        }
     }
 
     public function recordModel(string $provider, string $model, bool $stream): void
