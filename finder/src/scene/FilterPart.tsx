@@ -1,11 +1,11 @@
 import { Html, Line, useGLTF } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import { useMemo, useRef } from 'react';
-import { Vector3, type BufferGeometry, type Group } from 'three';
+import { useMemo, useRef, useState } from 'react';
+import { Vector3, type BufferGeometry, type Group, type Material, type Mesh } from 'three';
 import type { Dimension } from '../types';
 import { filterAnnotations } from './annotations';
 import { HOME } from './camera';
-import { filterCotes, rimTop, visibleLabels, type CoteKey, type FilterCotes, type Vec3 } from './cotes';
+import { facingFace, facingQuadrant, filterCotes, rimBottom, rimTop, visibleLabels, type CoteKey, type Face, type FilterCotes, type Vec3 } from './cotes';
 import { Arrowheads, chainSegments, ORDER, OVERLAY, type ArrowTip } from './Dimension';
 import { filterScale } from './filterScale';
 import { HiddenLine } from './HiddenLine';
@@ -14,6 +14,8 @@ import { DRAFT_BLUE, LINE_THIN } from './palette';
 
 export const FILTER_URL = `${import.meta.env.BASE_URL}parts/oil-filter.glb`;
 const METRES_TO_MM = 1000;
+const SWITCH_S = 0.15;
+const world = new Vector3();
 
 interface Props {
   dimensions: readonly Dimension[];
@@ -40,10 +42,46 @@ export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
   const H = mesh.size.y * scale.y;
   const R = (Math.max(mesh.size.x, mesh.size.z) * scale.x) / 2;
   const axis = useMemo(() => chainSegments([0, -9, 0], [0, H + 9, 0]), [H]);
-  const rimY = useMemo(() => rimTop(profile(mesh.geometries)), [mesh]);
-  const cotes = useMemo(() => filterCotes(R, H, { faceY: rimY * scale.y }), [R, H, rimY, scale.y]);
+  const rims = useMemo(() => {
+    const p = profile(mesh.geometries);
+    return { top: rimTop(p), bottom: rimBottom(p) };
+  }, [mesh]);
+  const [face, setFace] = useState<Face>('top');
+  const cotes = useMemo(() => filterCotes(R, H, { face, faceY: rims[face] * scale.y }), [R, H, rims, scale.y, face]);
 
-  // The cotes are fixed to the part, built facing the home view; only their labels billboard.
+  // The cotes are built facing +Z and snapped to the 90° quadrant that faces the camera; the Ø sits on
+  // the face the camera sees. A switch fades out, swaps, fades back in (instantly under reduced motion).
+  const outer = useRef<Group>(null);
+  const placed = useRef<Group>(null);
+  const want = useRef<{ k: number | null; face: Face }>({ k: null, face: 'top' });
+  const applied = useRef<{ k: number | null; face: Face }>({ k: null, face: 'top' });
+  const fade = useRef(1);
+  useFrame(({ camera }, delta) => {
+    const o = outer.current;
+    const g = placed.current;
+    if (!o || !g) return;
+    o.worldToLocal(world.copy(camera.position));
+    want.current.k = facingQuadrant(Math.atan2(world.x, world.z) - HOME.azimuth, want.current.k);
+    want.current.face = facingFace(Math.atan2(world.y - H / 2, Math.hypot(world.x, world.z)), want.current.face);
+    const stale = want.current.k !== applied.current.k || want.current.face !== applied.current.face;
+    const step = reducedMotion ? 1 : delta / (SWITCH_S / 2);
+    if (stale && applied.current.k !== null && fade.current > 0 && !reducedMotion) {
+      fade.current = Math.max(0, fade.current - step);
+    } else {
+      if (stale) {
+        g.rotation.y = HOME.azimuth + want.current.k! * (Math.PI / 2);
+        if (want.current.face !== applied.current.face) setFace(want.current.face);
+        applied.current = { ...want.current };
+      }
+      fade.current = Math.min(1, fade.current + step);
+    }
+    g.traverse((n) => {
+      const m = (n as Mesh).material as Material | Material[] | undefined;
+      if (m) for (const x of Array.isArray(m) ? m : [m]) x.opacity = fade.current;
+    });
+    for (const el of Object.values(labelEls.current)) if (el) el.style.opacity = String(fade.current);
+  });
+
   const labelEls = useRef<Partial<Record<CoteKey, HTMLElement | null>>>({});
   useFrame(() => {
     const items = (Object.entries(labelEls.current) as [CoteKey, HTMLElement | null][]).flatMap(([key, el]) => {
@@ -59,7 +97,7 @@ export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
   };
 
   return (
-    <group position={[0, -H / 2, 0]}>
+    <group ref={outer} position={[0, -H / 2, 0]}>
       <group ref={group}>
         {mesh.geometries.map((g, i) => (
           <HiddenLine key={i} geometry={g} ghost={ghost} threshold={24} rings />
@@ -67,8 +105,8 @@ export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
       </group>
       <Line points={axis} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} transparent opacity={ghost ? 0.28 : 1} depthTest={false} renderOrder={9} />
       {!ghost && (
-        <group rotation={[0, HOME.azimuth, 0]}>
-          {labels.diameter && <DiameterCote cote={cotes.diameter} label={labels.diameter} labelRef={bind('diameter')} />}
+        <group ref={placed}>
+          {labels.diameter && <DiameterCote cote={cotes.diameter} label={labels.diameter} labelRef={bind('diameter')} face={face} />}
           {labels.height && <HeightCote cote={cotes.height} label={labels.height} labelRef={bind('height')} />}
           {labels.thread && <ThreadNote cote={cotes.thread} label={labels.thread} labelRef={bind('thread')} />}
         </group>
@@ -86,7 +124,7 @@ function profile(geometries: readonly BufferGeometry[]): [number, number][] {
 
 type LabelRef = (el: HTMLElement | null) => void;
 
-function DiameterCote({ cote, label, labelRef }: { cote: FilterCotes['diameter']; label: string; labelRef: LabelRef }) {
+function DiameterCote({ cote, label, labelRef, face }: { cote: FilterCotes['diameter']; label: string; labelRef: LabelRef; face: Face }) {
   const tips = useMemo<ArrowTip[]>(() => {
     const a = new Vector3(...cote.from);
     const b = new Vector3(...cote.to);
@@ -101,7 +139,7 @@ function DiameterCote({ cote, label, labelRef }: { cote: FilterCotes['diameter']
       <Line points={[cote.from, cote.to]} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} renderOrder={ORDER} {...OVERLAY} />
       <Arrowheads tips={tips} opacity={1} />
       <Html position={cote.label} zIndexRange={[5, 0]}>
-        <span ref={labelRef} className="dim-label dim-label--above">
+        <span ref={labelRef} className={`dim-label dim-label--${face === 'top' ? 'above' : 'below'}`}>
           {label}
         </span>
       </Html>

@@ -1,4 +1,4 @@
-import { arrowSide, filterCotes, rimTop, visibleLabels } from './cotes';
+import { arrowSide, facingFace, facingQuadrant, filterCotes, rimBottom, rimTop, visibleLabels } from './cotes';
 
 const R = 38;
 const H = 90;
@@ -93,5 +93,66 @@ describe('visibleLabels', () => {
 
   it('checks a label only against labels still shown', () => {
     expect(visibleLabels([{ key: 'diameter', rect: rect(0, 0) }, { key: 'height', rect: rect(50, 0) }, { key: 'thread', rect: rect(100, 0) }])).toEqual(['diameter', 'thread']);
+  });
+});
+
+const deg = (d: number) => (d * Math.PI) / 180;
+
+describe('facingQuadrant', () => {
+  it('snaps the camera azimuth to the nearest 90° quadrant', () => {
+    expect(facingQuadrant(deg(10), null)).toBe(0);
+    expect(facingQuadrant(deg(80), null)).toBe(1);
+    expect(facingQuadrant(deg(-100), null)).toBe(3);
+    expect(facingQuadrant(deg(179), null)).toBe(2);
+    expect(facingQuadrant(deg(370), null)).toBe(0);
+  });
+
+  it('keeps the current quadrant until the camera is 10° past the boundary', () => {
+    expect(facingQuadrant(deg(50), 0)).toBe(0);
+    expect(facingQuadrant(deg(54), 0)).toBe(0);
+    expect(facingQuadrant(deg(56), 0)).toBe(1);
+    expect(facingQuadrant(deg(40), 1)).toBe(1);
+    expect(facingQuadrant(deg(34), 1)).toBe(0);
+  });
+
+  it('wraps across the ±180° seam without flicker', () => {
+    expect(facingQuadrant(deg(-176), 2)).toBe(2);
+    expect(facingQuadrant(deg(-120), 2)).toBe(3);
+  });
+});
+
+describe('facingFace', () => {
+  it('shows the top face from above the mid-height plane and the bottom face from below', () => {
+    expect(facingFace(deg(30), 'bottom')).toBe('top');
+    expect(facingFace(deg(-30), 'top')).toBe('bottom');
+  });
+
+  it('holds the current face within 10° of the mid-height plane', () => {
+    expect(facingFace(deg(-8), 'top')).toBe('top');
+    expect(facingFace(deg(8), 'bottom')).toBe('bottom');
+    expect(facingFace(deg(-12), 'top')).toBe('bottom');
+    expect(facingFace(deg(12), 'bottom')).toBe('top');
+  });
+});
+
+describe('rimBottom', () => {
+  it('finds the lowest point still at full radius: where a base plate meets the can', () => {
+    const profile: [number, number][] = [[10, 0], [34.9, 1], [34.9, 3], [33.3, 62], [12, 68]];
+    expect(rimBottom(profile)).toBe(1);
+  });
+});
+
+describe('filterCotes on the bottom face', () => {
+  const c = filterCotes(R, H, { face: 'bottom', faceY: 1, lift: 3 });
+
+  it('draws Ø across the bottom face at its rim with the value below it', () => {
+    expect(c.diameter.from).toEqual([-R, 1, 0]);
+    expect(c.diameter.to).toEqual([R, 1, 0]);
+    expect(c.diameter.label).toEqual([0, -2, 0]);
+  });
+
+  it('keeps the height spanning bottom plane to top plane', () => {
+    expect(c.height.from).toEqual([R + 12, 0, 0]);
+    expect(c.height.to).toEqual([R + 12, H, 0]);
   });
 });

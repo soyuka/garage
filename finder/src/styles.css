@@ -709,6 +709,10 @@ button {
   transform: translate(-50%, calc(-100% - 2px));
 }
 
+.dim-label--below {
+  transform: translate(-50%, 2px);
+}
+
 .dim-label--right {
   transform: translate(5px, -50%);
 }

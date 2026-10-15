@@ -7,6 +7,8 @@ export interface Rect {
   h: number;
 }
 
+export type Face = 'top' | 'bottom';
+
 export type CoteKey = 'diameter' | 'height' | 'thread' | 'seal';
 
 export const COTE_PRIORITY: readonly CoteKey[] = ['diameter', 'height', 'thread', 'seal'];
@@ -23,6 +25,7 @@ interface CoteOptions {
   overshoot?: number;
   lift?: number;
   faceY?: number;
+  face?: Face;
 }
 
 const THREAD_RIM_ANGLE = Math.PI / 4;
@@ -31,14 +34,14 @@ const THREAD_SHELF = 18;
 
 // In the camera-facing frame of a cylinder standing on its base at the origin (+Y the axis, +Z toward
 // the camera, +X screen right): every point at |x| ≥ R projects outside the silhouette.
-export function filterCotes(R: number, H: number, { offset = 12, gap = 1.5, overshoot = 2.5, lift = 3, faceY = H }: CoteOptions = {}): FilterCotes {
+export function filterCotes(R: number, H: number, { offset = 12, gap = 1.5, overshoot = 2.5, lift = 3, faceY = H, face = 'top' }: CoteOptions = {}): FilterCotes {
   const x = R + offset;
   const rimX = -R * Math.sin(THREAD_RIM_ANGLE);
   const rimZ = R * Math.cos(THREAD_RIM_ANGLE);
   const knee: Vec3 = [-R - THREAD_KNEE.out, -THREAD_KNEE.down, rimZ];
   const end: Vec3 = [-R - THREAD_KNEE.out - THREAD_SHELF, -THREAD_KNEE.down, rimZ];
   return {
-    diameter: { from: [-R, faceY, 0], to: [R, faceY, 0], label: [0, faceY + lift, 0] },
+    diameter: { from: [-R, faceY, 0], to: [R, faceY, 0], label: [0, face === 'top' ? faceY + lift : faceY - lift, 0] },
     height: {
       extensions: [
         [R + gap, 0, 0],
@@ -85,4 +88,30 @@ export function visibleLabels(items: readonly { key: CoteKey; rect: Rect }[]): C
   const sorted = [...items].sort((a, b) => COTE_PRIORITY.indexOf(a.key) - COTE_PRIORITY.indexOf(b.key));
   for (const item of sorted) if (!kept.some((k) => overlaps(k.rect, item.rect))) kept.push(item);
   return kept.map((k) => k.key);
+}
+
+const HYSTERESIS = (10 * Math.PI) / 180;
+const QUARTER = Math.PI / 2;
+
+const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+
+// Quadrant k faces azimuth k·90°. The previous quadrant holds until the camera is `hysteresis` past
+// its boundary, so the cotes never flicker on a boundary.
+export function facingQuadrant(azimuth: number, prev: number | null, hysteresis = HYSTERESIS): number {
+  const nearest = ((Math.round(wrap(azimuth) / QUARTER) % 4) + 4) % 4;
+  if (prev !== null && Math.abs(wrap(azimuth - prev * QUARTER)) <= QUARTER / 2 + hysteresis) return prev;
+  return nearest;
+}
+
+// Elevation of the camera above the part's mid-height plane.
+export function facingFace(elevation: number, prev: Face, hysteresis = HYSTERESIS): Face {
+  if (elevation > hysteresis) return 'top';
+  if (elevation < -hysteresis) return 'bottom';
+  return prev;
+}
+
+// Lowest point of an axisymmetric profile still at full radius: where the bottom face's visible rim sits.
+export function rimBottom(profile: readonly (readonly [number, number])[]): number {
+  const maxR = Math.max(...profile.map(([r]) => r));
+  return Math.min(...profile.filter(([r]) => r >= maxR * FULL_RADIUS).map(([, y]) => y));
 }
