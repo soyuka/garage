@@ -40,13 +40,13 @@ final class AgentMcpToolboxTest extends AppTestCase
         // writing the guess onto a vehicle — withholding it from the agent would defeat the point.
         $this->assertContains('list_service_defaults', $names);
 
-        // Withheld: the make/model browse roots and the granular catalog walk (get_service_parts
-        // bundles the latter in one call — fewer hops, smaller agent context).
+        // Withheld: the make/model browse roots and get_fill_volumes.
         $this->assertNotContains('list_makes', $names);
         $this->assertNotContains('list_models', $names);
         $this->assertNotContains('get_fill_volumes', $names);
-        $this->assertNotContains('list_part_categories', $names);
-        $this->assertNotContains('list_articles', $names);
+        // The brand/reference routing in the prompt sends the agent here once the dataset has no answer.
+        $this->assertContains('list_part_categories', $names);
+        $this->assertContains('list_articles', $names);
     }
 
     public function testExecuteMatchesTheHttpMcpPayloadVerbatim(): void

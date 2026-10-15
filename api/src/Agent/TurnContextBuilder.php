@@ -120,6 +120,10 @@ final readonly class TurnContextBuilder
             $parts[] = 'plaque '.$vehicle->getPlate();
         }
 
+        if (null !== $vehicle->getKType()) {
+            $parts[] = 'kType '.$vehicle->getKType();
+        }
+
         return "\nVéhicule : ".implode(', ', $parts);
     }
 
@@ -156,10 +160,36 @@ final readonly class TurnContextBuilder
                 ? ' — cible '.$task->getTargetUsageValue().' '.($task->getTargetUsageUnit()?->value ?? '')
                 : '';
 
-            return \sprintf('  - [%s] %s%s', $task->getId(), $name, rtrim($target));
+            $line = \sprintf('  - [%s] %s%s', $task->getId(), $name, rtrim($target));
+            foreach ($task->getParts() as $part) {
+                $line .= "\n".self::partLine($part);
+            }
+
+            return $line;
         }, $open);
 
         return "\n\nTâches en cours (réfère-toi à l'id pour clore une tâche via log_maintenance) :\n".implode("\n", $lines);
+    }
+
+    /**
+     * @param array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int} $part
+     */
+    private static function partLine(array $part): string
+    {
+        $name = trim(($part['brand'] ?? '').' '.$part['ref']);
+        $line = '      · '.$name;
+        if (isset($part['qty'])) {
+            $line .= ' ×'.$part['qty'];
+        }
+        if (isset($part['label']) && '' !== $part['label']) {
+            $line .= ' — '.$part['label'];
+        }
+        if (isset($part['priceCents'])) {
+            $cents = $part['priceCents'];
+            $line .= ' ['.(0 === $cents % 100 ? (string) intdiv($cents, 100) : number_format($cents / 100, 2, ',', '')).' €]';
+        }
+
+        return $line;
     }
 
     private function makeKnowledge(Vehicle $vehicle): string

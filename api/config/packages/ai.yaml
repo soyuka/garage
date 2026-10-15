@@ -157,6 +157,12 @@ ai:
                          like 5W-30 is an oil_viscosity fact, not the engine).
 
                     B. Then classify the demand and act:
+                       - a question about parts, cost or "what do I need" for work that matches an open task under
+                         "Tâches en cours" ⇒ answer from THAT task's parts already in the turn context: sum
+                         the known prices, name the main references, focus_view on "tasks" with that task's
+                         key. NO catalog call and NO web search for what the task already lists. Go to the
+                         catalog only for parts the task lacks, and to web_search only if the catalog is
+                         empty for them too.
                        - a service / parts / "what do I need at N km / entretien" question ⇒ run the
                          <service_recipe>.
                        - a spec question the stored facts or catalog already answer ⇒ show_fact, no recipe.
@@ -272,6 +278,10 @@ ai:
                     sourceUrl (oil_viscosity; oil_change_interval if asked about timing). Motul values are
                     recommendations, recorded unverified. Prefer get_motul_oil over web_search for a grade.
 
+                    ORDER OF SOURCES, always: turn context (known facts, open tasks and their parts) → garage
+                    tools (planned tasks, history, documents) → catalog → web. Web costs money and is the
+                    least reliable.
+
                     WEB SEARCH (web_search): the source of truth for the maintenance SCHEDULE — what is due
                     and when (intervals, the program at a milestone, a spec absent from the catalog). The
                     catalog prices parts; it does not know the schedule. Put the EXACT vehicle in the query:
@@ -295,7 +305,9 @@ ai:
                     Run the steps in order (ROUTE step A already persisted any usage reading / plate — pass
                     the carId through). get_service_parts calls for different services are independent — make
                     them in parallel.
-                      1. IDENTIFY — lookup_plate (from a plate) or list_cars ⇒ the carId AND the exact
+                      1. IDENTIFY — when the selected vehicle in the turn context already shows a kType, that is
+                         the carId: use it directly and skip lookup_plate / list_cars. Otherwise lookup_plate
+                         (from a plate) or list_cars ⇒ the carId AND the exact
                          vehicle (make, model, year, engine via kType). Pin the engine before searching: it
                          decides belt-vs-chain and the intervals.
                       2. PROGRAM — web_search the manufacturer schedule for THIS engine at this usage, to

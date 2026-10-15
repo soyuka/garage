@@ -36,17 +36,15 @@ class McpToolbox implements ToolboxInterface
      * update_vehicle/plan_maintenance when 586b223 added them without updating this list — the prompt
      * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.)
      *
-     * Excluded: the make/model browse roots (lookup_plate / list_cars resolve the carId directly),
-     * and the granular catalog-walk tools — the service flow uses the single get_service_parts call
-     * (parts + fluids in one round-trip) instead of get_fill_volumes → list_part_categories →
-     * list_articles. Fewer hops and one tool result keep the agent loop short and its context small.
+     * Excluded: the make/model browse roots (lookup_plate / list_cars resolve the carId directly)
+     * and get_fill_volumes. list_part_categories / list_articles stay visible: the service flow uses
+     * the single get_service_parts call, but brand and reference questions the open tasks cannot
+     * answer are routed to the catalog walk by the system prompt, so the agent must be able to call it.
      */
     private const EXCLUDED = [
         'list_makes',
         'list_models',
         'get_fill_volumes',
-        'list_part_categories',
-        'list_articles',
         // The pilot channel ({@see \App\ApiResource\Dashboard}) — the dashboard render intents exposed
         // to EXTERNAL MCP hosts. The agent already has each of them as an `#[AsTool]` bound to the
         // asking tab's session topic; the MCP twins publish to the owner's pilot topic instead, so

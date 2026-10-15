@@ -113,6 +113,34 @@ final class TurnContextBuilderTest extends TestCase
         self::assertStringNotContainsString('Faits connus', $context);
     }
 
+    public function testListsEachOpenTaskPartsWithPriceSoTheAgentAnswersFromTheDataset(): void
+    {
+        $vehicle = new Vehicle('Renault', 'Clio', VehicleType::Car, 'siv', year: 2012);
+        $task = new PlannedMaintenance($vehicle, 'clutch', 'user', label: 'Embrayage');
+        $task->setParts([
+            ['ref' => '623315033', 'brand' => 'LUK', 'qty' => 1, 'label' => 'Kit embrayage (Oscaro 174 €)', 'priceCents' => 17400],
+            ['ref' => 'LOCTITE-243', 'label' => 'Frein-filet'],
+        ]);
+
+        $builder = new TurnContextBuilder($this->resolver($vehicle), new VehicleFactsProjector(), $this->repository([$task]));
+        $context = $builder->build(new RunAgentTurn('combien coûtent les pièces ?', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.$vehicle->getId()));
+
+        self::assertStringContainsString('      · LUK 623315033 ×1 — Kit embrayage (Oscaro 174 €) [174 €]', $context);
+        self::assertStringContainsString('      · frein-filet moyen — Frein-filet (LOCTITE-243)', $context);
+        self::assertStringNotContainsString('Frein-filet (LOCTITE-243) [', $context);
+    }
+
+    public function testInlinesTheKTypeSoTheServiceRecipeSkipsPlateLookup(): void
+    {
+        $vehicle = new Vehicle('Renault', 'Clio', VehicleType::Car, 'siv', year: 2012);
+        $vehicle->setKType(18679);
+
+        $builder = new TurnContextBuilder($this->resolver($vehicle), new VehicleFactsProjector(), $this->repository([]));
+        $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.$vehicle->getId()));
+
+        self::assertStringContainsString('kType 18679', $context);
+    }
+
     private function resolver(?Vehicle $vehicle): GarageResolver
     {
         $resolver = $this->createStub(GarageResolver::class);
