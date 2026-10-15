@@ -30,8 +30,6 @@ export function routeHint(route: TextRoute, hasVehicle: boolean): string {
       return 'VIN';
     case 'reference':
       return 'Référence de pièce';
-    case 'category':
-      return `Catégorie : ${route.category.label}`;
     case 'text':
       return hasVehicle ? 'Recherche libre' : 'Recherche libre : précisez marque, modèle et moteur.';
   }
@@ -68,7 +66,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
     if (autoFocus) input.current?.focus();
   }, [autoFocus]);
 
-  const route = useMemo(() => routeText(text, categories), [text, categories]);
+  const route = useMemo(() => routeText(text), [text, categories]);
   const hint = context ?? routeHint(route, hasVehicle);
 
   const submit = () => {

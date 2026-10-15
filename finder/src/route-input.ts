@@ -1,15 +1,12 @@
 import { normaliseFni, normalisePlate } from './format';
-import { foldText } from './search';
-import type { Category } from './types';
 
-// The single finder input, routed cheapest first: local rules (plate, VIN, reference shape, known
-// category) before anything reaches the network, the agent for the rest.
+// The single finder input, routed cheapest first: local rules (plate, VIN, reference shape)
+// before anything reaches the network, the agent for the rest.
 
 export type TextRoute =
   | { kind: 'plate'; plate: string; format: 'siv' | 'fni' }
   | { kind: 'vin'; vin: string }
   | { kind: 'reference'; reference: string }
-  | { kind: 'category'; category: Category }
   | { kind: 'text'; text: string }
   | { kind: 'empty' };
 
@@ -47,7 +44,7 @@ function isReference(raw: string): boolean {
   });
 }
 
-export function routeText(input: string, categories: readonly Category[] | null): TextRoute {
+export function routeText(input: string): TextRoute {
   const raw = input.trim().replace(/\s+/g, ' ');
   if (raw === '') return { kind: 'empty' };
 
@@ -57,12 +54,6 @@ export function routeText(input: string, categories: readonly Category[] | null)
   if (PLATE_CHARS.test(raw) && VIN.test(compact(raw))) return { kind: 'vin', vin: compact(raw) };
 
   if (isReference(raw)) return { kind: 'reference', reference: raw };
-
-  if (categories) {
-    const q = foldText(raw);
-    const hit = categories.find((c) => c.leaf && foldText(c.label) === q);
-    if (hit) return { kind: 'category', category: hit };
-  }
 
   return { kind: 'text', text: raw };
 }

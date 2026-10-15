@@ -61,7 +61,7 @@ function Starters({ starters, busy, onText, onFiles }: { starters: readonly Star
             type="button"
             className="btn btn--quiet"
             disabled={busy}
-            onClick={() => (s.kind === 'photo' ? picker.current?.click() : onText(routeText(s.label, null), s.label))}
+            onClick={() => (s.kind === 'photo' ? picker.current?.click() : onText(routeText(s.label), s.label))}
           >
             {s.label}
           </button>

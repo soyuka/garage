@@ -8,14 +8,14 @@ describe('home showcase copy', () => {
 
   it('shows no plate anywhere', () => {
     const strings = [HOME.headline, HOME.lede, HOME.placeholder, ...STARTERS.map((s) => s.label)];
-    for (const s of strings) expect(routeText(s, null).kind).not.toBe('plate');
+    for (const s of strings) expect(routeText(s).kind).not.toBe('plate');
     for (const s of strings) expect(s).not.toMatch(/\b[A-Z]{2}-\d{3}-[A-Z]{2}\b/);
   });
 
   it('starts every text chip as a free search in one click, without a vehicle', () => {
     const texts = STARTERS.filter((s) => s.kind === 'text');
     expect(texts.length).toBeGreaterThan(0);
-    for (const s of texts) expect(routeText(s.label, null)).toEqual({ kind: 'text', text: s.label });
+    for (const s of texts) expect(routeText(s.label)).toEqual({ kind: 'text', text: s.label });
   });
 
   it('offers one photo chip, for the carte grise', () => {

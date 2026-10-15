@@ -174,18 +174,19 @@ function Finder({ api }: { api: FinderApi }) {
           .then((decode) => setPanel({ kind: 'vin', decode }))
           .catch((e: unknown) => setPanel({ kind: 'error', message: e instanceof ApiError ? e.message : 'Décodage du VIN impossible. Vérifiez la case E de la carte grise.' }));
         return;
-      case 'category':
-        if (!v) return askAgent(typed);
-        turn.reset();
-        setPanel({ kind: 'none' });
-        trace.current = newTrace('category', typed);
-        navigate({ view: 'result', ref, categoryId: r.category.id, clusterId: null });
-        return;
       case 'reference':
         return askAgent(r.reference, { intent: 'reference' });
       case 'text':
         return askAgent(r.text);
     }
+  };
+
+  const openSuggestion = (category: Category) => {
+    if (!v) return;
+    turn.reset();
+    setPanel({ kind: 'none' });
+    trace.current = newTrace('suggestion', category.label);
+    navigate({ view: 'result', ref, categoryId: category.id, clusterId: null });
   };
 
   const readRegistration = (registration: Registration) => {
@@ -267,7 +268,7 @@ function Finder({ api }: { api: FinderApi }) {
   if (!entry && route.view === 'vehicle' && !agentActive && cats) {
     for (const id of SUGGESTIONS) {
       const c = cats.find((k) => k.id === id);
-      if (c) quick.push({ label: c.label, run: () => onText({ kind: 'category', category: c }, c.label) });
+      if (c) quick.push({ label: c.label, run: () => openSuggestion(c) });
     }
   }
 
