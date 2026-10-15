@@ -125,6 +125,44 @@ describe('follow-up turns', () => {
   });
 });
 
+describe('follow-up from a deterministic result', () => {
+  const mazda = { carId: 19107, carType: 'PC' as const };
+  const held = (): TurnState => turnReducer(turnReducer(initialTurn, { type: 'start', instruction: 'et le filtre à air ?', held: mazda }), frame({ type: 'turn', phase: 'start' }));
+
+  it('holds the on-screen result while the turn runs', () => {
+    expect(held().held).toEqual(mazda);
+    expect(held().parts).toEqual([]);
+  });
+
+  it('releases on the first part the agent shows', () => {
+    expect(turnReducer(held(), frame({ type: 'showParts', categoryId: 100198, categoryLabel: 'Rotule axiale', rationale: '', narrowed })).held).toBeNull();
+    expect(turnReducer(held(), frame({ type: 'showWebPart', categoryLabel: 'Pompe', reference: 'P1', brand: 'GRAF', sourceUrl: 'https://example.org', sourceTitle: '', rationale: '' })).held).toBeNull();
+  });
+
+  it('releases on another vehicle, not on the one already on screen', () => {
+    const set = (carId: number) => frame({ type: 'setVehicle', carId, carType: 'PC', make: null, model: null, engine: null, plate: null });
+    expect(turnReducer(held(), set(19107)).held).toEqual(mazda);
+    expect(turnReducer(held(), set(16182)).held).toBeNull();
+  });
+
+  it('keeps the result when the turn ends with only a question, or with nothing', () => {
+    const asked = turnReducer(held(), frame({ type: 'askQuestion', question: 'Avant ou arrière ?', options: [], context: 'essieu ?' }));
+    expect(turnReducer(asked, frame({ type: 'turn', phase: 'end' })).held).toEqual(mazda);
+    expect(turnReducer(held(), frame({ type: 'turn', phase: 'end' })).held).toEqual(mazda);
+  });
+
+  it('holds nothing for a fresh turn', () => {
+    expect(turnReducer(initialTurn, { type: 'start', instruction: 'x' }).held).toBeNull();
+  });
+});
+
+describe('synthetic turns', () => {
+  it('marks a turn replayed from synthetic frames, and only that turn', () => {
+    expect(turnReducer(initialTurn, { type: 'start', instruction: 'rotule', synthetic: true }).synthetic).toBe(true);
+    expect(turnReducer(initialTurn, { type: 'start', instruction: 'rotule' }).synthetic).toBe(false);
+  });
+});
+
 describe('transport helpers', () => {
   it('builds the session topic the API publishes to and the hub subscription URL', () => {
     expect(sessionTopic('https://localhost/', 'abc')).toBe('https://localhost/agent/sessions/abc');

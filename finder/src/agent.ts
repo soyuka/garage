@@ -1,7 +1,7 @@
 import { mapNarrowing } from './api';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
-import type { AgentPart, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle } from './types';
+import type { AgentPart, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -12,7 +12,7 @@ const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 const NOTHING_FOUND = 'Aucune pièce trouvée pour cette demande. Reformulez-la, ou choisissez une catégorie dans la liste.';
 const CANCELLED = 'Demande interrompue.';
 
-export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false };
+export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false, held: null, synthetic: false };
 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
@@ -76,7 +76,7 @@ export function parseFrame(data: string): FinderFrame | null {
 }
 
 export type TurnAction =
-  | { type: 'start'; instruction: string; continued?: boolean }
+  | { type: 'start'; instruction: string; continued?: boolean; held?: HeldVehicle | null; synthetic?: boolean }
   | { type: 'frame'; frame: FinderFrame }
   | { type: 'cancel' }
   | { type: 'fail'; message: string }
@@ -110,6 +110,7 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
       return {
         ...state,
         stale: false,
+        held: null,
         parts: upsert(state, {
           kind: 'catalog',
           key: `c${frame.categoryId}`,
@@ -123,6 +124,7 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
       return {
         ...state,
         stale: false,
+        held: null,
         parts: upsert(state, {
           kind: 'web',
           key: `w${frame.brand}|${frame.reference}`,
@@ -138,17 +140,18 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
       return { ...state, ask: { question: frame.question, options: frame.options, context: frame.context } };
     case 'setVehicle': {
       const { type: _type, ...vehicle } = frame;
-      return { ...state, vehicle };
+      const same = state.held !== null && state.held.carId === vehicle.carId && state.held.carType === vehicle.carType;
+      return { ...state, vehicle, held: same ? state.held : null };
     }
   }
 }
 
 export function turnReducer(state: TurnState, action: TurnAction): TurnState {
   switch (action.type) {
-    case 'start':
-      return action.continued && state.parts.length > 0
-        ? { ...initialTurn, phase: 'sending', instruction: action.instruction, parts: state.parts, vehicle: state.vehicle, stale: true }
-        : { ...initialTurn, phase: 'sending', instruction: action.instruction };
+    case 'start': {
+      const base = { ...initialTurn, phase: 'sending' as const, instruction: action.instruction, held: action.held ?? null, synthetic: action.synthetic ?? false };
+      return action.continued && state.parts.length > 0 ? { ...base, parts: state.parts, vehicle: state.vehicle, stale: true } : base;
+    }
     case 'frame':
       return state.phase === 'sending' || state.phase === 'running' ? applyFrame(state, action.frame) : state;
     case 'cancel':

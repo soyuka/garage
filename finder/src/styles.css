@@ -504,6 +504,13 @@ button {
 
 .work > .sheet-wrap {
   flex: 1;
+  transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* A follow-up is running: the result it continues stays readable until the agent shows its own. */
+.work--held > .sheet-wrap {
+  opacity: 0.82;
+  filter: grayscale(0.5);
 }
 
 .trace {

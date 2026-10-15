@@ -98,8 +98,9 @@ function Finder({ api }: { api: FinderApi }) {
   const turnVehicle = turn.state.vehicle;
   const agentActive = turn.state.phase !== 'idle' || turn.needsLogin !== null;
   // An agent result keeps its own sheet (rationale, several parts) while its route names the part shown.
+  const held = turn.state.held !== null;
   const agentOwns =
-    agentActive && (route.view !== 'result' || turn.state.parts.some((p) => p.kind === 'catalog' && p.categoryId === route.categoryId));
+    agentActive && !held && (route.view !== 'result' || turn.state.parts.some((p) => p.kind === 'catalog' && p.categoryId === route.categoryId));
 
   const categoryId = route.view === 'result' && !agentOwns ? route.categoryId : null;
   const narrowing = useAsync<Narrowing>(v?.carId && categoryId ? `${v.carId}-${categoryId}` : null, () => {
@@ -112,6 +113,11 @@ function Finder({ api }: { api: FinderApi }) {
   useEffect(() => {
     if (agentActive && !agentOwns && !isBusy(turn.state)) turn.reset();
   }, [route]);
+
+  // The turn's first part replaces the result it was continuing: leave that result's route.
+  useEffect(() => {
+    if (agentActive && !held && !agentOwns && route.view === 'result' && turn.state.parts.length > 0) navigate({ view: 'vehicle', ref: route.ref });
+  }, [held, turn.state.parts]);
 
   const history = useAsync<HistoryEntry[]>(route.view === 'entry' && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.journal()));
 
@@ -136,7 +142,7 @@ function Finder({ api }: { api: FinderApi }) {
     if (demo) {
       if (isDemoTurn(text)) {
         setPanel({ kind: 'none' });
-        turn.replay(text, demoTurn());
+        turn.replay(text, demoTurn(), true);
       } else {
         setPanel({ kind: 'error', message: 'Mode démo : l’agent n’est pas appelé. Essayez la plaque XB-301-ZB puis « filtre à huile », ou « rotule axiale peugeot 307 ».' });
       }
@@ -149,8 +155,8 @@ function Finder({ api }: { api: FinderApi }) {
       summary: options.summary ?? context?.summary ?? null,
       pendingContext: options.pendingContext ?? context?.pendingContext ?? null,
       continued: options.continued ?? turn.state.parts.length > 0,
+      held: route.view === 'result' && !agentOwns && v?.carId ? { carId: v.carId, carType: v.carType } : null,
     });
-    if (route.view === 'result' && !agentOwns) navigate({ view: 'vehicle', ref: route.ref });
   };
 
   const onText = (r: TextRoute, typed: string) => {
@@ -378,7 +384,18 @@ function Finder({ api }: { api: FinderApi }) {
     agentOwns ? (
       <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} followUp={followUp} onAsk={askAgent} />
     ) : (
-      <Workspace api={api} route={route as Exclude<Route, { view: 'entry' }>} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} slot={slot} followUp={followUp} />
+      <Workspace
+        api={api}
+        route={route as Exclude<Route, { view: 'entry' }>}
+        vehicle={vehicle}
+        categories={categories}
+        narrowing={narrowing}
+        navigate={navigate}
+        slot={slot}
+        followUp={followUp}
+        turn={held ? turn : null}
+        onAsk={askAgent}
+      />
     ),
     'work',
   );
@@ -405,9 +422,12 @@ interface WorkspaceProps {
   navigate: Navigate;
   slot: HTMLElement | null;
   followUp: MutableRefObject<FollowUp | null>;
+  // A follow-up turn holding this result on screen until it shows parts of its own.
+  turn: AgentTurn | null;
+  onAsk: (text: string, options?: AskOptions) => void;
 }
 
-function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp }: WorkspaceProps) {
+function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, onAsk }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const v = vehicle.status === 'ok' ? vehicle.data : null;
@@ -471,8 +491,11 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   const traceNode = route.view === 'result' && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
   const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
 
+  const ask = turn?.state.ask ?? null;
+  const waiting = turn !== null && isBusy(turn.state);
+
   return (
-    <div className="work">
+    <div className={waiting ? 'work work--held' : 'work'} aria-busy={waiting || undefined}>
       <div ref={wrapRef} className={wide ? 'sheet-wrap' : 'sheet-wrap sheet-wrap--stacked'}>
         <Sheet
           family={family}
@@ -490,7 +513,9 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
         {!wide && traceNode}
         {!wide && block}
       </div>
+      {slot && ask && createPortal(<AgentQuestion ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} />, slot)}
       {slot &&
+        !ask &&
         question &&
         createPortal(<QuestionCard question={question} confirmed={confirmed} selected={cluster?.id ?? null} onAnswer={(id) => route.view === 'result' && navigate({ ...route, clusterId: id }, { replace: true })} />, slot)}
     </div>
@@ -612,7 +637,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} rationale={part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} synthetic={state.synthetic} rationale={part.rationale} />
   ) : null;
   const traceNode = n ? <NarrowingTrace narrowing={{ status: 'ok', data: n }} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
 

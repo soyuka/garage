@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer } from '../agent';
 import { isAuthenticated, login } from '../auth';
-import type { BuildLabel, FinderFrame, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
+import type { BuildLabel, FinderFrame, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
 const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
 const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
@@ -42,6 +42,7 @@ export interface AskOptions {
   summary?: string | null;
   buildLabel?: BuildLabel | null;
   continued?: boolean;
+  held?: HeldVehicle | null;
 }
 
 export interface AgentTurn {
@@ -52,7 +53,7 @@ export interface AgentTurn {
   cancel: () => void;
   reset: () => void;
   signIn: () => void;
-  replay: (instruction: string, frames: { frame: FinderFrame; at: number }[]) => void;
+  replay: (instruction: string, frames: { frame: FinderFrame; at: number }[], synthetic: boolean) => void;
 }
 
 // `ref` is the route's vehicle ref ('' on the entry page, where a turn starts without a vehicle).
@@ -98,7 +99,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
       setNeedsLogin(null);
       clearPending();
       lastFrame.current = Date.now();
-      dispatch({ type: 'start', instruction: text, continued: options.continued ?? false });
+      dispatch({ type: 'start', instruction: text, continued: options.continued ?? false, held: options.held ?? null });
       const body = turnBody({
         instruction: text,
         sessionId,
@@ -145,9 +146,9 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
 
   // Demo mode only: plays recorded frames through the same reducer, no request, no hub.
   const timers = useRef<number[]>([]);
-  const replay = useCallback((instruction: string, frames: { frame: FinderFrame; at: number }[]) => {
+  const replay = useCallback((instruction: string, frames: { frame: FinderFrame; at: number }[], synthetic: boolean) => {
     timers.current.forEach((t) => window.clearTimeout(t));
-    dispatch({ type: 'start', instruction });
+    dispatch({ type: 'start', instruction, synthetic });
     timers.current = frames.map(({ frame, at }) => window.setTimeout(() => dispatch({ type: 'frame', frame }), at));
   }, []);
   useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);

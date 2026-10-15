@@ -231,4 +231,13 @@ export interface TurnState {
   vehicle: AgentVehicle | null;
   // A follow-up keeps the previous turn's parts on screen until it shows its own.
   stale: boolean;
+  // A follow-up sent from a deterministic result keeps that result on screen until the turn shows a
+  // part or another vehicle.
+  held: HeldVehicle | null;
+  synthetic: boolean;
+}
+
+export interface HeldVehicle {
+  carId: number;
+  carType: 'PC' | 'CV';
 }
