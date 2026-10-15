@@ -27,12 +27,13 @@ final readonly class VehicleResolution
         public ?Vehicle $vehicle = null,
         public array $candidates = [],
         public ?string $vehicleId = null,
+        public bool $created = false,
     ) {
     }
 
-    public static function resolved(Vehicle $vehicle): self
+    public static function resolved(Vehicle $vehicle, bool $created = false): self
     {
-        return new self('resolved', vehicle: $vehicle);
+        return new self('resolved', vehicle: $vehicle, created: $created);
     }
 
     /**

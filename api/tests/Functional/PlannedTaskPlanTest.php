@@ -73,6 +73,24 @@ final class PlannedTaskPlanTest extends AppTestCase
         $this->assertCount(2, $members[0]['parts']);
     }
 
+    public function testRePostingWithTheChosenVehicleIriPlansOnThatRow(): void
+    {
+        $client = static::createClient();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $chosen = new Vehicle('PEUGEOT', '307', VehicleType::Car, 'user');
+        $chosen->setOwner(self::TEST_OWNER);
+        $dm->persist($chosen);
+        $dm->flush();
+
+        $data = $client->request('POST', '/garage/planned-tasks', [
+            'headers' => self::headers(),
+            'json' => ['vehicle' => '/garage/vehicles/'.$chosen->getId(), 'type' => 'other', 'label' => 'Rotule axiale', 'parts' => [['ref' => 'JAR123', 'brand' => 'TRW']]],
+        ])->toArray();
+
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame('/garage/vehicles/'.$chosen->getId(), $data['vehicle']);
+    }
+
     public function testAnonymousPostIsRejected(): void
     {
         static::createClient()->request('POST', '/garage/planned-tasks', [

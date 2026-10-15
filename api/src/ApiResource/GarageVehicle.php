@@ -14,6 +14,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use App\Dto\VehicleCreateInput;
 use App\Dto\VehicleFactInput;
+use App\Dto\VehicleSaveInput;
 use App\Entity\Vehicle;
 use App\State\GarageVehicleCollectionProvider;
 use App\State\GarageVehicleCreateProcessor;
@@ -21,6 +22,7 @@ use App\State\GarageVehicleDeleteProcessor;
 use App\State\GarageVehicleFactDeleteProcessor;
 use App\State\GarageVehicleFactProcessor;
 use App\State\GarageVehiclePatchProcessor;
+use App\State\GarageVehicleSaveProcessor;
 use App\State\GarageVehicleProvider;
 use Symfony\Component\Uid\Ulid;
 
@@ -44,6 +46,13 @@ use Symfony\Component\Uid\Ulid;
             uriTemplate: '/garage/vehicles',
             input: VehicleCreateInput::class,
             processor: GarageVehicleCreateProcessor::class,
+        ),
+        // The finder's "Enregistrer le véhicule": plate-aware find-or-create (201 created, 200 matched,
+        // 409 + candidates when a plateless save could be a stored car). See GarageVehicleSaveProcessor.
+        new Post(
+            uriTemplate: '/garage/vehicles/save',
+            input: VehicleSaveInput::class,
+            processor: GarageVehicleSaveProcessor::class,
         ),
         new Get(uriTemplate: '/garage/vehicles/{id}', provider: GarageVehicleProvider::class),
         new Patch(

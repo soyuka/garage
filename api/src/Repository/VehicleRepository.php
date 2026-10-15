@@ -184,6 +184,33 @@ final class VehicleRepository extends ServiceDocumentRepository
      * The tenancy floor every lookup shares: scoped to the current owner and excluding soft-deleted
      * rows. Callers layer their own fields/sort/limit on top.
      */
+    /**
+     * The current owner's vehicle registered under this plate, compared without case, spaces or
+     * dashes ("xb 301 zb" is "XB-301-ZB"): plates are stored as typed, so the comparison is done here
+     * over the owner's plated rows rather than by an exact query.
+     */
+    public function findByPlate(string $plate): ?Vehicle
+    {
+        $wanted = self::normalizePlate($plate);
+        if ('' === $wanted) {
+            return null;
+        }
+
+        $plated = $this->baseQuery()->field('plate')->notEqual(null)->sort('addedAt', 'asc')->getQuery()->execute();
+        foreach ($plated as $vehicle) {
+            if (self::normalizePlate((string) $vehicle->getPlate()) === $wanted) {
+                return $vehicle;
+            }
+        }
+
+        return null;
+    }
+
+    public static function normalizePlate(string $plate): string
+    {
+        return strtoupper((string) preg_replace('/[\s\-]+/u', '', $plate));
+    }
+
     private function baseQuery(): Builder
     {
         return $this->createQueryBuilder()
