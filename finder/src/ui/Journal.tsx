@@ -11,7 +11,6 @@ const RULES: Record<string, string> = {
   'plate-fni': 'plaque FNI',
   vin: 'VIN',
   category: 'catégorie',
-  suggestion: 'suggestion',
   recent: 'récente',
   'carte-grise': 'carte grise',
   url: 'lien',

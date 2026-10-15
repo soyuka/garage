@@ -43,7 +43,6 @@ const viewLabel = (family: Family, category: Category | null): string => {
 
 const MAX_FRAMES = 3;
 const PHOTO_INSTRUCTION = 'Photo de la pièce';
-const SUGGESTIONS = [100259, 100260, 100261];
 const SHEET_OVERLAY_MIN = 812;
 
 export function App() {
@@ -181,14 +180,6 @@ function Finder({ api }: { api: FinderApi }) {
     }
   };
 
-  const openSuggestion = (category: Category) => {
-    if (!v) return;
-    turn.reset();
-    setPanel({ kind: 'none' });
-    trace.current = newTrace('suggestion', category.label);
-    navigate({ view: 'result', ref, categoryId: category.id, clusterId: null });
-  };
-
   const readRegistration = (registration: Registration) => {
     turn.reset();
     if (route.view !== 'entry') navigate({ view: 'entry' });
@@ -265,12 +256,6 @@ function Finder({ api }: { api: FinderApi }) {
 
   const quick: QuickAction[] = [];
   if (!entry && route.view === 'result' && v?.carId && !isBusy(turn.state)) quick.push({ label: 'Chercher une autre pièce sur ce véhicule', run: () => openVehicle(ref) });
-  if (!entry && route.view === 'vehicle' && !agentActive && cats) {
-    for (const id of SUGGESTIONS) {
-      const c = cats.find((k) => k.id === id);
-      if (c) quick.push({ label: c.label, run: () => openSuggestion(c) });
-    }
-  }
 
   const note =
     panel.kind === 'reading' ? (
