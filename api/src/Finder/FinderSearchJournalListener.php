@@ -32,6 +32,10 @@ final class FinderSearchJournalListener
 
     public const string INPUT_HEADER = 'X-Finder-Input';
 
+    public const string PLATE_HEADER = 'X-Finder-Plate';
+
+    private const int MAX_PLATE_LENGTH = 20;
+
     private const string STARTED = '_finder_search_started';
 
     private const string CALLS = '_finder_search_calls';
@@ -112,7 +116,8 @@ final class FinderSearchJournalListener
     private function describe(mixed $data, Request $request): array
     {
         return match (true) {
-            $data instanceof NarrowedParts => [
+            // The narrowing knows only the carId: the page sends the plate it shows so the row reopens it.
+            $data instanceof NarrowedParts => self::plate($request) + [
                 'carId' => $data->carId,
                 // NarrowedParts carries no carType: the route reads it from the query, PC by default.
                 'carType' => (CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar)->value,
@@ -130,5 +135,15 @@ final class FinderSearchJournalListener
             ],
             default => [],
         };
+    }
+
+    /**
+     * @return array{plate?: string}
+     */
+    private static function plate(Request $request): array
+    {
+        $plate = trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', '', rawurldecode((string) $request->headers->get(self::PLATE_HEADER, ''))));
+
+        return '' === $plate || mb_strlen($plate) > self::MAX_PLATE_LENGTH ? [] : ['plate' => $plate];
     }
 }

@@ -90,6 +90,32 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null], $listed[0]['vehicle']);
     }
 
+    public function testANarrowedSearchCarryingThePagePlateRoutesToThePlate(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre', 'X-Finder-Plate' => rawurlencode(' XB-301-ZB ')],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame('XB-301-ZB', $this->rows()[0]->getSearch()['plate']);
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame('p/XB-301-ZB/c/100259', $listed[0]['route']);
+        self::assertSame('XB-301-ZB', $listed[0]['vehicle']['plate']);
+    }
+
+    public function testAnOverlongPlateHeaderIsDropped(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Plate' => str_repeat('A', 21)],
+        ]);
+
+        self::assertArrayNotHasKey('plate', $this->rows()[0]->getSearch());
+    }
+
     public function testAPlateLookupRowRoutesToThePlate(): void
     {
         $client = static::createClient();
