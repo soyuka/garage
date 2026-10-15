@@ -37,7 +37,8 @@ final readonly class TurnCostEstimator
 
     public function estimate(string $model, ?int $promptTokens, ?int $completionTokens, ?int $cacheReadTokens, ?int $cacheCreationTokens): ?float
     {
-        $price = $this->prices[$model] ?? null;
+        // The journal records the model string as configured, options included ("claude-sonnet-5-5?max_tokens=…").
+        $price = $this->prices[strtok($model, '?') ?: $model] ?? null;
         if (null === $price) {
             return null;
         }

@@ -30,6 +30,16 @@ final class TurnCostEstimatorTest extends TestCase
         );
     }
 
+    public function testTheRecordedModelOptionsDoNotChangeThePricedId(): void
+    {
+        $estimator = new TurnCostEstimator(self::PRICES);
+
+        self::assertSame(
+            $estimator->estimate('claude-sonnet-5-5', 1_000, 500, 20_000, 3_000),
+            $estimator->estimate('claude-sonnet-5-5?max_tokens=4096&thinking[type]=between_tools', 1_000, 500, 20_000, 3_000),
+        );
+    }
+
     public function testNoCostForAnUnpricedModel(): void
     {
         self::assertNull((new TurnCostEstimator(self::PRICES))->estimate('claude-haiku-4-5', 1_000, 500, 0, 0));
