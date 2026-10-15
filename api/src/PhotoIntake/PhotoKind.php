@@ -8,5 +8,6 @@ enum PhotoKind: string
 {
     case CarteGrise = 'carte_grise';
     case Part = 'part';
+    case BuildLabel = 'build_label';
     case Other = 'other';
 }

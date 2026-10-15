@@ -29,7 +29,12 @@ final class AnthropicPhotoIntakeReaderTest extends TestCase
 
         $schema = $captured['options']['response_format']['json_schema']['schema'];
         $this->assertSame([], array_values(array_filter(array_keys($schema['properties']), static fn (string $k): bool => str_starts_with($k, 'C'))));
-        $this->assertSame(['carte_grise', 'part', 'other'], $schema['properties']['kind']['enum']);
+        $this->assertSame(['carte_grise', 'part', 'build_label', 'other'], $schema['properties']['kind']['enum']);
+        $this->assertSame(['opr', 'printedCodes'], array_keys($schema['properties']['buildLabel']['properties']));
+        $this->assertSame(['opr', 'printedCodes'], $schema['properties']['buildLabel']['required']);
+        $system = (string) $captured['input']->getSystemMessage()?->getContent();
+        $this->assertStringContainsString('build_label', $system);
+        $this->assertStringContainsString('OPR', $system);
         $this->assertSame(['familyGuess', 'printedReferences', 'brandGuess'], array_keys($schema['properties']['part']['properties']));
         $this->assertSame(array_keys($schema['properties']), $schema['required']);
     }

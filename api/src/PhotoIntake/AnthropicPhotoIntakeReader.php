@@ -25,6 +25,7 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
         kind:
         - "carte_grise": a French vehicle registration certificate (certificat d'immatriculation).
         - "part": a vehicle part, its packaging or its label.
+        - "build_label": a manufacturer label stuck or riveted on the car body, typically on the door pillar or door edge (PSA "plaque constructeur", tyre-pressure sticker, paint/build vignette).
         - "other": anything else.
 
         For a carte_grise, extract the technical fields below, each copied from the document, or null when absent or unreadable. Never guess.
@@ -45,6 +46,8 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
         For any other kind, every field is null.
 
         For a part, fill part: familyGuess (the part family in French, e.g. "filtre à huile", "disque de frein"), printedReferences (every reference or part number printed or stamped on the part or its label, copied character for character, spaces and punctuation included; only what is legible, never a guess), brandGuess (the brand printed on it, or null). For any other kind, part has null/empty values.
+
+        For a build_label, fill buildLabel: printedCodes (every code printed on the label, each copied verbatim, character for character, one entry per printed code or line; only what is legible, never a guess), opr (on a Peugeot / Citroën / DS label: the OPR, also called "numéro d'organisation", a 4 or 5 digit production-day counter, often printed right after "DAM" or "OPR", e.g. "DAM 12345", or a DAM such as "1234588" whose first 4-5 digits are the OPR followed by a 2-digit plant code; copy those digits exactly, or null when absent, unreadable or when you are not sure which code it is). Paint codes and tyre pressures are not needed. Never guess, never compute. For any other kind, buildLabel has null/empty values.
 
         Set legible to false when the photo is too blurry, cropped or dark to read reliably. Use warnings for short remarks about doubtful readings; never put personal data in a warning.
         PROMPT;
@@ -83,7 +86,7 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
      */
     private function responseFormat(): array
     {
-        $properties = ['kind' => ['type' => 'string', 'enum' => ['carte_grise', 'part', 'other']]];
+        $properties = ['kind' => ['type' => 'string', 'enum' => ['carte_grise', 'part', 'build_label', 'other']]];
         $properties += array_fill_keys(AnthropicRegistrationDocumentReader::FIELDS, ['type' => ['string', 'null']]);
         $properties['part'] = [
             'type' => 'object',
@@ -93,6 +96,15 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
                 'brandGuess' => ['type' => ['string', 'null']],
             ],
             'required' => ['familyGuess', 'printedReferences', 'brandGuess'],
+            'additionalProperties' => false,
+        ];
+        $properties['buildLabel'] = [
+            'type' => 'object',
+            'properties' => [
+                'opr' => ['type' => ['string', 'null']],
+                'printedCodes' => ['type' => 'array', 'items' => ['type' => 'string']],
+            ],
+            'required' => ['opr', 'printedCodes'],
             'additionalProperties' => false,
         ];
         $properties['legible'] = ['type' => 'boolean'];
