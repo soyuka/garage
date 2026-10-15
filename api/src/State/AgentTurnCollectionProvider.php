@@ -6,6 +6,8 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Agent\Journal\TurnCostEstimator;
+use App\Agent\TurnSurface;
 use App\ApiResource\AgentTurn;
 use App\Repository\AgentTurnRepository;
 use App\Security\OwnerContext;
@@ -24,6 +26,7 @@ final class AgentTurnCollectionProvider implements ProviderInterface
     public function __construct(
         private readonly AgentTurnRepository $turns,
         private readonly OwnerContext $owner,
+        private readonly TurnCostEstimator $cost,
     ) {
     }
 
@@ -37,6 +40,12 @@ final class AgentTurnCollectionProvider implements ProviderInterface
             return [];
         }
 
-        return array_map(AgentTurn::summaryOf(...), $this->turns->findForOwner($owner, self::LIMIT));
+        $surface = $operation->getParameters()?->get('surface')?->getValue();
+        $surface = \is_string($surface) ? TurnSurface::tryFrom($surface) : null;
+
+        return array_map(
+            fn ($turn): AgentTurn => AgentTurn::summaryOf($turn, $this->cost),
+            $this->turns->findForOwner($owner, self::LIMIT, $surface),
+        );
     }
 }

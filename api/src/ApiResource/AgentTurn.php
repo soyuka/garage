@@ -8,10 +8,13 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\QueryParameter;
+use App\Agent\Journal\TurnCostEstimator;
 use App\Entity\AgentTurn as AgentTurnEntity;
 use App\State\AgentTurnCollectionProvider;
 use App\State\AgentTurnProvider;
 use Symfony\Component\Uid\Ulid;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * The read-model of the agent-turn debug journal ({@see AgentTurnEntity}). Read-only: a turn is
@@ -25,7 +28,17 @@ use Symfony\Component\Uid\Ulid;
 #[ApiResource(
     shortName: 'AgentTurn',
     operations: [
-        new GetCollection(uriTemplate: '/agent/turns', provider: AgentTurnCollectionProvider::class),
+        new GetCollection(
+            uriTemplate: '/agent/turns',
+            provider: AgentTurnCollectionProvider::class,
+            parameters: [
+                'surface' => new QueryParameter(
+                    description: 'Only the rows of one surface: finder or garage.',
+                    schema: ['type' => 'string', 'enum' => ['finder', 'garage']],
+                    constraints: [new Assert\Choice(choices: ['finder', 'garage'])],
+                ),
+            ],
+        ),
         new Get(uriTemplate: '/agent/turns/{id}', provider: AgentTurnProvider::class),
     ],
 )]
@@ -35,6 +48,8 @@ final class AgentTurn
     public Ulid $id;
 
     public string $instruction;
+    public string $surface;
+    public string $kind;
     public string $status;
     public ?string $error = null;
     public string $provider;
@@ -48,6 +63,10 @@ final class AgentTurn
     public int $toolCallCount = 0;
     public int $webSearchCount = 0;
     public ?int $totalTokens = null;
+    public ?int $cacheReadTokens = null;
+    public ?int $cacheCreationTokens = null;
+    #[ApiProperty(description: 'Estimated USD cost from the AGENT_PRICE_* env prices; null when they are not configured.')]
+    public ?float $estimatedCostUsd = null;
 
     /** Inlined on the item read only. The exact context handed to the LLM. */
     #[ApiProperty(description: 'The server-built context handed to the LLM (item read only).')]
@@ -69,11 +88,13 @@ final class AgentTurn
     /**
      * Light projection for the listing: identity, status, timing and counts. No heavy payload.
      */
-    public static function summaryOf(AgentTurnEntity $turn): self
+    public static function summaryOf(AgentTurnEntity $turn, ?TurnCostEstimator $cost = null): self
     {
         $resource = new self();
         $resource->id = $turn->getId();
         $resource->instruction = $turn->getInstruction();
+        $resource->surface = $turn->getSurface()->value;
+        $resource->kind = $turn->getKind()->value;
         $resource->status = $turn->getStatus()->value;
         $resource->error = $turn->getError();
         $resource->provider = $turn->getProvider();
@@ -87,6 +108,9 @@ final class AgentTurn
         $resource->toolCallCount = \count($turn->getToolCalls());
         $resource->webSearchCount = $turn->getWebSearchCount();
         $resource->totalTokens = $turn->getTotalTokens();
+        $resource->cacheReadTokens = $turn->getCacheReadTokens();
+        $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
+        $resource->estimatedCostUsd = $cost?->estimate($turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());
 
         return $resource;
     }
@@ -94,9 +118,9 @@ final class AgentTurn
     /**
      * Full projection for the item read: the summary plus the heavy payload.
      */
-    public static function fullOf(AgentTurnEntity $turn): self
+    public static function fullOf(AgentTurnEntity $turn, ?TurnCostEstimator $cost = null): self
     {
-        $resource = self::summaryOf($turn);
+        $resource = self::summaryOf($turn, $cost);
         $resource->context = $turn->getContext();
         $resource->summary = $turn->getSummary();
         $resource->pendingContext = $turn->getPendingContext();

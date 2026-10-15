@@ -26,6 +26,7 @@ use Symfony\Component\Uid\Ulid;
 #[ODM\Document(collection: 'agent_turns', repositoryClass: AgentTurnRepository::class)]
 // Sort-covering for the journal listing: scoped to owner, newest first.
 #[ODM\Index(keys: ['owner' => 'asc', 'startedAt' => 'desc'], name: 'idx_turn_owner_started')]
+#[ODM\Index(keys: ['owner' => 'asc', 'surface' => 'asc', 'startedAt' => 'desc'], name: 'idx_turn_owner_surface_started')]
 class AgentTurn
 {
     #[ODM\Id(strategy: 'NONE', type: 'string')]
@@ -40,6 +41,9 @@ class AgentTurn
     // Class-level default: journals written before the finder existed hydrate as garage turns.
     #[ODM\Field(type: 'string', enumType: TurnSurface::class)]
     private TurnSurface $surface = TurnSurface::Garage;
+
+    #[ODM\Field(type: 'string', enumType: AgentTurnKind::class)]
+    private AgentTurnKind $kind = AgentTurnKind::Agent;
 
     #[ODM\Field(type: 'date_immutable')]
     private \DateTimeImmutable $startedAt;
@@ -69,6 +73,14 @@ class AgentTurn
 
     #[ODM\Field(type: 'int', nullable: true)]
     private ?int $totalTokens = null;
+
+    // Anthropic's input_tokens excludes the cached prefix: under prompt caching a turn reads as a few
+    // prompt tokens unless the cache read/write buckets are kept alongside it.
+    #[ODM\Field(type: 'int', nullable: true)]
+    private ?int $cacheReadTokens = null;
+
+    #[ODM\Field(type: 'int', nullable: true)]
+    private ?int $cacheCreationTokens = null;
 
     /**
      * Raw LLM call payloads (request/response/usage) for offline analysis. Best-effort: full on the
@@ -258,21 +270,32 @@ class AgentTurn
         return $this->totalTokens;
     }
 
+    public function getCacheReadTokens(): ?int
+    {
+        return $this->cacheReadTokens;
+    }
+
+    public function getCacheCreationTokens(): ?int
+    {
+        return $this->cacheCreationTokens;
+    }
+
     /**
      * Accumulate token usage across the turn's model calls. Null deltas are ignored; any non-null one
      * promotes the running total from null to a sum, so a turn with no usage data stays null (unknown)
      * rather than reading a misleading zero.
      */
-    public function addUsage(?int $promptTokens, ?int $completionTokens): void
+    public function addUsage(?int $promptTokens, ?int $completionTokens, ?int $cacheReadTokens = null, ?int $cacheCreationTokens = null): void
     {
-        if (null !== $promptTokens) {
-            $this->promptTokens = ($this->promptTokens ?? 0) + $promptTokens;
-        }
-        if (null !== $completionTokens) {
-            $this->completionTokens = ($this->completionTokens ?? 0) + $completionTokens;
-        }
-        if (null !== $promptTokens || null !== $completionTokens) {
-            $this->totalTokens = ($this->promptTokens ?? 0) + ($this->completionTokens ?? 0);
+        $add = static fn (?int $total, ?int $delta): ?int => null === $delta ? $total : ($total ?? 0) + $delta;
+
+        $this->promptTokens = $add($this->promptTokens, $promptTokens);
+        $this->completionTokens = $add($this->completionTokens, $completionTokens);
+        $this->cacheReadTokens = $add($this->cacheReadTokens, $cacheReadTokens);
+        $this->cacheCreationTokens = $add($this->cacheCreationTokens, $cacheCreationTokens);
+
+        if (null !== $promptTokens || null !== $completionTokens || null !== $cacheReadTokens || null !== $cacheCreationTokens) {
+            $this->totalTokens = ($this->promptTokens ?? 0) + ($this->completionTokens ?? 0) + ($this->cacheReadTokens ?? 0) + ($this->cacheCreationTokens ?? 0);
         }
     }
 
@@ -318,5 +341,10 @@ class AgentTurn
     public function setSurface(TurnSurface $surface): void
     {
         $this->surface = $surface;
+    }
+
+    public function getKind(): AgentTurnKind
+    {
+        return $this->kind;
     }
 }

@@ -116,6 +116,8 @@ final readonly class ServerToolUseLogger implements PlatformInterface
             ['response' => $data],
             isset($data['usage']['input_tokens']) ? (int) $data['usage']['input_tokens'] : null,
             isset($data['usage']['output_tokens']) ? (int) $data['usage']['output_tokens'] : null,
+            isset($data['usage']['cache_read_input_tokens']) ? (int) $data['usage']['cache_read_input_tokens'] : null,
+            isset($data['usage']['cache_creation_input_tokens']) ? (int) $data['usage']['cache_creation_input_tokens'] : null,
         );
 
         if ($requests < 1 && [] === $queries) {

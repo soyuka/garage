@@ -106,12 +106,12 @@ final class TurnJournal implements WebSearchTracer
     /**
      * @param array<string, mixed> $payload raw request/response/usage for offline analysis
      */
-    public function recordLlmCall(array $payload, ?int $promptTokens, ?int $completionTokens): void
+    public function recordLlmCall(array $payload, ?int $promptTokens, ?int $completionTokens, ?int $cacheReadTokens = null, ?int $cacheCreationTokens = null): void
     {
         if (null === $this->current) {
             return;
         }
-        $this->current->addUsage($promptTokens, $completionTokens);
+        $this->current->addUsage($promptTokens, $completionTokens, $cacheReadTokens, $cacheCreationTokens);
         if ([] !== $payload) {
             $this->current->addRawCall($payload);
         }

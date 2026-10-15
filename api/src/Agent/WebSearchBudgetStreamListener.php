@@ -51,7 +51,7 @@ final class WebSearchBudgetStreamListener extends AbstractStreamListener
         }
 
         // Token usage rides the same delta — record it on the journal regardless of any search.
-        $this->journal?->recordLlmCall([], $delta->getPromptTokens(), $delta->getCompletionTokens());
+        $this->journal?->recordLlmCall([], $delta->getPromptTokens(), $delta->getCompletionTokens(), $delta->getCacheReadTokens(), $delta->getCacheCreationTokens());
 
         $searches = $delta->getToolTokens();
         if (null === $searches || $searches < 1) {

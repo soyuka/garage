@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
+use App\Agent\TurnSurface;
 use App\Entity\AgentTurn;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
@@ -25,11 +26,15 @@ final class AgentTurnRepository extends ServiceDocumentRepository
      *
      * @return list<AgentTurn>
      */
-    public function findForOwner(string $owner, int $limit = 50): array
+    public function findForOwner(string $owner, int $limit = 50, ?TurnSurface $surface = null): array
     {
+        $qb = $this->createQueryBuilder()->field('owner')->equals($owner);
+        if (null !== $surface) {
+            $qb->field('surface')->equals($surface->value);
+        }
+
         return array_values(
-            $this->createQueryBuilder()
-                ->field('owner')->equals($owner)
+            $qb
                 ->sort('startedAt', 'desc')
                 ->limit($limit)
                 ->getQuery()

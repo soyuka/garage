@@ -6,6 +6,7 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Agent\Journal\TurnCostEstimator;
 use App\ApiResource\AgentTurn;
 use App\Repository\AgentTurnRepository;
 use App\Security\OwnerContext;
@@ -23,6 +24,7 @@ final class AgentTurnProvider implements ProviderInterface
     public function __construct(
         private readonly AgentTurnRepository $turns,
         private readonly OwnerContext $owner,
+        private readonly TurnCostEstimator $cost,
     ) {
     }
 
@@ -36,6 +38,6 @@ final class AgentTurnProvider implements ProviderInterface
         $id = $uriVariables['id'];
         $turn = $this->turns->findOneForOwner($id instanceof Ulid ? $id : Ulid::fromString((string) $id), $owner);
 
-        return null !== $turn ? AgentTurn::fullOf($turn) : null;
+        return null !== $turn ? AgentTurn::fullOf($turn, $this->cost) : null;
     }
 }
