@@ -1247,6 +1247,7 @@ button {
 .intake input[type='search'] {
   flex: 1;
   min-width: 0;
+  text-overflow: ellipsis;
   border: 0;
   background: transparent;
   font: inherit;
@@ -1443,6 +1444,12 @@ button {
   scrollbar-color: var(--hair) transparent;
   padding: 2px;
   margin: -2px;
+}
+
+@media (pointer: coarse) {
+  .dock-mine-row {
+    scrollbar-width: none;
+  }
 }
 
 .dock-mine-row .btn--quiet {
