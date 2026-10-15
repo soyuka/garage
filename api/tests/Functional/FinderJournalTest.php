@@ -52,6 +52,16 @@ final class FinderJournalTest extends AppTestCase
         self::assertEqualsWithDelta(0.012416, $item['estimatedCostUsd'], 1e-9, 'prices pinned in .env.test');
     }
 
+    public function testATurnOnAnUnpricedModelHasNoCost(): void
+    {
+        $client = static::createClient();
+        $turn = $this->seed('filtre à huile', TurnSurface::Finder, static fn (AgentTurn $t) => $t->addUsage(8, 250, 12000, 3000), model: 'claude-haiku-4-5');
+
+        $item = $client->request('GET', '/agent/turns/'.$turn->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
+        self::assertSame('claude-haiku-4-5', $item['model']);
+        self::assertNull($item['estimatedCostUsd'] ?? null);
+    }
+
     public function testAnAuthenticatedFinderSearchIsJournaled(): void
     {
         $client = static::createClient();
@@ -316,10 +326,10 @@ final class FinderJournalTest extends AppTestCase
     /**
      * @param (\Closure(AgentTurn): void)|null $with
      */
-    private function seed(string $instruction, TurnSurface $surface, ?\Closure $with = null): AgentTurn
+    private function seed(string $instruction, TurnSurface $surface, ?\Closure $with = null, string $model = 'claude-sonnet-5-5'): AgentTurn
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        $turn = new AgentTurn(self::TEST_OWNER, 'sess', $instruction, 'ctx', 'anthropic', 'claude-sonnet-5-5', true);
+        $turn = new AgentTurn(self::TEST_OWNER, 'sess', $instruction, 'ctx', 'anthropic', $model, true);
         $turn->setSurface($surface);
         if (null !== $with) {
             $with($turn);

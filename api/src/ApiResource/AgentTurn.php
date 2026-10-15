@@ -71,7 +71,7 @@ final class AgentTurn
     public ?int $totalTokens = null;
     public ?int $cacheReadTokens = null;
     public ?int $cacheCreationTokens = null;
-    #[ApiProperty(description: 'Estimated USD cost from the AGENT_PRICE_* env prices; null when they are not configured.')]
+    #[ApiProperty(description: 'Estimated USD cost from the AGENT_PRICES entry of the turn model; null when that model is not priced.')]
     public ?float $estimatedCostUsd = null;
     /** @var list<array{mimeType: string, bytes: int}> */
     #[ApiProperty(description: 'Shape of the photos the turn carried (type and size, never the bytes).')]
@@ -144,7 +144,7 @@ final class AgentTurn
         $resource->categoryLabel = $turn->getCategoryLabel();
         $resource->cacheReadTokens = $turn->getCacheReadTokens();
         $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
-        $resource->estimatedCostUsd = $cost?->estimate($turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());
+        $resource->estimatedCostUsd = $cost?->estimate($turn->getModel(), $turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());
 
         return $resource;
     }
