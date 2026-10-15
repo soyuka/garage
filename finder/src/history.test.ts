@@ -1,4 +1,4 @@
-import { formatWhen, historyEntries } from './history';
+import { formatRelative, formatWhen, historyEntries } from './history';
 import { mapRows } from './journal';
 
 const row = (id: string, startedAt: string, extra: Record<string, unknown>) => ({
@@ -44,5 +44,18 @@ describe('formatWhen', () => {
     expect(formatWhen('2026-10-15T14:21:07+02:00', now)).toBe('14:21');
     expect(formatWhen('2026-10-12T09:05:00+02:00', now)).toBe('12 oct. 09:05');
     expect(formatWhen('nope', now)).toBe('');
+  });
+});
+
+describe('formatRelative', () => {
+  const now = new Date('2026-10-15T18:00:00+02:00');
+  it('says how long ago, coarser as it gets older', () => {
+    expect(formatRelative('2026-10-15T17:59:40+02:00', now)).toBe('à l’instant');
+    expect(formatRelative('2026-10-15T17:55:00+02:00', now)).toBe('il y a 5 min');
+    expect(formatRelative('2026-10-15T14:21:07+02:00', now)).toBe('il y a 3 h');
+    expect(formatRelative('2026-10-14T09:05:00+02:00', now)).toBe('hier');
+    expect(formatRelative('2026-10-11T09:05:00+02:00', now)).toBe('il y a 4 jours');
+    expect(formatRelative('2026-09-02T09:05:00+02:00', now)).toBe('2 sept.');
+    expect(formatRelative('nope', now)).toBe('');
   });
 });

@@ -15,7 +15,7 @@ import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
-import { BlankSheet, CardResult, Entry, VinResult } from './ui/Entry';
+import { CardResult, Entry, VinResult } from './ui/Entry';
 import { SaveVehicle } from './ui/Garage';
 import { History } from './ui/History';
 import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Async, type Navigate } from './ui/hooks';
@@ -354,7 +354,6 @@ function Finder({ api }: { api: FinderApi }) {
             }}
           />
         )}
-        <BlankSheet />
       </div>,
       'entry',
     );

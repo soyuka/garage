@@ -1,4 +1,4 @@
-import { formatWhen, type HistoryEntry } from '../history';
+import { formatRelative, formatWhen, type HistoryEntry } from '../history';
 
 // Logged-in home: the last searches from the journal; one click re-reads the cached result.
 export function History({ entries, loading, onOpen }: { entries: HistoryEntry[]; loading: boolean; onOpen: (e: HistoryEntry) => void }) {
@@ -21,8 +21,8 @@ export function History({ entries, loading, onOpen }: { entries: HistoryEntry[];
                 <span className="tag" data-tone={e.outcome.tone}>
                   {e.outcome.label}
                 </span>
-                <time className="m" dateTime={e.startedAt}>
-                  {formatWhen(e.startedAt)}
+                <time dateTime={e.startedAt} title={formatWhen(e.startedAt)}>
+                  {formatRelative(e.startedAt)}
                 </time>
               </a>
             </li>
