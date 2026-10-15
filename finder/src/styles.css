@@ -351,12 +351,12 @@ button {
   color: var(--mute);
 }
 
-.tb--blank {
+.entry-sheet .tb--blank {
   border-color: var(--hair);
   color: var(--mute);
 }
 
-.tb--blank .c {
+.entry-sheet .tb--blank .c {
   border-color: var(--hair);
 }
 

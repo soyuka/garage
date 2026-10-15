@@ -31,7 +31,7 @@ function Framing({ focus, extent, reducedMotion, settleKey }: { focus: Focus | n
   useEffect(() => {
     const cam = camera as OrthographicCamera;
     const free = focus ? Math.min(focus.x * 2, size.height) : Math.min(size.width, size.height);
-    cam.zoom = (free * 0.8) / extent;
+    cam.zoom = (free * (focus ? 0.8 : 0.66)) / extent;
     if (focus) cam.setViewOffset(size.width, size.height, size.width / 2 - focus.x, size.height / 2 - focus.y, size.width, size.height);
     else cam.clearViewOffset();
     cam.updateProjectionMatrix();
