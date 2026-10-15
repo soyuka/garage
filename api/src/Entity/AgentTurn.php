@@ -103,6 +103,21 @@ class AgentTurn
     #[ODM\Field(type: 'collection')]
     private array $images = [];
 
+    #[ODM\Field(type: 'int', nullable: true)]
+    private ?int $partsApiCalls = null;
+
+    /** @var array<string, int> */
+    #[ODM\Field(type: 'hash')]
+    private array $partsApiCallsByMethod = [];
+
+    /**
+     * A deterministic finder search (kind search): the rule that routed it and what it returned.
+     *
+     * @var array<string, mixed>
+     */
+    #[ODM\Field(type: 'hash')]
+    private array $search = [];
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $owner,
@@ -370,5 +385,58 @@ class AgentTurn
     public function setImages(array $images): void
     {
         $this->images = $images;
+    }
+
+    /**
+     * A deterministic finder search, journaled once it answered: it has no model, no context and no
+     * session, only the rule that routed it, what it returned, and the catalogue calls it spent.
+     *
+     * @param array<string, mixed> $search
+     * @param array<string, int>   $partsApiCallsByMethod
+     */
+    public static function search(string $owner, string $input, array $search, array $partsApiCallsByMethod, int $durationMs, AgentTurnStatus $status): self
+    {
+        $turn = new self($owner, '', $input, '', '', '', false);
+        $turn->kind = AgentTurnKind::Search;
+        $turn->surface = TurnSurface::Finder;
+        $turn->search = $search;
+        $turn->recordPartsApiCalls($partsApiCallsByMethod);
+        $turn->status = $status;
+        $turn->finishedAt = new \DateTimeImmutable();
+        $turn->startedAt = $turn->finishedAt->modify(\sprintf('-%d milliseconds', $durationMs));
+        $turn->durationMs = $durationMs;
+
+        return $turn;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function getSearch(): array
+    {
+        return $this->search;
+    }
+
+    public function getPartsApiCalls(): ?int
+    {
+        return $this->partsApiCalls;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function getPartsApiCallsByMethod(): array
+    {
+        return $this->partsApiCallsByMethod;
+    }
+
+    /**
+     * @param array<string, int> $byMethod
+     */
+    public function recordPartsApiCalls(array $byMethod): void
+    {
+        $byMethod = array_filter($byMethod, static fn (int $n): bool => $n > 0);
+        $this->partsApiCallsByMethod = $byMethod;
+        $this->partsApiCalls = array_sum($byMethod);
     }
 }

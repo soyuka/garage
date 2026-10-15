@@ -77,6 +77,7 @@ final class FinderTurnTest extends AppTestCase
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(TurnSurface::Finder, $turns[0]->getSurface());
+        self::assertNotNull($turns[0]->getPartsApiCalls(), "the agent turn journals its catalogue spend");
     }
 
     public function testAskQuestionPublishesTheQuestionAndEndsTheTurn(): void

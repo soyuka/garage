@@ -34,6 +34,13 @@ final class PartsApiClient
     public private(set) int $upstreamCalls = 0;
 
     /**
+     * The same count split by method: the test keys' quota is per method and per day.
+     *
+     * @var array<string, int>
+     */
+    public private(set) array $upstreamCallsByMethod = [];
+
+    /**
      * @param array<string, string> $keys one key per partsapi method
      */
     public function __construct(
@@ -62,6 +69,7 @@ final class PartsApiClient
         }
 
         ++$this->upstreamCalls;
+        $this->upstreamCallsByMethod[$method] = ($this->upstreamCallsByMethod[$method] ?? 0) + 1;
 
         try {
             $response = $this->httpClient->request('GET', self::BASE_URI, [

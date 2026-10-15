@@ -9,6 +9,7 @@ use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
 use App\Message\RunAgentTurn;
+use App\PartsApi\PartsApiClient;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
 
@@ -32,15 +33,20 @@ final class TurnJournal implements WebSearchTracer
     private ?AgentTurn $current = null;
     private int $toolSeq = 0;
 
+    /** @var array<string, int> */
+    private array $partsApiBefore = [];
+
     public function __construct(
         private readonly DocumentManager $documentManager,
         private readonly LoggerInterface $logger,
+        private readonly ?PartsApiClient $partsApi = null,
     ) {
     }
 
     public function begin(RunAgentTurn $message, string $context): void
     {
         $this->toolSeq = 0;
+        $this->partsApiBefore = $this->partsApi?->upstreamCallsByMethod ?? [];
         $this->current = new AgentTurn(
             owner: $message->owner,
             sessionId: $this->sessionId($message->sessionTopic),
@@ -134,6 +140,13 @@ final class TurnJournal implements WebSearchTracer
         }
 
         $turn->finish($status, $error);
+        if (null !== $this->partsApi) {
+            $spent = [];
+            foreach ($this->partsApi->upstreamCallsByMethod as $method => $count) {
+                $spent[$method] = $count - ($this->partsApiBefore[$method] ?? 0);
+            }
+            $turn->recordPartsApiCalls($spent);
+        }
 
         try {
             $this->documentManager->persist($turn);

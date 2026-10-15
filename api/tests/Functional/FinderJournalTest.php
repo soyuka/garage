@@ -6,7 +6,9 @@ namespace App\Tests\Functional;
 
 use App\Agent\TurnSurface;
 use App\Entity\AgentTurn;
+use App\Entity\AgentTurnKind;
 use App\Entity\AgentTurnStatus;
+use App\Repository\AgentTurnRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 
 final class FinderJournalTest extends AppTestCase
@@ -45,6 +47,87 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame(12000, $item['cacheReadTokens']);
         self::assertSame(3000, $item['cacheCreationTokens']);
         self::assertNull($item['estimatedCostUsd'] ?? null, 'no configured price, no cost');
+    }
+
+    public function testAnAuthenticatedFinderSearchIsJournaled(): void
+    {
+        $client = static::createClient();
+
+        $narrowed = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre à huile'],
+        ])->toArray();
+        self::assertResponseIsSuccessful();
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        $row = $rows[0];
+        self::assertSame(AgentTurnKind::Search, $row->getKind());
+        self::assertSame(TurnSurface::Finder, $row->getSurface());
+        self::assertSame(AgentTurnStatus::Completed, $row->getStatus());
+        self::assertSame('filtre à huile', $row->getInstruction());
+        self::assertSame($narrowed['upstreamCalls'], $row->getPartsApiCalls());
+        self::assertNotNull($row->getDurationMs());
+        self::assertSame([
+            'rule' => 'category',
+            'carId' => 19107,
+            'categoryId' => 100259,
+            'clusterCount' => \count($narrowed['clusters']),
+            'totalArticles' => $narrowed['totalArticles'],
+            'unclassifiedCount' => $narrowed['unclassifiedCount'],
+            'outcome' => $narrowed['narrowed'] ? 'ok' : 'degraded',
+            'httpStatus' => 200,
+        ], $row->getSearch());
+
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame('search', $listed[0]['kind']);
+        self::assertSame($narrowed['upstreamCalls'], $listed[0]['partsApiCalls']);
+        self::assertSame('category', $listed[0]['search']['rule']);
+    }
+
+    public function testAPlateLookupIsJournaledWithItsOutcome(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/vehicles/ZZ999ZZ', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'plate', 'X-Finder-Input' => 'zz 999 zz']]);
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        self::assertSame(AgentTurnStatus::Failed, $rows[0]->getStatus());
+        self::assertSame('plate', $rows[0]->getSearch()['rule']);
+        self::assertSame('not_found', $rows[0]->getSearch()['outcome']);
+        self::assertSame(404, $rows[0]->getSearch()['httpStatus']);
+    }
+
+    public function testAnonymousSearchesAreNotJournaled(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre à huile'],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame([], $this->rows());
+    }
+
+    public function testSearchesFromOtherClientsAreNotJournaled(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame([], $this->rows());
+    }
+
+    /**
+     * @return list<AgentTurn>
+     */
+    private function rows(): array
+    {
+        static::getContainer()->get(DocumentManager::class)->clear();
+
+        return static::getContainer()->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
     }
 
     /**

@@ -70,6 +70,14 @@ final class AgentTurn
     /** @var list<array{mimeType: string, bytes: int}> */
     #[ApiProperty(description: 'Shape of the photos the turn carried (type and size, never the bytes).')]
     public array $images = [];
+    #[ApiProperty(description: 'partsapi requests actually sent upstream during the row (cache hits are free).')]
+    public ?int $partsApiCalls = null;
+    /** @var array<string, int> */
+    #[ApiProperty(description: 'partsapi upstream requests by method: the test keys are capped per method and per day.')]
+    public array $partsApiCallsByMethod = [];
+    /** @var array<string, mixed>|null */
+    #[ApiProperty(description: 'For a deterministic finder search (kind search): rule, carId, categoryId, clusterCount, totalArticles, unclassifiedCount, outcome, httpStatus.')]
+    public ?array $search = null;
 
     /** Inlined on the item read only. The exact context handed to the LLM. */
     #[ApiProperty(description: 'The server-built context handed to the LLM (item read only).')]
@@ -112,6 +120,9 @@ final class AgentTurn
         $resource->webSearchCount = $turn->getWebSearchCount();
         $resource->totalTokens = $turn->getTotalTokens();
         $resource->images = $turn->getImages();
+        $resource->partsApiCalls = $turn->getPartsApiCalls();
+        $resource->partsApiCallsByMethod = $turn->getPartsApiCallsByMethod();
+        $resource->search = [] === $turn->getSearch() ? null : $turn->getSearch();
         $resource->cacheReadTokens = $turn->getCacheReadTokens();
         $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
         $resource->estimatedCostUsd = $cost?->estimate($turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());

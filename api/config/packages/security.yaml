@@ -23,12 +23,14 @@ security:
             stateless: true
             provider: zitadel
 
-        # The REST garage surface + the agent turn. Same Casdoor bearer as `mcp` (handler added
-        # per environment below). The token is OPTIONAL at the firewall: a request with no token
+        # The REST garage surface + the agent turn, plus the finder's public catalogue reads (vehicles,
+        # vins, cars): those stay anonymous, the bearer is only read so an authenticated finder search
+        # can be journaled under its owner (App\Finder\FinderSearchJournalListener). Same Casdoor
+        # bearer as `mcp` (handler added per environment below). The token is OPTIONAL at the firewall: a request with no token
         # falls through as anonymous so the public GET reads still work — it is the access_control
         # rules below that force a token on the write methods and on /agent/turn.
         api:
-            pattern: ^/(garage|agent|tts|stt|registration-documents|photo-intake)
+            pattern: ^/(garage|agent|tts|stt|registration-documents|photo-intake|vehicles|vins|cars)
             stateless: true
             provider: zitadel
 
