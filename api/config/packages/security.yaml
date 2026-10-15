@@ -28,7 +28,7 @@ security:
         # falls through as anonymous so the public GET reads still work — it is the access_control
         # rules below that force a token on the write methods and on /agent/turn.
         api:
-            pattern: ^/(garage|agent|tts|stt|registration-documents)
+            pattern: ^/(garage|agent|tts|stt|registration-documents|photo-intake)
             stateless: true
             provider: zitadel
 
@@ -55,6 +55,7 @@ security:
         - { path: ^/stt, roles: IS_AUTHENTICATED_FULLY }
         # /registration-documents sends the upload to a paid vision model: same open-proxy reasoning.
         - { path: ^/registration-documents, roles: IS_AUTHENTICATED_FULLY }
+        - { path: ^/photo-intake, roles: IS_AUTHENTICATED_FULLY }
 
 # Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC
 # handler but drops the audience check, because Casdoor sets `aud` to the (per-DCR dynamic)

@@ -19,8 +19,17 @@ final readonly class RegistrationDocumentExtractor
      */
     public function extract(string $content, string $mimeType): RegistrationDocumentExtraction
     {
-        $raw = $this->reader->read($content, $mimeType);
+        return $this->fromRaw($this->reader->read($content, $mimeType));
+    }
 
+    /**
+     * Whitelists and normalises a model's raw answer — shared with the photo intake, which reads the
+     * same fields in its single vision call.
+     *
+     * @param array<string, mixed> $raw
+     */
+    public function fromRaw(array $raw): RegistrationDocumentExtraction
+    {
         $fields = [];
         foreach (AnthropicRegistrationDocumentReader::FIELDS as $code) {
             $value = $raw[$code] ?? null;
@@ -44,7 +53,7 @@ final readonly class RegistrationDocumentExtractor
             }
         }
 
-        $modelWarnings = array_filter($raw['warnings'] ?? [], \is_string(...));
+        $modelWarnings = array_filter(\is_array($raw['warnings'] ?? null) ? $raw['warnings'] : [], \is_string(...));
 
         return new RegistrationDocumentExtraction($fields, true === ($raw['legible'] ?? false), [...$warnings, ...array_values($modelWarnings)]);
     }

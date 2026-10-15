@@ -135,6 +135,15 @@ services:
     App\RegistrationDocument\RegistrationDocumentReader:
         alias: App\RegistrationDocument\AnthropicRegistrationDocumentReader
 
+    # Finder photo intake: the same one-shot vision call, sorting carte grise / part / other.
+    App\PhotoIntake\AnthropicPhotoIntakeReader:
+        arguments:
+            $platform: '@App\Agent\ServerToolUseLogger.inner'
+            $model: 'claude-sonnet-5-5?max_tokens=2048'
+
+    App\PhotoIntake\PhotoIntakeReader:
+        alias: App\PhotoIntake\AnthropicPhotoIntakeReader
+
     # Gemini: Gemini + Google Search grounding. Plain ai.platform.gemini (no decorator on it).
     App\Agent\WebSearch\GeminiWebSearchClient:
         arguments:
@@ -332,6 +341,13 @@ when@test:
 
         App\RegistrationDocument\RegistrationDocumentReader:
             alias: App\Tests\Mock\FakeRegistrationDocumentReader
+            public: true
+
+        App\Tests\Mock\FakePhotoIntakeReader:
+            public: true
+
+        App\PhotoIntake\PhotoIntakeReader:
+            alias: App\Tests\Mock\FakePhotoIntakeReader
             public: true
 
         # A default tenant for the suite: garage reads that send no token resolve to the same owner
