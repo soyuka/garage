@@ -1,29 +1,59 @@
 import { Html, Line } from '@react-three/drei';
-import { useMemo } from 'react';
-import { BufferGeometry, Float32BufferAttribute, Vector3 } from 'three';
+import { useFrame } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
+import { BufferGeometry, Float32BufferAttribute, Matrix4, Vector3, type Mesh } from 'three';
+import { arrowSide, type Vec3 } from './cotes';
 import { DRAFT_BLUE, LINE_THIN } from './palette';
 
-export type Vec3 = [number, number, number];
+export type { Vec3 };
 
 const v = (p: Vec3) => new Vector3(...p);
 const arr = (p: Vector3): Vec3 => [p.x, p.y, p.z];
 
 // Drawn over the part: dimensions never hide behind the paper fill.
-const OVERLAY = { depthTest: false, depthWrite: false, transparent: true } as const;
-const ORDER = 10;
+export const OVERLAY = { depthTest: false, depthWrite: false, transparent: true } as const;
+export const ORDER = 10;
 
-function Arrowheads({ tips, length = 3.4, width = 1.1, opacity }: { tips: { tip: Vector3; back: Vector3; side: Vector3 }[]; length?: number; width?: number; opacity: number }) {
+export interface ArrowTip {
+  tip: Vector3;
+  back: Vector3;
+}
+
+const view = new Vector3();
+const toLocal = new Matrix4();
+
+// Filled arrowheads whose half-width opens across the line and across the view every frame, so a
+// head on a line lying in the top face never shows edge-on as the part turns.
+export function Arrowheads({ tips, length = 3.4, width = 1.1, opacity }: { tips: ArrowTip[]; length?: number; width?: number; opacity: number }) {
+  const mesh = useRef<Mesh>(null);
   const geometry = useMemo(() => {
-    const pts = tips.flatMap(({ tip, back, side }) => {
-      const base = tip.clone().add(back.clone().multiplyScalar(length));
-      return [tip, base.clone().add(side.clone().multiplyScalar(width)), base.clone().sub(side.clone().multiplyScalar(width))];
-    });
     const g = new BufferGeometry();
-    g.setAttribute('position', new Float32BufferAttribute(pts.flatMap((p) => [p.x, p.y, p.z]), 3));
+    g.setAttribute('position', new Float32BufferAttribute(new Float32Array(tips.length * 9), 3));
     return g;
-  }, [tips, length, width]);
+  }, [tips.length]);
+  useEffect(() => () => geometry.dispose(), [geometry]);
+
+  useFrame(({ camera }) => {
+    const m = mesh.current;
+    if (!m) return;
+    camera.getWorldDirection(view).negate();
+    toLocal.copy(m.matrixWorld).invert();
+    view.transformDirection(toLocal);
+    const pos = geometry.getAttribute('position') as Float32BufferAttribute;
+    tips.forEach(({ tip, back }, i) => {
+      const [sx, sy, sz] = arrowSide([back.x, back.y, back.z], [view.x, view.y, view.z]);
+      const bx = tip.x + back.x * length;
+      const by = tip.y + back.y * length;
+      const bz = tip.z + back.z * length;
+      pos.setXYZ(i * 3, tip.x, tip.y, tip.z);
+      pos.setXYZ(i * 3 + 1, bx + sx * width, by + sy * width, bz + sz * width);
+      pos.setXYZ(i * 3 + 2, bx - sx * width, by - sy * width, bz - sz * width);
+    });
+    pos.needsUpdate = true;
+  });
+
   return (
-    <mesh geometry={geometry} renderOrder={ORDER}>
+    <mesh ref={mesh} geometry={geometry} renderOrder={ORDER} frustumCulled={false}>
       <meshBasicMaterial color={DRAFT_BLUE} side={2} opacity={opacity} {...OVERLAY} />
     </mesh>
   );
@@ -59,8 +89,8 @@ export function DimensionLine({ from, to, offset, label, placement, gap = 1.5, o
         da, db,
       ].map(arr),
       tips: [
-        { tip: da, back: dir, side: n },
-        { tip: db, back: dir.clone().negate(), side: n },
+        { tip: da, back: dir },
+        { tip: db, back: dir.clone().negate() },
       ],
       mid: arr(da.clone().add(db).multiplyScalar(0.5)),
     };
@@ -89,8 +119,7 @@ export function Leader({ points, label, opacity = 1 }: LeaderProps) {
     const p = points.map(v);
     const segs = p.slice(1).flatMap((q, i) => [arr(p[i]!), arr(q)]);
     const back = p[1]!.clone().sub(p[0]!).normalize();
-    const side = new Vector3(-back.y, back.x, 0).normalize();
-    return { segments: segs, tips: [{ tip: p[0]!, back, side }] };
+    return { segments: segs, tips: [{ tip: p[0]!, back }] };
   }, [points]);
   const end = points[points.length - 1]!;
   return (
