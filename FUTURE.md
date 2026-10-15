@@ -629,8 +629,6 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
 - **`AgentTurnTest::testTheInterfaceLanguageReachesTheWorkerAndTheModel` is flaky**: it expects
   `'Checking your garage…'` while `StepNarrator` picks one of four `list_vehicles` variants at random
   (2/5 green in a row on unchanged code). Assert membership in the variant list instead.
-- **`AgentTurnCancelTest` fails on a re-run within 120 s**: it raises the `sess-xyz` cancel flag in
-  `cache.app` (TTL 120 s) and never clears it, so the next run's opening `assertFalse` trips.
 
 ## Finder agent — open items (2026-10-15)
 

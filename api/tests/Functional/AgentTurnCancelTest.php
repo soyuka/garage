@@ -15,16 +15,18 @@ final class AgentTurnCancelTest extends AppTestCase
     {
         $client = static::createClient();
         $cancellations = static::getContainer()->get(TurnCancellations::class);
+        $sessionId = 'sess-'.bin2hex(random_bytes(8));
 
-        $this->assertFalse($cancellations->isRequested('sess-xyz'));
+        $this->assertFalse($cancellations->isRequested($sessionId));
 
         $client->request('POST', '/agent/turn/cancel', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
-            'json' => ['sessionId' => 'sess-xyz'],
+            'json' => ['sessionId' => $sessionId],
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertTrue($cancellations->isRequested('sess-xyz'), 'the worker can now see the stop request');
+        $this->assertTrue($cancellations->isRequested($sessionId), 'the worker can now see the stop request');
+        $cancellations->clear($sessionId);
     }
 
     public function testCancelWithoutSessionIdIs400(): void
