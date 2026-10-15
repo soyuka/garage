@@ -1,0 +1,46 @@
+[
+    {
+        "CRITERIA_NAME": "Année à partir de",
+        "CRITERIA_VALUE": "200406; 200907"
+    },
+    {
+        "CRITERIA_NAME": "Code moteur",
+        "CRITERIA_VALUE": "Perkins 404D-22"
+    },
+    {
+        "CRITERIA_NAME": "Diamètre extérieur [mm]",
+        "CRITERIA_VALUE": "77"
+    },
+    {
+        "CRITERIA_NAME": "Diamètre intérieur 1 [mm]",
+        "CRITERIA_VALUE": "71"
+    },
+    {
+        "CRITERIA_NAME": "Diamètre intérieur 2 [mm]",
+        "CRITERIA_VALUE": "62"
+    },
+    {
+        "CRITERIA_NAME": "Filetage",
+        "CRITERIA_VALUE": "3/4-16 UNF"
+    },
+    {
+        "CRITERIA_NAME": "Hauteur [mm]",
+        "CRITERIA_VALUE": "85"
+    },
+    {
+        "CRITERIA_NAME": "Nº de série",
+        "CRITERIA_VALUE": "GG; GY"
+    },
+    {
+        "CRITERIA_NAME": "Numéro de châssis (VIN) à partir de",
+        "CRITERIA_VALUE": "130831; 176451; 306354"
+    },
+    {
+        "CRITERIA_NAME": "Règlement européen sur la sécurité des produi",
+        "CRITERIA_VALUE": "IEC 60417-6183 expertise mécanique requise"
+    },
+    {
+        "CRITERIA_NAME": "Type de filtre",
+        "CRITERIA_VALUE": "Filtre vissé"
+    }
+]

@@ -39,7 +39,10 @@ services:
                 getSearchTree: '%env(PARTSAPI_KEY_getSearchTree)%'
                 getArticles: '%env(PARTSAPI_KEY_getArticles)%'
                 GetFillVolumes: '%env(PARTSAPI_KEY_GetFillVolumes)%'
+                getArticleCrosses: '%env(PARTSAPI_KEY_getArticleCrosses)%'
+                getArticleCriteria: '%env(PARTSAPI_KEY_getArticleCriteria)%'
             $cache: '@cache.partsapi'
+            $catalogTtl: '%env(int:PARTSAPI_CATALOG_TTL)%'
 
     App\Catalog\PartsCatalog:
         arguments:
@@ -101,6 +104,16 @@ services:
         arguments:
             $platform: '@App\Agent\ServerToolUseLogger.inner'
             $model: '%env(WEB_SEARCH_MODEL)%'
+
+    # Carte grise extraction: one-shot Sonnet 5.5 vision call on the UNDECORATED Anthropic platform, so
+    # the upload never reaches ServerToolUseLogger / the turn journal.
+    App\RegistrationDocument\AnthropicRegistrationDocumentReader:
+        arguments:
+            $platform: '@App\Agent\ServerToolUseLogger.inner'
+            $model: 'claude-sonnet-5-5?max_tokens=2048'
+
+    App\RegistrationDocument\RegistrationDocumentReader:
+        alias: App\RegistrationDocument\AnthropicRegistrationDocumentReader
 
     # Gemini: Gemini + Google Search grounding. Plain ai.platform.gemini (no decorator on it).
     App\Agent\WebSearch\GeminiWebSearchClient:
@@ -292,6 +305,14 @@ when@test:
                 $http: '@App\Tests\Mock\RecordingTranscriptionHttpClient'
                 $apiKey: '%env(ELEVENLABS_API_KEY)%'
                 $model: '%env(ELEVENLABS_STT_MODEL)%'
+
+        # The model call is never made in tests: the endpoint talks to a scripted reader.
+        App\Tests\Mock\FakeRegistrationDocumentReader:
+            public: true
+
+        App\RegistrationDocument\RegistrationDocumentReader:
+            alias: App\Tests\Mock\FakeRegistrationDocumentReader
+            public: true
 
         # A default tenant for the suite: garage reads that send no token resolve to the same owner
         # the tests seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.

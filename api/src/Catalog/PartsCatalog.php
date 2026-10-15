@@ -86,6 +86,33 @@ final class PartsCatalog
     }
 
     /**
+     * Criteria are per ARTICLE, the union over every vehicle it fits — not per vehicle.
+     *
+     * @return list<ArticleCriterion>
+     */
+    public function articleCriteria(int $artId): array
+    {
+        $rows = $this->client->fetch('getArticleCriteria', ['ART_ID' => $artId, 'LANG' => $this->lang]);
+
+        return array_map(ArticleCriterion::fromPartsApi(...), $rows);
+    }
+
+    /**
+     * @return list<ArticleCross>
+     */
+    public function articleCrosses(int $artId): array
+    {
+        $rows = $this->client->fetch('getArticleCrosses', ['ART_ID' => $artId, 'LANG' => $this->lang]);
+
+        return array_map(ArticleCross::fromPartsApi(...), $rows);
+    }
+
+    public function upstreamCalls(): int
+    {
+        return $this->client->upstreamCalls;
+    }
+
+    /**
      * @return list<FillVolume>
      */
     public function fillVolumes(int $carId): array

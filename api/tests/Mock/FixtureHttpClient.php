@@ -109,6 +109,7 @@ final class FixtureHttpClient implements HttpClientInterface
             'getSearchTree' => sprintf('getSearchTree_%s_%s.json', $query['carId'] ?? '', $query['carType'] ?? ''),
             'getArticles' => sprintf('getArticles_%s_%s_%s.json', $query['carId'] ?? '', $query['carType'] ?? '', $query['strId'] ?? ''),
             'GetFillVolumes' => sprintf('GetFillVolumes_%s.json', $query['carId'] ?? ''),
+            'getArticleCriteria', 'getArticleCrosses' => sprintf('%s_%s.json', $method, $query['ART_ID'] ?? ''),
             default => null,
         };
 

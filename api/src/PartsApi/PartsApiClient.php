@@ -17,7 +17,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *  - cache key excludes the secret key, so rotating a token never invalidates the cache
  *    and secrets never get persisted; the signature is identical to prototype_1
  *    so already-paid responses can be imported as-is;
- *  - successful responses are cached forever and never re-fetched;
+ *  - successful responses are cached forever and never re-fetched, except the catalog
+ *    snapshots (CATALOG_METHODS) which expire after $catalogTtl;
  *  - auth/network/API errors are never cached.
  */
 final class PartsApiClient
@@ -27,6 +28,11 @@ final class PartsApiClient
 
     private const BASE_URI = 'https://api.partsapi.ru/';
 
+    private const CATALOG_METHODS = ['getArticles', 'getSearchTree'];
+
+    /** Requests actually sent upstream — what the paid quota is charged for. */
+    public private(set) int $upstreamCalls = 0;
+
     /**
      * @param array<string, string> $keys one key per partsapi method
      */
@@ -34,6 +40,7 @@ final class PartsApiClient
         private readonly HttpClientInterface $httpClient,
         private readonly array $keys,
         private readonly CacheItemPoolInterface $cache,
+        private readonly int $catalogTtl = 2592000,
     ) {
     }
 
@@ -53,6 +60,8 @@ final class PartsApiClient
         if ('' === $key) {
             throw MissingApiKeyException::forPartsApiMethod($method);
         }
+
+        ++$this->upstreamCalls;
 
         try {
             $response = $this->httpClient->request('GET', self::BASE_URI, [
@@ -84,6 +93,10 @@ final class PartsApiClient
             throw $status >= 500 || 429 === $status
                 ? UpstreamException::transient(self::SOURCE, $reason)
                 : UpstreamException::definitive(self::SOURCE, $reason);
+        }
+
+        if (\in_array($method, self::CATALOG_METHODS, true)) {
+            $cacheItem->expiresAfter($this->catalogTtl);
         }
 
         $this->cache->save($cacheItem->set($data));

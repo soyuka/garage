@@ -7,6 +7,7 @@ namespace App\Tests\PartsApi;
 use App\PartsApi\PartsApiClient;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -33,7 +34,25 @@ final class PartsApiClientTest extends TestCase
         $this->assertSame(1, $requests);
     }
 
-    private function client(?int &$requests): PartsApiClient
+    public function testCatalogResponsesExpireAfterTtlButOtherMethodsNever(): void
+    {
+        $clock = new MockClock();
+        $client = $this->client($requests, $clock, 100);
+
+        foreach (['getArticles', 'getSearchTree', 'getMakes'] as $method) {
+            $client->fetch($method, ['q' => 'a']);
+        }
+        $this->assertSame(3, $requests);
+
+        $clock->sleep(101);
+        foreach (['getArticles', 'getSearchTree', 'getMakes'] as $method) {
+            $client->fetch($method, ['q' => 'a']);
+        }
+
+        $this->assertSame(5, $requests, 'articles + search tree refetched, makes still cached');
+    }
+
+    private function client(?int &$requests, ?MockClock $clock = null, int $catalogTtl = 2592000): PartsApiClient
     {
         $requests = 0;
         $httpClient = new MockHttpClient(static function () use (&$requests): MockResponse {
@@ -42,6 +61,6 @@ final class PartsApiClientTest extends TestCase
             return new MockResponse(json_encode([['id' => 1]]), ['http_code' => 200]);
         });
 
-        return new PartsApiClient($httpClient, ['getArticles' => 'k'], new ArrayAdapter());
+        return new PartsApiClient($httpClient, ['getArticles' => 'k', 'getSearchTree' => 'k', 'getMakes' => 'k'], new ArrayAdapter(0, true, 0, 0, $clock), $catalogTtl);
     }
 }

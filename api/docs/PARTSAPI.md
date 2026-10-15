@@ -1,7 +1,7 @@
 # partsapi.ru — endpoint inventory & status
 
 Base: `GET https://api.partsapi.ru/?method=<METHOD>&key=<KEY>&<params>`.
-**One key per method** (`PARTSAPI_KEY_<method>` in `.env.local`). ~50 calls/method demo budget.
+**One key per method** (`PARTSAPI_KEY_<method>` in `.env.local`). Test keys: 50 calls/day/method.
 Verified behavior, error envelopes, codes: see `../../prototype_1/PARTSAPI.md` (source of truth).
 
 Quick facts (verified): `carType` ∈ {`PC`,`CV`} (strings); `carId` = TecDoc kType
@@ -29,6 +29,33 @@ instead of the alphabetically-first no-names. MCP/agent path only; REST stays fu
 | getArticles | `…/part-categories/{id}/articles` | step 5; key `"PRODUCT GROUP"` contains a space |
 | GetFillVolumes | `/cars/{carId}/fill-volumes` | AUTONORMS; same kType; RU titles, dup RU units filtered |
 
+## Narrowing methods (verified live 2026-10-15, "TecDoc 2026 Q2")
+
+Keys `PARTSAPI_KEY_getArticleCriteria` / `_getArticleCrosses` (`getArticleMedia` was verified too but is not used: the finder shows its own 3D blueprint, not TecDoc photos). Test keys are capped at
+**50 calls/day/method**; a refusal is `{error_code:5005,status:500}`. Unlike `getArticles`, these three take
+UPPERCASE params `ART_ID` and `LANG` (`getArticles` uses lowercase `lang`). They are article facts, cached
+forever (not in `PartsApiClient::CATALOG_METHODS`).
+
+| Method | Returns | Gotchas |
+|---|---|---|
+| getArticleCriteria | `[{CRITERIA_NAME, CRITERIA_VALUE}]` | **Per ARTICLE, not per vehicle**: the union over every vehicle the article fits (MANN W 712/73 lists engine code "Perkins 404D-22", multi-valued "Année à partir de", VIN breakpoints). Application-level criteria cannot discriminate for one car; only physical ones (dimensions with a `[unit]`, thread, filter type) can. Names are truncated at ~45 chars upstream (`Diamètre intérieur de la bague d'étanchéité [`). Thread is spelled `Filetage "3/4-16 UNF"` on one brand and `Taraudage/Filetage 1 "3/4\"-16"` on another. |
+| getArticleCrosses | `[{ART_BRAND, ART_DISPLAY_NR, ART_ID\|null, ART_PRODUCT_NAME}]` | A loose INTERCHANGE list, not an equivalence class (W 712/73: 495 crosses, 186 brands, 16 different MAHLE numbers), so never cluster on it. It does carry OE numbers: entries whose brand is a vehicle maker (MAZDA LF10-14-302, FORD 1S7G-6714-CA, VOLVO 30711781). |
+
+Fixtures: every `getArticleCriteria_<id>.json` / `getArticleCrosses_<id>.json` is a real response, exported from
+the live cache for the 8 representatives of the Mazda 6 oil filter (kType 19107, category 100259). Dates and VIN
+breakpoints are not available per car through these methods.
+
+Narrowing rules (`App\Catalog\Narrowing`): only `hauteur`, outer diameter (bare `diametre` = outer), the two seal
+diameters, `thread`, `type_de_filtre` and the discrete physical keys split parts; numbered diameters, packaging, weight,
+torque and valve pressure are suppliers' own conventions and stay info-only. mm keys agree within max(2 mm, 2.5%).
+Clusters whose crosses share a CARMAKER OE number (`make` input, normalised without spaces/dashes/dots/slashes) are
+merged: on the Mazda 6 the 85 mm and 93 mm filters both cross to MAZDA LF10-14-302, so it is one part with
+85-94 mm range fingerprints, not a question.
+
+`App\Catalog\Narrowing\ArticleNarrower` (MCP `narrow_parts`, `GET /cars/{carId}/part-categories/{categoryId}/narrowed`)
+spends at most 8 criteria + 1 crosses per initial physical cluster, then nothing once cached. A quota refusal
+degrades the answer (`narrowed: false`, `degradedReason`) instead of failing it.
+
 ## Wanted next (user can provide tokens)
 
 | Method | Why |
@@ -38,7 +65,7 @@ instead of the alphabetically-first no-names. MCP/agent path only; REST stays fu
 
 ## Full catalog (from partsapi.ru store, for reference)
 
-TecDoc 2025 Q4: getMakes, getModels, getCars, getSearchTree, getArticles, getArticle,
+TecDoc 2026 Q2: getMakes, getModels, getCars, getSearchTree, getArticles, getArticle,
 getArticleMedia, getArticleCrosses, getArticleCriteria, getApplicability, getApplicability2,
 getFullInfoCV, searchArticles, tecdocCrosses, getEngine, getPassengerCarInfo, getOEApplicability.
 

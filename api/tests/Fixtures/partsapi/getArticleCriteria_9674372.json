@@ -1,0 +1,54 @@
+[
+    {
+        "CRITERIA_NAME": "Année à partir de",
+        "CRITERIA_VALUE": "200406; 200907"
+    },
+    {
+        "CRITERIA_NAME": "Code moteur",
+        "CRITERIA_VALUE": "Perkins 404D-22"
+    },
+    {
+        "CRITERIA_NAME": "Diamètre extérieur [mm]",
+        "CRITERIA_VALUE": "76"
+    },
+    {
+        "CRITERIA_NAME": "Diamètre extérieur de la bague d'étanchéité [",
+        "CRITERIA_VALUE": "71"
+    },
+    {
+        "CRITERIA_NAME": "Diamètre intérieur de la bague d'étanchéité [",
+        "CRITERIA_VALUE": "62"
+    },
+    {
+        "CRITERIA_NAME": "Filetage",
+        "CRITERIA_VALUE": "3/4-16 UNF"
+    },
+    {
+        "CRITERIA_NAME": "Hauteur [mm]",
+        "CRITERIA_VALUE": "93"
+    },
+    {
+        "CRITERIA_NAME": "Nº de série",
+        "CRITERIA_VALUE": "GG; GY"
+    },
+    {
+        "CRITERIA_NAME": "Numéro de châssis (VIN) à partir de",
+        "CRITERIA_VALUE": "130831; 176451; 195596; 306354"
+    },
+    {
+        "CRITERIA_NAME": "Pression d'ouverture clapet de dérivation [ba",
+        "CRITERIA_VALUE": "1,0"
+    },
+    {
+        "CRITERIA_NAME": "Référence de l'outil spécialisé recommandé",
+        "CRITERIA_VALUE": "LS 7"
+    },
+    {
+        "CRITERIA_NAME": "Règlement européen sur la sécurité des produi",
+        "CRITERIA_VALUE": "IEC 60417-6183 expertise mécanique requise"
+    },
+    {
+        "CRITERIA_NAME": "Type de filtre",
+        "CRITERIA_VALUE": "Filtre vissé"
+    }
+]

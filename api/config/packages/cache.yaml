@@ -6,8 +6,10 @@ framework:
         default_doctrine_dbal_provider: doctrine.dbal.default_connection
 
         pools:
-            # Paid upstream HTTP responses — they are immutable facts about a vehicle
-            # or a TecDoc catalog entry, so they never expire (default_lifetime: 0).
+            # Paid upstream HTTP responses — immutable facts about a vehicle, so the pool
+            # default never expires (default_lifetime: 0). The exception is the partsapi
+            # catalog snapshot (getArticles/getSearchTree): PartsApiClient sets a per-item
+            # TTL from PARTSAPI_CATALOG_TTL because the upstream data is refreshed quarterly.
             cache.siv:
                 adapter: cache.adapter.doctrine_dbal
                 default_lifetime: 0
