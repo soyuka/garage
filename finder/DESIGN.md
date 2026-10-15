@@ -195,7 +195,7 @@ Paper, graphite and one drafting blue. Blue is ink for drawn and measured things
 The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px graphite < 1.5px graphite title-block and journal frame), not shadow. Shadows exist only on layers that genuinely float above the sheet, all soft, negative-spread, graphite-tinted.
 
 ### Shadow Vocabulary
-- **Popover** (`box-shadow: 0 12px 32px -12px rgba(34, 36, 40, 0.28)`): suggestion list, buy menu.
+- **Popover** (`box-shadow: 0 12px 32px -12px rgba(34, 36, 40, 0.28)`): buy menu.
 - **Toast** (`box-shadow: 0 10px 28px -10px rgba(34, 36, 40, 0.5)`): graphite toast.
 - **Drawer** (`box-shadow: -18px 0 48px -28px rgba(34, 36, 40, 0.45)`): journal as overlay; removed when docked.
 - **Focus halo** (`box-shadow: 0 0 0 3px rgba(43, 89, 195, 0.18)`): input field focus-within only.
@@ -232,7 +232,7 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 - **Focus:** 2px drafting-blue outline, 2px offset, everywhere (`styles.css:44-47`).
 
 ### Inputs / Fields
-- **Composer** (2026-10-15, was hero 54px on the homepage + 34px bar in the top bar): on the home, one field under the headline (52px, 17px text, revised 2026-10-15 evening); everywhere else one field docked at the bottom, 1px graphite border, 6px radius, 46px with 16px text; it clears after each send; the category suggestion list opens upward. Attach (and camera on coarse pointers) as 36px icon buttons with inline 1.5px-stroke SVG. Focus-within adds the blue halo; dragging a file over it turns the border dashed blue on panel.
+- **Composer** (2026-10-15, was hero 54px on the homepage + 34px bar in the top bar): on the home, one field under the headline (52px, 17px text, revised 2026-10-15 evening); everywhere else one field docked at the bottom, 1px graphite border, 6px radius, 46px with 16px text; it clears after each send. *Removed 2026-10-15:* the category autocomplete list under the composer (listbox, `Recherche libre : « … »` row, arrow-key navigation, combobox ARIA). *Why:* user decision ("shows weird categories, too much"). Enter submits the text through `routeText`: an exact leaf-category name for the vehicle still takes the deterministic narrowed path, anything else goes to the agent turn; the field is a plain search input again. Attach (and camera on coarse pointers) as 36px icon buttons with inline 1.5px-stroke SVG. Focus-within adds the blue halo; dragging a file over it turns the border dashed blue on panel.
 
 ### Chips and Tags
 - **Vehicle chip:** 34px, hairline border, 6px radius; plate on panel inset in Mono; engine hides below 1280px, kType below 760px.

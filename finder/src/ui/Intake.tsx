@@ -1,7 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { HOME } from '../home';
 import { routeText, type TextRoute } from '../route-input';
-import { searchCategories } from '../search';
 import type { Category } from '../types';
 import { useMedia } from './hooks';
 
@@ -57,9 +56,6 @@ function CameraIcon() {
 
 export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, hasVehicle = categories !== null, token = null, onText, onFiles }: Props) {
   const [text, setText] = useState(initial);
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState(0);
-  const [navigated, setNavigated] = useState(false);
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLInputElement>(null);
@@ -73,28 +69,16 @@ export function Intake({ variant, categories, loading = false, initial, context 
   }, [autoFocus]);
 
   const route = useMemo(() => routeText(text, categories), [text, categories]);
-  const textual = route.kind === 'text' || route.kind === 'category';
-  const hits = useMemo(() => (categories && textual ? searchCategories(categories, text) : []), [categories, text, textual]);
-  const showList = open && textual && text.trim() !== '' && text !== initial;
-  const askIndex = hits.length;
-  const optionCount = hits.length + 1;
   const hint = context ?? routeHint(route, hasVehicle);
 
-  const submit = (picked?: TextRoute) => {
-    const r = picked ?? route;
-    if (r.kind === 'empty' || busy) return;
-    setOpen(false);
+  const submit = () => {
+    if (route.kind === 'empty' || busy) return;
     setText('');
-    onText(r, text.trim());
+    onText(route, text.trim());
   };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (showList && navigated) {
-      if (active === askIndex) return submit({ kind: 'text', text: text.trim() });
-      const c = hits[active];
-      if (c) return submit({ kind: 'category', category: c });
-    }
     submit();
   };
 
@@ -142,41 +126,15 @@ export function Intake({ variant, categories, loading = false, initial, context 
           ref={input}
           id={`${id}-q`}
           type="search"
-          role="combobox"
-          aria-expanded={showList}
-          aria-controls={`${id}-list`}
-          aria-autocomplete="list"
           aria-describedby={`${id}-hint`}
-          aria-activedescendant={showList && navigated && active < optionCount ? `${id}-o${active}` : undefined}
           placeholder={loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder}
           value={text}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
-          onChange={(e) => {
-            setText(e.target.value);
-            setActive(0);
-            setNavigated(false);
-            setOpen(true);
-          }}
-          onFocus={() => setOpen(true)}
-          onBlur={() => setOpen(false)}
+          onChange={(e) => setText(e.target.value)}
           onPaste={onPaste}
-          onKeyDown={(e) => {
-            if (!showList) return;
-            if (e.key === 'ArrowDown') {
-              e.preventDefault();
-              setNavigated(true);
-              setActive((i) => (navigated ? Math.min(i + 1, optionCount - 1) : 0));
-            } else if (e.key === 'ArrowUp') {
-              e.preventDefault();
-              setNavigated(true);
-              setActive((i) => Math.max(i - 1, 0));
-            } else if (e.key === 'Escape') {
-              setOpen(false);
-            }
-          }}
         />
         <input ref={picker} type="file" accept={ACCEPT} multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => (files(e.target.files), (e.target.value = ''))} />
         <input
@@ -204,40 +162,6 @@ export function Intake({ variant, categories, loading = false, initial, context 
       <p id={`${id}-hint`} className="intake-hint" aria-live="polite">
         {over ? 'Déposez le fichier.' : hint}
       </p>
-      {showList && (
-        <ul className="q-list" id={`${id}-list`} role="listbox" aria-label="Catégories de pièces">
-          {hits.map((c, i) => (
-            <li
-              key={c.id}
-              id={`${id}-o${i}`}
-              role="option"
-              aria-selected={navigated && i === active}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                submit({ kind: 'category', category: c });
-              }}
-              onMouseEnter={() => (setNavigated(true), setActive(i))}
-            >
-              <span className="q-label">{c.label}</span>
-              <span className="q-path">{c.segments.slice(0, -1).join(' › ')}</span>
-            </li>
-          ))}
-          <li
-            id={`${id}-o${askIndex}`}
-            role="option"
-            className="q-ask"
-            aria-selected={navigated && active === askIndex}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              submit({ kind: 'text', text: text.trim() });
-            }}
-            onMouseEnter={() => (setNavigated(true), setActive(askIndex))}
-          >
-            <span className="q-label">Recherche libre : « {text.trim()} »</span>
-            {hits.length === 0 && <span className="q-path">Aucune catégorie de ce nom</span>}
-          </li>
-        </ul>
-      )}
     </form>
   );
 }

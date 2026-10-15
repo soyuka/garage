@@ -181,54 +181,6 @@ button {
 
 
 
-.q-list {
-  position: absolute;
-  bottom: calc(100% + 6px);
-  left: 0;
-  z-index: 30;
-  width: min(520px, 100%);
-  max-height: 360px;
-  overflow: auto;
-  list-style: none;
-  padding: 4px;
-  background: var(--bg);
-  border: 1px solid var(--ink);
-  border-radius: var(--radius);
-  box-shadow: 0 12px 32px -12px rgba(34, 36, 40, 0.28);
-}
-
-.q-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  padding: 8px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.q-list li[aria-selected='true'] {
-  background: var(--tint);
-}
-
-.q-label {
-  font-weight: 500;
-}
-
-.q-path {
-  font-size: 12px;
-  color: var(--mute);
-}
-
-.q-list .q-empty {
-  cursor: default;
-  color: var(--mute);
-  text-wrap: pretty;
-}
-
-
-
-
-
 .foot {
   display: flex;
   align-items: center;
@@ -1191,22 +1143,6 @@ button {
 /* ── responsive ────────────────────────────────────────────────────────── */
 
 /* ── agent turn ────────────────────────────────────────────────────────── */
-
-.q-list .q-ask {
-  margin-top: 4px;
-  border-top: 1px solid var(--hair);
-  border-radius: 0 0 4px 4px;
-}
-
-.q-list .q-ask:first-child {
-  margin-top: 0;
-  border-top: 0;
-  border-radius: 4px;
-}
-
-.q-ask .q-label {
-  color: var(--blue-ink);
-}
 
 .agent-status {
   display: flex;
@@ -2347,11 +2283,6 @@ button {
   .journal-btn {
     order: 2;
     padding: 0 6px;
-  }
-  .q-list {
-    left: 0;
-    right: auto;
-    width: 100%;
   }
   .journal-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
