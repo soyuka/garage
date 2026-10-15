@@ -106,6 +106,28 @@ describe('mapNarrowing', () => {
     });
   });
 
+  it('keeps per-cluster applicability verbatim, empty when absent', () => {
+    const n = mapNarrowing({
+      clusters: [
+        {
+          id: 'k1',
+          fingerprint: {},
+          oeNumbers: [],
+          representative: { artId: 1, brand: 'A', number: '1' },
+          variants: [],
+          articleCount: 1,
+          applicability: [
+            { name: 'Numéro de châssis (VIN) à partir de', values: ['8A123456', ' 8A200000 '] },
+            { name: '', values: ['x'] },
+            { name: 'Année à partir de', values: 'junk' },
+          ],
+        },
+      ],
+    });
+    expect(n.clusters[0]!.applicability).toEqual([{ name: 'Numéro de châssis (VIN) à partir de', values: ['8A123456', '8A200000'] }]);
+    expect(mapNarrowing(narrowed).clusters.every((c) => Array.isArray(c.applicability))).toBe(true);
+  });
+
   it('survives a degraded payload with omitted fields', () => {
     const d = mapNarrowing({ carId: 1, categoryId: 2, clusters: [], totalArticles: 9, totalBrands: 3, unclassifiedCount: 9, differsOn: [], narrowed: false, degradedReason: 'criteria unavailable from the parts catalog (quota or outage)', upstreamCalls: 1, fallbackBrands: [{ brand: 'BOSCH', tier: 1, articles: [{ id: 5, number: 'F 1' }] }] });
     expect(d.narrowed).toBe(false);
@@ -146,6 +168,14 @@ describe('mapPhotoIntake', () => {
       kind: 'part',
       part: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73'], brandGuess: null },
     });
+  });
+
+  it('reads a build label with its printed codes verbatim', () => {
+    expect(mapPhotoIntake({ kind: 'build_label', buildLabel: { opr: ' 10345 ', printedCodes: ['DAM 10345', '', 3, 'EWP'] } })).toEqual({
+      kind: 'build_label',
+      buildLabel: { opr: '10345', printedCodes: ['DAM 10345', 'EWP'] },
+    });
+    expect(mapPhotoIntake({ kind: 'build_label', buildLabel: null })).toEqual({ kind: 'other' });
   });
 
   it('falls back to other on anything unexpected', () => {

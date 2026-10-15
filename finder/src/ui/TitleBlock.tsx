@@ -2,10 +2,11 @@ import { Fragment, useState } from 'react';
 import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
 import { formatCount } from '../format';
-import { addLabel, atelierHref, planBody, PlanError } from '../garage';
+import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
 import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from '../result';
 import type { Category, Cluster, Family, Narrowing, Reference, Vehicle } from '../types';
 import { BuyMenu } from './BuyMenu';
+import { GaragePicker } from './Garage';
 import { useToast } from './Toast';
 import { vehicleEngine, vehicleName } from './VehicleChip';
 
@@ -112,7 +113,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
                   <span>{part}</span>
                 </Fragment>
               ))
-            : '—'}
+            : <span className="tb-muted">non renseignées par le catalogue</span>}
         </span>
       </div>
       <div className="c r">
@@ -150,7 +151,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
   );
 }
 
-type AddState = 'idle' | 'saving' | 'login';
+type AddState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'login' } | { kind: 'pick'; candidates: GarageCandidate[] };
 
 const PLAN_FAILURE: Record<string, string> = {
   ambiguous: 'Plusieurs véhicules du garage correspondent : ouvrez l’Atelier pour choisir le bon, puis réessayez.',
@@ -161,39 +162,43 @@ const PLAN_FAILURE: Record<string, string> = {
 
 function AddToVehicle({ vehicle, category, family, oe, equivalent, api, demo }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi; demo: boolean }) {
   const toast = useToast();
-  const [state, setState] = useState<AddState>('idle');
+  const [state, setState] = useState<AddState>({ kind: 'idle' });
   const label = addLabel(vehicle);
 
-  const add = async () => {
-    if (!demo && !isAuthenticated()) return setState('login');
-    setState('saving');
+  const add = async (extra: { vehicle?: string; confirmNew?: boolean } = {}) => {
+    if (!demo && !isAuthenticated()) return setState({ kind: 'login' });
+    setState({ kind: 'saving' });
     try {
-      const { vehicle: iri } = await api.planPart(planBody(vehicle, category, family, oe, equivalent));
+      const { vehicle: iri } = await api.planPart({ ...planBody(vehicle, category, family, oe, equivalent), ...extra });
       toast({ text: `${category.label} ajouté au plan d’entretien.`, link: { href: atelierHref(iri, window.location.origin), label: 'Voir dans l’Atelier' } });
-      setState('idle');
+      setState({ kind: 'idle' });
     } catch (e) {
-      if (e instanceof PlanError && e.kind === 'auth') return setState('login');
+      if (e instanceof PlanError && e.kind === 'auth') return setState({ kind: 'login' });
+      if (e instanceof PlanError && e.kind === 'ambiguous' && e.candidates.length > 0) return setState({ kind: 'pick', candidates: e.candidates });
       toast(PLAN_FAILURE[e instanceof PlanError ? e.kind : 'failed']!);
-      setState('idle');
+      setState({ kind: 'idle' });
     }
   };
 
-  if (state === 'login') {
+  if (state.kind === 'login') {
     return (
       <div className="add-login" role="group" aria-label="Connexion requise">
         <p>Le garage est lié à votre compte : connectez-vous, puis ajoutez la pièce.</p>
         <button type="button" className="btn pri" onClick={() => void login()}>
           Se connecter
         </button>
-        <button type="button" className="btn btn--quiet" onClick={() => setState('idle')}>
+        <button type="button" className="btn btn--quiet" onClick={() => setState({ kind: 'idle' })}>
           Annuler
         </button>
       </div>
     );
   }
+  if (state.kind === 'pick') {
+    return <GaragePicker candidates={state.candidates} busy={false} onPick={(iri) => void add({ vehicle: iri })} onNew={() => void add({ confirmNew: true })} onCancel={() => setState({ kind: 'idle' })} />;
+  }
   return (
-    <button type="button" className="btn" disabled={!oe && !equivalent} aria-busy={state === 'saving'} onClick={() => void add()}>
-      {state === 'saving' ? 'Ajout…' : label}
+    <button type="button" className="btn" disabled={!oe && !equivalent} aria-busy={state.kind === 'saving'} onClick={() => void add()}>
+      {state.kind === 'saving' ? 'Ajout…' : label}
     </button>
   );
 }

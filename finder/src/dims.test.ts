@@ -1,4 +1,4 @@
-import { baseView, dimMid, dimText, findDim, threadSize } from './dims';
+import { dimMid, dimText, findDim } from './dims';
 import type { Dimension } from './types';
 
 const d = (key: string, value: string, min: number | null, max: number | null, info = false): Dimension => ({
@@ -33,42 +33,5 @@ describe('findDim', () => {
     expect(findDim(dims, 'outer')?.key).toBe('diametre_1');
     expect(findDim(dims, 'height')?.key).toBe('hauteur_1');
     expect(findDim([d('diametre_exterieur', '0', 0, 0)], 'outer')).toBeUndefined();
-  });
-});
-
-describe('baseView', () => {
-  const fingerprint = [
-    d('diametre_exterieur', '76', 75, 78),
-    d('diametre_exterieur_de_la_bague_d_etancheite', '71', 71, 72),
-    d('diametre_interieur_de_la_bague_d_etancheite', '62', 62, 62),
-    d('thread', '3/4-16', null, null),
-  ];
-
-  it('draws from the fingerprint midpoints and labels with the shared formatter', () => {
-    expect(baseView(fingerprint)).toEqual({
-      outer: { mid: 76.5, text: '75–78' },
-      sealOuter: { mid: 71.5, text: '71–72' },
-      sealInner: { mid: 62, text: '62' },
-      thread: '3/4-16',
-    });
-  });
-
-  it('is null without an outer diameter, and tolerates a missing seal', () => {
-    expect(baseView([d('hauteur', '93', 85, 94)])).toBeNull();
-    expect(baseView([fingerprint[0]!])).toEqual({ outer: { mid: 76.5, text: '75–78' }, sealOuter: null, sealInner: null, thread: null });
-  });
-});
-
-describe('threadSize', () => {
-  it('reads UNF inch threads and metric threads into major diameter and pitch, in mm', () => {
-    expect(threadSize('3/4-16')).toEqual({ major: 19.05, pitch: 1.5875 });
-    expect(threadSize('3/4"-16 UNF')).toEqual({ major: 19.05, pitch: 1.5875 });
-    expect(threadSize('M20x1.5')).toEqual({ major: 20, pitch: 1.5 });
-    expect(threadSize('M 22 x 1,5')).toEqual({ major: 22, pitch: 1.5 });
-  });
-
-  it('is null for anything else', () => {
-    expect(threadSize('vissé')).toBeNull();
-    expect(threadSize('')).toBeNull();
   });
 });

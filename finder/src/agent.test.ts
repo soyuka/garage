@@ -96,6 +96,35 @@ describe('turnReducer', () => {
   });
 });
 
+describe('follow-up turns', () => {
+  const withParts = (): TurnState => {
+    const shown = turnReducer(running(), frame({ type: 'showParts', categoryId: 100259, categoryLabel: 'Filtre à huile', rationale: '', narrowed }));
+    return turnReducer(turnReducer(shown, frame({ type: 'askQuestion', question: 'Code ?', options: [], context: 'code de fabrication ?' })), frame({ type: 'turn', phase: 'end' }));
+  };
+
+  it('keeps the parts on screen while a follow-up runs, then replaces them on the first new part', () => {
+    const next = turnReducer(withParts(), { type: 'start', instruction: '10345', continued: true });
+    expect(next.phase).toBe('sending');
+    expect(next.parts).toHaveLength(1);
+    expect(next.stale).toBe(true);
+    expect(next.ask).toBeNull();
+    const replaced = turnReducer(turnReducer(next, frame({ type: 'turn', phase: 'start' })), frame({ type: 'showParts', categoryId: 100198, categoryLabel: 'Rotule axiale', rationale: '', narrowed }));
+    expect(replaced.parts.map((p) => p.key)).toEqual(['c100198']);
+    expect(replaced.stale).toBe(false);
+  });
+
+  it('keeps the previous parts when the follow-up shows none, and says nothing was found only for a fresh turn', () => {
+    const next = turnReducer(turnReducer(withParts(), { type: 'start', instruction: 'merci', continued: true }), frame({ type: 'turn', phase: 'end' }));
+    expect(next.parts).toHaveLength(1);
+    expect(next.stale).toBe(false);
+    expect(next.notice).toBeNull();
+  });
+
+  it('starts clean when not continued', () => {
+    expect(turnReducer(withParts(), { type: 'start', instruction: 'x' }).parts).toEqual([]);
+  });
+});
+
 describe('transport helpers', () => {
   it('builds the session topic the API publishes to and the hub subscription URL', () => {
     expect(sessionTopic('https://localhost/', 'abc')).toBe('https://localhost/agent/sessions/abc');
@@ -116,6 +145,24 @@ describe('transport helpers', () => {
       pendingContext: 'essieu ?',
     });
     expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: { carId: 1, carType: 'CV', make: null, model: null, engine: null } })).not.toHaveProperty('pendingContext');
+  });
+
+  it('carries the on-screen result, the plate and a build label on a follow-up', () => {
+    const body = turnBody({
+      instruction: 'Code relevé sur la vignette : 10345',
+      sessionId: 's',
+      vehicle: { carId: 16182, carType: 'PC', make: 'PEUGEOT', model: '307', engine: null, plate: 'AB-123-CD' },
+      pendingContext: 'code de fabrication ?',
+      summary: 'Rotule axiale (categoryId 100198)',
+      buildLabel: { opr: '10345', printedCodes: ['DAM 10345'] },
+    });
+    expect(body).toMatchObject({
+      vehicle: { plate: 'AB-123-CD' },
+      pendingContext: 'code de fabrication ?',
+      summary: 'Rotule axiale (categoryId 100198)',
+      buildLabel: { opr: '10345', printedCodes: ['DAM 10345'] },
+    });
+    expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: null, summary: '' })).not.toHaveProperty('summary');
   });
 
   it('omits the vehicle when none is known and carries photos, intent and photo hints', () => {

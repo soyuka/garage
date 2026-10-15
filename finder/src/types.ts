@@ -61,6 +61,13 @@ export interface Representative extends Reference {
   artId: number;
 }
 
+// Application-level criteria, verbatim. They are per ARTICLE (union over every car it fits), not per
+// car: they may only help choose between clusters that already differ, never prove a fit.
+export interface Applicability {
+  name: string;
+  values: string[];
+}
+
 export interface Cluster {
   id: string;
   dimensions: Dimension[];
@@ -68,6 +75,7 @@ export interface Cluster {
   representative: Representative;
   variants: Variant[];
   articleCount: number;
+  applicability: Applicability[];
 }
 
 export interface Divergence {
@@ -113,9 +121,11 @@ export interface Registration {
 
 export type ErrorKind = 'network' | 'notFound' | 'auth' | 'quota' | 'upstream' | 'invalid';
 
+// `generic`: a part with no 3D model, drawn as a neutral placeholder without cotes; `none`: no part on the sheet.
 export type Family =
-  | { kind: 'brake'; axle: 'front' | 'rear' }
+  | { kind: 'brake'; axle: 'front' | 'rear'; component: 'disc' | 'other' }
   | { kind: 'filter'; filter: 'oil' | 'fuel' | 'air' }
+  | { kind: 'generic' }
   | { kind: 'none' };
 
 // ── Agent turn contract (POST /agent/turn with surface "finder") ─────────────────────────────────
@@ -160,9 +170,16 @@ export interface PartPhotoHints {
   brandGuess: string | null;
 }
 
+// A door-pillar vignette: the codes as printed (PSA OPR / numéro d'organisation, often after "DAM").
+export interface BuildLabel {
+  opr: string | null;
+  printedCodes: string[];
+}
+
 export type PhotoIntake =
   | { kind: 'carte_grise'; registration: Registration }
   | { kind: 'part'; part: PartPhotoHints }
+  | { kind: 'build_label'; buildLabel: BuildLabel }
   | { kind: 'other' };
 
 export interface TurnVehicle {
@@ -171,6 +188,7 @@ export interface TurnVehicle {
   make: string | null;
   model: string | null;
   engine: string | null;
+  plate?: string | null;
 }
 
 export interface CatalogPart {
@@ -211,4 +229,6 @@ export interface TurnState {
   ask: AgentAsk | null;
   notice: string | null;
   vehicle: AgentVehicle | null;
+  // A follow-up keeps the previous turn's parts on screen until it shows its own.
+  stale: boolean;
 }

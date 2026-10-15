@@ -16,10 +16,10 @@ const isCylindrical = (dimensions: readonly Dimension[]): boolean =>
 
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = []): Family {
   const path = foldText(category.path);
-  if (BRAKE.test(path)) return { kind: 'brake', axle: axleFrom(path, dimensions) };
+  if (BRAKE.test(path)) return { kind: 'brake', axle: axleFrom(path, dimensions), component: /disque de frein/.test(path) ? 'disc' : 'other' };
   if (/filtre a huile/.test(path)) return { kind: 'filter', filter: 'oil' };
-  if (/habitacle/.test(path)) return { kind: 'none' };
+  if (/habitacle/.test(path)) return { kind: 'generic' };
   if (/filtre a carburant/.test(path) && isCylindrical(dimensions)) return { kind: 'filter', filter: 'fuel' };
   if (/filtre a air/.test(path) && isCylindrical(dimensions)) return { kind: 'filter', filter: 'air' };
-  return { kind: 'none' };
+  return { kind: 'generic' };
 }

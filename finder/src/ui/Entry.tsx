@@ -1,33 +1,11 @@
 import type { ReactNode } from 'react';
-import { routeText, type TextRoute } from '../route-input';
 import type { Registration, VinDecode } from '../types';
-import { Intake } from './Intake';
 
-interface Props {
-  context: string | null;
-  busy: boolean;
-  onText: (route: TextRoute, typed: string) => void;
-  onFiles: (files: File[]) => void;
-  examples: string[];
-  children?: ReactNode;
-}
-
-export function Entry({ context, busy, onText, onFiles, examples, children }: Props) {
+export function Entry({ children }: { children?: ReactNode }) {
   return (
     <section className="entry" aria-labelledby="entry-title">
       <h1 id="entry-title">Quelle pièce, pour quel véhicule ?</h1>
-      <p className="entry-lede">Un seul champ : la plaque, le VIN, une référence, le nom d’une pièce ou un symptôme. Ou une photo de la pièce, de la carte grise, une courte vidéo.</p>
-      <Intake variant="hero" categories={null} initial="" context={context} busy={busy} autoFocus onText={onText} onFiles={onFiles} />
-      {examples.length > 0 && (
-        <p className="entry-examples">
-          <span>Exemples</span>
-          {examples.map((x) => (
-            <button key={x} type="button" className="link-btn" onClick={() => onText(routeText(x, null), x)}>
-              {x}
-            </button>
-          ))}
-        </p>
-      )}
+      <p className="entry-lede">Un seul champ, en bas de l’écran : la plaque, le VIN, une référence, le nom d’une pièce ou un symptôme. Ou une photo de la pièce, de la carte grise, une courte vidéo.</p>
       {children && <div className="entry-panel">{children}</div>}
     </section>
   );

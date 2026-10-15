@@ -1,7 +1,6 @@
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapVehicle, mapVin } from './api';
 import { authFetch } from './auth';
-import { planPart, type PlanBody, type PlannedTask } from './garage';
-import { seedRecent } from './recent';
+import { planPart, saveVehicle, type PlanBody, type PlannedTask, type SaveBody, type SavedVehicle } from './garage';
 import { getJournal, getJournalDetail, mapDetail, mapRows, type JournalDetail, type JournalRow } from './journal';
 import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, VinDecode } from './types';
 
@@ -11,6 +10,7 @@ import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, 
 export interface Trace {
   rule: string;
   input: string;
+  plate?: string | null;
 }
 
 export interface FinderApi {
@@ -23,12 +23,17 @@ export interface FinderApi {
   journal(): Promise<JournalRow[]>;
   journalEntry(id: string): Promise<JournalDetail>;
   planPart(body: PlanBody): Promise<PlannedTask>;
+  saveVehicle(body: SaveBody): Promise<SavedVehicle>;
 }
 
 const LD = { Accept: 'application/ld+json' };
 
-const traced = (trace?: Trace): RequestInit => ({
-  headers: { ...LD, ...(trace ? { 'X-Finder-Rule': trace.rule, 'X-Finder-Input': encodeURIComponent(trace.input.slice(0, 200)) } : {}) },
+export const traced = (trace?: Trace): RequestInit => ({
+  headers: {
+    ...LD,
+    ...(trace ? { 'X-Finder-Rule': trace.rule, 'X-Finder-Input': encodeURIComponent(trace.input.slice(0, 200)) } : {}),
+    ...(trace?.plate ? { 'X-Finder-Plate': encodeURIComponent(trace.plate) } : {}),
+  },
 });
 
 async function getJson(url: string, init: RequestInit = {}): Promise<unknown> {
@@ -68,6 +73,7 @@ const live: FinderApi = {
   journal: getJournal,
   journalEntry: getJournalDetail,
   planPart,
+  saveVehicle,
 };
 
 // `?demo` serves recorded responses (XB-301-ZB, oil filter 100259) so UI work never spends the
@@ -94,11 +100,6 @@ async function demoApi(): Promise<FinderApi> {
       { code: 'P.3', label: 'Énergie', value: 'ES' },
     ],
   };
-  seedRecent('XB-301-ZB', [
-    { categoryId: 100032, label: 'Disque de frein' },
-    { categoryId: 100151, label: 'Bougie d’allumage' },
-    { categoryId: 100260, label: 'Filtre à air' },
-  ]);
   const later = <T,>(value: T, ms = 450): Promise<T> => new Promise((r) => setTimeout(() => r(value), ms));
   return {
     vehicle: (plate) => (plate === 'XB-301-ZB' ? later(mapVehicle(vehicle.default)) : Promise.reject(new ApiError('notFound'))),
@@ -114,6 +115,7 @@ async function demoApi(): Promise<FinderApi> {
       return entry ? later(mapDetail(entry), 300) : Promise.reject(new ApiError('notFound'));
     },
     planPart: () => later({ task: '/garage/planned-tasks/01DEMOTASK', vehicle: '/garage/vehicles/01DEMOVEHICLE' }, 500),
+    saveVehicle: () => later({ vehicle: '/garage/vehicles/01DEMOVEHICLE', created: true }, 500),
   };
 }
 

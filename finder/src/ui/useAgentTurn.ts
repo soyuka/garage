@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer } from '../agent';
 import { isAuthenticated, login } from '../auth';
-import type { PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
+import type { BuildLabel, FinderFrame, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
 const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
 const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
@@ -38,6 +38,10 @@ export interface AskOptions {
   intent?: TurnIntent;
   images?: string[];
   photoHints?: PartPhotoHints | null;
+  // The on-screen result the request continues, and whether the previous parts stay up meanwhile.
+  summary?: string | null;
+  buildLabel?: BuildLabel | null;
+  continued?: boolean;
 }
 
 export interface AgentTurn {
@@ -48,6 +52,7 @@ export interface AgentTurn {
   cancel: () => void;
   reset: () => void;
   signIn: () => void;
+  replay: (instruction: string, frames: { frame: FinderFrame; at: number }[]) => void;
 }
 
 // `ref` is the route's vehicle ref ('' on the entry page, where a turn starts without a vehicle).
@@ -93,15 +98,17 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
       setNeedsLogin(null);
       clearPending();
       lastFrame.current = Date.now();
-      dispatch({ type: 'start', instruction: text });
+      dispatch({ type: 'start', instruction: text, continued: options.continued ?? false });
       const body = turnBody({
         instruction: text,
         sessionId,
-        vehicle: vehicle?.carId ? { carId: vehicle.carId, carType: vehicle.carType, make: vehicle.make, model: vehicle.model, engine: vehicle.engineCode } : null,
+        vehicle: vehicle?.carId ? { carId: vehicle.carId, carType: vehicle.carType, make: vehicle.make, model: vehicle.model, engine: vehicle.engineCode, plate: vehicle.plate } : null,
         pendingContext: options.pendingContext ?? null,
         intent,
         images: options.images,
         photoHints: options.photoHints ?? null,
+        summary: options.summary ?? null,
+        buildLabel: options.buildLabel ?? null,
       });
       postTurn(body).catch((e: unknown) => {
         if (e instanceof TurnRequestError && e.kind === 'auth') {
@@ -136,6 +143,15 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
     void login();
   }, [ref, needsLogin]);
 
+  // Demo mode only: plays recorded frames through the same reducer, no request, no hub.
+  const timers = useRef<number[]>([]);
+  const replay = useCallback((instruction: string, frames: { frame: FinderFrame; at: number }[]) => {
+    timers.current.forEach((t) => window.clearTimeout(t));
+    dispatch({ type: 'start', instruction });
+    timers.current = frames.map(({ frame, at }) => window.setTimeout(() => dispatch({ type: 'frame', frame }), at));
+  }, []);
+  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
+
   const resumed = useRef(false);
   const vehicleReady = ref === '' || Boolean(vehicle?.carId);
   useEffect(() => {
@@ -144,5 +160,5 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
     ask(pending.text, { intent: pending.intent });
   }, [pending, vehicleReady, ask]);
 
-  return { state, needsLogin: needsLogin?.text ?? null, restored: pending?.text ?? null, ask, cancel, reset, signIn };
+  return { state, needsLogin: needsLogin?.text ?? null, restored: pending?.text ?? null, ask, cancel, reset, signIn, replay };
 }

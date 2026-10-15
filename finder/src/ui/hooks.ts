@@ -33,17 +33,23 @@ export function useAsync<T>(key: string | null, run: () => Promise<T>): Async<T>
   return { ...state, retry };
 }
 
-export function useRoute(): [Route, (r: Route) => void] {
+export type Navigate = (r: Route, options?: { replace?: boolean }) => void;
+
+export function useRoute(): [Route, Navigate] {
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   useEffect(() => {
     const onHash = () => setRoute(parseRoute(window.location.hash));
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
-  const navigate = useCallback((r: Route) => {
+  const navigate = useCallback<Navigate>((r, options) => {
     const hash = routeToHash(r);
-    if (window.location.hash !== hash) window.location.hash = hash;
-    else setRoute(r);
+    if (window.location.hash === hash) setRoute(r);
+    else if (options?.replace) {
+      // replaceState fires no hashchange: the route state follows by hand.
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}${hash}`);
+      setRoute(r);
+    } else window.location.hash = hash;
   }, []);
   return [route, navigate];
 }

@@ -25,6 +25,15 @@ export interface SearchInfo {
   httpStatus: number | null;
 }
 
+// Server-computed (api AgentTurn::summaryOf): the finder hash path that restores the row's result.
+export interface RowVehicle {
+  plate: string | null;
+  carId: number | null;
+  carType: string | null;
+  make: string | null;
+  model: string | null;
+}
+
 export interface JournalRow {
   id: string;
   instruction: string;
@@ -43,6 +52,8 @@ export interface JournalRow {
   partsApiCallsByMethod: Record<string, number>;
   images: { mimeType: string; bytes: number }[];
   search: SearchInfo | null;
+  route: string | null;
+  vehicle: RowVehicle | null;
 }
 
 export interface JournalToolCall {
@@ -113,6 +124,10 @@ function mapRow(raw: unknown): JournalRow | null {
       return mimeType && bytes !== null ? [{ mimeType, bytes }] : [];
     }),
     search: mapSearch(j.search),
+    route: str(j.route),
+    vehicle: isObject(j.vehicle)
+      ? { plate: str(j.vehicle.plate), carId: num(j.vehicle.carId), carType: str(j.vehicle.carType), make: str(j.vehicle.make), model: str(j.vehicle.model) }
+      : null,
   };
 }
 

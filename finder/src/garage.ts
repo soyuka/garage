@@ -48,6 +48,9 @@ export interface PlanBody {
   source: 'user';
   addedBy: 'finder';
   parts: PlanPartLine[];
+  // After a 409: the garage vehicle IRI the user picked, or confirmNew for a car not listed.
+  vehicle?: string;
+  confirmNew?: boolean;
 }
 
 export function planBody(v: Vehicle, category: Category, family: Family, oe: Reference | null, equivalent: Reference | null): PlanBody {
@@ -73,10 +76,38 @@ export const atelierHref = (vehicleIri: string, origin: string): string => `${or
 
 export type PlanErrorKind = 'auth' | 'ambiguous' | 'invalid' | 'network' | 'failed';
 
+export interface GarageCandidate {
+  iri: string;
+  plate: string | null;
+  name: string | null;
+}
+
 export class PlanError extends Error {
-  constructor(public readonly kind: PlanErrorKind) {
+  constructor(
+    public readonly kind: PlanErrorKind,
+    public readonly candidates: GarageCandidate[] = [],
+  ) {
     super(kind);
   }
+}
+
+type Json = Record<string, unknown>;
+const text = (v: unknown): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim() : null);
+
+function candidatesOf(raw: unknown): GarageCandidate[] {
+  const list = typeof raw === 'object' && raw !== null && Array.isArray((raw as Json).candidates) ? ((raw as Json).candidates as unknown[]) : [];
+  return list.flatMap((c) => {
+    const j = (typeof c === 'object' && c !== null ? c : {}) as Json;
+    const iri = text(j['@id']);
+    if (iri === null) return [];
+    const shape: Vehicle = { plate: null, make: text(j.make), model: text(j.model), modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId: null, carType: 'PC' };
+    return [{ iri, plate: text(j.plate), name: vehicleShortName(shape) }];
+  });
+}
+
+async function failure(res: Response): Promise<PlanError> {
+  const kind = KIND[res.status] ?? 'failed';
+  return new PlanError(kind, kind === 'ambiguous' ? candidatesOf(await res.json().catch(() => null)) : []);
 }
 
 export interface PlannedTask {
@@ -97,8 +128,43 @@ export async function planPart(body: PlanBody): Promise<PlannedTask> {
   } catch {
     throw new PlanError('network');
   }
-  if (!res.ok) throw new PlanError(KIND[res.status] ?? 'failed');
+  if (!res.ok) throw await failure(res);
   const json = (await res.json()) as { '@id'?: string; vehicle?: string };
   if (!json['@id'] || !json.vehicle) throw new PlanError('failed');
   return { task: json['@id'], vehicle: json.vehicle };
+}
+
+export interface SaveBody {
+  make: string | null;
+  model: string | null;
+  carId: number | null;
+  plate: string | null;
+  vin: string | null;
+  vehicle?: string;
+  confirmNew?: boolean;
+}
+
+export const saveBody = (v: Vehicle): SaveBody => ({ make: v.make, model: v.model ?? v.modelEn, carId: v.carId, plate: v.plate, vin: v.vin });
+
+export interface SavedVehicle {
+  vehicle: string;
+  created: boolean;
+}
+
+// POST /garage/vehicles/save: 201 created, 200 matched (same plate, or the picked IRI), 409 + candidates.
+export async function saveVehicle(body: SaveBody): Promise<SavedVehicle> {
+  let res: Response;
+  try {
+    res = await authFetch('/garage/vehicles/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    throw new PlanError('network');
+  }
+  if (!res.ok) throw await failure(res);
+  const json = (await res.json()) as { '@id'?: string };
+  if (!json['@id']) throw new PlanError('failed');
+  return { vehicle: json['@id'], created: res.status === 201 };
 }

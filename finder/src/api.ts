@@ -1,5 +1,6 @@
 import { normalisePlate } from './format';
 import type {
+  Applicability,
   CarType,
   Category,
   Cluster,
@@ -161,6 +162,11 @@ function mapCluster(raw: unknown): Cluster | null {
     representative: { artId: int(rep.artId), ...repRef },
     variants,
     articleCount: int(j.articleCount),
+    applicability: list(j.applicability).flatMap((a): Applicability[] => {
+      const name = str(obj(a).name);
+      const values = list(obj(a).values).flatMap((v) => (typeof v === 'string' && v.trim() !== '' ? [v.trim()] : []));
+      return name && name.trim() !== '' && values.length > 0 ? [{ name: name.trim(), values }] : [];
+    }),
   };
 }
 
@@ -251,6 +257,17 @@ export function mapPhotoIntake(raw: unknown): PhotoIntake {
         familyGuess: str(p.familyGuess),
         printedReferences: list(p.printedReferences).filter((r): r is string => typeof r === 'string' && r.trim() !== ''),
         brandGuess: str(p.brandGuess),
+      },
+    };
+  }
+  if (j.kind === 'build_label' && isObject(j.buildLabel)) {
+    const b = j.buildLabel;
+    const opr = str(b.opr);
+    return {
+      kind: 'build_label',
+      buildLabel: {
+        opr: opr === null || opr.trim() === '' ? null : opr.trim(),
+        printedCodes: list(b.printedCodes).flatMap((c) => (typeof c === 'string' && c.trim() !== '' ? [c.trim()] : [])),
       },
     };
   }

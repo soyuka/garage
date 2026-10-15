@@ -24,7 +24,9 @@
      "getArticleCriteria": 1
     },
     "images": [],
-    "search": null
+    "search": null,
+    "route": null,
+    "vehicle": null
    },
    {
     "@id": "/agent/turns/01JDEMO0SEARCH000000000002",
@@ -56,6 +58,14 @@
      "unclassifiedCount": 14,
      "outcome": "ok",
      "httpStatus": 200
+    },
+    "route": "p/XB-301-ZB/c/100259",
+    "vehicle": {
+     "plate": "XB-301-ZB",
+     "carId": 19107,
+     "carType": "PC",
+     "make": "MAZDA",
+     "model": "MAZDA6"
     }
    },
    {
@@ -85,6 +95,14 @@
      "unclassifiedCount": null,
      "outcome": "ok",
      "httpStatus": 200
+    },
+    "route": "p/XB-301-ZB",
+    "vehicle": {
+     "plate": "XB-301-ZB",
+     "carId": 19107,
+     "carType": "PC",
+     "make": "MAZDA",
+     "model": "MAZDA6"
     }
    },
    {
@@ -120,7 +138,9 @@
       "bytes": 377904
      }
     ],
-    "search": null
+    "search": null,
+    "route": null,
+    "vehicle": null
    }
   ]
  },
@@ -215,7 +235,9 @@
      "at": "2026-10-15T14:21:24+02:00",
      "serverSide": false
     }
-   ]
+   ],
+   "route": null,
+   "vehicle": null
   },
   "/agent/turns/01JDEMO0SEARCH000000000002": {
    "@id": "/agent/turns/01JDEMO0SEARCH000000000002",
@@ -249,7 +271,15 @@
     "httpStatus": 200
    },
    "toolCalls": [],
-   "webSearchQueries": []
+   "webSearchQueries": [],
+   "route": "p/XB-301-ZB/c/100259",
+   "vehicle": {
+    "plate": "XB-301-ZB",
+    "carId": 19107,
+    "carType": "PC",
+    "make": "MAZDA",
+    "model": "MAZDA6"
+   }
   },
   "/agent/turns/01JDEMO0PLATE0000000000003": {
    "@id": "/agent/turns/01JDEMO0PLATE0000000000003",
@@ -280,7 +310,15 @@
     "httpStatus": 200
    },
    "toolCalls": [],
-   "webSearchQueries": []
+   "webSearchQueries": [],
+   "route": "p/XB-301-ZB",
+   "vehicle": {
+    "plate": "XB-301-ZB",
+    "carId": 19107,
+    "carType": "PC",
+    "make": "MAZDA",
+    "model": "MAZDA6"
+   }
   },
   "/agent/turns/01JDEMO0PHOTO0000000000004": {
    "@id": "/agent/turns/01JDEMO0PHOTO0000000000004",
@@ -319,7 +357,9 @@
    "toolCalls": [],
    "webSearchQueries": [],
    "promptTokens": 12210,
-   "completionTokens": 0
+   "completionTokens": 0,
+   "route": null,
+   "vehicle": null
   }
  }
 }

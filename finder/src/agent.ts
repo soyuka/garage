@@ -1,7 +1,7 @@
 import { mapNarrowing } from './api';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
-import type { AgentPart, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle } from './types';
+import type { AgentPart, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -12,7 +12,7 @@ const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 const NOTHING_FOUND = 'Aucune pièce trouvée pour cette demande. Reformulez-la, ou choisissez une catégorie dans la liste.';
 const CANCELLED = 'Demande interrompue.';
 
-export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null };
+export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false };
 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
@@ -76,13 +76,14 @@ export function parseFrame(data: string): FinderFrame | null {
 }
 
 export type TurnAction =
-  | { type: 'start'; instruction: string }
+  | { type: 'start'; instruction: string; continued?: boolean }
   | { type: 'frame'; frame: FinderFrame }
   | { type: 'cancel' }
   | { type: 'fail'; message: string }
   | { type: 'reset' };
 
-function upsert(parts: AgentPart[], part: AgentPart): AgentPart[] {
+function upsert(state: TurnState, part: AgentPart): AgentPart[] {
+  const parts = state.stale ? [] : state.parts;
   const i = parts.findIndex((p) => p.key === part.key);
   if (i === -1) return [...parts, part];
   const next = parts.slice();
@@ -98,6 +99,7 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
         ...state,
         phase: 'done',
         status: null,
+        stale: false,
         notice: state.notice ?? (state.parts.length === 0 && state.ask === null ? NOTHING_FOUND : null),
       };
     case 'status':
@@ -107,7 +109,8 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
     case 'showParts':
       return {
         ...state,
-        parts: upsert(state.parts, {
+        stale: false,
+        parts: upsert(state, {
           kind: 'catalog',
           key: `c${frame.categoryId}`,
           categoryId: frame.categoryId,
@@ -119,7 +122,8 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
     case 'showWebPart':
       return {
         ...state,
-        parts: upsert(state.parts, {
+        stale: false,
+        parts: upsert(state, {
           kind: 'web',
           key: `w${frame.brand}|${frame.reference}`,
           label: frame.categoryLabel,
@@ -142,7 +146,9 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
 export function turnReducer(state: TurnState, action: TurnAction): TurnState {
   switch (action.type) {
     case 'start':
-      return { ...initialTurn, phase: 'sending', instruction: action.instruction };
+      return action.continued && state.parts.length > 0
+        ? { ...initialTurn, phase: 'sending', instruction: action.instruction, parts: state.parts, vehicle: state.vehicle, stale: true }
+        : { ...initialTurn, phase: 'sending', instruction: action.instruction };
     case 'frame':
       return state.phase === 'sending' || state.phase === 'running' ? applyFrame(state, action.frame) : state;
     case 'cancel':
@@ -175,6 +181,8 @@ export interface TurnBody {
   pendingContext?: string;
   images?: string[];
   photoHints?: PartPhotoHints;
+  summary?: string;
+  buildLabel?: BuildLabel;
 }
 
 export interface TurnRequest {
@@ -185,6 +193,8 @@ export interface TurnRequest {
   intent?: TurnIntent;
   images?: string[];
   photoHints?: PartPhotoHints | null;
+  summary?: string | null;
+  buildLabel?: BuildLabel | null;
 }
 
 export function turnBody(r: TurnRequest): TurnBody {
@@ -197,6 +207,8 @@ export function turnBody(r: TurnRequest): TurnBody {
     ...(r.pendingContext ? { pendingContext: r.pendingContext } : {}),
     ...(r.images && r.images.length > 0 ? { images: r.images } : {}),
     ...(r.photoHints ? { photoHints: r.photoHints } : {}),
+    ...(r.summary ? { summary: r.summary } : {}),
+    ...(r.buildLabel ? { buildLabel: r.buildLabel } : {}),
   };
 }
 

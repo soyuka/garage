@@ -1,0 +1,47 @@
+import { vehicleShortName } from './garage';
+import { outcomeOf, type JournalRow } from './journal';
+import { parseRoute, routeToHash } from './route';
+import type { Vehicle } from './types';
+
+const MAX = 10;
+
+export interface HistoryEntry {
+  id: string;
+  hash: string;
+  input: string;
+  vehicle: { plate: string | null; name: string | null };
+  outcome: { label: string; tone: 'ok' | 'warn' | 'alarm' };
+  startedAt: string;
+}
+
+function vehicleName(row: JournalRow): string | null {
+  const v = row.vehicle;
+  if (!v) return null;
+  const shape: Vehicle = { plate: v.plate, make: v.make, model: v.model, modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId: v.carId, carType: v.carType === 'CV' ? 'CV' : 'PC' };
+  return vehicleShortName(shape);
+}
+
+// The home page's recent searches: journal rows the server could give a route, newest first, one per
+// route. The route is re-parsed so only a hash the page itself would produce is ever followed.
+export function historyEntries(rows: readonly JournalRow[]): HistoryEntry[] {
+  const seen = new Set<string>();
+  const out: HistoryEntry[] = [];
+  for (const row of [...rows].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))) {
+    if (row.route === null) continue;
+    const route = parseRoute(`#/${row.route}`);
+    if (route.view === 'entry') continue;
+    const hash = routeToHash(route);
+    if (seen.has(hash)) continue;
+    seen.add(hash);
+    out.push({ id: row.id, hash, input: row.instruction, vehicle: { plate: row.vehicle?.plate ?? null, name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt });
+    if (out.length === MAX) break;
+  }
+  return out;
+}
+
+export function formatWhen(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  return d.toDateString() === now.toDateString() ? time : `${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })} ${time}`;
+}

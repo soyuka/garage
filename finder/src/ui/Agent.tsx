@@ -12,64 +12,70 @@ interface StatusProps {
   onSignIn: () => void;
 }
 
+// One line above the composer: what was asked, what the agent is doing, how it ended.
 export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: StatusProps) {
   if (needsLogin !== null) {
     return (
-      <section className="agent" aria-labelledby="agent-title">
-        <h2 id="agent-title">Votre demande</h2>
-        <p className="agent-q">« {needsLogin} »</p>
-        <p className="agent-note">Connectez-vous pour que l’agent cherche la pièce. Votre demande sera relancée au retour.</p>
+      <div className="dock-status">
+        <p className="dock-line">
+          <span className="dock-q">« {needsLogin} »</span>
+          <span>Connectez-vous pour que l’agent cherche la pièce : la demande repart au retour.</span>
+        </p>
         <button type="button" className="btn pri" onClick={onSignIn}>
           Se connecter
         </button>
-      </section>
+      </div>
     );
   }
   if (state.phase === 'idle') return null;
   const busy = isBusy(state);
   return (
-    <section className="agent" aria-labelledby="agent-title" aria-busy={busy}>
-      <h2 id="agent-title">Votre demande</h2>
-      <p className="agent-q">« {state.instruction} »</p>
-      {busy && (
-        <div className="agent-run">
-          <p className="agent-status" role="status">
+    <div className="dock-status" aria-busy={busy}>
+      <p className="dock-line">
+        <span className="dock-q">« {state.instruction} »</span>
+        {busy && (
+          <span className="agent-status" role="status">
             <span className="agent-dot" aria-hidden="true" />
             {state.status ?? 'L’agent lit votre demande…'}
-          </p>
-          <button type="button" className="btn btn--quiet" onClick={onCancel}>
-            Interrompre
-          </button>
-        </div>
-      )}
-      {!busy && state.notice && (
-        <p className={state.phase === 'failed' ? 'agent-note agent-note--error' : 'agent-note'} role={state.phase === 'failed' ? 'alert' : 'status'}>
-          {state.notice}
-        </p>
+          </span>
+        )}
+        {!busy && state.notice && (
+          <span className={state.phase === 'failed' ? 'agent-note agent-note--error' : 'agent-note'} role={state.phase === 'failed' ? 'alert' : 'status'}>
+            {state.notice}
+          </span>
+        )}
+      </p>
+      {busy && (
+        <button type="button" className="btn btn--quiet" onClick={onCancel}>
+          Interrompre
+        </button>
       )}
       {state.phase === 'failed' && (
-        <button type="button" className="btn" onClick={onRetry}>
+        <button type="button" className="btn btn--quiet" onClick={onRetry}>
           Réessayer
         </button>
       )}
-    </section>
+    </div>
   );
 }
 
 export function AgentQuestion({ ask, disabled, onAnswer }: { ask: AgentAsk; disabled: boolean; onAnswer: (value: string) => void }) {
   return (
-    <section aria-labelledby="agent-ask-title">
-      <h2 id="agent-ask-title">Une question</h2>
-      <div className="ask">
-        <p>{ask.question}</p>
-        <div role="group" aria-label="Réponses">
+    <section className="ask" aria-labelledby="agent-ask-title">
+      <h2 id="agent-ask-title" className="sr-only">
+        Une question de l’agent
+      </h2>
+      <p className="ask-q">{ask.question}</p>
+      <p className="ask-hint">Répondez par un bouton, ou dans le champ : texte ou photo.</p>
+      {ask.options.length > 0 && (
+        <div className="ask-answers" role="group" aria-label="Réponses">
           {ask.options.map((o) => (
             <button key={o.value} type="button" className="btn" disabled={disabled} onClick={() => onAnswer(o.value)}>
               {o.label}
             </button>
           ))}
         </div>
-      </div>
+      )}
     </section>
   );
 }

@@ -31,27 +31,3 @@ export function measure(dims: readonly Dimension[], key: DimKey): Measure | null
 }
 
 export const threadOf = (dims: readonly Dimension[]): string | null => dims.find((d) => !d.info && d.key === 'thread')?.value ?? null;
-
-export interface BaseView {
-  outer: Measure;
-  sealOuter: Measure | null;
-  sealInner: Measure | null;
-  thread: string | null;
-}
-
-export function baseView(dims: readonly Dimension[]): BaseView | null {
-  const outer = measure(dims, 'outer');
-  if (!outer) return null;
-  return { outer, sealOuter: measure(dims, 'sealOuter'), sealInner: measure(dims, 'sealInner'), thread: threadOf(dims) };
-}
-
-const INCH = 25.4;
-const round = (n: number): number => Math.round(n * 1e4) / 1e4;
-
-export function threadSize(note: string): { major: number; pitch: number } | null {
-  const inch = /^(\d+)\/(\d+)"?\s*-\s*(\d+)/.exec(note.trim());
-  if (inch) return { major: round((Number(inch[1]) / Number(inch[2])) * INCH), pitch: round(INCH / Number(inch[3])) };
-  const metric = /^M\s*(\d+(?:[.,]\d+)?)\s*[x×]\s*(\d+(?:[.,]\d+)?)/i.exec(note.trim());
-  if (metric) return { major: Number(metric[1]!.replace(',', '.')), pitch: Number(metric[2]!.replace(',', '.')) };
-  return null;
-}

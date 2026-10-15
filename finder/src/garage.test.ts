@@ -1,4 +1,4 @@
-import { addLabel, atelierHref, maintenanceType, planBody, planPart, PlanError } from './garage';
+import { addLabel, atelierHref, maintenanceType, planBody, planPart, PlanError, saveBody, saveVehicle } from './garage';
 import type { Category, Vehicle } from './types';
 
 const vehicle: Vehicle = {
@@ -19,7 +19,7 @@ describe('maintenanceType', () => {
   it('maps the drawn families to the garage service vocabulary, else snake-cases the label', () => {
     expect(maintenanceType(oil, { kind: 'filter', filter: 'oil' })).toBe('oil_filter');
     expect(maintenanceType(oil, { kind: 'filter', filter: 'air' })).toBe('air_filter');
-    expect(maintenanceType(oil, { kind: 'brake', axle: 'front' })).toBe('brakes');
+    expect(maintenanceType(oil, { kind: 'brake', axle: 'front', component: 'disc' })).toBe('brakes');
     expect(maintenanceType({ ...oil, label: "Bougie d'allumage" }, { kind: 'none' })).toBe('bougie_d_allumage');
   });
 });
@@ -87,5 +87,45 @@ describe('planPart', () => {
   it('maps a network failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
     await expect(planPart(planBody(vehicle, oil, { kind: 'none' }, null, null))).rejects.toMatchObject({ kind: 'network' });
+  });
+
+  it('hands back the candidates of an ambiguous match, told apart by plate', async () => {
+    const conflict = { status: 'ambiguous_match', candidates: [{ '@id': '/garage/vehicles/01A', make: 'PEUGEOT', model: '307', plate: 'AB-123-CD' }, { '@id': '/garage/vehicles/01B', make: 'PEUGEOT', model: '307', plate: null }, { make: 'x' }] };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(conflict), { status: 409 })));
+    const err = (await planPart(planBody(vehicle, oil, { kind: 'none' }, null, null)).catch((e: unknown) => e)) as PlanError;
+    expect(err.candidates).toEqual([
+      { iri: '/garage/vehicles/01A', plate: 'AB-123-CD', name: 'Peugeot 307' },
+      { iri: '/garage/vehicles/01B', plate: null, name: 'Peugeot 307' },
+    ]);
+  });
+
+  it('re-posts against the vehicle the user picked', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ '@id': '/garage/planned-tasks/01T', vehicle: '/garage/vehicles/01A' }), { status: 201 }));
+    vi.stubGlobal('fetch', fetch);
+    await planPart({ ...planBody(vehicle, oil, { kind: 'none' }, null, null), vehicle: '/garage/vehicles/01A' });
+    expect(JSON.parse(fetch.mock.calls[0]![1].body).vehicle).toBe('/garage/vehicles/01A');
+  });
+});
+
+describe('saveVehicle', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('saves the car with its identity for dedup and says whether it was new', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ '@id': '/garage/vehicles/01V' }), { status: 201 }));
+    vi.stubGlobal('fetch', fetch);
+    await expect(saveVehicle(saveBody(vehicle))).resolves.toEqual({ vehicle: '/garage/vehicles/01V', created: true });
+    const [url, init] = fetch.mock.calls[0]!;
+    expect(url).toBe('/garage/vehicles/save');
+    expect(JSON.parse(init.body)).toEqual({ make: 'MAZDA', model: 'MAZDA6', carId: 19107, plate: 'XB-301-ZB', vin: 'JMZGG14F671528417' });
+  });
+
+  it('reports an existing match as not created', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ '@id': '/garage/vehicles/01V' }), { status: 200 })));
+    await expect(saveVehicle(saveBody(vehicle))).resolves.toEqual({ vehicle: '/garage/vehicles/01V', created: false });
+  });
+
+  it('surfaces an ambiguous match with its candidates', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ candidates: [{ '@id': '/garage/vehicles/01A', make: 'MAZDA', model: '6', plate: 'XB-301-ZB' }] }), { status: 409 })));
+    await expect(saveVehicle(saveBody(vehicle))).rejects.toMatchObject({ kind: 'ambiguous', candidates: [{ iri: '/garage/vehicles/01A' }] });
   });
 });

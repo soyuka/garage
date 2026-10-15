@@ -2,7 +2,6 @@ import { Component, lazy, Suspense, useLayoutEffect, useRef, useState, type Reac
 import { measure } from '../dims';
 import type { Dimension, Family } from '../types';
 import type { Focus } from '../scene/Blueprint';
-import { BaseView } from './BaseView';
 
 const Blueprint = lazy(() => import('../scene/Blueprint').then((m) => ({ default: m.Blueprint })));
 
@@ -15,17 +14,24 @@ interface Props {
   placeholder: ReactNode;
   overlayWidth: number | null;
   status?: ReactNode;
+  notes?: ReactNode;
   children?: ReactNode;
 }
 
+// Orthographic fit, in scene millimetres: the part's largest span plus room for its cotes, from any angle.
 function extentFor(family: Family, dims: readonly Dimension[]): number {
-  if (family.kind !== 'filter') return 170;
-  const height = measure(dims, 'height')?.mid ?? 69;
-  const diameter = measure(dims, 'outer')?.mid ?? 70;
-  return Math.max(height + 56, diameter + 76);
+  if (family.kind === 'filter') {
+    const height = measure(dims, 'height')?.mid ?? 69;
+    const diameter = measure(dims, 'outer')?.mid ?? 70;
+    return Math.max(height + 56, diameter + 76);
+  }
+  if (family.kind === 'brake') return (family.component === 'disc' ? (measure(dims, 'outer')?.mid ?? 254) : 254) + 90;
+  return 150;
 }
 
-export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, children }: Props) {
+export const GENERIC_CAPTION = 'Aperçu générique — pas de modèle 3D pour cette pièce';
+
+export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, notes, children }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const [focus, setFocus] = useState<Focus | null>(null);
 
@@ -45,6 +51,7 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
   return (
     <div className="sheet" ref={ref}>
       <div className="sheet-label m">{viewLabel}</div>
+      {notes && <div className="sheet-notes">{notes}</div>}
       {family.kind === 'none' ? (
         <div className="sheet-placeholder" style={overlayWidth ? { right: overlayWidth } : undefined}>
           {placeholder}
@@ -63,14 +70,10 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
           {status}
         </div>
       )}
+      {family.kind === 'generic' && !status && <p className="sheet-caption">{GENERIC_CAPTION}</p>}
       {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser pour tourner · molette pour zoomer</div>}
       {overlayWidth && children ? (
         <div className="sheet-side" style={{ width: overlayWidth }}>
-          {!ghost && family.kind !== 'none' && (
-            <div className="sheet-inset">
-              <BaseView family={family} dimensions={dimensions} />
-            </div>
-          )}
           {children}
         </div>
       ) : (

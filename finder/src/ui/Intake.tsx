@@ -5,13 +5,14 @@ import type { Category } from '../types';
 import { useMedia } from './hooks';
 
 interface Props {
-  variant: 'hero' | 'bar';
+  variant: 'dock';
   categories: readonly Category[] | null;
   loading?: boolean;
   initial: string;
   context?: string | null;
   busy?: boolean;
   autoFocus?: boolean;
+  hasVehicle?: boolean;
   onText: (route: TextRoute, typed: string) => void;
   onFiles: (files: File[]) => void;
 }
@@ -52,7 +53,7 @@ function CameraIcon() {
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, onText, onFiles }: Props) {
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, hasVehicle = categories !== null, onText, onFiles }: Props) {
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -75,14 +76,13 @@ export function Intake({ variant, categories, loading = false, initial, context 
   const showList = open && textual && text.trim() !== '' && text !== initial;
   const askIndex = hits.length;
   const optionCount = hits.length + 1;
-  const hint = context ?? routeHint(route, categories !== null);
+  const hint = context ?? routeHint(route, hasVehicle);
 
   const submit = (picked?: TextRoute) => {
     const r = picked ?? route;
     if (r.kind === 'empty' || busy) return;
     setOpen(false);
-    input.current?.blur();
-    if (r.kind === 'category') setText(r.category.label);
+    setText('');
     onText(r, text.trim());
   };
 
@@ -145,7 +145,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           aria-autocomplete="list"
           aria-describedby={`${id}-hint`}
           aria-activedescendant={showList && navigated && active < optionCount ? `${id}-o${active}` : undefined}
-          placeholder={loading ? 'Chargement du catalogue…' : variant === 'hero' ? 'Plaque, VIN, pièce…' : 'Pièce, symptôme, référence, plaque…'}
+          placeholder={loading ? 'Chargement du catalogue…' : hasVehicle ? 'Une pièce, un symptôme, une référence, une réponse…' : 'Plaque, VIN, pièce et véhicule, référence…'}
           value={text}
           autoComplete="off"
           autoCapitalize="off"
@@ -157,10 +157,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
             setNavigated(false);
             setOpen(true);
           }}
-          onFocus={(e) => {
-            if (variant === 'bar') e.currentTarget.select();
-            setOpen(true);
-          }}
+          onFocus={() => setOpen(true)}
           onBlur={() => setOpen(false)}
           onPaste={onPaste}
           onKeyDown={(e) => {
@@ -201,7 +198,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           {busy ? 'Lecture…' : 'Chercher'}
         </button>
       </div>
-      <p id={`${id}-hint`} className={variant === 'hero' ? 'intake-hint' : 'sr-only'} aria-live="polite">
+      <p id={`${id}-hint`} className="intake-hint" aria-live="polite">
         {over ? 'Déposez la photo, la vidéo ou le PDF.' : hint}
       </p>
       {showList && (

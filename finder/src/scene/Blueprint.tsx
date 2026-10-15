@@ -1,10 +1,13 @@
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useRef } from 'react';
-import type { OrthographicCamera } from 'three';
+import { Vector3, type OrthographicCamera } from 'three';
+import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Dimension, Family } from '../types';
 import { BrakePart } from './BrakePart';
 import { FilterPart } from './FilterPart';
+import { GenericPart } from './GenericPart';
+import { turntableStep } from './turntable';
 
 export interface Focus {
   x: number;
@@ -22,12 +25,15 @@ interface Props {
 
 const DISTANCE = 600;
 const START_AZIMUTH = 0.62;
-const POLAR = 1.12;
+const START_POLAR = 1.12;
+const POLAR_MARGIN = 0.06;
+const UP = new Vector3(0, 1, 0);
 
-function Framing({ focus, extent, reducedMotion, settleKey }: { focus: Focus | null; extent: number; reducedMotion: boolean; settleKey: string }) {
+// Once the user takes the view, the turntable stays off for the rest of the visit, every part included.
+let taken = false;
+
+function Fit({ focus, extent }: { focus: Focus | null; extent: number }) {
   const { camera, size, invalidate } = useThree();
-  const settle = useRef(1);
-
   useEffect(() => {
     const cam = camera as OrthographicCamera;
     const free = focus ? Math.min(focus.x * 2, size.height) : Math.min(size.width, size.height);
@@ -37,25 +43,35 @@ function Framing({ focus, extent, reducedMotion, settleKey }: { focus: Focus | n
     cam.updateProjectionMatrix();
     invalidate();
   }, [camera, size, focus, extent, invalidate]);
+  return null;
+}
+
+function Turntable({ reducedMotion }: { reducedMotion: boolean }) {
+  const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as OrbitControlsImpl | null;
+  const stopped = useRef(taken);
 
   useEffect(() => {
-    settle.current = reducedMotion ? 1 : 0;
-  }, [settleKey, reducedMotion]);
+    if (!controls) return;
+    const take = () => {
+      taken = true;
+      stopped.current = true;
+    };
+    controls.addEventListener('start', take);
+    return () => controls.removeEventListener('start', take);
+  }, [controls]);
 
   useFrame((_, delta) => {
-    if (settle.current >= 1) return;
-    settle.current = Math.min(1, settle.current + delta / 1.4);
-    const e = 1 - Math.pow(1 - settle.current, 3);
-    const az = START_AZIMUTH + 0.32 * (1 - e);
-    camera.position.set(DISTANCE * Math.sin(POLAR) * Math.sin(az), DISTANCE * Math.cos(POLAR), DISTANCE * Math.sin(POLAR) * Math.cos(az));
+    const step = turntableStep(delta, { reducedMotion, stopped: stopped.current });
+    if (step === 0) return;
+    camera.position.applyAxisAngle(UP, step);
     camera.lookAt(0, 0, 0);
+    controls?.update();
   });
-
   return null;
 }
 
 export function Blueprint({ family, dimensions, ghost, reducedMotion, focus, extent }: Props) {
-  const settleKey = family.kind === 'brake' ? `brake-${family.axle}` : 'filter';
   return (
     <Canvas
       orthographic
@@ -63,20 +79,18 @@ export function Blueprint({ family, dimensions, ghost, reducedMotion, focus, ext
       dpr={[1, 2]}
       gl={{ antialias: true, alpha: true }}
       camera={{
-        position: [DISTANCE * Math.sin(POLAR) * Math.sin(START_AZIMUTH), DISTANCE * Math.cos(POLAR), DISTANCE * Math.sin(POLAR) * Math.cos(START_AZIMUTH)],
+        position: [DISTANCE * Math.sin(START_POLAR) * Math.sin(START_AZIMUTH), DISTANCE * Math.cos(START_POLAR), DISTANCE * Math.sin(START_POLAR) * Math.cos(START_AZIMUTH)],
         near: 1,
         far: 3000,
         zoom: 3,
       }}
       aria-hidden="true"
     >
-      <Framing focus={focus} extent={extent} reducedMotion={reducedMotion} settleKey={settleKey} />
+      <Fit focus={focus} extent={extent} />
       <Suspense fallback={null}>
-        {family.kind === 'filter' ? (
-          <FilterPart dimensions={dimensions} ghost={ghost} reducedMotion={reducedMotion} />
-        ) : (
-          <BrakePart axle={family.axle} ghost={ghost} />
-        )}
+        {family.kind === 'filter' && <FilterPart dimensions={dimensions} ghost={ghost} reducedMotion={reducedMotion} />}
+        {family.kind === 'brake' && <BrakePart axle={family.axle} component={family.component} dimensions={dimensions} ghost={ghost} />}
+        {family.kind === 'generic' && <GenericPart ghost={ghost} />}
       </Suspense>
       <OrbitControls
         makeDefault
@@ -87,8 +101,11 @@ export function Blueprint({ family, dimensions, ghost, reducedMotion, focus, ext
         zoomSpeed={0.6}
         minZoom={0.5}
         maxZoom={20}
+        minPolarAngle={POLAR_MARGIN}
+        maxPolarAngle={Math.PI - POLAR_MARGIN}
         target={[0, 0, 0]}
       />
+      <Turntable reducedMotion={reducedMotion} />
     </Canvas>
   );
 }
