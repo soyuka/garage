@@ -631,3 +631,16 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
   because `show_parts` narrows server-side (same `ArticleNarrower`, same `NarrowedParts::from`).
 - The journal's token counts for streamed turns look partial (finder live turn: 8 prompt / 328
   completion tokens recorded).
+
+## Finder single input + journal (found 2026-10-15)
+
+- **Vehicle-less finder turns cannot browse make/model live**: `list_models` / `list_cars` answer
+  `not_configured` (no `PARTSAPI_KEY_getModels` / `getCars` in `api/.env.local`). The live turn
+  "filtre à huile mazda 6 2.0 2005" (journal `01M4ZW632EJ7MJ1Z2PJDZ4V3SR`) fell back to asking the
+  plate. Add the two keys, or drop the browse from `finder.md` until then.
+- **Journal cost line is empty** until `AGENT_PRICE_*_PER_MTOK` are set in `api/.env.local` from the
+  current price list (deliberately not guessed).
+- **The api firewall now reads the bearer on /vehicles, /vins, /cars** (search journal): an expired
+  token on those public reads answers 401 instead of falling through as anonymous. The finder only
+  sends fresh tokens; check the dashboard does the same.
+- Mobile hero placeholder clips at 390 px ("Plaque, VIN, référence ou p…").
