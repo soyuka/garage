@@ -29,7 +29,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed }:
   const top = eq?.shown.find((v) => !oe || v.number !== oe.number) ?? null;
   const cotes = cluster ? cotesLine(cluster.dimensions) : null;
   const headline = oe ?? (cluster ? cluster.representative : null);
-  const buyRef = oe?.number ?? top?.number ?? cluster?.representative.number ?? null;
+  const buyRef = oe ?? top ?? cluster?.representative ?? null;
   const fallback = !cluster ? narrowing.fallbackBrands.slice(0, 6) : [];
   const copyValue = oe ? copyText(oe, top) : cluster ? copyText(null, { ...cluster.representative, tier: 1 }) : '';
 

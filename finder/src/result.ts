@@ -29,20 +29,6 @@ export function copyText(oe: Reference | null, top: Variant | null): string {
   return [oe, top].filter((r): r is Reference => r !== null).map(refText).join(' · ');
 }
 
-export interface BuyLink {
-  shop: string;
-  url: string;
-}
-
-export function buyLinks(reference: string): BuyLink[] {
-  const q = encodeURIComponent(reference);
-  return [
-    { shop: 'Oscaro', url: `https://www.oscaro.com/fr/search?q=${q}` },
-    { shop: 'Autodoc', url: `https://www.auto-doc.fr/search?keyword=${q}` },
-    { shop: 'Mister-Auto', url: `https://www.mister-auto.com/nwsearch?q=${q}` },
-  ];
-}
-
 const find = (dims: readonly Dimension[], re: RegExp): Dimension | undefined => dims.find((d) => !d.info && re.test(d.key));
 
 // A part sold by several brands in slightly different sizes shows its range; the 3D scale keeps the representative's value.

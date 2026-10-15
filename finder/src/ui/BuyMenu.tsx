@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { buyLinks } from '../result';
+import { buyLinks, type BuyReference } from '../buy';
 
-export function BuyMenu({ reference }: { reference: string }) {
+export function BuyMenu({ reference }: { reference: BuyReference }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const id = useId();
@@ -28,12 +28,12 @@ export function BuyMenu({ reference }: { reference: string }) {
         </svg>
       </button>
       {open && (
-        <ul className="menu-list" id={id} role="menu" aria-label={`Rechercher ${reference} chez`}>
+        <ul className="menu-list" id={id} role="menu" aria-label={`Rechercher ${reference.number} chez`}>
           {buyLinks(reference).map((l) => (
             <li key={l.shop} role="none">
               <a role="menuitem" href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
                 {l.shop}
-                <span className="m">{reference}</span>
+                <span className="m">{reference.number}</span>
               </a>
             </li>
           ))}

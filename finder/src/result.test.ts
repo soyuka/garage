@@ -1,4 +1,4 @@
-import { buyLinks, copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from './result';
+import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from './result';
 import { mapNarrowing } from './api';
 import narrowed from './fixtures/narrowed.json';
 
@@ -37,14 +37,6 @@ describe('copyText', () => {
   it('copies the OE reference and the top equivalent', () => {
     expect(copyText({ brand: 'MAZDA', number: 'LF10-14-302' }, { artId: 1, brand: 'MANN-FILTER', number: 'W 712/73', tier: 1 })).toBe('MAZDA LF10-14-302 · MANN-FILTER W 712/73');
     expect(copyText(null, { artId: 1, brand: 'MANN-FILTER', number: 'W 712/73', tier: 1 })).toBe('MANN-FILTER W 712/73');
-  });
-});
-
-describe('buyLinks', () => {
-  it('builds a search URL per shop with the reference encoded', () => {
-    const links = buyLinks('W 712/73');
-    expect(links.map((l) => l.shop)).toEqual(['Oscaro', 'Autodoc', 'Mister-Auto']);
-    for (const l of links) expect(l.url).toContain('W%20712%2F73');
   });
 });
 
