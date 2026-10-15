@@ -95,6 +95,14 @@ class AgentTurn
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $finalText = null;
 
+    /**
+     * The shape of the photos the turn carried — never their bytes.
+     *
+     * @var list<array{mimeType: string, bytes: int}>
+     */
+    #[ODM\Field(type: 'collection')]
+    private array $images = [];
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $owner,
@@ -346,5 +354,21 @@ class AgentTurn
     public function getKind(): AgentTurnKind
     {
         return $this->kind;
+    }
+
+    /**
+     * @return list<array{mimeType: string, bytes: int}>
+     */
+    public function getImages(): array
+    {
+        return $this->images;
+    }
+
+    /**
+     * @param list<array{mimeType: string, bytes: int}> $images
+     */
+    public function setImages(array $images): void
+    {
+        $this->images = $images;
     }
 }

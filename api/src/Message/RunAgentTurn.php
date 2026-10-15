@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Message;
 
+use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderVehicle;
+use App\Agent\Finder\PartPhotoHints;
 use App\Agent\TurnSurface;
 
 /**
@@ -36,6 +38,13 @@ final readonly class RunAgentTurn
         public TurnSurface $surface = TurnSurface::Garage,
         // Finder turns only: the car the page already resolved. Null on a garage turn.
         public ?FinderVehicle $vehicle = null,
+        public FinderIntent $intent = FinderIntent::Text,
+        public ?PartPhotoHints $photoHints = null,
+        // Finder photos ride a short-lived stash, never this message (see TurnImageStash): only the
+        // key and each image's shape travel through the queue.
+        public ?string $imageStash = null,
+        /** @var list<array{mimeType: string, bytes: int}> */
+        public array $images = [],
     ) {
     }
 }

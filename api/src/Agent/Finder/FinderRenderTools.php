@@ -21,6 +21,7 @@ use Webmozart\Assert\Assert;
  */
 #[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title (« Filtre à huile »). rationale is ONE French sentence on why this part answers the request. Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again; if totalArticles is 0 or narrowed is false with no clusters, the catalogue has nothing usable: fall back to web_search + show_web_part.', 'showParts')]
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE French sentence on why it fits this vehicle.', 'showWebPart')]
+#[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle.', 'setVehicle')]
 #[AsTool('ask_question', 'Ask the user ONE short French question when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 4 options, each {label shown on the button, value sent back}. context is a short note to yourself restating what was asked and why; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
 final class FinderRenderTools
 {
@@ -37,7 +38,7 @@ final class FinderRenderTools
     }
 
     /** Bound once per finder turn by the handler — the worker is long-lived, so this also resets the per-turn count. */
-    public function bindVehicle(FinderVehicle $vehicle): void
+    public function bindVehicle(?FinderVehicle $vehicle): void
     {
         $this->vehicle = $vehicle;
         $this->shown = 0;
@@ -48,7 +49,9 @@ final class FinderRenderTools
      */
     public function showParts(int $categoryId, string $categoryLabel, string $rationale): array
     {
-        Assert::notNull($this->vehicle, 'show_parts needs the finder vehicle of the turn.');
+        if (null === $this->vehicle) {
+            return ['status' => 'refused', 'reason' => 'No vehicle yet: identify it (lookup_plate or list_makes/list_models/list_cars), call set_vehicle, then show_parts.'];
+        }
         Assert::greaterThan($categoryId, 0);
         Assert::stringNotEmpty(trim($categoryLabel));
         if ($this->shown >= self::MAX_CATEGORIES) {
@@ -100,6 +103,26 @@ final class FinderRenderTools
         ]);
 
         return 'ok';
+    }
+
+    public function setVehicle(int $carId, string $carType, string $make, string $model, string $engine = '', ?string $plate = null): string
+    {
+        $vehicle = FinderVehicle::fromPayload(['carId' => $carId, 'carType' => $carType, 'make' => $make, 'model' => $model, 'engine' => $engine]);
+        Assert::notNull($vehicle, 'carId must be a positive TecDoc kType and carType PC or CV.');
+        $this->vehicle = $vehicle;
+        $plate = null === $plate || '' === trim($plate) ? null : strtoupper(trim($plate));
+
+        $this->frames->publishFrame([
+            'type' => 'setVehicle',
+            'carId' => $vehicle->carId,
+            'carType' => $vehicle->carType->value,
+            'make' => $vehicle->make,
+            'model' => $vehicle->model,
+            'engine' => $vehicle->engine,
+            'plate' => $plate,
+        ]);
+
+        return 'ok: the finder now shows this vehicle; continue with list_part_categories and show_parts.';
     }
 
     /**

@@ -4,7 +4,13 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderVehicle;
+use App\Agent\Finder\InvalidTurnImage;
+use App\Agent\Finder\PartPhotoHints;
+use App\Agent\Finder\TurnImage;
+use App\Agent\Finder\TurnImageDecoder;
+use App\Agent\Finder\TurnImageStash;
 use App\Agent\TurnSurface;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
@@ -38,6 +44,8 @@ final class AgentTurnController
     public function __construct(
         private readonly MessageBusInterface $bus,
         private readonly Security $security,
+        private readonly TurnImageDecoder $images,
+        private readonly TurnImageStash $imageStash,
         #[Autowire('%env(DEFAULT_URI)%')]
         private readonly string $baseUri,
     ) {
@@ -62,10 +70,23 @@ final class AgentTurnController
         }
 
         $vehicle = null;
+        $intent = FinderIntent::Text;
+        $images = [];
         if (TurnSurface::Finder === $surface) {
-            $vehicle = FinderVehicle::fromPayload(\is_array($payload['vehicle'] ?? null) ? $payload['vehicle'] : []);
-            if (null === $vehicle) {
-                return new JsonResponse(['error' => 'a finder turn needs vehicle.carId (and a PC/CV carType)'], Response::HTTP_BAD_REQUEST);
+            if (null !== ($payload['vehicle'] ?? null)) {
+                $vehicle = FinderVehicle::fromPayload(\is_array($payload['vehicle']) ? $payload['vehicle'] : []);
+                if (null === $vehicle) {
+                    return new JsonResponse(['error' => 'vehicle needs a carId (and a PC/CV carType); omit it to let the agent identify the car'], Response::HTTP_BAD_REQUEST);
+                }
+            }
+            $intent = FinderIntent::tryFrom((string) ($payload['intent'] ?? FinderIntent::Text->value));
+            if (null === $intent) {
+                return new JsonResponse(['error' => 'intent must be one of: text, reference, photo'], Response::HTTP_BAD_REQUEST);
+            }
+            try {
+                $images = $this->images->decode($payload['images'] ?? null);
+            } catch (InvalidTurnImage $e) {
+                return new JsonResponse(['error' => $e->getMessage()], $e->status);
             }
         }
 
@@ -83,6 +104,10 @@ final class AgentTurnController
             locale: Locale::resolve($request->getLocale())->value,
             surface: $surface,
             vehicle: $vehicle,
+            intent: $intent,
+            photoHints: TurnSurface::Finder === $surface ? PartPhotoHints::fromPayload($payload['photoHints'] ?? null) : null,
+            imageStash: [] === $images ? null : $this->imageStash->put($images),
+            images: array_map(static fn (TurnImage $i): array => $i->shape(), $images),
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);

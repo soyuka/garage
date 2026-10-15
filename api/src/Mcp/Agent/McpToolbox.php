@@ -36,15 +36,20 @@ class McpToolbox implements ToolboxInterface
      * update_vehicle/plan_maintenance when 586b223 added them without updating this list — the prompt
      * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.)
      *
-     * Excluded: the make/model browse roots (lookup_plate / list_cars resolve the carId directly)
-     * and get_fill_volumes. list_part_categories / list_articles stay visible: the service flow uses
-     * the single get_service_parts call, but brand and reference questions the open tasks cannot
-     * answer are routed to the catalog walk by the system prompt, so the agent must be able to call it.
+     * Excluded from the garage agent: the make/model browse roots (lookup_plate / list_cars resolve the
+     * carId directly) and get_fill_volumes. An explicit `$only` allowlist (the finder, which may start
+     * from "307 1.4 hdi" with no plate) can name them back. list_part_categories / list_articles stay
+     * visible: the service flow uses the single get_service_parts call, but brand and reference
+     * questions the open tasks cannot answer are routed to the catalog walk by the system prompt, so
+     * the agent must be able to call it.
      */
-    private const EXCLUDED = [
+    private const BROWSE_ROOTS = [
         'list_makes',
         'list_models',
         'get_fill_volumes',
+    ];
+
+    private const EXCLUDED = [
         // The pilot channel ({@see \App\ApiResource\Dashboard}) — the dashboard render intents exposed
         // to EXTERNAL MCP hosts. The agent already has each of them as an `#[AsTool]` bound to the
         // asking tab's session topic; the MCP twins publish to the owner's pilot topic instead, so
@@ -84,6 +89,9 @@ class McpToolbox implements ToolboxInterface
         $tools = [];
         foreach ($response['result']['tools'] ?? [] as $definition) {
             if (\in_array($definition['name'], self::EXCLUDED, true)) {
+                continue;
+            }
+            if (null === $this->only && \in_array($definition['name'], self::BROWSE_ROOTS, true)) {
                 continue;
             }
             if (null !== $this->only && !\in_array($definition['name'], $this->only, true)) {

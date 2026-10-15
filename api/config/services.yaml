@@ -88,7 +88,7 @@ services:
         class: App\Mcp\Agent\McpToolbox
         arguments:
             $server: '@mcp.server.garage'
-            $only: ['lookup_plate', 'decode_vin', 'list_part_categories', 'get_service_parts']
+            $only: ['lookup_plate', 'decode_vin', 'list_makes', 'list_models', 'list_cars', 'list_part_categories', 'get_service_parts']
 
     app.finder.composite_toolbox:
         class: App\Agent\Toolbox\CompositeToolbox

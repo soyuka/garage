@@ -7,6 +7,8 @@ namespace App\MessageHandler;
 use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Finder\FinderContextBuilder;
 use App\Agent\Finder\FinderRenderTools;
+use App\Agent\Finder\TurnImage;
+use App\Agent\Finder\TurnImageStash;
 use App\Agent\TurnSurface;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\SelectedVehicleContext;
@@ -26,6 +28,8 @@ use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
+use Symfony\AI\Platform\Message\Content\Image;
+use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
@@ -58,6 +62,7 @@ final readonly class RunAgentTurnHandler
         private AgentInterface $finder,
         private FinderRenderTools $finderTools,
         private FinderContextBuilder $finderContext,
+        private TurnImageStash $imageStash,
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
         private RepeatedToolFailureGuard $repeatedToolFailureGuard,
@@ -107,9 +112,10 @@ final readonly class RunAgentTurnHandler
         // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
         // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
         $this->stepNarrator->reset();
-        if (TurnSurface::Finder === $message->surface && null !== $message->vehicle) {
+        if (TurnSurface::Finder === $message->surface) {
             $this->finderTools->bindVehicle($message->vehicle);
         }
+        $images = null === $message->imageStash ? [] : $this->imageStash->get($message->imageStash);
         [$agent, $context] = match ($message->surface) {
             TurnSurface::Finder => [$this->finder, $this->finderContext->build($message)],
             TurnSurface::Garage => [$this->garage, $this->contextBuilder->build($message)],
@@ -123,7 +129,7 @@ final readonly class RunAgentTurnHandler
         $error = null;
         try {
             $result = $agent->call(
-                new MessageBag(Message::ofUser($context)),
+                new MessageBag(Message::ofUser(new Text($context), ...array_map(static fn (TurnImage $i): Image => new Image($i->bytes, $i->mimeType), $images))),
                 ['stream' => true],
             );
 
@@ -169,6 +175,9 @@ final readonly class RunAgentTurnHandler
             // Persist the debug journal for this turn — completed, capped or failed alike, so a run
             // that misbehaved stays inspectable. Best-effort: a journal write never sinks the turn.
             $this->journal->finish($status, $error);
+            if (null !== $message->imageStash) {
+                $this->imageStash->forget($message->imageStash);
+            }
             // Always settle the dashboard's progress heartbeat — even if the loop threw and Messenger
             // is about to retry — or the UI would stay stuck in the busy state.
             $this->renderTools->signalTurnPhase('end');

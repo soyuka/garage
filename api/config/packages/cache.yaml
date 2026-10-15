@@ -21,3 +21,15 @@ framework:
             cache.motul:
                 adapter: cache.adapter.doctrine_dbal
                 default_lifetime: 0
+            # A finder turn's photos, between the HTTP request and the worker (TurnImageStash): kept out
+            # of the queued message so a dead-lettered turn never retains them. Short-lived on purpose.
+            cache.turn_images:
+                adapter: cache.adapter.doctrine_dbal
+                default_lifetime: 900
+
+when@test:
+    framework:
+        cache:
+            pools:
+                cache.turn_images:
+                    adapter: cache.adapter.array

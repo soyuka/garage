@@ -11,6 +11,8 @@ use App\MessageHandler\RunAgentTurnHandler;
 use App\Repository\AgentTurnRepository;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;
+use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\AI\Platform\Message\Content\Image;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\Template;
 use Symfony\AI\Platform\Message\ToolCallMessage;
@@ -21,6 +23,8 @@ use Symfony\AI\Platform\Tool\Tool;
 final class FinderTurnTest extends AppTestCase
 {
     private const VEHICLE = ['carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR'];
+
+    private const PNG = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x9a\xa0\xa0\x00\x00\x00\x00IEND\xaeB`\x82";
 
     public function testFinderTurnRunsTheFinderAgentAndStreamsTheNarrowedParts(): void
     {
@@ -184,7 +188,7 @@ final class FinderTurnTest extends AppTestCase
         }
     }
 
-    public function testFinderTurnRequiresTheVehicleCarId(): void
+    public function testAMalformedVehicleIsRejected(): void
     {
         $client = static::createClient();
 
@@ -194,6 +198,147 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(400);
+    }
+
+    public function testAFinderTurnWithoutVehicleStartsByIdentifyingIt(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+
+        $seen = ['tools' => [], 'context' => ''];
+        $container->set('ai.platform.anthropic', self::script([new ToolCall('n1', 'end_turn', [])], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'filtre à huile 307 1.4 hdi', 'sessionId' => 'sess-novehicle', 'surface' => 'finder'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        self::assertStringContainsString('Aucun véhicule identifié', $seen['context']);
+        self::assertStringContainsString('filtre à huile 307 1.4 hdi', $seen['context']);
+        foreach (['set_vehicle', 'lookup_plate', 'list_makes', 'list_models', 'list_cars'] as $tool) {
+            self::assertContains($tool, $seen['tools'], "a vehicle-less finder turn needs $tool");
+        }
+    }
+
+    public function testSetVehicleHandsTheCarToThePageAndUnlocksShowParts(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('v1', 'set_vehicle', ['carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR']),
+            new ToolCall('v2', 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Filtre à huile', 'rationale' => 'Demandé.']),
+            new ToolCall('v3', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('filtre à huile mazda 6 2.0', 'sess-setvehicle', vehicle: null);
+
+        $frames = self::frames('sess-setvehicle');
+        $set = array_values(array_filter($frames, static fn (array $f): bool => 'setVehicle' === $f['type']));
+        self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR', 'plate' => null]], $set);
+        self::assertCount(1, array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
+    }
+
+    public function testShowPartsWithoutAVehicleTellsTheAgentToSetOneFirst(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $results = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('p1', 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Filtre à huile', 'rationale' => 'Demandé.']),
+            new ToolCall('p2', 'end_turn', []),
+        ], $results));
+
+        self::runFinderTurn('filtre à huile', 'sess-noset', vehicle: null);
+
+        self::assertSame([], array_values(array_filter(self::frames('sess-noset'), static fn (array $f): bool => 'showParts' === $f['type'])));
+        self::assertStringContainsString('set_vehicle', $results['toolResults'][0] ?? '');
+    }
+
+    public function testImagesReachTheModelAndOnlyTheirShapeIsJournaled(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([new ToolCall('i1', 'end_turn', [])], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => [
+                'instruction' => 'quelle est cette pièce ?',
+                'sessionId' => 'sess-photo',
+                'surface' => 'finder',
+                'vehicle' => self::VEHICLE,
+                'intent' => 'photo',
+                'photoHints' => ['familyGuess' => 'filtre à huile', 'printedReferences' => ['W 712/73'], 'brandGuess' => 'MANN-FILTER'],
+                'images' => ['data:image/png;base64,'.base64_encode(self::PNG), 'data:image/png;base64,'.base64_encode(self::PNG)],
+            ],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        self::assertSame(['image/png', 'image/png'], $seen['images']);
+        self::assertStringContainsString('W 712/73', $seen['context']);
+        self::assertStringContainsString('MANN-FILTER', $seen['context']);
+
+        $turn = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 1)[0];
+        self::assertSame([['mimeType' => 'image/png', 'bytes' => \strlen(self::PNG)], ['mimeType' => 'image/png', 'bytes' => \strlen(self::PNG)]], $turn->getImages());
+        self::assertStringNotContainsString(base64_encode(self::PNG), serialize([$turn->getContext(), $turn->getRawCalls(), $turn->getInstruction()]));
+    }
+
+    public function testAReferenceIntentIsSpelledOutForTheAgent(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+
+        $seen = ['context' => ''];
+        $container->set('ai.platform.anthropic', self::script([new ToolCall('r1', 'end_turn', [])], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'W 712/73', 'sessionId' => 'sess-ref', 'surface' => 'finder', 'intent' => 'reference'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        self::assertStringContainsString('référence', $seen['context']);
+        self::assertStringContainsString('W 712/73', $seen['context']);
+    }
+
+    /**
+     * @return iterable<string, array{0: list<string>, 1: int}>
+     */
+    public static function badImages(): iterable
+    {
+        $png = 'data:image/png;base64,'.base64_encode(self::PNG);
+        yield 'more than three' => [[$png, $png, $png, $png], 400];
+        yield 'not a data url' => [['https://example.org/a.png'], 400];
+        yield 'a gif labelled png' => [['data:image/png;base64,'.base64_encode('GIF89a'.str_repeat("\0", 32))], 415];
+        yield 'over ten megabytes' => [['data:image/png;base64,'.base64_encode(self::PNG.str_repeat("\0", 10 * 1024 * 1024))], 413];
+    }
+
+    /**
+     * @param list<string> $images
+     */
+    #[DataProvider('badImages')]
+    public function testImagesAreValidatedBeforeAnyModelCall(array $images, int $status): void
+    {
+        ini_set('memory_limit', '1G');
+        $client = static::createClient();
+        $container = static::getContainer();
+
+        $seen = ['calls' => 0];
+        $container->set('ai.platform.anthropic', self::script([], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'x', 'sessionId' => 'sess-bad', 'surface' => 'finder', 'images' => $images],
+        ]);
+
+        $this->assertResponseStatusCodeSame($status);
+        self::assertSame(0, $seen['calls']);
     }
 
     public function testUnknownSurfaceIsRejected(): void
@@ -208,7 +353,10 @@ final class FinderTurnTest extends AppTestCase
         $this->assertResponseStatusCodeSame(400);
     }
 
-    private static function runFinderTurn(string $instruction, string $session, string $pendingContext = ''): void
+    /**
+     * @param array<string, mixed>|null $vehicle
+     */
+    private static function runFinderTurn(string $instruction, string $session, string $pendingContext = '', ?array $vehicle = self::VEHICLE): void
     {
         static::getContainer()->get(RunAgentTurnHandler::class)(new RunAgentTurn(
             instruction: $instruction,
@@ -216,7 +364,7 @@ final class FinderTurnTest extends AppTestCase
             owner: self::TEST_OWNER,
             pendingContext: $pendingContext,
             surface: TurnSurface::Finder,
-            vehicle: FinderVehicle::fromPayload(self::VEHICLE),
+            vehicle: null === $vehicle ? null : FinderVehicle::fromPayload($vehicle),
         ));
     }
 
@@ -231,10 +379,12 @@ final class FinderTurnTest extends AppTestCase
             $seen['tools'] = array_map(static fn (Tool $t): string => $t->getName(), array_filter($options['tools'] ?? [], static fn ($t): bool => $t instanceof Tool));
 
             $executed = 0;
+            $seen['toolResults'] = [];
             $messages = $input instanceof MessageBag ? $input->getMessages() : [];
             foreach ($messages as $message) {
                 if ($message instanceof ToolCallMessage) {
                     ++$executed;
+                    $seen['toolResults'][] = (string) $message->asText();
                 }
             }
             if ($input instanceof MessageBag) {
@@ -242,6 +392,7 @@ final class FinderTurnTest extends AppTestCase
                 $seen['system'] = $system instanceof Template ? $system->getTemplate() : (string) $system;
                 $user = $input->getUserMessage();
                 $seen['context'] = null === $user ? '' : implode("\n", array_map(static fn ($c): string => method_exists($c, 'getText') ? $c->getText() : '', $user->getContent()));
+                $seen['images'] = null === $user ? [] : array_values(array_map(static fn (Image $i): string => $i->getFormat(), array_filter($user->getContent(), static fn ($c): bool => $c instanceof Image)));
             }
 
             return isset($steps[$executed]) ? new ToolCallResult([$steps[$executed]]) : 'Fait.';

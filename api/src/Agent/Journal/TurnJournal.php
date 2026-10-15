@@ -56,6 +56,7 @@ final class TurnJournal implements WebSearchTracer
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
         );
         $this->current->setSurface($message->surface);
+        $this->current->setImages($message->images);
     }
 
     public function recordModel(string $provider, string $model, bool $stream): void
