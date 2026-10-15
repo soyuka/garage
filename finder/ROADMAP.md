@@ -26,9 +26,9 @@ Shipped, end to end:
   bbox centre on both axes, pan, zoom to cursor, double-click reset, idle turntable (1 rev / 40 s,
   stops on first touch, off under reduced motion); cotes fixed to the part with billboarded labels,
   drawn ONLY from the cluster fingerprint (never from the mesh).
-- **Meshes (2026-10-15)**: 84 Wrench web meshes + filter + brakes (batch 3: 29, 2026-10-15) in `finder/public/parts/`
+- **Meshes (2026-10-15)**: 89 Wrench web meshes + filter + brakes (batch 3: 29, batch 4: 5, 2026-10-15) in `finder/public/parts/`
   (inventory, sizes, licence note: `SOURCES.md`). `family.ts` `MESH_RULES` maps TecDoc categories to
-  them (128/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
+  them (133/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
   the active mesh loads; approximate matches captioned "Aperçu : forme générique de la famille";
   unmapped categories keep the generic chamfered block. Dev contact sheet:
   https://localhost/finder/dev/meshes.html (not in the build). Title block = result card, Copier /
@@ -102,8 +102,10 @@ break / 2.0 DI) instead of guessing.
 
 ## 3D assets (researched 2026-10-15)
 
-- Shipped meshes are Wrench extracts (87 files, see `SOURCES.md`), user-approved for this private prototype
+- Shipped meshes are Wrench extracts (92 files, see `SOURCES.md`), user-approved for this private prototype
   (`finder/public/parts/SOURCES.md`). Only final blueprint GLBs go in the repo.
+- Not available in Wrench: EGR, A/C compressor and condenser, coolant expansion tank, vacuum pump,
+  timing chain, clutch slave cylinder, catalytic converter, gearbox body.
 - Legit route if this ever goes public: parametric three.js for solids of revolution (filters, disc,
   plugs, spring, bearing, thermostat, pulley); CC-BY Sketchfab candidates (re-verify author + licence,
   skip brand-named models): tie rod end https://sketchfab.com/3d-models/none-08006a773eb345bab3a384b71185aa9e ,

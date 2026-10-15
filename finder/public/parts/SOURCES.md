@@ -40,6 +40,7 @@ Every other mesh is centred on its bounding box at load time and drawn at a fixe
 | `cooling-hardpipe.glb` | `CoolingHardpipe` | 122 × 120 × 312 | 2648 |
 | `crankshaft-pulley-damper.glb` | `Damper` | 149 × 40 × 149 | 7320 |
 | `crankshaft.glb` | `CrankShaft` | 465 × 145 × 121 | 20290 |
+| `differential.glb` | `Differential` | 689 × 381 × 276 | 24300 |
 | `drive-shaft.glb` | `DriveShaft` | 995 × 207 × 103 | 11302 |
 | `efr-turbo.glb` | `EFR_Turbo` | 257 × 183 × 292 | 25219 |
 | `engine-mount.glb` | `EngineMount` | 104 × 58 × 83 | 3772 |
@@ -53,6 +54,7 @@ Every other mesh is centred on its bounding box at load time and drawn at a fixe
 | `front-shock-bushing.glb` | `FrontShock_Bushing` | 29 × 13 × 29 | 576 |
 | `front-sway-bar.glb` | `FrontSwayBar_1_125` | 996 × 29 × 267 | 5760 |
 | `front-upper-control-arm.glb` | `Front_UCA_1` | 310 × 84 × 259 | 8543 |
+| `front-upright.glb` | `Front_Upright_1` | 201 × 153 × 170 | 6828 |
 | `fuel-filter.glb` | `FuelFilter` | 121 × 180 × 87 | 4574 |
 | `fuel-rail.glb` | `FuelRail` | 134 × 81 × 325 | 6308 |
 | `fuel-sender.glb` | `FuelSender` | 232 × 329 × 339 | 23117 |
@@ -79,6 +81,7 @@ Every other mesh is centred on its bounding box at load time and drawn at a fixe
 | `outer-tie-rod-end.glb` | `OuterTieRodEnd` | 41 × 113 × 74 | 5246 |
 | `oxygen-sensor.glb` | `o2Sensor` | 24 × 88 × 25 | 3714 |
 | `pcv-valve.glb` | `HeadAcc_PCV_Valve` | 28 × 49 × 28 | 932 |
+| `pilot-bearing.glb` | `PilotBearing` | 35 × 8 × 35 | 192 |
 | `piston.glb` | `Piston` | 83 × 61 × 83 | 3770 |
 | `radiator-cap.glb` | `RadiatorCap` | 68 × 26 × 47 | 2146 |
 | `radiator.glb` | `Radiator` | 653 × 85 × 454 | 5411 |
@@ -104,6 +107,8 @@ Every other mesh is centred on its bounding box at load time and drawn at a fixe
 | `timing-belt.glb` | `TimingBelt` | 270 × 22 × 431 | 7150 |
 | `upper-control-arm-bushing.glb` | `FUCA_Bushing` | 52 × 56 × 52 | 1856 |
 | `upper-radiator-hose.glb` | `CoolingHose_Top` | 231 × 138 × 347 | 3648 |
+| `valve-cover-gasket.glb` | `BP_VC_Gasket` | 252 × 35 × 423 | 8730 |
+| `valve-cover.glb` | `BP_ValveCover` | 289 × 79 × 485 | 20639 |
 | `valve-spring.glb` | `ValveSpring` | 25 × 46 × 25 | 2208 |
 | `water-pump-impeller.glb` | `WaterPumpRotating` | 74 × 103 × 74 | 1836 |
 | `water-pump.glb` | `WaterPumpBody` | 247 × 91 × 140 | 9030 |
@@ -120,3 +125,13 @@ licence note as above). Axes +Y up, metres, Draco, no materials, all checked by 
 tree names them: `PPF` (a perforated power-plant brace, not a shaft), `RearPadBackingPlate`,
 `Front_Dustshield_left`, `EngineMountCup`, `EngineMountHornA`, `EngineMountHornB`.
 
+## Batch 4 (2026-10-15)
+
+5 more meshes from `blueprint-experiment/parts4/web/` (same terms as above), mapped against the real
+Mazda tree: `front-upright` ("Fusée d'essieu"), `valve-cover` ("Culasse > Cache-soupape"),
+`valve-cover-gasket` ("Joints > Cache-soupape"), `differential` ("Différentiel"), `pilot-bearing`
+("Palier guide / Rondelle de butée"). Four web builds were not shipped: `Front_Upright_2` (same
+knuckle, the tree has one "Fusée d'essieu" and no rear variant), `BP_ValveCoverType2` (no distinct
+category), `TransPlate` (a gearbox plate; the only candidate, the automatic-gearbox "Boîtier/composants",
+is the wrong part for this manual car and the gearbox body stays generic), `CatfishMufflerBody`
+(performance muffler; both "Silencieux" categories are already covered by `muffler.glb`).

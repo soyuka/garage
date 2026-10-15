@@ -124,6 +124,11 @@ export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /^accessoires$/, within: /commande a courroie/, mesh: 'alternator-tensioner' },
   { leaf: /^accessoires \/ composants/, within: /frein|freinage/, mesh: 'brake-hardware-1', variants: [{ when: 'rear', mesh: 'rear-pad-hardware' }] },
   { leaf: /^tuyauterie et brides$/, mesh: 'cooling-hardpipe' },
+  { leaf: /^fusee d'essieu$/, mesh: 'front-upright' },
+  { leaf: /^cache-soupape/, within: /joints/, mesh: 'valve-cover-gasket' },
+  { leaf: /^cache-soupape/, mesh: 'valve-cover' },
+  { leaf: /^differentiel/, mesh: 'differential' },
+  { leaf: /^palier guide/, mesh: 'pilot-bearing' },
 ];
 
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = []): Family {

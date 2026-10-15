@@ -129,6 +129,11 @@ describe('partFamily', () => {
       ['Système électrique > Démarreur > Composants du démarreur', 'starter-gear'],
       ['Dispositif de freinage > Frein à disque > Accessoires / composants', 'brake-hardware-1'],
       ['Entraînement hybride/électrique > Refroidissement > Tuyauterie et brides', 'cooling-hardpipe'],
+      ["Suspension d'essieu/Guidage des roues/Roues > Fusée d'essieu / kit de réparation > Fusée d'essieu", 'front-upright'],
+      ['Moteur > Culasse / pieces de montage > Cache-soupape', 'valve-cover'],
+      ['Moteur > Joints > Cache-soupape', 'valve-cover-gasket'],
+      ['Entraînement des essieux > Différentiel', 'differential'],
+      ['Embrayage / composants > Palier guide / Rondelle de butée', 'pilot-bearing'],
     ];
     for (const [path, mesh] of expected) expect([path, meshOf(real(path))]).toEqual([path, mesh]);
   });
@@ -177,7 +182,7 @@ describe('partFamily', () => {
       'Outils spéciaux > Outils spéciaux suspension d’essieu/guidage des roues/roues > Rotules',
       'Moteur > Système bielle-manivelle > Vilebrequin > Poulies de vilebrequin',
       'Moteur > Système bielle-manivelle > Vilebrequin > Coussinet de vilebrequin',
-      "Suspension d'essieu/Guidage des roues/Roues > Fusée d'essieu / kit de réparation > Fusée d'essieu",
+      "Suspension d'essieu/Guidage des roues/Roues > Fusée d'essieu / kit de réparation > Kit de réparation",
       'Alimentation carburant > Soupapes',
       'Moteur > Joints > Joint de tige de soupape',
       'Moteur > Épuration des gaz d\'échappement > Recyclage des gaz d\'échappement > Soupape, recyclage des gaz d\'échappement',
