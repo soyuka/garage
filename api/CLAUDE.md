@@ -8,7 +8,7 @@ API Platform 5.0 on Symfony / PHP 8.4+, FrankenPHP 1.12 (custom build). **MCP-fi
 `ApiResource` DTO carrying both HTTP operations and `mcp:` tools, backed by a thin
 `State/` provider (reads) or processor (tool calls) over a domain service. Adding a capability means
 adding a DTO + processor, not a controller — plain `#[Route]` controllers exist only where API
-Platform cannot express the thing (bill up/download, the MCP stream lifecycle callback).
+Platform cannot express the thing (bill up/download).
 
 Persistence is split on purpose:
 
