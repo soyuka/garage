@@ -3,7 +3,7 @@ import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
 import { formatCount } from '../format';
 import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
-import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents, sourceLabel } from '../result';
+import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from '../result';
 import type { Category, Cluster, Family, Narrowing, Reference, Vehicle } from '../types';
 import { BuyMenu } from './BuyMenu';
 import { GaragePicker } from './Garage';
@@ -18,8 +18,6 @@ interface Props {
   confirmed: boolean;
   family: Family;
   api: FinderApi;
-  demo: boolean;
-  synthetic?: boolean;
   rationale?: string;
 }
 
@@ -32,7 +30,7 @@ async function copy(text: string): Promise<boolean> {
   }
 }
 
-export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, family, api, demo, synthetic = false, rationale }: Props) {
+export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, family, api, rationale }: Props) {
   const toast = useToast();
   const oe = cluster ? pickOe(cluster, vehicle.make) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
@@ -119,7 +117,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
       </div>
       <div className="c r">
         <span className="l">Source</span>
-        <span className={synthetic && demo ? 'tag' : 'tag ok'}>{sourceLabel({ demo, synthetic })}</span>
+        <span className="tag ok">TecDoc</span>
         {!narrowing.narrowed && <span className="tag warn">affinage partiel</span>}
       </div>
 
@@ -143,7 +141,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
           Copier la référence
         </button>
         {buyRef && <BuyMenu reference={buyRef} />}
-        <AddToVehicle vehicle={vehicle} category={category} family={family} oe={oe} equivalent={top} api={api} demo={demo} />
+        <AddToVehicle vehicle={vehicle} category={category} family={family} oe={oe} equivalent={top} api={api} />
         <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>
           Partager
         </button>
@@ -161,13 +159,13 @@ const PLAN_FAILURE: Record<string, string> = {
   failed: 'L’ajout au garage a échoué. Réessayez.',
 };
 
-function AddToVehicle({ vehicle, category, family, oe, equivalent, api, demo }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi; demo: boolean }) {
+function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi }) {
   const toast = useToast();
   const [state, setState] = useState<AddState>({ kind: 'idle' });
   const label = addLabel(vehicle);
 
   const add = async (extra: { vehicle?: string; confirmNew?: boolean } = {}) => {
-    if (!demo && !isAuthenticated()) return setState({ kind: 'login' });
+    if (!isAuthenticated()) return setState({ kind: 'login' });
     setState({ kind: 'saving' });
     try {
       const { vehicle: iri } = await api.planPart({ ...planBody(vehicle, category, family, oe, equivalent), ...extra });

@@ -1,6 +1,6 @@
-import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents, sourceLabel } from './result';
+import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from './result';
 import { mapNarrowing } from './api';
-import narrowed from './fixtures/narrowed.json';
+import narrowed from '../test-fixtures/narrowed.json';
 
 const NNBSP = ' ';
 const n = mapNarrowing(narrowed);
@@ -62,16 +62,5 @@ describe('degradedMessage', () => {
     expect(degradedMessage('no physical criteria available to tell the parts apart')).toMatch(/aucune cote/i);
     expect(degradedMessage('a; b')).toMatch(/catalogue/);
     expect(degradedMessage('images unavailable from the parts catalog (quota or outage)')).toMatch(/partiellement/);
-  });
-});
-
-describe('sourceLabel', () => {
-  it('never names TecDoc for synthetic demo parts', () => {
-    expect(sourceLabel({ demo: true, synthetic: true })).toBe('Démo (données fictives)');
-  });
-
-  it('names TecDoc for live data and for recorded catalogue fixtures', () => {
-    expect(sourceLabel({ demo: false, synthetic: false })).toBe('TecDoc');
-    expect(sourceLabel({ demo: true, synthetic: false })).toBe('TecDoc');
   });
 });

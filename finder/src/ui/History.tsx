@@ -1,7 +1,7 @@
 import { formatWhen, type HistoryEntry } from '../history';
 
 // Logged-in home: the last searches from the journal; one click re-reads the cached result.
-export function History({ entries, loading, onOpen, base }: { entries: HistoryEntry[]; loading: boolean; onOpen: (e: HistoryEntry) => void; base: string }) {
+export function History({ entries, loading, onOpen }: { entries: HistoryEntry[]; loading: boolean; onOpen: (e: HistoryEntry) => void }) {
   if (!loading && entries.length === 0) return null;
   return (
     <section className="history" aria-labelledby="history-title" aria-busy={loading}>
@@ -12,7 +12,7 @@ export function History({ entries, loading, onOpen, base }: { entries: HistoryEn
         <ol>
           {entries.map((e) => (
             <li key={e.id}>
-              <a href={`${base}${e.hash}`} onClick={() => onOpen(e)}>
+              <a href={e.hash} onClick={() => onOpen(e)}>
                 <span className="history-input">{e.input || '—'}</span>
                 <span className="history-vehicle">
                   {e.vehicle.plate && <span className="m">{e.vehicle.plate}</span>}

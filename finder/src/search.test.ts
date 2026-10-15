@@ -1,6 +1,6 @@
 import { foldText, searchCategories } from './search';
 import { mapCategories } from './api';
-import categories from './fixtures/categories.json';
+import categories from '../test-fixtures/categories.json';
 
 const cats = mapCategories(categories);
 

@@ -18,14 +18,13 @@ interface Props {
   busy: boolean;
   hasVehicle: boolean;
   autoFocus: boolean;
-  demo: boolean;
   onText: (route: TextRoute, typed: string) => void;
   onFiles: (files: File[]) => void;
 }
 
 // Always at the bottom of the viewport: the agent's line, its open question, quick actions, and the
 // composer that starts or continues a search (text, photo, PDF, video).
-export function Dock({ status, note, slot, quick, categories, loading, busy, hasVehicle, autoFocus, demo, onText, onFiles }: Props) {
+export function Dock({ status, note, slot, quick, categories, loading, busy, hasVehicle, autoFocus, onText, onFiles }: Props) {
   return (
     <div className="dock">
       <div className="dock-inner">
@@ -44,7 +43,6 @@ export function Dock({ status, note, slot, quick, categories, loading, busy, has
         <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} hasVehicle={hasVehicle} onText={onText} onFiles={onFiles} />
         <p className="dock-foot">
           <span>Catalogue TecDoc · usage privé</span>
-          {demo && <span className="tag">mode démo : réponses enregistrées, aucun appel catalogue</span>}
         </p>
       </div>
     </div>

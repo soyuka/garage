@@ -1,4 +1,12 @@
+import * as client from './client';
 import { traced } from './client';
+
+describe('client module', () => {
+  it('serves the live API only, no recorded mode', () => {
+    expect(Object.keys(client)).not.toContain('isDemo');
+    expect(Object.keys(client)).toContain('liveApi');
+  });
+});
 
 describe('traced', () => {
   it('journals the rule and the typed text, and the plate the page knows', () => {

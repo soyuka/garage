@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer } from '../agent';
 import { isAuthenticated, login } from '../auth';
-import type { BuildLabel, FinderFrame, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
+import type { BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
 const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
 const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
@@ -53,11 +53,10 @@ export interface AgentTurn {
   cancel: () => void;
   reset: () => void;
   signIn: () => void;
-  replay: (instruction: string, frames: { frame: FinderFrame; at: number }[], synthetic: boolean) => void;
 }
 
 // `ref` is the route's vehicle ref ('' on the entry page, where a turn starts without a vehicle).
-export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: boolean): AgentTurn {
+export function useAgentTurn(vehicle: Vehicle | null, ref: string): AgentTurn {
   const [state, dispatch] = useReducer(turnReducer, initialTurn);
   const [needsLogin, setNeedsLogin] = useState<{ text: string; intent: TurnIntent } | null>(null);
   const pending = useMemo(() => readPending(ref), [ref]);
@@ -65,7 +64,6 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
   const lastFrame = useRef(0);
 
   useEffect(() => {
-    if (!enabled) return;
     const source = new EventSource(hubUrl(HUB, window.location.origin, sessionTopic(API_BASE, sessionId)));
     source.onmessage = (e: MessageEvent<string>) => {
       const frame = parseFrame(e.data);
@@ -74,7 +72,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
       dispatch({ type: 'frame', frame });
     };
     return () => source.close();
-  }, [sessionId, enabled]);
+  }, [sessionId]);
 
   const busy = isBusy(state);
   useEffect(() => {
@@ -90,7 +88,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
 
   const ask = useCallback(
     (text: string, options: AskOptions = {}) => {
-      if (!enabled || text.trim() === '') return;
+      if (text.trim() === '') return;
       const intent = options.intent ?? 'text';
       if (!isAuthenticated()) {
         setNeedsLogin({ text, intent });
@@ -120,7 +118,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
         dispatch({ type: 'fail', message: e instanceof Error ? e.message : SILENT });
       });
     },
-    [enabled, vehicle, sessionId],
+    [vehicle, sessionId],
   );
 
   const cancel = useCallback(() => {
@@ -144,15 +142,6 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
     void login();
   }, [ref, needsLogin]);
 
-  // Demo mode only: plays recorded frames through the same reducer, no request, no hub.
-  const timers = useRef<number[]>([]);
-  const replay = useCallback((instruction: string, frames: { frame: FinderFrame; at: number }[], synthetic: boolean) => {
-    timers.current.forEach((t) => window.clearTimeout(t));
-    dispatch({ type: 'start', instruction, synthetic });
-    timers.current = frames.map(({ frame, at }) => window.setTimeout(() => dispatch({ type: 'frame', frame }), at));
-  }, []);
-  useEffect(() => () => timers.current.forEach((t) => window.clearTimeout(t)), []);
-
   const resumed = useRef(false);
   const vehicleReady = ref === '' || Boolean(vehicle?.carId);
   useEffect(() => {
@@ -161,5 +150,5 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, enabled: bool
     ask(pending.text, { intent: pending.intent });
   }, [pending, vehicleReady, ask]);
 
-  return { state, needsLogin: needsLogin?.text ?? null, restored: pending?.text ?? null, ask, cancel, reset, signIn, replay };
+  return { state, needsLogin: needsLogin?.text ?? null, restored: pending?.text ?? null, ask, cancel, reset, signIn };
 }

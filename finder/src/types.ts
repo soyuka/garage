@@ -234,7 +234,6 @@ export interface TurnState {
   // A follow-up sent from a deterministic result keeps that result on screen until the turn shows a
   // part or another vehicle.
   held: HeldVehicle | null;
-  synthetic: boolean;
 }
 
 export interface HeldVehicle {

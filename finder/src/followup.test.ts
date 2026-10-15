@@ -1,5 +1,5 @@
 import { mapNarrowing } from './api';
-import narrowed from './fixtures/narrowed.json';
+import narrowed from '../test-fixtures/narrowed.json';
 import { resultSummary } from './followup';
 import type { Narrowing } from './types';
 

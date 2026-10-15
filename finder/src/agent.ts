@@ -12,7 +12,7 @@ const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 const NOTHING_FOUND = 'Aucune pièce trouvée pour cette demande. Reformulez-la, ou choisissez une catégorie dans la liste.';
 const CANCELLED = 'Demande interrompue.';
 
-export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false, held: null, synthetic: false };
+export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false, held: null };
 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
@@ -76,7 +76,7 @@ export function parseFrame(data: string): FinderFrame | null {
 }
 
 export type TurnAction =
-  | { type: 'start'; instruction: string; continued?: boolean; held?: HeldVehicle | null; synthetic?: boolean }
+  | { type: 'start'; instruction: string; continued?: boolean; held?: HeldVehicle | null }
   | { type: 'frame'; frame: FinderFrame }
   | { type: 'cancel' }
   | { type: 'fail'; message: string }
@@ -149,7 +149,7 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
 export function turnReducer(state: TurnState, action: TurnAction): TurnState {
   switch (action.type) {
     case 'start': {
-      const base = { ...initialTurn, phase: 'sending' as const, instruction: action.instruction, held: action.held ?? null, synthetic: action.synthetic ?? false };
+      const base = { ...initialTurn, phase: 'sending' as const, instruction: action.instruction, held: action.held ?? null };
       return action.continued && state.parts.length > 0 ? { ...base, parts: state.parts, vehicle: state.vehicle, stale: true } : base;
     }
     case 'frame':

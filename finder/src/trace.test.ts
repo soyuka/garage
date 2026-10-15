@@ -1,5 +1,5 @@
 import { mapNarrowing } from './api';
-import narrowed from './fixtures/narrowed.json';
+import narrowed from '../test-fixtures/narrowed.json';
 import { narrowingTrace } from './trace';
 
 import { NNBSP } from './format';

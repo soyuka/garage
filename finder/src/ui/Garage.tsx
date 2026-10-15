@@ -41,12 +41,12 @@ const SAVE_FAILURE: Record<string, string> = {
   ambiguous: 'Plusieurs véhicules du garage correspondent.',
 };
 
-export function SaveVehicle({ vehicle, api, demo }: { vehicle: Vehicle; api: FinderApi; demo: boolean }) {
+export function SaveVehicle({ vehicle, api }: { vehicle: Vehicle; api: FinderApi }) {
   const toast = useToast();
   const [state, setState] = useState<SaveState>({ kind: 'idle' });
 
   const save = async (extra: { vehicle?: string; confirmNew?: boolean } = {}) => {
-    if (!demo && !isAuthenticated()) return setState({ kind: 'login' });
+    if (!isAuthenticated()) return setState({ kind: 'login' });
     setState({ kind: 'saving' });
     try {
       const saved = await api.saveVehicle({ ...saveBody(vehicle), ...extra });

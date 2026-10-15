@@ -2,18 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObjec
 import { createPortal } from 'react-dom';
 import { isAuthenticated, login } from './auth';
 import { ApiError } from './api';
-import { isDemo, loadApi, type FinderApi, type Trace } from './client';
+import { liveApi, type FinderApi, type Trace } from './client';
 import { partFamily } from './family';
 import { resultSummary } from './followup';
 import { historyEntries, type HistoryEntry } from './history';
 import { MediaError, pickSharpest, prepareImage, sampleVideo, type Frame } from './media';
 import { buildQuestion } from './question';
 import { parseRef, type Route } from './route';
-import { routeFile, routeText, type TextRoute } from './route-input';
+import { routeFile, type TextRoute } from './route-input';
 import type { AgentPart, Category, Family, Narrowing, Registration, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
-import { demoTurn, isDemoTurn } from './demo-turn';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
 import { BlankSheet, CardResult, Entry, VinResult } from './ui/Entry';
@@ -43,15 +42,9 @@ const MAX_FRAMES = 3;
 const PHOTO_INSTRUCTION = 'Identifie la pièce sur la photo.';
 const SUGGESTIONS = [100259, 100260, 100261];
 const SHEET_OVERLAY_MIN = 812;
-const DEMO_EXAMPLES = ['XB-301-ZB', 'W 712/73', 'rotule axiale peugeot 307'];
 
 export function App() {
-  const [api, setApi] = useState<FinderApi | null>(null);
-  useEffect(() => {
-    void loadApi().then(setApi);
-  }, []);
-  if (!api) return null;
-  return <Finder api={api} />;
+  return <Finder api={liveApi} />;
 }
 
 // What the page shows next to the composer besides an agent turn.
@@ -73,8 +66,7 @@ const routeRef = (route: Route): string => (route.view === 'entry' ? '' : route.
 
 function Finder({ api }: { api: FinderApi }) {
   const [route, navigate] = useRoute();
-  const demo = isDemo();
-  const authed = demo || isAuthenticated();
+  const authed = isAuthenticated();
   const [panel, setPanel] = useState<Panel>({ kind: 'none' });
   const [journalOpen, setJournalOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
@@ -94,7 +86,7 @@ function Finder({ api }: { api: FinderApi }) {
   const v = vehicle.status === 'ok' ? vehicle.data : null;
   const categories = useAsync<Category[]>(v?.carId ? `${v.carId}-${v.carType}` : null, () => api.categories(v!.carId!, v!.carType));
 
-  const turn = useAgentTurn(v, ref, !demo);
+  const turn = useAgentTurn(v, ref);
   const turnVehicle = turn.state.vehicle;
   const agentActive = turn.state.phase !== 'idle' || turn.needsLogin !== null;
   // An agent result keeps its own sheet (rationale, several parts) while its route names the part shown.
@@ -139,15 +131,6 @@ function Finder({ api }: { api: FinderApi }) {
   );
 
   const askAgent = (text: string, options: AskOptions = {}) => {
-    if (demo) {
-      if (isDemoTurn(text)) {
-        setPanel({ kind: 'none' });
-        turn.replay(text, demoTurn(), true);
-      } else {
-        setPanel({ kind: 'error', message: 'Mode démo : l’agent n’est pas appelé. Essayez la plaque XB-301-ZB puis « filtre à huile », ou « rotule axiale peugeot 307 ».' });
-      }
-      return;
-    }
     setPanel({ kind: 'none' });
     const context = followUp.current;
     turn.ask(text, {
@@ -202,7 +185,7 @@ function Finder({ api }: { api: FinderApi }) {
       setPanel({ kind: 'error', message: kind.reason === 'size' ? 'PDF trop lourd : 10 Mo au maximum.' : 'Format non pris en charge : une photo, une courte vidéo ou un PDF.' });
       return;
     }
-    if (!demo && !isAuthenticated()) {
+    if (!isAuthenticated()) {
       setPanel({ kind: 'login', why: 'La lecture d’une photo ou d’un document demande une connexion. Le fichier est lu puis oublié : il n’est jamais stocké.' });
       return;
     }
@@ -256,7 +239,6 @@ function Finder({ api }: { api: FinderApi }) {
   const cats = categories.status === 'ok' ? categories.data : null;
 
   const quick: QuickAction[] = [];
-  if (entry && demo) for (const x of DEMO_EXAMPLES) quick.push({ label: x, run: () => onText(routeText(x, null), x) });
   if (!entry && route.view === 'vehicle' && !agentActive && cats) {
     for (const id of SUGGESTIONS) {
       const c = cats.find((k) => k.id === id);
@@ -289,7 +271,7 @@ function Finder({ api }: { api: FinderApi }) {
     <header className="top">
       <a
         className="logo"
-        href={demo ? '?demo#/' : '#/'}
+        href="#/"
         onClick={() => {
           turn.reset();
           setPanel({ kind: 'none' });
@@ -307,7 +289,7 @@ function Finder({ api }: { api: FinderApi }) {
               navigate({ view: 'entry' });
             }}
           />
-          {v.carId !== null && <SaveVehicle key={ref} vehicle={v} api={api} demo={demo} />}
+          {v.carId !== null && <SaveVehicle key={ref} vehicle={v} api={api} />}
         </div>
       )}
       <button ref={journalButton} type="button" className="journal-btn" aria-expanded={journalOpen} onClick={() => setJournalOpen((o) => !o)}>
@@ -327,7 +309,6 @@ function Finder({ api }: { api: FinderApi }) {
       busy={busyReading}
       hasVehicle={!entry && v !== null}
       autoFocus={entry || (route.view === 'vehicle' && !agentActive)}
-      demo={demo}
       onText={onText}
       onFiles={(f) => void onFiles(f)}
     />
@@ -366,7 +347,6 @@ function Finder({ api }: { api: FinderApi }) {
           <History
             entries={history.status === 'ok' ? history.data : []}
             loading={history.status === 'loading'}
-            base={demo ? '?demo' : ''}
             onOpen={(e) => {
               turn.reset();
               setPanel({ kind: 'none' });
@@ -489,7 +469,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   if (loading && family.kind !== 'none') status = <p className="sheet-loading" role="status">Affinage des références…</p>;
 
   const traceNode = route.view === 'result' && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
-  const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
+  const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
 
   const ask = turn?.state.ask ?? null;
   const waiting = turn !== null && isBusy(turn.state);
@@ -637,7 +617,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} synthetic={state.synthetic} rationale={part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} rationale={part.rationale} />
   ) : null;
   const traceNode = n ? <NarrowingTrace narrowing={{ status: 'ok', data: n }} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
 

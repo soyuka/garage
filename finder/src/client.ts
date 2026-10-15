@@ -1,7 +1,7 @@
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapVehicle, mapVin } from './api';
 import { authFetch } from './auth';
 import { planPart, saveVehicle, type PlanBody, type PlannedTask, type SaveBody, type SavedVehicle } from './garage';
-import { getJournal, getJournalDetail, mapDetail, mapRows, type JournalDetail, type JournalRow } from './journal';
+import { getJournal, getJournalDetail, type JournalDetail, type JournalRow } from './journal';
 import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, VinDecode } from './types';
 
 // Which rule of the single input led to a catalogue read. Sent as headers so an authenticated
@@ -50,7 +50,7 @@ async function getJson(url: string, init: RequestInit = {}): Promise<unknown> {
   return res.json();
 }
 
-const live: FinderApi = {
+export const liveApi: FinderApi = {
   vehicle: async (plate, trace) => mapVehicle(await getJson(`/vehicles/${encodeURIComponent(plate.replace(/[\s-]/g, ''))}`, traced(trace))),
   vin: async (vin, trace) => mapVin(await getJson(`/vins/${encodeURIComponent(vin)}`, traced(trace))),
   categories: async (carId, carType) =>
@@ -75,50 +75,3 @@ const live: FinderApi = {
   planPart,
   saveVehicle,
 };
-
-// `?demo` serves recorded responses (XB-301-ZB, oil filter 100259) so UI work never spends the
-// catalogue's daily test quota; any other narrowing in demo mode answers as an exhausted quota.
-async function demoApi(): Promise<FinderApi> {
-  const [vehicle, vin, categories, narrowed, journal] = await Promise.all([
-    import('./fixtures/vehicle.json'),
-    import('./fixtures/vin.json'),
-    import('./fixtures/categories.json'),
-    import('./fixtures/narrowed.json'),
-    import('./fixtures/journal.json'),
-  ]);
-  const registration: Registration = {
-    plate: 'XB-301-ZB',
-    vin: 'JMZGG14F671528417',
-    legible: true,
-    warnings: [],
-    fields: [
-      { code: 'A', label: 'Immatriculation', value: 'XB-301-ZB' },
-      { code: 'B', label: 'Première immatriculation', value: '29/03/2007' },
-      { code: 'D.1', label: 'Marque', value: 'MAZDA' },
-      { code: 'D.3', label: 'Dénomination commerciale', value: 'MAZDA6' },
-      { code: 'E', label: 'Numéro VIN', value: 'JMZGG14F671528417' },
-      { code: 'P.3', label: 'Énergie', value: 'ES' },
-    ],
-  };
-  const later = <T,>(value: T, ms = 450): Promise<T> => new Promise((r) => setTimeout(() => r(value), ms));
-  return {
-    vehicle: (plate) => (plate === 'XB-301-ZB' ? later(mapVehicle(vehicle.default)) : Promise.reject(new ApiError('notFound'))),
-    vin: (v) => later({ ...mapVin(vin.default), vin: v }),
-    categories: () => later(mapCategories(categories.default)),
-    narrowed: (_c, _t, categoryId) =>
-      categoryId === 100259 ? later(mapNarrowing(narrowed.default), 1100) : Promise.reject(new ApiError('quota')),
-    extractRegistration: () => later(registration, 1400),
-    photoIntake: () => later({ kind: 'carte_grise', registration } as const, 1400),
-    journal: () => later(mapRows(journal.default.list), 300),
-    journalEntry: (id) => {
-      const entry = (journal.default.entries as Record<string, unknown>)[id];
-      return entry ? later(mapDetail(entry), 300) : Promise.reject(new ApiError('notFound'));
-    },
-    planPart: () => later({ task: '/garage/planned-tasks/01DEMOTASK', vehicle: '/garage/vehicles/01DEMOVEHICLE' }, 500),
-    saveVehicle: () => later({ vehicle: '/garage/vehicles/01DEMOVEHICLE', created: true }, 500),
-  };
-}
-
-export const isDemo = (): boolean => new URLSearchParams(window.location.search).has('demo');
-
-export const loadApi = (): Promise<FinderApi> => (isDemo() ? demoApi() : Promise.resolve(live));

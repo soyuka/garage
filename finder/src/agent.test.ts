@@ -1,5 +1,5 @@
 import { hubUrl, initialTurn, parseFrame, sessionTopic, turnBody, turnReducer } from './agent';
-import narrowed from './fixtures/narrowed.json';
+import narrowed from '../test-fixtures/narrowed.json';
 import type { FinderFrame, TurnState } from './types';
 
 const frame = (f: FinderFrame) => ({ type: 'frame' as const, frame: f });
@@ -156,10 +156,9 @@ describe('follow-up from a deterministic result', () => {
   });
 });
 
-describe('synthetic turns', () => {
-  it('marks a turn replayed from synthetic frames, and only that turn', () => {
-    expect(turnReducer(initialTurn, { type: 'start', instruction: 'rotule', synthetic: true }).synthetic).toBe(true);
-    expect(turnReducer(initialTurn, { type: 'start', instruction: 'rotule' }).synthetic).toBe(false);
+describe('turn state', () => {
+  it('carries no replayed or synthetic marker: every turn is a live one', () => {
+    expect(Object.keys(turnReducer(initialTurn, { type: 'start', instruction: 'rotule' }))).not.toContain('synthetic');
   });
 });
 

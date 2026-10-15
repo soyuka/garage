@@ -1,8 +1,8 @@
 import { mapPhotoIntake } from './api';
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapRegistration, mapVehicle, mapVin } from './api';
-import narrowed from './fixtures/narrowed.json';
-import vehicle from './fixtures/vehicle.json';
-import vin from './fixtures/vin.json';
+import narrowed from '../test-fixtures/narrowed.json';
+import vehicle from '../test-fixtures/vehicle.json';
+import vin from '../test-fixtures/vin.json';
 
 describe('mapVehicle', () => {
   it('reads the JSON-LD vehicle and formats the plate', () => {

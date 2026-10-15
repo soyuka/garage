@@ -1,6 +1,6 @@
 import { buildQuestion } from './question';
 import { mapNarrowing } from './api';
-import narrowed from './fixtures/narrowed.json';
+import narrowed from '../test-fixtures/narrowed.json';
 
 const NNBSP = ' ';
 
