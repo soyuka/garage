@@ -13,11 +13,13 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Dto\ArchiveTasksOutput;
+use App\Dto\PlanMaintenanceInput;
 use App\Dto\PlannedTaskInput;
 use App\Entity\PlannedMaintenance;
 use App\State\ArchiveCompletedTasksProcessor;
 use App\State\PlannedTaskCreateProcessor;
 use App\State\PlannedTaskPatchProcessor;
+use App\State\PlannedTaskPlanProcessor;
 use App\State\PlannedTaskProvider;
 use App\State\VehiclePlannedTaskCollectionProvider;
 use Symfony\Component\Uid\Ulid;
@@ -53,6 +55,13 @@ use Symfony\Component\Uid\Ulid;
             ],
             input: PlannedTaskInput::class,
             processor: PlannedTaskCreateProcessor::class,
+        ),
+        // The finder's "add to my garage": plan_maintenance over REST — vehicle resolved/created by
+        // identity (plate/carId/make+model) through the shared dedup, open task upserted.
+        new Post(
+            uriTemplate: '/garage/planned-tasks',
+            input: PlanMaintenanceInput::class,
+            processor: PlannedTaskPlanProcessor::class,
         ),
         // "Archiver les entretiens terminés": file every done task into the past-maintenance log.
         // No request body (input: false) and no resource read (read: false) — it acts on the
