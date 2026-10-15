@@ -18,5 +18,5 @@
     "noUncheckedIndexedAccess": true,
     "types": ["vite/client", "vitest/globals"]
   },
-  "include": ["src", "test-fixtures", "vite.config.ts"]
+  "include": ["src", "test-fixtures", "dev", "vite.config.ts"]
 }

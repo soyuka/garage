@@ -4,7 +4,8 @@ import { useMemo, useRef } from 'react';
 import { Vector3, type BufferGeometry, type Group } from 'three';
 import type { Dimension } from '../types';
 import { filterAnnotations } from './annotations';
-import { facingAngle, filterCotes, rimTop, visibleLabels, type CoteKey, type FilterCotes, type Vec3 } from './cotes';
+import { HOME } from './camera';
+import { filterCotes, rimTop, visibleLabels, type CoteKey, type FilterCotes, type Vec3 } from './cotes';
 import { Arrowheads, chainSegments, ORDER, OVERLAY, type ArrowTip } from './Dimension';
 import { filterScale } from './filterScale';
 import { HiddenLine } from './HiddenLine';
@@ -42,12 +43,9 @@ export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
   const rimY = useMemo(() => rimTop(profile(mesh.geometries)), [mesh]);
   const cotes = useMemo(() => filterCotes(R, H, { faceY: rimY * scale.y }), [R, H, rimY, scale.y]);
 
-  // The cotes face the camera's azimuth, not the part: the Ø spans the full top face and the height
-  // sits on the silhouette's right edge from any orbit angle.
-  const facing = useRef<Group>(null);
+  // The cotes are fixed to the part, built facing the home view; only their labels billboard.
   const labelEls = useRef<Partial<Record<CoteKey, HTMLElement | null>>>({});
-  useFrame(({ camera }) => {
-    if (facing.current) facing.current.rotation.y = facingAngle(camera.position.x, camera.position.z);
+  useFrame(() => {
     const items = (Object.entries(labelEls.current) as [CoteKey, HTMLElement | null][]).flatMap(([key, el]) => {
       if (!el) return [];
       const r = el.getBoundingClientRect();
@@ -69,7 +67,7 @@ export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
       </group>
       <Line points={axis} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} transparent opacity={ghost ? 0.28 : 1} depthTest={false} renderOrder={9} />
       {!ghost && (
-        <group ref={facing}>
+        <group rotation={[0, HOME.azimuth, 0]}>
           {labels.diameter && <DiameterCote cote={cotes.diameter} label={labels.diameter} labelRef={bind('diameter')} />}
           {labels.height && <HeightCote cote={cotes.height} label={labels.height} labelRef={bind('height')} />}
           {labels.thread && <ThreadNote cote={cotes.thread} label={labels.thread} labelRef={bind('thread')} />}

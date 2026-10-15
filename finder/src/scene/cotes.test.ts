@@ -1,4 +1,4 @@
-import { arrowSide, facingAngle, filterCotes, rimTop, visibleLabels } from './cotes';
+import { arrowSide, filterCotes, rimTop, visibleLabels } from './cotes';
 
 const R = 38;
 const H = 90;
@@ -58,17 +58,6 @@ describe('rimTop', () => {
 
   it('falls back to the top of a flat part', () => {
     expect(rimTop([[30, 0], [30, 50]])).toBe(50);
-  });
-});
-
-describe('facingAngle', () => {
-  it('turns the annotation frame so its +Z points at the camera azimuth', () => {
-    for (const [x, z] of [[0, 600], [600, 0], [-300, -300], [120, -500]] as const) {
-      const a = facingAngle(x, z);
-      const len = Math.hypot(x, z);
-      expect(Math.sin(a)).toBeCloseTo(x / len);
-      expect(Math.cos(a)).toBeCloseTo(z / len);
-    }
   });
 });
 

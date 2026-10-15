@@ -12,7 +12,11 @@ export const MESH_SPAN = 120;
 export const meshUrl = (id: MeshId): string => `${import.meta.env.BASE_URL}parts/${meshFile(id)}`;
 
 export function MeshPart({ mesh, ghost }: { mesh: MeshId; ghost: boolean }) {
-  const { scene } = useGLTF(meshUrl(mesh), DRACO_PATH);
+  return <GltfPart url={meshUrl(mesh)} ghost={ghost} />;
+}
+
+export function GltfPart({ url, ghost }: { url: string; ghost: boolean }) {
+  const { scene } = useGLTF(url, DRACO_PATH);
   const { geometries } = useMemo(() => {
     const size = new Box3().setFromObject(scene).getSize(new Vector3());
     const longest = Math.max(size.x, size.y, size.z);

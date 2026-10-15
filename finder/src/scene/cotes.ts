@@ -63,11 +63,6 @@ export function rimTop(profile: readonly (readonly [number, number])[]): number 
   return Math.max(...profile.filter(([r]) => r >= maxR * FULL_RADIUS).map(([, y]) => y));
 }
 
-// Rotation about +Y that points the frame's +Z at a camera standing at (x, z) around the part axis.
-export function facingAngle(cameraX: number, cameraZ: number): number {
-  return Math.atan2(cameraX, cameraZ);
-}
-
 // Arrowhead half-width direction: across the line and across the view, so the head always shows its face.
 export function arrowSide(back: readonly number[], view: readonly number[]): Vec3 {
   const [bx, by, bz] = back as [number, number, number];

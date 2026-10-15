@@ -1,18 +1,23 @@
 import { Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
-import { BackSide, BufferGeometry, Color, EdgesGeometry, ShaderMaterial } from 'three';
+import { BackSide, BufferGeometry, Color, EdgesGeometry, ShaderMaterial, Vector2 } from 'three';
 import { DRAFT_BLUE, LINE_VISIBLE, PAPER } from './palette';
 import { completeRings, type Seg } from './rings';
 
 // Hidden-line drafting: a paper-coloured fill pushed back by polygonOffset occludes the far edges,
-// EdgesGeometry draws the creases, and an inverted hull (back faces grown along the normal by a
-// constant number of screen pixels) draws the silhouettes that creases miss on curved surfaces.
+// EdgesGeometry draws the creases, and an inverted hull (back faces pushed outward in clip space by a
+// constant number of screen pixels, so it holds under perspective) draws the silhouettes that creases
+// miss on curved surfaces.
 const hullVertex = /* glsl */ `
-  uniform float uThickness;
+  uniform float uPixels;
+  uniform vec2 uResolution;
   void main() {
-    vec3 p = position + normalize(normal) * uThickness;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
+    vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec2 dir = (projectionMatrix * vec4(normalize(normalMatrix * normal), 0.0)).xy;
+    float len = length(dir);
+    if (len > 1e-6) clip.xy += (dir / len) * (2.0 * uPixels / uResolution) * clip.w;
+    gl_Position = clip;
   }
 `;
 const hullFragment = /* glsl */ `
@@ -40,19 +45,19 @@ export function HiddenLine({ geometry, threshold = 25, ghost = false, rings = fa
   }, [geometry, threshold, rings]);
   const hull = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(
-    () => ({ uThickness: { value: 0.5 }, uColor: { value: new Color(DRAFT_BLUE) }, uOpacity: { value: 1 } }),
+    () => ({ uPixels: { value: OUTLINE_PX }, uResolution: { value: new Vector2(1, 1) }, uColor: { value: new Color(DRAFT_BLUE) }, uOpacity: { value: 1 } }),
     [],
   );
   const opacity = ghost ? 0.28 : 1;
   uniforms.uOpacity.value = opacity;
 
-  useFrame(({ camera }) => {
-    if (hull.current && 'zoom' in camera) hull.current.uniforms.uThickness!.value = OUTLINE_PX / (camera as { zoom: number }).zoom;
+  useFrame(({ size, viewport }) => {
+    if (hull.current) (hull.current.uniforms.uResolution!.value as Vector2).set(size.width * viewport.dpr, size.height * viewport.dpr);
   });
 
   return (
     <group>
-      <mesh geometry={geometry} renderOrder={0}>
+      <mesh geometry={geometry} renderOrder={0} userData={{ fit: true }}>
         <meshBasicMaterial color={PAPER} polygonOffset polygonOffsetFactor={4} polygonOffsetUnits={12} />
       </mesh>
       <mesh geometry={geometry} renderOrder={1}>
