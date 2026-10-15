@@ -108,6 +108,11 @@ function Finder({ api }: { api: FinderApi }) {
     return api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make, { ...t, plate: v!.plate });
   });
 
+  // A route the turn does not own (back button, history link, typed URL) closes a finished turn.
+  useEffect(() => {
+    if (agentActive && !agentOwns && !isBusy(turn.state)) turn.reset();
+  }, [route]);
+
   const history = useAsync<HistoryEntry[]>(route.view === 'entry' && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.journal()));
 
   useEffect(() => {
@@ -371,7 +376,7 @@ function Finder({ api }: { api: FinderApi }) {
 
   return shell(
     agentOwns ? (
-      <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} followUp={followUp} />
+      <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} followUp={followUp} onAsk={askAgent} />
     ) : (
       <Workspace api={api} route={route as Exclude<Route, { view: 'entry' }>} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} slot={slot} followUp={followUp} />
     ),
@@ -427,7 +432,9 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
         <div className="sheet-wrap">
           <div className="sheet">
             <div className="sheet-status" role="status">
-              Identification de <span className="m">{route.ref}</span>…
+              <p>
+                Identification de <span className="m">{route.ref}</span>…
+              </p>
             </div>
           </div>
         </div>
@@ -524,6 +531,7 @@ interface AgentWorkspaceProps {
   turn: AgentTurn;
   slot: HTMLElement | null;
   followUp: MutableRefObject<FollowUp | null>;
+  onAsk: (text: string, options?: AskOptions) => void;
 }
 
 function partCategory(part: AgentPart, categories: Category[]): Category {
@@ -533,7 +541,7 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
     : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
 }
 
-function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, followUp }: AgentWorkspaceProps) {
+function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, followUp, onAsk }: AgentWorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const { state } = turn;
@@ -631,7 +639,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
       {slot &&
         createPortal(
           <>
-            {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => turn.ask(value, { pendingContext: state.ask?.context ?? null, summary: followUp.current?.summary ?? null, continued: true })} />}
+            {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} />}
             {!state.ask && question && part && <QuestionCard question={question} confirmed={confirmed} selected={cluster?.id ?? null} onAnswer={(id) => openPart(part, id)} />}
           </>,
           slot,

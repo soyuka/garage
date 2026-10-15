@@ -22,10 +22,24 @@ Shipped, end to end:
   vehicle-less starts (browse makes/models/cars), photos, reference lookup, `show_parts` narrows
   server-side, `set_vehicle`, `ask_question` for what the catalogue can't settle, web finds tagged
   "Source : web". Cap 25 tool calls.
-- **Result**: drawing sheet with the hidden-line 3D part (brakes + oil filter meshes), "VUE A —
-  DESSOUS" base view, one formatter for drawn dims and title-block cotes (ranges, never false
-  precision), title block = result card, Copier / Acheter (Oscaro, Autodoc, Mister-Auto, web — URLs
-  verified) / Ajouter au <véhicule> (`POST /garage/planned-tasks`, real) / Partager (hash URL).
+- **Result**: drawing sheet with ONE hidden-line 3D view, free 360° orbit + idle turntable (1 rev /
+  40 s, stops on first touch, off under reduced motion); cotes fixed to the part with billboarded
+  labels, drawn ONLY from the cluster fingerprint (never from the mesh); families without a mesh get a
+  generic chamfered block + "Aperçu générique" caption, no cotes. Title block = result card, Copier /
+  Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
+  confirmNew) / Partager. "Enregistrer le véhicule" in the top bar (`POST /garage/vehicles/save`,
+  same-plate match, different plate = different car, 409 picker when no plate).
+- **Layout (2026-10-15)**: composer docked at the bottom on every width, with the agent status, its
+  question + answers (or the differsOn question) and quick actions above it; no left aside (trace is
+  a sheet note). A follow-up continues the search: POST /agent/turn carries `summary` (on-screen
+  category, clusters, OE, cotes, applicability), `pendingContext`, `vehicle.plate`, and `buildLabel`
+  for a door-vignette photo; the previous parts stay ghosted until new ones arrive.
+- **History**: logged-in home lists the last 10 journal searches; rows carry a server `route`
+  (`p/<plate>/c/<cat>` or `k/<carId>-<type>/c/<cat>`) + `vehicle`; restoring re-reads /narrowed
+  (cached). Agent catalogue results replace the hash with their result route, so they are shareable.
+- **PSA build code**: photo intake kind `build_label` (OPR/DAM verbatim), `decode_build_code` in the
+  finder allowlist, clusters expose `applicability` (per ARTICLE, non-splitting); finder.md says to
+  use it only between clusters that already differ, never as certainty.
 - **Journal**: agent turns and deterministic searches in `agent_turns` (`surface`, `kind`), cache
   tokens, cost (Sonnet 5.5 prices in `.env`), partsapi calls per method vs the 50/day quota; drawer
   docks right ≥1280px.
@@ -37,13 +51,19 @@ break / 2.0 DI) instead of guessing.
 ## Open
 
 - Live-test the paths that cost money, with the user watching: real part photo, multi-part request
-  ("courroie + pompe à eau"), web-found reference, the ask → answer round trip.
+  ("courroie + pompe à eau"), web-found reference, the ask → answer round trip, and the PSA case
+  "rotule axiale peugeot 307" → code de fabrication typed AND as a vignette photo (`build_label`).
+  None of the 2026-10-15 agent paths ran live; the `?demo` rotule turn is synthetic (refs DÉMO-A/B).
+- Applicability values are per article: check on real 307 data whether they discriminate at all
+  between the clusters; if never, drop the question rather than keep a weak signal.
+- Dimension labels can overlap for a moment when the part is seen edge-on (height vs thread note).
+- A follow-up from a deterministic result switches to the agent sheet ("Recherche en cours") instead
+  of keeping the deterministic sheet up until the agent answers.
 - 100/220 articles stay unattached on the Mazda oil filter (their crosses don't reach the 2 reps
   called). Options: one more crosses call on a third rep, or accept and keep the quiet line.
-- Part families: only brakes + oil filter have meshes; everything else shows the category name.
+- Part families: only brakes + oil filter have meshes; everything else shows the generic placeholder.
   More GLBs come from the asset session (`blueprint-experiment/`, not committed — raw extraction).
-- Base view hidden when the title block stacks (mobile, docked journal); 409 (ambiguous vehicle) on
-  "Ajouter" only toasts a link to the Atelier, no picker; mobile vehicle chip truncates.
+- Garage: picker only, no fleet management; several same-model cars are told apart by plate only.
 - Data source: partsapi test keys (50/day/method). Going public = TecAlliance licence (below) AND
   buying the Wrench meshes from the developer.
 

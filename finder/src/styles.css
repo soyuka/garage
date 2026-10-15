@@ -1383,6 +1383,13 @@ button {
   margin: 0;
 }
 
+.narrow h2 {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--mute);
+  margin-bottom: 6px;
+}
+
 /* ── sheet notes, generic caption ──────────────────────────────────────── */
 
 .sheet-notes {
@@ -1428,6 +1435,10 @@ button {
 .save {
   position: relative;
   flex: none;
+}
+
+.save > .btn {
+  gap: 0;
 }
 
 .save-pop {
@@ -2047,14 +2058,28 @@ button {
   }
   .history a {
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 2px 12px;
+    gap: 4px 12px;
   }
-  .history-vehicle {
-    grid-column: 1;
+  .history-input {
+    grid-area: 1 / 1;
   }
   .history time {
-    grid-column: 2;
-    grid-row: 2;
+    grid-area: 1 / 2;
+  }
+  .history-vehicle {
+    grid-area: 2 / 1;
+  }
+  .history .tag {
+    grid-area: 2 / 2;
+    justify-self: end;
+  }
+  .intake-hint {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .save-long {
+    display: none;
   }
   .top {
     flex-wrap: wrap;

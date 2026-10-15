@@ -128,15 +128,16 @@ Token source of truth: `finder/src/styles.css:1-17` (`:root`), `finder/src/scene
 
 The app is an ISO engineering drawing sheet that works. White paper, graphite frame, drafting-blue linework: the answer to "which part?" is a drawn part with its cotes and a title block, not a product photo in a card grid. The sheet is the page; the title block is the result card; the drawing is the product view. TecDoc photos were dropped from the build and do not come back.
 
-Density is that of a drawing: thin rules, labelled cells, tabular figures, no decoration that is not a drafting device. The blank sheet is visible before any search (homepage = one input over an empty `PLANCHE` with an empty title block), so the user sees the form the answer will take before asking. French UI throughout (`index.html` `lang="fr"`), French number formatting with narrow no-break space (`format.ts:1`, `formatNumber`).
+Density is that of a drawing: thin rules, labelled cells, tabular figures, no decoration that is not a drafting device. The blank sheet is visible before any search (homepage = the question, the recent searches when logged in, an empty `PLANCHE` with an empty title block), so the user sees the form the answer will take before asking. French UI throughout (`index.html` `lang="fr"`), French number formatting with narrow no-break space (`format.ts:1`, `formatNumber`).
 
-Layout, as built: 56px top bar / content / 28px foot (`styles.css:89-94`). Workspace = 288px aside + sheet (`styles.css:492-496`); the title block overlays the sheet's bottom-right corner at 520px with the base view stacked above it, only when the sheet column is at least 812px wide (`App.tsx:346,402`); otherwise the sheet and title block stack. Breakpoints: ≤1099px stacks sheet over title block and drops the aside to 248px; ≤759px collapses to one column with 16px gutter; the journal docks as a 480px right column at ≥1280px (`App.tsx:65`, `styles.css` `.app--journal`) and is a 580px overlay drawer below that.
+Layout, as built (revised 2026-10-15): `100dvh` grid of 56px top bar / scrolling main / dock (`styles.css` `.app`, `.main`, `.dock`). The dock is always on screen at the bottom, on every width: agent status line, the open question (agent `ask_question` or the `differsOn` question) with its answer buttons, quick actions, then the composer (`ui/Dock.tsx`). Workspace = the sheet alone; the narrowing trace is a drawing note in the sheet's top-left corner (`.sheet-notes`) and moves under the sheet when it stacks. The title block overlays the sheet's bottom-right corner at 520px when the sheet is at least 812px wide (`App.tsx` `SHEET_OVERLAY_MIN`); otherwise sheet, trace and title block stack. ≤759px: 16px gutter, the vehicle chip wraps to its own row. The journal docks as a 480px right column at ≥1280px spanning main and dock, a 580px overlay drawer below that.
+*Was (until 2026-10-15):* a 288px left aside (trace, question, recent searches), the input in the top bar (hero input on the homepage) and a 28px footer. *Why reversed:* the user decided the composer must always be visible and continue the current search; a question belongs next to where it is answered.
 
 **Key Characteristics:**
-- Hidden-line orthographic 3D part (`scene/HiddenLine.tsx`, `scene/Blueprint.tsx` orthographic camera) is the main product view.
+- Hidden-line orthographic 3D part (`scene/HiddenLine.tsx`, `scene/Blueprint.tsx` orthographic camera) is the ONLY product view: free 360° orbit, slow idle turntable.
 - ISO 128 line weights, ISO 129 dimension placement, chain centre lines.
 - Title block = result card; drawn cotes and title-block cotes come from one formatter.
-- Single input (text, photo, video) over a blank sheet.
+- One composer (text, photo, PDF, video) docked at the bottom of every screen.
 - Flat paper; shadows only on things that float above the sheet.
 
 ## 2. Colors: The Drafting Palette
@@ -177,15 +178,17 @@ Paper, graphite and one drafting blue. Blue is ink for drawn and measured things
 - **Headline** (600, 17px): title-block designation, journal heading.
 - **Body** (400, 14px, 1.4): prose; 13px for secondary prose, 46-60ch measures.
 - **Data** (Mono 500, 13px, tabular): dimension labels on the sheet (`.dim-label`), plates, kType, references, counts, durations; 12.5px in lists.
-- **View label** (Mono 500, 11.5px, +0.04em): drawing view names, `VUE ISO — FILTRE À HUILE`, `VUE A — DESSOUS`, `PLANCHE`. Upper case is in the string itself, as on a drawing.
+- **View label** (Mono 500, 11.5px, +0.04em): drawing view names, `VUE 3D — FILTRE À HUILE`, `PLANCHE` (was `VUE ISO —`: a freely orbiting view is not an isometric one, renamed 2026-10-15). Upper case is in the string itself, as on a drawing.
 - **Label** (500, 11px, +0.02em, sentence case): title-block cell labels (`Désignation`, `Réf. OE · MAZDA`, `Cotes`).
 
 ### Named Rules
 **The Mono Is Data Rule.** Plates, VIN, references, kType, cotes, counts, times and quotas render in Plex Mono with tabular figures (`.m`, `styles.css:73-76`). Prose and brand names stay in Plex Sans; equivalence lines set the brand in Sans and the reference in Mono.
 
-**The One Formatter Rule.** Every printed number goes through `format.ts` (`formatNumber`, `formatRange`, `formatMeasure`, NNBSP grouping). Drawn dimensions, the base view and the title-block `Cotes` line all call `dimText` (`dims.ts:24`, `result.ts:33-45`, `ui/BaseView.tsx`), so the sheet and the title block can never disagree.
+**The One Formatter Rule.** Every printed number goes through `format.ts` (`formatNumber`, `formatRange`, `formatMeasure`, NNBSP grouping). Drawn dimensions and the title-block `Cotes` line both call `dimText` (`scene/annotations.ts`, `result.ts` `cotesLine`), so the sheet and the title block can never disagree.
 
-**The Range Rule.** When variants of a part differ, a cote prints as a range (`75–78`), never a picked value; the mesh is built at the range midpoint (`dimMid`, `dims.ts:26`). With no catalogue value, a drawn cote prints `≈` before a mesh-derived figure (`scene/FilterPart.tsx:72,79`). False precision is prohibited.
+**The Range Rule.** When variants of a part differ, a cote prints as a range (`75–78`), never a picked value; the mesh is built at the range midpoint (`dimMid`, `dims.ts`). False precision is prohibited.
+
+**The Never Invent Rule** (2026-10-15). A cote is drawn only when the cluster fingerprint carries it (`scene/annotations.ts`, tested in `annotations.test.ts`); otherwise there is no dimension line at all, and the title block says `non renseignées par le catalogue`. Brakes: disc Ø and thickness only for a disc category, only from the fingerprint. *Was:* a missing cote printed `≈` + a figure measured on the mesh (`FilterPart.tsx`). *Why reversed:* a mesh measurement is not catalogue data; it read as one.
 
 ## 4. Elevation
 
@@ -204,13 +207,14 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 
 ### The Sheet (signature)
 - **Frame:** 1px graphite border, paper fill, `overflow: hidden`, min-height 420px (`styles.css` `.sheet`).
-- **View label:** top-left at 20/24px, view-label type. Drag hint bottom-left, 11.5px mute.
-- **3D view:** orthographic camera; `HiddenLine` draws creases (`EdgesGeometry`, 25° threshold) plus a constant-pixel inverted-hull silhouette, both at `LINE_VISIBLE` 1.7px, over a paper fill pushed back by polygon offset. Ghost state (loading/preview) draws at 0.28 opacity.
+- **View label:** top-left at 20/24px, view-label type. Drag hint bottom-left, 11.5px mute. Trace note under the label (`.sheet-notes`, 232px).
+- **3D view:** orthographic camera, OrbitControls with free azimuth and polar 0.06–π−0.06, no pan; idle turntable at one revolution per 40 s (`scene/turntable.ts`), stopped for the rest of the visit by the first pointer interaction, off under `prefers-reduced-motion`. `HiddenLine` draws creases (`EdgesGeometry`, 25° threshold) plus a constant-pixel inverted-hull silhouette, both at `LINE_VISIBLE` 1.7px, over a paper fill pushed back by polygon offset. Ghost state (loading/preview) draws at 0.28 opacity.
 - **Line weights (ISO 128):** visible outline 1.7px (`LINE_VISIBLE`), dimension, extension, leader and centre lines 0.85px (`LINE_THIN`), about 2:1 (`palette.ts:5-7`). Centre lines are chain lines, ISO 128 type 04: long dash, gap, short dash, gap (`chainSegments`, `scene/Dimension.tsx`; SVG `stroke-dasharray: 14 3 2 3`).
-- **Dimensions (ISO 129):** extension lines start 1.5mm off the feature and run 2.5mm past an unbroken dimension line with filled arrowheads; the value sits beside the line (above for horizontal, right for vertical) as DOM text so it stays crisp; dimensions draw over the part, never behind it. Notes use a leader to a horizontal shelf.
+- **Dimensions (ISO 129):** extension lines start 1.5mm off the feature and run 2.5mm past an unbroken dimension line with filled arrowheads; dimension and extension lines are fixed to the part and turn with it; the value is DOM text (drei `<Html>`) on a paper ground, so it always faces the viewer and stays crisp; dimensions draw over the part, never behind it. Notes use a leader to a horizontal shelf.
+- **Generic placeholder** (2026-10-15): a family without a mesh draws an abstract chamfered block with one bore in the same hidden-line style (`scene/GenericPart.tsx`), captioned `Aperçu générique — pas de modèle 3D pour cette pièce`, never with cotes.
 
-### Base View (signature)
-- 2D SVG orthographic `VUE A — DESSOUS` for filters (outer Ø, seal ring band at 10% blue fill, thread major/minor circles), `VUE A — FACE` for brakes (`ui/BaseView.tsx`). Same weights via `vector-effect: non-scaling-stroke`, same chain centre lines, leaders to a label column. Every circle is a midpoint; every label is the title block's range text. Shown above the title block only in the overlay layout.
+### Base View (removed 2026-10-15)
+- *Was:* a 2D SVG `VUE A — DESSOUS` / `VUE A — FACE` inset above the title block. *Why removed:* the user wants one 3D view only; the cotes it carried now sit on the 3D part.
 
 ### Title Block (signature; the result card)
 - **Structure:** 3-column grid, 1.5px graphite outer frame, 1px graphite cell rules, docked flush to the sheet's bottom-right corner (`right/bottom: -1px`) at 520px; full width when stacked.
@@ -228,14 +232,17 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 - **Focus:** 2px drafting-blue outline, 2px offset, everywhere (`styles.css:44-47`).
 
 ### Inputs / Fields
-- **Single input:** one field, 1px graphite border, 6px radius; hero 54px with 18px text, bar 34px in the top bar. Attach (and camera on coarse pointers) as 36px icon buttons with inline 1.5px-stroke SVG. Focus-within adds the blue halo; dragging a file over it turns the border dashed blue on panel.
+- **Composer** (2026-10-15, was hero 54px on the homepage + 34px bar in the top bar): one field docked at the bottom, 1px graphite border, 6px radius, 46px with 16px text; it clears after each send; the category suggestion list opens upward. Attach (and camera on coarse pointers) as 36px icon buttons with inline 1.5px-stroke SVG. Focus-within adds the blue halo; dragging a file over it turns the border dashed blue on panel.
 
 ### Chips and Tags
 - **Vehicle chip:** 34px, hairline border, 6px radius; plate on panel inset in Mono; engine hides below 1280px, kType below 760px.
 - **Tags:** 11.5px, 3px radius, panel fill; `ok` = blue outline on paper; `warn` = warn on warn tint.
 
 ### Navigation and Lists
-- **Trace (aside "Affinage"):** label/value rows on hairline rules under a graphite top rule; the result row is graphite-ruled and blue.
+- **Recent searches (home, logged in):** the journal's last 10 restorable searches (`history.ts`), rows of input · plate + vehicle · outcome tag · time on hairline rules under a graphite top rule; one click follows the server-computed route.
+- **Question card:** panel fill, 8px radius, question in 14px/500, answers as secondary buttons (Mono only for cluster answers), hint below.
+- **Garage picker:** on a 409 from the garage, the candidates as buttons `plate · model`, plus `Un autre véhicule` (confirmNew) and `Annuler` (`ui/Garage.tsx`).
+- **Trace (sheet note "Affinage"):** label/value rows on hairline rules under a graphite top rule; the result row is graphite-ruled and blue.
 - **Part tabs:** one bordered strip, hairline separators, selected = graphite fill, white text.
 - **Journal:** 1.5px graphite left frame and header rule; rows hover to panel; facts in a graphite-ruled 3-column grid (2 on mobile); payloads in Mono 11.5/1.45 on hairline boxes.
 
@@ -248,8 +255,9 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 - **Do** show the answer as a drawing: hidden-line orthographic part, cotes, view label, title block.
 - **Do** keep visible lines at 1.7px and dimension/centre lines at 0.85px; import them from `palette.ts`, never re-type them.
 - **Do** format every number through `format.ts` and every cote through `dimText`; ranges when variants differ, mesh at midpoint.
-- **Do** keep a single input on the homepage over a blank sheet; text, photo and video enter through the same field.
-- **Do** name views the drafting way (`VUE ISO —`, `VUE A — DESSOUS`) in Mono caps; label cells in sentence case.
+- **Do** keep the one composer docked at the bottom of every screen; text, photo, PDF and video enter through it, and a follow-up continues the current result.
+- **Do** name views the drafting way (`VUE 3D —`, `PLANCHE`) in Mono caps; label cells in sentence case.
+- **Don't** draw a cote the catalogue does not carry, nor estimate one from a mesh.
 - **Do** dock the journal right at ≥1280px and overlay it below.
 - **Do** write the UI in French with French number grouping.
 
