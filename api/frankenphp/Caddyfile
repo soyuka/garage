@@ -43,7 +43,7 @@
 			header({'Accept': '*text/html*'})
 			&& !path(
 				'/docs*', '/graphql*', '/bundles*', '/contexts*', '/_profiler*', '/_wdt*',
-				'/mcp*', '/agent*', '/garage*', '/.well-known*',
+				'/mcp*', '/agent*', '/garage*', '/.well-known*', '/finder*',
 				'*.json*', '*.html', '*.csv', '*.yml', '*.yaml', '*.xml'
 			)
 		)
@@ -63,6 +63,12 @@
 		# the browser used, so the API's issuer/JWKS check is unaffected. handle_path strips /casdoor.
 		handle_path /casdoor/* {
 			reverse_proxy http://{$CASDOOR_UPSTREAM:casdoor:8000}
+		}
+
+		# finder SPA (its own Vite dev server, base /finder/): assets, HMR websocket and HTML all live
+		# under /finder, so one handle routes them before @frontend sends HTML to the dashboard.
+		handle /finder* {
+			reverse_proxy http://{$FINDER_UPSTREAM:finder:5173}
 		}
 
 		# Vite dev server. Default upstream lets a PHP-only stack (no dashboard service) still parse;

@@ -71,6 +71,20 @@ services:
     expose:
       - "5173"
     restart: unless-stopped
+
+  # finder — the parts finder SPA (Vite/React), served same-origin behind Caddy at
+  # https://localhost/finder/ (`handle /finder*` in frankenphp/Caddyfile). Same dev-only shape as
+  # the dashboard service; Vite runs with base /finder/ so every asset and HMR path stays under it.
+  finder:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host"
+    volumes:
+      - ../finder:/app
+      - /app/node_modules
+    expose:
+      - "5173"
+    restart: unless-stopped
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 
