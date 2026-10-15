@@ -279,4 +279,47 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame('2002-08', $row['yearFrom']);
         $this->assertSame('2007-08', $row['yearTo']);
     }
+
+    public function testListCarsFiltersServerSide(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_cars',
+            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'year' => 2005, 'capacityLitres' => 2.0],
+        ], 2)['result']['structuredContent'];
+
+        $this->assertSame(5, $content['total']);
+        $this->assertFalse($content['truncated']);
+        $ids = array_column($content['items'], 'id');
+        sort($ids);
+        $this->assertSame([16681, 16683, 16844, 18827, 19107], $ids);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_cars',
+            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'year' => 2005, 'capacityLitres' => 2.0, 'fuel' => 'essence'],
+        ], 3)['result']['structuredContent'];
+
+        $ids = array_column($content['items'], 'id');
+        sort($ids);
+        $this->assertSame([16681, 19107], $ids);
+    }
+
+    public function testListCarsSearchAndUnfilteredTotals(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_cars',
+            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'search' => 'gg14'],
+        ], 2)['result']['structuredContent'];
+
+        $this->assertSame(3, $content['total']);
+        $this->assertSame(14, $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_cars',
+            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC'],
+        ], 3)['result']['structuredContent']['total']);
+    }
 }

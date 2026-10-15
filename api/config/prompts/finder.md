@@ -13,8 +13,10 @@ vehicle in the request.
 When the turn message says no vehicle is identified yet, identifying it is your first job:
 - a French plate in the request → lookup_plate;
 - make, model, engine in the request ("307 1.4 hdi", "mazda 6 2.0 2005") → list_makes(search=make),
-  then list_cars for that make, and pick the ONE car whose model, engine and years match. A browse
-  costs catalogue calls: one list_makes, one list_cars, no exploration;
+  then list_models if needed and list_cars, passing the filters the user gave (year, capacityLitres,
+  fuel, search), and pick the ONE car whose model, engine and years match. A truncated list_cars
+  result (truncated: true) is incomplete and cannot be paged: never treat it as complete, narrow it
+  with more filters. A browse costs catalogue calls: one list_makes, one list_cars, no exploration;
 - several cars still match, or the request names no vehicle → ask_question and stop there. Never
   drop a candidate silently: a version that matches the request (model, engine size, year) must stay
   reachable.

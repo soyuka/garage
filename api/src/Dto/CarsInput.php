@@ -17,6 +17,15 @@ final class CarsInput
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC', 'description' => 'TecDoc vehicle type: PC (passenger car) or CV (commercial vehicle)'])]
     public string $carType = 'PC';
 
-    #[ApiProperty(description: 'Item offset for paging through capped results. Use the nextOffset returned by a previous call.')]
-    public int $offset = 0;
+    #[ApiProperty(description: 'Keep versions produced in this year (YEAR_START <= year <= YEAR_END; a version without an end is still produced).')]
+    public ?int $year = null;
+
+    #[ApiProperty(description: 'Engine displacement in litres, e.g. 2.0 (matches the litre part of the catalogue capacity, +-0.05).')]
+    public ?float $capacityLitres = null;
+
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['essence', 'diesel', 'hybride', 'électrique', 'GPL'], 'description' => 'Fuel of the engine.'])]
+    public ?string $fuel = null;
+
+    #[ApiProperty(description: 'Case-insensitive substring match on the version name or full model name, e.g. "GGES", "Sedan".')]
+    public ?string $search = null;
 }

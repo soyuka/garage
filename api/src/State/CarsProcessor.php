@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Car;
 use App\Catalog\PartsCatalog;
+use App\Catalog\CarFilter;
 use App\Dto\CarsInput;
 use App\Mcp\CappedResult;
 use Mcp\Schema\Result\CallToolResult;
@@ -19,6 +20,8 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class CarsProcessor implements ProcessorInterface
 {
+    private const LIMIT = 30;
+
     public function __construct(private readonly PartsCatalog $catalog)
     {
     }
@@ -27,11 +30,14 @@ final class CarsProcessor implements ProcessorInterface
     {
         $cars = $this->catalog->cars($data->makeId, $data->modelId, CarTypeResolver::fromString($data->carType));
 
+        $cars = CarFilter::apply($cars, $data->year, $data->capacityLitres, $data->fuel, $data->search);
+
         return CappedResult::of(
             array_map(static fn (Car $car): array => (array) $car, $cars),
             'vehicle variants',
-            null,
-            $data->offset,
+            'Narrow with year, capacityLitres, fuel or search; never treat this list as complete.',
+            limit: self::LIMIT,
+            pageable: false,
         );
     }
 }

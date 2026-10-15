@@ -26,7 +26,7 @@ final class CappedResult
      *
      * @param list<array<string, mixed>> $items
      */
-    public static function of(array $items, string $noun, ?string $narrowHint = null, int $offset = 0, int $limit = self::DEFAULT_LIMIT): CallToolResult
+    public static function of(array $items, string $noun, ?string $narrowHint = null, int $offset = 0, int $limit = self::DEFAULT_LIMIT, bool $pageable = true): CallToolResult
     {
         $total = \count($items);
         $offset = max(0, $offset);
@@ -37,13 +37,22 @@ final class CappedResult
         $payload = [
             'status' => 'ok',
             'totalItems' => $total,
+            'total' => $total,
             'offset' => $offset,
             'returned' => $returned,
             'truncated' => $total > $limit,
             'items' => $shown,
         ];
 
-        if ($hasMore) {
+        if ($hasMore && !$pageable) {
+            $payload['hint'] = sprintf(
+                '%d %s matched; only the first %d are shown, so this list is INCOMPLETE. Do not page: narrow the result.%s',
+                $total,
+                $noun,
+                $returned,
+                null !== $narrowHint ? ' '.$narrowHint : '',
+            );
+        } elseif ($hasMore) {
             $payload['nextOffset'] = $offset + $returned;
             $payload['hint'] = sprintf(
                 '%d %s matched; showing %d from offset %d. Page on with offset=%d, or narrow the result.%s',

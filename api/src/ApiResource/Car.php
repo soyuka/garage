@@ -36,13 +36,31 @@ use Symfony\Component\Validator\Constraints as Assert;
                     schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC'],
                     constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
                 ),
+                'year' => new QueryParameter(
+                    description: 'Keep versions produced in this year (open-ended versions are still produced)',
+                    schema: ['type' => 'integer'],
+                    constraints: [new Assert\Type('numeric')],
+                ),
+                'capacityLitres' => new QueryParameter(
+                    description: 'Engine displacement in litres, e.g. 2.0 (+-0.05)',
+                    schema: ['type' => 'number'],
+                    constraints: [new Assert\Type('numeric')],
+                ),
+                'fuel' => new QueryParameter(
+                    description: 'essence, diesel, hybride, électrique or GPL',
+                    schema: ['type' => 'string', 'enum' => ['essence', 'diesel', 'hybride', 'électrique', 'GPL']],
+                ),
+                'search' => new QueryParameter(
+                    description: 'Case-insensitive substring on the version name or full model name',
+                    schema: ['type' => 'string'],
+                ),
             ],
         ),
     ],
     mcp: [
         'list_cars' => new McpToolCollection(
             title: 'List Vehicle Variants',
-            description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts and fluids tools.',
+            description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts and fluids tools. Returns at most 30 rows plus total and truncated: when truncated is true the list is INCOMPLETE and cannot be paged, so narrow it with the server-side filters year, capacityLitres, fuel or search (always pass the ones the user gave) and never treat it as complete.',
             input: CarsInput::class,
             processor: CarsProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],

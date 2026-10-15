@@ -76,4 +76,26 @@ final class CatalogResourceTest extends AppTestCase
             ],
         ]);
     }
+
+    public function testListCarsFiltersByYearAndCapacity(): void
+    {
+        $client = static::createClient();
+        $response = $client->request('GET', '/makes/72/models/4887/cars?carType=PC&year=2005&capacityLitres=2.0');
+
+        $this->assertResponseIsSuccessful();
+        $ids = array_column($response->toArray()['hydra:member'], 'id');
+        sort($ids);
+        $this->assertSame([16681, 16683, 16844, 18827, 19107], $ids);
+    }
+
+    public function testListCarsFiltersByFuel(): void
+    {
+        $client = static::createClient();
+        $response = $client->request('GET', '/makes/72/models/4887/cars?carType=PC&year=2005&capacityLitres=2.0&fuel=diesel');
+
+        $this->assertResponseIsSuccessful();
+        $ids = array_column($response->toArray()['hydra:member'], 'id');
+        sort($ids);
+        $this->assertSame([16683, 16844, 18827], $ids);
+    }
 }
