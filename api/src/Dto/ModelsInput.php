@@ -14,7 +14,7 @@ final class ModelsInput
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC', 'description' => 'TecDoc vehicle type: PC (passenger car) or CV (commercial vehicle)'])]
     public string $carType = 'PC';
 
-    #[ApiProperty(description: 'Case-insensitive substring filter on the model name, e.g. "hatchback". Recommended — a manufacturer can list hundreds of models.')]
+    #[ApiProperty(description: 'Case-insensitive substring match on the model name WITHOUT the make, e.g. "6", "3", "CX-5", "Clio" (not "MAZDA 6"; a leading make name is ignored). Recommended: a manufacturer can list hundreds of models and results are capped, so search instead of paging.')]
     public ?string $search = null;
 
     #[ApiProperty(description: 'Item offset for paging through capped results. Use the nextOffset returned by a previous call.')]

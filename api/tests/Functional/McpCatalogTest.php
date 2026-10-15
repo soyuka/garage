@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Mcp\ArticleGroup;
+use PHPUnit\Framework\Attributes\DataProvider;
 
 final class McpCatalogTest extends AppTestCase
 {
@@ -232,6 +233,31 @@ final class McpCatalogTest extends AppTestCase
         $this->assertNotNull($row);
         $this->assertSame('6 Hatchback (GG)', $row['name']);
         $this->assertSame('2002-08', $row['yearFrom']);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function modelSearchProvider(): iterable
+    {
+        yield 'make-prefixed query' => ['MAZDA 6'];
+        yield 'bare short name' => ['6'];
+        yield 'lowercase prefixed' => ['mazda 6'];
+    }
+
+    #[DataProvider('modelSearchProvider')]
+    public function testListModelsSearchMatchesNameWithoutMake(string $search): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $content = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_models',
+            'arguments' => ['makeId' => 72, 'carType' => 'PC', 'search' => $search],
+        ], 2)['result']['structuredContent'];
+
+        $this->assertSame('ok', $content['status']);
+        $this->assertContains(4887, array_column($content['items'], 'id'));
     }
 
     public function testListCarsReturnsMappedRows(): void

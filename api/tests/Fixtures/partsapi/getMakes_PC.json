@@ -10,5 +10,9 @@
     {
         "makeId": 93,
         "makeName": "RENAULT"
+    },
+    {
+        "makeId": 72,
+        "makeName": "MAZDA"
     }
 ]

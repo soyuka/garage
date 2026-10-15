@@ -37,7 +37,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     mcp: [
         'list_models' => new McpToolCollection(
             title: 'List Models',
-            description: 'List the model lines of a manufacturer (use list_makes first to get the makeId).',
+            description: 'List the model lines of a manufacturer (use list_makes first to get the makeId). Results are capped: pass `search` with the model name without the make (e.g. "6", "CX-5") instead of paging through offsets.',
             input: ModelsInput::class,
             processor: ModelsProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],

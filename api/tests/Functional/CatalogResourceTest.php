@@ -13,11 +13,12 @@ final class CatalogResourceTest extends AppTestCase
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains([
-            'hydra:totalItems' => 3,
+            'hydra:totalItems' => 4,
             'hydra:member' => [
                 ['id' => 3854, 'name' => 'ABARTH'],
                 ['id' => 55, 'name' => 'IVECO'],
                 ['id' => 93, 'name' => 'RENAULT'],
+                ['id' => 72, 'name' => 'MAZDA'],
             ],
         ]);
         // Cache key signature must stay stable with the already-paid live response
