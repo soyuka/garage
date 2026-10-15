@@ -60,3 +60,8 @@ export function degradedMessage(reason: string): string {
   if (french.length === parts.length && french.length > 0) return french.join(' ');
   return [...french, 'Le catalogue a répondu partiellement (quota ou panne).'].join(' ');
 }
+
+// Synthetic demo frames (DÉMO-A/B) are not catalogue data; recorded fixtures are real TecDoc answers.
+export function sourceLabel({ demo, synthetic }: { demo: boolean; synthetic: boolean }): string {
+  return demo && synthetic ? 'Démo (données fictives)' : 'TecDoc';
+}

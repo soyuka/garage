@@ -3,7 +3,7 @@ import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
 import { formatCount } from '../format';
 import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
-import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from '../result';
+import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents, sourceLabel } from '../result';
 import type { Category, Cluster, Family, Narrowing, Reference, Vehicle } from '../types';
 import { BuyMenu } from './BuyMenu';
 import { GaragePicker } from './Garage';
@@ -19,6 +19,7 @@ interface Props {
   family: Family;
   api: FinderApi;
   demo: boolean;
+  synthetic?: boolean;
   rationale?: string;
 }
 
@@ -31,7 +32,7 @@ async function copy(text: string): Promise<boolean> {
   }
 }
 
-export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, family, api, demo, rationale }: Props) {
+export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, family, api, demo, synthetic = false, rationale }: Props) {
   const toast = useToast();
   const oe = cluster ? pickOe(cluster, vehicle.make) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
@@ -118,7 +119,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
       </div>
       <div className="c r">
         <span className="l">Source</span>
-        <span className="tag ok">TecDoc</span>
+        <span className={synthetic && demo ? 'tag' : 'tag ok'}>{sourceLabel({ demo, synthetic })}</span>
         {!narrowing.narrowed && <span className="tag warn">affinage partiel</span>}
       </div>
 
