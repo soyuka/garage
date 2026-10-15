@@ -93,7 +93,11 @@ describe('history vehicle name', () => {
     expect(name({ plate: null, carId: 16182, carType: 'PC', make: 'PEUGEOT', model: '307', engine: '1.6 HDi' })).toBe('Peugeot 307 1.6 HDi');
   });
 
-  it('never leaves a known carId unnamed', () => {
+  it('leaves the name empty when only the plate is known: the row already shows it', () => {
+    expect(name({ plate: 'AB123CD', carId: 16182, carType: 'PC', make: null, model: null })).toBeNull();
+  });
+
+  it('falls back to the kType only when nothing else names the car', () => {
     expect(name({ plate: null, carId: 16182, carType: 'PC', make: null, model: null })).toBe('kType 16182');
   });
 });
