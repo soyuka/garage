@@ -46,6 +46,9 @@ final class FinderTurnTest extends AppTestCase
 
         self::assertStringContainsString('finder', $seen['system']);
         self::assertStringNotContainsString('Assistant Atelier', $seen['system']);
+        self::assertStringContainsString('<follow_up>', $seen['system']);
+        self::assertStringContainsString('<build_code>', $seen['system']);
+        self::assertStringContainsString('decode_build_code', $seen['system']);
         self::assertStringContainsString('19107', $seen['context']);
         self::assertStringContainsString('MAZDA', $seen['context']);
         self::assertStringContainsString('filtre à huile', $seen['context']);
