@@ -13,13 +13,13 @@ interface Props {
   confirmed: boolean;
   onAnswer: (clusterId: string) => void;
   recent: RecentSearch[];
-  plate: string;
+  vehicleLabel: string;
   currentCategory: number | null;
   onRecent: (r: RecentSearch) => void;
   lead?: ReactNode;
 }
 
-export function Aside({ narrowing, remaining, question, selected, confirmed, onAnswer, recent, plate, currentCategory, onRecent, lead }: Props) {
+export function Aside({ narrowing, remaining, question, selected, confirmed, onAnswer, recent, vehicleLabel, currentCategory, onRecent, lead }: Props) {
   const others = recent.filter((r) => r.categoryId !== currentCategory);
   return (
     <aside className="aside">
@@ -55,7 +55,7 @@ export function Aside({ narrowing, remaining, question, selected, confirmed, onA
               <li key={r.categoryId}>
                 <button type="button" onClick={() => onRecent(r)}>
                   {r.label}
-                  <span className="m">{plate}</span>
+                  <span className="m">{vehicleLabel}</span>
                 </button>
               </li>
             ))}

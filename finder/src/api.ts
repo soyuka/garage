@@ -8,6 +8,7 @@ import type {
   ErrorKind,
   FallbackBrand,
   Narrowing,
+  PhotoIntake,
   Reference,
   Registration,
   RegistrationField,
@@ -50,9 +51,9 @@ export function classifyStatus(status: number): ErrorKind {
 
 export function mapVehicle(raw: unknown): Vehicle {
   const j = obj(raw);
-  const plate = str(j.plate) ?? '';
+  const plate = str(j.plate);
   return {
-    plate: normalisePlate(plate) ?? plate,
+    plate: plate === null ? null : (normalisePlate(plate) ?? plate),
     make: str(j.make),
     model: str(j.model),
     modelEn: str(j.modelEn),
@@ -237,4 +238,21 @@ export function mapRegistration(raw: unknown): Registration {
     legible: j.legible === true,
     warnings: list(j.warnings).filter((w): w is string => typeof w === 'string'),
   };
+}
+
+export function mapPhotoIntake(raw: unknown): PhotoIntake {
+  const j = obj(raw);
+  if (j.kind === 'carte_grise' && isObject(j.registration)) return { kind: 'carte_grise', registration: mapRegistration(j.registration) };
+  if (j.kind === 'part' && isObject(j.part)) {
+    const p = j.part;
+    return {
+      kind: 'part',
+      part: {
+        familyGuess: str(p.familyGuess),
+        printedReferences: list(p.printedReferences).filter((r): r is string => typeof r === 'string' && r.trim() !== ''),
+        brandGuess: str(p.brandGuess),
+      },
+    };
+  }
+  return { kind: 'other' };
 }

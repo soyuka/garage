@@ -10,6 +10,13 @@ export function normalisePlate(raw: string): string | null {
   return m ? `${m[1]}-${m[2]}-${m[3]}` : null;
 }
 
+const FNI = /^(\d{1,4})([A-Z]{2,3})(\d{2}|2A|2B)$/;
+
+export function normaliseFni(raw: string): string | null {
+  const m = FNI.exec(compact(raw));
+  return m ? `${m[1]} ${m[2]} ${m[3]}` : null;
+}
+
 export const isPlate = (value: string): boolean => /^[A-Z]{2}-\d{3}-[A-Z]{2}$/.test(value);
 
 export function formatPlateInput(raw: string): string {

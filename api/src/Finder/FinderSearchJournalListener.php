@@ -86,7 +86,8 @@ final class FinderSearchJournalListener
             $spent[$method] = $count - ($before[$method] ?? 0);
         }
 
-        $input = trim((string) $request->headers->get(self::INPUT_HEADER, ''));
+        // The page URL-encodes the typed text: a header value cannot carry arbitrary UTF-8.
+        $input = trim(rawurldecode((string) $request->headers->get(self::INPUT_HEADER, '')));
 
         try {
             $this->documentManager->persist(AgentTurn::search(

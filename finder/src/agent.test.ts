@@ -106,14 +106,46 @@ describe('transport helpers', () => {
 
   it('sends the finder surface, the vehicle and the pending question context', () => {
     expect(
-      turnBody('Avant', 'sess', { carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: null }, 'essieu ?'),
+      turnBody({ instruction: 'Avant', sessionId: 'sess', vehicle: { carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: null }, pendingContext: 'essieu ?' }),
     ).toEqual({
       instruction: 'Avant',
       sessionId: 'sess',
       surface: 'finder',
+      intent: 'text',
       vehicle: { carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: null },
       pendingContext: 'essieu ?',
     });
-    expect(turnBody('x', 's', { carId: 1, carType: 'CV', make: null, model: null, engine: null }, null)).not.toHaveProperty('pendingContext');
+    expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: { carId: 1, carType: 'CV', make: null, model: null, engine: null } })).not.toHaveProperty('pendingContext');
+  });
+
+  it('omits the vehicle when none is known and carries photos, intent and photo hints', () => {
+    const body = turnBody({
+      instruction: 'quelle pièce ?',
+      sessionId: 's',
+      vehicle: null,
+      intent: 'photo',
+      images: ['data:image/jpeg;base64,AAAA'],
+      photoHints: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73'], brandGuess: null },
+    });
+    expect(body).not.toHaveProperty('vehicle');
+    expect(body).toMatchObject({ intent: 'photo', images: ['data:image/jpeg;base64,AAAA'], photoHints: { printedReferences: ['W 712/73'] } });
+    expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: null })).not.toHaveProperty('images');
+  });
+});
+
+describe('setVehicle', () => {
+  const set = { type: 'setVehicle', carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: '2.0 MZR', plate: null };
+
+  it('parses the vehicle the agent identified', () => {
+    expect(parseFrame(JSON.stringify(set))).toEqual(set);
+    expect(parseFrame(JSON.stringify({ ...set, plate: 'xb-301-zb' }))).toMatchObject({ plate: 'XB-301-ZB' });
+    expect(parseFrame(JSON.stringify({ ...set, carId: 0 }))).toBeNull();
+    expect(parseFrame(JSON.stringify({ ...set, carType: 'XX' }))).toBeNull();
+  });
+
+  it('keeps it on the turn so the page can adopt it', () => {
+    const s = turnReducer(running(), frame(parseFrame(JSON.stringify(set))!));
+    expect(s.vehicle).toEqual({ carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: '2.0 MZR', plate: null });
+    expect(turnReducer(s, { type: 'start', instruction: 'y' }).vehicle).toBeNull();
   });
 });

@@ -82,7 +82,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, r
 
       <div className="c s2">
         <span className="l">Véhicule</span>
-        <span className="m tb-plate">{vehicle.plate}</span> · {vehicleName(vehicle)} {vehicleEngine(vehicle) && <span className="tb-muted">· {vehicleEngine(vehicle)}</span>}
+        {vehicle.plate && <><span className="m tb-plate">{vehicle.plate}</span> · </>}{vehicleName(vehicle)} {vehicleEngine(vehicle) && <span className="tb-muted">· {vehicleEngine(vehicle)}</span>}
       </div>
       <div className="c r">
         <span className="l">kType</span>

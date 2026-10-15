@@ -1,7 +1,7 @@
 export type CarType = 'PC' | 'CV';
 
 export interface Vehicle {
-  plate: string;
+  plate: string | null;
   make: string | null;
   model: string | null;
   modelEn: string | null;
@@ -120,8 +120,13 @@ export type Family =
 
 // ── Agent turn contract (POST /agent/turn with surface "finder") ─────────────────────────────────
 // Frames arrive on the turn's session topic `${base}/agent/sessions/<sessionId>`. The server side is
-// api/src/Agent/Finder/FinderRenderTools.php (showParts, showWebPart, askQuestion) and
+// api/src/Agent/Finder/FinderRenderTools.php (showParts, showWebPart, askQuestion, setVehicle) and
 // api/src/Agent/Ui/RenderIntentTools.php (turn, status, toast). This file owns the contract.
+//
+// The request (api/src/Controller/AgentTurnController.php): `vehicle` is optional (absent: the agent
+// identifies the car and answers with setVehicle); `intent` is text | reference | photo; `images` is
+// at most 3 jpeg/png/webp data URLs, 10 MB in total, sniffed server-side and never stored;
+// `photoHints` echoes what POST /photo-intake read off a part photo.
 
 export interface QuestionOption {
   label: string;
@@ -135,7 +140,30 @@ export type FinderFrame =
   // `narrowed` is the GET /cars/{carId}/part-categories/{categoryId}/narrowed body, minus JSON-LD keys.
   | { type: 'showParts'; categoryId: number; categoryLabel: string; rationale: string; narrowed: unknown }
   | { type: 'showWebPart'; categoryLabel: string; reference: string; brand: string; sourceUrl: string; sourceTitle: string; rationale: string }
-  | { type: 'askQuestion'; question: string; options: QuestionOption[]; context: string };
+  | { type: 'askQuestion'; question: string; options: QuestionOption[]; context: string }
+  | ({ type: 'setVehicle' } & AgentVehicle);
+
+export interface AgentVehicle {
+  carId: number;
+  carType: CarType;
+  make: string | null;
+  model: string | null;
+  engine: string | null;
+  plate: string | null;
+}
+
+export type TurnIntent = 'text' | 'reference' | 'photo';
+
+export interface PartPhotoHints {
+  familyGuess: string | null;
+  printedReferences: string[];
+  brandGuess: string | null;
+}
+
+export type PhotoIntake =
+  | { kind: 'carte_grise'; registration: Registration }
+  | { kind: 'part'; part: PartPhotoHints }
+  | { kind: 'other' };
 
 export interface TurnVehicle {
   carId: number;
@@ -182,4 +210,5 @@ export interface TurnState {
   parts: AgentPart[];
   ask: AgentAsk | null;
   notice: string | null;
+  vehicle: AgentVehicle | null;
 }

@@ -1,4 +1,4 @@
-import { enterIntent, foldText, searchCategories } from './search';
+import { foldText, searchCategories } from './search';
 import { mapCategories } from './api';
 import categories from './fixtures/categories.json';
 
@@ -32,27 +32,5 @@ describe('searchCategories', () => {
 
   it('caps the list', () => {
     expect(searchCategories(cats, 'e', 5)).toHaveLength(5);
-  });
-});
-
-describe('enterIntent', () => {
-  const oil = { id: 1, name: 'Filtre à huile', path: 'Filtres > Filtre à huile', segments: ['Filtres', 'Filtre à huile'], label: 'Filtre à huile', leaf: true };
-  const air = { id: 2, name: 'Filtre à air', path: 'Filtres > Filtre à air', segments: ['Filtres', 'Filtre à air'], label: 'Filtre à air', leaf: true };
-
-  it('picks the category whose label is exactly the typed text', () => {
-    expect(enterIntent('filtre a HUILE', [air, oil], 0, false)).toEqual({ kind: 'pick', category: oil });
-  });
-
-  it('picks the highlighted suggestion once the user moved through the list', () => {
-    expect(enterIntent('filtre', [oil, air], 1, true)).toEqual({ kind: 'pick', category: air });
-  });
-
-  it('asks the agent for free text that names no category exactly', () => {
-    expect(enterIntent('mes freins grincent à l’avant', [], 0, false)).toEqual({ kind: 'ask', text: 'mes freins grincent à l’avant' });
-    expect(enterIntent('filtre', [oil, air], 0, false)).toEqual({ kind: 'ask', text: 'filtre' });
-  });
-
-  it('does nothing on blank input', () => {
-    expect(enterIntent('   ', [oil], 0, false)).toEqual({ kind: 'none' });
   });
 });

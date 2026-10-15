@@ -117,7 +117,7 @@ const hostOf = (url: string): string => {
   }
 };
 
-export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle; part: WebPart }) {
+export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part: WebPart }) {
   const toast = useToast();
   const refText = [part.brand, part.reference].filter((s) => s.trim() !== '').join(' ');
   return (
@@ -130,14 +130,23 @@ export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle; part: WebPa
         <span className="l">{part.brand ? `Réf. · ${part.brand}` : 'Référence'}</span>
         <div className="oe m">{part.reference}</div>
       </div>
-      <div className="c s2">
-        <span className="l">Véhicule</span>
-        <span className="m tb-plate">{vehicle.plate}</span> · {vehicleName(vehicle)} {vehicleEngine(vehicle) && <span className="tb-muted">· {vehicleEngine(vehicle)}</span>}
-      </div>
-      <div className="c r">
-        <span className="l">kType</span>
-        <span className="m tb-ktype">{vehicle.carId}</span>
-      </div>
+      {vehicle ? (
+        <>
+          <div className="c s2">
+            <span className="l">Véhicule</span>
+            {vehicle.plate && <><span className="m tb-plate">{vehicle.plate}</span> · </>}{vehicleName(vehicle)} {vehicleEngine(vehicle) && <span className="tb-muted">· {vehicleEngine(vehicle)}</span>}
+          </div>
+          <div className="c r">
+            <span className="l">kType</span>
+            <span className="m tb-ktype">{vehicle.carId}</span>
+          </div>
+        </>
+      ) : (
+        <div className="c s3">
+          <span className="l">Véhicule</span>
+          <span className="tb-muted">Non identifié : vérifiez que la référence correspond à votre véhicule.</span>
+        </div>
+      )}
       <div className="c s3">
         <span className="l">Source : web</span>
         <a className="tb-source" href={part.sourceUrl} target="_blank" rel="noopener noreferrer">

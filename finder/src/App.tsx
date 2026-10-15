@@ -1,21 +1,26 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { isDemo, loadApi, type FinderApi } from './client';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { isAuthenticated, login } from './auth';
+import { ApiError } from './api';
+import { isDemo, loadApi, type FinderApi, type Trace } from './client';
 import { partFamily } from './family';
+import { MediaError, pickSharpest, prepareImage, sampleVideo, type Frame } from './media';
 import { buildQuestion } from './question';
 import { recentFor, remember, type RecentSearch } from './recent';
-import type { Route } from './route';
-import type { AgentPart, Category, Family, Narrowing, Vehicle } from './types';
+import { parseRef, type Route } from './route';
+import { routeFile, type TextRoute } from './route-input';
+import type { AgentPart, Category, Family, Narrowing, Registration, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
+import { carVehicle, rememberCar } from './vehicles';
 import { Aside } from './ui/Aside';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
-import { Entry } from './ui/Entry';
+import { CardResult, Entry, VinResult } from './ui/Entry';
 import { useAsync, useMedia, useReducedMotion, useRoute, type Async } from './ui/hooks';
+import { Intake } from './ui/Intake';
+import { Journal } from './ui/Journal';
 import { useAgentTurn, type AgentTurn } from './ui/useAgentTurn';
-import { QueryBox } from './ui/QueryBox';
-import { Segmented, type EntryMode } from './ui/Segmented';
 import { Sheet } from './ui/Sheet';
 import { TitleBlock } from './ui/TitleBlock';
-import { VehicleChip } from './ui/VehicleChip';
+import { VehicleChip, vehicleLabel } from './ui/VehicleChip';
 
 const FAMILY_VIEW: Record<string, string> = {
   filter: 'VUE ISO — FILTRE',
@@ -29,6 +34,9 @@ const viewLabel = (family: Family, category: Category | null): string => {
   return category ? category.label.toUpperCase() : 'PLANCHE';
 };
 
+const MAX_FRAMES = 3;
+const PHOTO_INSTRUCTION = 'Identifie la pièce sur la photo.';
+
 export function App() {
   const [api, setApi] = useState<FinderApi | null>(null);
   useEffect(() => {
@@ -38,45 +46,185 @@ export function App() {
   return <Finder api={api} />;
 }
 
+// What the entry panel shows under the single input, besides an agent turn.
+type Panel =
+  | { kind: 'none' }
+  | { kind: 'vin'; decode: VinDecode }
+  | { kind: 'card'; registration: Registration }
+  | { kind: 'reading'; what: string }
+  | { kind: 'login'; why: string }
+  | { kind: 'error'; message: string };
+
+const routeRef = (route: Route): string => (route.view === 'entry' ? '' : route.ref);
+
 function Finder({ api }: { api: FinderApi }) {
   const [route, navigate] = useRoute();
-  const [entryMode, setEntryMode] = useState<EntryMode>('plate');
   const demo = isDemo();
-  const plate = route.view === 'entry' ? null : route.plate;
+  const [panel, setPanel] = useState<Panel>({ kind: 'none' });
+  const [journalOpen, setJournalOpen] = useState(false);
+  const journalButton = useRef<HTMLButtonElement>(null);
+  const trace = useRef<Trace | null>(null);
+  const ref = routeRef(route);
+  const parsed = ref === '' ? null : parseRef(ref);
 
-  const vehicle = useAsync<Vehicle>(plate, () => api.vehicle(plate!));
+  const vehicle = useAsync<Vehicle>(ref === '' ? null : ref, () => {
+    if (parsed?.kind === 'car') return Promise.resolve(carVehicle(parsed.carId, parsed.carType));
+    const t = trace.current ?? { rule: 'url', input: ref };
+    trace.current = null;
+    return api.vehicle(parsed?.kind === 'plate' ? parsed.plate : ref, t);
+  });
   const v = vehicle.status === 'ok' ? vehicle.data : null;
   const categories = useAsync<Category[]>(v?.carId ? `${v.carId}-${v.carType}` : null, () => api.categories(v!.carId!, v!.carType));
   const categoryId = route.view === 'result' ? route.categoryId : null;
-  const narrowing = useAsync<Narrowing>(
-    v?.carId && categoryId ? `${v.carId}-${categoryId}` : null,
-    () => api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make),
+  const narrowing = useAsync<Narrowing>(v?.carId && categoryId ? `${v.carId}-${categoryId}` : null, () => {
+    const t = trace.current ?? { rule: 'url', input: String(categoryId) };
+    trace.current = null;
+    return api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make, t);
+  });
+
+  const turn = useAgentTurn(v, ref, !demo);
+  const turnVehicle = turn.state.vehicle;
+
+  useEffect(() => {
+    if (!turnVehicle) return;
+    const next = rememberCar(turnVehicle);
+    if (next !== ref && !(v?.carId === turnVehicle.carId && v.carType === turnVehicle.carType)) navigate({ view: 'vehicle', ref: next });
+    // Adopting the agent's vehicle must not restart the turn: only the frame drives this.
+  }, [turnVehicle]);
+
+  const goVehicle = useCallback(
+    (plate: string, rule: string, input: string) => {
+      turn.reset();
+      setPanel({ kind: 'none' });
+      trace.current = { rule, input };
+      navigate({ view: 'vehicle', ref: plate });
+    },
+    [turn, navigate],
   );
 
-  const turn = useAgentTurn(v, !demo);
-  const askAgent = (text: string) => {
-    if (!v) return;
-    if (route.view !== 'vehicle') navigate({ view: 'vehicle', plate: v.plate });
-    turn.ask(text);
+  const askAgent = (text: string, options: Parameters<AgentTurn['ask']>[1] = {}) => {
+    if (demo) {
+      setPanel({ kind: 'error', message: 'Mode démo : l’agent n’est pas appelé. Essayez la plaque XB-301-ZB, puis « filtre à huile ».' });
+      return;
+    }
+    setPanel({ kind: 'none' });
+    if (route.view === 'result') navigate({ view: 'vehicle', ref: route.ref });
+    turn.ask(text, options);
   };
 
-  const changeVehicle = (mode: EntryMode) => {
-    setEntryMode(mode);
-    navigate({ view: 'entry' });
+  const onText = (r: TextRoute, typed: string) => {
+    switch (r.kind) {
+      case 'empty':
+        return;
+      case 'plate':
+        return goVehicle(r.plate, r.format === 'siv' ? 'plate' : 'plate-fni', typed);
+      case 'vin':
+        setPanel({ kind: 'reading', what: 'Décodage du VIN…' });
+        if (route.view !== 'entry') navigate({ view: 'entry' });
+        api
+          .vin(r.vin, { rule: 'vin', input: typed })
+          .then((decode) => setPanel({ kind: 'vin', decode }))
+          .catch((e: unknown) => setPanel({ kind: 'error', message: e instanceof ApiError ? e.message : 'Décodage impossible.' }));
+        return;
+      case 'category':
+        if (!v) return askAgent(typed);
+        turn.reset();
+        trace.current = { rule: 'category', input: typed };
+        navigate({ view: 'result', ref, categoryId: r.category.id, clusterId: null });
+        return;
+      case 'reference':
+        return askAgent(r.reference, { intent: 'reference' });
+      case 'text':
+        return askAgent(r.text);
+    }
   };
+
+  const readRegistration = (registration: Registration) => {
+    if (route.view !== 'entry') navigate({ view: 'entry' });
+    setPanel({ kind: 'card', registration });
+  };
+
+  const onFiles = async (files: File[]) => {
+    const first = files[0];
+    if (!first) return;
+    const kind = routeFile(first);
+    if (kind.kind === 'unsupported') {
+      setPanel({ kind: 'error', message: kind.reason === 'size' ? 'PDF trop lourd : 10 Mo au maximum.' : 'Format non pris en charge : une photo, une courte vidéo ou un PDF.' });
+      return;
+    }
+    if (!demo && !isAuthenticated()) {
+      setPanel({ kind: 'login', why: 'La lecture d’une photo ou d’un document demande une connexion. Le fichier est lu puis oublié : il n’est jamais stocké.' });
+      return;
+    }
+    try {
+      if (kind.kind === 'pdf') {
+        setPanel({ kind: 'reading', what: 'Lecture de la carte grise…' });
+        readRegistration(await api.extractRegistration(first));
+        return;
+      }
+      setPanel({ kind: 'reading', what: kind.kind === 'video' ? 'Extraction de trois images de la vidéo…' : 'Préparation de la photo…' });
+      let frames: Frame[];
+      if (kind.kind === 'video') frames = await sampleVideo(first);
+      else frames = await Promise.all(files.filter((f) => routeFile(f).kind === 'image').slice(0, MAX_FRAMES).map(prepareImage));
+      frames = frames.slice(0, MAX_FRAMES);
+      const sharpest = frames[pickSharpest(frames.map((f) => f.score))]!;
+      setPanel({ kind: 'reading', what: 'Lecture de la photo…' });
+      const intake = await api.photoIntake(sharpest.blob);
+      if (intake.kind === 'carte_grise') return readRegistration(intake.registration);
+      if (intake.kind === 'part') {
+        askAgent(PHOTO_INSTRUCTION, { intent: 'photo', images: frames.map((f) => f.dataUrl), photoHints: intake.part });
+        return;
+      }
+      setPanel({ kind: 'error', message: 'Ni une pièce ni une carte grise sur cette photo. Cadrez la pièce, ou sa référence, de plus près.' });
+    } catch (e) {
+      const message =
+        e instanceof MediaError
+          ? e.message
+          : e instanceof ApiError
+            ? e.kind === 'auth'
+              ? 'Session expirée : reconnectez-vous.'
+              : e.kind === 'upstream'
+                ? 'La photo n’a pas pu être lue. Essayez une photo plus nette, bien éclairée.'
+                : e.message
+            : 'Lecture impossible.';
+      setPanel({ kind: 'error', message });
+    }
+  };
+
+  const closeJournal = useCallback(() => {
+    setJournalOpen(false);
+    journalButton.current?.focus();
+  }, []);
+
+  const busyReading = panel.kind === 'reading';
+  const agentActive = turn.state.phase !== 'idle' || turn.needsLogin !== null;
 
   const header = (
     <header className="top">
-      <a className="logo" href="#/" onClick={() => setEntryMode('plate')}>
+      <a
+        className="logo"
+        href={demo ? '?demo#/' : '#/'}
+        onClick={() => {
+          turn.reset();
+          setPanel({ kind: 'none' });
+        }}
+      >
         finder
       </a>
-      {v && <VehicleChip vehicle={v} onChange={() => changeVehicle('plate')} />}
-      {v && route.view !== 'entry' && (
+      {v && (
+        <VehicleChip
+          vehicle={v}
+          onChange={() => {
+            turn.reset();
+            setPanel({ kind: 'none' });
+            navigate({ view: 'entry' });
+          }}
+        />
+      )}
+      {(route.view !== 'entry' || agentActive) && (
         <div className="q">
-          <div className="top-seg">
-            <Segmented value={null} onChange={changeVehicle} label="Changer de véhicule" />
-          </div>
-          <QueryBox
+          <Intake
+            variant="bar"
             categories={categories.status === 'ok' ? categories.data : null}
             loading={categories.status === 'loading'}
             initial={
@@ -84,15 +232,16 @@ function Finder({ api }: { api: FinderApi }) {
                 ? (categories.data.find((c) => c.id === route.categoryId)?.label ?? '')
                 : (turn.needsLogin ?? turn.restored ?? (turn.state.phase !== 'idle' ? turn.state.instruction : ''))
             }
+            busy={busyReading}
             autoFocus={route.view === 'vehicle' && turn.state.phase === 'idle'}
-            onPick={(c) => {
-              turn.reset();
-              navigate({ view: 'result', plate: v.plate, categoryId: c.id, clusterId: null });
-            }}
-            onAsk={demo || v.carId === null ? null : askAgent}
+            onText={onText}
+            onFiles={(f) => void onFiles(f)}
           />
         </div>
       )}
+      <button ref={journalButton} type="button" className="journal-btn" aria-expanded={journalOpen} onClick={() => setJournalOpen(true)}>
+        Journal
+      </button>
     </header>
   );
 
@@ -103,20 +252,31 @@ function Finder({ api }: { api: FinderApi }) {
     </footer>
   );
 
-  if (route.view === 'entry' || vehicle.status === 'error') {
+  const journal = <Journal api={api} open={journalOpen} authed={demo || isAuthenticated()} onClose={closeJournal} />;
+
+  if ((route.view === 'entry' && !agentActive) || vehicle.status === 'error') {
     const error =
       vehicle.status === 'error'
         ? vehicle.error.kind === 'notFound'
-          ? `La plaque ${plate} est introuvable. Vérifiez-la, ou passez par la carte grise.`
+          ? `La plaque ${ref} est introuvable. Vérifiez-la, ou envoyez une photo de la carte grise.`
           : vehicle.error.message
         : null;
     return (
       <div className="app app--entry">
         {header}
         <main className="entry-main">
-          <Entry api={api} mode={entryMode} onMode={setEntryMode} onPlate={(p) => navigate({ view: 'vehicle', plate: p })} error={error} demo={demo} />
+          <Entry
+            context={panel.kind === 'vin' && panel.decode.valid ? 'Ajoutez la plaque, ou une photo de la carte grise : le VIN seul ne donne pas le type exact.' : null}
+            busy={busyReading}
+            onText={onText}
+            onFiles={(f) => void onFiles(f)}
+            examples={demo ? ['XB-301-ZB', 'W 712/73', 'filtre à huile 307 1.4 hdi'] : []}
+          >
+            <EntryPanel panel={error ? { kind: 'error', message: error } : panel} onPlate={(p) => goVehicle(p, 'carte-grise', p)} onReset={() => setPanel({ kind: 'none' })} />
+          </Entry>
         </main>
         {footer}
+        {journal}
       </div>
     );
   }
@@ -124,10 +284,48 @@ function Finder({ api }: { api: FinderApi }) {
   return (
     <div className="app app--work">
       {header}
-      <Workspace route={route} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} turn={turn} />
+      {route.view === 'entry' ? (
+        <AgentWorkspace vehicle={null} categories={[]} turn={turn} recent={[]} onRecent={() => undefined} />
+      ) : (
+        <Workspace route={route} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} turn={turn} trace={trace} panel={panel} />
+      )}
       {footer}
+      {journal}
     </div>
   );
+}
+
+function EntryPanel({ panel, onPlate, onReset }: { panel: Panel; onPlate: (plate: string) => void; onReset: () => void }) {
+  switch (panel.kind) {
+    case 'none':
+      return null;
+    case 'vin':
+      return <VinResult decode={panel.decode} />;
+    case 'card':
+      return <CardResult data={panel.registration} onPlate={onPlate} onReset={onReset} />;
+    case 'reading':
+      return (
+        <p className="entry-status" role="status">
+          <span className="agent-dot" aria-hidden="true" />
+          {panel.what}
+        </p>
+      );
+    case 'login':
+      return (
+        <div className="card-login">
+          <p>{panel.why}</p>
+          <button type="button" className="btn pri" onClick={() => void login()}>
+            Se connecter
+          </button>
+        </div>
+      );
+    case 'error':
+      return (
+        <p className="field-error" role="alert">
+          {panel.message}
+        </p>
+      );
+  }
 }
 
 interface WorkspaceProps {
@@ -137,15 +335,21 @@ interface WorkspaceProps {
   narrowing: Async<Narrowing> & { retry: () => void };
   navigate: (r: Route) => void;
   turn: AgentTurn;
+  trace: { current: Trace | null };
+  panel: Panel;
 }
 
 const SUGGESTIONS = [100259, 100260, 100261];
 
-function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: WorkspaceProps) {
+function Workspace({ route, vehicle, categories, narrowing, navigate, turn, trace, panel }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const wide = useMedia('(min-width: 1100px)');
   const v = vehicle.status === 'ok' ? vehicle.data : null;
-  const [recent, setRecent] = useState<RecentSearch[]>(() => recentFor(route.plate));
+  const [recent, setRecent] = useState<RecentSearch[]>(() => recentFor(route.ref));
+  const open = (categoryId: number, rule: string, input: string) => {
+    trace.current = { rule, input };
+    navigate({ view: 'result', ref: route.ref, categoryId, clusterId: null });
+  };
 
   const category = route.view === 'result' && categories.status === 'ok' ? (categories.data.find((c) => c.id === route.categoryId) ?? null) : null;
   const n = narrowing.status === 'ok' ? narrowing.data : null;
@@ -155,10 +359,10 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: Wo
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const family = category ? partFamily(category, cluster?.dimensions ?? []) : ({ kind: 'none' } as const);
 
-  useEffect(() => setRecent(recentFor(route.plate)), [route.plate]);
+  useEffect(() => setRecent(recentFor(route.ref)), [route.ref]);
   useEffect(() => {
-    if (category) setRecent(remember(route.plate, { categoryId: category.id, label: category.label }));
-  }, [category, route.plate]);
+    if (category) setRecent(remember(route.ref, { categoryId: category.id, label: category.label }));
+  }, [category, route.ref]);
 
   if (!v) {
     return (
@@ -167,7 +371,7 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: Wo
         <div className="sheet-wrap">
           <div className="sheet">
             <div className="sheet-status" role="status">
-              Identification de <span className="m">{route.plate}</span>…
+              Identification de <span className="m">{route.ref}</span>…
             </div>
           </div>
         </div>
@@ -181,12 +385,10 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: Wo
         vehicle={v}
         categories={categories.status === 'ok' ? categories.data : []}
         turn={turn}
-        wide={wide}
-        reducedMotion={reducedMotion}
         recent={recent}
         onRecent={(r) => {
           turn.reset();
-          navigate({ view: 'result', plate: v.plate, categoryId: r.categoryId, clusterId: null });
+          open(r.categoryId, 'recent', r.label);
         }}
       />
     );
@@ -204,11 +406,22 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: Wo
     placeholder = (
       <div className="sheet-message">
         <p className="sheet-big">Quelle pièce ?</p>
-        <p>Tapez-la dans le champ en haut : « filtre à huile », « disque de frein »…</p>
+        <p>Tapez-la dans le champ en haut, « filtre à huile », « disque de frein », une référence, ou envoyez une photo de la pièce.</p>
+        {panel.kind === 'error' && (
+          <p className="field-error" role="alert">
+            {panel.message}
+          </p>
+        )}
+        {panel.kind === 'reading' && (
+          <p className="entry-status" role="status">
+            <span className="agent-dot" aria-hidden="true" />
+            {panel.what}
+          </p>
+        )}
         {suggestions.length > 0 && (
           <div className="sugg">
             {suggestions.map((c) => (
-              <button key={c.id} type="button" className="btn" onClick={() => navigate({ view: 'result', plate: v.plate, categoryId: c.id, clusterId: null })}>
+              <button key={c.id} type="button" className="btn" onClick={() => open(c.id, 'suggestion', c.label)}>
                 {c.label}
               </button>
             ))}
@@ -248,9 +461,9 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: Wo
         confirmed={confirmed}
         onAnswer={(id) => route.view === 'result' && navigate({ ...route, clusterId: id })}
         recent={recent}
-        plate={v.plate}
+        vehicleLabel={vehicleLabel(v)}
         currentCategory={category?.id ?? null}
-        onRecent={(r) => navigate({ view: 'result', plate: v.plate, categoryId: r.categoryId, clusterId: null })}
+        onRecent={(r) => open(r.categoryId, 'recent', r.label)}
       />
       <div className="sheet-wrap">
         <Sheet
@@ -299,11 +512,9 @@ function TitleSkeleton() {
 }
 
 interface AgentWorkspaceProps {
-  vehicle: Vehicle;
+  vehicle: Vehicle | null;
   categories: Category[];
   turn: AgentTurn;
-  wide: boolean;
-  reducedMotion: boolean;
   recent: RecentSearch[];
   onRecent: (r: RecentSearch) => void;
 }
@@ -315,7 +526,9 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
     : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
 }
 
-function AgentWorkspace({ vehicle, categories, turn, wide, reducedMotion, recent, onRecent }: AgentWorkspaceProps) {
+function AgentWorkspace({ vehicle, categories, turn, recent, onRecent }: AgentWorkspaceProps) {
+  const reducedMotion = useReducedMotion();
+  const wide = useMedia('(min-width: 1100px)');
   const { state } = turn;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [clusterFor, setClusterFor] = useState<Record<string, string>>({});
@@ -348,7 +561,7 @@ function AgentWorkspace({ vehicle, categories, turn, wide, reducedMotion, recent
         onRetry={() => turn.ask(state.instruction)}
         onSignIn={turn.signIn}
       />
-      {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => turn.ask(value, state.ask?.context ?? null)} />}
+      {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => turn.ask(value, { pendingContext: state.ask?.context ?? null })} />}
     </>
   );
 
@@ -364,7 +577,7 @@ function AgentWorkspace({ vehicle, categories, turn, wide, reducedMotion, recent
     placeholder = busy ? (
       <div className="sheet-message">
         <p className="sheet-big">Recherche en cours</p>
-        <p>L’agent identifie la ou les pièces de votre demande dans le catalogue de ce véhicule.</p>
+        <p>{vehicle ? 'L’agent identifie la ou les pièces de votre demande dans le catalogue de ce véhicule.' : 'L’agent identifie d’abord le véhicule, puis la ou les pièces de votre demande.'}</p>
       </div>
     ) : (
       <div className="sheet-message">
@@ -383,7 +596,7 @@ function AgentWorkspace({ vehicle, categories, turn, wide, reducedMotion, recent
 
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
-  ) : category && n ? (
+  ) : category && n && vehicle ? (
     <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} rationale={part.rationale} />
   ) : null;
 
@@ -397,7 +610,7 @@ function AgentWorkspace({ vehicle, categories, turn, wide, reducedMotion, recent
         confirmed={confirmed}
         onAnswer={(id) => part && setClusterFor((m) => ({ ...m, [part.key]: id }))}
         recent={recent}
-        plate={vehicle.plate}
+        vehicleLabel={vehicle ? vehicleLabel(vehicle) : ''}
         currentCategory={null}
         onRecent={onRecent}
         lead={lead}

@@ -1,6 +1,7 @@
 import { mapNarrowing } from './api';
 import { authFetch } from './auth';
-import type { AgentPart, FinderFrame, QuestionOption, TurnState, TurnVehicle } from './types';
+import { normalisePlate } from './format';
+import type { AgentPart, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -11,7 +12,7 @@ const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 const NOTHING_FOUND = 'Aucune pièce trouvée pour cette demande. Reformulez-la, ou choisissez une catégorie dans la liste.';
 const CANCELLED = 'Demande interrompue.';
 
-export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null };
+export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null };
 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
@@ -54,6 +55,20 @@ export function parseFrame(data: string): FinderFrame | null {
     case 'askQuestion': {
       const opts = options(j.options);
       return filled(j.question) && opts !== null && text(j.context) ? { type: 'askQuestion', question: j.question, options: opts, context: j.context } : null;
+    }
+    case 'setVehicle': {
+      const nullable = (v: unknown): string | null => (filled(v) ? v.trim() : null);
+      if (typeof j.carId !== 'number' || !Number.isInteger(j.carId) || j.carId <= 0 || (j.carType !== 'PC' && j.carType !== 'CV')) return null;
+      const plate = nullable(j.plate);
+      return {
+        type: 'setVehicle',
+        carId: j.carId,
+        carType: j.carType,
+        make: nullable(j.make),
+        model: nullable(j.model),
+        engine: nullable(j.engine),
+        plate: plate === null ? null : (normalisePlate(plate) ?? plate.toUpperCase()),
+      };
     }
     default:
       return null;
@@ -117,6 +132,10 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
       };
     case 'askQuestion':
       return { ...state, ask: { question: frame.question, options: frame.options, context: frame.context } };
+    case 'setVehicle': {
+      const { type: _type, ...vehicle } = frame;
+      return { ...state, vehicle };
+    }
   }
 }
 
@@ -151,12 +170,34 @@ export interface TurnBody {
   instruction: string;
   sessionId: string;
   surface: 'finder';
-  vehicle: TurnVehicle;
+  intent: TurnIntent;
+  vehicle?: TurnVehicle;
   pendingContext?: string;
+  images?: string[];
+  photoHints?: PartPhotoHints;
 }
 
-export function turnBody(instruction: string, sessionId: string, vehicle: TurnVehicle, pendingContext: string | null): TurnBody {
-  return { instruction, sessionId, surface: 'finder', vehicle, ...(pendingContext ? { pendingContext } : {}) };
+export interface TurnRequest {
+  instruction: string;
+  sessionId: string;
+  vehicle: TurnVehicle | null;
+  pendingContext?: string | null;
+  intent?: TurnIntent;
+  images?: string[];
+  photoHints?: PartPhotoHints | null;
+}
+
+export function turnBody(r: TurnRequest): TurnBody {
+  return {
+    instruction: r.instruction,
+    sessionId: r.sessionId,
+    surface: 'finder',
+    intent: r.intent ?? 'text',
+    ...(r.vehicle ? { vehicle: r.vehicle } : {}),
+    ...(r.pendingContext ? { pendingContext: r.pendingContext } : {}),
+    ...(r.images && r.images.length > 0 ? { images: r.images } : {}),
+    ...(r.photoHints ? { photoHints: r.photoHints } : {}),
+  };
 }
 
 export class TurnRequestError extends Error {

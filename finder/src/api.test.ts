@@ -1,3 +1,4 @@
+import { mapPhotoIntake } from './api';
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapRegistration, mapVehicle, mapVin } from './api';
 import narrowed from './fixtures/narrowed.json';
 import vehicle from './fixtures/vehicle.json';
@@ -131,5 +132,24 @@ describe('classifyStatus', () => {
     expect(classifyStatus(502)).toBe('upstream');
     expect(classifyStatus(422)).toBe('invalid');
     expect(new ApiError('quota').message).toMatch(/quota/i);
+  });
+});
+
+describe('mapPhotoIntake', () => {
+  it('reads a carte grise through the registration mapper', () => {
+    const r = mapPhotoIntake({ kind: 'carte_grise', registration: { A: 'XB-301-ZB', 'D.1': 'MAZDA', legible: true, warnings: [] }, part: null });
+    expect(r).toMatchObject({ kind: 'carte_grise', registration: { plate: 'XB-301-ZB', legible: true } });
+  });
+
+  it('reads a part with its printed references', () => {
+    expect(mapPhotoIntake({ kind: 'part', registration: null, part: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73', 3], brandGuess: null } })).toEqual({
+      kind: 'part',
+      part: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73'], brandGuess: null },
+    });
+  });
+
+  it('falls back to other on anything unexpected', () => {
+    expect(mapPhotoIntake({ kind: 'carte_grise' })).toEqual({ kind: 'other' });
+    expect(mapPhotoIntake(null)).toEqual({ kind: 'other' });
   });
 });
