@@ -19,6 +19,8 @@ export function BuyMenu({ reference }: { reference: BuyReference }) {
     };
   }, [open]);
 
+  const label = [reference.brand, reference.number].filter(Boolean).join(' ');
+
   return (
     <div className="menu" ref={root}>
       <button type="button" className="btn" aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
@@ -28,16 +30,21 @@ export function BuyMenu({ reference }: { reference: BuyReference }) {
         </svg>
       </button>
       {open && (
-        <ul className="menu-list" id={id} role="menu" aria-label={`Rechercher ${reference.number} chez`}>
-          {buyLinks(reference).map((l) => (
-            <li key={l.shop} role="none">
-              <a role="menuitem" href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
-                {l.shop}
-                <span className="m">{reference.number}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
+        <div className="menu-pop" id={id}>
+          <p className="menu-head">
+            <span className="l">Rechercher</span>
+            <span className="m">{label}</span>
+          </p>
+          <ul className="menu-list" role="menu" aria-label={`Rechercher ${label} chez`}>
+            {buyLinks(reference).map((l) => (
+              <li key={l.shop} role="none">
+                <a role="menuitem" href={l.url} target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>
+                  {l.shop}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

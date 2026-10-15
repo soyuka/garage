@@ -1,6 +1,8 @@
 import { Component, lazy, Suspense, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { measure } from '../dims';
 import type { Dimension, Family } from '../types';
 import type { Focus } from '../scene/Blueprint';
+import { BaseView } from './BaseView';
 
 const Blueprint = lazy(() => import('../scene/Blueprint').then((m) => ({ default: m.Blueprint })));
 
@@ -18,8 +20,9 @@ interface Props {
 
 function extentFor(family: Family, dims: readonly Dimension[]): number {
   if (family.kind !== 'filter') return 170;
-  const measured = (re: RegExp, fallback: number) => dims.find((d) => re.test(d.key) && d.number !== null)?.number ?? fallback;
-  return Math.max(measured(/^hauteur(_1)?$/, 69) + 40, measured(/^diametre(_exterieur|_1)?$/, 70) + 70);
+  const height = measure(dims, 'height')?.mid ?? 69;
+  const diameter = measure(dims, 'outer')?.mid ?? 70;
+  return Math.max(height + 56, diameter + 76);
 }
 
 export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, children }: Props) {
@@ -61,7 +64,18 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
         </div>
       )}
       {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser pour tourner · molette pour zoomer</div>}
-      {children}
+      {overlayWidth && children ? (
+        <div className="sheet-side" style={{ width: overlayWidth }}>
+          {!ghost && family.kind !== 'none' && (
+            <div className="sheet-inset">
+              <BaseView family={family} dimensions={dimensions} />
+            </div>
+          )}
+          {children}
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
 }

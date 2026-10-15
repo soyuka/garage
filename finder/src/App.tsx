@@ -13,8 +13,8 @@ import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
 import { Aside } from './ui/Aside';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
-import { CardResult, Entry, VinResult } from './ui/Entry';
-import { useAsync, useMedia, useReducedMotion, useRoute, type Async } from './ui/hooks';
+import { BlankSheet, CardResult, Entry, VinResult } from './ui/Entry';
+import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Async } from './ui/hooks';
 import { Intake } from './ui/Intake';
 import { Journal } from './ui/Journal';
 import { useAgentTurn, type AgentTurn } from './ui/useAgentTurn';
@@ -62,6 +62,7 @@ function Finder({ api }: { api: FinderApi }) {
   const demo = isDemo();
   const [panel, setPanel] = useState<Panel>({ kind: 'none' });
   const [journalOpen, setJournalOpen] = useState(false);
+  const docked = useMedia('(min-width: 1280px)');
   const journalButton = useRef<HTMLButtonElement>(null);
   const trace = useRef<Trace | null>(null);
   const ref = routeRef(route);
@@ -239,7 +240,7 @@ function Finder({ api }: { api: FinderApi }) {
           />
         </div>
       )}
-      <button ref={journalButton} type="button" className="journal-btn" aria-expanded={journalOpen} onClick={() => setJournalOpen(true)}>
+      <button ref={journalButton} type="button" className="journal-btn" aria-expanded={journalOpen} onClick={() => setJournalOpen((o) => !o)}>
         Journal
       </button>
     </header>
@@ -252,7 +253,7 @@ function Finder({ api }: { api: FinderApi }) {
     </footer>
   );
 
-  const journal = <Journal api={api} open={journalOpen} authed={demo || isAuthenticated()} onClose={closeJournal} />;
+  const journal = <Journal api={api} open={journalOpen} authed={demo || isAuthenticated()} docked={docked} onClose={closeJournal} />;
 
   if ((route.view === 'entry' && !agentActive) || vehicle.status === 'error') {
     const error =
@@ -262,7 +263,7 @@ function Finder({ api }: { api: FinderApi }) {
           : vehicle.error.message
         : null;
     return (
-      <div className="app app--entry">
+      <div className={journalOpen && docked ? 'app app--entry app--journal' : 'app app--entry'}>
         {header}
         <main className="entry-main">
           <Entry
@@ -274,6 +275,7 @@ function Finder({ api }: { api: FinderApi }) {
           >
             <EntryPanel panel={error ? { kind: 'error', message: error } : panel} onPlate={(p) => goVehicle(p, 'carte-grise', p)} onReset={() => setPanel({ kind: 'none' })} />
           </Entry>
+          <BlankSheet />
         </main>
         {footer}
         {journal}
@@ -282,12 +284,12 @@ function Finder({ api }: { api: FinderApi }) {
   }
 
   return (
-    <div className="app app--work">
+    <div className={journalOpen && docked ? 'app app--work app--journal' : 'app app--work'}>
       {header}
       {route.view === 'entry' ? (
-        <AgentWorkspace vehicle={null} categories={[]} turn={turn} recent={[]} onRecent={() => undefined} />
+        <AgentWorkspace api={api} vehicle={null} categories={[]} turn={turn} recent={[]} onRecent={() => undefined} />
       ) : (
-        <Workspace route={route} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} turn={turn} trace={trace} panel={panel} />
+        <Workspace api={api} route={route} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} turn={turn} trace={trace} panel={panel} />
       )}
       {footer}
       {journal}
@@ -329,6 +331,7 @@ function EntryPanel({ panel, onPlate, onReset }: { panel: Panel; onPlate: (plate
 }
 
 interface WorkspaceProps {
+  api: FinderApi;
   route: Exclude<Route, { view: 'entry' }>;
   vehicle: Async<Vehicle> & { retry: () => void };
   categories: Async<Category[]> & { retry: () => void };
@@ -340,10 +343,11 @@ interface WorkspaceProps {
 }
 
 const SUGGESTIONS = [100259, 100260, 100261];
+const SHEET_OVERLAY_MIN = 812;
 
-function Workspace({ route, vehicle, categories, narrowing, navigate, turn, trace, panel }: WorkspaceProps) {
+function Workspace({ api, route, vehicle, categories, narrowing, navigate, turn, trace, panel }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
-  const wide = useMedia('(min-width: 1100px)');
+  const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const v = vehicle.status === 'ok' ? vehicle.data : null;
   const [recent, setRecent] = useState<RecentSearch[]>(() => recentFor(route.ref));
   const open = (categoryId: number, rule: string, input: string) => {
@@ -382,6 +386,7 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn, trac
   if (route.view === 'vehicle' && (turn.state.phase !== 'idle' || turn.needsLogin !== null)) {
     return (
       <AgentWorkspace
+        api={api}
         vehicle={v}
         categories={categories.status === 'ok' ? categories.data : []}
         turn={turn}
@@ -456,6 +461,7 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn, trac
       <Aside
         narrowing={route.view === 'result' ? narrowing : null}
         remaining={confirmed ? 1 : null}
+        cluster={cluster}
         question={question}
         selected={cluster?.id ?? null}
         confirmed={confirmed}
@@ -465,7 +471,7 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn, trac
         currentCategory={category?.id ?? null}
         onRecent={(r) => open(r.categoryId, 'recent', r.label)}
       />
-      <div className="sheet-wrap">
+      <div ref={wrapRef} className={wide ? 'sheet-wrap' : 'sheet-wrap sheet-wrap--stacked'}>
         <Sheet
           family={family}
           viewLabel={viewLabel(family, category)}
@@ -476,10 +482,10 @@ function Workspace({ route, vehicle, categories, narrowing, navigate, turn, trac
           placeholder={placeholder}
           status={status}
         >
-          {wide && showResult && <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} />}
+          {wide && showResult && <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} />}
           {wide && loading && route.view === 'result' && <TitleSkeleton />}
         </Sheet>
-        {!wide && showResult && <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} />}
+        {!wide && showResult && <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} />}
         {!wide && loading && route.view === 'result' && <TitleSkeleton />}
       </div>
     </main>
@@ -512,6 +518,7 @@ function TitleSkeleton() {
 }
 
 interface AgentWorkspaceProps {
+  api: FinderApi;
   vehicle: Vehicle | null;
   categories: Category[];
   turn: AgentTurn;
@@ -526,9 +533,9 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
     : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
 }
 
-function AgentWorkspace({ vehicle, categories, turn, recent, onRecent }: AgentWorkspaceProps) {
+function AgentWorkspace({ api, vehicle, categories, turn, recent, onRecent }: AgentWorkspaceProps) {
   const reducedMotion = useReducedMotion();
-  const wide = useMedia('(min-width: 1100px)');
+  const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const { state } = turn;
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [clusterFor, setClusterFor] = useState<Record<string, string>>({});
@@ -597,7 +604,7 @@ function AgentWorkspace({ vehicle, categories, turn, recent, onRecent }: AgentWo
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} rationale={part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} demo={isDemo()} rationale={part.rationale} />
   ) : null;
 
   return (
@@ -605,6 +612,7 @@ function AgentWorkspace({ vehicle, categories, turn, recent, onRecent }: AgentWo
       <Aside
         narrowing={n ? { status: 'ok', data: n } : null}
         remaining={confirmed ? 1 : null}
+        cluster={cluster}
         question={question}
         selected={cluster?.id ?? null}
         confirmed={confirmed}
@@ -615,7 +623,7 @@ function AgentWorkspace({ vehicle, categories, turn, recent, onRecent }: AgentWo
         onRecent={onRecent}
         lead={lead}
       />
-      <div className={state.parts.length > 1 ? 'sheet-wrap sheet-wrap--parts' : 'sheet-wrap'}>
+      <div ref={wrapRef} className={['sheet-wrap', state.parts.length > 1 && 'sheet-wrap--parts', !wide && 'sheet-wrap--stacked'].filter(Boolean).join(' ')}>
         {state.parts.length > 1 && part && <PartSwitcher parts={state.parts} selected={part.key} onSelect={setSelectedKey} />}
         <Sheet
           family={family}

@@ -1,4 +1,5 @@
-import { NNBSP, formatRange, formatValue } from './format';
+import { dimText, findDim, threadOf } from './dims';
+import { NNBSP } from './format';
 import { foldText } from './search';
 import type { Cluster, Dimension, Reference, Variant } from './types';
 
@@ -29,27 +30,20 @@ export function copyText(oe: Reference | null, top: Variant | null): string {
   return [oe, top].filter((r): r is Reference => r !== null).map(refText).join(' · ');
 }
 
-const find = (dims: readonly Dimension[], re: RegExp): Dimension | undefined => dims.find((d) => !d.info && re.test(d.key));
-
-// A part sold by several brands in slightly different sizes shows its range; the 3D scale keeps the representative's value.
-const text = (d: Dimension): string => (d.min !== null && d.max !== null ? formatRange(d.min, d.max) : formatValue(d.value));
-
 export function cotesLine(dims: readonly Dimension[]): string | null {
   const parts: string[] = [];
-  const outer = find(dims, /^diametre(_exterieur|_1)?$/);
-  const height = find(dims, /^hauteur(_1)?$/);
-  const thickness = find(dims, /^epaisseur/);
-  const thread = find(dims, /^thread$/);
-  const sealIn = find(dims, /^diametre_interieur_de_la_bague_d_etancheite$/);
-  const sealOut = find(dims, /^diametre_exterieur_de_la_bague_d_etancheite$/);
-  if (outer?.number != null) parts.push(`Ø${NNBSP}${text(outer)}`);
-  if (height?.number != null) parts.push(`H${NNBSP}${text(height)}`);
-  if (thickness?.number != null) parts.push(`ép.${NNBSP}${text(thickness)}`);
-  if (thread) parts.push(thread.value);
-  const seal = [sealIn, sealOut].filter((d): d is Dimension => d?.number != null).map(text);
+  const outer = findDim(dims, 'outer');
+  const height = findDim(dims, 'height');
+  const thickness = findDim(dims, 'thickness');
+  const thread = threadOf(dims);
+  const seal = [findDim(dims, 'sealInner'), findDim(dims, 'sealOuter')].filter((d): d is Dimension => d !== undefined).map(dimText);
+  if (outer) parts.push(`Ø${NNBSP}${dimText(outer)}`);
+  if (height) parts.push(`H${NNBSP}${dimText(height)}`);
+  if (thickness) parts.push(`ép.${NNBSP}${dimText(thickness)}`);
+  if (thread) parts.push(thread);
   if (seal.length > 0) parts.push(`joint Ø${NNBSP}${seal.join('/')}`);
   if (parts.length === 0) return null;
-  const hasLength = [outer, height, thickness, sealIn, sealOut].some((d) => d?.number != null);
+  const hasLength = outer || height || thickness || seal.length > 0;
   return hasLength ? `${parts.join(' · ')}${NNBSP}mm` : parts.join(' · ');
 }
 

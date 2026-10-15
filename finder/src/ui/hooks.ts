@@ -71,3 +71,19 @@ export function useMedia(query: string): boolean {
   }, [query]);
   return match;
 }
+
+// Whether an element is at least `min` px wide: the sheet's own width, not the viewport's, decides the
+// title-block overlay, so a docked journal that narrows the sheet stacks the block below the drawing.
+export function useWideEnough(min: number): [(el: HTMLElement | null) => void, boolean] {
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.innerWidth - 288 >= min);
+  useEffect(() => {
+    if (!el) return;
+    const measure = () => setWide(el.getBoundingClientRect().width >= min);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [el, min]);
+  return [setEl, wide];
+}

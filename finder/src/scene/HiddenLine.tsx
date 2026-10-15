@@ -1,7 +1,9 @@
+import { Line } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
 import { useMemo, useRef } from 'react';
 import { BackSide, BufferGeometry, Color, EdgesGeometry, ShaderMaterial } from 'three';
-import { DRAFT_BLUE, PAPER } from './palette';
+import { DRAFT_BLUE, LINE_VISIBLE, PAPER } from './palette';
+import { completeRings, type Seg } from './rings';
 
 // Hidden-line drafting: a paper-coloured fill pushed back by polygonOffset occludes the far edges,
 // EdgesGeometry draws the creases, and an inverted hull (back faces grown along the normal by a
@@ -19,16 +21,23 @@ const hullFragment = /* glsl */ `
   void main() { gl_FragColor = vec4(uColor, uOpacity); }
 `;
 
-const OUTLINE_PX = 1.1;
+// The hull grows outward only, so its visible width equals OUTLINE_PX: matched to the crease lines.
+const OUTLINE_PX = LINE_VISIBLE;
 
 interface Props {
   geometry: BufferGeometry;
   threshold?: number;
   ghost?: boolean;
+  rings?: boolean;
 }
 
-export function HiddenLine({ geometry, threshold = 25, ghost = false }: Props) {
-  const edges = useMemo(() => new EdgesGeometry(geometry, threshold), [geometry, threshold]);
+export function HiddenLine({ geometry, threshold = 25, ghost = false, rings = false }: Props) {
+  const edges = useMemo(() => {
+    const pos = new EdgesGeometry(geometry, threshold).getAttribute('position');
+    const segs: Seg[] = [];
+    for (let i = 0; i + 1 < pos.count; i += 2) segs.push([[pos.getX(i), pos.getY(i), pos.getZ(i)], [pos.getX(i + 1), pos.getY(i + 1), pos.getZ(i + 1)]]);
+    return (rings ? completeRings(segs) : segs).flat();
+  }, [geometry, threshold, rings]);
   const hull = useRef<ShaderMaterial>(null);
   const uniforms = useMemo(
     () => ({ uThickness: { value: 0.5 }, uColor: { value: new Color(DRAFT_BLUE) }, uOpacity: { value: 1 } }),
@@ -44,7 +53,7 @@ export function HiddenLine({ geometry, threshold = 25, ghost = false }: Props) {
   return (
     <group>
       <mesh geometry={geometry} renderOrder={0}>
-        <meshBasicMaterial color={PAPER} polygonOffset polygonOffsetFactor={1} polygonOffsetUnits={1} />
+        <meshBasicMaterial color={PAPER} polygonOffset polygonOffsetFactor={4} polygonOffsetUnits={12} />
       </mesh>
       <mesh geometry={geometry} renderOrder={1}>
         <shaderMaterial
@@ -56,9 +65,9 @@ export function HiddenLine({ geometry, threshold = 25, ghost = false }: Props) {
           fragmentShader={hullFragment}
         />
       </mesh>
-      <lineSegments geometry={edges} renderOrder={2}>
-        <lineBasicMaterial color={DRAFT_BLUE} transparent={ghost} opacity={opacity} />
-      </lineSegments>
+      {edges.length > 0 && (
+        <Line points={edges} segments color={DRAFT_BLUE} lineWidth={LINE_VISIBLE} transparent={ghost} opacity={opacity} renderOrder={2} polygonOffset polygonOffsetFactor={-4} polygonOffsetUnits={-12} />
+      )}
     </group>
   );
 }

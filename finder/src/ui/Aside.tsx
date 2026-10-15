@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react';
-import { formatCount } from '../format';
 import type { Question } from '../question';
 import type { RecentSearch } from '../recent';
-import type { Narrowing } from '../types';
+import { narrowingTrace } from '../trace';
+import type { Cluster, Narrowing } from '../types';
 import type { Async } from './hooks';
 
 interface Props {
   narrowing: Async<Narrowing> | null;
   remaining: number | null;
+  cluster: Cluster | null;
   question: Question | null;
   selected: string | null;
   confirmed: boolean;
@@ -19,12 +20,12 @@ interface Props {
   lead?: ReactNode;
 }
 
-export function Aside({ narrowing, remaining, question, selected, confirmed, onAnswer, recent, vehicleLabel, currentCategory, onRecent, lead }: Props) {
+export function Aside({ narrowing, remaining, cluster, question, selected, confirmed, onAnswer, recent, vehicleLabel, currentCategory, onRecent, lead }: Props) {
   const others = recent.filter((r) => r.categoryId !== currentCategory);
   return (
     <aside className="aside">
       {lead}
-      {narrowing && <NarrowingLine narrowing={narrowing} remaining={remaining} />}
+      {narrowing && <NarrowingTrace narrowing={narrowing} remaining={remaining} cluster={cluster} />}
       {question && (
         <section aria-labelledby="ask-title">
           <h2 id="ask-title">{confirmed ? 'Votre réponse' : 'Une question'}</h2>
@@ -66,31 +67,41 @@ export function Aside({ narrowing, remaining, question, selected, confirmed, onA
   );
 }
 
-function NarrowingLine({ narrowing, remaining }: { narrowing: Async<Narrowing>; remaining: number | null }) {
+const SKELETON_ROWS = ['Références catalogue', 'Marques', '→'];
+
+function NarrowingTrace({ narrowing, remaining, cluster }: { narrowing: Async<Narrowing>; remaining: number | null; cluster: Cluster | null }) {
   if (narrowing.status === 'loading') {
     return (
       <section className="narrow" aria-busy="true" aria-labelledby="narrow-title">
         <h2 id="narrow-title">Affinage</h2>
-        <div className="big m skeleton-text" aria-hidden="true">
-          000 → 0
-        </div>
-        <p role="status">Analyse des références du catalogue…</p>
+        <dl className="trace">
+          {SKELETON_ROWS.map((label) => (
+            <div key={label} data-result={label === '→' || undefined}>
+              <dt>{label}</dt>
+              <dd>
+                <span className="sk" style={{ width: 36 }} />
+              </dd>
+            </div>
+          ))}
+        </dl>
+        <p className="trace-status" role="status">Analyse des références du catalogue…</p>
       </section>
     );
   }
   if (narrowing.status !== 'ok') return null;
   const n = narrowing.data;
-  const parts = remaining ?? n.clusters.length;
+  const rows = narrowingTrace(n, cluster, remaining ?? n.clusters.length);
   return (
     <section className="narrow" aria-labelledby="narrow-title">
       <h2 id="narrow-title">Affinage</h2>
-      <div className="big m">
-        {formatCount(n.totalArticles)} → {parts === 0 ? '?' : parts}
-      </div>
-      <p>
-        {formatCount(n.totalArticles)} références catalogue · {formatCount(n.totalBrands)} marques
-        {parts > 0 ? ` → ${parts} pièce${parts > 1 ? 's' : ''}${parts > 1 ? ' distinctes' : ''}` : ''}
-      </p>
+      <dl className="trace">
+        {rows.map((r) => (
+          <div key={r.label} data-result={r.result}>
+            <dt>{r.label}</dt>
+            <dd className="m">{r.value}</dd>
+          </div>
+        ))}
+      </dl>
     </section>
   );
 }

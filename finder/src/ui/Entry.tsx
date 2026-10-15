@@ -33,6 +33,28 @@ export function Entry({ context, busy, onText, onFiles, examples, children }: Pr
   );
 }
 
+// The empty drawing sheet the result lands on: same frame, same title block grammar, nothing filled.
+export function BlankSheet() {
+  return (
+    <div className="entry-sheet" aria-hidden="true">
+      <div className="sheet-label m">PLANCHE</div>
+      <div className="tb tb--blank">
+        <div className="c s3">
+          <span className="l">Désignation</span>
+          <b className="tb-title">—</b>
+        </div>
+        <div className="c s3">
+          <span className="l">Réf. OE</span>
+          <div className="oe m">—</div>
+        </div>
+        <div className="c s3 nb">
+          <span className="l">Véhicule</span>—
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function VinResult({ decode }: { decode: VinDecode }) {
   if (!decode.valid) {
     return (

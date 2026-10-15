@@ -1,3 +1,4 @@
+import { measure, type Measure } from '../dims';
 import type { Dimension } from '../types';
 
 export interface Size {
@@ -7,19 +8,15 @@ export interface Size {
 }
 
 export interface FilterScale extends Size {
-  height: number | null;
-  diameter: number | null;
+  height: Measure | null;
+  diameter: Measure | null;
 }
 
-const measure = (dims: readonly Dimension[], re: RegExp): number | null =>
-  dims.find((d) => !d.info && re.test(d.key) && d.number !== null && d.number > 0)?.number ?? null;
-
-const ratio = (target: number | null, measured: number): number =>
-  target !== null && measured > 0 ? target / measured : 1;
+const ratio = (target: Measure | null, measured: number): number => (target !== null && measured > 0 ? target.mid / measured : 1);
 
 export function filterScale(meshSizeMm: Size, dims: readonly Dimension[]): FilterScale {
-  const height = measure(dims, /^hauteur(_1)?$/);
-  const diameter = measure(dims, /^diametre(_exterieur|_1)?$/);
+  const height = measure(dims, 'height');
+  const diameter = measure(dims, 'outer');
   const radial = ratio(diameter, Math.max(meshSizeMm.x, meshSizeMm.z));
   return { x: radial, y: ratio(height, meshSizeMm.y), z: radial, height, diameter };
 }

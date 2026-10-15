@@ -1,6 +1,10 @@
+import { Fragment, useState } from 'react';
+import { isAuthenticated, login } from '../auth';
+import type { FinderApi } from '../client';
 import { formatCount } from '../format';
+import { addLabel, atelierHref, planBody, PlanError } from '../garage';
 import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from '../result';
-import type { Category, Cluster, Narrowing, Vehicle } from '../types';
+import type { Category, Cluster, Family, Narrowing, Reference, Vehicle } from '../types';
 import { BuyMenu } from './BuyMenu';
 import { useToast } from './Toast';
 import { vehicleEngine, vehicleName } from './VehicleChip';
@@ -11,6 +15,9 @@ interface Props {
   narrowing: Narrowing;
   cluster: Cluster | null;
   confirmed: boolean;
+  family: Family;
+  api: FinderApi;
+  demo: boolean;
   rationale?: string;
 }
 
@@ -23,7 +30,7 @@ async function copy(text: string): Promise<boolean> {
   }
 }
 
-export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, rationale }: Props) {
+export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, family, api, demo, rationale }: Props) {
   const toast = useToast();
   const oe = cluster ? pickOe(cluster, vehicle.make) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
@@ -58,9 +65,15 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, r
           <span className="l">Équivalences · même pièce, autres marques</span>
           <div className="eq m">
             {eq.shown.map((v) => (
-              <span key={v.artId}>
+              <button
+                key={v.artId}
+                type="button"
+                className="eq-ref"
+                title={`Copier ${v.brand} ${v.number}`}
+                onClick={async () => toast((await copy(`${v.brand} ${v.number}`)) ? `Copié : ${v.brand} ${v.number}` : 'Copie impossible.')}
+              >
                 <i>{v.brand}</i> {v.number}
-              </span>
+              </button>
             ))}
             {eq.otherBrands > 0 && <span className="eq-more">+ {formatCount(eq.otherBrands)} autres marques</span>}
           </div>
@@ -91,7 +104,16 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, r
 
       <div className="c s2">
         <span className="l">Cotes</span>
-        <span className="m tb-cotes">{cotes ?? '—'}</span>
+        <span className="m tb-cotes">
+          {cotes
+            ? cotes.split(' · ').map((part, i) => (
+                <Fragment key={i}>
+                  {i > 0 && ' · '}
+                  <span>{part}</span>
+                </Fragment>
+              ))
+            : '—'}
+        </span>
       </div>
       <div className="c r">
         <span className="l">Source</span>
@@ -119,14 +141,60 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, r
           Copier la référence
         </button>
         {buyRef && <BuyMenu reference={buyRef} />}
-        <button type="button" className="btn" onClick={() => toast('Bientôt : ajout de la pièce au véhicule dans l’Atelier.')}>
-          Ajouter au véhicule
-        </button>
+        <AddToVehicle vehicle={vehicle} category={category} family={family} oe={oe} equivalent={top} api={api} demo={demo} />
         <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>
           Partager
         </button>
       </div>
     </div>
+  );
+}
+
+type AddState = 'idle' | 'saving' | 'login';
+
+const PLAN_FAILURE: Record<string, string> = {
+  ambiguous: 'Plusieurs véhicules du garage correspondent : ouvrez l’Atelier pour choisir le bon, puis réessayez.',
+  invalid: 'Le garage a refusé ce véhicule : marque ou modèle manquant.',
+  network: 'Garage injoignable : vérifiez la connexion et réessayez.',
+  failed: 'L’ajout au garage a échoué. Réessayez.',
+};
+
+function AddToVehicle({ vehicle, category, family, oe, equivalent, api, demo }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi; demo: boolean }) {
+  const toast = useToast();
+  const [state, setState] = useState<AddState>('idle');
+  const label = addLabel(vehicle);
+
+  const add = async () => {
+    if (!demo && !isAuthenticated()) return setState('login');
+    setState('saving');
+    try {
+      const { vehicle: iri } = await api.planPart(planBody(vehicle, category, family, oe, equivalent));
+      toast({ text: `${category.label} ajouté au plan d’entretien.`, link: { href: atelierHref(iri, window.location.origin), label: 'Voir dans l’Atelier' } });
+      setState('idle');
+    } catch (e) {
+      if (e instanceof PlanError && e.kind === 'auth') return setState('login');
+      toast(PLAN_FAILURE[e instanceof PlanError ? e.kind : 'failed']!);
+      setState('idle');
+    }
+  };
+
+  if (state === 'login') {
+    return (
+      <div className="add-login" role="group" aria-label="Connexion requise">
+        <p>Le garage est lié à votre compte : connectez-vous, puis ajoutez la pièce.</p>
+        <button type="button" className="btn pri" onClick={() => void login()}>
+          Se connecter
+        </button>
+        <button type="button" className="btn btn--quiet" onClick={() => setState('idle')}>
+          Annuler
+        </button>
+      </div>
+    );
+  }
+  return (
+    <button type="button" className="btn" disabled={!oe && !equivalent} aria-busy={state === 'saving'} onClick={() => void add()}>
+      {state === 'saving' ? 'Ajout…' : label}
+    </button>
   );
 }
 

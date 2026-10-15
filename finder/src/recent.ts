@@ -33,3 +33,12 @@ export function remember(plate: string, search: RecentSearch): RecentSearch[] {
   }
   return next;
 }
+
+export function seedRecent(plate: string, searches: RecentSearch[]): void {
+  if (recentFor(plate).length > 0) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify({ ...read(), [plate]: searches.slice(0, MAX) }));
+  } catch {
+    /* demo convenience only */
+  }
+}

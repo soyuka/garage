@@ -145,7 +145,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           aria-autocomplete="list"
           aria-describedby={`${id}-hint`}
           aria-activedescendant={showList && navigated && active < optionCount ? `${id}-o${active}` : undefined}
-          placeholder={loading ? 'Chargement du catalogue…' : variant === 'hero' ? 'Plaque, VIN, référence ou pièce' : 'Pièce, symptôme, référence, plaque…'}
+          placeholder={loading ? 'Chargement du catalogue…' : variant === 'hero' ? 'Plaque, VIN, pièce…' : 'Pièce, symptôme, référence, plaque…'}
           value={text}
           autoComplete="off"
           autoCapitalize="off"

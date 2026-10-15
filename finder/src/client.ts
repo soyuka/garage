@@ -1,5 +1,7 @@
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapVehicle, mapVin } from './api';
 import { authFetch } from './auth';
+import { planPart, type PlanBody, type PlannedTask } from './garage';
+import { seedRecent } from './recent';
 import { getJournal, getJournalDetail, mapDetail, mapRows, type JournalDetail, type JournalRow } from './journal';
 import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, VinDecode } from './types';
 
@@ -20,6 +22,7 @@ export interface FinderApi {
   photoIntake(photo: Blob): Promise<PhotoIntake>;
   journal(): Promise<JournalRow[]>;
   journalEntry(id: string): Promise<JournalDetail>;
+  planPart(body: PlanBody): Promise<PlannedTask>;
 }
 
 const LD = { Accept: 'application/ld+json' };
@@ -64,6 +67,7 @@ const live: FinderApi = {
   },
   journal: getJournal,
   journalEntry: getJournalDetail,
+  planPart,
 };
 
 // `?demo` serves recorded responses (XB-301-ZB, oil filter 100259) so UI work never spends the
@@ -90,6 +94,11 @@ async function demoApi(): Promise<FinderApi> {
       { code: 'P.3', label: 'Énergie', value: 'ES' },
     ],
   };
+  seedRecent('XB-301-ZB', [
+    { categoryId: 100032, label: 'Disque de frein' },
+    { categoryId: 100151, label: 'Bougie d’allumage' },
+    { categoryId: 100260, label: 'Filtre à air' },
+  ]);
   const later = <T,>(value: T, ms = 450): Promise<T> => new Promise((r) => setTimeout(() => r(value), ms));
   return {
     vehicle: (plate) => (plate === 'XB-301-ZB' ? later(mapVehicle(vehicle.default)) : Promise.reject(new ApiError('notFound'))),
@@ -104,6 +113,7 @@ async function demoApi(): Promise<FinderApi> {
       const entry = (journal.default.entries as Record<string, unknown>)[id];
       return entry ? later(mapDetail(entry), 300) : Promise.reject(new ApiError('notFound'));
     },
+    planPart: () => later({ task: '/garage/planned-tasks/01DEMOTASK', vehicle: '/garage/vehicles/01DEMOVEHICLE' }, 500),
   };
 }
 

@@ -53,10 +53,11 @@ interface Props {
   api: FinderApi;
   open: boolean;
   authed: boolean;
+  docked: boolean;
   onClose: () => void;
 }
 
-export function Journal({ api, open, authed, onClose }: Props) {
+export function Journal({ api, open, authed, docked, onClose }: Props) {
   const [rows, setRows] = useState<JournalRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,9 +102,8 @@ export function Journal({ api, open, authed, onClose }: Props) {
   const usage = rows ? todayUsage(rows, new Date()) : null;
 
   return (
-    <div className="journal-layer">
-      <button type="button" className="journal-scrim" aria-label="Fermer le journal" tabIndex={-1} onClick={onClose} />
-      <aside className="journal" aria-labelledby="journal-title">
+    <Layer docked={docked} onClose={onClose}>
+      <aside className={docked ? 'journal journal--docked' : 'journal'} aria-labelledby="journal-title">
         <header className="journal-head">
           <h2 id="journal-title" ref={heading} tabIndex={-1}>
             Journal
@@ -132,31 +132,25 @@ export function Journal({ api, open, authed, onClose }: Props) {
           <>
             {usage && (
               <section className="journal-quota" aria-labelledby="quota-title">
-                <div className="c">
-                  <span className="l" id="quota-title">
-                    Appels partsapi aujourd’hui
-                  </span>
-                  <span className="journal-total m">{formatCount(usage.total)}</span>
-                </div>
-                <div className="c">
-                  <span className="l">Quota des clés de test : {QUOTA_PER_METHOD} par méthode et par jour</span>
-                  {usage.busiest ? (
-                    <ul className="journal-methods m">
-                      {Object.entries(usage.byMethod)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([method, n]) => (
-                          <li key={method} data-near={n >= QUOTA_PER_METHOD * 0.8}>
-                            <span>{method}</span>
-                            <span>
-                              {n}/{QUOTA_PER_METHOD}
-                            </span>
-                          </li>
-                        ))}
-                    </ul>
-                  ) : (
-                    <span className="journal-muted">Aucun appel journalisé aujourd’hui.</span>
-                  )}
-                </div>
+                <span className="l" id="quota-title">
+                  Appels partsapi aujourd’hui · quota des clés de test : {QUOTA_PER_METHOD} par méthode et par jour
+                </span>
+                <ul className="journal-methods m">
+                  <li className="journal-methods-total">
+                    <span>Total</span>
+                    <span>{formatCount(usage.total)}</span>
+                  </li>
+                  {Object.entries(usage.byMethod)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([method, n]) => (
+                      <li key={method} data-near={n >= QUOTA_PER_METHOD * 0.8}>
+                        <span>{method}</span>
+                        <span>
+                          {n}/{QUOTA_PER_METHOD}
+                        </span>
+                      </li>
+                    ))}
+                </ul>
               </section>
             )}
             {error && (
@@ -177,6 +171,17 @@ export function Journal({ api, open, authed, onClose }: Props) {
           </>
         )}
       </aside>
+    </Layer>
+  );
+}
+
+// Docked, the journal is a column beside the sheet: no scrim, the page stays usable.
+function Layer({ docked, onClose, children }: { docked: boolean; onClose: () => void; children: ReactNode }) {
+  if (docked) return children;
+  return (
+    <div className="journal-layer">
+      <button type="button" className="journal-scrim" aria-label="Fermer le journal" tabIndex={-1} onClick={onClose} />
+      {children}
     </div>
   );
 }
