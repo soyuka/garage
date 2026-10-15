@@ -10,7 +10,7 @@ export function vehicleShortName(v: Vehicle): string | null {
     .replace(/\(.*?\)/g, '')
     .trim()
     .split(/\s+/)[0];
-  return [title(v.make), model].filter(Boolean).join(' ');
+  return [title(v.make), model && /^[A-Z]{2,}$/.test(model) ? title(model) : model].filter(Boolean).join(' ');
 }
 
 export const addLabel = (v: Vehicle): string => {

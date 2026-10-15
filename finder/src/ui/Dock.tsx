@@ -1,8 +1,10 @@
 import { useRef, type ReactNode, type Ref } from 'react';
 import type { Starter } from '../home';
+import type { MyVehicle } from '../my-vehicles';
 import { routeText, type TextRoute } from '../route-input';
-import type { Category } from '../types';
+import type { Category, Vehicle } from '../types';
 import { Intake } from './Intake';
+import { ContextToken, MyVehicles } from './VehicleContext';
 
 export interface QuickAction {
   label: string;
@@ -15,6 +17,11 @@ interface Props {
   slot: Ref<HTMLDivElement>;
   quick: QuickAction[];
   starters: readonly Starter[];
+  // The car the composer searches on, and the saved cars offered on the logged-in home.
+  context: Vehicle | null;
+  mine: readonly MyVehicle[];
+  onClearContext: () => void;
+  onPick: (v: MyVehicle) => void;
   categories: readonly Category[] | null;
   loading: boolean;
   busy: boolean;
@@ -26,7 +33,7 @@ interface Props {
 
 // Always at the bottom of the viewport: the agent's line, its open question, quick actions, and the
 // composer that starts or continues a search (text, photo, PDF, video).
-export function Dock({ status, note, slot, quick, starters, categories, loading, busy, hasVehicle, autoFocus, onText, onFiles }: Props) {
+export function Dock({ status, note, slot, quick, starters, context, mine, onClearContext, onPick, categories, loading, busy, hasVehicle, autoFocus, onText, onFiles }: Props) {
   return (
     <div className="dock">
       <div className="dock-inner">
@@ -42,8 +49,13 @@ export function Dock({ status, note, slot, quick, starters, categories, loading,
             ))}
           </div>
         )}
-        <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} hasVehicle={hasVehicle} onText={onText} onFiles={onFiles} />
-        {starters.length > 0 && <Starters starters={starters} busy={busy} onText={onText} onFiles={onFiles} />}
+        <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} hasVehicle={hasVehicle}
+          token={context && <ContextToken vehicle={context} onRemove={onClearContext} />}
+          onText={onText}
+          onFiles={onFiles}
+        />
+        <MyVehicles vehicles={mine} busy={busy} onPick={onPick} />
+        {mine.length === 0 && starters.length > 0 && <Starters starters={starters} busy={busy} onText={onText} onFiles={onFiles} />}
       </div>
     </div>
   );

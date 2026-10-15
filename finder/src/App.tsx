@@ -7,6 +7,7 @@ import { partFamily } from './family';
 import { resultSummary } from './followup';
 import { historyEntries, type HistoryEntry } from './history';
 import { STARTERS } from './home';
+import { listMyVehicles, pickTarget, type MyVehicle } from './my-vehicles';
 import { MediaError, pickSharpest, prepareImage, sampleVideo, type Frame } from './media';
 import { buildQuestion } from './question';
 import { parseRef, type Route } from './route';
@@ -113,6 +114,7 @@ function Finder({ api }: { api: FinderApi }) {
   }, [held, turn.state.parts]);
 
   const history = useAsync<HistoryEntry[]>(route.view === 'entry' && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.history()));
+  const mine = useAsync<MyVehicle[]>(route.view === 'entry' && !agentActive && authed ? 'mine' : null, listMyVehicles);
 
   useEffect(() => {
     if (!turnVehicle) return;
@@ -130,6 +132,19 @@ function Finder({ api }: { api: FinderApi }) {
     },
     [turn, navigate],
   );
+
+  // The vehicle in context is the route's: opening a car scopes the composer to it, leaving it unscopes.
+  const openVehicle = (ref: string) => {
+    turn.reset();
+    setPanel({ kind: 'none' });
+    trace.current = null;
+    navigate(ref === '' ? { view: 'entry' } : { view: 'vehicle', ref });
+  };
+
+  const pickMine = (picked: MyVehicle) => {
+    const target = pickTarget(picked);
+    openVehicle(target.car ? rememberCar(target.car) : target.ref);
+  };
 
   const askAgent = (text: string, options: AskOptions = {}) => {
     setPanel({ kind: 'none' });
@@ -240,6 +255,7 @@ function Finder({ api }: { api: FinderApi }) {
   const cats = categories.status === 'ok' ? categories.data : null;
 
   const quick: QuickAction[] = [];
+  if (!entry && route.view === 'result' && v?.carId && !isBusy(turn.state)) quick.push({ label: 'Chercher une autre pièce sur ce véhicule', run: () => openVehicle(ref) });
   if (!entry && route.view === 'vehicle' && !agentActive && cats) {
     for (const id of SUGGESTIONS) {
       const c = cats.find((k) => k.id === id);
@@ -284,11 +300,7 @@ function Finder({ api }: { api: FinderApi }) {
         <div className="top-vehicle">
           <VehicleChip
             vehicle={v}
-            onChange={() => {
-              turn.reset();
-              setPanel({ kind: 'none' });
-              navigate({ view: 'entry' });
-            }}
+            onChange={() => openVehicle('')}
           />
           {v.carId !== null && <SaveVehicle key={ref} vehicle={v} api={api} />}
         </div>
@@ -305,7 +317,11 @@ function Finder({ api }: { api: FinderApi }) {
       note={note}
       slot={setSlot}
       quick={quick}
-      starters={entry ? STARTERS : []}
+      starters={entry && mine.status !== 'loading' ? STARTERS : []}
+      context={entry ? null : v}
+      mine={entry && mine.status === 'ok' ? mine.data : []}
+      onClearContext={() => openVehicle('')}
+      onPick={pickMine}
       categories={entry ? null : cats}
       loading={categories.status === 'loading'}
       busy={busyReading}

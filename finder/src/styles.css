@@ -1367,6 +1367,99 @@ button {
   gap: 4px;
 }
 
+/* vehicle in context: pinned at the start of the composer */
+.ctx {
+  flex: 0 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 45%;
+  height: 32px;
+  margin-left: 7px;
+  padding: 0 2px 0 9px;
+  border-radius: 4px;
+  background: var(--tint);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ctx-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ctx-name.m {
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+}
+
+.ctx-remove {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.ctx-remove:hover {
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.intake--dock .ctx + input[type='search'] {
+  padding-left: 10px;
+}
+
+/* logged-in home: saved cars under the composer, one scrolling line */
+.dock-mine {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.dock-mine-label {
+  flex: none;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--mute);
+}
+
+.dock-mine-row {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hair) transparent;
+  padding: 2px;
+  margin: -2px;
+}
+
+.dock-mine-row .btn--quiet {
+  flex: none;
+  gap: 8px;
+  font-weight: 400;
+}
+
+.dock-mine-row .btn--quiet:has(.plate) {
+  padding-left: 4px;
+}
+
+.dock-mine-row .plate {
+  padding: 2px 6px;
+  font-size: 12px;
+}
+
 .dock .field-error {
   margin: 0;
 }

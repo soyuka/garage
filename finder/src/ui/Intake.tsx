@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { HOME } from '../home';
 import { routeText, type TextRoute } from '../route-input';
 import { searchCategories } from '../search';
@@ -14,6 +14,7 @@ interface Props {
   busy?: boolean;
   autoFocus?: boolean;
   hasVehicle?: boolean;
+  token?: ReactNode;
   onText: (route: TextRoute, typed: string) => void;
   onFiles: (files: File[]) => void;
 }
@@ -54,7 +55,7 @@ function CameraIcon() {
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, hasVehicle = categories !== null, onText, onFiles }: Props) {
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, hasVehicle = categories !== null, token = null, onText, onFiles }: Props) {
   const [text, setText] = useState(initial);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
@@ -136,6 +137,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
         Plaque, VIN ou pièce
       </label>
       <div className="intake-field">
+        {token}
         <input
           ref={input}
           id={`${id}-q`}
