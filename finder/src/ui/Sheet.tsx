@@ -56,7 +56,7 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
       )}
       {family.kind === 'generic' && !status && <p className="sheet-caption">{GENERIC_CAPTION}</p>}
       {family.kind === 'mesh' && family.approximate && !status && <p className="sheet-caption">{APPROXIMATE_CAPTION}</p>}
-      {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser : rotation · clic droit : déplacement · molette : zoom · double-clic : recentrer</div>}
+      {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser pour tourner</div>}
       {overlayWidth && children ? (
         <div className="sheet-side" style={{ width: overlayWidth }}>
           {children}

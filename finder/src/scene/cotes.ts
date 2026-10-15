@@ -91,16 +91,13 @@ export function visibleLabels(items: readonly { key: CoteKey; rect: Rect }[]): C
 }
 
 const HYSTERESIS = (10 * Math.PI) / 180;
-const QUARTER = Math.PI / 2;
-
 const wrap = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 
-// Quadrant k faces azimuth k·90°. The previous quadrant holds until the camera is `hysteresis` past
-// its boundary, so the cotes never flicker on a boundary.
-export function facingQuadrant(azimuth: number, prev: number | null, hysteresis = HYSTERESIS): number {
-  const nearest = ((Math.round(wrap(azimuth) / QUARTER) % 4) + 4) % 4;
-  if (prev !== null && Math.abs(wrap(azimuth - prev * QUARTER)) <= QUARTER / 2 + hysteresis) return prev;
-  return nearest;
+// Exponential approach along the shortest arc, so the cotes follow the camera azimuth without ever
+// swinging the long way round the ±π seam.
+export function dampAngle(current: number, target: number, delta: number, rate: number, instant = false): number {
+  if (instant) return target;
+  return current + wrap(target - current) * (1 - Math.exp(-delta * rate));
 }
 
 // Elevation of the camera above the part's mid-height plane.

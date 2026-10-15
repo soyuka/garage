@@ -4,8 +4,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Vector3, type BufferGeometry, type Group, type Material, type Mesh } from 'three';
 import type { Dimension } from '../types';
 import { filterAnnotations } from './annotations';
-import { HOME } from './camera';
-import { facingFace, facingQuadrant, filterCotes, rimBottom, rimTop, visibleLabels, type CoteKey, type Face, type FilterCotes, type Vec3 } from './cotes';
+import { dampAngle, facingFace, filterCotes, rimBottom, rimTop, visibleLabels, type CoteKey, type Face, type FilterCotes, type Vec3 } from './cotes';
 import { Arrowheads, chainSegments, ORDER, OVERLAY, type ArrowTip } from './Dimension';
 import { filterScale } from './filterScale';
 import { HiddenLine } from './HiddenLine';
@@ -15,6 +14,7 @@ import { DRAFT_BLUE, LINE_THIN } from './palette';
 export const FILTER_URL = `${import.meta.env.BASE_URL}parts/oil-filter.glb`;
 const METRES_TO_MM = 1000;
 const SWITCH_S = 0.15;
+const FOLLOW_RATE = 8;
 const world = new Vector3();
 
 interface Props {
@@ -49,29 +49,32 @@ export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
   const [face, setFace] = useState<Face>('top');
   const cotes = useMemo(() => filterCotes(R, H, { face, faceY: rims[face] * scale.y }), [R, H, rims, scale.y, face]);
 
-  // The cotes are built facing +Z and snapped to the 90° quadrant that faces the camera; the Ø sits on
-  // the face the camera sees. A switch fades out, swaps, fades back in (instantly under reduced motion).
+  // The cotes are built facing +Z and turn continuously about the part's axis to follow the camera
+  // azimuth; the Ø sits on the face the camera sees. Only a face switch fades out, swaps, fades back in
+  // (instantly under reduced motion).
   const outer = useRef<Group>(null);
   const placed = useRef<Group>(null);
-  const want = useRef<{ k: number | null; face: Face }>({ k: null, face: 'top' });
-  const applied = useRef<{ k: number | null; face: Face }>({ k: null, face: 'top' });
+  const want = useRef<Face>('top');
+  const applied = useRef<Face | null>(null);
   const fade = useRef(1);
+  const turn = useRef<number | null>(null);
   useFrame(({ camera }, delta) => {
     const o = outer.current;
     const g = placed.current;
     if (!o || !g) return;
     o.worldToLocal(world.copy(camera.position));
-    want.current.k = facingQuadrant(Math.atan2(world.x, world.z) - HOME.azimuth, want.current.k);
-    want.current.face = facingFace(Math.atan2(world.y - H / 2, Math.hypot(world.x, world.z)), want.current.face);
-    const stale = want.current.k !== applied.current.k || want.current.face !== applied.current.face;
+    const azimuth = Math.atan2(world.x, world.z);
+    turn.current = turn.current === null ? azimuth : dampAngle(turn.current, azimuth, delta, FOLLOW_RATE, reducedMotion);
+    g.rotation.y = turn.current;
+    want.current = facingFace(Math.atan2(world.y - H / 2, Math.hypot(world.x, world.z)), want.current);
+    const stale = want.current !== applied.current;
     const step = reducedMotion ? 1 : delta / (SWITCH_S / 2);
-    if (stale && applied.current.k !== null && fade.current > 0 && !reducedMotion) {
+    if (stale && applied.current !== null && fade.current > 0 && !reducedMotion) {
       fade.current = Math.max(0, fade.current - step);
     } else {
       if (stale) {
-        g.rotation.y = HOME.azimuth + want.current.k! * (Math.PI / 2);
-        if (want.current.face !== applied.current.face) setFace(want.current.face);
-        applied.current = { ...want.current };
+        setFace(want.current);
+        applied.current = want.current;
       }
       fade.current = Math.min(1, fade.current + step);
     }

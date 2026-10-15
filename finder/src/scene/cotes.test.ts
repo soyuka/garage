@@ -1,4 +1,4 @@
-import { arrowSide, facingFace, facingQuadrant, filterCotes, rimBottom, rimTop, visibleLabels } from './cotes';
+import { arrowSide, facingFace, dampAngle, filterCotes, rimBottom, rimTop, visibleLabels } from './cotes';
 
 const R = 38;
 const H = 90;
@@ -98,26 +98,35 @@ describe('visibleLabels', () => {
 
 const deg = (d: number) => (d * Math.PI) / 180;
 
-describe('facingQuadrant', () => {
-  it('snaps the camera azimuth to the nearest 90° quadrant', () => {
-    expect(facingQuadrant(deg(10), null)).toBe(0);
-    expect(facingQuadrant(deg(80), null)).toBe(1);
-    expect(facingQuadrant(deg(-100), null)).toBe(3);
-    expect(facingQuadrant(deg(179), null)).toBe(2);
-    expect(facingQuadrant(deg(370), null)).toBe(0);
+describe('dampAngle', () => {
+  it('takes the shortest arc across the ±π seam', () => {
+    const next = dampAngle(3.1, -3.1, 0.05, 8);
+    const moved = next - 3.1;
+    expect(moved).toBeGreaterThan(0);
+    expect(moved).toBeLessThan(0.2);
   });
 
-  it('keeps the current quadrant until the camera is 10° past the boundary', () => {
-    expect(facingQuadrant(deg(50), 0)).toBe(0);
-    expect(facingQuadrant(deg(54), 0)).toBe(0);
-    expect(facingQuadrant(deg(56), 0)).toBe(1);
-    expect(facingQuadrant(deg(40), 1)).toBe(1);
-    expect(facingQuadrant(deg(34), 1)).toBe(0);
+  it('moves the same way crossing zero, without a jump', () => {
+    let a = deg(20);
+    let prev = a;
+    for (let i = 0; i < 60; i++) {
+      a = dampAngle(a, deg(-20), 1 / 60, 8);
+      expect(Math.abs(a - prev)).toBeLessThan(deg(5));
+      prev = a;
+    }
+    expect(a).toBeLessThan(0);
   });
 
-  it('wraps across the ±180° seam without flicker', () => {
-    expect(facingQuadrant(deg(-176), 2)).toBe(2);
-    expect(facingQuadrant(deg(-120), 2)).toBe(3);
+  it('is frame-rate independent', () => {
+    let coarse = 0;
+    let fine = 0;
+    coarse = dampAngle(coarse, 1, 0.1, 8);
+    for (let i = 0; i < 10; i++) fine = dampAngle(fine, 1, 0.01, 8);
+    expect(coarse).toBeCloseTo(fine, 6);
+  });
+
+  it('snaps to the target under reduced motion', () => {
+    expect(dampAngle(3.1, -3.1, 0.016, 8, true)).toBe(-3.1);
   });
 });
 
