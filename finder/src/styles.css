@@ -8,6 +8,14 @@
   --bg: #ffffff;
   --warn: #8a4b00;
   --warn-tint: #fbf1e4;
+  --error: #b3261e;
+  --error-ink: #8f1d16;
+  --error-tint: #fbeceb;
+  --error-line: #e3b1ad;
+  --mute-2: #6b7080;
+  --mute-3: #8a8f9a;
+  --line-2: #c9cdd6;
+  --panel-2: #f3f4f7;
   --sans: 'IBM Plex Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, monospace;
   --gutter: 24px;
@@ -51,7 +59,7 @@ input {
 }
 
 ::placeholder {
-  color: #6b7080;
+  color: var(--mute-2);
   opacity: 1;
 }
 
@@ -258,7 +266,7 @@ button {
 .btn:disabled {
   cursor: not-allowed;
   border-color: var(--hair);
-  color: #8a8f9a;
+  color: var(--mute-3);
   background: var(--bg);
 }
 
@@ -273,7 +281,7 @@ button {
 
 .btn.pri:disabled {
   background: var(--tint);
-  color: #6b7080;
+  color: var(--mute-2);
   border-color: var(--tint);
 }
 
@@ -387,7 +395,7 @@ button {
 }
 
 .field-error {
-  color: #b3261e;
+  color: var(--error);
 }
 
 .vin-result {
@@ -1072,7 +1080,7 @@ button {
   height: 14px;
   margin-top: 3px;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--tint) 0%, #f3f4f7 50%, var(--tint) 100%) 0 0 / 200% 100%;
+  background: linear-gradient(90deg, var(--tint) 0%, var(--panel-2) 50%, var(--tint) 100%) 0 0 / 200% 100%;
   animation: sheen 1.4s linear infinite;
 }
 
@@ -1082,7 +1090,7 @@ button {
 
 .skeleton-text {
   color: transparent;
-  background: linear-gradient(90deg, var(--tint) 0%, #f3f4f7 50%, var(--tint) 100%) 0 0 / 200% 100%;
+  background: linear-gradient(90deg, var(--tint) 0%, var(--panel-2) 50%, var(--tint) 100%) 0 0 / 200% 100%;
   border-radius: 4px;
   width: max-content;
   animation: sheen 1.4s linear infinite;
@@ -1277,12 +1285,12 @@ button {
 }
 
 .part-tab[aria-selected='true'] .part-n {
-  color: #c9cdd6;
+  color: var(--line-2);
 }
 
 .part-tab[aria-selected='true'] .tag {
   background: transparent;
-  border-color: #6b7080;
+  border-color: var(--mute-2);
   color: #fff;
 }
 
@@ -1696,9 +1704,9 @@ button {
 }
 
 .journal-row .tag[data-tone='alarm'] {
-  border-color: #e3b1ad;
-  background: #fbeceb;
-  color: #8f1d16;
+  border-color: var(--error-line);
+  background: var(--error-tint);
+  color: var(--error-ink);
 }
 
 .journal-input {
@@ -1772,7 +1780,7 @@ button {
 }
 
 .journal-error .m {
-  color: #8f1d16;
+  color: var(--error-ink);
   overflow-wrap: anywhere;
 }
 

@@ -67,7 +67,18 @@ export function Aside({ narrowing, remaining, cluster, question, selected, confi
   );
 }
 
-const SKELETON_ROWS = ['Références catalogue', 'Marques', '→'];
+const RESULT_LABEL = '→';
+
+function TraceLabel({ label }: { label: string }) {
+  if (label !== RESULT_LABEL) return <>{label}</>;
+  return (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" aria-hidden="true">
+      <path d="M1 6h10M7 2l4 4-4 4" />
+    </svg>
+  );
+}
+
+const SKELETON_ROWS = ['Références catalogue', 'Marques', RESULT_LABEL];
 
 function NarrowingTrace({ narrowing, remaining, cluster }: { narrowing: Async<Narrowing>; remaining: number | null; cluster: Cluster | null }) {
   if (narrowing.status === 'loading') {
@@ -76,8 +87,10 @@ function NarrowingTrace({ narrowing, remaining, cluster }: { narrowing: Async<Na
         <h2 id="narrow-title">Affinage</h2>
         <dl className="trace">
           {SKELETON_ROWS.map((label) => (
-            <div key={label} data-result={label === '→' || undefined}>
-              <dt>{label}</dt>
+            <div key={label} data-result={label === RESULT_LABEL || undefined}>
+              <dt>
+                <TraceLabel label={label} />
+              </dt>
               <dd>
                 <span className="sk" style={{ width: 36 }} />
               </dd>
@@ -97,7 +110,9 @@ function NarrowingTrace({ narrowing, remaining, cluster }: { narrowing: Async<Na
       <dl className="trace">
         {rows.map((r) => (
           <div key={r.label} data-result={r.result}>
-            <dt>{r.label}</dt>
+            <dt>
+              <TraceLabel label={r.label} />
+            </dt>
             <dd className="m">{r.value}</dd>
           </div>
         ))}
