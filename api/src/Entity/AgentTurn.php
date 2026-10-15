@@ -496,6 +496,14 @@ class AgentTurn
     }
 
     /**
+     * @param array<string, mixed> $search
+     */
+    public function setSearch(array $search): void
+    {
+        $this->search = $search;
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public function getSearch(): array

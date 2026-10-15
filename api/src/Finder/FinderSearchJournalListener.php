@@ -13,6 +13,7 @@ use App\Entity\AgentTurnStatus;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
 use App\Repository\AgentTurnRepository;
+use App\Vehicle\VehicleIndex;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -62,6 +63,7 @@ final class FinderSearchJournalListener
         private readonly PartsCatalog $catalog,
         private readonly DocumentManager $documentManager,
         private readonly AgentTurnRepository $turns,
+        private readonly VehicleIndex $index,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -81,6 +83,7 @@ final class FinderSearchJournalListener
     public function onTerminate(TerminateEvent $event): void
     {
         $request = $event->getRequest();
+        $this->indexPageVehicle($request, $event->getResponse()->getStatusCode());
         $started = $request->attributes->get(self::STARTED);
         if (!\is_int($started) || !\in_array($request->attributes->get('_api_resource_class'), self::RESOURCES, true)) {
             return;
@@ -132,6 +135,21 @@ final class FinderSearchJournalListener
         } catch (\Throwable $e) {
             $this->logger->error('Failed to journal a finder search: {error}', ['error' => $e->getMessage()]);
         }
+    }
+
+    // Every narrowing the page fires carries the vehicle it shows, journaled or not.
+    private function indexPageVehicle(Request $request, int $status): void
+    {
+        if ($status >= 400 || NarrowedParts::class !== $request->attributes->get('_api_resource_class') || !$request->headers->has(self::VEHICLE_HEADER)) {
+            return;
+        }
+        $header = rawurldecode((string) $request->headers->get(self::VEHICLE_HEADER));
+        $descriptor = \strlen($header) > self::MAX_VEHICLE_HEADER_LENGTH ? null : json_decode($header, true);
+        if (!\is_array($descriptor) || !\is_int($descriptor['carId'] ?? null)) {
+            return;
+        }
+
+        $this->index->record($descriptor['carId'], self::text($descriptor['carType'] ?? null), self::text($descriptor['make'] ?? null), self::text($descriptor['model'] ?? null), self::text($descriptor['engine'] ?? null), 'finder');
     }
 
     // The page URL-encodes the typed text: a header value cannot carry arbitrary UTF-8.

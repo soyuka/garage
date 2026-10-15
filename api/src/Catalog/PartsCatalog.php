@@ -12,6 +12,7 @@ use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
+use App\Vehicle\VehicleIndex;
 
 /**
  * TecDoc catalog reads over partsapi.ru. $lang is the partsapi language id for group/article
@@ -23,6 +24,7 @@ final class PartsCatalog
     public function __construct(
         private readonly PartsApiClient $client,
         private readonly int $lang = 6,
+        private readonly ?VehicleIndex $vehicles = null,
     ) {
     }
 
@@ -65,6 +67,7 @@ final class PartsCatalog
     public function cars(int $makeId, int $modelId, CarType $carType): array
     {
         $rows = $this->client->fetch('getCars', ['makeId' => $makeId, 'modelId' => $modelId, 'carType' => $carType->value, 'lang' => $this->lang]);
+        $this->vehicles?->recordCatalogRows($rows, $carType);
 
         return array_map(Car::fromPartsApi(...), $rows);
     }

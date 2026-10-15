@@ -7,6 +7,7 @@ namespace App\Agent\Finder;
 use App\ApiResource\NarrowedParts;
 use App\Agent\Ui\RenderIntentTools;
 use App\Catalog\Narrowing\ArticleNarrower;
+use App\Vehicle\VehicleIndex;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Webmozart\Assert\Assert;
 
@@ -38,6 +39,7 @@ final class FinderRenderTools
     public function __construct(
         private readonly RenderIntentTools $frames,
         private readonly ArticleNarrower $narrower,
+        private readonly VehicleIndex $index,
     ) {
     }
 
@@ -135,6 +137,7 @@ final class FinderRenderTools
         $vehicle = FinderVehicle::fromPayload(['carId' => $carId, 'carType' => $carType, 'make' => $make, 'model' => $model, 'engine' => $engine, 'plate' => $plate]);
         Assert::notNull($vehicle, 'carId must be a positive TecDoc kType and carType PC or CV.');
         $this->vehicle = $vehicle;
+        $this->index->record($vehicle->carId, $vehicle->carType, $vehicle->make, $vehicle->model, $vehicle->engine, 'finder');
         $plate = null === $plate || '' === trim($plate) ? null : strtoupper(trim($plate));
 
         $this->frames->publishFrame([
