@@ -46,7 +46,7 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame(250, $item['completionTokens']);
         self::assertSame(12000, $item['cacheReadTokens']);
         self::assertSame(3000, $item['cacheCreationTokens']);
-        self::assertNull($item['estimatedCostUsd'] ?? null, 'no configured price, no cost');
+        self::assertEqualsWithDelta(0.012416, $item['estimatedCostUsd'], 1e-9, 'prices pinned in .env.test');
     }
 
     public function testAnAuthenticatedFinderSearchIsJournaled(): void
