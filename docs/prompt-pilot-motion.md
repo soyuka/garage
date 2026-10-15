@@ -101,7 +101,7 @@ SID=$(curl -sk -D- -o /dev/null -X POST https://localhost/mcp -H "Authorization:
 ```
 
 To watch the frames without a browser, subscribe to the topic from `GET /agent/link` (authenticated)
-with `curl -sk -N "https://localhost/.well-known/mercure?topic=<url-encoded topic>"`.
+with `curl -sk -N "https://localhost/.well-known/mercure?match=<url-encoded topic>"`. Mercure 1.0 answers `?topic=` with a 400.
 
 Gotchas that will eat an hour if nobody tells you:
 

@@ -18,7 +18,7 @@ Persistence is split on purpose:
 - **MinIO / S3** — maintenance bill binaries; metadata stays on the Mongo record.
 - **Mercure** — render frames to the dashboard, and the transport for delegated MCP streams.
 
-The FrankenPHP binary is **rebuilt** (`Dockerfile` builder stage): stock modules plus Mercure 1.0.2
+The FrankenPHP binary is **rebuilt** (`Dockerfile` builder stage): stock modules plus Mercure 1.1.2
 and `mercure_stream`, the handler that serves an MCP tool call's SSE straight from the hub. Details
 and the rules that design depends on: `../docs/mcp-mercure-stream.md`.
 

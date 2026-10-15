@@ -22,7 +22,11 @@
 	}
 
 	root /app/public
-	encode zstd br gzip
+	# Since Caddy 2.11.7 `encode` compresses Server-Sent Events, holding an encoder (several MiB) per
+	# subscriber for the life of the stream, and mixing private updates with attacker-influenced data
+	# in one compressed stream is BREACH-shaped. Mercure 1.0.4 upgrade notes.
+	@compressible not path /.well-known/mercure*
+	encode @compressible zstd br gzip
 
 	vulcain
 

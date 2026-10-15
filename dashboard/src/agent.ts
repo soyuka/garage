@@ -78,7 +78,7 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
  * external MCP host (Claude Code, Goose…) land. The pilot topic carries the very same UIAction
  * frames, so the same handler drives the same choreography whoever is at the controls.
  *
- * The pilot topic gets its OWN subscription rather than a third `?topic=` on the shared one. Mercure
+ * The pilot topic gets its OWN subscription rather than a third `?match=` on the shared one. Mercure
  * delivers an update without naming the topic it matched, so a single stream cannot tell the two
  * drivers apart — and the dashboard has to, because the two lifecycles differ (a pilot run declares
  * no start, may go quiet for minutes, and must never trip the in-app turn's liveness watchdog; see

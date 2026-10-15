@@ -2,8 +2,8 @@
 
 # Versions
 ARG FRANKENPHP_VERSION=1.12.7
-# The stock FrankenPHP image still bundles Mercure 0.24; the hub is pinned forward here.
-ARG MERCURE_CADDY_VERSION=v1.0.2
+# FrankenPHP 1.12.7 bundles Mercure 0.24 (1.13.0 bundles 1.0.3); the hub is pinned forward here.
+ARG MERCURE_CADDY_VERSION=v1.1.2
 # Untagged prototype, so it is pinned by commit.
 ARG MERCURE_STREAM_DELEGATION_VERSION=6ddd0076bd7e
 
@@ -18,7 +18,7 @@ ARG MERCURE_STREAM_DELEGATION_VERSION
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
 # hadolint ignore=DL3003,SC2046
-# Mercure 1.0.2 needs Go >= 1.27; the builder image ships 1.26 and pins GOTOOLCHAIN=local,
+# Mercure 1.x needs Go >= 1.27; the builder image ships 1.26 and pins GOTOOLCHAIN=local,
 # which forbids fetching a newer one.
 RUN CGO_ENABLED=1 \
 	GOTOOLCHAIN=auto \

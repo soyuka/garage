@@ -616,3 +616,10 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
 - The decoded date may be the order date, not the build date (one forum poster; surfaced as a caveat). Unresolved.
 - partsapi `getArticleCriteria` (no key yet) is what would expose the catalogue's own « n° d'organisation » split
   per article; until then the model gets the threshold from the catalogue text or the user.
+
+## Mercure 1.1.2 upgrade leftovers (found 2026-10-14)
+
+- **FrankenPHP 1.13.0** (2026-10-04) is out; the Dockerfile stays on 1.12.7 and pins the hub to
+  Mercure 1.1.2 itself. Bumping it is an independent change.
+- **`subscriptions`** stays enabled in the hub but nothing uses it; since Mercure 1.1.0 it requires a
+  subscriber token (anonymous gets 401). Drop it if it stays unused.

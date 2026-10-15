@@ -8,7 +8,7 @@ mercure:
             jwt:
                 secret: '%env(MERCURE_JWT_SECRET)%'
                 publish: '*'
-                # `aud` is left to default to public_url, which the hub pins as resource_identifier.
+                # `aud` defaults to public_url (the hub's pinned resource_identifier), plus url on the publisher token since bundle 0.6.1.
                 claims:
                     iss: '%env(MERCURE_JWT_ISSUER)%'
                     sub: 'mon-parc-auto'

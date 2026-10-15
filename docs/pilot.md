@@ -141,7 +141,7 @@ call settle_dashboard '{"message":"Vidange préparée","tone":"ok"}'
 ```
 
 To watch the frames without a browser, subscribe to the topic from `GET /agent/link`:
-`curl -sk -N "https://localhost/.well-known/mercure?topic=<url-encoded topic>"`.
+`curl -sk -N "https://localhost/.well-known/mercure?match=<url-encoded topic>"`. Mercure 1.0 answers `?topic=` with a 400.
 
 **If the dashboard ignores a frame the hub clearly delivered**, check the browser's EventSource before
 suspecting the topic digest: Caddy's cert is self-signed, and when Chrome drops the exception the

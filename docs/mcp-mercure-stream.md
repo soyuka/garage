@@ -123,4 +123,4 @@ app, and each `mercure` directive builds its own hub. Two directives therefore g
 never see each other's updates. The site on `php:80` forwards to the public site for this reason.
 
 To rebuild the binary after changing a module version, run `docker compose build php`. The build
-sets `GOTOOLCHAIN=auto` because Mercure 1.0.2 needs Go 1.27 and the builder image ships Go 1.26.
+sets `GOTOOLCHAIN=auto` because Mercure 1.x needs Go 1.27 and the builder image ships Go 1.26.

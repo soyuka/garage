@@ -152,7 +152,7 @@ explicitly; `getForecast` falls back `vehicle ?? iri`.
 ## Stage C.4 — Mercure live cascade (landed)
 
 - **`src/useMercure.ts`** (Tier-1, fresh) — the EventSource subscription. Pure core (unit-tested):
-  `buildHubUrl` (repeated `?topic=`), `parseFrame` (null on `:` keep-alive), `isDomainEvent`
+  `buildHubUrl` (repeated `?topic=`; `?match=` since the Mercure 1.0 hub, d8568ce), `parseFrame` (null on `:` keep-alive), `isDomainEvent`
   (`kind` vs `type` discriminator), `upsertVehicle`/`removeVehicle` (collection reconciliation). The
   hook holds the handler in a ref so a changing callback identity does NOT re-open the stream — only a
   topic-set change re-subscribes (cleaner than the reference's exhaustive-deps disable). Diverges from
