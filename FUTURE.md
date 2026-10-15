@@ -624,12 +624,6 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
 - **`subscriptions`** stays enabled in the hub but nothing uses it; since Mercure 1.1.0 it requires a
   subscriber token (anonymous gets 401). Drop it if it stays unused.
 
-## Agent guardrails + flaky agent tests (found 2026-10-15, finder agent work)
-
-- **`AgentTurnTest::testTheInterfaceLanguageReachesTheWorkerAndTheModel` is flaky**: it expects
-  `'Checking your garage…'` while `StepNarrator` picks one of four `list_vehicles` variants at random
-  (2/5 green in a row on unchanged code). Assert membership in the variant list instead.
-
 ## Finder agent — open items (2026-10-15)
 
 - `show_parts` with several clusters relies on the finder's own differsOn question card (local, no

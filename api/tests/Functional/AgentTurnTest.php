@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\I18n\AgentMessages;
+use App\I18n\Locale;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\RecordingHub;
 use Symfony\AI\Platform\Message\Content\Text;
@@ -137,6 +139,9 @@ final class AgentTurnTest extends AppTestCase
                 $statuses[] = $payload['message'];
             }
         }
-        $this->assertContains('Checking your garage…', $statuses);
+        $english = AgentMessages::for(Locale::En)->narration['list_vehicles'];
+        $french = AgentMessages::for(Locale::Fr)->narration['list_vehicles'];
+        $this->assertNotSame([], array_intersect($statuses, $english), 'the list_vehicles heartbeat is one of the English variants');
+        $this->assertSame([], array_intersect($statuses, $french), 'no French variant leaks into an English turn');
     }
 }
