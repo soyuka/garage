@@ -52,41 +52,6 @@ services:
             $locale: '%env(MOTUL_LOCALE)%'
             $bu: '%env(MOTUL_BU)%'
 
-    # ── Delegated MCP streams (docs/mcp-mercure-stream.md) ───────────────────────────────────────
-    # A tool call answers with a topic instead of a body; Caddy's mercure_stream handler serves the
-    # SSE from the hub, so no PHP thread stays parked on the client connection.
-    App\Mcp\Stream\MercureStreamResponseFactory:
-        arguments:
-            $streams: '@mcp.psr17_factory'
-
-    App\Mcp\Stream\PendingCallStore:
-        arguments:
-            $cache: '@cache.app'
-
-    App\Mcp\Stream\McpStreamRunner:
-        arguments:
-            $server: '@mcp.server.garage'
-            $requests: '@mcp.psr17_factory'
-            $streams: '@mcp.psr17_factory'
-            $responses: '@mcp.psr17_factory'
-            $middleware: '@mcp.server.garage.middleware_factory'
-            $path: '%app.mcp_path%'
-            $logger: '@logger'
-        tags:
-            - { name: 'monolog.logger', channel: 'mcp' }
-
-    # Wraps the bundle's controller rather than replacing it: everything but tools/call still goes
-    # through the stock path.
-    App\Controller\Mcp\DelegatingMcpController:
-        decorates: 'mcp.server.garage.controller'
-        public: true
-        arguments:
-            $inner: '@.inner'
-            $responses: '@mcp.psr17_factory'
-            $httpFoundation: '@mcp.http_foundation_factory'
-        tags:
-            - 'controller.service_arguments'
-
     # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server.garage,
     # not autowireable by FQCN), so the agent reuses the garage tools without HTTP/OAuth.
     App\Mcp\Agent\McpToolbox:

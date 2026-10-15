@@ -4,16 +4,12 @@
 ARG FRANKENPHP_VERSION=1.12.7
 # FrankenPHP 1.12.7 bundles Mercure 0.24 (1.13.0 bundles 1.0.3); the hub is pinned forward here.
 ARG MERCURE_CADDY_VERSION=v1.1.2
-# Untagged prototype, so it is pinned by commit.
-ARG MERCURE_STREAM_DELEGATION_VERSION=6ddd0076bd7e
 
-# Rebuilds the FrankenPHP binary with the stock module set plus mercure_stream,
-# the handler that serves an SSE response straight from the hub. Without it the
-# Mercure-Stream header the app returns is never intercepted and reaches the client.
+# Rebuilds the FrankenPHP binary with the stock module set, swapping the bundled
+# Mercure hub module for MERCURE_CADDY_VERSION.
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-builder-php8.5 AS frankenphp_builder
 
 ARG MERCURE_CADDY_VERSION
-ARG MERCURE_STREAM_DELEGATION_VERSION
 
 COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
 
@@ -32,8 +28,7 @@ RUN CGO_ENABLED=1 \
 		--with github.com/dunglas/frankenphp/caddy=./caddy/ \
 		--with github.com/dunglas/caddy-cbrotli \
 		--with github.com/dunglas/mercure/caddy@${MERCURE_CADDY_VERSION} \
-		--with github.com/dunglas/vulcain/caddy \
-		--with github.com/dunglas/mercure-stream-delegation@${MERCURE_STREAM_DELEGATION_VERSION}
+		--with github.com/dunglas/vulcain/caddy
 
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php8.5 AS frankenphp_upstream
 

@@ -52,7 +52,7 @@ the owner's pilot topic (`DashboardChannel::pilotTopic()`).
 
 ### B. Server-side MCP tool-call listener  *(the durable floor)*
 
-Publish the same frame from the server, around tool dispatch in `DelegatingMcpController` /
+Publish the same frame from the server, around tool dispatch in the `/mcp` endpoint /
 `McpToolbox`, for every tool including reads.
 
 - Host-agnostic — works for any MCP client, zero client config, no secret to distribute.

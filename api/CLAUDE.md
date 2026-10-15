@@ -16,11 +16,11 @@ Persistence is split on purpose:
 - **Postgres** — DBAL HTTP caches (`cache.siv`, `cache.partsapi`) and Casdoor's own store. Never the
   domain model.
 - **MinIO / S3** — maintenance bill binaries; metadata stays on the Mongo record.
-- **Mercure** — render frames to the dashboard, and the transport for delegated MCP streams.
+- **Mercure** — render frames to the dashboard.
 
-The FrankenPHP binary is **rebuilt** (`Dockerfile` builder stage): stock modules plus Mercure 1.1.2
-and `mercure_stream`, the handler that serves an MCP tool call's SSE straight from the hub. Details
-and the rules that design depends on: `../docs/mcp-mercure-stream.md`.
+The FrankenPHP binary is **rebuilt** (`Dockerfile` builder stage): stock modules with the Mercure
+hub pinned at 1.1.2. The builder sets `GOTOOLCHAIN=auto` because Mercure 1.x needs a newer Go than
+the builder image ships; rebuild with `docker compose build php` after changing a module version.
 
 ## Commands
 
@@ -95,22 +95,9 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   each `mercure` directive builds its own. Addresses that differ in scheme land in different Caddy
   servers, so a hub on the `{$SERVER_NAME}` site is built once per address: the stage profile
   (`https://localhost, http://garage.soyuka.me`) would not boot. The hub is declared once on the
-  internal `http://php:80` site, which forwards everything but `/.well-known/mercure*` back to the
-  public site; the public site proxies the hub path to it. FrankenPHP hot reload must stay off, as it
-  wants a hub in its own server (`FRANKENPHP_SITE_CONFIG` is empty in `compose.override.yaml`).
-- **Delegated MCP streams are off by default** (`MCP_STREAM_DELEGATION=0`), because they cost
-  throughput and return nothing today: 0.917 s against 0.407 s at 24 concurrent `tools/call`. No
-  garage tool yields progress, elicitation or sampling, so the SDK never takes the streaming branch
-  that parks a thread, and the deferred run still holds one on `kernel.terminate`. Turned on, every
-  real client sends `Accept: application/json, text/event-stream`, so every `tools/call` goes
-  through the hub and the lifecycle callback, which must answer **204** exactly, with
-  `lifecycle_token` written `{$VAR}` and not `{env.VAR}`. All verified end to end in
-  `../docs/mcp-mercure-stream.md`. The
-  callback must answer **204** exactly, and `lifecycle_token` must use `{$VAR}` rather than
-  `{env.VAR}` — both are verified end to end and explained in `../docs/mcp-mercure-stream.md`.
-  Delegation currently costs about 2x throughput at 24 concurrent calls and buys nothing measurable:
-  an ordinary `tools/call` never took the SDK's streaming branch, and the tool still runs on a PHP
-  thread in `kernel.terminate`. Same doc, § What it costs.
+  internal `http://php:80` site, which serves only `/.well-known/mercure*`; the public site proxies
+  the hub path to it. FrankenPHP hot reload must stay off, as it wants a hub in its own server
+  (`FRANKENPHP_SITE_CONFIG` is empty in `compose.override.yaml`).
 - **The owner is the email claim** (55bf873), so a seeded `setOwner()` takes an address. The test
   fallback in `config/services.yaml` and `AppTestCase::TEST_OWNER` must stay equal.
 

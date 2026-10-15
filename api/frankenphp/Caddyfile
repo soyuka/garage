@@ -82,32 +82,6 @@
 		}
 		rewrite @phpRoute index.php
 
-		# An MCP response carrying Mercure-Stream is a promise, not a body: the endpoint returns an
-		# empty 200 and this handler swaps it for the hub's SSE, so no PHP thread stays parked on the
-		# connection. Without the intercept the header reaches the client and no stream ever opens.
-		# The hub is this same Caddy; MERCURE_URL is the in-container address the publisher already uses.
-		intercept {
-			@mercureStream header Mercure-Stream *
-			handle_response @mercureStream {
-				route {
-					mercure_stream {$MERCURE_URL:http://php/.well-known/mercure} {
-						# "ready" fires once the hub has accepted the subscription. The app only starts
-						# publishing then: this module does no replay and sends no Last-Event-ID, so a
-						# frame published before this point is gone.
-						lifecycle_url {$MCP_STREAM_LIFECYCLE_URL:http://php/_mcp/stream-lifecycle}
-						# {$...}, not {env....}: this module keeps the configured string as-is and never runs
-						# it through Caddy's replacer, so a runtime placeholder is sent verbatim as the
-						# bearer and the callback answers 401. The mercure directive below resolves
-						# {env....} itself, which is why the two forms differ. Substituting at parse time
-						# does put the token in the adapted config that the admin API serves on localhost.
-						lifecycle_token {$MCP_STREAM_LIFECYCLE_TOKEN}
-						timeout {$MCP_STREAM_TIMEOUT:5m}
-						idle_timeout {$MCP_STREAM_IDLE_TIMEOUT:60s}
-					}
-				}
-			}
-		}
-
 		@frontController path index.php
 		php @frontController {
 			{$FRANKENPHP_SITE_CONFIG}
@@ -124,9 +98,8 @@
 	}
 }
 
-# The single Mercure hub, on the in-network address the app publishes to and `mercure_stream`
-# subscribes to. Mercure 1.0 refuses a second unnamed hub anywhere in the configuration, and each
-# `mercure` directive provisions its own. SERVER_NAME can carry several addresses (stage serves
+# The single Mercure hub, on the in-network address the app publishes to. Mercure 1.0 refuses a
+# second unnamed hub anywhere in the configuration, and each `mercure` directive provisions its own. SERVER_NAME can carry several addresses (stage serves
 # https://localhost and http://garage.soyuka.me), and addresses that differ in scheme land in
 # different Caddy servers, so a hub on the public site is instantiated once per server and the
 # config is rejected. Declaring it here keeps it to one, whatever SERVER_NAME holds; the public
@@ -154,19 +127,6 @@ http://php:80 {
 			subscriptions
 			# Extra directives
 			{$MERCURE_EXTRA_DIRECTIVES}
-		}
-	}
-
-	# The stream lifecycle callback also arrives on this address. It is the app, not the hub, so
-	# everything that is not the hub path goes back to the public site. The certificate is Caddy's
-	# own, on a hop that never leaves the container.
-	handle {
-		reverse_proxy https://{$MERCURE_INTERNAL_HOST:localhost} {
-			transport http {
-				tls
-				tls_insecure_skip_verify
-			}
-			header_up Host {$MERCURE_INTERNAL_HOST:localhost}
 		}
 	}
 }

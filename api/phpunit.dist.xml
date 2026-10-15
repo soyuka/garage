@@ -18,10 +18,6 @@
              Dotenv never overwrites one of those — so .env.test cannot win and McpAllowedHostsTest
              would assert against whatever hosts the running stack happens to allow. -->
         <server name="MCP_ALLOWED_HOSTS" value="localhost,127.0.0.1,[::1],mcp.example.test" force="true" />
-        <!-- force="true": compose exports these into the container, and Dotenv never overrides a
-             var that is already set, so .env.test alone would lose to the dev values. -->
-        <server name="MCP_STREAM_DELEGATION" value="0" force="true" />
-        <server name="MCP_STREAM_LIFECYCLE_TOKEN" value="test-lifecycle-token" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 
