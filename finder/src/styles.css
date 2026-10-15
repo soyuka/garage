@@ -653,6 +653,15 @@ button {
   gap: 8px;
 }
 
+.ask .ask-answers .btn {
+  white-space: normal;
+  height: auto;
+  min-height: 32px;
+  padding-block: 6px;
+  text-align: left;
+  text-wrap: balance;
+}
+
 .ask .btn {
   padding: 0 12px;
   background: var(--bg);
@@ -2236,6 +2245,11 @@ button {
   }
   .ask {
     padding: 10px 12px;
+  }
+  .ask-answers {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
   }
   .history a {
     grid-template-columns: minmax(0, 1fr) auto;

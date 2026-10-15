@@ -1,4 +1,4 @@
-import { buildQuestion } from './question';
+import { askChoices, buildQuestion } from './question';
 import { mapNarrowing } from './api';
 import narrowed from '../test-fixtures/narrowed.json';
 
@@ -74,5 +74,32 @@ describe('buildQuestion', () => {
 
   it('asks nothing when a single part remains', () => {
     expect(buildQuestion({ ...n, clusters: n.clusters.slice(0, 1), differsOn: [] }, 'Filtre à huile')).toBeNull();
+  });
+});
+
+describe('askChoices', () => {
+  const options = [
+    { label: 'Hatchback 2.0 141 ch · 2002–2007', value: '19107' },
+    { label: 'Hatchback 2.0 DI 136 ch · 2002–2007', value: '19108' },
+  ];
+
+  it('appends the plate option after the agent options, as a distinct kind', () => {
+    const choices = askChoices(options);
+    expect(choices.slice(0, 2)).toEqual([
+      { kind: 'agent', label: options[0]!.label, value: '19107' },
+      { kind: 'agent', label: options[1]!.label, value: '19108' },
+    ]);
+    expect(choices.at(-1)).toEqual({ kind: 'plate', label: 'Donner la plaque' });
+  });
+
+  it('keeps the plate option outside the six the agent may offer', () => {
+    const six = Array.from({ length: 6 }, (_, i) => ({ label: `v${i}`, value: String(i) }));
+    const choices = askChoices(six);
+    expect(choices).toHaveLength(7);
+    expect(choices.filter((c) => c.kind === 'plate')).toHaveLength(1);
+  });
+
+  it('offers the plate even when the agent gave no option', () => {
+    expect(askChoices([])).toEqual([{ kind: 'plate', label: 'Donner la plaque' }]);
   });
 });

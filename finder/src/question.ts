@@ -1,6 +1,6 @@
 import { NNBSP, formatValue } from './format';
 import { foldText } from './search';
-import type { Narrowing } from './types';
+import type { Narrowing, QuestionOption } from './types';
 
 export interface Answer {
   label: string;
@@ -66,4 +66,13 @@ export function buildQuestion(n: Narrowing, categoryLabel: string): Question | n
     hint: hintFor(divergence.key),
     answers: values.map((v, i) => ({ label: `${shown[i]}${unit}`, clusterId: byValue.get(v) ?? '' })),
   };
+}
+
+export type AskChoice = { kind: 'agent'; label: string; value: string } | { kind: 'plate'; label: string };
+
+export const PLATE_LABEL = 'Donner la plaque';
+
+// The plate shortcut is added here, not by the agent, so no question can forget it; it sits outside the agent's six.
+export function askChoices(options: QuestionOption[]): AskChoice[] {
+  return [...options.map((o): AskChoice => ({ kind: 'agent', label: o.label, value: o.value })), { kind: 'plate', label: PLATE_LABEL }];
 }

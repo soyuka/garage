@@ -1,4 +1,5 @@
 import { isBusy } from '../agent';
+import { askChoices } from '../question';
 import type { AgentAsk, AgentPart, TurnState, Vehicle, WebPart } from '../types';
 import { BuyMenu } from './BuyMenu';
 import { useToast } from './Toast';
@@ -59,7 +60,7 @@ export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: 
   );
 }
 
-export function AgentQuestion({ ask, disabled, onAnswer }: { ask: AgentAsk; disabled: boolean; onAnswer: (value: string) => void }) {
+export function AgentQuestion({ ask, disabled, onAnswer, onPlate }: { ask: AgentAsk; disabled: boolean; onAnswer: (value: string) => void; onPlate: () => void }) {
   return (
     <section className="ask" aria-labelledby="agent-ask-title">
       <h2 id="agent-ask-title" className="sr-only">
@@ -67,15 +68,19 @@ export function AgentQuestion({ ask, disabled, onAnswer }: { ask: AgentAsk; disa
       </h2>
       <p className="ask-q">{ask.question}</p>
       <p className="ask-hint">Ou répondez dans le champ.</p>
-      {ask.options.length > 0 && (
-        <div className="ask-answers" role="group" aria-label="Réponses">
-          {ask.options.map((o) => (
-            <button key={o.value} type="button" className="btn" disabled={disabled} onClick={() => onAnswer(o.value)}>
-              {o.label}
+      <div className="ask-answers" role="group" aria-label="Réponses">
+        {askChoices(ask.options).map((c) =>
+          c.kind === 'plate' ? (
+            <button key="plate" type="button" className="btn" disabled={disabled} onClick={onPlate}>
+              {c.label}
             </button>
-          ))}
-        </div>
-      )}
+          ) : (
+            <button key={c.value} type="button" className="btn" disabled={disabled} onClick={() => onAnswer(c.value)}>
+              {c.label}
+            </button>
+          ),
+        )}
+      </div>
     </section>
   );
 }

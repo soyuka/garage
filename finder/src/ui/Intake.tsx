@@ -12,12 +12,14 @@ interface Props {
   context?: string | null;
   busy?: boolean;
   autoFocus?: boolean;
+  plateRequest?: number;
   hasVehicle?: boolean;
   token?: ReactNode;
   onText: (route: TextRoute, typed: string) => void;
   onFiles: (files: File[]) => void;
 }
 
+const PLATE_PLACEHOLDER = 'Plaque : AB-123-CD';
 const ACCEPT = 'image/*,video/*,application/pdf';
 
 export function routeHint(route: TextRoute, hasVehicle: boolean): string {
@@ -52,9 +54,10 @@ function CameraIcon() {
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, hasVehicle = categories !== null, token = null, onText, onFiles }: Props) {
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, hasVehicle = categories !== null, token = null, onText, onFiles }: Props) {
   const [text, setText] = useState(initial);
   const [over, setOver] = useState(false);
+  const [plateHint, setPlateHint] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const picker = useRef<HTMLInputElement>(null);
   const camera = useRef<HTMLInputElement>(null);
@@ -65,6 +68,11 @@ export function Intake({ variant, categories, loading = false, initial, context 
   useEffect(() => {
     if (autoFocus) input.current?.focus();
   }, [autoFocus]);
+  useEffect(() => {
+    if (plateRequest === 0) return;
+    setPlateHint(true);
+    input.current?.focus();
+  }, [plateRequest]);
 
   const route = useMemo(() => routeText(text), [text, categories]);
   const hint = context ?? routeHint(route, hasVehicle);
@@ -125,13 +133,14 @@ export function Intake({ variant, categories, loading = false, initial, context 
           id={`${id}-q`}
           type="search"
           aria-describedby={`${id}-hint`}
-          placeholder={loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder}
+          placeholder={plateHint ? PLATE_PLACEHOLDER : loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder}
           value={text}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
           enterKeyHint="search"
           onChange={(e) => setText(e.target.value)}
+          onBlur={() => setPlateHint(false)}
           onPaste={onPaste}
         />
         <input ref={picker} type="file" accept={ACCEPT} multiple className="sr-only" tabIndex={-1} aria-hidden="true" onChange={(e) => (files(e.target.files), (e.target.value = ''))} />
