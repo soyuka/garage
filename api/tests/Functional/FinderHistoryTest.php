@@ -13,59 +13,6 @@ final class FinderHistoryTest extends AppTestCase
 {
     private const array LD = ['Accept' => 'application/ld+json'];
 
-    public function testClearingHidesEarlierRowsFromTheHistoryButNotTheJournal(): void
-    {
-        $client = static::createClient();
-        $this->seed('filtre à huile', self::TEST_OWNER, new \DateTimeImmutable('-1 hour'));
-
-        $response = $client->request('POST', '/agent/turns/history/clear', ['headers' => self::authHeaders(), 'json' => []]);
-        self::assertResponseIsSuccessful();
-        self::assertNull($response->toArray()['previous']);
-        self::assertNotNull($response->toArray()['clearedAt']);
-
-        self::assertSame([], $this->instructions($this->history($client)));
-        self::assertSame(['filtre à huile'], $this->instructions($this->journal($client)));
-
-        $this->seed('plaquettes', self::TEST_OWNER, new \DateTimeImmutable('+1 minute'));
-        self::assertSame(['plaquettes'], $this->instructions($this->history($client)));
-    }
-
-    public function testClearingCanBeRestoredToThePreviousTimestamp(): void
-    {
-        $client = static::createClient();
-        $this->seed('filtre à huile', self::TEST_OWNER, new \DateTimeImmutable('-1 hour'));
-
-        $cleared = $client->request('POST', '/agent/turns/history/clear', ['headers' => self::authHeaders(), 'json' => []])->toArray();
-        $restored = $client->request('POST', '/agent/turns/history/clear', ['headers' => self::authHeaders(), 'json' => ['restore' => $cleared['previous']]])->toArray();
-
-        self::assertNull($restored['clearedAt']);
-        self::assertSame(['filtre à huile'], $this->instructions($this->history($client)));
-    }
-
-    public function testRestoreAcceptsATimestamp(): void
-    {
-        $client = static::createClient();
-        $this->seed('vieux', self::TEST_OWNER, new \DateTimeImmutable('-2 hours'));
-        $this->seed('récent', self::TEST_OWNER, new \DateTimeImmutable('-10 minutes'));
-
-        $client->request('POST', '/agent/turns/history/clear', ['headers' => self::authHeaders(), 'json' => ['restore' => (new \DateTimeImmutable('-1 hour'))->format(\DateTimeInterface::ATOM)]]);
-
-        self::assertSame(['récent'], $this->instructions($this->history($client)));
-    }
-
-    public function testClearingNeverTouchesAnotherOwner(): void
-    {
-        $client = static::createClient();
-        $this->seed('chez un autre', 'someone-else@example.com', new \DateTimeImmutable('-1 hour'));
-        $this->seed('chez moi', self::TEST_OWNER, new \DateTimeImmutable('-1 hour'));
-
-        $client->request('POST', '/agent/turns/history/clear', ['headers' => self::authHeaders(), 'json' => []]);
-
-        $other = static::getContainer()->get(\App\Repository\AgentTurnRepository::class)->findForOwner('someone-else@example.com');
-        self::assertCount(1, $other);
-        self::assertSame([], $this->instructions($this->history($client)));
-    }
-
     public function testHidingOneEntryDropsItFromTheHistoryOnly(): void
     {
         $client = static::createClient();
@@ -93,13 +40,11 @@ final class FinderHistoryTest extends AppTestCase
         self::assertFalse($reloaded->isHiddenFromHistory());
     }
 
-    public function testBothEndpointsRequireAuthentication(): void
+    public function testHidingRequiresAuthentication(): void
     {
         $client = static::createClient();
         $turn = $this->seed('x', self::TEST_OWNER, new \DateTimeImmutable('-1 hour'));
 
-        $client->request('POST', '/agent/turns/history/clear', ['json' => []]);
-        self::assertResponseStatusCodeSame(401);
         $client->request('POST', '/agent/turns/'.$turn->getId().'/hide', ['json' => []]);
         self::assertResponseStatusCodeSame(401);
     }

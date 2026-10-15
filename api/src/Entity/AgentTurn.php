@@ -26,6 +26,7 @@ use Symfony\Component\Uid\Ulid;
 #[ODM\Document(collection: 'agent_turns', repositoryClass: AgentTurnRepository::class)]
 // Sort-covering for the journal listing: scoped to owner, newest first.
 #[ODM\Index(keys: ['owner' => 'asc', 'startedAt' => 'desc'], name: 'idx_turn_owner_started')]
+#[ODM\Index(keys: ['owner' => 'asc', 'searchId' => 'asc'], name: 'idx_turn_owner_search', sparse: true)]
 #[ODM\Index(keys: ['owner' => 'asc', 'surface' => 'asc', 'startedAt' => 'desc'], name: 'idx_turn_owner_surface_started')]
 class AgentTurn
 {
@@ -121,7 +122,7 @@ class AgentTurn
     /**
      * Finder agent turns: the vehicle the page sent with the turn, so the journal can reopen it.
      *
-     * @var array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string}|null
+     * @var array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string, engine?: ?string}|null
      */
     #[ODM\Field(type: 'hash', nullable: true)]
     private ?array $vehicle = null;
@@ -129,6 +130,10 @@ class AgentTurn
     // Class-level default: a constructor-promoted nullable field 500s on documents written before it existed.
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $categoryLabel = null;
+
+    // Correlates the requests of one finder submit onto a single search row.
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $searchId = null;
 
     // Hides the row from the finder home history only; the journal still lists it.
     #[ODM\Field(type: 'bool')]
@@ -430,13 +435,14 @@ class AgentTurn
      * @param array<string, mixed> $search
      * @param array<string, int>   $partsApiCallsByMethod
      */
-    public static function search(string $owner, string $input, array $search, array $partsApiCallsByMethod, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null): self
+    public static function search(string $owner, string $input, array $search, array $partsApiCallsByMethod, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null, ?string $searchId = null): self
     {
         $turn = new self($owner, '', $input, '', '', '', false);
         $turn->kind = AgentTurnKind::Search;
         $turn->surface = TurnSurface::Finder;
         $turn->search = $search;
         $turn->categoryLabel = $categoryLabel;
+        $turn->searchId = $searchId;
         $turn->recordPartsApiCalls($partsApiCallsByMethod);
         $turn->status = $status;
         $turn->finishedAt = new \DateTimeImmutable();
@@ -447,7 +453,34 @@ class AgentTurn
     }
 
     /**
-     * @return array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string}|null
+     * Folds a later request of the same submit into this row: its facts complete the row (the first
+     * rule is kept), catalogue calls add up, and the duration runs from the first request to this one.
+     *
+     * @param array<string, mixed> $search
+     * @param array<string, int>   $partsApiCallsByMethod
+     */
+    public function absorbSearch(array $search, array $partsApiCallsByMethod, AgentTurnStatus $status, ?string $categoryLabel): void
+    {
+        $search = array_filter($search, static fn (mixed $v): bool => null !== $v);
+        if (AgentTurnStatus::Failed === $this->status) {
+            unset($search['outcome'], $search['httpStatus']);
+            $status = AgentTurnStatus::Failed;
+        }
+        unset($search['rule']);
+        $this->search = $search + $this->search;
+        $this->categoryLabel = $categoryLabel ?? $this->categoryLabel;
+        $merged = $this->partsApiCallsByMethod;
+        foreach ($partsApiCallsByMethod as $method => $count) {
+            $merged[$method] = ($merged[$method] ?? 0) + $count;
+        }
+        $this->recordPartsApiCalls($merged);
+        $this->status = $status;
+        $this->finishedAt = new \DateTimeImmutable();
+        $this->durationMs = max(0, (int) round(((float) $this->finishedAt->format('U.u') - (float) $this->startedAt->format('U.u')) * 1000));
+    }
+
+    /**
+     * @return array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string, engine?: ?string}|null
      */
     public function getVehicle(): ?array
     {
@@ -455,7 +488,7 @@ class AgentTurn
     }
 
     /**
-     * @param array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string}|null $vehicle
+     * @param array{carId: int, carType: string, plate: ?string, make: ?string, model: ?string, engine?: ?string}|null $vehicle
      */
     public function setVehicle(?array $vehicle): void
     {

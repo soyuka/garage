@@ -71,6 +71,16 @@ final class PartCategory
     }
 
     /**
+     * The French leaf of the path: the node name can come back in the catalogue's English.
+     */
+    public function label(): string
+    {
+        $leaf = trim(substr(strrchr('>'.$this->path, '>'), 1));
+
+        return '' === $leaf ? $this->name : $leaf;
+    }
+
+    /**
      * @param list<array<string, mixed>> $nodes raw getSearchTree response
      *
      * @return list<self>

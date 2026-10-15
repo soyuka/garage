@@ -87,7 +87,7 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame($narrowed['upstreamCalls'], $listed[0]['partsApiCalls']);
         self::assertSame('category', $listed[0]['search']['rule']);
         self::assertSame('k/19107-PC/c/100259', $listed[0]['route']);
-        self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null], $listed[0]['vehicle']);
+        self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null, 'engine' => null], $listed[0]['vehicle']);
     }
 
     public function testANarrowedSearchCarriesTheCategoryLabelFromTheCachedTree(): void
@@ -169,7 +169,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Plate' => str_repeat('A', 21)],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre', 'X-Finder-Plate' => str_repeat('A', 21)],
         ]);
 
         self::assertArrayNotHasKey('plate', $this->rows()[0]->getSearch());
@@ -187,7 +187,7 @@ final class FinderJournalTest extends AppTestCase
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
         self::assertSame('p/XC302ZC', $listed[0]['route']);
-        self::assertSame(['plate' => 'XC302ZC', 'carId' => 34247, 'carType' => 'CV', 'make' => 'IVECO', 'model' => 'DAILY'], $listed[0]['vehicle']);
+        self::assertSame(['plate' => 'XC302ZC', 'carId' => 34247, 'carType' => 'CV', 'make' => 'IVECO', 'model' => 'DAILY', 'engine' => 'CLASSE C · F1AE0481B'], $listed[0]['vehicle']);
     }
 
     public function testAnAgentRowRoutesToTheVehicleAndCategoryItShowed(): void
@@ -195,7 +195,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
         $this->seed('rotule axiale 307 XB-301-ZB', TurnSurface::Finder, static function (AgentTurn $t): void {
             $t->setVehicle(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6']);
-            $t->addToolCall(new AgentTurnToolCall(0, 'set_vehicle', ['carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'plate' => 'XB-301-ZB'], 'ok', new \DateTimeImmutable()));
+            $t->addToolCall(new AgentTurnToolCall(0, 'set_vehicle', ['carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'engine' => '1.6 HDi', 'plate' => 'XB-301-ZB'], 'ok', new \DateTimeImmutable()));
             $t->addToolCall(new AgentTurnToolCall(1, 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Rotule', 'rationale' => 'x'], '{}', new \DateTimeImmutable()));
         });
         $this->seed('filtre à huile', TurnSurface::Finder, static fn (AgentTurn $t) => $t->setVehicle(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6']));
@@ -203,7 +203,7 @@ final class FinderJournalTest extends AppTestCase
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
         $byInstruction = array_column($listed, null, 'instruction');
         self::assertSame('p/XB-301-ZB/c/100259', $byInstruction['rotule axiale 307 XB-301-ZB']['route']);
-        self::assertSame(['plate' => 'XB-301-ZB', 'carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307'], $byInstruction['rotule axiale 307 XB-301-ZB']['vehicle']);
+        self::assertSame(['plate' => 'XB-301-ZB', 'carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'engine' => '1.6 HDi'], $byInstruction['rotule axiale 307 XB-301-ZB']['vehicle']);
         self::assertSame('k/19107-PC', $byInstruction['filtre à huile']['route']);
     }
 
@@ -219,6 +219,66 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame('plate', $rows[0]->getSearch()['rule']);
         self::assertSame('not_found', $rows[0]->getSearch()['outcome']);
         self::assertSame(404, $rows[0]->getSearch()['httpStatus']);
+    }
+
+    public function testARequestWithoutTheTypedInputIsNotJournaled(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Search' => 'abc'],
+        ]);
+        self::assertResponseIsSuccessful();
+        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url']]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame([], $this->rows());
+    }
+
+    public function testTheRequestsOfOneSearchShareOneRow(): void
+    {
+        $client = static::createClient();
+        $headers = self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'plate', 'X-Finder-Input' => 'XC-302-ZC', 'X-Finder-Search' => '6f1c0a52-1d0e-4a54-9a07-2d4f3c2a9e11'];
+
+        $client->request('GET', '/vehicles/XC302ZC', ['headers' => $headers]);
+        self::assertResponseIsSuccessful();
+        $narrowed = $client->request('GET', '/cars/34247/part-categories/100259/narrowed?carType=CV', ['headers' => $headers])->toArray();
+        self::assertResponseIsSuccessful();
+
+        $rows = $this->rows();
+        self::assertCount(1, $rows);
+        self::assertSame('XC-302-ZC', $rows[0]->getInstruction());
+        $search = $rows[0]->getSearch();
+        self::assertSame(['XC302ZC', 34247, 'IVECO', 'DAILY', 100259, 'plate'], [$search['plate'], $search['carId'], $search['make'], $search['model'], $search['categoryId'], $search['rule']]);
+        self::assertSame(\count($narrowed['clusters']), $search['clusterCount']);
+        self::assertGreaterThanOrEqual($narrowed['upstreamCalls'], $rows[0]->getPartsApiCalls());
+    }
+
+    public function testTheVehicleHeaderFillsMakeModelAndEngineWithoutAPlateLookup(): void
+    {
+        $client = static::createClient();
+        $vehicle = rawurlencode(json_encode(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR · LF'], \JSON_THROW_ON_ERROR));
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre à huile', 'X-Finder-Vehicle' => $vehicle],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR · LF'], $listed[0]['vehicle']);
+    }
+
+    public function testAMalformedVehicleHeaderIsIgnored(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre', 'X-Finder-Vehicle' => '%7Bnot-json'],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        self::assertCount(1, $this->rows());
+        self::assertArrayNotHasKey('make', $this->rows()[0]->getSearch());
     }
 
     public function testAnonymousSearchesAreNotJournaled(): void

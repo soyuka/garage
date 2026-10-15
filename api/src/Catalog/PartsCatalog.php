@@ -90,7 +90,9 @@ final class PartsCatalog
         }
         foreach (PartCategory::fromPartsApiTree($nodes, false) as $category) {
             if ($category->id === $categoryId) {
-                return '' === $category->name ? null : $category->name;
+                $label = $category->label();
+
+                return '' === $label ? null : $label;
             }
         }
 

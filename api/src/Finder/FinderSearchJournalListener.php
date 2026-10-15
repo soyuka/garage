@@ -12,6 +12,7 @@ use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
+use App\Repository\AgentTurnRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -23,9 +24,11 @@ use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
  * Journals the finder's deterministic searches — plate, VIN, category narrowing — in the agent-turn
- * journal (kind search), so the drawer shows every catalogue spend, not only the agent's. Only the
- * finder sends X-Finder-Rule, and only an authenticated request has an owner to journal under: the
- * dashboard, MCP and anonymous reads pass through untouched. Best-effort: a failed write is logged.
+ * journal (kind search), so the drawer shows every catalogue spend, not only the agent's. Only a
+ * user-initiated submit is journaled: the finder sends X-Finder-Rule and X-Finder-Input (the typed
+ * text) on a composer submit or chip click, and neither on restores, hash loads and background
+ * fetches. The requests of one submit share an X-Finder-Search id and fold into one row. Only an
+ * authenticated request has an owner to journal under. Best-effort: a failed write is logged.
  */
 final class FinderSearchJournalListener
 {
@@ -34,6 +37,16 @@ final class FinderSearchJournalListener
     public const string INPUT_HEADER = 'X-Finder-Input';
 
     public const string PLATE_HEADER = 'X-Finder-Plate';
+
+    public const string SEARCH_HEADER = 'X-Finder-Search';
+
+    public const string VEHICLE_HEADER = 'X-Finder-Vehicle';
+
+    private const int MAX_SEARCH_ID_LENGTH = 64;
+
+    private const int MAX_VEHICLE_HEADER_LENGTH = 1000;
+
+    private const int MAX_FIELD_LENGTH = 80;
 
     private const int MAX_PLATE_LENGTH = 20;
 
@@ -48,6 +61,7 @@ final class FinderSearchJournalListener
         private readonly PartsApiClient $partsApi,
         private readonly PartsCatalog $catalog,
         private readonly DocumentManager $documentManager,
+        private readonly AgentTurnRepository $turns,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -56,7 +70,7 @@ final class FinderSearchJournalListener
     public function onRequest(RequestEvent $event): void
     {
         $request = $event->getRequest();
-        if (!$event->isMainRequest() || !$request->headers->has(self::RULE_HEADER)) {
+        if (!$event->isMainRequest() || !$request->headers->has(self::RULE_HEADER) || '' === self::input($request)) {
             return;
         }
         $request->attributes->set(self::STARTED, hrtime(true));
@@ -94,23 +108,43 @@ final class FinderSearchJournalListener
             $spent[$method] = $count - ($before[$method] ?? 0);
         }
 
-        // The page URL-encodes the typed text: a header value cannot carry arbitrary UTF-8.
-        $input = trim(rawurldecode((string) $request->headers->get(self::INPUT_HEADER, '')));
+        $searchId = $this->searchId($request);
+        $label = $this->categoryLabel($data, $request);
+        $failed = $status >= 400;
 
         try {
-            $this->documentManager->persist(AgentTurn::search(
-                owner: $owner,
-                input: mb_substr('' !== $input ? $input : $request->getPathInfo(), 0, 200),
-                search: $search,
-                partsApiCallsByMethod: $spent,
-                durationMs: (int) ((hrtime(true) - $started) / 1_000_000),
-                status: $status < 400 ? AgentTurnStatus::Completed : AgentTurnStatus::Failed,
-                categoryLabel: $this->categoryLabel($data, $request),
-            ));
+            $row = null === $searchId ? null : $this->turns->findOneBySearchId($owner, $searchId);
+            if (null !== $row) {
+                $row->absorbSearch($search, $spent, $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed, $label);
+            } else {
+                $this->documentManager->persist(AgentTurn::search(
+                    owner: $owner,
+                    input: mb_substr(self::input($request), 0, 200),
+                    search: $search,
+                    partsApiCallsByMethod: $spent,
+                    durationMs: (int) ((hrtime(true) - $started) / 1_000_000),
+                    status: $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed,
+                    categoryLabel: $label,
+                    searchId: $searchId,
+                ));
+            }
             $this->documentManager->flush();
         } catch (\Throwable $e) {
             $this->logger->error('Failed to journal a finder search: {error}', ['error' => $e->getMessage()]);
         }
+    }
+
+    // The page URL-encodes the typed text: a header value cannot carry arbitrary UTF-8.
+    private static function input(Request $request): string
+    {
+        return trim(rawurldecode((string) $request->headers->get(self::INPUT_HEADER, '')));
+    }
+
+    private function searchId(Request $request): ?string
+    {
+        $id = trim((string) $request->headers->get(self::SEARCH_HEADER, ''));
+
+        return '' !== $id && \strlen($id) <= self::MAX_SEARCH_ID_LENGTH && 1 === preg_match('/^[A-Za-z0-9-]+$/', $id) ? $id : null;
     }
 
     private function categoryLabel(mixed $data, Request $request): ?string
@@ -129,7 +163,7 @@ final class FinderSearchJournalListener
     {
         return match (true) {
             // The narrowing knows only the carId: the page sends the plate it shows so the row reopens it.
-            $data instanceof NarrowedParts => self::plate($request) + [
+            $data instanceof NarrowedParts => self::pageVehicle($request) + [
                 'carId' => $data->carId,
                 // NarrowedParts carries no carType: the route reads it from the query, PC by default.
                 'carType' => (CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar)->value,
@@ -144,9 +178,42 @@ final class FinderSearchJournalListener
                 'carType' => $data->carType,
                 'make' => $data->make,
                 'model' => $data->model,
+                'engine' => self::text(implode(' · ', array_filter([$data->version, $data->engineCode]))),
             ],
             default => [],
         };
+    }
+
+    /**
+     * What the page shows for the vehicle: the narrowing itself only knows the carId.
+     *
+     * @return array<string, string>
+     */
+    private static function pageVehicle(Request $request): array
+    {
+        $header = rawurldecode((string) $request->headers->get(self::VEHICLE_HEADER, ''));
+        $descriptor = '' === $header || \strlen($header) > self::MAX_VEHICLE_HEADER_LENGTH ? null : json_decode($header, true);
+        $descriptor = \is_array($descriptor) ? $descriptor : [];
+
+        $fields = [];
+        foreach (['plate', 'make', 'model', 'engine'] as $key) {
+            $value = self::text($descriptor[$key] ?? null);
+            if (null !== $value) {
+                $fields[$key] = $value;
+            }
+        }
+
+        return self::plate($request) + $fields;
+    }
+
+    private static function text(mixed $value): ?string
+    {
+        if (!\is_string($value)) {
+            return null;
+        }
+        $value = trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', '', $value));
+
+        return '' === $value ? null : mb_substr($value, 0, self::MAX_FIELD_LENGTH);
     }
 
     /**

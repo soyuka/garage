@@ -10,7 +10,6 @@ use App\Agent\Journal\TurnCostEstimator;
 use App\Agent\TurnSurface;
 use App\ApiResource\AgentTurn;
 use App\Repository\AgentTurnRepository;
-use App\Repository\UserRepository;
 use App\Security\OwnerContext;
 
 /**
@@ -26,7 +25,6 @@ final class AgentTurnCollectionProvider implements ProviderInterface
 
     public function __construct(
         private readonly AgentTurnRepository $turns,
-        private readonly UserRepository $users,
         private readonly OwnerContext $owner,
         private readonly TurnCostEstimator $cost,
     ) {
@@ -46,11 +44,10 @@ final class AgentTurnCollectionProvider implements ProviderInterface
         $surface = \is_string($surface) ? TurnSurface::tryFrom($surface) : null;
 
         $history = filter_var($operation->getParameters()?->get('history')?->getValue(), \FILTER_VALIDATE_BOOLEAN);
-        $clearedAt = $history ? $this->users->findOneByExternalId($owner)?->getHistoryClearedAt() : null;
 
         return array_map(
             fn ($turn): AgentTurn => AgentTurn::summaryOf($turn, $this->cost),
-            $this->turns->findForOwner($owner, self::LIMIT, $surface, $history, $clearedAt),
+            $this->turns->findForOwner($owner, self::LIMIT, $surface, $history),
         );
     }
 }

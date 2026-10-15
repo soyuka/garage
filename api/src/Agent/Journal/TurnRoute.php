@@ -8,7 +8,7 @@ namespace App\Agent\Journal;
  * The finder hash path a journal row reopens ("p/<plate>[/c/<categoryId>]" or
  * "k/<carId>-<carType>[/c/<categoryId>]", without the "#/"), and the vehicle it names.
  *
- * @phpstan-type JournalVehicle array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string}
+ * @phpstan-type JournalVehicle array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string, engine: ?string}
  */
 final readonly class TurnRoute
 {
@@ -84,6 +84,7 @@ final readonly class TurnRoute
             'carType' => self::text($data['carType'] ?? null),
             'make' => self::text($data['make'] ?? null),
             'model' => self::text($data['model'] ?? null),
+            'engine' => self::text($data['engine'] ?? null),
         ];
     }
 
