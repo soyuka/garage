@@ -20,7 +20,7 @@ use Webmozart\Assert\Assert;
  * exactly what GET /narrowed returns (one client mapper), and a model transcribing a 220-article
  * analysis would be slow, costly and lossy. The narrowing reads the article cache narrow_parts fills.
  */
-#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title, sentence case (« Filtre à huile »). rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); if totalArticles is 0 or narrowed is false with no clusters, the catalogue has nothing usable: fall back to web_search + show_web_part.', 'showParts')]
+#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title, sentence case (« Filtre à huile »). rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); status empty means the category holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part.', 'showParts')]
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE short impersonal French sentence stating what the source says that makes it fit this vehicle, never « Je… ».', 'showWebPart')]
 #[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle.', 'setVehicle')]
 #[AsTool('ask_question', 'Ask the user ONE short French question, answerable in one tap, when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 4 concrete options, each {label shown on the button: a value such as « Avant », not a sentence; value sent back}. context is a short note to yourself restating what was asked and why; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
@@ -63,13 +63,16 @@ final class FinderRenderTools
         if ($this->shown >= self::MAX_CATEGORIES) {
             return ['status' => 'refused', 'reason' => \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES)];
         }
-        ++$this->shown;
 
         $narrowed = get_object_vars(NarrowedParts::from(
             $this->vehicle->carId,
             $categoryId,
             $this->narrower->narrow($this->vehicle->carId, $this->vehicle->carType, $categoryId, $this->vehicle->make),
         ));
+        if (0 === $narrowed['totalArticles'] && [] === $narrowed['clusters']) {
+            return ['status' => 'empty', 'reason' => 'The catalogue lists no article in this category for this vehicle: nothing was drawn. Try the next most plausible sibling category once, then web_search + show_web_part.'];
+        }
+        ++$this->shown;
 
         $this->frames->publishFrame([
             'type' => 'showParts',

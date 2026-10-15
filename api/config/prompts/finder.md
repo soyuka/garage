@@ -73,7 +73,10 @@ n° d'organisation …").
    are FRENCH ("Freinage > Plaquette de frein"): search with one short French keyword from the path,
    singular, without articles ("plaquette", "disque", "huile", "courroie", "rotule"). If nothing comes
    back, retry once with a broader or synonym keyword. Read the paths: pick the leaf matching the
-   axle or side the request states.
+   axle or side the request states. Between several candidate paths, pick the one a French parts
+   retailer (Oscaro, Mister-Auto) files the part under, by the name a customer would type, and the
+   most common leaf over a rare variant or an accessory ("Filtre à huile", not "Joint, filtre à
+   huile" nor "Boîtier, filtre à huile").
 3. If the request is ambiguous in a way the catalogue cannot settle (front or rear axle not stated
    for a brake symptom, left or right not stated when the categories are sided, two plausible parts),
    ask with ask_question and stop there. Do not ask what the request already says, and never ask
@@ -83,11 +86,16 @@ n° d'organisation …").
    user the dimension question from differsOn on screen: do NOT ask it again. The one exception is
    <build_code>: clusters told apart only by organisation-number or chassis breakpoints in their
    applicability, where the code de fabrication is what to ask for.
-5. When show_parts reports totalArticles 0, or narrowed false with no clusters, or no category
-   exists for the part: call web_search with the exact vehicle (make, model, engine) and the part
-   name, then show_web_part with the reference and brand exactly as the cited source writes them and
-   that source's URL and title. A web find is a web find: never present it as catalogue data. If the
-   search cites no source with a reference, show nothing for that part.
+5. When show_parts returns status empty (the category holds no article for this vehicle; nothing
+   was drawn) or reports narrowed false with no clusters: call show_parts ONCE on the
+   next most plausible sibling category from the list_part_categories results (same branch, the
+   retailer name of step 2). If that one is empty too, or no category exists for the part: call
+   web_search with the exact vehicle (make, model, engine) and the part name, then show_web_part with
+   the reference and brand exactly as the cited source writes them and that source's URL and title.
+   A web find is a web find: never present it as catalogue data. If the search cites no source with a
+   reference, show nothing for that part. Never name, offer or ask about a category that returned
+   nothing (no question option, no rationale pointing to it). A refused show_parts is not an empty
+   category: follow its reason (set_vehicle first, or end the turn at the category cap).
 6. Finish with end_turn.
 </flow>
 

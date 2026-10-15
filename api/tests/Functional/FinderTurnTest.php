@@ -331,6 +331,27 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('set_vehicle', $results['toolResults'][0] ?? '');
     }
 
+    public function testAnEmptyCategoryIsNeverDrawnAndTellsTheAgentToTryASibling(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('e1', 'show_parts', ['categoryId' => 999999, 'categoryLabel' => 'Filtre vide', 'rationale' => 'Demandé.']),
+            new ToolCall('e2', 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Filtre à huile', 'rationale' => 'Demandé.']),
+            new ToolCall('e3', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('filtre à huile', 'sess-empty');
+
+        $empty = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('empty', $empty['status'] ?? null);
+        self::assertStringContainsString('sibling', $empty['reason'] ?? '');
+        $shown = array_values(array_filter(self::frames('sess-empty'), static fn (array $f): bool => 'showParts' === $f['type']));
+        self::assertSame([100259], array_column($shown, 'categoryId'));
+    }
+
     public function testImagesReachTheModelAndOnlyTheirShapeIsJournaled(): void
     {
         $client = static::createClient();
