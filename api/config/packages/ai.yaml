@@ -1,4 +1,17 @@
 ai:
+    model:
+        anthropic:
+            claude-sonnet-5-5:
+                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
+                capabilities:
+                    - input-messages
+                    - output-text
+                    - output-streaming
+                    - tool-calling
+                    - output-structured
+                    - thinking
+                    - input-image
+                    - input-pdf
     platform:
         anthropic:
             api_key: '%env(ANTHROPIC_API_KEY)%'
@@ -34,12 +47,20 @@ ai:
             # Raised Haiku → Sonnet: narrate_step and the propose_actions/toast copy are now
             # model-authored prose the user actually reads (and, under the audition, hears spoken),
             # and Haiku's phrasing there was visibly weaker than the pilot path's (which already runs
-            # Sonnet). claude-sonnet-4-6 is the highest Sonnet id in the vendored fork's catalog
-            # (vendor/symfony/ai-platform/src/Bridge/Anthropic/ModelCatalog.php) — that catalog is the
-            # ceiling: an id absent from it throws ModelNotFoundException, so do not chase a newer one
-            # without confirming it is vendored first.
+            # Sonnet). Now Sonnet 5.5 ($2/$10 per MTok, cheaper than 4.6's $3/$15). The vendored
+            # catalog (vendor/symfony/ai-anthropic-platform/ModelCatalog.php) stops at claude-sonnet-5,
+            # and an id absent from it throws ModelNotFoundException, so claude-sonnet-5-5 is
+            # registered under `ai.model.anthropic` below (merged over the defaults by ModelCatalog),
+            # with the capability list of claude-sonnet-5 — no vendor patch.
+            #
+            # thinking[type]=between_tools: Sonnet 5.5 rejects `thinking: {type: disabled}` (400) and
+            # omitting `thinking` turns adaptive thinking ON. between_tools is the closest to the
+            # thinking-off behaviour this agent ran on 4.6; the query string is parsed by
+            # AbstractModelCatalog::parseModelName and lands verbatim in the request body. The bridge
+            # never sends temperature/top_p/top_k, a forced tool_choice (it defaults to auto) or an
+            # assistant prefill — all 400s on 5.5 — so keep it that way.
             platform: 'ai.platform.anthropic'
-            model: 'claude-sonnet-4-6?max_tokens=8192'
+            model: 'claude-sonnet-5-5?max_tokens=8192&thinking[type]=between_tools'
             #
             # Alibaba Cloud Qwen. Web search is NOT tied to the orchestrator: it is the provider-agnostic
             # web_search custom tool, so keep AGENT_WEB_SEARCH=off and pick its backend with
@@ -111,6 +132,13 @@ ai:
                     - propose_actions is a last resort, only when you must ask the user to choose a
                       direction you cannot decide. A turn that completed a clear action ends with a toast
                       + select_vehicle + end_turn, with no card bolted on.
+                    - The finding (and any toast) is a SPOKEN SUMMARY, two short sentences at most and never more than
+                      200 characters (140 for a toast): the answer first, then at most one sentence of
+                      source or caveat. When the exact value is not documented for this vehicle's variant but
+                      is documented for a sibling variant, say so in one line, e.g. "Probablement 44 N·m,
+                      relevé sur la boîte auto P9X ; pas trouvé pour la PK6." Torques: the Renault manuals
+                      give daN.m — answer in N·m (multiply by 10), optionally with the daN.m value in
+                      parentheses. No paragraph-long hedging.
                     </output_contract>
 
                     <routing>
