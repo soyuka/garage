@@ -8,7 +8,7 @@ import { facingAngle, filterCotes, rimTop, visibleLabels, type CoteKey, type Fil
 import { Arrowheads, chainSegments, ORDER, OVERLAY, type ArrowTip } from './Dimension';
 import { filterScale } from './filterScale';
 import { HiddenLine } from './HiddenLine';
-import { prepareMesh } from './meshGeometries';
+import { DRACO_PATH, prepareMesh } from './meshGeometries';
 import { DRAFT_BLUE, LINE_THIN } from './palette';
 
 export const FILTER_URL = `${import.meta.env.BASE_URL}parts/oil-filter.glb`;
@@ -21,7 +21,7 @@ interface Props {
 }
 
 export function FilterPart({ dimensions, ghost, reducedMotion }: Props) {
-  const { scene } = useGLTF(FILTER_URL);
+  const { scene } = useGLTF(FILTER_URL, DRACO_PATH);
   const mesh = useMemo(() => prepareMesh(scene, METRES_TO_MM, 'base'), [scene]);
   const scale = useMemo(() => filterScale(mesh.size, dimensions), [mesh, dimensions]);
   const labels = useMemo(() => filterAnnotations(dimensions), [dimensions]);
@@ -155,4 +155,4 @@ function ThreadNote({ cote, label, labelRef }: { cote: FilterCotes['thread']; la
   );
 }
 
-useGLTF.preload(FILTER_URL);
+useGLTF.preload(FILTER_URL, DRACO_PATH);

@@ -7,6 +7,7 @@ import type { Dimension, Family } from '../types';
 import { BrakePart } from './BrakePart';
 import { FilterPart } from './FilterPart';
 import { GenericPart } from './GenericPart';
+import { MeshPart } from './MeshPart';
 import { turntableStep } from './turntable';
 
 export interface Focus {
@@ -90,6 +91,7 @@ export function Blueprint({ family, dimensions, ghost, reducedMotion, focus, ext
       <Suspense fallback={null}>
         {family.kind === 'filter' && <FilterPart dimensions={dimensions} ghost={ghost} reducedMotion={reducedMotion} />}
         {family.kind === 'brake' && <BrakePart axle={family.axle} component={family.component} dimensions={dimensions} ghost={ghost} />}
+        {family.kind === 'mesh' && <MeshPart mesh={family.mesh} ghost={ghost} />}
         {family.kind === 'generic' && <GenericPart ghost={ghost} />}
       </Suspense>
       <OrbitControls

@@ -6,11 +6,10 @@ import type { Dimension } from '../types';
 import { brakeAnnotations, type BrakeComponent } from './annotations';
 import { DimensionLine, Leader } from './Dimension';
 import { HiddenLine } from './HiddenLine';
-import { prepareMesh } from './meshGeometries';
+import { DRACO_PATH, prepareMesh } from './meshGeometries';
 
 const BASE = import.meta.env.BASE_URL;
 const URLS = { front: `${BASE}parts/front-brake-web.glb`, rear: `${BASE}parts/rear-brake-web.glb` } as const;
-const DRACO = `${BASE}draco/`;
 const METRES_TO_MM = 1000;
 const RIM = 0.985;
 
@@ -40,7 +39,7 @@ function rimHeight(geometries: BufferGeometry[], radius: number): number {
 // The disc axis is Y and its rim is the widest thing in X: the assembly is scaled so the disc reads at
 // the catalogue diameter when there is one, at the mesh's own size otherwise (and then no cote is drawn).
 export function BrakePart({ axle, component, dimensions, ghost }: Props) {
-  const { scene } = useGLTF(URLS[axle], DRACO);
+  const { scene } = useGLTF(URLS[axle], DRACO_PATH);
   const labels = useMemo(() => brakeAnnotations(dimensions, component), [dimensions, component]);
   const target = component === 'disc' ? measure(dimensions, 'outer')?.mid ?? null : null;
   const { geometries, size, R, rimY } = useMemo(() => {

@@ -1,3 +1,5 @@
+import type { MeshId } from './meshes';
+
 export type CarType = 'PC' | 'CV';
 
 export interface Vehicle {
@@ -125,6 +127,7 @@ export type ErrorKind = 'network' | 'notFound' | 'auth' | 'quota' | 'upstream' |
 export type Family =
   | { kind: 'brake'; axle: 'front' | 'rear'; component: 'disc' | 'other' }
   | { kind: 'filter'; filter: 'oil' | 'fuel' | 'air' }
+  | { kind: 'mesh'; mesh: MeshId; approximate: boolean }
   | { kind: 'generic' }
   | { kind: 'none' };
 

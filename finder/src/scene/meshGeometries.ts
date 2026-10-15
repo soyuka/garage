@@ -1,5 +1,7 @@
 import { Box3, BufferGeometry, Mesh, Object3D, Vector3 } from 'three';
 
+export const DRACO_PATH = `${import.meta.env.BASE_URL}draco/`;
+
 export interface PreparedMesh {
   geometries: BufferGeometry[];
   size: Vector3;

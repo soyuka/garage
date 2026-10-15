@@ -30,6 +30,7 @@ function extentFor(family: Family, dims: readonly Dimension[]): number {
 }
 
 export const GENERIC_CAPTION = 'Aperçu générique — pas de modèle 3D pour cette pièce';
+export const APPROXIMATE_CAPTION = 'Aperçu : forme générique de la famille';
 
 export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, notes, children }: Props) {
   const ref = useRef<HTMLDivElement>(null);
@@ -71,6 +72,7 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
         </div>
       )}
       {family.kind === 'generic' && !status && <p className="sheet-caption">{GENERIC_CAPTION}</p>}
+      {family.kind === 'mesh' && family.approximate && !status && <p className="sheet-caption">{APPROXIMATE_CAPTION}</p>}
       {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser pour tourner · molette pour zoomer</div>}
       {overlayWidth && children ? (
         <div className="sheet-side" style={{ width: overlayWidth }}>

@@ -34,7 +34,7 @@ const FAMILY_VIEW: Record<string, string> = {
 const viewLabel = (family: Family, category: Category | null): string => {
   if (family.kind === 'filter') return `VUE 3D — ${(category?.label ?? 'filtre').toUpperCase()}`;
   if (family.kind === 'brake') return FAMILY_VIEW[family.axle] ?? 'VUE 3D';
-  if (family.kind === 'generic' && category) return `VUE 3D — ${category.label.toUpperCase()}`;
+  if ((family.kind === 'generic' || family.kind === 'mesh') && category) return `VUE 3D — ${category.label.toUpperCase()}`;
   return category ? category.label.toUpperCase() : 'PLANCHE';
 };
 
