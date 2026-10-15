@@ -53,6 +53,7 @@ export interface JournalRow {
   images: { mimeType: string; bytes: number }[];
   search: SearchInfo | null;
   route: string | null;
+  categoryLabel: string | null;
   vehicle: RowVehicle | null;
 }
 
@@ -125,6 +126,7 @@ function mapRow(raw: unknown): JournalRow | null {
     }),
     search: mapSearch(j.search),
     route: str(j.route),
+    categoryLabel: str(j.categoryLabel),
     vehicle: isObject(j.vehicle)
       ? { plate: str(j.vehicle.plate), carId: num(j.vehicle.carId), carType: str(j.vehicle.carType), make: str(j.vehicle.make), model: str(j.vehicle.model) }
       : null,

@@ -21,6 +21,9 @@ function vehicleName(row: JournalRow): string | null {
   return vehicleShortName(shape);
 }
 
+// A page opened by URL journals the bare category id as its input: never show that.
+const label = (row: JournalRow): string => row.categoryLabel ?? (/^\d+$/.test(row.instruction.trim()) ? '' : row.instruction);
+
 // The home page's recent searches: journal rows the server could give a route, newest first, one per
 // route. The route is re-parsed so only a hash the page itself would produce is ever followed.
 export function historyEntries(rows: readonly JournalRow[]): HistoryEntry[] {
@@ -33,7 +36,7 @@ export function historyEntries(rows: readonly JournalRow[]): HistoryEntry[] {
     const hash = routeToHash(route);
     if (seen.has(hash)) continue;
     seen.add(hash);
-    out.push({ id: row.id, hash, input: row.instruction, vehicle: { plate: row.vehicle?.plate ?? null, name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt });
+    out.push({ id: row.id, hash, input: label(row), vehicle: { plate: row.vehicle?.plate ?? null, name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt });
     if (out.length === MAX) break;
   }
   return out;

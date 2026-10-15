@@ -80,6 +80,24 @@ final class PartsCatalog
     }
 
     /**
+     * The category's name from the part-category tree only when it is already cached: never an upstream call.
+     */
+    public function cachedCategoryName(int $carId, int $categoryId, CarType $carType): ?string
+    {
+        $nodes = $this->client->peek('getSearchTree', ['carId' => $carId, 'carType' => $carType->value, 'lang' => $this->lang]);
+        if (null === $nodes) {
+            return null;
+        }
+        foreach (PartCategory::fromPartsApiTree($nodes, false) as $category) {
+            if ($category->id === $categoryId) {
+                return '' === $category->name ? null : $category->name;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @return list<Article>
      */
     public function articles(int $carId, int $categoryId, CarType $carType): array

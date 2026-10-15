@@ -82,6 +82,8 @@ final class AgentTurn
     public ?array $search = null;
     #[ApiProperty(description: 'The finder hash path (without "#/") that reopens what the row searched: p/<plate> or k/<carId>-<carType>, then /c/<categoryId> when a category is known; null when no vehicle is known.')]
     public ?string $route = null;
+    #[ApiProperty(description: 'French TecDoc name of the category the row searched or showed (last show_parts of an agent turn; the cached part-category tree for a search); null when unknown.')]
+    public ?string $categoryLabel = null;
     /** @var array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string}|null */
     #[ApiProperty(description: 'The vehicle the row was about: the last set_vehicle of an agent turn, else the vehicle the page sent; for a search, what it resolved.')]
     public ?array $vehicle = null;
@@ -135,6 +137,7 @@ final class AgentTurn
             : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments()], $turn->getToolCalls()));
         $resource->route = $route->route;
         $resource->vehicle = $route->vehicle;
+        $resource->categoryLabel = $turn->getCategoryLabel();
         $resource->cacheReadTokens = $turn->getCacheReadTokens();
         $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
         $resource->estimatedCostUsd = $cost?->estimate($turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());

@@ -126,6 +126,10 @@ class AgentTurn
     #[ODM\Field(type: 'hash', nullable: true)]
     private ?array $vehicle = null;
 
+    // Class-level default: a constructor-promoted nullable field 500s on documents written before it existed.
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $categoryLabel = null;
+
     public function __construct(
         #[ODM\Field(type: 'string')]
         private string $owner,
@@ -258,6 +262,16 @@ class AgentTurn
     public function addToolCall(AgentTurnToolCall $toolCall): void
     {
         $this->toolCalls->add($toolCall);
+
+        $label = $toolCall->getArguments()['categoryLabel'] ?? null;
+        if ('show_parts' === $toolCall->getName() && \is_string($label) && '' !== trim($label) && !str_contains($toolCall->getResult(), '"status":"refused"')) {
+            $this->categoryLabel = trim($label);
+        }
+    }
+
+    public function getCategoryLabel(): ?string
+    {
+        return $this->categoryLabel;
     }
 
     public function getWebSearchCount(): int
@@ -402,12 +416,13 @@ class AgentTurn
      * @param array<string, mixed> $search
      * @param array<string, int>   $partsApiCallsByMethod
      */
-    public static function search(string $owner, string $input, array $search, array $partsApiCallsByMethod, int $durationMs, AgentTurnStatus $status): self
+    public static function search(string $owner, string $input, array $search, array $partsApiCallsByMethod, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null): self
     {
         $turn = new self($owner, '', $input, '', '', '', false);
         $turn->kind = AgentTurnKind::Search;
         $turn->surface = TurnSurface::Finder;
         $turn->search = $search;
+        $turn->categoryLabel = $categoryLabel;
         $turn->recordPartsApiCalls($partsApiCallsByMethod);
         $turn->status = $status;
         $turn->finishedAt = new \DateTimeImmutable();

@@ -90,6 +90,65 @@ final class FinderJournalTest extends AppTestCase
         self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null], $listed[0]['vehicle']);
     }
 
+    public function testANarrowedSearchCarriesTheCategoryLabelFromTheCachedTree(): void
+    {
+        $client = static::createClient();
+        $client->request('GET', '/cars/19107/part-categories?carType=PC', ['headers' => self::authHeaders()]);
+        self::assertResponseIsSuccessful();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => '100259'],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame('Filtre à huile', $this->rows()[0]->getCategoryLabel());
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame('Filtre à huile', $listed[0]['categoryLabel']);
+        $item = $client->request('GET', $listed[0]['@id'], ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
+        self::assertSame('Filtre à huile', $item['categoryLabel']);
+    }
+
+    public function testANarrowedSearchSpendsNoCallOnAnUncachedTree(): void
+    {
+        $client = static::createClient();
+        static::getContainer()->get('cache.partsapi')->clear();
+
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => '100259'],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        $row = $this->rows()[0];
+        self::assertNull($row->getCategoryLabel());
+        self::assertArrayNotHasKey('getSearchTree', $row->getPartsApiCallsByMethod());
+    }
+
+    public function testAnAgentTurnCarriesTheLastShownCategoryLabel(): void
+    {
+        $client = static::createClient();
+        $this->seed('rotule', TurnSurface::Finder, static function (AgentTurn $t): void {
+            $t->addToolCall(new AgentTurnToolCall(0, 'show_parts', ['categoryId' => 1, 'categoryLabel' => 'Silentbloc', 'rationale' => 'x'], '{"status":"refused"}', new \DateTimeImmutable()));
+            $t->addToolCall(new AgentTurnToolCall(1, 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Rotule', 'rationale' => 'x'], '{"status":"shown"}', new \DateTimeImmutable()));
+        });
+
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame('Rotule', $listed[0]['categoryLabel']);
+    }
+
+    public function testALegacyDocumentWithoutTheFieldStillHydrates(): void
+    {
+        $client = static::createClient();
+        $turn = $this->seed('filtre', TurnSurface::Finder);
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $dm->getDocumentCollection(AgentTurn::class)->updateOne(['_id' => (string) $turn->getId()], ['$unset' => ['categoryLabel' => '']]);
+        $dm->clear();
+
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertResponseIsSuccessful();
+        self::assertSame('filtre', $listed[0]['instruction']);
+        self::assertArrayNotHasKey('categoryLabel', $listed[0]);
+    }
+
     public function testANarrowedSearchCarryingThePagePlateRoutesToThePlate(): void
     {
         $client = static::createClient();

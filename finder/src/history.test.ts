@@ -32,6 +32,17 @@ describe('historyEntries', () => {
     expect(search).toMatchObject({ hash: '#/p/XB-301-ZB/c/100259', vehicle: { plate: 'XB-301-ZB', name: 'Mazda 6' }, outcome: { label: '1 pièce' } });
   });
 
+  it('shows the category label, else the typed text, never a bare category id', () => {
+    const r = mapRows({
+      member: [
+        row('a', '2026-10-15T10:00:00+02:00', { instruction: '100259', categoryLabel: 'Filtre à huile', route: 'k/19107-PC/c/100259' }),
+        row('b', '2026-10-15T09:00:00+02:00', { instruction: 'filtre à huile', route: 'k/19107-PC/c/100260' }),
+        row('c', '2026-10-15T08:00:00+02:00', { instruction: '100261', route: 'k/19107-PC/c/100261' }),
+      ],
+    });
+    expect(historyEntries(r).map((e) => e.input)).toEqual(['Filtre à huile', 'filtre à huile', '']);
+  });
+
   it('caps the list', () => {
     const many = mapRows({ member: Array.from({ length: 30 }, (_, i) => row(String(i), `2026-10-${String(i % 28 + 1).padStart(2, '0')}T10:00:00+02:00`, { route: `p/XB-301-ZB/c/${100000 + i}` })) });
     expect(historyEntries(many)).toHaveLength(10);

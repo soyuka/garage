@@ -113,6 +113,20 @@ final class PartsApiClient
     }
 
     /**
+     * The cached response, or null when there is none: never spends an upstream call.
+     *
+     * @param array<string, int|string> $params
+     *
+     * @return list<array<string, mixed>>|null
+     */
+    public function peek(string $method, array $params): ?array
+    {
+        $item = $this->cache->getItem($this->cacheKey($method, $params));
+
+        return $item->isHit() ? $item->get() : null;
+    }
+
+    /**
      * Cache key = <method>.sha1(signature), where the signature is the method + params
      * WITHOUT the secret key. The signature is identical to prototype_1, so the sha1 is
      * byte-stable and already-paid responses import 1:1.

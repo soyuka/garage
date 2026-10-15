@@ -7,6 +7,7 @@ namespace App\Finder;
 use App\ApiResource\NarrowedParts;
 use App\ApiResource\Vehicle;
 use App\ApiResource\VinDecoding;
+use App\Catalog\PartsCatalog;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\PartsApi\CarType;
@@ -45,6 +46,7 @@ final class FinderSearchJournalListener
     public function __construct(
         private readonly Security $security,
         private readonly PartsApiClient $partsApi,
+        private readonly PartsCatalog $catalog,
         private readonly DocumentManager $documentManager,
         private readonly LoggerInterface $logger,
     ) {
@@ -103,11 +105,21 @@ final class FinderSearchJournalListener
                 partsApiCallsByMethod: $spent,
                 durationMs: (int) ((hrtime(true) - $started) / 1_000_000),
                 status: $status < 400 ? AgentTurnStatus::Completed : AgentTurnStatus::Failed,
+                categoryLabel: $this->categoryLabel($data, $request),
             ));
             $this->documentManager->flush();
         } catch (\Throwable $e) {
             $this->logger->error('Failed to journal a finder search: {error}', ['error' => $e->getMessage()]);
         }
+    }
+
+    private function categoryLabel(mixed $data, Request $request): ?string
+    {
+        if (!$data instanceof NarrowedParts) {
+            return null;
+        }
+
+        return $this->catalog->cachedCategoryName($data->carId, $data->categoryId, CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar);
     }
 
     /**
