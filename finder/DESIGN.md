@@ -239,7 +239,7 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 - **Tags:** 11.5px, 3px radius, panel fill; `ok` = blue outline on paper; `warn` = warn on warn tint.
 
 ### Navigation and Lists
-- **Recent searches (home, logged in):** the journal's last 10 restorable searches (`history.ts`), rows of input · plate + vehicle · outcome tag · relative time (`formatRelative`, exact time on hover) on hairline rules under a graphite top rule; one click follows the server-computed route.
+- **Recent searches (home, logged in):** the journal's last 10 restorable searches (`history.ts`), rows of input · plate + vehicle · outcome tag · relative time (`formatRelative`, exact time on hover) on hairline rules under a graphite top rule; one click follows the server-computed route. "Effacer" (text button right of the heading) hides every row up to now (`historyClearedAt` on the user, `?history=1`) with a 5 s "Historique effacé · Annuler" toast instead of a confirm dialog; a ✕ per row ("Retirer de l'historique", on hover/focus, always on touch) hides that route. Hiding never deletes: the journal drawer keeps every entry.
 - **Question card:** panel fill, 8px radius, question in 14px/500, answers as secondary buttons (Mono only for cluster answers), hint below.
 - **Garage picker:** on a 409 from the garage, the candidates as buttons `plate · model`, plus `Nouveau véhicule` (confirmNew) and `Annuler` (`ui/Garage.tsx`).
 - **Trace (sheet note "Affinage"):** label/value rows on hairline rules under a graphite top rule; the result row is graphite-ruled and blue.
