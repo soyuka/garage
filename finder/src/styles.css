@@ -1351,13 +1351,15 @@ button {
   overflow-wrap: anywhere;
 }
 
-.dock-quick {
+.dock-quick,
+.dock-starters {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
 
-.dock-quick .btn--quiet {
+.dock-quick .btn--quiet,
+.dock-starters .btn--quiet {
   font-weight: 400;
 }
 

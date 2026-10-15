@@ -6,6 +6,7 @@ import { liveApi, newTrace, type FinderApi, type Trace } from './client';
 import { partFamily } from './family';
 import { resultSummary } from './followup';
 import { historyEntries, type HistoryEntry } from './history';
+import { STARTERS } from './home';
 import { MediaError, pickSharpest, prepareImage, sampleVideo, type Frame } from './media';
 import { buildQuestion } from './question';
 import { parseRef, type Route } from './route';
@@ -304,6 +305,7 @@ function Finder({ api }: { api: FinderApi }) {
       note={note}
       slot={setSlot}
       quick={quick}
+      starters={entry ? STARTERS : []}
       categories={entry ? null : cats}
       loading={categories.status === 'loading'}
       busy={busyReading}

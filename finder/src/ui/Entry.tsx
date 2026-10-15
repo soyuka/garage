@@ -1,11 +1,12 @@
 import type { ReactNode } from 'react';
+import { HOME } from '../home';
 import type { Registration, VinDecode } from '../types';
 
 export function Entry({ children }: { children?: ReactNode }) {
   return (
     <section className="entry" aria-labelledby="entry-title">
-      <h1 id="entry-title">Quelle pièce, pour quel véhicule ?</h1>
-      <p className="entry-lede">Saisissez la plaque ou le VIN, puis la pièce.</p>
+      <h1 id="entry-title">{HOME.headline}</h1>
+      <p className="entry-lede">{HOME.lede}</p>
       {children && <div className="entry-panel">{children}</div>}
     </section>
   );

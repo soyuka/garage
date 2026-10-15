@@ -1,4 +1,5 @@
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent } from 'react';
+import { HOME } from '../home';
 import { routeText, type TextRoute } from '../route-input';
 import { searchCategories } from '../search';
 import type { Category } from '../types';
@@ -145,7 +146,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           aria-autocomplete="list"
           aria-describedby={`${id}-hint`}
           aria-activedescendant={showList && navigated && active < optionCount ? `${id}-o${active}` : undefined}
-          placeholder={loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : 'AB-123-CD'}
+          placeholder={loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder}
           value={text}
           autoComplete="off"
           autoCapitalize="off"
