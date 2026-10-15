@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Agent\Finder\FinderVehicle;
+use App\Agent\TurnSurface;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -54,6 +56,19 @@ final class AgentTurnController
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
         }
 
+        $surface = TurnSurface::tryFrom((string) ($payload['surface'] ?? TurnSurface::Garage->value));
+        if (null === $surface) {
+            return new JsonResponse(['error' => 'surface must be one of: garage, finder'], Response::HTTP_BAD_REQUEST);
+        }
+
+        $vehicle = null;
+        if (TurnSurface::Finder === $surface) {
+            $vehicle = FinderVehicle::fromPayload(\is_array($payload['vehicle'] ?? null) ? $payload['vehicle'] : []);
+            if (null === $vehicle) {
+                return new JsonResponse(['error' => 'a finder turn needs vehicle.carId (and a PC/CV carType)'], Response::HTTP_BAD_REQUEST);
+            }
+        }
+
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
         // owner is always present — the turn never runs unowned.
         $this->bus->dispatch(new RunAgentTurn(
@@ -66,6 +81,8 @@ final class AgentTurnController
             // Not a payload field: the browser already announces its language on the request, so the
             // dashboard's choice arrives for free (framework.yaml `set_locale_from_accept_language`).
             locale: Locale::resolve($request->getLocale())->value,
+            surface: $surface,
+            vehicle: $vehicle,
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);

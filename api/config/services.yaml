@@ -78,6 +78,26 @@ services:
             $mcpToolbox: '@App\Mcp\Agent\McpToolbox'
             $narrator: '@App\Agent\Ui\StepNarrator'
 
+    # The finder agent (ai.yaml `finder`): its render tools stay out of the `ai.tool` tag so the garage
+    # agent's `tools: true` never picks them up; the finder lists this service explicitly instead.
+    App\Agent\Finder\FinderRenderTools:
+        autoconfigure: false
+
+    # The catalogue READ tools only — an allowlist, so a new garage write tool can never reach the finder.
+    app.finder.mcp_toolbox:
+        class: App\Mcp\Agent\McpToolbox
+        arguments:
+            $server: '@mcp.server.garage'
+            $only: ['lookup_plate', 'decode_vin', 'list_part_categories', 'get_service_parts']
+
+    app.finder.composite_toolbox:
+        class: App\Agent\Toolbox\CompositeToolbox
+        decorates: ai.toolbox.finder
+        arguments:
+            $renderToolbox: '@.inner'
+            $mcpToolbox: '@app.finder.mcp_toolbox'
+            $narrator: '@App\Agent\Ui\StepNarrator'
+
     # Log Anthropic server-side tool use (web_search) per call. Decorates the platform the garage
     # agent runs on: server tools leave no Toolbox call or domain write, so the platform's raw
     # response is the only place their use is observable. The decorated platform is a lazy proxy

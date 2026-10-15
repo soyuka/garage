@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Agent\Exception\RepeatedToolFailureException;
+use App\Agent\Finder\FinderContextBuilder;
+use App\Agent\Finder\FinderRenderTools;
+use App\Agent\TurnSurface;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\SelectedVehicleContext;
 use App\Agent\TurnContextBuilder;
@@ -52,6 +55,9 @@ final readonly class RunAgentTurnHandler
 {
     public function __construct(
         private AgentInterface $garage,
+        private AgentInterface $finder,
+        private FinderRenderTools $finderTools,
+        private FinderContextBuilder $finderContext,
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
         private RepeatedToolFailureGuard $repeatedToolFailureGuard,
@@ -101,16 +107,22 @@ final readonly class RunAgentTurnHandler
         // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
         // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
         $this->stepNarrator->reset();
+        if (TurnSurface::Finder === $message->surface && null !== $message->vehicle) {
+            $this->finderTools->bindVehicle($message->vehicle);
+        }
+        [$agent, $context] = match ($message->surface) {
+            TurnSurface::Finder => [$this->finder, $this->finderContext->build($message)],
+            TurnSurface::Garage => [$this->garage, $this->contextBuilder->build($message)],
+        };
         // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so
         // the journal records exactly what the model saw (instruction + inlined facts/tasks).
-        $context = $this->contextBuilder->build($message);
         $this->journal->begin($message, $context);
         $this->renderTools->signalTurnPhase('start');
 
         $status = AgentTurnStatus::Completed;
         $error = null;
         try {
-            $result = $this->garage->call(
+            $result = $agent->call(
                 new MessageBag(Message::ofUser($context)),
                 ['stream' => true],
             );

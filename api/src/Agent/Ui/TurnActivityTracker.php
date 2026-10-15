@@ -30,6 +30,7 @@ final class TurnActivityTracker
         'log_maintenance', 'plan_maintenance', 'edit_maintenance', 'set_maintenance_schedule', 'update_vehicle', 'dismiss_maintenance', 'remove_planned_part',
         'select_vehicle', 'open_vehicle', 'toast', 'show_fact', 'focus_view', 'reveal_assembly', 'show_document',
         'propose_actions', 'end_turn',
+        'show_parts', 'show_web_part', 'ask_question',
     ];
 
     private bool $productive = false;

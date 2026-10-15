@@ -1,0 +1,123 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Agent\Finder;
+
+use App\ApiResource\NarrowedParts;
+use App\Agent\Ui\RenderIntentTools;
+use App\Catalog\Narrowing\ArticleNarrower;
+use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
+use Webmozart\Assert\Assert;
+
+/**
+ * The finder's render intents, published as frames on the finder tab's turn session topic. Kept OUT
+ * of the `ai.tool` tag (autoconfigure: false in services.yaml): the garage agent takes every tagged
+ * tool (`tools: true`), and these must reach the finder agent only, which lists this service by name.
+ *
+ * show_parts narrows server-side instead of taking the payload as an argument: the frame must carry
+ * exactly what GET /narrowed returns (one client mapper), and a model transcribing a 220-article
+ * analysis would be slow, costly and lossy. The narrowing reads the article cache narrow_parts fills.
+ */
+#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title (« Filtre à huile »). rationale is ONE French sentence on why this part answers the request. Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again; if totalArticles is 0 or narrowed is false with no clusters, the catalogue has nothing usable: fall back to web_search + show_web_part.', 'showParts')]
+#[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE French sentence on why it fits this vehicle.', 'showWebPart')]
+#[AsTool('ask_question', 'Ask the user ONE short French question when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 4 options, each {label shown on the button, value sent back}. context is a short note to yourself restating what was asked and why; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
+final class FinderRenderTools
+{
+    public const MAX_CATEGORIES = 4;
+
+    private ?FinderVehicle $vehicle = null;
+
+    private int $shown = 0;
+
+    public function __construct(
+        private readonly RenderIntentTools $frames,
+        private readonly ArticleNarrower $narrower,
+    ) {
+    }
+
+    /** Bound once per finder turn by the handler — the worker is long-lived, so this also resets the per-turn count. */
+    public function bindVehicle(FinderVehicle $vehicle): void
+    {
+        $this->vehicle = $vehicle;
+        $this->shown = 0;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function showParts(int $categoryId, string $categoryLabel, string $rationale): array
+    {
+        Assert::notNull($this->vehicle, 'show_parts needs the finder vehicle of the turn.');
+        Assert::greaterThan($categoryId, 0);
+        Assert::stringNotEmpty(trim($categoryLabel));
+        if ($this->shown >= self::MAX_CATEGORIES) {
+            return ['status' => 'refused', 'reason' => \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES)];
+        }
+        ++$this->shown;
+
+        $narrowed = get_object_vars(NarrowedParts::from(
+            $this->vehicle->carId,
+            $categoryId,
+            $this->narrower->narrow($this->vehicle->carId, $this->vehicle->carType, $categoryId, $this->vehicle->make),
+        ));
+
+        $this->frames->publishFrame([
+            'type' => 'showParts',
+            'categoryId' => $categoryId,
+            'categoryLabel' => trim($categoryLabel),
+            'rationale' => trim($rationale),
+            'narrowed' => $narrowed,
+        ]);
+
+        return [
+            'status' => 'shown',
+            'totalArticles' => $narrowed['totalArticles'],
+            'narrowed' => $narrowed['narrowed'],
+            'degradedReason' => $narrowed['degradedReason'],
+            'clusters' => array_map(static fn (array $c): array => [
+                'id' => $c['id'],
+                'representative' => $c['representative']['brand'].' '.$c['representative']['number'],
+                'oe' => array_map(static fn (array $r): string => $r['brand'].' '.$r['number'], \array_slice($c['oeNumbers'], 0, 2)),
+            ], $narrowed['clusters']),
+            'differsOn' => array_column($narrowed['differsOn'], 'label'),
+        ];
+    }
+
+    public function showWebPart(string $categoryLabel, string $reference, string $brand, string $sourceUrl, string $sourceTitle, string $rationale): string
+    {
+        Assert::stringNotEmpty(trim($reference));
+        Assert::regex($sourceUrl, '#^https?://#', 'sourceUrl must be the http(s) URL of the cited source.');
+
+        $this->frames->publishFrame([
+            'type' => 'showWebPart',
+            'categoryLabel' => trim($categoryLabel),
+            'reference' => trim($reference),
+            'brand' => trim($brand),
+            'sourceUrl' => $sourceUrl,
+            'sourceTitle' => trim($sourceTitle),
+            'rationale' => trim($rationale),
+        ]);
+
+        return 'ok';
+    }
+
+    /**
+     * @param list<QuestionOption> $options
+     */
+    public function askQuestion(string $question, array $options, string $context): string
+    {
+        Assert::stringNotEmpty(trim($question));
+        Assert::allIsInstanceOf($options, QuestionOption::class);
+        Assert::countBetween($options, 2, 4);
+
+        $this->frames->publishFrame([
+            'type' => 'askQuestion',
+            'question' => trim($question),
+            'options' => array_map(static fn (QuestionOption $o): array => ['label' => $o->label, 'value' => $o->value], array_values($options)),
+            'context' => $context,
+        ]);
+
+        return 'ok';
+    }
+}

@@ -24,6 +24,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  *  - `propose_actions` — also terminal: it poses a full question back to the user whose answer arrives
  *    as the NEXT turn via the CTA buttons, so there is nothing left to do this turn. The CTA was
  *    already published over Mercure by {@see RenderIntentTools::proposeActions()}.
+ *  - `ask_question` — the finder's twin of propose_actions: the answer arrives as the next turn.
  *
  * The empty text is never shown (the generative-UI has no prose channel). Complements the hard cap in
  * {@see \App\DependencyInjection\Compiler\AgentMaxToolCallsPass}, which is the backstop for a model
@@ -33,7 +34,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 final class TerminalToolListener
 {
     /** A call to any of these ends the turn. */
-    private const TERMINAL_TOOLS = ['end_turn', 'propose_actions'];
+    private const TERMINAL_TOOLS = ['end_turn', 'propose_actions', 'ask_question'];
 
     public function __invoke(ToolCallsExecuted $event): void
     {

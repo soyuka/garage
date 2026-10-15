@@ -62,8 +62,15 @@ class McpToolbox implements ToolboxInterface
     /** @var list<Tool>|null */
     private ?array $tools = null;
 
-    public function __construct(private readonly Server $server)
-    {
+    /**
+     * @param list<string>|null $only an ALLOWLIST on top of the denylist, for an agent that must see a
+     *                                fixed read-only subset (the finder): there, failing closed on a new
+     *                                tool is the point — a garage write must never leak into it
+     */
+    public function __construct(
+        private readonly Server $server,
+        private readonly ?array $only = null,
+    ) {
     }
 
     public function getTools(): array
@@ -77,6 +84,9 @@ class McpToolbox implements ToolboxInterface
         $tools = [];
         foreach ($response['result']['tools'] ?? [] as $definition) {
             if (\in_array($definition['name'], self::EXCLUDED, true)) {
+                continue;
+            }
+            if (null !== $this->only && !\in_array($definition['name'], $this->only, true)) {
                 continue;
             }
 

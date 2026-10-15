@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Message;
 
+use App\Agent\Finder\FinderVehicle;
+use App\Agent\TurnSurface;
+
 /**
  * One agent turn, queued for the async worker. Carries the user instruction plus the dashboard
  * snapshot the HTTP request held, and the *absolute* per-session Mercure topic the render intents
@@ -30,6 +33,9 @@ final readonly class RunAgentTurn
         // same reason `owner` is: the worker has no request to read it from, and everything the agent
         // says this turn — the heartbeat, the failure toasts, the answers themselves — follows it.
         public string $locale = 'fr',
+        public TurnSurface $surface = TurnSurface::Garage,
+        // Finder turns only: the car the page already resolved. Null on a garage turn.
+        public ?FinderVehicle $vehicle = null,
     ) {
     }
 }

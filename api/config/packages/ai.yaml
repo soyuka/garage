@@ -429,3 +429,21 @@ ai:
                     vehicle's open tasks with their ids — to act on one ("marque la vidange faite"),
                     reference that id directly, no need to re-list.
                     </dashboard_tools>
+
+        # The parts finder (finder/): free text → parts on the drawing sheet. Same platform and model
+        # options as `garage` (see the notes there), its own prompt and an explicit, minimal toolset:
+        # the finder render tools + web_search + end_turn here, the catalogue read tools merged in by
+        # app.finder.composite_toolbox (config/services.yaml). No garage write, no dashboard intent.
+        # max_tool_calls is the bundle's own cap (the garage's AgentMaxToolCallsPass targets a service
+        # id this bundle version no longer defines).
+        finder:
+            platform: 'ai.platform.anthropic'
+            model: 'claude-sonnet-5-5?max_tokens=4096&thinking[type]=between_tools'
+            tools:
+                - 'App\Agent\Finder\FinderRenderTools'
+                - 'App\Agent\WebSearch\WebSearchTool'
+                - 'App\Agent\Ui\EndTurnTool'
+            fault_tolerant_toolbox: true
+            max_tool_calls: 25
+            prompt:
+                file: '%kernel.project_dir%/config/prompts/finder.md'

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Agent\TurnSurface;
 use App\Repository\AgentTurnRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -35,6 +36,10 @@ class AgentTurn
 
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $error = null;
+
+    // Class-level default: journals written before the finder existed hydrate as garage turns.
+    #[ODM\Field(type: 'string', enumType: TurnSurface::class)]
+    private TurnSurface $surface = TurnSurface::Garage;
 
     #[ODM\Field(type: 'date_immutable')]
     private \DateTimeImmutable $startedAt;
@@ -303,5 +308,15 @@ class AgentTurn
         $this->error = $error;
         $this->finishedAt = new \DateTimeImmutable();
         $this->durationMs = (int) (($this->finishedAt->format('U.u') - $this->startedAt->format('U.u')) * 1000);
+    }
+
+    public function getSurface(): TurnSurface
+    {
+        return $this->surface;
+    }
+
+    public function setSurface(TurnSurface $surface): void
+    {
+        $this->surface = $surface;
     }
 }

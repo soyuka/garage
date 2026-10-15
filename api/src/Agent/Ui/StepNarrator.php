@@ -49,6 +49,8 @@ final class StepNarrator
         'get_maintenance_history',
         'list_due_maintenance',
         'web_search',
+        'list_part_categories',
+        'show_parts',
     ];
 
     /**
