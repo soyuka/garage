@@ -632,15 +632,29 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
 - The journal's token counts for streamed turns look partial (finder live turn: 8 prompt / 328
   completion tokens recorded).
 
-## Finder single input + journal (found 2026-10-15)
+## Finder single input + journal (found 2026-10-15) — CLOSED the same day
 
-- **Vehicle-less finder turns cannot browse make/model live**: `list_models` / `list_cars` answer
-  `not_configured` (no `PARTSAPI_KEY_getModels` / `getCars` in `api/.env.local`). The live turn
-  "filtre à huile mazda 6 2.0 2005" (journal `01M4ZW632EJ7MJ1Z2PJDZ4V3SR`) fell back to asking the
-  plate. Add the two keys, or drop the browse from `finder.md` until then.
-- **Journal cost line is empty** until `AGENT_PRICE_*_PER_MTOK` are set in `api/.env.local` from the
-  current price list (deliberately not guessed).
-- **The api firewall now reads the bearer on /vehicles, /vins, /cars** (search journal): an expired
-  token on those public reads answers 401 instead of falling through as anonymous. The finder only
-  sends fresh tokens; check the dashboard does the same.
-- Mobile hero placeholder clips at 390 px ("Plaque, VIN, référence ou p…").
+All four items shipped: getModels/getCars keys added and params fixed (5951995); Sonnet 5.5 prices
+in `api/.env` (f643b96); catalog reads served anonymously on a bad token via a lenient `catalog`
+firewall (b58d176); the home placeholder was rewritten (c5a1a6a).
+
+## Finder: companion parts as an agentic round (decided 2026-10-15, not started)
+
+On a result page, suggest what usually goes with the part (oil filter → engine oil + sump plug
+washer; pads → discs to check + brake fluid; timing belt → water pump + tensioners; shock absorbers →
+top mounts / bump stops; tie-rod end → "géométrie à refaire" note). **User decision: an agent round
+runs the companions, not a hand-curated table.**
+
+- Shape: after `show_parts`, the finder agent may run a follow-up round (same turn or a cheap second
+  turn) that proposes companions as a new frame (e.g. `showCompanions {items[{categoryId, label,
+  why}]}`), rendered as a "Souvent changé avec" row under the title block. A companion is narrowed
+  only when the user opens it — never eagerly.
+- Reuse what exists: `ServiceKind` / `get_service_parts` (`api/src/Catalog/ServiceKind.php`)
+  already groups oil change / filters / brakes / spark plugs; `GetFillVolumes` gives oil capacity +
+  spec per kType at no extra quota (cached), `get_motul_oil` the viscosity.
+- Constraint that drives the design: each NEW companion category costs ~10 partsapi calls cold
+  (8 criteria + crosses, test keys = 50/day/method); fluids cost 0. Hence lazy narrowing and a cap
+  (≤ 3 companions per result). Anthropic cost of the extra round to measure in the journal.
+- Guardrails: companions must be catalogue categories that exist for this kType
+  (`list_part_categories`), one-sentence "why" in the finder voice, never a fabricated reference;
+  respect `max_tool_calls: 25`.

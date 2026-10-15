@@ -57,6 +57,8 @@ break / 2.0 DI) instead of guessing.
 
 ## Open
 
+- Companion parts ("Souvent changé avec") as an agentic round — decided, not started; see repo-root `FUTURE.md` § "Finder: companion parts".
+
 - Live-test the paths that cost money, with the user watching: real part photo, multi-part request
   ("courroie + pompe à eau"), web-found reference, the ask → answer round trip, and the PSA case
   "rotule axiale peugeot 307" → code de fabrication typed AND as a vignette photo (`build_label`).
