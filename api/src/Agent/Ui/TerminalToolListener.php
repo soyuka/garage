@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Agent\Ui;
 
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
+use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\TextResult;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
@@ -43,11 +44,17 @@ final class TerminalToolListener
         }
 
         foreach ($event->getToolResults() as $toolResult) {
-            if (\in_array($toolResult->getToolCall()->getName(), self::TERMINAL_TOOLS, true)) {
+            if (\in_array($toolResult->getToolCall()->getName(), self::TERMINAL_TOOLS, true) && !self::failed($toolResult)) {
                 $event->setResult(new TextResult(''));
 
                 return;
             }
         }
+    }
+
+    /** A refused question (too many options…) published nothing: the turn must go on so the model can ask again. */
+    private static function failed(ToolResult $toolResult): bool
+    {
+        return 'ask_question' === $toolResult->getToolCall()->getName() && 'ok' !== $toolResult->getResult();
     }
 }

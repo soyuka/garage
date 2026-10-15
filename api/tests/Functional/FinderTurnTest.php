@@ -111,6 +111,40 @@ final class FinderTurnTest extends AppTestCase
         ]], $asked);
     }
 
+    public function testAskQuestionOffersUpToSixOptionsAndRejectsSeven(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $option = static fn (int $i): array => ['label' => "Version $i", 'value' => "car$i"];
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('q1', 'ask_question', ['question' => 'Quelle version ?', 'options' => array_map($option, range(1, 7)), 'context' => 'mazda 6 2.0 2005 : 7 versions']),
+            new ToolCall('q2', 'ask_question', ['question' => 'Quelle version ?', 'options' => array_map($option, range(1, 6)), 'context' => 'mazda 6 2.0 2005 : candidats 1 2 3 4 5 6']),
+            new ToolCall('q3', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('filtre à huile mazda 6 2.0 2005', 'sess-six', vehicle: null);
+
+        self::assertSame(6, $seen['schemas']['ask_question']['properties']['options']['maxItems'] ?? null, 'the advertised schema caps options at 6');
+        $asked = array_values(array_filter(self::frames('sess-six'), static fn (array $f): bool => 'askQuestion' === $f['type']));
+        self::assertCount(1, $asked, 'seven options are refused, six are published');
+        self::assertCount(6, $asked[0]['options']);
+    }
+
+    public function testTheCandidateCarIdsOfAQuestionContextReachTheNextTurn(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = ['context' => ''];
+        $container->set('ai.platform.anthropic', self::script([new ToolCall('e1', 'end_turn', [])], $seen));
+
+        self::runFinderTurn('Essence', 'sess-candidates', vehicle: null, pendingContext: 'mazda 6 2.0 2005 : carburant ? candidats carIds 19107,19108,19109,19110,19111,19112,19113,19114,19115');
+
+        self::assertStringContainsString('candidats carIds 19107,19108,19109,19110,19111,19112,19113,19114,19115', $seen['context']);
+    }
+
     public function testShowWebPartPublishesAWebSourcedFind(): void
     {
         static::createClient();
@@ -471,6 +505,12 @@ final class FinderTurnTest extends AppTestCase
         return new ScriptedStreamPlatform(static function ($model, $input, array $options) use ($steps, &$seen): ToolCallResult|string {
             $seen['calls'] = ($seen['calls'] ?? 0) + 1;
             $seen['tools'] = array_map(static fn (Tool $t): string => $t->getName(), array_filter($options['tools'] ?? [], static fn ($t): bool => $t instanceof Tool));
+            $seen['schemas'] = [];
+            foreach ($options['tools'] ?? [] as $tool) {
+                if ($tool instanceof Tool) {
+                    $seen['schemas'][$tool->getName()] = $tool->getParameters();
+                }
+            }
 
             $executed = 0;
             $seen['toolResults'] = [];

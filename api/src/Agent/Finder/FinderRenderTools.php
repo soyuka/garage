@@ -9,6 +9,7 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Vehicle\VehicleIndex;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
+use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
 use Webmozart\Assert\Assert;
 
 /**
@@ -23,10 +24,12 @@ use Webmozart\Assert\Assert;
 #[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title, sentence case (« Filtre à huile »). rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); status empty means the category holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part.', 'showParts')]
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE short impersonal French sentence stating what the source says that makes it fit this vehicle, never « Je… ».', 'showWebPart')]
 #[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle.', 'setVehicle')]
-#[AsTool('ask_question', 'Ask the user ONE short French question, answerable in one tap, when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 4 concrete options, each {label shown on the button: a value such as « Avant », not a sentence; value sent back}. context is a short note to yourself restating what was asked and why; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
+#[AsTool('ask_question', 'Ask the user ONE short French question, answerable in one tap, when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 6 concrete options, each {label shown on the button: a value such as « Avant », not a sentence; value sent back}. Never drop a matching candidate: offer all of them when there are 6 or fewer, otherwise ask a question that splits them first. The finder adds its own « Donner la plaque » button: never offer it yourself. context is a short note to yourself restating what was asked and why, including the remaining candidate carIds; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
 final class FinderRenderTools
 {
     public const MAX_CATEGORIES = 4;
+
+    public const int MAX_OPTIONS = 6;
 
     private const int MAX_APPLICABILITY_VALUES = 12;
 
@@ -159,11 +162,11 @@ final class FinderRenderTools
     /**
      * @param list<QuestionOption> $options
      */
-    public function askQuestion(string $question, array $options, string $context): string
+    public function askQuestion(string $question, #[Schema(minItems: 2, maxItems: self::MAX_OPTIONS)] array $options, string $context): string
     {
         Assert::stringNotEmpty(trim($question));
         Assert::allIsInstanceOf($options, QuestionOption::class);
-        Assert::countBetween($options, 2, 4);
+        Assert::countBetween($options, 2, self::MAX_OPTIONS);
 
         $this->frames->publishFrame([
             'type' => 'askQuestion',
