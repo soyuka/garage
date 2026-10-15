@@ -63,7 +63,7 @@ export function SaveVehicle({ vehicle, api, demo }: { vehicle: Vehicle; api: Fin
   return (
     <div className="save">
       <button type="button" className="btn btn--quiet" aria-busy={state.kind === 'saving'} disabled={state.kind === 'saving' || state.kind === 'saved'} onClick={() => void save()}>
-        {state.kind === 'saved' ? 'Enregistré' : state.kind === 'saving' ? 'Enregistrement…' : <>Enregistrer<span className="save-long"> le véhicule</span></>}
+        {state.kind === 'saved' ? 'Enregistré' : state.kind === 'saving' ? 'Enregistrement…' : <>Enregistrer<span className="save-long">{'\u00a0le véhicule'}</span></>}
       </button>
       {state.kind === 'login' && (
         <div className="save-pop" role="group" aria-label="Connexion requise">
