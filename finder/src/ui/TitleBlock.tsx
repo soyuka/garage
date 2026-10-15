@@ -11,6 +11,7 @@ interface Props {
   narrowing: Narrowing;
   cluster: Cluster | null;
   confirmed: boolean;
+  rationale?: string;
 }
 
 async function copy(text: string): Promise<boolean> {
@@ -22,7 +23,7 @@ async function copy(text: string): Promise<boolean> {
   }
 }
 
-export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed }: Props) {
+export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, rationale }: Props) {
   const toast = useToast();
   const oe = cluster ? pickOe(cluster, vehicle.make) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
@@ -100,6 +101,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed }:
 
       <div className="c s3 why">
         <span className="l">Pourquoi cette pièce</span>
+        {rationale && <span className="why-agent">{rationale}</span>}
         {whyLine(narrowing, cluster, confirmed)}
         {narrowing.degradedReason && <span className="why-degraded">{degradedMessage(narrowing.degradedReason)}</span>}
         {narrowing.unclassifiedCount > 0 && cluster && (

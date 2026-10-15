@@ -30,3 +30,14 @@ export function searchCategories(categories: readonly Category[], query: string,
     .slice(0, limit)
     .map((s) => s.c);
 }
+
+export type EnterIntent = { kind: 'pick'; category: Category } | { kind: 'ask'; text: string } | { kind: 'none' };
+
+export function enterIntent(text: string, hits: readonly Category[], active: number, navigated: boolean): EnterIntent {
+  const q = foldText(text);
+  if (q === '') return { kind: 'none' };
+  const highlighted = hits[active];
+  if (navigated && highlighted) return { kind: 'pick', category: highlighted };
+  const exact = hits.find((c) => foldText(c.label) === q);
+  return exact ? { kind: 'pick', category: exact } : { kind: 'ask', text: text.trim() };
+}

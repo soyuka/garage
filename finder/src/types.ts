@@ -117,3 +117,69 @@ export type Family =
   | { kind: 'brake'; axle: 'front' | 'rear' }
   | { kind: 'filter'; filter: 'oil' | 'fuel' | 'air' }
   | { kind: 'none' };
+
+// ── Agent turn contract (POST /agent/turn with surface "finder") ─────────────────────────────────
+// Frames arrive on the turn's session topic `${base}/agent/sessions/<sessionId>`. The server side is
+// api/src/Agent/Finder/FinderRenderTools.php (showParts, showWebPart, askQuestion) and
+// api/src/Agent/Ui/RenderIntentTools.php (turn, status, toast). This file owns the contract.
+
+export interface QuestionOption {
+  label: string;
+  value: string;
+}
+
+export type FinderFrame =
+  | { type: 'turn'; phase: 'start' | 'end' }
+  | { type: 'status'; message: string; tool?: string }
+  | { type: 'toast'; tone: 'info' | 'ok' | 'warn' | 'alarm'; message: string }
+  // `narrowed` is the GET /cars/{carId}/part-categories/{categoryId}/narrowed body, minus JSON-LD keys.
+  | { type: 'showParts'; categoryId: number; categoryLabel: string; rationale: string; narrowed: unknown }
+  | { type: 'showWebPart'; categoryLabel: string; reference: string; brand: string; sourceUrl: string; sourceTitle: string; rationale: string }
+  | { type: 'askQuestion'; question: string; options: QuestionOption[]; context: string };
+
+export interface TurnVehicle {
+  carId: number;
+  carType: CarType;
+  make: string | null;
+  model: string | null;
+  engine: string | null;
+}
+
+export interface CatalogPart {
+  kind: 'catalog';
+  key: string;
+  categoryId: number;
+  label: string;
+  rationale: string;
+  narrowing: Narrowing;
+}
+
+export interface WebPart {
+  kind: 'web';
+  key: string;
+  label: string;
+  reference: string;
+  brand: string;
+  sourceUrl: string;
+  sourceTitle: string;
+  rationale: string;
+}
+
+export type AgentPart = CatalogPart | WebPart;
+
+export interface AgentAsk {
+  question: string;
+  options: QuestionOption[];
+  context: string;
+}
+
+export type TurnPhase = 'idle' | 'sending' | 'running' | 'done' | 'failed';
+
+export interface TurnState {
+  phase: TurnPhase;
+  instruction: string;
+  status: string | null;
+  parts: AgentPart[];
+  ask: AgentAsk | null;
+  notice: string | null;
+}

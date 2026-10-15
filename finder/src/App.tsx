@@ -4,10 +4,13 @@ import { partFamily } from './family';
 import { buildQuestion } from './question';
 import { recentFor, remember, type RecentSearch } from './recent';
 import type { Route } from './route';
-import type { Category, Family, Narrowing, Vehicle } from './types';
+import type { AgentPart, Category, Family, Narrowing, Vehicle } from './types';
+import { isBusy } from './agent';
 import { Aside } from './ui/Aside';
+import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Entry } from './ui/Entry';
 import { useAsync, useMedia, useReducedMotion, useRoute, type Async } from './ui/hooks';
+import { useAgentTurn, type AgentTurn } from './ui/useAgentTurn';
 import { QueryBox } from './ui/QueryBox';
 import { Segmented, type EntryMode } from './ui/Segmented';
 import { Sheet } from './ui/Sheet';
@@ -50,6 +53,13 @@ function Finder({ api }: { api: FinderApi }) {
     () => api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make),
   );
 
+  const turn = useAgentTurn(v, !demo);
+  const askAgent = (text: string) => {
+    if (!v) return;
+    if (route.view !== 'vehicle') navigate({ view: 'vehicle', plate: v.plate });
+    turn.ask(text);
+  };
+
   const changeVehicle = (mode: EntryMode) => {
     setEntryMode(mode);
     navigate({ view: 'entry' });
@@ -69,9 +79,17 @@ function Finder({ api }: { api: FinderApi }) {
           <QueryBox
             categories={categories.status === 'ok' ? categories.data : null}
             loading={categories.status === 'loading'}
-            initial={route.view === 'result' && categories.status === 'ok' ? (categories.data.find((c) => c.id === route.categoryId)?.label ?? '') : ''}
-            autoFocus={route.view === 'vehicle'}
-            onPick={(c) => navigate({ view: 'result', plate: v.plate, categoryId: c.id, clusterId: null })}
+            initial={
+              route.view === 'result' && categories.status === 'ok'
+                ? (categories.data.find((c) => c.id === route.categoryId)?.label ?? '')
+                : (turn.needsLogin ?? turn.restored ?? (turn.state.phase !== 'idle' ? turn.state.instruction : ''))
+            }
+            autoFocus={route.view === 'vehicle' && turn.state.phase === 'idle'}
+            onPick={(c) => {
+              turn.reset();
+              navigate({ view: 'result', plate: v.plate, categoryId: c.id, clusterId: null });
+            }}
+            onAsk={demo || v.carId === null ? null : askAgent}
           />
         </div>
       )}
@@ -106,7 +124,7 @@ function Finder({ api }: { api: FinderApi }) {
   return (
     <div className="app app--work">
       {header}
-      <Workspace route={route} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} />
+      <Workspace route={route} vehicle={vehicle} categories={categories} narrowing={narrowing} navigate={navigate} turn={turn} />
       {footer}
     </div>
   );
@@ -118,11 +136,12 @@ interface WorkspaceProps {
   categories: Async<Category[]> & { retry: () => void };
   narrowing: Async<Narrowing> & { retry: () => void };
   navigate: (r: Route) => void;
+  turn: AgentTurn;
 }
 
 const SUGGESTIONS = [100259, 100260, 100261];
 
-function Workspace({ route, vehicle, categories, narrowing, navigate }: WorkspaceProps) {
+function Workspace({ route, vehicle, categories, narrowing, navigate, turn }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const wide = useMedia('(min-width: 1100px)');
   const v = vehicle.status === 'ok' ? vehicle.data : null;
@@ -153,6 +172,23 @@ function Workspace({ route, vehicle, categories, narrowing, navigate }: Workspac
           </div>
         </div>
       </main>
+    );
+  }
+
+  if (route.view === 'vehicle' && (turn.state.phase !== 'idle' || turn.needsLogin !== null)) {
+    return (
+      <AgentWorkspace
+        vehicle={v}
+        categories={categories.status === 'ok' ? categories.data : []}
+        turn={turn}
+        wide={wide}
+        reducedMotion={reducedMotion}
+        recent={recent}
+        onRecent={(r) => {
+          turn.reset();
+          navigate({ view: 'result', plate: v.plate, categoryId: r.categoryId, clusterId: null });
+        }}
+      />
     );
   }
 
@@ -259,5 +295,129 @@ function TitleSkeleton() {
       <div className="c s2 nb"><span className="l">Cotes</span><span className="sk" style={{ width: '80%' }} /></div>
       <div className="c r nb"><span className="l">Source</span><span className="sk" style={{ width: '60%' }} /></div>
     </div>
+  );
+}
+
+interface AgentWorkspaceProps {
+  vehicle: Vehicle;
+  categories: Category[];
+  turn: AgentTurn;
+  wide: boolean;
+  reducedMotion: boolean;
+  recent: RecentSearch[];
+  onRecent: (r: RecentSearch) => void;
+}
+
+function partCategory(part: AgentPart, categories: Category[]): Category {
+  const known = part.kind === 'catalog' ? categories.find((c) => c.id === part.categoryId) : undefined;
+  return known
+    ? { ...known, label: part.label }
+    : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
+}
+
+function AgentWorkspace({ vehicle, categories, turn, wide, reducedMotion, recent, onRecent }: AgentWorkspaceProps) {
+  const { state } = turn;
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [clusterFor, setClusterFor] = useState<Record<string, string>>({});
+  const busy = isBusy(state);
+
+  const part = state.parts.find((p) => p.key === selectedKey) ?? state.parts[0] ?? null;
+  const category = part ? partCategory(part, categories) : null;
+  const n = part?.kind === 'catalog' ? part.narrowing : null;
+  const clusters = n?.clusters ?? [];
+  const chosen = part ? clusterFor[part.key] : undefined;
+  const cluster = clusters.find((c) => c.id === chosen) ?? clusters[0] ?? null;
+  const confirmed = clusters.length === 1 || (chosen !== undefined && cluster?.id === chosen);
+  const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
+  const family: Family = category ? partFamily(category, cluster?.dimensions ?? []) : { kind: 'none' };
+  const overlay = wide && part ? 520 : null;
+
+  useEffect(() => {
+    if (state.phase === 'sending') {
+      setSelectedKey(null);
+      setClusterFor({});
+    }
+  }, [state.phase]);
+
+  const lead = (
+    <>
+      <AgentStatus
+        state={state}
+        needsLogin={turn.needsLogin}
+        onCancel={turn.cancel}
+        onRetry={() => turn.ask(state.instruction)}
+        onSignIn={turn.signIn}
+      />
+      {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => turn.ask(value, state.ask?.context ?? null)} />}
+    </>
+  );
+
+  let placeholder: ReactNode = null;
+  if (!part && turn.needsLogin !== null) {
+    placeholder = (
+      <div className="sheet-message">
+        <p className="sheet-big">Connexion requise</p>
+        <p>L’agent cherche la pièce pour un compte connecté. Connectez-vous dans la colonne de gauche : la demande repart au retour.</p>
+      </div>
+    );
+  } else if (!part) {
+    placeholder = busy ? (
+      <div className="sheet-message">
+        <p className="sheet-big">Recherche en cours</p>
+        <p>L’agent identifie la ou les pièces de votre demande dans le catalogue de ce véhicule.</p>
+      </div>
+    ) : (
+      <div className="sheet-message">
+        <p className="sheet-big">{state.ask ? 'Une précision' : 'Aucune pièce'}</p>
+        <p>{state.ask ? 'Répondez à la question à gauche pour que l’agent continue.' : 'Reformulez la demande dans le champ en haut, ou choisissez une catégorie dans la liste.'}</p>
+      </div>
+    );
+  } else if (family.kind === 'none') {
+    placeholder = (
+      <div className="sheet-message">
+        <p className="sheet-big">{part.label}</p>
+        <p>{part.kind === 'web' ? 'Référence trouvée sur le web : pas de vue technique pour cette pièce.' : 'Pas encore de vue technique pour cette famille de pièces.'}</p>
+      </div>
+    );
+  }
+
+  const block = !part ? null : part.kind === 'web' ? (
+    <WebTitleBlock vehicle={vehicle} part={part} />
+  ) : category && n ? (
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} rationale={part.rationale} />
+  ) : null;
+
+  return (
+    <main className="work">
+      <Aside
+        narrowing={n ? { status: 'ok', data: n } : null}
+        remaining={confirmed ? 1 : null}
+        question={question}
+        selected={cluster?.id ?? null}
+        confirmed={confirmed}
+        onAnswer={(id) => part && setClusterFor((m) => ({ ...m, [part.key]: id }))}
+        recent={recent}
+        plate={vehicle.plate}
+        currentCategory={null}
+        onRecent={onRecent}
+        lead={lead}
+      />
+      <div className={state.parts.length > 1 ? 'sheet-wrap sheet-wrap--parts' : 'sheet-wrap'}>
+        {state.parts.length > 1 && part && <PartSwitcher parts={state.parts} selected={part.key} onSelect={setSelectedKey} />}
+        <Sheet
+          family={family}
+          viewLabel={viewLabel(family, category)}
+          dimensions={cluster?.dimensions ?? []}
+          ghost={!cluster}
+          reducedMotion={reducedMotion}
+          overlayWidth={overlay}
+          placeholder={placeholder}
+          status={null}
+        >
+          {wide && block}
+        </Sheet>
+        {!wide && block}
+      </div>
+    </main>
   );
 }

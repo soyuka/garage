@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { formatCount } from '../format';
 import type { Question } from '../question';
 import type { RecentSearch } from '../recent';
@@ -15,12 +16,14 @@ interface Props {
   plate: string;
   currentCategory: number | null;
   onRecent: (r: RecentSearch) => void;
+  lead?: ReactNode;
 }
 
-export function Aside({ narrowing, remaining, question, selected, confirmed, onAnswer, recent, plate, currentCategory, onRecent }: Props) {
+export function Aside({ narrowing, remaining, question, selected, confirmed, onAnswer, recent, plate, currentCategory, onRecent, lead }: Props) {
   const others = recent.filter((r) => r.categoryId !== currentCategory);
   return (
     <aside className="aside">
+      {lead}
       {narrowing && <NarrowingLine narrowing={narrowing} remaining={remaining} />}
       {question && (
         <section aria-labelledby="ask-title">

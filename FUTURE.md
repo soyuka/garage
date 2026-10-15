@@ -623,3 +623,24 @@ Shipped: `decode_build_code` (PSA OPR/DAM/APV ⇄ date), `get_make_knowledge`, `
   Mercure 1.1.2 itself. Bumping it is an independent change.
 - **`subscriptions`** stays enabled in the hub but nothing uses it; since Mercure 1.1.0 it requires a
   subscriber token (anonymous gets 401). Drop it if it stays unused.
+
+## Agent guardrails + flaky agent tests (found 2026-10-15, finder agent work)
+
+- **`AgentMaxToolCallsPass` is a no-op.** It sets argument 5 of `ai.tool.agent_processor.garage`, a
+  service this ai-bundle no longer defines (`debug:container` finds nothing): the garage runs on the
+  bundle default `max_tool_calls: 50`, not 25. The finder uses the bundle option directly
+  (`config/packages/ai.yaml`, agent `finder`, `max_tool_calls: 25`); the garage should too, and the
+  pass be deleted. Left untouched to keep the garage path unchanged in the finder commit.
+- **`AgentTurnTest::testTheInterfaceLanguageReachesTheWorkerAndTheModel` is flaky**: it expects
+  `'Checking your garage…'` while `StepNarrator` picks one of four `list_vehicles` variants at random
+  (2/5 green in a row on unchanged code). Assert membership in the variant list instead.
+- **`AgentTurnCancelTest` fails on a re-run within 120 s**: it raises the `sess-xyz` cancel flag in
+  `cache.app` (TTL 120 s) and never clears it, so the next run's opening `assertFalse` trips.
+
+## Finder agent — open items (2026-10-15)
+
+- `show_parts` with several clusters relies on the finder's own differsOn question card (local, no
+  new turn) instead of an `ask_question` round-trip; `narrow_parts` is withheld from the finder agent
+  because `show_parts` narrows server-side (same `ArticleNarrower`, same `NarrowedParts::from`).
+- The journal's token counts for streamed turns look partial (finder live turn: 8 prompt / 328
+  completion tokens recorded).
