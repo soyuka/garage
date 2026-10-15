@@ -23,14 +23,22 @@ security:
             stateless: true
             provider: zitadel
 
-        # The REST garage surface + the agent turn, plus the finder's public catalogue reads (vehicles,
-        # vins, cars): those stay anonymous, the bearer is only read so an authenticated finder search
-        # can be journaled under its owner (App\Finder\FinderSearchJournalListener). Same Casdoor
-        # bearer as `mcp` (handler added per environment below). The token is OPTIONAL at the firewall: a request with no token
-        # falls through as anonymous so the public GET reads still work — it is the access_control
-        # rules below that force a token on the write methods and on /agent/turn.
+        # The finder's public catalogue reads (vehicles, vins, cars) stay anonymous; the bearer is only
+        # read so an authenticated finder search can be journaled under its owner
+        # (App\Finder\FinderSearchJournalListener). A missing, invalid or expired token is treated as
+        # anonymous (App\Security\LenientAccessTokenAuthenticator) — a stale dashboard token must not
+        # break a public read. Same Casdoor handler as `api` (added per environment below).
+        catalog:
+            pattern: ^/(vehicles|vins|cars)
+            stateless: true
+            provider: zitadel
+
+        # The REST garage surface + the agent turn. The token is OPTIONAL at the firewall (a request
+        # with no token falls through as anonymous so the public garage GETs still work); the
+        # access_control rules below force one on the write methods and on /agent/turn, and an invalid
+        # token is a strict 401 here.
         api:
-            pattern: ^/(garage|agent|tts|stt|registration-documents|photo-intake|vehicles|vins|cars)
+            pattern: ^/(garage|agent|tts|stt|registration-documents|photo-intake)
             stateless: true
             provider: zitadel
 
@@ -71,6 +79,9 @@ when@dev: &casdoor_firewall
             api:
                 access_token:
                     token_handler: App\Security\CasdoorTokenHandler
+            catalog:
+                access_token:
+                    token_handler: App\Security\CasdoorTokenHandler
 
 when@prod: *casdoor_firewall
 
@@ -84,5 +95,8 @@ when@test:
                     # run for real.
                     token_handler: App\Tests\Security\FakeOidcTokenHandler
             api:
+                access_token:
+                    token_handler: App\Tests\Security\FakeOidcTokenHandler
+            catalog:
                 access_token:
                     token_handler: App\Tests\Security\FakeOidcTokenHandler
