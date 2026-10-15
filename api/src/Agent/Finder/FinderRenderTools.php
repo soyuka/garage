@@ -19,13 +19,17 @@ use Webmozart\Assert\Assert;
  * exactly what GET /narrowed returns (one client mapper), and a model transcribing a 220-article
  * analysis would be slow, costly and lossy. The narrowing reads the article cache narrow_parts fills.
  */
-#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title (« Filtre à huile »). rationale is ONE French sentence on why this part answers the request. Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again; if totalArticles is 0 or narrowed is false with no clusters, the catalogue has nothing usable: fall back to web_search + show_web_part.', 'showParts')]
+#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 per turn. categoryLabel is the short French name shown as the title (« Filtre à huile »). rationale is ONE French sentence on why this part answers the request. Returns a summary: if clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); if totalArticles is 0 or narrowed is false with no clusters, the catalogue has nothing usable: fall back to web_search + show_web_part.', 'showParts')]
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE French sentence on why it fits this vehicle.', 'showWebPart')]
 #[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle.', 'setVehicle')]
 #[AsTool('ask_question', 'Ask the user ONE short French question when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 4 options, each {label shown on the button, value sent back}. context is a short note to yourself restating what was asked and why; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
 final class FinderRenderTools
 {
     public const MAX_CATEGORIES = 4;
+
+    private const int MAX_APPLICABILITY_VALUES = 12;
+
+    private const string APPLICABILITY_CAVEAT = 'applicability is per ARTICLE (the union over every vehicle the article fits), not per car: use it only to choose between clusters that already differ, never as proof, never to split or discard one.';
 
     private ?FinderVehicle $vehicle = null;
 
@@ -73,7 +77,8 @@ final class FinderRenderTools
             'narrowed' => $narrowed,
         ]);
 
-        return [
+        $several = \count($narrowed['clusters']) > 1;
+        $summary = [
             'status' => 'shown',
             'totalArticles' => $narrowed['totalArticles'],
             'narrowed' => $narrowed['narrowed'],
@@ -82,9 +87,29 @@ final class FinderRenderTools
                 'id' => $c['id'],
                 'representative' => $c['representative']['brand'].' '.$c['representative']['number'],
                 'oe' => array_map(static fn (array $r): string => $r['brand'].' '.$r['number'], \array_slice($c['oeNumbers'], 0, 2)),
-            ], $narrowed['clusters']),
+            ] + ($several ? ['applicability' => self::applicabilityLine($c['applicability'] ?? [])] : []), $narrowed['clusters']),
             'differsOn' => array_column($narrowed['differsOn'], 'label'),
         ];
+        if ($several) {
+            $summary['applicabilityCaveat'] = self::APPLICABILITY_CAVEAT;
+        }
+
+        return $summary;
+    }
+
+    /**
+     * @param list<array{name: string, values: list<string>}> $applicability
+     */
+    private static function applicabilityLine(array $applicability): string
+    {
+        $parts = [];
+        foreach ($applicability as $entry) {
+            $values = \array_slice($entry['values'], 0, self::MAX_APPLICABILITY_VALUES);
+            $more = \count($entry['values']) > self::MAX_APPLICABILITY_VALUES ? ', …' : '';
+            $parts[] = $entry['name'].' : '.implode(', ', $values).$more;
+        }
+
+        return [] === $parts ? 'none listed' : implode(' | ', $parts);
     }
 
     public function showWebPart(string $categoryLabel, string $reference, string $brand, string $sourceUrl, string $sourceTitle, string $rationale): string
@@ -107,7 +132,7 @@ final class FinderRenderTools
 
     public function setVehicle(int $carId, string $carType, string $make, string $model, string $engine = '', ?string $plate = null): string
     {
-        $vehicle = FinderVehicle::fromPayload(['carId' => $carId, 'carType' => $carType, 'make' => $make, 'model' => $model, 'engine' => $engine]);
+        $vehicle = FinderVehicle::fromPayload(['carId' => $carId, 'carType' => $carType, 'make' => $make, 'model' => $model, 'engine' => $engine, 'plate' => $plate]);
         Assert::notNull($vehicle, 'carId must be a positive TecDoc kType and carType PC or CV.');
         $this->vehicle = $vehicle;
         $plate = null === $plate || '' === trim($plate) ? null : strtoupper(trim($plate));

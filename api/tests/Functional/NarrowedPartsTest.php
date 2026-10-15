@@ -32,6 +32,8 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertContains(['brand' => 'MAZDA', 'number' => 'LF10-14-302'], $part['oeNumbers']);
         $this->assertSame(220, $part['articleCount'] + $data['unclassifiedCount']);
         $this->assertLessThan(110, $data['unclassifiedCount']);
+        $this->assertSame('article', $data['applicabilityScope']);
+        $this->assertContains('130831', array_column($part['applicability'], 'values', 'name')['Numéro de châssis (VIN) à partir de'] ?? []);
 
         // 1 getArticles + 1 getMakes + 8 criteria + 1 crosses per initial cluster, no media
         $this->assertSame(10 + 2, $data['upstreamCalls']);
@@ -70,6 +72,8 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertCount(1, $content['clusters']);
         $this->assertSame([], $content['differsOn']);
         $this->assertSame(220, $content['totalArticles']);
+        $this->assertSame('article', $content['applicabilityScope']);
+        $this->assertNotSame([], $content['clusters'][0]['applicability']);
     }
 
     public function testNarrowPartsToolSteersTheAgentAwayFromListArticles(): void

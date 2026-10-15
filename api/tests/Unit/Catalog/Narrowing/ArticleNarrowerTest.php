@@ -66,6 +66,37 @@ final class ArticleNarrowerTest extends TestCase
         $this->assertTrue($part->fingerprint['pression_d_ouverture_clapet_de_derivation']['info']);
     }
 
+    public function testApplicabilityIsUnionedPerClusterAndNeverSplits(): void
+    {
+        $result = $this->narrow();
+
+        $this->assertCount(1, $result->clusters);
+        $applicability = array_column($result->clusters[0]->applicability, 'values', 'name');
+
+        $vin = $applicability['Numéro de châssis (VIN) à partir de'] ?? [];
+        foreach (['130831', '176451', '195596', '306354'] as $breakpoint) {
+            $this->assertContains($breakpoint, $vin);
+        }
+        $this->assertSame(\count($vin), \count(array_unique($vin)));
+        $this->assertContains('200406', $applicability['Année à partir de'] ?? []);
+        $this->assertContains('200907', $applicability['Année à partir de'] ?? []);
+        $this->assertSame([], array_filter(array_merge(...array_values($applicability)), static fn (string $v): bool => '' === $v || str_contains($v, ';')));
+
+        foreach (array_keys($applicability) as $name) {
+            $this->assertDoesNotMatchRegularExpression('/code moteur|tecdoc du moteur|pour le mod|type de v/iu', $name);
+        }
+    }
+
+    public function testApplicabilityDoesNotSplitWithoutTheMakeEither(): void
+    {
+        $clusters = $this->narrow(make: null)->clusters;
+
+        $this->assertGreaterThan(1, \count($clusters));
+        foreach ($clusters as $cluster) {
+            $this->assertNotSame([], $cluster->applicability);
+        }
+    }
+
     public function testWithoutTheCarsMakeNothingMerges(): void
     {
         $result = $this->narrow(make: null);
@@ -189,11 +220,12 @@ final class ArticleNarrowerTest extends TestCase
         $data = $this->narrow()->toArray();
 
         $this->assertEqualsCanonicalizing(
-            ['clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'upstreamCalls', 'fallbackBrands'],
+            ['clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'upstreamCalls', 'fallbackBrands', 'applicabilityScope'],
             array_keys($data),
         );
+        $this->assertSame('article', $data['applicabilityScope']);
         $this->assertEqualsCanonicalizing(
-            ['id', 'fingerprint', 'oeNumbers', 'representative', 'variants', 'articleCount'],
+            ['id', 'fingerprint', 'oeNumbers', 'representative', 'variants', 'articleCount', 'applicability'],
             array_keys($data['clusters'][0]),
         );
         $this->assertEqualsCanonicalizing(['artId', 'brand', 'number'], array_keys($data['clusters'][0]['representative']));

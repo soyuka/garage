@@ -70,7 +70,7 @@ final class FinderTurnTest extends AppTestCase
 
         $route = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA')->toArray();
         $narrowed = $shown[0]['narrowed'];
-        foreach (['carId', 'categoryId', 'clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'fallbackBrands'] as $key) {
+        foreach (['carId', 'categoryId', 'clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'fallbackBrands', 'applicabilityScope'] as $key) {
             self::assertSame($route[$key] ?? null, $narrowed[$key] ?? null, "showParts.narrowed.$key must match GET /narrowed");
         }
 
@@ -269,6 +269,46 @@ final class FinderTurnTest extends AppTestCase
         $set = array_values(array_filter($frames, static fn (array $f): bool => 'setVehicle' === $f['type']));
         self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR', 'plate' => null]], $set);
         self::assertCount(1, array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
+    }
+
+    public function testShowPartsSummaryCarriesPerArticleApplicabilityWhenClustersDiffer(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('a1', 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Filtre à huile', 'rationale' => 'Demandé.']),
+            new ToolCall('a2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('filtre à huile', 'sess-applicability', vehicle: ['carId' => 19107, 'carType' => 'PC']);
+
+        $summary = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertIsArray($summary);
+        self::assertGreaterThan(1, \count($summary['clusters']));
+        self::assertStringContainsString('per ARTICLE', $summary['applicabilityCaveat']);
+        self::assertStringContainsString('Numéro de châssis (VIN) à partir de', implode("\n", array_column($summary['clusters'], 'applicability')));
+        self::assertStringNotContainsString('Code moteur', implode("\n", array_column($summary['clusters'], 'applicability')));
+    }
+
+    public function testShowPartsSummaryOmitsApplicabilityForASingleCluster(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('s1', 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Filtre à huile', 'rationale' => 'Demandé.']),
+            new ToolCall('s2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('filtre à huile', 'sess-single');
+
+        $summary = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertCount(1, $summary['clusters']);
+        self::assertArrayNotHasKey('applicabilityCaveat', $summary);
+        self::assertArrayNotHasKey('applicability', $summary['clusters'][0]);
     }
 
     public function testShowPartsWithoutAVehicleTellsTheAgentToSetOneFirst(): void

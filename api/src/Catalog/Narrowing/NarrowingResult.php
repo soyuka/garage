@@ -39,6 +39,7 @@ final readonly class NarrowingResult
             'degradedReason' => $this->degradedReason,
             'upstreamCalls' => $this->upstreamCalls,
             'fallbackBrands' => $this->fallbackBrands,
+            'applicabilityScope' => Applicability::SCOPE,
         ];
     }
 }

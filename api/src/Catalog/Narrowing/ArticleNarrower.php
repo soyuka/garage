@@ -77,6 +77,7 @@ final class ArticleNarrower
                 representative: ['artId' => $best->artId, 'brand' => $best->brand, 'number' => $best->number],
                 variants: $variants[$cluster->id],
                 articleCount: \count($variants[$cluster->id]),
+                applicability: Applicability::union(array_map(static fn (Representative $m): array => $m->applicability, $cluster->members)),
             );
         }
 
@@ -135,7 +136,7 @@ final class ArticleNarrower
                 break;
             }
 
-            $representatives[] = new Representative($article->id, $article->brand, $article->number, BrandTier::rank($article->brand), FingerprintBuilder::fromCriteria($criteria));
+            $representatives[] = new Representative($article->id, $article->brand, $article->number, BrandTier::rank($article->brand), FingerprintBuilder::fromCriteria($criteria), Applicability::fromCriteria($criteria));
         }
 
         return $representatives;

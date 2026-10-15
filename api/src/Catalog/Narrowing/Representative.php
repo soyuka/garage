@@ -7,7 +7,8 @@ namespace App\Catalog\Narrowing;
 final readonly class Representative
 {
     /**
-     * @param int $rank BrandTier::rank() of the brand, lower is better
+     * @param int                         $rank          BrandTier::rank() of the brand, lower is better
+     * @param array<string, list<string>> $applicability see {@see Applicability::fromCriteria()}
      */
     public function __construct(
         public int $artId,
@@ -15,6 +16,7 @@ final readonly class Representative
         public string $number,
         public int $rank,
         public Fingerprint $fingerprint,
+        public array $applicability = [],
     ) {
     }
 
