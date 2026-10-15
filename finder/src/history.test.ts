@@ -1,4 +1,4 @@
-import { formatRelative, formatWhen, historyEntries } from './history';
+import { formatRelative, formatWhen, historyEntries, withoutRemoved } from './history';
 import { mapRows } from './journal';
 
 const row = (id: string, startedAt: string, extra: Record<string, unknown>) => ({
@@ -43,6 +43,12 @@ describe('historyEntries', () => {
     expect(historyEntries(r).map((e) => e.input)).toEqual(['Filtre à huile', 'filtre à huile', '']);
   });
 
+  it('carries every row id of a route so hiding an entry hides its duplicates', () => {
+    const [agent, search] = historyEntries(rows);
+    expect(agent!.ids).toEqual(['/agent/turns/2']);
+    expect(search!.ids).toEqual(['/agent/turns/1', '/agent/turns/4']);
+  });
+
   it('caps the list', () => {
     const many = mapRows({ member: Array.from({ length: 30 }, (_, i) => row(String(i), `2026-10-${String(i % 28 + 1).padStart(2, '0')}T10:00:00+02:00`, { route: `p/XB-301-ZB/c/${100000 + i}` })) });
     expect(historyEntries(many)).toHaveLength(10);
@@ -68,5 +74,13 @@ describe('formatRelative', () => {
     expect(formatRelative('2026-10-11T09:05:00+02:00', now)).toBe('il y a 4 jours');
     expect(formatRelative('2026-09-02T09:05:00+02:00', now)).toBe('2 sept.');
     expect(formatRelative('nope', now)).toBe('');
+  });
+});
+
+describe('withoutRemoved', () => {
+  it('drops the entries whose id was hidden, keeping order', () => {
+    const entries = historyEntries(rows);
+    expect(withoutRemoved(entries, new Set())).toEqual(entries);
+    expect(withoutRemoved(entries, new Set([entries[0]!.id])).map((e) => e.id)).toEqual([entries[1]!.id]);
   });
 });

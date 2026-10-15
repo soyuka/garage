@@ -1,4 +1,4 @@
-import { excerpt, formatCost, framesOf, mapDetail, mapRows, outcomeOf, todayUsage } from './journal';
+import { clearHistory, excerpt, formatCost, framesOf, getHistory, hideFromHistory, mapDetail, mapRows, outcomeOf, todayUsage } from './journal';
 
 const agentRow = {
   '@id': '/agent/turns/01J0AGENT',
@@ -127,5 +127,55 @@ describe('formatting', () => {
     expect(outcomeOf({ ...search!, search: { ...search!.search!, outcome: 'not_found' } })).toEqual({ label: 'introuvable', tone: 'warn' });
     expect(outcomeOf({ ...agent!, status: 'capped' })).toEqual({ label: 'plafonné', tone: 'warn' });
     expect(outcomeOf({ ...agent!, status: 'failed' })).toEqual({ label: 'échec', tone: 'alarm' });
+  });
+});
+
+describe('history calls', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('reads the history view, not the journal', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ member: [searchRow] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    const rows = await getHistory();
+    expect(fetch.mock.calls[0]![0]).toBe('/agent/turns?surface=finder&history=1');
+    expect(rows).toHaveLength(1);
+  });
+
+  it('clears, then restores the previous cursor through the same endpoint', async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ clearedAt: '2026-10-15T10:00:00+00:00', previous: '2026-10-14T10:00:00+00:00' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ clearedAt: '2026-10-14T10:00:00+00:00', previous: '2026-10-15T10:00:00+00:00' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+
+    const cleared = await clearHistory();
+    expect(fetch.mock.calls[0]![0]).toBe('/agent/turns/history/clear');
+    expect(fetch.mock.calls[0]![1].method).toBe('POST');
+    expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({});
+    expect(cleared.previous).toBe('2026-10-14T10:00:00+00:00');
+
+    await clearHistory(cleared.previous);
+    expect(JSON.parse(fetch.mock.calls[1]![1].body)).toEqual({ restore: '2026-10-14T10:00:00+00:00' });
+  });
+
+  it('restores to "never cleared" with a null cursor', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ clearedAt: null, previous: '2026-10-15T10:00:00+00:00' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    await clearHistory(null);
+    expect(JSON.parse(fetch.mock.calls[0]![1].body)).toEqual({ restore: null });
+  });
+
+  it('hides one row by its iri', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal('fetch', fetch);
+    await hideFromHistory('/agent/turns/01J0SEARCH');
+    expect(fetch.mock.calls[0]![0]).toBe('/agent/turns/01J0SEARCH/hide');
+    expect(fetch.mock.calls[0]![1].method).toBe('POST');
+  });
+
+  it('throws when the server refuses', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status: 404 })));
+    await expect(hideFromHistory('/agent/turns/x')).rejects.toThrow();
+    await expect(clearHistory()).rejects.toThrow();
   });
 });

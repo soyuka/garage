@@ -111,7 +111,7 @@ function Finder({ api }: { api: FinderApi }) {
     if (agentActive && !held && !agentOwns && route.view === 'result' && turn.state.parts.length > 0) navigate({ view: 'vehicle', ref: route.ref });
   }, [held, turn.state.parts]);
 
-  const history = useAsync<HistoryEntry[]>(route.view === 'entry' && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.journal()));
+  const history = useAsync<HistoryEntry[]>(route.view === 'entry' && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.history()));
 
   useEffect(() => {
     if (!turnVehicle) return;
@@ -344,6 +344,7 @@ function Finder({ api }: { api: FinderApi }) {
         </Entry>
         {authed && (
           <History
+            api={api}
             entries={history.status === 'ok' ? history.data : []}
             loading={history.status === 'loading'}
             onOpen={(e) => {

@@ -3,6 +3,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 export interface ToastMessage {
   text: string;
   link?: { href: string; label: string };
+  action?: { label: string; onClick: () => void };
 }
 
 type Show = (message: string | ToastMessage) => void;
@@ -18,17 +19,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     const next = typeof m === 'string' ? { text: m } : m;
     setMessage(next);
     window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => setMessage(null), next.link ? 7000 : 2600);
+    timer.current = window.setTimeout(() => setMessage(null), next.action ? 5000 : next.link ? 7000 : 2600);
   }, []);
   return (
     <ToastContext.Provider value={show}>
       {children}
-      <div className="toast" role="status" aria-live="polite" data-open={message !== null} data-link={message?.link !== undefined}>
+      <div className="toast" role="status" aria-live="polite" data-open={message !== null} data-link={message?.link !== undefined || message?.action !== undefined}>
         {message?.text}
         {message?.link && (
           <a href={message.link.href} target="_blank" rel="noopener">
             {message.link.label}
           </a>
+        )}
+        {message?.action && (
+          <button
+            type="button"
+            onClick={() => {
+              message.action?.onClick();
+              window.clearTimeout(timer.current);
+              setMessage(null);
+            }}
+          >
+            {message.action.label}
+          </button>
         )}
       </div>
     </ToastContext.Provider>

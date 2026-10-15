@@ -234,6 +234,37 @@ export async function getJournal(): Promise<JournalRow[]> {
   return mapRows(await res.json());
 }
 
+// The home page's recent searches: the same rows minus what the owner cleared or hid. The journal
+// drawer keeps using getJournal, which never hides anything.
+export async function getHistory(): Promise<JournalRow[]> {
+  const res = await authFetch('/agent/turns?surface=finder&history=1', { headers: LD });
+  if (!res.ok) throw new Error(`Historique indisponible (HTTP ${res.status}).`);
+  return mapRows(await res.json());
+}
+
+export interface HistoryCursor {
+  clearedAt: string | null;
+  previous: string | null;
+}
+
+// No argument: hide everything up to now. With one, put the cursor back to that value (null = never
+// cleared): the undo of a clear, fed with the `previous` it returned.
+export async function clearHistory(restore?: string | null): Promise<HistoryCursor> {
+  const res = await authFetch('/agent/turns/history/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify(restore === undefined ? {} : { restore }),
+  });
+  if (!res.ok) throw new Error(`Historique indisponible (HTTP ${res.status}).`);
+  const j = obj(await res.json());
+  return { clearedAt: str(j.clearedAt), previous: str(j.previous) };
+}
+
+export async function hideFromHistory(id: string): Promise<void> {
+  const res = await authFetch(`${id}/hide`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}' });
+  if (!res.ok) throw new Error(`Historique indisponible (HTTP ${res.status}).`);
+}
+
 export async function getJournalDetail(id: string): Promise<JournalDetail> {
   const res = await authFetch(id, { headers: LD });
   if (!res.ok) throw new Error(`Entrée indisponible (HTTP ${res.status}).`);

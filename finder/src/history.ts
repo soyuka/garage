@@ -7,6 +7,8 @@ const MAX = 10;
 
 export interface HistoryEntry {
   id: string;
+  // Every journal row that restores to this entry (older duplicates included): hiding it hides them all.
+  ids: string[];
   hash: string;
   input: string;
   vehicle: { plate: string | null; name: string | null };
@@ -27,20 +29,28 @@ const label = (row: JournalRow): string => row.categoryLabel ?? (/^\d+$/.test(ro
 // The home page's recent searches: journal rows the server could give a route, newest first, one per
 // route. The route is re-parsed so only a hash the page itself would produce is ever followed.
 export function historyEntries(rows: readonly JournalRow[]): HistoryEntry[] {
-  const seen = new Set<string>();
+  const seen = new Map<string, HistoryEntry>();
   const out: HistoryEntry[] = [];
   for (const row of [...rows].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))) {
     if (row.route === null) continue;
     const route = parseRoute(`#/${row.route}`);
     if (route.view === 'entry') continue;
     const hash = routeToHash(route);
-    if (seen.has(hash)) continue;
-    seen.add(hash);
-    out.push({ id: row.id, hash, input: label(row), vehicle: { plate: row.vehicle?.plate ?? null, name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt });
-    if (out.length === MAX) break;
+    const known = seen.get(hash);
+    if (known) {
+      known.ids.push(row.id);
+      continue;
+    }
+    if (out.length === MAX) continue;
+    const entry: HistoryEntry = { id: row.id, ids: [row.id], hash, input: label(row), vehicle: { plate: row.vehicle?.plate ?? null, name: vehicleName(row) }, outcome: outcomeOf(row), startedAt: row.startedAt };
+    seen.set(hash, entry);
+    out.push(entry);
   }
   return out;
 }
+
+// Entries hidden locally (by entry id) before the next server read confirms it.
+export const withoutRemoved = (entries: readonly HistoryEntry[], removed: ReadonlySet<string>): HistoryEntry[] => entries.filter((e) => !removed.has(e.id));
 
 export function formatWhen(iso: string, now: Date = new Date()): string {
   const d = new Date(iso);

@@ -1,7 +1,7 @@
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapVehicle, mapVin } from './api';
 import { authFetch } from './auth';
 import { planPart, saveVehicle, type PlanBody, type PlannedTask, type SaveBody, type SavedVehicle } from './garage';
-import { getJournal, getJournalDetail, type JournalDetail, type JournalRow } from './journal';
+import { clearHistory, getHistory, getJournal, getJournalDetail, hideFromHistory, type HistoryCursor, type JournalDetail, type JournalRow } from './journal';
 import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, VinDecode } from './types';
 
 // Which rule of the single input led to a catalogue read. Sent as headers so an authenticated
@@ -22,6 +22,9 @@ export interface FinderApi {
   photoIntake(photo: Blob): Promise<PhotoIntake>;
   journal(): Promise<JournalRow[]>;
   journalEntry(id: string): Promise<JournalDetail>;
+  history(): Promise<JournalRow[]>;
+  clearHistory(restore?: string | null): Promise<HistoryCursor>;
+  hideFromHistory(id: string): Promise<void>;
   planPart(body: PlanBody): Promise<PlannedTask>;
   saveVehicle(body: SaveBody): Promise<SavedVehicle>;
 }
@@ -72,6 +75,9 @@ export const liveApi: FinderApi = {
   },
   journal: getJournal,
   journalEntry: getJournalDetail,
+  history: getHistory,
+  clearHistory,
+  hideFromHistory,
   planPart,
   saveVehicle,
 };
