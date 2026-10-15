@@ -50,7 +50,7 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('MAZDA', $seen['context']);
         self::assertStringContainsString('filtre à huile', $seen['context']);
 
-        foreach (['show_parts', 'show_web_part', 'ask_question', 'end_turn', 'web_search', 'lookup_plate', 'decode_vin', 'list_part_categories', 'get_service_parts'] as $tool) {
+        foreach (['show_parts', 'show_web_part', 'ask_question', 'end_turn', 'web_search', 'lookup_plate', 'decode_vin', 'list_part_categories', 'get_service_parts', 'decode_build_code'] as $tool) {
             self::assertContains($tool, $seen['tools'], "the finder agent must see $tool");
         }
         foreach (['log_maintenance', 'plan_maintenance', 'set_vehicle_facts', 'list_vehicles', 'toast', 'select_vehicle', 'propose_actions', 'narrate_step', 'narrow_parts', 'list_articles'] as $tool) {
