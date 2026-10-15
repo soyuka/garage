@@ -128,13 +128,13 @@ Token source of truth: `finder/src/styles.css:1-17` (`:root`), `finder/src/scene
 
 The app is an ISO engineering drawing sheet that works. White paper, graphite frame, drafting-blue linework: the answer to "which part?" is a drawn part with its cotes and a title block, not a product photo in a card grid. The sheet is the page; the title block is the result card; the drawing is the product view. TecDoc photos were dropped from the build and do not come back.
 
-Density is that of a drawing: thin rules, labelled cells, tabular figures, no decoration that is not a drafting device. The blank sheet is visible before any search (homepage = the question, the recent searches when logged in, an empty `PLANCHE` with an empty title block), so the user sees the form the answer will take before asking. French UI throughout (`index.html` `lang="fr"`), French number formatting with narrow no-break space (`format.ts:1`, `formatNumber`).
+Density is that of a drawing: thin rules, labelled cells, tabular figures, no decoration that is not a drafting device. Home (revised 2026-10-15) = the question and its subtitle; logged in, the recent searches take the space below (up to 10 rows); logged out, nothing else but the docked composer. *Was:* an empty `PLANCHE` with a blank title block under the question, added after the finish review to give the entry the drawing-sheet world. *Why reversed:* without explanation it read as an empty table; history now owns the home. French UI throughout (`index.html` `lang="fr"`), French number formatting with narrow no-break space (`format.ts:1`, `formatNumber`).
 
 Layout, as built (revised 2026-10-15): `100dvh` grid of 56px top bar / scrolling main / dock (`styles.css` `.app`, `.main`, `.dock`). The dock is always on screen at the bottom, on every width: agent status line, the open question (agent `ask_question` or the `differsOn` question) with its answer buttons, quick actions, then the composer (`ui/Dock.tsx`). Workspace = the sheet alone; the narrowing trace is a drawing note in the sheet's top-left corner (`.sheet-notes`) and moves under the sheet when it stacks. The title block overlays the sheet's bottom-right corner at 520px when the sheet is at least 812px wide (`App.tsx` `SHEET_OVERLAY_MIN`); otherwise sheet, trace and title block stack. ≤759px: 16px gutter, the vehicle chip wraps to its own row. The journal docks as a 480px right column at ≥1280px spanning main and dock, a 580px overlay drawer below that.
 *Was (until 2026-10-15):* a 288px left aside (trace, question, recent searches), the input in the top bar (hero input on the homepage) and a 28px footer. *Why reversed:* the user decided the composer must always be visible and continue the current search; a question belongs next to where it is answered.
 
 **Key Characteristics:**
-- Hidden-line orthographic 3D part (`scene/HiddenLine.tsx`, `scene/Blueprint.tsx` orthographic camera) is the ONLY product view: free 360° orbit, slow idle turntable.
+- Hidden-line 3D part (`scene/HiddenLine.tsx`, `scene/Blueprint.tsx` low-FOV perspective camera) is the ONLY product view: orbit on both axes around the part, pan, zoom, slow idle turntable.
 - ISO 128 line weights, ISO 129 dimension placement, chain centre lines.
 - Title block = result card; drawn cotes and title-block cotes come from one formatter.
 - One composer (text, photo, PDF, video) docked at the bottom of every screen.
@@ -208,9 +208,10 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 ### The Sheet (signature)
 - **Frame:** 1px graphite border, paper fill, `overflow: hidden`, min-height 420px (`styles.css` `.sheet`).
 - **View label:** top-left at 20/24px, view-label type. Drag hint bottom-left, 11.5px mute. Trace note under the label (`.sheet-notes`, 232px).
-- **3D view:** orthographic camera, OrbitControls with free azimuth and polar 0.06–π−0.06, no pan; idle turntable at one revolution per 40 s (`scene/turntable.ts`), stopped for the rest of the visit by the first pointer interaction, off under `prefers-reduced-motion`. `HiddenLine` draws creases (`EdgesGeometry`, 25° threshold) plus a constant-pixel inverted-hull silhouette, both at `LINE_VISIBLE` 1.7px, over a paper fill pushed back by polygon offset. Ghost state (loading/preview) draws at 0.28 opacity.
+- **3D view** (revised 2026-10-15): perspective camera at 22° FOV (`scene/camera.ts` `FOV`), close to a drawing's parallel lines. OrbitControls target = the drawn part's bounding-box centre (the paper fills tag `userData.fit`), recomputed per part; framing = camera distance fitted to the drawing area's aspect (`fitDistance`), the canvas itself sized to the free drawing area left of the title block. Azimuth unbounded, polar 0.05–π−0.05, pan on right-drag / two fingers, zoom to cursor, double-click eases back to the home pose in 0.45 s (`resetPose`, `lerpPose`; instant under reduced motion), damping off under reduced motion. *Was:* orthographic camera shifted beside the title block by `setViewOffset` while orbiting the world origin, no pan. *Why reversed:* the user could only move the part in one direction; drags swung the offset part off-axis. Idle turntable at one revolution per 40 s (`scene/turntable.ts`), stopped for the rest of the visit by the first pointer interaction, off under `prefers-reduced-motion`. `HiddenLine` draws creases (`EdgesGeometry`, 25° threshold) plus an inverted-hull silhouette pushed out a constant number of pixels in clip space (holds under perspective), both at `LINE_VISIBLE` 1.7px, over a paper fill pushed back by polygon offset. Ghost state (loading/preview) draws at 0.28 opacity.
 - **Line weights (ISO 128):** visible outline 1.7px (`LINE_VISIBLE`), dimension, extension, leader and centre lines 0.85px (`LINE_THIN`), about 2:1 (`palette.ts:5-7`). Centre lines are chain lines, ISO 128 type 04: long dash, gap, short dash, gap (`chainSegments`, `scene/Dimension.tsx`; SVG `stroke-dasharray: 14 3 2 3`).
-- **Dimensions (ISO 129):** extension lines start 1.5mm off the feature and run 2.5mm past an unbroken dimension line with filled arrowheads; the filter's cotes sit in a frame that faces the camera's azimuth every frame (`scene/cotes.ts` `facingAngle`): Ø across the top face at the rim (under a domed crown, `rimTop`), height on the silhouette's right edge, thread leader from the camera-facing base rim to a note outside the silhouette; arrowheads open across the view so none shows edge-on; when two labels' projected rects collide, the lower one hides (Ø > H > thread > seal, `visibleLabels`). *Was (until 2026-10-15):* lines fixed to the part and turning with it. *Why reversed:* at most angles the Ø floated off the rim and the height read longer than the part. The value is DOM text (drei `<Html>`) on a paper ground, so it always faces the viewer and stays crisp; dimensions draw over the part, never behind it. Notes use a leader to a horizontal shelf.
+- **Dimensions (ISO 129):** extension lines start 1.5mm off the feature and run 2.5mm past an unbroken dimension line with filled arrowheads; the filter's cotes are fixed to the part, built facing the home view (`HOME.azimuth`); only their DOM labels billboard: Ø across the top face at the rim (under a domed crown, `rimTop`), height on the silhouette's right edge, thread leader from the camera-facing base rim to a note outside the silhouette; arrowheads open across the view so none shows edge-on; when two labels' projected rects collide, the lower one hides (Ø > H > thread > seal, `visibleLabels`). *History:* fixed to the part until 2026-10-15 morning, then re-oriented to the camera azimuth every frame (the Ø floated off the rim at some angles), then fixed again the same day. *Why:* the per-frame re-orientation on top of the turntable made polar drags barely read; with a perspective camera orbiting the part centre, fixed lines read as a drawing. The value is DOM text (drei `<Html>`) on a paper ground, so it always faces the viewer and stays crisp; dimensions draw over the part, never behind it. Notes use a leader to a horizontal shelf.
+- **Part meshes** (2026-10-15): 55 Wrench web meshes plus the filter and brakes (`public/parts/SOURCES.md`). TecDoc category → mesh is a rule table (`family.ts` `MESH_RULES`: folded leaf / within / except regexes, first match wins, specific before generic; avant/arrière only picks the rear variant where one exists). Only the active mesh loads (Draco, `scene/MeshPart.tsx`), centred on its bounding box and drawn at a fixed span: no cotes on these meshes, the title block's `Cotes` still prints the fingerprint. An approximate match is captioned `Aperçu : forme générique de la famille`.
 - **Generic placeholder** (2026-10-15): a family without a mesh draws an abstract chamfered block with one bore in the same hidden-line style (`scene/GenericPart.tsx`), captioned `Aperçu générique — pas de modèle 3D pour cette pièce`, never with cotes.
 
 ### Base View (removed 2026-10-15)
@@ -220,7 +221,6 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 - **Structure:** 3-column grid, 1.5px graphite outer frame, 1px graphite cell rules, docked flush to the sheet's bottom-right corner (`right/bottom: -1px`) at 520px; full width when stacked.
 - **Cells, in order:** Désignation · Réf. OE (reference type) · Équivalences (brand Sans 500 + ref Mono, ref copies on click) · Véhicule | kType · Cotes | Source · Pourquoi cette pièce (panel fill) · actions.
 - **Cell:** label type, then value; padding 10px 14px 11px; no radius.
-- **Blank state:** same block on the entry sheet with hairline rules and `—` values.
 - **Skeleton:** panel-to-`panel-2` sheen, 1.4s linear.
 
 ### Buttons
@@ -239,7 +239,7 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 - **Tags:** 11.5px, 3px radius, panel fill; `ok` = blue outline on paper; `warn` = warn on warn tint.
 
 ### Navigation and Lists
-- **Recent searches (home, logged in):** the journal's last 10 restorable searches (`history.ts`), rows of input · plate + vehicle · outcome tag · time on hairline rules under a graphite top rule; one click follows the server-computed route.
+- **Recent searches (home, logged in):** the journal's last 10 restorable searches (`history.ts`), rows of input · plate + vehicle · outcome tag · relative time (`formatRelative`, exact time on hover) on hairline rules under a graphite top rule; one click follows the server-computed route.
 - **Question card:** panel fill, 8px radius, question in 14px/500, answers as secondary buttons (Mono only for cluster answers), hint below.
 - **Garage picker:** on a 409 from the garage, the candidates as buttons `plate · model`, plus `Un autre véhicule` (confirmNew) and `Annuler` (`ui/Garage.tsx`).
 - **Trace (sheet note "Affinage"):** label/value rows on hairline rules under a graphite top rule; the result row is graphite-ruled and blue.
@@ -249,14 +249,16 @@ The sheet is flat paper: hierarchy comes from rule weight (1px hairline < 1px gr
 ### Motion
 - Ease `cubic-bezier(0.16, 1, 0.3, 1)`; state changes 0.15s; journal enters 0.32s (translate + clip); agent dot breathes 1.8s. `prefers-reduced-motion` collapses all of it (`styles.css:2035`).
 
+### Demo mode (removed 2026-10-15)
+- *Was:* `?demo` served recorded fixtures, replayed a synthetic DÉMO agent turn and showed a `mode démo` footer chip. *Why removed:* user decision; real searches on cached catalogue data cost no partsapi call, so reviews and captures use the real app. Fixtures the tests need live in `finder/test-fixtures/`, outside the bundle.
+
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** show the answer as a drawing: hidden-line orthographic part, cotes, view label, title block.
+- **Do** show the answer as a drawing: hidden-line part, cotes, view label, title block.
 - **Do** keep visible lines at 1.7px and dimension/centre lines at 0.85px; import them from `palette.ts`, never re-type them.
 - **Do** format every number through `format.ts` and every cote through `dimText`; ranges when variants differ, mesh at midpoint.
 - **Do** keep the one composer docked at the bottom of every screen; text, photo, PDF and video enter through it, and a follow-up continues the current result: a deterministic result stays on screen, slightly greyed, until the agent shows a part or another vehicle (`TurnState.held`).
-- **Do** label synthetic demo data `Démo (données fictives)` in the Source cell, never TecDoc (`result.ts` `sourceLabel`).
 - **Do** name views the drafting way (`VUE 3D —`, `PLANCHE`) in Mono caps; label cells in sentence case.
 - **Don't** draw a cote the catalogue does not carry, nor estimate one from a mesh.
 - **Do** dock the journal right at ≥1280px and overlay it below.

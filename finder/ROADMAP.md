@@ -22,10 +22,16 @@ Shipped, end to end:
   vehicle-less starts (browse makes/models/cars), photos, reference lookup, `show_parts` narrows
   server-side, `set_vehicle`, `ask_question` for what the catalogue can't settle, web finds tagged
   "Source : web". Cap 25 tool calls.
-- **Result**: drawing sheet with ONE hidden-line 3D view, free 360° orbit + idle turntable (1 rev /
-  40 s, stops on first touch, off under reduced motion); cotes fixed to the part with billboarded
-  labels, drawn ONLY from the cluster fingerprint (never from the mesh); families without a mesh get a
-  generic chamfered block + "Aperçu générique" caption, no cotes. Title block = result card, Copier /
+- **Result**: drawing sheet with ONE hidden-line 3D view: 22° perspective camera orbiting the part's
+  bbox centre on both axes, pan, zoom to cursor, double-click reset, idle turntable (1 rev / 40 s,
+  stops on first touch, off under reduced motion); cotes fixed to the part with billboarded labels,
+  drawn ONLY from the cluster fingerprint (never from the mesh).
+- **Meshes (2026-10-15)**: 55 Wrench web meshes + filter + brakes in `finder/public/parts/`
+  (inventory, sizes, licence note: `SOURCES.md`). `family.ts` `MESH_RULES` maps TecDoc categories to
+  them (91/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
+  the active mesh loads; approximate matches captioned "Aperçu : forme générique de la famille";
+  unmapped categories keep the generic chamfered block. Dev contact sheet:
+  https://localhost/finder/dev/meshes.html (not in the build). Title block = result card, Copier /
   Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
   confirmNew) / Partager. "Enregistrer le véhicule" in the top bar (`POST /garage/vehicles/save`,
   same-plate match, different plate = different car, 409 picker when no plate).
@@ -34,7 +40,8 @@ Shipped, end to end:
   a sheet note). A follow-up continues the search: POST /agent/turn carries `summary` (on-screen
   category, clusters, OE, cotes, applicability), `pendingContext`, `vehicle.plate`, and `buildLabel`
   for a door-vignette photo; the previous parts stay ghosted until new ones arrive.
-- **History**: logged-in home lists the last 10 journal searches; rows carry a server `route`
+- **History**: logged-in home lists the last 10 journal searches (relative time; the blank PLANCHE
+  entry sheet was removed 2026-10-15); rows carry a server `route`
   (`p/<plate>/c/<cat>` or `k/<carId>-<type>/c/<cat>`) + `vehicle`; restoring re-reads /narrowed
   (cached). Agent catalogue results replace the hash with their result route, so they are shareable.
 - **PSA build code**: photo intake kind `build_label` (OPR/DAM verbatim), `decode_build_code` in the
@@ -53,7 +60,8 @@ break / 2.0 DI) instead of guessing.
 - Live-test the paths that cost money, with the user watching: real part photo, multi-part request
   ("courroie + pompe à eau"), web-found reference, the ask → answer round trip, and the PSA case
   "rotule axiale peugeot 307" → code de fabrication typed AND as a vignette photo (`build_label`).
-  None of the 2026-10-15 agent paths ran live; the `?demo` rotule turn is synthetic (refs DÉMO-A/B).
+  None of the 2026-10-15 agent paths ran live. The `?demo` mode was removed 2026-10-15 (user
+  decision): captures use the real app on cached data.
 - Applicability values are per article: check on real 307 data whether they discriminate at all
   between the clusters; if never, drop the question rather than keep a weak signal.
 - Dimension labels can overlap for a moment when the part is seen edge-on (height vs thread note).
@@ -61,8 +69,10 @@ break / 2.0 DI) instead of guessing.
   of keeping the deterministic sheet up until the agent answers.
 - 100/220 articles stay unattached on the Mazda oil filter (their crosses don't reach the 2 reps
   called). Options: one more crosses call on a third rep, or accept and keep the quiet line.
-- Part families: only brakes + oil filter have meshes; everything else shows the generic placeholder.
-  More GLBs come from the asset session (`blueprint-experiment/`, not committed — raw extraction).
+- Mesh view on a real non-filter category not yet seen in the app (every uncached category costs
+  partsapi calls); verified only on the dev contact sheet. No cotes are drawn on these meshes yet:
+  each family would need its own anchor logic, from fingerprint data only.
+- Oil caps (HeadAcc_OilCap, OilCap_Type1) have no web build: not shipped.
 - Garage: picker only, no fleet management; several same-model cars are told apart by plate only.
 - Data source: partsapi test keys (50/day/method). Going public = TecAlliance licence (below) AND
   buying the Wrench meshes from the developer.
@@ -92,7 +102,7 @@ break / 2.0 DI) instead of guessing.
 
 ## 3D assets (researched 2026-10-15)
 
-- Shipped meshes are Wrench extracts (brakes, oil filter), user-approved for this private prototype
+- Shipped meshes are Wrench extracts (58 files, see `SOURCES.md`), user-approved for this private prototype
   (`finder/public/parts/SOURCES.md`). Only final blueprint GLBs go in the repo.
 - Legit route if this ever goes public: parametric three.js for solids of revolution (filters, disc,
   plugs, spring, bearing, thermostat, pulley); CC-BY Sketchfab candidates (re-verify author + licence,
@@ -109,4 +119,4 @@ break / 2.0 DI) instead of guessing.
 `finder` service in `api/compose.override.yaml`; Casdoor redirect `https://localhost/finder/callback`.
 Catalog reads (`/vehicles`, `/vins`, `/cars`) sit on a lenient `catalog` firewall: a valid token
 journals the search, an invalid/expired one is served anonymously. Agent turns, photo intake and
-garage writes need the token. Demo mode with recorded fixtures: https://localhost/finder/?demo
+garage writes need the token.
