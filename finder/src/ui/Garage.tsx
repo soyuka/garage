@@ -9,7 +9,7 @@ import { useToast } from './Toast';
 export function GaragePicker({ candidates, busy, onPick, onNew, onCancel }: { candidates: GarageCandidate[]; busy: boolean; onPick: (iri: string) => void; onNew: () => void; onCancel: () => void }) {
   return (
     <div className="pick" role="group" aria-labelledby="pick-title">
-      <p id="pick-title">Plusieurs véhicules du garage peuvent correspondre : lequel ?</p>
+      <p id="pick-title">Quel véhicule du garage ?</p>
       <ul>
         {candidates.map((c) => (
           <li key={c.iri}>
@@ -22,7 +22,7 @@ export function GaragePicker({ candidates, busy, onPick, onNew, onCancel }: { ca
       </ul>
       <div className="pick-tail">
         <button type="button" className="btn btn--quiet" disabled={busy} onClick={onNew}>
-          Un autre véhicule
+          Nouveau véhicule
         </button>
         <button type="button" className="btn btn--quiet" disabled={busy} onClick={onCancel}>
           Annuler
@@ -35,10 +35,10 @@ export function GaragePicker({ candidates, busy, onPick, onNew, onCancel }: { ca
 type SaveState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'saved' } | { kind: 'login' } | { kind: 'pick'; candidates: GarageCandidate[] };
 
 const SAVE_FAILURE: Record<string, string> = {
-  invalid: 'Le garage a refusé ce véhicule : marque ou modèle manquant.',
-  network: 'Garage injoignable : vérifiez la connexion et réessayez.',
-  failed: 'L’enregistrement a échoué. Réessayez.',
-  ambiguous: 'Plusieurs véhicules du garage correspondent.',
+  invalid: 'Refusé par le garage : marque ou modèle manquant.',
+  network: 'Garage injoignable. Vérifiez la connexion et réessayez.',
+  failed: 'Enregistrement impossible. Réessayez.',
+  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Choisissez-le dans l’Atelier.',
 };
 
 export function SaveVehicle({ vehicle, api }: { vehicle: Vehicle; api: FinderApi }) {
@@ -50,7 +50,7 @@ export function SaveVehicle({ vehicle, api }: { vehicle: Vehicle; api: FinderApi
     setState({ kind: 'saving' });
     try {
       const saved = await api.saveVehicle({ ...saveBody(vehicle), ...extra });
-      toast({ text: saved.created ? 'Véhicule enregistré dans le garage.' : 'Ce véhicule est déjà dans le garage.', link: { href: atelierHref(saved.vehicle, window.location.origin), label: 'Voir dans l’Atelier' } });
+      toast({ text: saved.created ? 'Véhicule enregistré dans le garage.' : 'Déjà dans le garage.', link: { href: atelierHref(saved.vehicle, window.location.origin), label: 'Voir dans l’Atelier' } });
       setState({ kind: 'saved' });
     } catch (e) {
       if (e instanceof PlanError && e.kind === 'auth') return setState({ kind: 'login' });
@@ -67,7 +67,7 @@ export function SaveVehicle({ vehicle, api }: { vehicle: Vehicle; api: FinderApi
       </button>
       {state.kind === 'login' && (
         <div className="save-pop" role="group" aria-label="Connexion requise">
-          <p>Le garage est lié à votre compte : connectez-vous, puis enregistrez le véhicule.</p>
+          <p>Connexion requise pour enregistrer le véhicule.</p>
           <div className="pick-tail">
             <button type="button" className="btn pri" onClick={() => void login()}>
               Se connecter

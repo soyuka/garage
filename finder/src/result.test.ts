@@ -57,10 +57,10 @@ describe('cotesLine', () => {
 
 describe('degradedMessage', () => {
   it('says in plain French what the narrowing missed', () => {
-    expect(degradedMessage('criteria unavailable from the parts catalog (quota or outage)')).toMatch(/cotes/);
+    expect(degradedMessage('criteria unavailable from the parts catalog (quota or outage)')).toMatch(/^Cotes non chargées/);
     expect(degradedMessage('cross-references unavailable from the parts catalog (quota or outage): OE numbers and the remaining articles could not be classified')).toMatch(/OE/);
     expect(degradedMessage('no physical criteria available to tell the parts apart')).toMatch(/aucune cote/i);
     expect(degradedMessage('a; b')).toMatch(/catalogue/);
-    expect(degradedMessage('images unavailable from the parts catalog (quota or outage)')).toMatch(/partiellement/);
+    expect(degradedMessage('images unavailable from the parts catalog (quota or outage)')).toMatch(/Réponse partielle/);
   });
 });

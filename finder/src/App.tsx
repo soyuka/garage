@@ -39,7 +39,7 @@ const viewLabel = (family: Family, category: Category | null): string => {
 };
 
 const MAX_FRAMES = 3;
-const PHOTO_INSTRUCTION = 'Identifie la pièce sur la photo.';
+const PHOTO_INSTRUCTION = 'Photo de la pièce';
 const SUGGESTIONS = [100259, 100260, 100261];
 const SHEET_OVERLAY_MIN = 812;
 
@@ -155,7 +155,7 @@ function Finder({ api }: { api: FinderApi }) {
         api
           .vin(r.vin, { rule: 'vin', input: typed })
           .then((decode) => setPanel({ kind: 'vin', decode }))
-          .catch((e: unknown) => setPanel({ kind: 'error', message: e instanceof ApiError ? e.message : 'Décodage impossible.' }));
+          .catch((e: unknown) => setPanel({ kind: 'error', message: e instanceof ApiError ? e.message : 'Décodage du VIN impossible. Vérifiez la case E de la carte grise.' }));
         return;
       case 'category':
         if (!v) return askAgent(typed);
@@ -182,11 +182,11 @@ function Finder({ api }: { api: FinderApi }) {
     if (!first) return;
     const kind = routeFile(first);
     if (kind.kind === 'unsupported') {
-      setPanel({ kind: 'error', message: kind.reason === 'size' ? 'PDF trop lourd : 10 Mo au maximum.' : 'Format non pris en charge : une photo, une courte vidéo ou un PDF.' });
+      setPanel({ kind: 'error', message: kind.reason === 'size' ? 'PDF trop lourd (10 Mo maximum).' : 'Format non pris en charge : photo, vidéo courte ou PDF.' });
       return;
     }
     if (!isAuthenticated()) {
-      setPanel({ kind: 'login', why: 'La lecture d’une photo ou d’un document demande une connexion. Le fichier est lu puis oublié : il n’est jamais stocké.' });
+      setPanel({ kind: 'login', why: 'Connexion requise pour lire un fichier. Le fichier n’est pas conservé.' });
       return;
     }
     try {
@@ -195,7 +195,7 @@ function Finder({ api }: { api: FinderApi }) {
         readRegistration(await api.extractRegistration(first));
         return;
       }
-      setPanel({ kind: 'reading', what: kind.kind === 'video' ? 'Extraction de trois images de la vidéo…' : 'Préparation de la photo…' });
+      setPanel({ kind: 'reading', what: kind.kind === 'video' ? 'Extraction des images de la vidéo…' : 'Préparation de la photo…' });
       let frames: Frame[];
       if (kind.kind === 'video') frames = await sampleVideo(first);
       else frames = await Promise.all(files.filter((f) => routeFile(f).kind === 'image').slice(0, MAX_FRAMES).map(prepareImage));
@@ -208,12 +208,12 @@ function Finder({ api }: { api: FinderApi }) {
       if (intake.kind === 'build_label') {
         const code = intake.buildLabel.opr ?? intake.buildLabel.printedCodes.join(' · ');
         if (code === '') {
-          setPanel({ kind: 'error', message: 'Aucun code lisible sur cette vignette. Rapprochez-vous, ou tapez le numéro d’organisation (souvent après « DAM »).' });
+          setPanel({ kind: 'error', message: 'Vignette illisible. Reprenez la photo de plus près, ou saisissez le numéro d’organisation (après « DAM »).' });
           return;
         }
-        return askAgent(`Code de fabrication relevé sur la vignette : ${code}`, { buildLabel: intake.buildLabel });
+        return askAgent(`Code de fabrication : ${code}`, { buildLabel: intake.buildLabel });
       }
-      setPanel({ kind: 'error', message: 'Ni une pièce, ni une carte grise, ni une vignette constructeur sur cette photo. Cadrez de plus près.' });
+      setPanel({ kind: 'error', message: 'Photo non reconnue. Cadrez la pièce, la carte grise ou la vignette de plus près.' });
     } catch (e) {
       const message =
         e instanceof MediaError
@@ -222,9 +222,9 @@ function Finder({ api }: { api: FinderApi }) {
             ? e.kind === 'auth'
               ? 'Session expirée : reconnectez-vous.'
               : e.kind === 'upstream'
-                ? 'La photo n’a pas pu être lue. Essayez une photo plus nette, bien éclairée.'
+                ? 'Lecture de la photo impossible. Reprenez-la plus nette, avec plus de lumière.'
                 : e.message
-            : 'Lecture impossible.';
+            : 'Lecture du fichier impossible.';
       setPanel({ kind: 'error', message });
     }
   };
@@ -328,7 +328,7 @@ function Finder({ api }: { api: FinderApi }) {
     const error =
       vehicle.status === 'error'
         ? vehicle.error.kind === 'notFound'
-          ? `La plaque ${ref} est introuvable. Vérifiez-la, ou envoyez une photo de la carte grise.`
+          ? `Plaque ${ref} introuvable. Vérifiez-la ou envoyez la carte grise en photo.`
           : vehicle.error.message
         : null;
     return shell(
@@ -340,7 +340,6 @@ function Finder({ api }: { api: FinderApi }) {
             </p>
           )}
           {panel.kind === 'vin' && <VinResult decode={panel.decode} />}
-          {panel.kind === 'vin' && panel.decode.valid && <p className="entry-note">Ajoutez la plaque, ou une photo de la carte grise : le VIN seul ne donne pas le type exact.</p>}
           {panel.kind === 'card' && <CardResult data={panel.registration} onPlate={(p) => goVehicle(p, 'carte-grise', p)} onReset={() => setPanel({ kind: 'none' })} />}
         </Entry>
         {authed && (
@@ -447,23 +446,23 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   let status: ReactNode = null;
   let placeholder: ReactNode = null;
   if (v.carId === null) {
-    placeholder = <p className="sheet-message">Ce véhicule n’a pas de type catalogue (kType) : impossible d’en lister les pièces.</p>;
+    placeholder = <p className="sheet-message">Pas de kType pour ce véhicule : aucune pièce au catalogue.</p>;
   } else if (route.view === 'vehicle') {
     placeholder = (
       <div className="sheet-message">
         <p className="sheet-big">Quelle pièce ?</p>
-        <p>Tapez-la dans le champ en bas : « filtre à huile », « disque de frein », une référence, ou envoyez une photo de la pièce.</p>
+        <p>Nom, référence ou photo, dans le champ en bas.</p>
       </div>
     );
   } else if (categories.status === 'error') {
     status = <ErrorNote message={categories.error.message} onRetry={categories.retry} />;
   } else if (route.view === 'result' && categories.status === 'ok' && !category) {
-    placeholder = <p className="sheet-message">Cette catégorie n’existe pas pour ce véhicule. Cherchez la pièce dans le champ en bas.</p>;
+    placeholder = <p className="sheet-message">Catégorie absente pour ce véhicule. Cherchez la pièce par son nom.</p>;
   } else if (narrowing.status === 'error') {
     status = <ErrorNote message={narrowing.error.message} onRetry={narrowing.retry} />;
     placeholder = <p className="sheet-big">{category?.label}</p>;
   } else if (n && n.totalArticles === 0) {
-    status = <p className="sheet-message">Aucune pièce de cette catégorie n’est référencée pour ce véhicule.</p>;
+    status = <p className="sheet-message">Aucune référence dans cette catégorie pour ce véhicule.</p>;
   }
   if (loading && family.kind !== 'none') status = <p className="sheet-loading" role="status">Affinage des références…</p>;
 
@@ -596,19 +595,19 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
     placeholder = (
       <div className="sheet-message">
         <p className="sheet-big">Connexion requise</p>
-        <p>L’agent cherche la pièce pour un compte connecté. Connectez-vous au-dessus du champ : la demande repart au retour.</p>
+        <p>Connectez-vous au-dessus du champ. La recherche reprend au retour.</p>
       </div>
     );
   } else if (!part) {
     placeholder = busy ? (
       <div className="sheet-message">
         <p className="sheet-big">Recherche en cours</p>
-        <p>{vehicle ? 'L’agent identifie la ou les pièces de votre demande dans le catalogue de ce véhicule.' : 'L’agent identifie d’abord le véhicule, puis la ou les pièces de votre demande.'}</p>
+        <p>{vehicle ? 'Recherche dans le catalogue du véhicule.' : 'Identification du véhicule, puis de la pièce.'}</p>
       </div>
     ) : (
       <div className="sheet-message">
-        <p className="sheet-big">{state.ask ? 'Une précision' : 'Aucune pièce'}</p>
-        <p>{state.ask ? 'Répondez à la question au-dessus du champ pour que l’agent continue.' : 'Reformulez la demande dans le champ en bas.'}</p>
+        <p className="sheet-big">{state.ask ? 'Question en attente' : 'Aucune pièce'}</p>
+        <p>{state.ask ? 'Répondez au-dessus du champ.' : 'Reformulez la demande.'}</p>
       </div>
     );
   }

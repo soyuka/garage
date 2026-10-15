@@ -19,7 +19,7 @@ export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: 
       <div className="dock-status">
         <p className="dock-line">
           <span className="dock-q">« {needsLogin} »</span>
-          <span>Connectez-vous pour que l’agent cherche la pièce : la demande repart au retour.</span>
+          <span>Connexion requise. La recherche reprend au retour.</span>
         </p>
         <button type="button" className="btn pri" onClick={onSignIn}>
           Se connecter
@@ -36,7 +36,7 @@ export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: 
         {busy && (
           <span className="agent-status" role="status">
             <span className="agent-dot" aria-hidden="true" />
-            {state.status ?? 'L’agent lit votre demande…'}
+            {state.status ?? 'Lecture de la demande…'}
           </span>
         )}
         {!busy && state.notice && (
@@ -63,10 +63,10 @@ export function AgentQuestion({ ask, disabled, onAnswer }: { ask: AgentAsk; disa
   return (
     <section className="ask" aria-labelledby="agent-ask-title">
       <h2 id="agent-ask-title" className="sr-only">
-        Une question de l’agent
+        Question
       </h2>
       <p className="ask-q">{ask.question}</p>
-      <p className="ask-hint">Répondez par un bouton, ou dans le champ : texte ou photo.</p>
+      <p className="ask-hint">Ou répondez dans le champ.</p>
       {ask.options.length > 0 && (
         <div className="ask-answers" role="group" aria-label="Réponses">
           {ask.options.map((o) => (
@@ -150,7 +150,7 @@ export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part
       ) : (
         <div className="c s3">
           <span className="l">Véhicule</span>
-          <span className="tb-muted">Non identifié : vérifiez que la référence correspond à votre véhicule.</span>
+          <span className="tb-muted">Non identifié. Vérifiez la compatibilité avant de commander.</span>
         </div>
       )}
       <div className="c s3">
@@ -163,11 +163,11 @@ export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part
       <div className="c s3 why">
         <span className="l">Pourquoi cette pièce</span>
         {part.rationale && <span className="why-agent">{part.rationale}</span>}
-        <span className="why-degraded">Absente du catalogue TecDoc : vérifiez la référence sur la source avant de commander.</span>
+        <span className="why-degraded">Hors catalogue TecDoc. Vérifiez la réf. sur la source avant de commander.</span>
       </div>
       <div className="act">
-        <button type="button" className="btn pri" onClick={async () => toast((await copy(refText)) ? `Copié : ${refText}` : 'Copie impossible : sélectionnez la référence à la main.')}>
-          Copier la référence
+        <button type="button" className="btn pri" onClick={async () => toast((await copy(refText)) ? `Copié : ${refText}` : 'Copie impossible. Sélectionnez la référence.')}>
+          Copier la réf.
         </button>
         <BuyMenu reference={{ brand: part.brand || null, number: part.reference }} />
       </div>

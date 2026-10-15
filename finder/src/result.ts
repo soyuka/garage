@@ -48,15 +48,15 @@ export function cotesLine(dims: readonly Dimension[]): string | null {
 }
 
 const DEGRADED: [RegExp, string][] = [
-  [/no physical criteria/, 'Aucune cote publiée ne permet de distinguer ces pièces : liste classée par marque.'],
-  [/criteria unavailable/, 'Les cotes des pièces n’ont pas pu être lues : affinage incomplet.'],
-  [/cross-references unavailable/, 'Les références OE et une partie des équivalences manquent.'],
-  [/vehicle makers unavailable/, 'Les références OE peuvent être incomplètes.'],
+  [/no physical criteria/, 'Aucune cote publiée pour les distinguer : liste par marque.'],
+  [/criteria unavailable/, 'Cotes non chargées : affinage incomplet.'],
+  [/cross-references unavailable/, 'Réf. OE et une partie des équivalences manquantes.'],
+  [/vehicle makers unavailable/, 'Réf. OE peut-être incomplètes.'],
 ];
 
 export function degradedMessage(reason: string): string {
   const parts = reason.split(';').map((r) => r.trim());
   const french = parts.map((p) => DEGRADED.find(([re]) => re.test(p))?.[1]).filter((m): m is string => m !== undefined);
   if (french.length === parts.length && french.length > 0) return french.join(' ');
-  return [...french, 'Le catalogue a répondu partiellement (quota ou panne).'].join(' ');
+  return [...french, 'Réponse partielle du catalogue (quota ou panne).'].join(' ');
 }

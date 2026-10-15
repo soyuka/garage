@@ -56,13 +56,13 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
       ) : (
         <div className="c s3">
           <span className="l">Référence</span>
-          <div className="tb-muted">Pas de pièce unique identifiée</div>
+          <div className="tb-muted">Aucune référence unique</div>
         </div>
       )}
 
       {eq && eq.shown.length > 0 && (
         <div className="c s3">
-          <span className="l">Équivalences · même pièce, autres marques</span>
+          <span className="l">Équivalences</span>
           <div className="eq m">
             {eq.shown.map((v) => (
               <button
@@ -82,7 +82,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
 
       {fallback.length > 0 && (
         <div className="c s3">
-          <span className="l">Marques classées · sans affinage</span>
+          <span className="l">Marques (non affiné)</span>
           <div className="eq m">
             {fallback.map((b) => (
               <span key={b.brand}>
@@ -127,7 +127,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
         {whyLine(narrowing, cluster, confirmed)}
         {narrowing.degradedReason && <span className="why-degraded">{degradedMessage(narrowing.degradedReason)}</span>}
         {narrowing.unclassifiedCount > 0 && cluster && (
-          <span className="why-quiet">{formatCount(narrowing.unclassifiedCount)} références non rattachées à une pièce.</span>
+          <span className="why-quiet">{formatCount(narrowing.unclassifiedCount)} réf. non rattachées.</span>
         )}
       </div>
 
@@ -136,14 +136,14 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
           type="button"
           className="btn pri"
           disabled={!headline}
-          onClick={async () => toast((await copy(copyValue)) ? `Copié : ${copyValue}` : 'Copie impossible : sélectionnez la référence à la main.')}
+          onClick={async () => toast((await copy(copyValue)) ? `Copié : ${copyValue}` : 'Copie impossible. Sélectionnez la référence.')}
         >
-          Copier la référence
+          Copier la réf.
         </button>
         {buyRef && <BuyMenu reference={buyRef} />}
         <AddToVehicle vehicle={vehicle} category={category} family={family} oe={oe} equivalent={top} api={api} />
         <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>
-          Partager
+          Copier le lien
         </button>
       </div>
     </div>
@@ -153,10 +153,10 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
 type AddState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'login' } | { kind: 'pick'; candidates: GarageCandidate[] };
 
 const PLAN_FAILURE: Record<string, string> = {
-  ambiguous: 'Plusieurs véhicules du garage correspondent : ouvrez l’Atelier pour choisir le bon, puis réessayez.',
-  invalid: 'Le garage a refusé ce véhicule : marque ou modèle manquant.',
-  network: 'Garage injoignable : vérifiez la connexion et réessayez.',
-  failed: 'L’ajout au garage a échoué. Réessayez.',
+  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Choisissez-le dans l’Atelier, puis réessayez.',
+  invalid: 'Refusé par le garage : marque ou modèle manquant.',
+  network: 'Garage injoignable. Vérifiez la connexion et réessayez.',
+  failed: 'Ajout au garage impossible. Réessayez.',
 };
 
 function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi }) {
@@ -182,7 +182,7 @@ function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehi
   if (state.kind === 'login') {
     return (
       <div className="add-login" role="group" aria-label="Connexion requise">
-        <p>Le garage est lié à votre compte : connectez-vous, puis ajoutez la pièce.</p>
+        <p>Connexion requise pour ajouter la pièce.</p>
         <button type="button" className="btn pri" onClick={() => void login()}>
           Se connecter
         </button>
@@ -203,13 +203,13 @@ function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehi
 }
 
 function whyLine(n: Narrowing, cluster: Cluster | null, confirmed: boolean) {
-  if (!cluster) return <span>Le catalogue n’a pas pu regrouper les références en pièces distinctes.</span>;
+  if (!cluster) return <span>Références non regroupées en pièces distinctes.</span>;
   const brands = new Set(cluster.variants.map((v) => v.brand)).size;
-  const same = `${formatCount(cluster.articleCount)} références de ${formatCount(brands)} marque${brands > 1 ? 's' : ''} désignent cette même pièce.`;
+  const same = `${formatCount(cluster.articleCount)} réf. de ${formatCount(brands)} marque${brands > 1 ? 's' : ''} pour cette même pièce.`;
   if (n.clusters.length > 1 && !confirmed) {
     return (
       <span>
-        {n.clusters.length} pièces possibles pour ce véhicule : répondez à la question pour confirmer. <span className="tag">à confirmer</span>
+        {n.clusters.length} pièces possibles. Répondez à la question pour trancher. <span className="tag">à confirmer</span>
       </span>
     );
   }

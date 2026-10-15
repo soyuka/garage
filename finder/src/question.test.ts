@@ -23,7 +23,7 @@ describe('buildQuestion', () => {
       { label: `85${NNBSP}mm`, clusterId: 'c2' },
       { label: `93${NNBSP}mm`, clusterId: 'c1' },
     ]);
-    expect(q?.hint).toMatch(/ancien/);
+    expect(q?.hint).toBe('Mesurez de la base au sommet, joint compris.');
   });
 
   it('prefixes diameters with Ø and agrees the article with the noun', () => {
@@ -67,7 +67,8 @@ describe('buildQuestion', () => {
 
   it('falls back to the representatives when no dimension tells the parts apart', () => {
     const q = buildQuestion({ ...n, differsOn: [] }, 'Filtre à huile');
-    expect(q?.text).toMatch(/ancien/);
+    expect(q?.text).toBe('2 références possibles, sans cote distinctive. Laquelle est montée ?');
+    expect(q?.hint).toBe('Comparez avec la réf. gravée sur la pièce démontée.');
     expect(q?.answers.map((a) => a.label)).toEqual(['MANN-FILTER W 712/73', 'BOSCH F 026 407 085']);
   });
 

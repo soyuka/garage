@@ -29,11 +29,11 @@ Shipped, end to end:
 - **Meshes (2026-10-15)**: 89 Wrench web meshes + filter + brakes (batch 3: 29, batch 4: 5, 2026-10-15) in `finder/public/parts/`
   (inventory, sizes, licence note: `SOURCES.md`). `family.ts` `MESH_RULES` maps TecDoc categories to
   them (133/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
-  the active mesh loads; approximate matches captioned "Aperçu : forme générique de la famille";
+  the active mesh loads; approximate matches captioned "Forme type de la famille, pas la pièce exacte";
   unmapped categories keep the generic chamfered block. Dev contact sheet:
   https://localhost/finder/dev/meshes.html (not in the build). Title block = result card, Copier /
   Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
-  confirmNew) / Partager. "Enregistrer le véhicule" in the top bar (`POST /garage/vehicles/save`,
+  confirmNew) / Copier le lien. "Enregistrer le véhicule" in the top bar (`POST /garage/vehicles/save`,
   same-plate match, different plate = different car, 409 picker when no plate).
 - **Layout (2026-10-15)**: composer docked at the bottom on every width, with the agent status, its
   question + answers (or the differsOn question) and quick actions above it; no left aside (trace is
@@ -72,6 +72,10 @@ break / 2.0 DI) instead of guessing.
 - Mesh view on a real non-filter category not yet seen in the app (every uncached category costs
   partsapi calls); verified only on the dev contact sheet. No cotes are drawn on these meshes yet:
   each family would need its own anchor logic, from fingerprint data only.
+- History rows restored from a category pick show the raw category id as their input (`100259`)
+  instead of the category label (seen on the home capture, 2026-10-15).
+- Carte grise warnings come from the server in English (`RegistrationDocumentExtractor`: `A: not in
+  the AA-123-AA format.`) and print as is in the French card result.
 - Oil caps (HeadAcc_OilCap, OilCap_Type1) have no web build: not shipped.
 - Garage: picker only, no fleet management; several same-model cars are told apart by plate only.
 - Data source: partsapi test keys (50/day/method). Going public = TecAlliance licence (below) AND

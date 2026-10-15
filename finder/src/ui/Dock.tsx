@@ -41,9 +41,6 @@ export function Dock({ status, note, slot, quick, categories, loading, busy, has
           </div>
         )}
         <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} hasVehicle={hasVehicle} onText={onText} onFiles={onFiles} />
-        <p className="dock-foot">
-          <span>Catalogue TecDoc · usage privé</span>
-        </p>
       </div>
     </div>
   );

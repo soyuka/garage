@@ -7,7 +7,7 @@ export function History({ entries, loading, onOpen }: { entries: HistoryEntry[];
     <section className="history" aria-labelledby="history-title" aria-busy={loading}>
       <h2 id="history-title">Recherches récentes</h2>
       {loading ? (
-        <p className="history-loading">Lecture du journal…</p>
+        <p className="history-loading">Chargement…</p>
       ) : (
         <ol>
           {entries.map((e) => (

@@ -22,17 +22,17 @@ const ACCEPT = 'image/*,video/*,application/pdf';
 export function routeHint(route: TextRoute, hasVehicle: boolean): string {
   switch (route.kind) {
     case 'empty':
-      return hasVehicle ? 'Une pièce, un symptôme, une référence, une autre plaque, ou une photo.' : 'Collez ou déposez une photo ici, ou passez par le trombone.';
+      return 'Photo ou PDF : collez ou glissez le fichier ici.';
     case 'plate':
-      return route.format === 'siv' ? 'Plaque SIV : Entrée identifie le véhicule.' : 'Ancienne plaque FNI : Entrée identifie le véhicule.';
+      return route.format === 'siv' ? 'Plaque SIV' : 'Plaque FNI (ancien format)';
     case 'vin':
-      return 'VIN : décodé sur place, sans appel au catalogue.';
+      return 'VIN';
     case 'reference':
-      return 'Référence de pièce : l’agent cherche ce qu’elle désigne.';
+      return 'Référence de pièce';
     case 'category':
-      return `Catégorie du catalogue : ${route.category.label}.`;
+      return `Catégorie : ${route.category.label}`;
     case 'text':
-      return hasVehicle ? 'L’agent cherche la pièce pour ce véhicule.' : 'L’agent identifie le véhicule, puis la pièce.';
+      return hasVehicle ? 'Recherche libre' : 'Recherche libre : précisez marque, modèle et moteur.';
   }
 }
 
@@ -132,7 +132,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
       role="search"
     >
       <label htmlFor={`${id}-q`} className="sr-only">
-        Plaque, VIN, référence, pièce ou photo
+        Plaque, VIN ou pièce
       </label>
       <div className="intake-field">
         <input
@@ -145,7 +145,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           aria-autocomplete="list"
           aria-describedby={`${id}-hint`}
           aria-activedescendant={showList && navigated && active < optionCount ? `${id}-o${active}` : undefined}
-          placeholder={loading ? 'Chargement du catalogue…' : hasVehicle ? 'Une pièce, un symptôme, une référence, une réponse…' : 'Plaque, VIN, pièce et véhicule, référence…'}
+          placeholder={loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : 'AB-123-CD'}
           value={text}
           autoComplete="off"
           autoCapitalize="off"
@@ -199,7 +199,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
         </button>
       </div>
       <p id={`${id}-hint`} className="intake-hint" aria-live="polite">
-        {over ? 'Déposez la photo, la vidéo ou le PDF.' : hint}
+        {over ? 'Déposez le fichier.' : hint}
       </p>
       {showList && (
         <ul className="q-list" id={`${id}-list`} role="listbox" aria-label="Catégories de pièces">
@@ -230,8 +230,8 @@ export function Intake({ variant, categories, loading = false, initial, context 
             }}
             onMouseEnter={() => (setNavigated(true), setActive(askIndex))}
           >
-            <span className="q-label">Demander : « {text.trim()} »</span>
-            <span className="q-path">{hits.length === 0 ? 'Aucune catégorie ne correspond : l’agent cherche la pièce' : 'L’agent trouve la ou les pièces'}</span>
+            <span className="q-label">Recherche libre : « {text.trim()} »</span>
+            {hits.length === 0 && <span className="q-path">Aucune catégorie de ce nom</span>}
           </li>
         </ul>
       )}

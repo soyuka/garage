@@ -108,7 +108,7 @@ export function Journal({ api, open, authed, docked, onClose }: Props) {
           <h2 id="journal-title" ref={heading} tabIndex={-1}>
             Journal
           </h2>
-          <span className="journal-sub">finder · le plus récent en haut</span>
+          <span className="journal-sub">finder</span>
           <div className="journal-tools">
             {authed && (
               <button type="button" className="icon-btn" onClick={load} disabled={loading} aria-label="Actualiser le journal" title="Actualiser">
@@ -123,7 +123,7 @@ export function Journal({ api, open, authed, docked, onClose }: Props) {
 
         {!authed ? (
           <div className="journal-empty">
-            <p>Le journal liste vos recherches et les tours de l’agent. Il est lié à votre compte.</p>
+            <p>Connexion requise pour lire le journal.</p>
             <button type="button" className="btn pri" onClick={() => void login()}>
               Se connecter
             </button>
@@ -133,7 +133,7 @@ export function Journal({ api, open, authed, docked, onClose }: Props) {
             {usage && (
               <section className="journal-quota" aria-labelledby="quota-title">
                 <span className="l" id="quota-title">
-                  Appels partsapi aujourd’hui · quota des clés de test : {QUOTA_PER_METHOD} par méthode et par jour
+                  Appels partsapi du jour · quota {QUOTA_PER_METHOD} par méthode
                 </span>
                 <ul className="journal-methods m">
                   <li className="journal-methods-total">
@@ -160,7 +160,7 @@ export function Journal({ api, open, authed, docked, onClose }: Props) {
             )}
             <ol className="journal-list" aria-busy={loading}>
               {rows === null && loading && <li className="journal-muted journal-pad">Chargement…</li>}
-              {rows !== null && rows.length === 0 && <li className="journal-muted journal-pad">Rien encore : vos recherches apparaîtront ici.</li>}
+              {rows !== null && rows.length === 0 && <li className="journal-muted journal-pad">Aucune recherche.</li>}
               {rows?.map((row) => (
                 <li key={row.id}>
                   <Row row={row} open={selected === row.id} onToggle={() => toggle(row.id)} />
@@ -261,7 +261,7 @@ function Detail({ detail: state }: { detail: DetailState | null }) {
       {detail.kind === 'agent' && (
         <p className="journal-line">
           <span className="l">Coût estimé</span>
-          {cost ?? <span className="journal-muted">non calculé : prix AGENT_PRICE_* non configurés côté API</span>}
+          {cost ?? <span className="journal-muted">non calculé (AGENT_PRICE_* absents côté API)</span>}
         </p>
       )}
       <p className="journal-line">

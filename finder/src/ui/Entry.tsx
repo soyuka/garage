@@ -5,7 +5,7 @@ export function Entry({ children }: { children?: ReactNode }) {
   return (
     <section className="entry" aria-labelledby="entry-title">
       <h1 id="entry-title">Quelle pièce, pour quel véhicule ?</h1>
-      <p className="entry-lede">Un seul champ, en bas de l’écran : la plaque, le VIN, une référence, le nom d’une pièce ou un symptôme. Ou une photo de la pièce, de la carte grise, une courte vidéo.</p>
+      <p className="entry-lede">Saisissez la plaque ou le VIN, puis la pièce.</p>
       {children && <div className="entry-panel">{children}</div>}
     </section>
   );
@@ -15,7 +15,7 @@ export function VinResult({ decode }: { decode: VinDecode }) {
   if (!decode.valid) {
     return (
       <p className="field-error" role="alert">
-        Ce VIN n’est pas valide{decode.error ? ` (${decode.error})` : ''}. Vérifiez la case E de la carte grise.
+        VIN invalide{decode.error ? ` (${decode.error})` : ''}. Vérifiez la case E de la carte grise.
       </p>
     );
   }
@@ -40,7 +40,7 @@ export function VinResult({ decode }: { decode: VinDecode }) {
           <dd className="m">{decode.wmi ?? '—'}</dd>
         </div>
       </dl>
-      <p className="entry-note">Le VIN donne le constructeur, pas le type exact du véhicule. Ajoutez la plaque, ou une photo de la carte grise, dans le champ.</p>
+      <p className="entry-note">Le VIN ne suffit pas à trouver le kType. Saisissez la plaque ou envoyez la carte grise en photo.</p>
     </div>
   );
 }
@@ -50,7 +50,7 @@ export function CardResult({ data, onPlate, onReset }: { data: Registration; onP
     <div className="card-result">
       {!data.legible && (
         <p className="field-error" role="alert">
-          Document peu lisible : vérifiez chaque champ avant de continuer.
+          Document peu lisible. Vérifiez chaque champ.
         </p>
       )}
       <table className="reg">
@@ -80,7 +80,7 @@ export function CardResult({ data, onPlate, onReset }: { data: Registration; onP
             Rechercher <span className="m">{data.plate}</span>
           </button>
         ) : (
-          <p className="field-error">Plaque (case A) illisible : saisissez-la à la main.</p>
+          <p className="field-error">Plaque (case A) illisible. Saisissez-la.</p>
         )}
         <button type="button" className="btn" onClick={onReset}>
           Annuler

@@ -9,7 +9,7 @@ const isObject = (v: unknown): v is Json => typeof v === 'object' && v !== null 
 const text = (v: unknown): v is string => typeof v === 'string';
 const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 
-const NOTHING_FOUND = 'Aucune pièce trouvée pour cette demande. Reformulez-la, ou choisissez une catégorie dans la liste.';
+const NOTHING_FOUND = 'Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.';
 const CANCELLED = 'Demande interrompue.';
 
 export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false, held: null };
@@ -219,10 +219,10 @@ export class TurnRequestError extends Error {
   constructor(public readonly kind: 'auth' | 'network' | 'server') {
     super(
       kind === 'auth'
-        ? 'Connexion requise pour interroger l’agent.'
+        ? 'Connexion requise pour cette recherche.'
         : kind === 'network'
-          ? 'Le serveur ne répond pas. Vérifiez la connexion puis réessayez.'
-          : 'L’agent n’a pas pu démarrer. Réessayez dans un instant, ou choisissez une catégorie dans la liste.',
+          ? 'Serveur injoignable. Vérifiez la connexion et réessayez.'
+          : 'Recherche non lancée (erreur serveur). Réessayez ou choisissez une catégorie.',
     );
   }
 }

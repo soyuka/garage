@@ -23,10 +23,10 @@ function ofNoun(categoryLabel: string): string {
 }
 
 const HINTS: [RegExp, string][] = [
-  [/^hauteur/, 'Mesurez l’ancienne pièce de la base au sommet, joint compris.'],
-  [/^diametre/, 'Mesurez le diamètre de l’ancienne pièce, ou lisez-le gravé dessus.'],
-  [/^epaisseur/, 'Mesurez l’épaisseur de l’ancienne pièce au pied à coulisse.'],
-  [/^thread|^filetage/, 'Comparez le filetage de l’ancienne pièce.'],
+  [/^hauteur/, 'Mesurez de la base au sommet, joint compris.'],
+  [/^diametre/, 'Mesurez au pied à coulisse, ou lisez la valeur gravée.'],
+  [/^epaisseur/, 'Mesurez au pied à coulisse.'],
+  [/^thread|^filetage/, 'Comparez avec le filetage de la pièce démontée.'],
 ];
 
 const hintFor = (key: string): string | null => HINTS.find(([re]) => re.test(key))?.[1] ?? null;
@@ -43,8 +43,8 @@ export function buildQuestion(n: Narrowing, categoryLabel: string): Question | n
   const divergence = n.differsOn.find((d) => new Set(d.values.map((v) => v.value)).size > 1);
   if (!divergence) {
     return {
-      text: `${n.clusters.length} pièces possibles, sans cote qui les sépare : laquelle ressemble à l’ancienne ?`,
-      hint: 'Comparez la référence gravée sur l’ancienne pièce.',
+      text: `${n.clusters.length} références possibles, sans cote distinctive. Laquelle est montée ?`,
+      hint: 'Comparez avec la réf. gravée sur la pièce démontée.',
       answers: n.clusters.map((c) => ({ label: `${c.representative.brand} ${c.representative.number}`, clusterId: c.id })),
     };
   }

@@ -33,7 +33,7 @@ export function NarrowingTrace({ narrowing, remaining, cluster }: { narrowing: A
             </div>
           ))}
         </dl>
-        <p className="trace-status" role="status">Analyse des références du catalogue…</p>
+        <p className="trace-status" role="status">Lecture des références…</p>
       </section>
     );
   }
@@ -62,7 +62,7 @@ export function QuestionCard({ question, confirmed, selected, onAnswer }: { ques
   return (
     <section className="ask" aria-labelledby="ask-title">
       <h2 id="ask-title" className="sr-only">
-        {confirmed ? 'Votre réponse' : 'Une question'}
+        {confirmed ? 'Réponse' : 'Question'}
       </h2>
       <p className="ask-q">{question.text}</p>
       {question.hint && <p className="ask-hint">{question.hint}</p>}

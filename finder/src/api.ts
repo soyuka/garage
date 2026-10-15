@@ -28,12 +28,12 @@ const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFi
 const int = (v: unknown, fallback = 0): number => num(v) ?? fallback;
 
 const ERROR_MESSAGES: Record<ErrorKind, string> = {
-  network: 'Le serveur ne répond pas. Vérifiez la connexion puis réessayez.',
+  network: 'Serveur injoignable. Vérifiez la connexion et réessayez.',
   notFound: 'Introuvable dans le catalogue.',
   auth: 'Connexion requise.',
-  quota: 'Le quota du catalogue est épuisé pour aujourd’hui. Réessayez demain ou plus tard.',
-  upstream: 'Le catalogue de pièces ne répond pas pour le moment. Réessayez dans un instant.',
-  invalid: 'La demande n’a pas été comprise.',
+  quota: 'Quota du catalogue épuisé pour aujourd’hui. Réessayez demain.',
+  upstream: 'Catalogue injoignable. Réessayez dans un instant.',
+  invalid: 'Demande refusée par le serveur. Vérifiez la saisie.',
 };
 
 export class ApiError extends Error {

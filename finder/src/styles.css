@@ -1352,15 +1352,6 @@ button {
   font-weight: 400;
 }
 
-.dock-foot {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  align-items: center;
-  font-size: 11.5px;
-  color: var(--mute);
-}
-
 .dock .intake {
   gap: 4px;
 }
@@ -2025,12 +2016,6 @@ button {
   }
   .dock {
     padding: 10px var(--gutter) 6px;
-  }
-  .dock-foot > span:first-child {
-    display: none;
-  }
-  .dock-foot:not(:has(.tag)) {
-    display: none;
   }
   .ask {
     padding: 10px 12px;

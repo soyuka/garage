@@ -88,7 +88,7 @@ async function encode(source: Drawable): Promise<Frame> {
 
 export class MediaError extends Error {
   constructor(public readonly kind: 'decode' | 'video') {
-    super(kind === 'video' ? 'Vidéo illisible sur cet appareil : prenez plutôt une photo.' : 'Image illisible : essayez une photo JPEG ou PNG.');
+    super(kind === 'video' ? 'Vidéo illisible sur cet appareil. Envoyez une photo.' : 'Image illisible. Envoyez un JPEG ou un PNG.');
   }
 }
 

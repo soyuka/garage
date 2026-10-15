@@ -7,7 +7,7 @@ const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
 const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
 const SILENCE_MS = 90_000;
 const PENDING_KEY = 'finder.agent.pending';
-const SILENT = 'L’agent ne répond plus. Réessayez, ou choisissez une catégorie dans la liste.';
+const SILENT = 'Pas de réponse. Réessayez ou choisissez une catégorie.';
 
 interface Pending {
   ref: string;
