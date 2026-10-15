@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent\Ui;
 
+use App\Agent\TurnSurface;
 use App\Agent\Ui\RenderIntentTools;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
@@ -255,5 +256,25 @@ final class StepNarratorTest extends TestCase
         $narrator->reset();
 
         $this->assertFalse($narrator->wasAnnounced('call-4'));
+    }
+
+    public function testAFinderTurnNarratesInTheFinderVoiceUntilTheNextReset(): void
+    {
+        $published = new \ArrayObject();
+        $narrator = $this->narrator($published);
+        $narrator->reset(TurnSurface::Finder);
+        $narrator->forTool('show_parts');
+        $narrator->forTool('list_cars');
+        $narrator->reset();
+        $narrator->forTool('show_parts');
+
+        $this->assertSame(
+            [
+                ['type' => 'status', 'message' => 'Affinage des références…', 'tool' => 'show_parts'],
+                ['type' => 'status', 'message' => 'Recherche de la motorisation…', 'tool' => 'list_cars'],
+                ['type' => 'status', 'message' => "J'affine les références…", 'tool' => 'show_parts'],
+            ],
+            $published->getArrayCopy(),
+        );
     }
 }

@@ -111,7 +111,7 @@ final readonly class RunAgentTurnHandler
         $this->activityTracker->reset();
         // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
         // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
-        $this->stepNarrator->reset();
+        $this->stepNarrator->reset($message->surface);
         if (TurnSurface::Finder === $message->surface) {
             $this->finderTools->bindVehicle($message->vehicle);
         }
@@ -161,7 +161,7 @@ final readonly class RunAgentTurnHandler
             // routes the turn straight to the `failed` transport, so capped runs stay visible for
             // monitoring instead of vanishing into a log line.
             $this->logger->warning('Garage turn did not converge, dead-lettering: {error}', ['error' => $e->getMessage()]);
-            $this->renderTools->toast($messages->notConverged, 'warn');
+            $this->renderTools->toast(TurnSurface::Finder === $message->surface ? $messages->finderNotConverged : $messages->notConverged, 'warn');
 
             throw new UnrecoverableMessageHandlerException('Garage turn did not converge.', previous: $e);
         } catch (\Throwable $e) {

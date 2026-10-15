@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use App\Agent\TurnSurface;
 use App\I18n\AgentMessages;
 use App\I18n\LocaleContext;
 
@@ -71,6 +72,8 @@ final class StepNarrator
      */
     private array $lastIndex = [];
 
+    private TurnSurface $surface = TurnSurface::Garage;
+
     /**
      * PHP has no way to write a closure as a constructor default (it is not a constant expression),
      * so the random picker is applied in {@see sentence()} instead of at the parameter — `null` here
@@ -105,7 +108,12 @@ final class StepNarrator
      */
     private function sentence(string $tool): ?string
     {
-        $variants = AgentMessages::for($this->locale->current())->narration[$tool] ?? null;
+        $messages = AgentMessages::for($this->locale->current());
+        if (TurnSurface::Finder === $this->surface) {
+            return $messages->finderNarration[$tool] ?? null;
+        }
+
+        $variants = $messages->narration[$tool] ?? null;
 
         if (null === $variants) {
             return null;
@@ -153,10 +161,12 @@ final class StepNarrator
 
     /**
      * Called once per turn by {@see \App\MessageHandler\RunAgentTurnHandler}, alongside the other
-     * per-turn resets — this is a long-lived singleton in the worker.
+     * per-turn resets — this is a long-lived singleton in the worker. The finder narrates one fixed
+     * impersonal line per step (a parts counter, not the Atelier's first-person workshop voice).
      */
-    public function reset(): void
+    public function reset(TurnSurface $surface = TurnSurface::Garage): void
     {
+        $this->surface = $surface;
         $this->announced = [];
         $this->lastIndex = [];
     }

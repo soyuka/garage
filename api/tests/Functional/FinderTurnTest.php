@@ -198,8 +198,7 @@ final class FinderTurnTest extends AppTestCase
 
         $toasts = array_values(array_filter(self::frames('sess-noop'), static fn (array $f): bool => 'toast' === $f['type']));
         self::assertCount(1, $toasts);
-        self::assertStringContainsString('pièce', $toasts[0]['message']);
-        self::assertStringNotContainsString('enregistrer', $toasts[0]['message']);
+        self::assertSame('Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.', $toasts[0]['message']);
     }
 
     public function testGarageAgentDoesNotSeeTheFinderTools(): void

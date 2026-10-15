@@ -26,7 +26,8 @@ namespace App\I18n;
 final readonly class AgentMessages
 {
     /**
-     * @param array<string, non-empty-list<string>> $narration tool name → the heartbeat sentence variants for that step
+     * @param array<string, non-empty-list<string>> $narration       tool name → the heartbeat sentence variants for that step
+     * @param array<string, string>                 $finderNarration tool name → the finder's one status line for that step
      */
     private function __construct(
         public array $narration,
@@ -34,6 +35,8 @@ final readonly class AgentMessages
         public string $notConverged,
         public string $cancelled,
         public string $finderNoOp,
+        public array $finderNarration,
+        public string $finderNotConverged,
     ) {
     }
 
@@ -126,7 +129,20 @@ final readonly class AgentMessages
             noOp: "Je n'ai pas pu traiter ta demande. Reformule ou précise ce que tu veux enregistrer.",
             notConverged: "Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.",
             cancelled: 'Demande interrompue.',
-            finderNoOp: "Je n'ai trouvé aucune pièce pour cette demande. Reformule-la, ou choisis une catégorie dans la liste.",
+            finderNoOp: 'Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.',
+            finderNarration: [
+                'lookup_plate' => 'Lecture de la plaque…',
+                'decode_vin' => 'Décodage du VIN…',
+                'list_makes' => 'Recherche du constructeur…',
+                'list_models' => 'Recherche du modèle…',
+                'list_cars' => 'Recherche de la motorisation…',
+                'decode_build_code' => 'Décodage du code de fabrication…',
+                'list_part_categories' => 'Recherche de la catégorie…',
+                'get_service_parts' => 'Liste des pièces d’entretien…',
+                'show_parts' => 'Affinage des références…',
+                'web_search' => 'Recherche sur le web…',
+            ],
+            finderNotConverged: 'Recherche non aboutie. Précisez la pièce ou le véhicule.',
         );
     }
 
@@ -215,7 +231,20 @@ final readonly class AgentMessages
             noOp: 'I could not handle that. Rephrase it, or say more precisely what you want recorded.',
             notConverged: 'I could not finish that. Rephrase it, or narrow the question.',
             cancelled: 'Request stopped.',
-            finderNoOp: 'I found no part for that request. Rephrase it, or pick a category from the list.',
+            finderNoOp: 'No part found. Rephrase the request or pick a category.',
+            finderNarration: [
+                'lookup_plate' => 'Reading the plate…',
+                'decode_vin' => 'Decoding the VIN…',
+                'list_makes' => 'Finding the make…',
+                'list_models' => 'Finding the model…',
+                'list_cars' => 'Finding the engine…',
+                'decode_build_code' => 'Decoding the build code…',
+                'list_part_categories' => 'Finding the category…',
+                'get_service_parts' => 'Listing service parts…',
+                'show_parts' => 'Narrowing the references…',
+                'web_search' => 'Searching the web…',
+            ],
+            finderNotConverged: 'Search did not finish. Name the part or the vehicle more precisely.',
         );
     }
 }
