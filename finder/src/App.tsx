@@ -32,7 +32,7 @@ import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Asy
 import { Journal } from './ui/Journal';
 import { useAgentTurn, type AgentTurn, type AskOptions } from './ui/useAgentTurn';
 import { Sheet } from './ui/Sheet';
-import { ResultActions } from './ui/ResultActions';
+import { ResultActions, WebActions } from './ui/ResultActions';
 import { TitleBlock } from './ui/TitleBlock';
 import { QuestionCard } from './ui/Trace';
 import { VehicleChip } from './ui/VehicleChip';
@@ -764,6 +764,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
         </Sheet>
       </div>
       {actionsSlot && part?.kind === 'catalog' && category && n && vehicle && createPortal(<ResultActions vehicle={vehicle} category={category} family={family} cluster={cluster} clusters={n.clusters} api={api} />, actionsSlot)}
+      {actionsSlot && part?.kind === 'web' && createPortal(<WebActions key={part.key} part={part} />, actionsSlot)}
       {slot &&
         createPortal(
           <>

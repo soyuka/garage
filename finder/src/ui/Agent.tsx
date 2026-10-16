@@ -1,8 +1,7 @@
 import { isBusy } from '../agent';
 import { askChoices } from '../question';
 import type { AgentAsk, AgentPart, TurnState, Vehicle, WebPart } from '../types';
-import { BuyMenu } from './BuyMenu';
-import { useToast } from './Toast';
+import { CopyRef } from './CopyRef';
 import { vehicleEngine, vehicleName } from './VehicleChip';
 
 interface StatusProps {
@@ -111,15 +110,6 @@ export function PartSwitcher({ parts, selected, onSelect }: { parts: AgentPart[]
   );
 }
 
-async function copy(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 const hostOf = (url: string): string => {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -129,8 +119,6 @@ const hostOf = (url: string): string => {
 };
 
 export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part: WebPart }) {
-  const toast = useToast();
-  const refText = [part.brand, part.reference].filter((s) => s.trim() !== '').join(' ');
   return (
     <div className="tb" aria-label="Cartouche du résultat">
       <div className="c s3">
@@ -139,7 +127,10 @@ export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part
       </div>
       <div className="c s3">
         <span className="l">{part.brand ? `Réf. · ${part.brand}` : 'Référence'}</span>
-        <div className="oe m">{part.reference}</div>
+        <div className="oe-line">
+          <div className="oe m">{part.reference}</div>
+          <CopyRef text={part.reference} />
+        </div>
       </div>
       {vehicle ? (
         <>
@@ -169,12 +160,6 @@ export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part
         <span className="l">Pourquoi cette pièce</span>
         {part.rationale && <span className="why-agent">{part.rationale}</span>}
         <span className="why-degraded">Hors catalogue TecDoc. Vérifiez la réf. sur la source avant de commander.</span>
-      </div>
-      <div className="act">
-        <button type="button" className="btn pri" onClick={async () => toast((await copy(refText)) ? `Copié : ${refText}` : 'Copie impossible. Sélectionnez la référence.')}>
-          Copier la réf.
-        </button>
-        <BuyMenu reference={{ brand: part.brand || null, number: part.reference }} />
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
 import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
 import { actionRefs } from '../result';
-import type { Category, Cluster, Family, Reference, Vehicle } from '../types';
+import type { Category, Cluster, Family, Reference, Vehicle, WebPart } from '../types';
 import { BuyMenu } from './BuyMenu';
 import { copy } from './CopyRef';
 import { GaragePicker } from './Garage';
@@ -29,6 +29,15 @@ export function ResultActions({ vehicle, category, family, cluster, clusters, ap
       <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>
         Copier le lien
       </button>
+    </div>
+  );
+}
+
+// A web find: no catalogue variant and no shareable route, so buying is its only dock action.
+export function WebActions({ part }: { part: WebPart }) {
+  return (
+    <div className="act" role="group" aria-label="Actions sur la pièce">
+      <BuyMenu reference={{ brand: part.brand || null, number: part.reference }} />
     </div>
   );
 }
