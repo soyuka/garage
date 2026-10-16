@@ -62,19 +62,18 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
     public function read(string $content, string $mimeType): array
     {
         try {
-            $text = $this->platform->invoke(
+            $decoded = $this->platform->invoke(
                 $this->model,
                 new MessageBag(
                     Message::forSystem(self::SYSTEM_PROMPT),
                     Message::ofUser(new Text('Sort this photo and read it.'), new Image($content, $mimeType)),
                 ),
                 ['response_format' => $this->responseFormat()],
-            )->asText();
+            )->asObject();
         } catch (ExceptionInterface $e) {
             throw new RegistrationDocumentUnreadable('The photo intake model call failed: '.$e::class, 0, $e);
         }
 
-        $decoded = json_decode($text, true);
         if (!\is_array($decoded)) {
             throw new RegistrationDocumentUnreadable('The photo intake model did not return a JSON object.');
         }

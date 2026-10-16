@@ -54,19 +54,18 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
         $file = 'application/pdf' === $mimeType ? new Document($content, $mimeType) : new Image($content, $mimeType);
 
         try {
-            $text = $this->platform->invoke(
+            $decoded = $this->platform->invoke(
                 $this->model,
                 new MessageBag(
                     Message::forSystem(self::SYSTEM_PROMPT),
                     Message::ofUser(new Text('Extract the fields from this document.'), $file),
                 ),
                 ['response_format' => $this->responseFormat()],
-            )->asText();
+            )->asObject();
         } catch (ExceptionInterface $e) {
             throw new RegistrationDocumentUnreadable('The extraction model call failed: '.$e::class, 0, $e);
         }
 
-        $decoded = json_decode($text, true);
         if (!\is_array($decoded)) {
             throw new RegistrationDocumentUnreadable('The extraction model did not return a JSON object.');
         }
