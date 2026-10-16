@@ -66,6 +66,8 @@ export function getToken(): string | null {
   return token !== null && isTokenFresh(token, Date.now()) ? token.accessToken : null;
 }
 
+export const isCallbackPath = (): boolean => window.location.pathname === CALLBACK_PATH;
+
 export const isAuthenticated = (): boolean => getToken() !== null;
 
 export async function login(): Promise<void> {

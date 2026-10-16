@@ -1,3 +1,4 @@
+import { authFetch } from './auth';
 import type { CarType, Cluster, Narrowing } from './types';
 
 export interface SheetPhoto {
@@ -16,4 +17,15 @@ export function sheetPhoto(narrowing: Narrowing | null, cluster: Cluster | null,
   const { artId, brand, number } = cluster.representative;
   const reference = `${brand} ${number}`;
   return { src: photoPath(narrowing.carId, carType, narrowing.categoryId, artId), reference, alt: `Photo catalogue de la pièce ${reference}` };
+}
+
+// An <img src> cannot send the bearer the API now requires: the bytes come through authFetch. Null on any
+// failure, which the sheet turns into the same fallback as a broken image.
+export async function fetchPhotoBlob(src: string, get: (url: string) => Promise<Response> = authFetch): Promise<Blob | null> {
+  try {
+    const res = await get(src);
+    return res.ok ? await res.blob() : null;
+  } catch {
+    return null;
+  }
 }

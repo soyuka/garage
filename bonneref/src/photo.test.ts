@@ -1,4 +1,4 @@
-import { photoPath, sheetPhoto } from './photo';
+import { fetchPhotoBlob, photoPath, sheetPhoto } from './photo';
 import type { Cluster, Narrowing } from './types';
 
 const cluster = (artId: number, brand: string, number: string): Cluster => ({
@@ -35,5 +35,23 @@ describe('sheetPhoto', () => {
   it('asks for nothing until a cluster is shown', () => {
     expect(sheetPhoto(narrowing, null, 'PC')).toBeNull();
     expect(sheetPhoto(null, cluster(1, 'X', '1'), 'PC')).toBeNull();
+  });
+});
+
+describe('fetchPhotoBlob', () => {
+  const blob = new Blob(['x'], { type: 'image/jpeg' });
+
+  it('returns the body of an OK response', async () => {
+    const get = vi.fn(async () => new Response(blob, { status: 200 }));
+    expect(await fetchPhotoBlob('/p', get)).toBeInstanceOf(Blob);
+    expect(get).toHaveBeenCalledWith('/p');
+  });
+
+  it('is null on a non-OK response, so the fallback chain takes over', async () => {
+    expect(await fetchPhotoBlob('/p', async () => new Response('no', { status: 401 }))).toBeNull();
+  });
+
+  it('is null when the request fails', async () => {
+    expect(await fetchPhotoBlob('/p', async () => Promise.reject(new TypeError('network')))).toBeNull();
   });
 });

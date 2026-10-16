@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef, type ReactNode } from 'react';
 import { measure } from '../dims';
 import { formatCount } from '../format';
+import { login } from '../auth';
 import { HOME, type Starter } from '../home';
 import type { MyVehicle } from '../my-vehicles';
 import { routeText, type TextRoute } from '../route-input';
@@ -29,6 +30,24 @@ interface Props {
 }
 
 // The home holds the composer itself, under the headline; it docks at the bottom once a search leaves the home.
+// Logged out: the headline, the lede and the example sheet; the only way on is the sign-in button.
+export function SignedOutHome({ reducedMotion }: { reducedMotion: boolean }) {
+  return (
+    <div className="home">
+      <section className="home-hero" aria-labelledby="entry-title">
+        <h1 id="entry-title">{HOME.headline}</h1>
+        <p className="entry-lede">{HOME.ledeSignedOut}</p>
+        <div className="home-gate">
+          <button type="button" className="btn pri" onClick={() => void login()}>
+            Se connecter
+          </button>
+        </div>
+      </section>
+      <Showcase reducedMotion={reducedMotion} />
+    </div>
+  );
+}
+
 export function Home({ starters, mine, mineLoading, busy, note, panel, below, onPick, onText, attachments, onAttach, onDetach }: Props) {
   return (
     <div className="home">

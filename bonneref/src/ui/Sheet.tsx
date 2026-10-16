@@ -1,7 +1,7 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { measure } from '../dims';
 import { categoryPicto } from '../picto';
-import type { SheetPhoto } from '../photo';
+import { fetchPhotoBlob, type SheetPhoto } from '../photo';
 import { CategoryPicto } from './CategoryPicto';
 import { useLinger } from './Presence';
 import type { Dimension, Family } from '../types';
@@ -119,16 +119,38 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
 function CataloguePhoto({ photo, categoryPath }: { photo: SheetPhoto; categoryPath: string | null }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const objectUrl = useObjectUrl(photo.src, () => setFailed(true));
   if (failed) return <Fallback categoryPath={categoryPath} />;
   // Pinned only once decoded: a photo that fails never flashes an empty frame before the « ? ».
   return (
     <figure className="sheet-photo" data-loaded={loaded || undefined}>
-      <img src={photo.src} alt={photo.alt} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
+      {objectUrl && <img src={objectUrl} alt={photo.alt} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
       <figcaption className="sheet-photo-cap m">
         Photo catalogue · <span className="nw">{photo.reference}</span>
       </figcaption>
     </figure>
   );
+}
+
+// The photo route is authenticated: fetched with the bearer, shown from a blob URL revoked when the
+// key changes or the figure unmounts.
+function useObjectUrl(src: string, onFail: () => void): string | null {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    let made: string | null = null;
+    void fetchPhotoBlob(src).then((blob) => {
+      if (!live) return;
+      if (!blob) return onFail();
+      made = URL.createObjectURL(blob);
+      setUrl(made);
+    });
+    return () => {
+      live = false;
+      if (made) URL.revokeObjectURL(made);
+    };
+  }, [src]);
+  return url;
 }
 
 function Fallback({ categoryPath }: { categoryPath: string | null }) {

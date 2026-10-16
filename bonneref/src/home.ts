@@ -2,6 +2,7 @@
 export const HOME = {
   headline: 'La réf. d’origine et ses équivalences.',
   lede: 'Saisissez la plaque ou le modèle, puis la pièce. La pièce s’affiche avec le numéro du constructeur, ses dimensions et les autres marques qui la fabriquent.',
+  ledeSignedOut: 'Connectez-vous pour chercher une pièce. Voici ce que vous obtenez\u00a0: le numéro du constructeur, les dimensions et les autres marques qui la fabriquent.',
   placeholder: 'plaquettes de frein clio 3…',
 } as const;
 

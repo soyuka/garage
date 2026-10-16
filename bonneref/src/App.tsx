@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { isAuthenticated, login } from './auth';
+import { isAuthenticated, isCallbackPath, login } from './auth';
 import { ApiError } from './api';
 import { liveApi, newTrace, type FinderApi, type Trace } from './client';
+import { gateView } from './gate';
 import { partFamily } from './family';
 import { sheetPhoto } from './photo';
 import { resultSummary } from './followup';
@@ -28,7 +29,7 @@ import { VinResult } from './ui/Entry';
 import { SaveVehicle } from './ui/Garage';
 import { GaragePage } from './ui/GaragePage';
 import { History } from './ui/History';
-import { Home, Showcase } from './ui/Home';
+import { Home, Showcase, SignedOutHome } from './ui/Home';
 import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Async, type Navigate } from './ui/hooks';
 import { Journal } from './ui/Journal';
 import { Presence, useLinger, viewTransition } from './ui/Presence';
@@ -57,7 +58,25 @@ const BLOCK_WIDTH = 520;
 const BLOCK_WIDTH_WIDE = 600;
 
 export function App() {
-  return <Finder api={liveApi} />;
+  const view = gateView({ authed: isAuthenticated(), callback: isCallbackPath() });
+  if (view === 'wait') return null;
+  return view === 'gate' ? <SignedOut /> : <Finder api={liveApi} />;
+}
+
+// No hook of Finder runs here: nothing is fetched, subscribed or journalled while logged out. The logo is
+// not a link so a deep link stays in the address bar for login() to store and restore.
+function SignedOut() {
+  const reducedMotion = useReducedMotion();
+  return (
+    <div className="app app--entry">
+      <header className="top">
+        <span className="logo">bonneref</span>
+      </header>
+      <main className="main">
+        <SignedOutHome reducedMotion={reducedMotion} />
+      </main>
+    </div>
+  );
 }
 
 // What the page shows next to the composer besides an agent turn.

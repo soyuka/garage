@@ -314,6 +314,15 @@ button {
   text-wrap: pretty;
 }
 
+.home-gate {
+  margin-top: 28px;
+}
+
+.home-gate .btn {
+  height: 42px;
+  padding: 0 18px;
+}
+
 .home-hero .intake {
   margin-top: 28px;
   gap: 6px;
