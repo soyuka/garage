@@ -1,3 +1,4 @@
+import { mapKnownCar } from './api';
 import { carRef } from './route';
 import type { AgentVehicle, CarType, Vehicle } from './types';
 
@@ -43,4 +44,15 @@ export function rememberCar(v: AgentVehicle): string {
 
 export function carVehicle(carId: number, carType: CarType): Vehicle {
   return read()[carRef(carId, carType)] ?? vehicleFromAgent({ carId, carType, make: null, model: null, engine: null, plate: null });
+}
+
+// A bare carId names itself from the server's vehicle index; what the tab remembered wins, and an unknown car stays a bare kType.
+export async function resolveCar(carId: number, carType: CarType, read: (carId: number, carType: CarType) => Promise<unknown>): Promise<Vehicle> {
+  const remembered = carVehicle(carId, carType);
+  if (remembered.make) return remembered;
+  try {
+    return vehicleFromAgent(mapKnownCar(await read(carId, carType), carId, carType));
+  } catch {
+    return remembered;
+  }
 }

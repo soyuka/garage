@@ -20,7 +20,7 @@ import { parseRef, type ClusterChoice, type Route } from './route';
 import type { TextRoute } from './route-input';
 import type { AgentPart, AgentVehicle, BuildCode, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
-import { carVehicle, rememberCar } from './vehicles';
+import { rememberCar, resolveCar } from './vehicles';
 import { pickChoice, questionOpen, selectVariant } from './variants';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
@@ -91,7 +91,7 @@ function Finder({ api }: { api: FinderApi }) {
   const parsed = ref === '' ? null : parseRef(ref);
 
   const vehicle = useAsync<Vehicle>(ref === '' ? null : ref, () => {
-    if (parsed?.kind === 'car') return Promise.resolve(carVehicle(parsed.carId, parsed.carType));
+    if (parsed?.kind === 'car') return resolveCar(parsed.carId, parsed.carType, api.car);
     const t = trace.current ?? undefined;
     trace.current = null;
     return api.vehicle(parsed?.kind === 'plate' ? parsed.plate : ref, t);

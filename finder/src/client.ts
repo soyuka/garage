@@ -27,6 +27,7 @@ export interface FinderApi {
   vehicle(plate: string, trace?: Trace): Promise<Vehicle>;
   vin(vin: string, trace?: Trace): Promise<VinDecode>;
   categories(carId: number, carType: CarType): Promise<Category[]>;
+  car(carId: number, carType: CarType): Promise<unknown>;
   narrowed(carId: number, carType: CarType, categoryId: number, make: string | null, productGroupId: number | null, trace?: Trace): Promise<Narrowing>;
   extractRegistration(file: Blob): Promise<Registration>;
   photoIntake(photo: Blob): Promise<PhotoIntake>;
@@ -75,6 +76,7 @@ export const liveApi: FinderApi = {
   vin: async (vin, trace) => mapVin(await getJson(`/vins/${encodeURIComponent(vin)}`, traced(trace))),
   categories: async (carId, carType) =>
     mapCategories(await getJson(`/cars/${carId}/part-categories?carType=${carType}`, { headers: LD })),
+  car: (carId, carType) => getJson(`/cars/${carId}/identity?carType=${carType}`, { headers: LD }),
   narrowed: async (carId, carType, categoryId, make, productGroupId, trace) => mapNarrowing(await getJson(narrowedPath(carId, carType, categoryId, make, productGroupId), traced(trace))),
   extractRegistration: async (file) => {
     const body = new FormData();

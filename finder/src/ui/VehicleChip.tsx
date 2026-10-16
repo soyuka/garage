@@ -5,7 +5,7 @@ export function vehicleName(v: Vehicle): string {
   const make = v.make ? v.make.charAt(0) + v.make.slice(1).toLowerCase() : '';
   const model = v.modelEn ?? v.model ?? '';
   const name = [make, model.replace(new RegExp(`^${v.make ?? ''}\\s*`, 'i'), '')].filter(Boolean).join(' ').trim();
-  return name || (v.carId !== null ? `Véhicule kType ${v.carId}` : 'Véhicule');
+  return name || 'Véhicule';
 }
 
 export const vehicleLabel = (v: Vehicle): string => v.plate ?? `kType ${v.carId ?? '?'}`;
@@ -15,8 +15,9 @@ export function vehicleEngine(v: Vehicle): string {
 }
 
 export function VehicleChip({ vehicle, buildCode = null, onChange }: { vehicle: Vehicle; buildCode?: BuildCode | null; onChange: () => void }) {
+  const named = vehicleName(vehicle) !== 'Véhicule';
   return (
-    <button type="button" className="chip" onClick={onChange} aria-label={`Véhicule ${vehicle.plate ?? vehicleName(vehicle)}, changer de véhicule`}>
+    <button type="button" className="chip" onClick={onChange} aria-label={`Véhicule ${vehicle.plate ?? (named ? vehicleName(vehicle) : vehicleLabel(vehicle))}, changer de véhicule`}>
       {vehicle.plate && <span className="plate m">{vehicle.plate}</span>}
       <span className="chip-name">{vehicleName(vehicle)}</span>
       <span className="chip-engine">{vehicleEngine(vehicle)}</span>

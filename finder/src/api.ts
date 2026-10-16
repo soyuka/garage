@@ -1,5 +1,6 @@
 import { normalisePlate } from './format';
 import type {
+  AgentVehicle,
   Applicability,
   CarType,
   Category,
@@ -69,6 +70,11 @@ export function mapVehicle(raw: unknown): Vehicle {
     carType: carType(j.carType),
   };
 }
+
+export const mapKnownCar = (raw: unknown, carId: number, type: CarType): AgentVehicle => {
+  const j = obj(raw);
+  return { carId, carType: type, make: str(j.make), model: str(j.model), engine: str(j.engine), plate: null };
+};
 
 const carType = (v: unknown): CarType => (v === 'CV' ? 'CV' : 'PC');
 
