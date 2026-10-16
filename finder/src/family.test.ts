@@ -40,7 +40,7 @@ describe('partFamily', () => {
     expect(partFamily(cat('Filtre > Filtre à carburant'), round)).toEqual({ kind: 'filter', filter: 'fuel' });
     expect(meshOf(real('Filtre > Filtre à air'))).toBe('air-filter');
     expect(meshOf(real('Filtre > Filtre à carburant'))).toBe('fuel-filter');
-    expect(partFamily(cat('Filtre > Filtre à air pour habitacle'), round)).toEqual({ kind: 'generic' });
+    expect(partFamily(cat('Filtre > Filtre à air pour habitacle'), round)).toEqual({ kind: 'photo' });
   });
 
   it('maps the real Mazda tree categories to their mesh', () => {
@@ -200,7 +200,7 @@ describe('partFamily', () => {
       "Boîte de vitesses > Boîte de vitesse automatique > Carter d'huile et pièces de montage > Carter d'huile",
       'Carburation > Carburateurs > Commande / Amortisseurs / Boîtiers',
     ]) {
-      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'generic' }]);
+      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'photo' }]);
     }
   });
 
@@ -212,21 +212,21 @@ describe('partFamily', () => {
   });
 
   it('never draws the outer tie rod end for an inner axial joint', () => {
-    expect(partFamily(cat('Direction > Rotule axiale'))).toEqual({ kind: 'generic' });
-    expect(partFamily(cat('Direction > Rotule de direction intérieure'))).toEqual({ kind: 'generic' });
+    expect(partFamily(cat('Direction > Rotule axiale'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Direction > Rotule de direction intérieure'))).toEqual({ kind: 'photo' });
   });
 
   it('reads the TecDoc product group before the category node it sits in', () => {
     const rotules = real('Direction > Rotules');
     expect(partFamily(rotules, [], 'Rotule de barre de connexion')).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: false });
-    expect(partFamily(rotules, [], 'Rotule de direction intérieure, barre de connexion')).toEqual({ kind: 'generic' });
-    expect(partFamily(rotules, [], 'Rotule de direction')).toEqual({ kind: 'generic' });
+    expect(partFamily(rotules, [], 'Rotule de direction intérieure, barre de connexion')).toEqual({ kind: 'photo' });
+    expect(partFamily(rotules, [], 'Rotule de direction')).toEqual({ kind: 'photo' });
     expect(partFamily(real("Allumage / préchauffage > Bougie d'allumage"), [], "Bougie d'allumage")).toEqual({ kind: 'mesh', mesh: 'spark-plug', approximate: false });
   });
 
-  it('gives every family without a mesh the generic placeholder', () => {
-    expect(partFamily(cat('Accessoires > Chaîne à neige'))).toEqual({ kind: 'generic' });
-    expect(partFamily(cat('Dispositif de freinage > Liquide de frein'))).toEqual({ kind: 'generic' });
+  it('gives every family without a mesh the catalogue photo instead of a drawing', () => {
+    expect(partFamily(cat('Accessoires > Chaîne à neige'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Dispositif de freinage > Liquide de frein'))).toEqual({ kind: 'photo' });
   });
 });
 

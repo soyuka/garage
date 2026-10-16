@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { measure } from '../dims';
+import type { SheetPhoto } from '../photo';
 import type { Dimension, Family } from '../types';
 
 const Blueprint = lazy(() => import('../scene/Blueprint').then((m) => ({ default: m.Blueprint })));
@@ -12,6 +13,7 @@ interface Props {
   reducedMotion: boolean;
   placeholder: ReactNode;
   overlayWidth: number | null;
+  photo?: SheetPhoto | null;
   status?: ReactNode;
   notes?: ReactNode;
   children?: ReactNode;
@@ -28,7 +30,7 @@ function extentFor(family: Family, dims: readonly Dimension[]): number {
   return 150;
 }
 
-export const GENERIC_CAPTION = 'Pas de modèle 3D : forme générique';
+export const UNKNOWN_CAPTION = 'Ni modèle 3D ni photo catalogue';
 export const APPROXIMATE_CAPTION = 'Forme type de la famille, pas la pièce exacte';
 
 // The overlaid title block never clips: a block taller than the sheet (variant table) makes the sheet grow.
@@ -45,7 +47,7 @@ function useBlockHeight(active: boolean) {
   return [ref, height] as const;
 }
 
-export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, notes, children }: Props) {
+export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, status, notes, children }: Props) {
   const overlaid = Boolean(overlayWidth && children);
   const [sideRef, blockHeight] = useBlockHeight(overlaid);
   return (
@@ -55,6 +57,10 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
       {family.kind === 'none' ? (
         <div className="sheet-placeholder" style={overlayWidth ? { right: overlayWidth } : undefined}>
           {placeholder}
+        </div>
+      ) : family.kind === 'photo' ? (
+        <div className="sheet-figure" style={overlayWidth ? { right: overlayWidth } : undefined}>
+          {photo ? <CataloguePhoto key={photo.src} photo={photo} /> : !status && <Unknown />}
         </div>
       ) : (
         <div className="sheet-canvas" style={overlayWidth ? { right: overlayWidth } : undefined}>
@@ -70,9 +76,8 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
           {status}
         </div>
       )}
-      {family.kind === 'generic' && !status && <p className="sheet-caption">{GENERIC_CAPTION}</p>}
       {family.kind === 'mesh' && family.approximate && !status && <p className="sheet-caption">{APPROXIMATE_CAPTION}</p>}
-      {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser pour tourner</div>}
+      {family.kind !== 'none' && family.kind !== 'photo' && !ghost && <div className="sheet-hint">Glisser pour tourner</div>}
       {overlaid ? (
         <div ref={sideRef} className="sheet-side" style={{ width: overlayWidth! }}>
           {children}
@@ -80,6 +85,30 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
       ) : (
         children
       )}
+    </div>
+  );
+}
+
+// A reference photo pinned on the sheet: never measured, never dimensioned. A missing or broken image
+// falls back to the « ? ».
+function CataloguePhoto({ photo }: { photo: SheetPhoto }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <Unknown />;
+  return (
+    <figure className="sheet-photo">
+      <img src={photo.src} alt={photo.alt} decoding="async" onError={() => setFailed(true)} />
+      <figcaption className="sheet-photo-cap m">
+        Photo catalogue · <span className="nw">{photo.reference}</span>
+      </figcaption>
+    </figure>
+  );
+}
+
+function Unknown() {
+  return (
+    <div className="sheet-unknown" role="img" aria-label={UNKNOWN_CAPTION}>
+      <span className="sheet-unknown-mark" aria-hidden="true">?</span>
+      <span className="sheet-unknown-cap">{UNKNOWN_CAPTION}</span>
     </div>
   );
 }

@@ -7,12 +7,11 @@ import type { Dimension, Family } from '../types';
 import { BrakePart } from './BrakePart';
 import { FOV, HOME, POLAR_MARGIN, fitDistance, orbitPosition, type Vec3 } from './camera';
 import { FilterPart } from './FilterPart';
-import { GenericPart } from './GenericPart';
 import { MeshPart } from './MeshPart';
 import { turntableStep } from './turntable';
 
 interface Props {
-  family: Exclude<Family, { kind: 'none' }>;
+  family: Exclude<Family, { kind: 'none' } | { kind: 'photo' }>;
   dimensions: readonly Dimension[];
   ghost: boolean;
   reducedMotion: boolean;
@@ -28,7 +27,7 @@ const UP = new Vector3(0, 1, 0);
 let taken = false;
 
 const familyKey = (f: Props['family']): string =>
-  f.kind === 'brake' ? `brake-${f.axle}-${f.component}` : f.kind === 'filter' ? `filter-${f.filter}` : f.kind === 'mesh' ? `mesh-${f.mesh}` : f.kind;
+  f.kind === 'brake' ? `brake-${f.axle}-${f.component}` : f.kind === 'filter' ? `filter-${f.filter}` : `mesh-${f.mesh}`;
 
 // Orbit target = the drawn part's bounding-box centre (the paper fills HiddenLine tags `fit`), camera
 // distance = the framing extent fitted to the drawing area's aspect. Measured on the first frame after
@@ -110,7 +109,6 @@ export function Blueprint({ family, dimensions, ghost, reducedMotion, extent, in
           {family.kind === 'filter' && <FilterPart dimensions={dimensions} ghost={ghost} reducedMotion={reducedMotion} />}
           {family.kind === 'brake' && <BrakePart axle={family.axle} component={family.component} dimensions={dimensions} ghost={ghost} />}
           {family.kind === 'mesh' && <MeshPart mesh={family.mesh} ghost={ghost} />}
-          {family.kind === 'generic' && <GenericPart ghost={ghost} />}
         </group>
         <Rig part={part} fitKey={fitKey} extent={extent} display={!interactive} />
       </Suspense>

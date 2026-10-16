@@ -133,12 +133,12 @@ export interface Registration {
 
 export type ErrorKind = 'network' | 'notFound' | 'auth' | 'quota' | 'upstream' | 'invalid';
 
-// `generic`: a part with no 3D model, drawn as a neutral placeholder without cotes; `none`: no part on the sheet.
+// `photo`: a part with no 3D model, shown by its catalogue photo or a plain « ? »; `none`: no part on the sheet.
 export type Family =
   | { kind: 'brake'; axle: 'front' | 'rear'; component: 'disc' | 'other' }
   | { kind: 'filter'; filter: 'oil' | 'fuel' | 'air' }
   | { kind: 'mesh'; mesh: MeshId; approximate: boolean }
-  | { kind: 'generic' }
+  | { kind: 'photo' }
   | { kind: 'none' };
 
 // ── Agent turn contract (POST /agent/turn with surface "finder") ─────────────────────────────────

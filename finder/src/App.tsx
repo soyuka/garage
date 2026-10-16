@@ -4,6 +4,7 @@ import { isAuthenticated, login } from './auth';
 import { ApiError } from './api';
 import { liveApi, newTrace, type FinderApi, type Trace } from './client';
 import { partFamily } from './family';
+import { sheetPhoto } from './photo';
 import { resultSummary } from './followup';
 import { historyEntries, historyFor, type HistoryEntry } from './history';
 import { STARTERS } from './home';
@@ -42,7 +43,7 @@ const FAMILY_VIEW: Record<string, string> = {
 const viewLabel = (family: Family, category: Category | null): string => {
   if (family.kind === 'filter') return `VUE 3D — ${(category?.label ?? 'filtre').toUpperCase()}`;
   if (family.kind === 'brake') return FAMILY_VIEW[family.axle] ?? 'VUE 3D';
-  if ((family.kind === 'generic' || family.kind === 'mesh') && category) return `VUE 3D — ${category.label.toUpperCase()}`;
+  if (family.kind === 'mesh' && category) return `VUE 3D — ${category.label.toUpperCase()}`;
   return category ? category.label.toUpperCase() : '';
 };
 
@@ -543,6 +544,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           family={family}
           viewLabel={viewLabel(family, category)}
           dimensions={cluster?.dimensions ?? []}
+          photo={family.kind === 'photo' ? sheetPhoto(n, cluster, v.carType) : null}
           ghost={loading || !cluster}
           reducedMotion={reducedMotion}
           overlayWidth={block ? overlay : null}
@@ -699,6 +701,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           family={family}
           viewLabel={viewLabel(family, category)}
           dimensions={cluster?.dimensions ?? []}
+          photo={family.kind === 'photo' ? sheetPhoto(n, cluster, vehicle?.carType ?? 'PC') : null}
           ghost={!cluster || state.stale}
           reducedMotion={reducedMotion}
           overlayWidth={overlay}

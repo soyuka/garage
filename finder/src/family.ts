@@ -17,7 +17,7 @@ const isCylindrical = (dimensions: readonly Dimension[]): boolean =>
 
 // TecDoc category → mesh, first match wins, so specific rules sit above generic ones. `leaf` reads the
 // category's last path segment, `within` and `except` the whole path, all accent- and case-folded.
-// `mesh: null` pins a look-alike to the generic placeholder. `approximate` (default true) captions the
+// `mesh: null` pins a look-alike to the catalogue photo. `approximate` (default true) captions the
 // view as the family's generic shape: these meshes come from one car, never from the user's.
 export interface MeshRule {
   leaf: RegExp;
@@ -134,8 +134,8 @@ export const MESH_RULES: readonly MeshRule[] = [
 
 // TecDoc product group (generic article) → mesh, read before the category node: one node can hold several
 // groups that are different parts ("Direction > Rotules" holds outer tie rod ends and inner axial joints).
-// An inner axial joint has no mesh of its own: the outer tie rod end would mislead, so it stays generic.
-// « Rotule de direction » (PT 2066, 2 unchecked articles on the 307) is not confirmed as either: generic too.
+// An inner axial joint has no mesh of its own: the outer tie rod end would mislead, so it shows its photo.
+// « Rotule de direction » (PT 2066, 2 unchecked articles on the 307) is not confirmed as either: photo too.
 export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null; approximate?: boolean }[] = [
   { group: /rotule de direction interieure|rotule axiale/, mesh: null },
   { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
@@ -145,18 +145,18 @@ export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null;
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = [], productGroup: string | null = null): Family {
   const group = productGroup === null ? null : foldText(productGroup);
   const groupRule = group === null ? undefined : PRODUCT_GROUP_RULES.find((r) => r.group.test(group));
-  if (groupRule) return groupRule.mesh === null ? { kind: 'generic' } : { kind: 'mesh', mesh: groupRule.mesh, approximate: groupRule.approximate ?? true };
+  if (groupRule) return groupRule.mesh === null ? { kind: 'photo' } : { kind: 'mesh', mesh: groupRule.mesh, approximate: groupRule.approximate ?? true };
 
   const path = foldText(category.path);
   const leaf = path.split(' > ').at(-1) ?? path;
-  if (/habitacle/.test(path)) return { kind: 'generic' };
+  if (/habitacle/.test(path)) return { kind: 'photo' };
   if (/filtre a huile/.test(leaf)) return { kind: 'filter', filter: 'oil' };
   if (/filtre a carburant/.test(leaf) && isCylindrical(dimensions)) return { kind: 'filter', filter: 'fuel' };
   if (/filtre a air/.test(leaf) && isCylindrical(dimensions)) return { kind: 'filter', filter: 'air' };
   if (BRAKE.test(path) && !/plaquette/.test(leaf)) return { kind: 'brake', axle: axleFrom(path, dimensions), component: /disque de freins?/.test(path) ? 'disc' : 'other' };
 
   const rule = MESH_RULES.find((r) => r.leaf.test(leaf) && (!r.within || r.within.test(path)) && !(r.except && r.except.test(path)));
-  if (!rule || rule.mesh === null) return { kind: 'generic' };
+  if (!rule || rule.mesh === null) return { kind: 'photo' };
   const variant = rule.variants?.find((v) => (v.when === 'rear' ? axleFrom(path, dimensions) === 'rear' : v.when.test(leaf)));
   return { kind: 'mesh', mesh: variant?.mesh ?? rule.mesh, approximate: rule.approximate ?? true };
 }
