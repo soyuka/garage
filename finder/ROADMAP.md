@@ -37,6 +37,16 @@ Shipped, end to end:
   1440×900 0 px overflow (unsettled, retained, single part); 390×844 designation + variant table + OE
   above the dock. Captures `.impeccable/review/clarity-*.png`. See DESIGN.md (Title Block, Variant
   table, Vehicle chip, Result actions).
+- **Verdict collapse (2026-10-16, user review)**: once the agent's retained variant is the one shown,
+  the variant table shows only that row (« Votre véhicule » + basis); the others fold behind « Voir
+  l'autre référence (ne correspond pas) » / « Voir les N autres références », which reveals them muted
+  with their « Ne correspond pas : … » reason, still selectable, and hides them again (grid-rows
+  reveal, 0.32s in / 0.18s out). Unsettled results list every row as before. The A/B letters are gone
+  everywhere (the letter column, « variante A » in the Réf. OE label): a row is its OE number, which is
+  the radio (arrow keys, `aria-checked` kept); URLs unchanged. Every « Famille : …, pas la pièce » /
+  « Forme type de la famille, pas la pièce exacte » caption is removed; `Family.approximate` is now
+  unused by the UI (kept in `family.ts`, to drop if nothing reads it later). Captures
+  `.impeccable/review/verdict-*.png`. DESIGN § Variant table, Sheet, Motion.
 - **Motion pass (2026-10-16, « a pretty demo, full motion »)**: while a search runs the sheet
   redraws random small Wrench parts under a plotter pen (two clipping planes through the eye), at most
   two meshes loaded, disposed on drop; the result hands off through the same sweep and the camera
@@ -134,7 +144,7 @@ Shipped, end to end:
 - **Meshes (2026-10-15)**: 89 Wrench web meshes + filter + brakes (batch 3: 29, batch 4: 5, 2026-10-15) in `finder/public/parts/`
   (inventory, sizes, licence note: `SOURCES.md`). `family.ts` `MESH_RULES` maps TecDoc categories to
   them (133/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
-  the active mesh loads; approximate matches captioned "Forme type de la famille, pas la pièce exacte";
+  the active mesh loads; approximate matches were captioned "Forme type de la famille, pas la pièce exacte" until 2026-10-16 (caption removed);
   unmapped categories show the catalogue photo or « ? » (below; the generic chamfered block was removed
   2026-10-16). Dev contact sheet:
   https://localhost/finder/dev/meshes.html (not in the build) (not in the build).
