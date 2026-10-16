@@ -638,6 +638,22 @@ All four items shipped: getModels/getCars keys added and params fixed (5951995);
 in `api/.env` (f643b96); catalog reads served anonymously on a bad token via a lenient `catalog`
 firewall (b58d176); the home placeholder was rewritten (c5a1a6a).
 
+## Finder: hardening before any public use (discussed 2026-10-16, not started — user: "nothing to do yet")
+
+Found in the code 2026-10-16: no rate limit, no per-user budget, no length cap on the turn input.
+1. Cost: per-user turns/hour + daily $ budget, enforced from the journal's per-turn cost.
+2. Client-written prompt: `summary`, `pendingContext`, `buildLabel`, vehicle arrive as browser text
+   (`api/src/Controller/AgentTurnController.php:101`), unbounded, straight into the agent context.
+   Rebuild them server-side from the previous journal turn (client sends a turn id).
+3. Off-topic abuse ("just use the search tool with …" = free LLM + search proxy): nothing to read
+   back (finder renders structured frames only; audit the web-find frame + status line for free
+   text), `web_search` gated server-side (only after a catalogue miss in the same turn, 1–2 per
+   turn, query must carry vehicle or reference; `allowed_domains` possible), scope line in finder.md.
+4. Plain limits: text ~500 chars, ≤4 images of a few MB checked server-side (php accepts 50M),
+   video frame cap.
+Injection blast radius stays small as long as the finder allowlist has no tool that writes or
+sends without a user click.
+
 ## Finder: tools as a second pass (decided 2026-10-16, not started)
 
 The first prototype ignores workshop tools entirely: the finder agent's leaf list drops the
