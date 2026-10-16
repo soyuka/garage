@@ -4,7 +4,7 @@ import { mapNarrowing } from './api';
 import { NNBSP } from './format';
 import axial from '../test-fixtures/narrowed-307-axial.json';
 import mazda from '../test-fixtures/narrowed.json';
-import { applicabilityLines, choiceSelectionId, makerOe, otherDimensions, pickChoice, questionOpen, selectVariant, storedVerdict, variantMark, variantRows } from './variants';
+import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, othersLabel, otherDimensions, pickChoice, questionOpen, selectVariant, storedVerdict, variantMark, variantRows } from './variants';
 import { VariantTable } from './ui/VariantTable';
 
 const n307 = () => mapNarrowing(axial);
@@ -102,9 +102,9 @@ describe('agent verdict', () => {
 });
 
 describe('variantRows', () => {
-  it('lists every part with its letter, OE, representative and the cote that tells them apart', () => {
+  it('lists every part with its OE, representative and the cote that tells them apart', () => {
     const rows = variantRows(n307(), 'PEUGEOT');
-    expect(rows.map((r) => r.letter)).toEqual(['A', 'B']);
+    expect(rows.every((r) => !('letter' in r))).toBe(true);
     expect(rows[0]).toMatchObject({ id: 'c1', oe: { brand: 'PEUGEOT', number: '3812 E0' }, representative: { brand: 'BOSCH', number: '0 986 141 079' }, articleCount: 90 });
     expect(rows[1]).toMatchObject({ id: 'c2', oe: { brand: 'PEUGEOT', number: '3812 E5' }, representative: { brand: 'BOSCH', number: '0 986 141 133' }, articleCount: 11 });
     expect(rows[0]!.differs).toEqual([{ key: 'longeur_rotule', label: 'Longeur rotule', text: `322–338${NNBSP}mm` }]);
@@ -173,7 +173,9 @@ describe('VariantTable', () => {
     const html = render(null, null);
     expect(html).toContain('role="radiogroup"');
     expect((html.match(/role="radio"/g) ?? []).length).toBe(2);
-    expect(html).toMatch(/aria-checked="true"[^>]*><span class="vt-letter m"><span class="sr-only">Variante <\/span>A</);
+    expect(html).toMatch(/aria-checked="true"[^>]*><b class="m">3812 E0<\/b><\/button>/);
+    expect(html).not.toContain('vt-letter');
+    expect(html).not.toMatch(/Variante [A-Z]|Var\./);
     expect(html).toContain('3812 E5');
     expect(html).toContain('358');
     expect(html).toContain('10311');
@@ -214,5 +216,50 @@ describe('VariantTable', () => {
     const html = render('c2', 'user');
     expect(html).toContain('choisie par vous');
     expect(html).not.toContain('confirmé');
+  });
+
+  it('hides the set-aside rows behind a link once the agent retained a part', () => {
+    const n = n307();
+    const selection = selectVariant(n, { id: 'c1', by: 'agent', selectionId: SEL }, { id: SEL, clusterId: 'c1', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' });
+    const html = renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: 'PEUGEOT', selection, onPick: () => {} }));
+    const [shown, hidden] = html.split('class="vt-more"');
+    expect(shown).toContain('3812 E0');
+    expect(shown).not.toContain('3812 E5');
+    expect(hidden).toContain('3812 E5');
+    expect(hidden).toContain('data-open="false"');
+    expect(hidden).toContain('inert=""');
+    expect(html).toContain('aria-expanded="false"');
+    expect(html).toContain('Voir l’autre référence (ne correspond pas)');
+  });
+
+  it('shows every row when nothing is settled, with no link', () => {
+    const html = render(null, null);
+    expect(html).not.toContain('vt-more');
+    expect(html).not.toContain('aria-expanded');
+  });
+});
+
+describe('hiddenVariantIds', () => {
+  const n = n307();
+  const verdict = { id: SEL, clusterId: 'c1', basis: 'code', setAside: null };
+  const rows = variantRows(n, 'PEUGEOT');
+
+  it('hides everything but the retained row while the retained part is the one shown', () => {
+    expect(hiddenVariantIds(rows, selectVariant(n, { id: 'c1', by: 'agent', selectionId: SEL }, verdict))).toEqual(['c2']);
+  });
+
+  it('hides nothing when nothing is settled or the user shows another row', () => {
+    expect(hiddenVariantIds(rows, selectVariant(n, null))).toEqual([]);
+    expect(hiddenVariantIds(rows, selectVariant(n, { id: 'c2', by: 'user' }))).toEqual([]);
+    expect(hiddenVariantIds(rows, selectVariant(n, { id: 'c2', by: 'user', retained: { id: 'c1', selectionId: SEL } }, verdict))).toEqual([]);
+  });
+});
+
+describe('othersLabel', () => {
+  it('words the link by the number of hidden references and its state', () => {
+    expect(othersLabel(1, false)).toBe('Voir l’autre référence (ne correspond pas)');
+    expect(othersLabel(3, false)).toBe('Voir les 3 autres références (ne correspondent pas)');
+    expect(othersLabel(1, true)).toBe('Masquer l’autre référence');
+    expect(othersLabel(3, true)).toBe('Masquer les 3 autres références');
   });
 });

@@ -2,7 +2,7 @@ import { Fragment, useState } from 'react';
 import { formatCount } from '../format';
 import { copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEquivalents } from '../result';
 import type { Category, Narrowing, Vehicle } from '../types';
-import { makerOe, otherDimensions, variantLetter, type Selection } from '../variants';
+import { makerOe, otherDimensions, type Selection } from '../variants';
 import { CopyRef } from './CopyRef';
 import { VariantTable } from './VariantTable';
 
@@ -20,7 +20,6 @@ const EQ_KEEP = 2;
 export function TitleBlock({ vehicle, category, narrowing, selection, onPick, rationale }: Props) {
   const { cluster } = selection;
   const multi = narrowing.clusters.length > 1 && cluster !== null;
-  const letter = multi ? variantLetter(selection.index) : null;
   const otherOe = multi ? makerOe(cluster, vehicle.make, narrowing.clusters) : [];
   const otherCotes = multi ? otherDimensions(cluster, narrowing.differsOn) : [];
   const oe = cluster ? pickOe(cluster, vehicle.make, narrowing.clusters) : null;
@@ -51,7 +50,6 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, ra
         <div key={`oe-${cluster?.id ?? 'none'}`} className="c s3 tb-swap">
           <span className="l">
             {oe ? `Réf. OE · ${oe.brand}` : `Réf. · ${headline.brand}`}
-            {letter && ` · variante ${letter}`}
           </span>
           <div className="oe-line">
             <div className="oe m">{headline.number}</div>

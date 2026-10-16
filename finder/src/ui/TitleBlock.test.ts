@@ -53,4 +53,13 @@ describe('TitleBlock', () => {
     const n = { ...mapNarrowing(mazda), narrowed: false, degradedReason: 'criteria unavailable' };
     expect(render(n)).toContain('Cotes non chargées : affinage incomplet.');
   });
+
+  it('labels the reference without a variant letter', () => {
+    const n = mapNarrowing(axial);
+    const retained = selectVariant(n, { id: 'c1', by: 'agent', selectionId: SEL }, { id: SEL, clusterId: 'c1', basis: 'code', setAside: null });
+    for (const html of [render(n), render(n, retained), render(n, selectVariant(n, { id: 'c2', by: 'user' }))]) {
+      expect(html).toContain('Réf. OE · PEUGEOT');
+      expect(html).not.toMatch(/variante [A-Z]/i);
+    }
+  });
 });

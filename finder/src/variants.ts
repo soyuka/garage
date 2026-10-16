@@ -58,7 +58,18 @@ export function pickChoice(selection: Selection, clusterId: string): ClusterChoi
 // The cote question stays until something settled the part; the agent's verdict did.
 export const questionOpen = (selection: Selection): boolean => !selection.verdict;
 
-export const variantLetter = (index: number): string => (index < 26 ? String.fromCharCode(65 + index) : String(index + 1));
+// Settled, the retained row is the only one shown; the others wait behind a link. Showing another row
+// (a pick, an old link) puts them all back, the checked part is never hidden.
+export function hiddenVariantIds(rows: readonly { id: string }[], selection: Selection): string[] {
+  const v = selection.verdict;
+  if (!v || selection.cluster?.id !== v.clusterId) return [];
+  return rows.filter((r) => r.id !== v.clusterId).map((r) => r.id);
+}
+
+export function othersLabel(count: number, open: boolean): string {
+  if (open) return count === 1 ? 'Masquer l’autre référence' : `Masquer les ${count} autres références`;
+  return count === 1 ? 'Voir l’autre référence (ne correspond pas)' : `Voir les ${count} autres références (ne correspondent pas)`;
+}
 
 export interface ApplicabilityLine {
   label: string;
@@ -87,7 +98,6 @@ export interface VariantCote {
 
 export interface VariantRow {
   id: string;
-  letter: string;
   oe: Reference | null;
   representative: Reference;
   articleCount: number;
@@ -101,9 +111,8 @@ export const splitting = (differsOn: readonly Divergence[]): Divergence[] => dif
 
 export function variantRows(n: Narrowing, make: string | null): VariantRow[] {
   const divergences = splitting(n.differsOn);
-  return n.clusters.map((c, i) => ({
+  return n.clusters.map((c) => ({
     id: c.id,
-    letter: variantLetter(i),
     oe: pickOe(c, make, n.clusters),
     representative: c.representative,
     articleCount: c.articleCount,
