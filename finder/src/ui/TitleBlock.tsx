@@ -1,17 +1,10 @@
 import { Fragment, useLayoutEffect, useRef, useState } from 'react';
-import { isAuthenticated, login } from '../auth';
-import type { FinderApi } from '../client';
 import { formatCount } from '../format';
-import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
 import { copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEquivalents } from '../result';
-import type { Category, Family, Narrowing, Reference, Vehicle } from '../types';
+import type { Category, Narrowing, Vehicle } from '../types';
 import { makerOe, otherDimensions, variantLetter, type Selection } from '../variants';
-import { BuyMenu } from './BuyMenu';
-import { copy, CopyRef } from './CopyRef';
-import { GaragePicker } from './Garage';
-import { useToast } from './Toast';
+import { CopyRef } from './CopyRef';
 import { VariantTable } from './VariantTable';
-import { vehicleEngine, vehicleName } from './VehicleChip';
 
 interface Props {
   vehicle: Vehicle;
@@ -19,15 +12,12 @@ interface Props {
   narrowing: Narrowing;
   selection: Selection;
   onPick: (clusterId: string) => void;
-  family: Family;
-  api: FinderApi;
   rationale?: string;
 }
 
 const EQ_KEEP = 2;
 
-export function TitleBlock({ vehicle, category, narrowing, selection, onPick, family, api, rationale }: Props) {
-  const toast = useToast();
+export function TitleBlock({ vehicle, category, narrowing, selection, onPick, rationale }: Props) {
   const { cluster } = selection;
   const multi = narrowing.clusters.length > 1 && cluster !== null;
   const letter = multi ? variantLetter(selection.index) : null;
@@ -35,10 +25,8 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
   const otherCotes = multi ? otherDimensions(cluster, narrowing.differsOn) : [];
   const oe = cluster ? pickOe(cluster, vehicle.make, narrowing.clusters) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
-  const top = eq?.shown.find((v) => !oe || v.number !== oe.number) ?? null;
   const cotes = cluster ? cotesLine(cluster.dimensions) : null;
   const headline = oe ?? (cluster ? cluster.representative : null);
-  const buyRef = oe ?? top ?? cluster?.representative ?? null;
   const fallback = !cluster ? narrowing.fallbackBrands.slice(0, 6) : [];
   const copyValue = copyText(oe, cluster?.representative ?? null);
   const [eqOpen, setEqOpen] = useState(false);
@@ -59,8 +47,12 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
 
   return (
     <div className={multi ? 'tb tb--multi' : 'tb'} aria-label="Cartouche du résultat">
-      <div className="c s3">
+      <div className="c s3 tb-head">
         <span className="l">Désignation</span>
+        <span className="tb-prov" aria-label="Source">
+          <span className="tag ok">TecDoc</span>
+          {!narrowing.narrowed && <span className="tag warn">affinage partiel</span>}
+        </span>
         <b className="tb-title">{category.label}</b>
       </div>
 
@@ -132,16 +124,7 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
         </div>
       )}
 
-      <div className="c s2">
-        <span className="l">Véhicule</span>
-        {vehicle.plate && <><span className="m tb-plate">{vehicle.plate}</span> · </>}{vehicleName(vehicle)} {vehicleEngine(vehicle) && <span className="tb-muted">· {vehicleEngine(vehicle)}</span>}
-      </div>
-      <div className="c r">
-        <span className="l">kType</span>
-        <span className="m tb-ktype">{vehicle.carId}</span>
-      </div>
-
-      <div className="c s2">
+      <div className="c s3">
         <span className="l">Cotes</span>
         <span className="m tb-cotes">
           {cotes
@@ -163,11 +146,6 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
           </ul>
         )}
       </div>
-      <div className="c r">
-        <span className="l">Source</span>
-        <span className="tag ok">TecDoc</span>
-        {!narrowing.narrowed && <span className="tag warn">affinage partiel</span>}
-      </div>
 
       <div className="c s3 why">
         <span className="l">Pourquoi cette pièce</span>
@@ -183,67 +161,7 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
           </button>
         )}
       </div>
-
-      <div className="act">
-        {buyRef && <BuyMenu reference={buyRef} />}
-        <AddToVehicle vehicle={vehicle} category={category} family={family} oe={oe} equivalent={top} api={api} />
-        <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>
-          Copier le lien
-        </button>
-      </div>
     </div>
-  );
-}
-
-type AddState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'login' } | { kind: 'pick'; candidates: GarageCandidate[] };
-
-const PLAN_FAILURE: Record<string, string> = {
-  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Choisissez-le dans l’Atelier, puis réessayez.',
-  invalid: 'Refusé par le garage : marque ou modèle manquant.',
-  network: 'Garage injoignable. Vérifiez la connexion et réessayez.',
-  failed: 'Ajout au garage impossible. Réessayez.',
-};
-
-function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi }) {
-  const toast = useToast();
-  const [state, setState] = useState<AddState>({ kind: 'idle' });
-  const label = addLabel(vehicle);
-
-  const add = async (extra: { vehicle?: string; confirmNew?: boolean } = {}) => {
-    if (!isAuthenticated()) return setState({ kind: 'login' });
-    setState({ kind: 'saving' });
-    try {
-      const { vehicle: iri } = await api.planPart({ ...planBody(vehicle, category, family, oe, equivalent), ...extra });
-      toast({ text: `${category.label} ajouté au plan d’entretien.`, link: { href: atelierHref(iri, window.location.origin), label: 'Voir dans l’Atelier' } });
-      setState({ kind: 'idle' });
-    } catch (e) {
-      if (e instanceof PlanError && e.kind === 'auth') return setState({ kind: 'login' });
-      if (e instanceof PlanError && e.kind === 'ambiguous' && e.candidates.length > 0) return setState({ kind: 'pick', candidates: e.candidates });
-      toast(PLAN_FAILURE[e instanceof PlanError ? e.kind : 'failed']!);
-      setState({ kind: 'idle' });
-    }
-  };
-
-  if (state.kind === 'login') {
-    return (
-      <div className="add-login" role="group" aria-label="Connexion requise">
-        <p>Connexion requise pour ajouter la pièce.</p>
-        <button type="button" className="btn pri" onClick={() => void login()}>
-          Se connecter
-        </button>
-        <button type="button" className="btn btn--quiet" onClick={() => setState({ kind: 'idle' })}>
-          Annuler
-        </button>
-      </div>
-    );
-  }
-  if (state.kind === 'pick') {
-    return <GaragePicker candidates={state.candidates} busy={false} onPick={(iri) => void add({ vehicle: iri })} onNew={() => void add({ confirmNew: true })} onCancel={() => setState({ kind: 'idle' })} />;
-  }
-  return (
-    <button type="button" className="btn" disabled={!oe && !equivalent} aria-busy={state.kind === 'saving'} onClick={() => void add()}>
-      {state.kind === 'saving' ? 'Ajout…' : label}
-    </button>
   );
 }
 
@@ -259,10 +177,19 @@ function whyLine(n: Narrowing, selection: Selection, letter: string | null) {
       </span>
     );
   }
+  const basis = selection.verdict?.basis;
   if (status === 'agent') {
     return (
       <span>
-        Variante {letter} retenue{selection.basis ? ` d’après ${selection.basis}` : ''}. L’applicabilité du catalogue est donnée par article, pas pour ce véhicule : une indication, à vérifier sur la pièce démontée. {same}
+        L’applicabilité du catalogue est donnée par article, pas pour ce véhicule : une indication, à vérifier sur la pièce démontée. {same}
+      </span>
+    );
+  }
+  if (status === 'user' && selection.verdict) {
+    const retained = n.clusters.findIndex((c) => c.id === selection.verdict!.id);
+    return (
+      <span>
+        Variante {letter} choisie par vous. Le code de fabrication désigne la variante {variantLetter(retained)}{basis ? ` (${basis})` : ''}. {same}
       </span>
     );
   }

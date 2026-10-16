@@ -4,7 +4,7 @@ import { mapNarrowing } from './api';
 import { NNBSP } from './format';
 import axial from '../test-fixtures/narrowed-307-axial.json';
 import mazda from '../test-fixtures/narrowed.json';
-import { applicabilityLines, makerOe, otherDimensions, selectVariant, variantRows } from './variants';
+import { applicabilityLines, makerOe, otherDimensions, pickChoice, questionOpen, selectVariant, variantMark, variantRows } from './variants';
 import { VariantTable } from './ui/VariantTable';
 
 const n307 = () => mapNarrowing(axial);
@@ -25,7 +25,7 @@ describe('selectVariant', () => {
   it('drives the sheet with the chosen part and says who chose it', () => {
     expect(selectVariant(n307(), { id: 'c2', by: 'user' })).toMatchObject({ status: 'user', index: 1, cluster: { id: 'c2' } });
     expect(selectVariant(n307(), { id: 'c2', by: 'answer' })).toMatchObject({ status: 'answer', index: 1, cluster: { id: 'c2' } });
-    expect(selectVariant(n307(), { id: 'c1', by: 'agent', basis: 'code de fabrication' })).toMatchObject({ status: 'agent', index: 0, basis: 'code de fabrication', cluster: { id: 'c1' } });
+    expect(selectVariant(n307(), { id: 'c1', by: 'agent', basis: 'code de fabrication' })).toMatchObject({ status: 'agent', index: 0, verdict: { id: 'c1', basis: 'code de fabrication', setAside: '' }, cluster: { id: 'c1' } });
   });
 
   it('falls back to an open first part when the chosen id is unknown', () => {
@@ -34,6 +34,46 @@ describe('selectVariant', () => {
 
   it('has no part without a narrowing', () => {
     expect(selectVariant(null, null)).toEqual({ cluster: null, index: -1, status: 'open' });
+  });
+});
+
+describe('agent verdict', () => {
+  const retained = { id: 'c1', by: 'agent', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' } as const;
+  const verdict = { id: 'c1', basis: retained.basis, setAside: 'OPR ≥ 10311' };
+
+  it('keeps the agent’s verdict apart from the part shown', () => {
+    expect(selectVariant(n307(), retained)).toMatchObject({ status: 'agent', index: 0, verdict });
+    expect(selectVariant(n307(), { id: 'c2', by: 'user', verdict })).toMatchObject({ status: 'user', index: 1, verdict });
+    expect(selectVariant(n307(), { id: 'c2', by: 'user' }).verdict).toBeNull();
+    expect(selectVariant(n307(), { id: 'c1', by: 'agent', basis: 'b' }).verdict).toEqual({ id: 'c1', basis: 'b', setAside: '' });
+  });
+
+  it('drops a verdict naming a part that is not in the result', () => {
+    expect(selectVariant(n307(), { id: 'c2', by: 'user', verdict: { ...verdict, id: 'c9' } }).verdict).toBeNull();
+  });
+
+  it('marks the retained row and sets the others aside, whatever row is shown', () => {
+    const s = selectVariant(n307(), retained);
+    expect([variantMark(s, 'c1'), variantMark(s, 'c2')]).toEqual(['retained', 'aside']);
+    const picked = selectVariant(n307(), { id: 'c2', by: 'user', verdict });
+    expect([variantMark(picked, 'c1'), variantMark(picked, 'c2')]).toEqual(['retained', 'aside']);
+    const open = selectVariant(n307(), null);
+    expect([variantMark(open, 'c1'), variantMark(open, 'c2')]).toEqual([null, null]);
+  });
+
+  it('a pick keeps the verdict, and picking the retained row goes back to it', () => {
+    const s = selectVariant(n307(), retained);
+    expect(pickChoice(s, 'c2')).toEqual({ id: 'c2', by: 'user', verdict });
+    expect(pickChoice(selectVariant(n307(), { id: 'c2', by: 'user', verdict }), 'c1')).toEqual(retained);
+    expect(pickChoice(selectVariant(n307(), null), 'c2')).toEqual({ id: 'c2', by: 'user' });
+  });
+
+  it('asks the cote question only while nothing settled the part', () => {
+    expect(questionOpen(selectVariant(n307(), null))).toBe(true);
+    expect(questionOpen(selectVariant(n307(), { id: 'c2', by: 'user' }))).toBe(true);
+    expect(questionOpen(selectVariant(n307(), { id: 'c2', by: 'answer' }))).toBe(true);
+    expect(questionOpen(selectVariant(n307(), retained))).toBe(false);
+    expect(questionOpen(selectVariant(n307(), { id: 'c2', by: 'user', verdict }))).toBe(false);
   });
 });
 
@@ -123,9 +163,24 @@ describe('VariantTable', () => {
 
   it('marks a part retained by the agent with its basis, never as the user’s or as confirmed', () => {
     const html = render('c1', 'agent');
-    expect(html).toContain('retenue d’après code de fabrication (OPR 09824 ≤ 10310)');
+    expect(html).toContain('Votre véhicule');
+    expect(html).toContain('code de fabrication (OPR 09824 ≤ 10310)');
     expect(html).not.toContain('confirmé');
     expect(html).not.toContain('choisie par vous');
+  });
+
+  it('sets the other part aside, still a radio, with what rules it out', () => {
+    const n = n307();
+    const selection = selectVariant(n, { id: 'c1', by: 'agent', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' });
+    const html = renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: 'PEUGEOT', selection, onPick: () => {} }));
+    expect(html).toMatch(/data-mark="aside"/);
+    expect(html).toContain('Ne correspond pas : OPR ≥ 10311');
+    expect((html.match(/role="radio"/g) ?? []).length).toBe(2);
+    expect(render(null, null)).not.toContain('data-mark');
+  });
+
+  it('says the number of parts once, in the table head', () => {
+    expect(render(null, null).match(/2 pièces distinctes/g)).toHaveLength(1);
   });
 
   it('marks a part picked by the user as theirs, never as confirmed', () => {

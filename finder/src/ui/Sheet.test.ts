@@ -20,7 +20,8 @@ describe('Sheet without a 3D model', () => {
     const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo: null }));
     expect(html).toContain('<div class="sheet-unknown"');
     expect(html).toContain('>?</span>');
-    expect(html).toContain('Ni modèle 3D ni photo catalogue');
+    expect(html).toContain('aria-label="Ni modèle 3D ni photo catalogue"');
+    expect(html).not.toContain('sheet-unknown-cap');
     expect(html).not.toContain('<figure');
   });
 

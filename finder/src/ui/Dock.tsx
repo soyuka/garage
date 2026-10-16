@@ -13,6 +13,8 @@ interface Props {
   status: ReactNode;
   note: ReactNode;
   slot: Ref<HTMLDivElement>;
+  // The result's actions, portalled in under the field.
+  actions: Ref<HTMLDivElement>;
   quick: QuickAction[];
   // The car the composer searches on.
   context: Vehicle | null;
@@ -32,26 +34,31 @@ interface Props {
   onDetach: (index: number) => void;
 }
 
-// At the bottom of the viewport on every screen but the home: the agent's line, its open question, quick actions, and the
-// composer that starts or continues a search (text, photo, PDF, video).
-export function Dock({ status, note, slot, quick, context, onClearContext, categories, loading, busy, hasVehicle, autoFocus, plateRequest, labelRequest, onText, attachments, onAttach, onDetach }: Props) {
+// At the bottom of the viewport on every screen but the home: the agent's line, its open question, the composer that
+// starts or continues a search (text, photo, PDF, video), and under it the result's actions and quick actions.
+export function Dock({ status, note, slot, actions, quick, context, onClearContext, categories, loading, busy, hasVehicle, autoFocus, plateRequest, labelRequest, onText, attachments, onAttach, onDetach }: Props) {
   return (
     <div className="dock">
       <div className="dock-inner">
         {status}
         {note}
         <div ref={slot} className="dock-slot" />
-        {quick.length > 0 && (
-          <div className="dock-quick" role="group" aria-label="Actions rapides">
-            {quick.map((q) => (
-              <button key={q.label} type="button" className="btn btn--quiet" onClick={q.run}>
-                {q.label}
-              </button>
-            ))}
-          </div>
-        )}
         <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} plateRequest={plateRequest} labelRequest={labelRequest} hasVehicle={hasVehicle}
           token={context && <ContextToken vehicle={context} onRemove={onClearContext} />}
+          below={
+            <div className="dock-actions" data-empty={quick.length === 0 || undefined}>
+              <div ref={actions} className="dock-acts" />
+              {quick.length > 0 && (
+                <div className="dock-quick" role="group" aria-label="Actions rapides">
+                  {quick.map((q) => (
+                    <button key={q.label} type="button" className="btn btn--quiet" onClick={q.run}>
+                      {q.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          }
           onText={onText}
           attachments={attachments}
           onAttach={onAttach}

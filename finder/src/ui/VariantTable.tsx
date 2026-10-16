@@ -1,7 +1,7 @@
 import { useId, useRef, type KeyboardEvent } from 'react';
 import { formatCount } from '../format';
 import type { Narrowing } from '../types';
-import { variantRows, type Selection } from '../variants';
+import { variantMark, variantRows, type Selection } from '../variants';
 import { CopyRef } from './CopyRef';
 
 interface Props {
@@ -11,15 +11,13 @@ interface Props {
   onPick: (clusterId: string) => void;
 }
 
-const STATUS: Record<Selection['status'], { text: string; tone: '' | 'ok' | 'agent' } | null> = {
+const STATUS: Record<Selection['status'], { text: string; tone: '' | 'ok' } | null> = {
   open: { text: 'à confirmer', tone: '' },
   user: { text: 'choisie par vous', tone: '' },
   answer: { text: 'confirmé par la cote', tone: 'ok' },
-  agent: { text: 'retenue', tone: 'agent' },
+  agent: null,
   single: null,
 };
-
-const statusText = (selection: Selection, text: string): string => (selection.status === 'agent' && selection.basis ? `${text} d’après ${selection.basis}` : text);
 
 // The drawing's variant table: one row per distinct part, the row picks the part the sheet draws.
 export function VariantTable({ narrowing, make, selection, onPick }: Props) {
@@ -46,7 +44,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
         <span className="l" id="vt-title">
           Variantes · {formatCount(rows.length)} pièces distinctes
         </span>
-        {status && <span className={status.tone ? `tag ${status.tone}` : 'tag'}>{statusText(selection, status.text)}</span>}
+        {status && <span className={status.tone ? `tag ${status.tone}` : 'tag'}>{status.text}</span>}
       </div>
       <div className={`${cols} vt-head`} aria-hidden="true">
         <span>Var.</span>
@@ -58,8 +56,9 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
         {rows.map((r, i) => {
           const checked = i === selection.index;
           const ref = r.oe ?? r.representative;
+          const mark = variantMark(selection, r.id);
           return (
-            <div key={r.id} className={`vt-item ${cols}`} data-checked={checked || undefined}>
+            <div key={r.id} className={`vt-item ${cols}`} data-checked={checked || undefined} data-mark={mark ?? undefined}>
               <button type="button" role="radio" aria-checked={checked} aria-describedby={`${uid}-${r.id}`} tabIndex={checked ? 0 : -1} className="vt-pick" onClick={() => onPick(r.id)} onKeyDown={(e) => move(e, i)}>
                 <span className="vt-letter m">
                   <span className="sr-only">Variante </span>
@@ -96,6 +95,13 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
                       ))}
                 </span>
               )}
+              {mark === 'retained' && (
+                <span className="vt-verdict">
+                  <span className="tag agent">Votre véhicule</span>
+                  {selection.verdict?.basis && <span className="vt-why">d’après {selection.verdict.basis}</span>}
+                </span>
+              )}
+              {mark === 'aside' && <span className="vt-verdict vt-why">Ne correspond pas{selection.verdict?.setAside ? ` : ${selection.verdict.setAside}` : ''}</span>}
             </div>
           );
         })}

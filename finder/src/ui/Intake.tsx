@@ -16,6 +16,8 @@ interface Props {
   labelRequest?: number;
   hasVehicle?: boolean;
   token?: ReactNode;
+  // Under the field, before the hint: the result's actions in the dock.
+  below?: ReactNode;
   attachments?: readonly File[];
   onText: (route: TextRoute, typed: string) => void | Promise<boolean>;
   onAttach: (files: File[]) => void;
@@ -75,7 +77,7 @@ function Chips({ files, disabled, onDetach }: { files: readonly File[]; disabled
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, labelRequest = 0, hasVehicle = categories !== null, token = null, attachments = [], onText, onAttach, onDetach }: Props) {
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, labelRequest = 0, hasVehicle = categories !== null, token = null, below = null, attachments = [], onText, onAttach, onDetach }: Props) {
   const [text, setText] = useState(initial);
   const [over, setOver] = useState(false);
   const [plateHint, setPlateHint] = useState(false);
@@ -196,6 +198,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           {busy ? 'Lecture…' : 'Chercher'}
         </button>
       </div>
+      {below}
       <p id={`${id}-hint`} className="intake-hint" aria-live="polite">
         {over ? 'Déposez le fichier.' : hint}
       </p>

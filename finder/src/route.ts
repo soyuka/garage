@@ -5,8 +5,18 @@ import type { CarType } from './types';
 // without one ("k19107-PC").
 // `answer`: settled by the cote question (`/k/<id>`, the only form before 2026-10-16); `user`: picked
 // in the variant table (`/v/<id>`), the user's decision, never presented as confirmed; `agent`: retained
-// by the agent from what the user gave (`/r/<id>/<basis>`), an indication resting on per-article data.
-export type ClusterChoice = { id: string; by: 'answer' | 'user' } | { id: string; by: 'agent'; basis: string };
+// by the agent from what the user gave (`/r/<id>/<basis>/<setAside>`), an indication resting on
+// per-article data. A pick after the agent's verdict keeps it (`/v/<id>/r/<id>/<basis>/<setAside>`).
+export interface Verdict {
+  id: string;
+  basis: string;
+  setAside: string;
+}
+
+export type ClusterChoice =
+  | { id: string; by: 'answer' }
+  | { id: string; by: 'user'; verdict?: Verdict }
+  | { id: string; by: 'agent'; basis: string; setAside?: string };
 
 export const BASIS_MAX = 160;
 
@@ -40,18 +50,34 @@ export function parseRoute(hash: string): Route {
     productGroupId = /^[1-9]\d*$/.test(rest[1] ?? '') ? Number(rest[1]) : null;
     rest.splice(0, 2);
   }
-  const by = rest[0] === 'k' ? 'answer' : rest[0] === 'v' ? 'user' : rest[0] === 'r' ? 'agent' : null;
-  const cluster: ClusterChoice | null =
-    by && rest[1] ? (by === 'agent' ? { id: rest[1], by, basis: (rest[2] ?? '').trim().slice(0, BASIS_MAX) } : { id: rest[1], by }) : null;
-  return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, cluster };
+  return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, cluster: parseChoice(rest) };
+}
+
+const text = (raw: string | undefined): string => (raw ?? '').trim().slice(0, BASIS_MAX);
+
+function parseChoice(rest: string[]): ClusterChoice | null {
+  const id = rest[1];
+  if (!id) return null;
+  if (rest[0] === 'k') return { id, by: 'answer' };
+  if (rest[0] === 'r') {
+    const setAside = text(rest[3]);
+    return { id, by: 'agent', basis: text(rest[2]), ...(setAside ? { setAside } : {}) };
+  }
+  if (rest[0] !== 'v') return null;
+  const verdict = rest[2] === 'r' ? parseChoice(rest.slice(2)) : null;
+  return verdict?.by === 'agent' ? { id, by: 'user', verdict: { id: verdict.id, basis: verdict.basis, setAside: verdict.setAside ?? '' } } : { id, by: 'user' };
 }
 
 const refHash = (ref: string): string => (CAR.test(ref) ? `#/k/${ref.slice(1)}` : `#/p/${encodeURIComponent(ref.replace(/ /g, ''))}`);
 
 function clusterHash(c: ClusterChoice): string {
   const id = encodeURIComponent(c.id);
-  if (c.by === 'agent') return `/r/${id}${c.basis ? `/${encodeURIComponent(c.basis)}` : ''}`;
-  return `/${c.by === 'user' ? 'v' : 'k'}/${id}`;
+  if (c.by === 'agent') {
+    const tail = c.setAside ? [c.basis, c.setAside] : c.basis ? [c.basis] : [];
+    return `/r/${id}${tail.map((t) => `/${encodeURIComponent(t)}`).join('')}`;
+  }
+  if (c.by === 'user') return `/v/${id}${c.verdict ? clusterHash({ id: c.verdict.id, by: 'agent', basis: c.verdict.basis, setAside: c.verdict.setAside }) : ''}`;
+  return `/k/${id}`;
 }
 
 export function routeToHash(route: Route): string {

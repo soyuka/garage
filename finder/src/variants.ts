@@ -1,7 +1,7 @@
 import { dimText, findDim, threadOf, type DimKey } from './dims';
 import { NNBSP, formatValue } from './format';
 import { pickOe, sameBrand } from './result';
-import type { ClusterChoice } from './route';
+import type { ClusterChoice, Verdict } from './route';
 import type { Applicability, Cluster, Dimension, Divergence, Narrowing, Reference } from './types';
 
 // `open`: several parts and nobody chose, the first is shown. `answer`: the cote question settled it.
@@ -9,22 +9,41 @@ import type { Applicability, Cluster, Dimension, Divergence, Narrowing, Referenc
 // agent on `basis` (a decoded code de fabrication against per-article breakpoints), an indication.
 export type SelectionStatus = 'single' | 'answer' | 'user' | 'agent' | 'open';
 
+// `verdict`: the part the agent retained, kept when the user then shows another row.
 export interface Selection {
   cluster: Cluster | null;
   index: number;
   status: SelectionStatus;
-  basis?: string;
+  verdict?: Verdict | null;
 }
+
+const verdictOf = (choice: ClusterChoice): Verdict | null =>
+  choice.by === 'agent' ? { id: choice.id, basis: choice.basis, setAside: choice.setAside ?? '' } : choice.by === 'user' ? (choice.verdict ?? null) : null;
 
 export function selectVariant(n: Narrowing | null, choice: ClusterChoice | null): Selection {
   const clusters = n?.clusters ?? [];
   if (clusters.length === 0) return { cluster: null, index: -1, status: 'open' };
   if (clusters.length === 1) return { cluster: clusters[0]!, index: 0, status: 'single' };
   const index = choice ? clusters.findIndex((c) => c.id === choice.id) : -1;
-  if (index === -1) return { cluster: clusters[0]!, index: 0, status: 'open' };
-  const picked = { cluster: clusters[index]!, index };
-  return choice!.by === 'agent' ? { ...picked, status: 'agent', basis: choice!.basis } : { ...picked, status: choice!.by };
+  if (index === -1) return { cluster: clusters[0]!, index: 0, status: 'open', verdict: null };
+  const verdict = verdictOf(choice!);
+  return { cluster: clusters[index]!, index, status: choice!.by, verdict: verdict && clusters.some((c) => c.id === verdict.id) ? verdict : null };
 }
+
+export type VariantMark = 'retained' | 'aside' | null;
+
+export const variantMark = (selection: Selection, clusterId: string): VariantMark => (selection.verdict ? (selection.verdict.id === clusterId ? 'retained' : 'aside') : null);
+
+// A row pick is the user's call; the agent's verdict stays on the table, and picking its row returns to it.
+export function pickChoice(selection: Selection, clusterId: string): ClusterChoice {
+  const v = selection.verdict;
+  if (!v) return { id: clusterId, by: 'user' };
+  if (v.id === clusterId) return { id: v.id, by: 'agent', basis: v.basis, ...(v.setAside ? { setAside: v.setAside } : {}) };
+  return { id: clusterId, by: 'user', verdict: v };
+}
+
+// The cote question stays until something settled the part; the agent's verdict did.
+export const questionOpen = (selection: Selection): boolean => !selection.verdict;
 
 export const variantLetter = (index: number): string => (index < 26 ? String.fromCharCode(65 + index) : String(index + 1));
 

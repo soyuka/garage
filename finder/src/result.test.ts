@@ -1,4 +1,4 @@
-import { copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEquivalents, relaunchText } from './result';
+import { actionRefs, copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEquivalents, relaunchText } from './result';
 import { mapNarrowing } from './api';
 import axialFixture from '../test-fixtures/narrowed-307-axial.json';
 import narrowed from '../test-fixtures/narrowed.json';
@@ -123,5 +123,26 @@ describe('relaunchText', () => {
 
   it('never relaunches a result that narrowed', () => {
     expect(relaunchText(n, 'filtre à huile', 'Filtre à huile')).toBeNull();
+  });
+});
+
+describe('actionRefs', () => {
+  it('buys and plans the selected variant: its OE, and its first other brand', () => {
+    const n = mapNarrowing(axialFixture);
+    const a = actionRefs(n.clusters[0]!, 'PEUGEOT', n.clusters);
+    expect(a.buy).toEqual({ brand: 'PEUGEOT', number: '3812 E0' });
+    expect(a.oe).toEqual(a.buy);
+    const b = actionRefs(n.clusters[1]!, 'PEUGEOT', n.clusters);
+    expect(b.buy).toEqual({ brand: 'PEUGEOT', number: '3812 E5' });
+    expect(b.equivalent?.number).not.toBe('3812 E5');
+    expect(b.equivalent).not.toBeNull();
+  });
+
+  it('falls back to the first brand reference without an OE', () => {
+    const n = mapNarrowing(axialFixture);
+    const c = { ...n.clusters[1]!, oeNumbers: [] };
+    const a = actionRefs(c, 'PEUGEOT', [c]);
+    expect(a.oe).toBeNull();
+    expect(a.buy).toEqual(a.equivalent);
   });
 });

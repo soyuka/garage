@@ -82,3 +82,17 @@ export function relaunchText(n: Narrowing, input: string | null, categoryLabel: 
   const typed = input?.trim() ?? '';
   return typed !== '' ? typed : categoryLabel;
 }
+
+export interface ActionRefs {
+  oe: Reference | null;
+  equivalent: Reference | null;
+  buy: Reference | null;
+}
+
+// What Acheter and Ajouter au véhicule act on: the shown variant's OE, else its first other brand.
+export function actionRefs(cluster: Cluster, make: string | null, parts: readonly Cluster[] = [cluster]): ActionRefs {
+  const oe = pickOe(cluster, make, parts);
+  const equivalent = rankEquivalents(cluster).shown.find((v) => !oe || v.number !== oe.number) ?? null;
+  const eq = equivalent ? { brand: equivalent.brand, number: equivalent.number } : null;
+  return { oe, equivalent: eq, buy: oe ?? eq ?? cluster.representative };
+}

@@ -15,7 +15,6 @@ interface Props {
   overlayWidth: number | null;
   photo?: SheetPhoto | null;
   status?: ReactNode;
-  notes?: ReactNode;
   children?: ReactNode;
 }
 
@@ -30,7 +29,7 @@ function extentFor(family: Family, dims: readonly Dimension[]): number {
   return 150;
 }
 
-export const UNKNOWN_CAPTION = 'Ni modèle 3D ni photo catalogue';
+export const UNKNOWN_LABEL = 'Ni modèle 3D ni photo catalogue';
 export const APPROXIMATE_CAPTION = 'Forme type de la famille, pas la pièce exacte';
 
 // The overlaid title block never clips: a block taller than the sheet (variant table) makes the sheet grow.
@@ -47,13 +46,12 @@ function useBlockHeight(active: boolean) {
   return [ref, height] as const;
 }
 
-export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, status, notes, children }: Props) {
+export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, status, children }: Props) {
   const overlaid = Boolean(overlayWidth && children);
   const [sideRef, blockHeight] = useBlockHeight(overlaid);
   return (
     <div className="sheet" style={blockHeight ? { minHeight: Math.ceil(blockHeight) } : undefined}>
       {viewLabel && <div className="sheet-label m">{viewLabel}</div>}
-      {notes && <div className="sheet-notes">{notes}</div>}
       {family.kind === 'none' ? (
         <div className="sheet-placeholder" style={overlayWidth ? { right: overlayWidth } : undefined}>
           {placeholder}
@@ -106,9 +104,8 @@ function CataloguePhoto({ photo }: { photo: SheetPhoto }) {
 
 function Unknown() {
   return (
-    <div className="sheet-unknown" role="img" aria-label={UNKNOWN_CAPTION}>
+    <div className="sheet-unknown" role="img" aria-label={UNKNOWN_LABEL}>
       <span className="sheet-unknown-mark" aria-hidden="true">?</span>
-      <span className="sheet-unknown-cap">{UNKNOWN_CAPTION}</span>
     </div>
   );
 }

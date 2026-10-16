@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type MutableRefObject, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { isAuthenticated, login } from './auth';
 import { ApiError } from './api';
@@ -10,6 +10,7 @@ import { historyEntries, historyFor, type HistoryEntry } from './history';
 import { STARTERS } from './home';
 import { listMyVehicles, pickTarget, type MyVehicle } from './my-vehicles';
 import { addAttachments } from './attachments';
+import { buildCodeFor, garageMatch, rememberBuildCode } from './buildcode';
 import { MediaError } from './media';
 import { readAttachment } from './read-attachment';
 import { runSubmission, type PendingAsk } from './submit';
@@ -17,10 +18,10 @@ import { buildQuestion } from './question';
 import { relaunchText } from './result';
 import { parseRef, type ClusterChoice, type Route } from './route';
 import type { TextRoute } from './route-input';
-import type { AgentPart, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
+import type { AgentPart, AgentVehicle, BuildCode, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
-import { selectVariant, type SelectionStatus } from './variants';
+import { pickChoice, questionOpen, selectVariant } from './variants';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
 import { VinResult } from './ui/Entry';
@@ -31,8 +32,9 @@ import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Asy
 import { Journal } from './ui/Journal';
 import { useAgentTurn, type AgentTurn, type AskOptions } from './ui/useAgentTurn';
 import { Sheet } from './ui/Sheet';
+import { ResultActions } from './ui/ResultActions';
 import { TitleBlock } from './ui/TitleBlock';
-import { NarrowingTrace, QuestionCard } from './ui/Trace';
+import { QuestionCard } from './ui/Trace';
 import { VehicleChip } from './ui/VehicleChip';
 
 const FAMILY_VIEW: Record<string, string> = {
@@ -48,6 +50,8 @@ const viewLabel = (family: Family, category: Category | null): string => {
 };
 
 const SHEET_OVERLAY_MIN = 812;
+const BLOCK_WIDTH = 520;
+const BLOCK_WIDTH_WIDE = 600;
 
 export function App() {
   return <Finder api={liveApi} />;
@@ -78,6 +82,7 @@ function Finder({ api }: { api: FinderApi }) {
   const [queued, setQueued] = useState<{ ref: string; ask: PendingAsk | null } | null>(null);
   const [journalOpen, setJournalOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
+  const [actionsSlot, setActionsSlot] = useState<HTMLDivElement | null>(null);
   const docked = useMedia('(min-width: 1280px)');
   const journalButton = useRef<HTMLButtonElement>(null);
   const trace = useRef<Trace | null>(null);
@@ -94,7 +99,9 @@ function Finder({ api }: { api: FinderApi }) {
   const v = vehicle.status === 'ok' ? vehicle.data : null;
   const categories = useAsync<Category[]>(v?.carId ? `${v.carId}-${v.carType}` : null, () => api.categories(v!.carId!, v!.carType));
 
-  const turn = useAgentTurn(v, ref);
+  const [codeVersion, codeChanged] = useReducer((n: number) => n + 1, 0);
+  const buildCode = useMemo(() => (v ? buildCodeFor(v) : null), [v, codeVersion]);
+  const turn = useAgentTurn(v, ref, buildCode);
   const turnVehicle = turn.state.vehicle;
   const agentActive = turn.state.phase !== 'idle' || turn.needsLogin !== null;
   // An agent result keeps its own sheet (rationale, several parts) while its route names the part shown.
@@ -124,6 +131,16 @@ function Finder({ api }: { api: FinderApi }) {
 
   const history = useAsync<HistoryEntry[]>((route.view === 'entry' || route.view === 'vehicle') && !agentActive && authed ? 'history' : null, async () => historyEntries(await api.history()));
   const mine = useAsync<MyVehicle[]>(route.view === 'entry' && !agentActive && authed ? 'mine' : null, listMyVehicles);
+
+  // The decoded code de fabrication is the car's: kept for the tab, and on its garage row when it has one.
+  useEffect(() => {
+    const code = turn.state.buildCode;
+    const car = turnVehicle ?? v;
+    if (!code || !car) return;
+    rememberBuildCode(car, code);
+    codeChanged();
+    if (authed) void recordBuildCode(api, car, code);
+  }, [turn.state.buildCode]);
 
   useEffect(() => {
     if (!turnVehicle) return;
@@ -311,11 +328,8 @@ function Finder({ api }: { api: FinderApi }) {
       </a>
       {v && !entry && (
         <div className="top-vehicle">
-          <VehicleChip
-            vehicle={v}
-            onChange={() => openVehicle('')}
-          />
-          {v.carId !== null && <SaveVehicle key={ref} vehicle={v} api={api} />}
+          <VehicleChip vehicle={v} buildCode={buildCode} onChange={() => openVehicle('')} />
+          {v.carId !== null && <SaveVehicle key={ref} vehicle={v} buildCode={buildCode} api={api} />}
         </div>
       )}
       <button ref={journalButton} type="button" className="journal-btn" aria-expanded={journalOpen} onClick={() => setJournalOpen((o) => !o)}>
@@ -329,6 +343,7 @@ function Finder({ api }: { api: FinderApi }) {
       status={<AgentStatus state={turn.state} needsLogin={turn.needsLogin} onCancel={turn.cancel} onRetry={() => turn.ask(turn.state.instruction)} onSignIn={turn.signIn} />}
       note={note}
       slot={setSlot}
+      actions={setActionsSlot}
       quick={quick}
       context={v}
       onClearContext={() => openVehicle('')}
@@ -404,7 +419,7 @@ function Finder({ api }: { api: FinderApi }) {
 
   return shell(
     agentOwns ? (
-      <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} followUp={followUp} onAsk={askAgent} onPlate={askPlate} onLabel={askLabel} />
+      <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} actionsSlot={actionsSlot} followUp={followUp} onAsk={askAgent} onPlate={askPlate} onLabel={askLabel} />
     ) : (
       <Workspace
         api={api}
@@ -414,6 +429,7 @@ function Finder({ api }: { api: FinderApi }) {
         narrowing={narrowing}
         navigate={navigate}
         slot={slot}
+        actionsSlot={actionsSlot}
         followUp={followUp}
         turn={held ? turn : null}
         recent={authed && route.view === 'vehicle' ? historyFor(historyList, route.ref) : []}
@@ -426,6 +442,12 @@ function Finder({ api }: { api: FinderApi }) {
     ),
     'work',
   );
+}
+
+async function recordBuildCode(api: FinderApi, car: Vehicle | AgentVehicle, code: BuildCode): Promise<void> {
+  const iri = garageMatch(await listMyVehicles(), car);
+  if (!iri) return;
+  await api.saveVehicle({ make: car.make, model: car.model, carId: car.carId, plate: car.plate, vin: null, vehicle: iri, buildCode: code.organisationNumber }).catch(() => undefined);
 }
 
 function useFollowUp(followUp: MutableRefObject<FollowUp | null>, value: FollowUp | null) {
@@ -448,6 +470,7 @@ interface WorkspaceProps {
   narrowing: Async<Narrowing> & { retry: () => void };
   navigate: Navigate;
   slot: HTMLElement | null;
+  actionsSlot: HTMLElement | null;
   followUp: MutableRefObject<FollowUp | null>;
   // A follow-up turn holding this result on screen until it shows parts of its own.
   turn: AgentTurn | null;
@@ -460,9 +483,10 @@ interface WorkspaceProps {
   onLabel: () => void;
 }
 
-function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, recent, restoredInput, onOpenHistory, onAsk, onPlate, onLabel }: WorkspaceProps) {
+function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, actionsSlot, followUp, turn, recent, restoredInput, onOpenHistory, onAsk, onPlate, onLabel }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
+  const roomy = useMedia('(min-width: 1280px)');
   const v = vehicle.status === 'ok' ? vehicle.data : null;
 
   const n = narrowing.status === 'ok' ? narrowing.data : null;
@@ -474,6 +498,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   const selection = selectVariant(n, choice);
   const { cluster } = selection;
   const decided = selection.status !== 'open';
+  const asking = questionOpen(selection);
   const choose = (next: ClusterChoice) => route.view === 'result' && navigate({ ...route, cluster: next }, { replace: true });
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const showResult = route.view === 'result' && category !== null && n !== null && n.totalArticles > 0 && relaunch === null;
@@ -481,7 +506,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
 
   useFollowUp(
     followUp,
-    showResult && category && n ? { summary: resultSummary(category.label, n, decided ? choice : null), pendingContext: question && !decided ? `question affichée : ${question.text}` : null } : null,
+    showResult && category && n ? { summary: resultSummary(category.label, n, decided ? choice : null), pendingContext: question && !decided && asking ? `question affichée : ${question.text}` : null } : null,
   );
 
   if (!v) {
@@ -500,7 +525,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
     );
   }
 
-  const overlay = wide ? 520 : null;
+  const overlay = wide ? (roomy ? BLOCK_WIDTH_WIDE : BLOCK_WIDTH) : null;
   const loading = narrowing.status === 'loading' || (route.view === 'result' && categories.status === 'loading');
 
   let status: ReactNode = null;
@@ -536,8 +561,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   }
   if (loading && family.kind !== 'none') status = <p className="sheet-loading" role="status">Affinage des références…</p>;
 
-  const traceNode = route.view === 'result' && relaunch === null && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={settledCount(selection.status)} cluster={cluster} /> : null;
-  const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} selection={selection} onPick={(id) => choose({ id, by: 'user' })} family={family} api={api} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
+  const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} selection={selection} onPick={(id) => choose(pickChoice(selection, id))} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
 
   const ask = turn?.state.ask ?? null;
   const waiting = turn !== null && isBusy(turn.state);
@@ -545,6 +569,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   return (
     <div className={waiting ? 'work work--held' : 'work'} aria-busy={waiting || undefined}>
       <div ref={wrapRef} className={wide ? 'sheet-wrap' : 'sheet-wrap sheet-wrap--stacked'}>
+        {!wide && block}
         <Sheet
           family={family}
           viewLabel={viewLabel(family, category)}
@@ -555,24 +580,20 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           overlayWidth={block ? overlay : null}
           placeholder={placeholder}
           status={status}
-          notes={wide ? traceNode : null}
         >
           {wide && block}
         </Sheet>
-        {!wide && traceNode}
-        {!wide && block}
       </div>
       {slot && ask && createPortal(<AgentQuestion ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} onPlate={onPlate} onLabel={onLabel} />, slot)}
+      {actionsSlot && showResult && category && n && createPortal(<ResultActions vehicle={v} category={category} family={family} cluster={cluster} clusters={n.clusters} api={api} />, actionsSlot)}
       {slot &&
         !ask &&
         question &&
+        asking &&
         createPortal(<QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => choose({ id, by: 'answer' })} />, slot)}
     </div>
   );
 }
-
-// A part picked by the user leaves the catalogue's count as it was: only the cote settles it to one.
-const settledCount = (status: SelectionStatus): number | null => (status === 'single' || status === 'answer' ? 1 : null);
 
 function ErrorNote({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -591,10 +612,7 @@ function TitleSkeleton() {
       <div className="c s3"><span className="l">Désignation</span><span className="sk" style={{ width: '46%' }} /></div>
       <div className="c s3"><span className="l">Réf. OE</span><span className="sk sk--big" style={{ width: '62%' }} /></div>
       <div className="c s3"><span className="l">Équivalences</span><span className="sk" style={{ width: '88%' }} /></div>
-      <div className="c s2"><span className="l">Véhicule</span><span className="sk" style={{ width: '70%' }} /></div>
-      <div className="c r"><span className="l">kType</span><span className="sk" style={{ width: '50%' }} /></div>
-      <div className="c s2 nb"><span className="l">Cotes</span><span className="sk" style={{ width: '80%' }} /></div>
-      <div className="c r nb"><span className="l">Source</span><span className="sk" style={{ width: '60%' }} /></div>
+      <div className="c s3 nb"><span className="l">Cotes</span><span className="sk" style={{ width: '80%' }} /></div>
     </div>
   );
 }
@@ -607,6 +625,7 @@ interface AgentWorkspaceProps {
   categories: Category[];
   turn: AgentTurn;
   slot: HTMLElement | null;
+  actionsSlot: HTMLElement | null;
   followUp: MutableRefObject<FollowUp | null>;
   onAsk: (text: string, options?: AskOptions) => void;
   onPlate: () => void;
@@ -620,11 +639,13 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
     : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
 }
 
-const agentChoice = (p: AgentPart): ClusterChoice | null => (p.kind === 'catalog' && p.selection ? { id: p.selection.clusterId, by: 'agent', basis: p.selection.basis } : null);
+const agentChoice = (p: AgentPart): ClusterChoice | null =>
+  p.kind === 'catalog' && p.selection ? { id: p.selection.clusterId, by: 'agent', basis: p.selection.basis, ...(p.selection.setAside ? { setAside: p.selection.setAside } : {}) } : null;
 
-function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, followUp, onAsk, onPlate, onLabel }: AgentWorkspaceProps) {
+function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, actionsSlot, followUp, onAsk, onPlate, onLabel }: AgentWorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
+  const roomy = useMedia('(min-width: 1280px)');
   const { state } = turn;
   const [webKey, setWebKey] = useState<string | null>(null);
   const busy = isBusy(state);
@@ -642,9 +663,10 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const selection = selectVariant(n, chosen);
   const { cluster } = selection;
   const decided = selection.status !== 'open';
+  const asking = questionOpen(selection);
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const family: Family = category && part ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
-  const overlay = wide && part ? 520 : null;
+  const overlay = wide && part ? (roomy ? BLOCK_WIDTH_WIDE : BLOCK_WIDTH) : null;
 
   const openPart = (p: AgentPart, cluster: ClusterChoice | null = null) => {
     if (p.kind === 'web') {
@@ -674,7 +696,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
       ? { summary: null, pendingContext: state.ask?.context ?? null }
       : {
           summary: part.kind === 'catalog' && category && n ? resultSummary(category.label, n, decided ? chosen : null) : part.kind === 'web' ? `${part.label} : ${part.brand} ${part.reference} (source web, hors catalogue)` : null,
-          pendingContext: state.ask?.context ?? (question && !decided ? `question affichée : ${question.text}` : null),
+          pendingContext: state.ask?.context ?? (question && !decided && asking ? `question affichée : ${question.text}` : null),
         },
   );
 
@@ -703,14 +725,14 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, { id, by: 'user' })} family={family} api={api} rationale={part.selection ? undefined : part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, pickChoice(selection, id))} rationale={part.selection ? undefined : part.rationale} />
   ) : null;
-  const traceNode = n ? <NarrowingTrace narrowing={{ status: 'ok', data: n }} remaining={settledCount(selection.status)} cluster={cluster} /> : null;
 
   return (
     <div className="work">
       <div ref={wrapRef} className={['sheet-wrap', state.parts.length > 1 && 'sheet-wrap--parts', !wide && 'sheet-wrap--stacked'].filter(Boolean).join(' ')}>
         {state.parts.length > 1 && part && <PartSwitcher parts={state.parts} selected={part.key} onSelect={(key) => { const p = state.parts.find((x) => x.key === key); if (p) openPart(p, agentChoice(p)); }} />}
+        {!wide && block}
         <Sheet
           family={family}
           viewLabel={viewLabel(family, category)}
@@ -721,18 +743,16 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           overlayWidth={overlay}
           placeholder={placeholder}
           status={null}
-          notes={wide ? traceNode : null}
         >
           {wide && block}
         </Sheet>
-        {!wide && traceNode}
-        {!wide && block}
       </div>
+      {actionsSlot && part?.kind === 'catalog' && category && n && vehicle && createPortal(<ResultActions vehicle={vehicle} category={category} family={family} cluster={cluster} clusters={n.clusters} api={api} />, actionsSlot)}
       {slot &&
         createPortal(
           <>
             {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
-            {!state.ask && question && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}
+            {!state.ask && question && asking && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}
           </>,
           slot,
         )}

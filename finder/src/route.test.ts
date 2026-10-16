@@ -49,6 +49,16 @@ describe('route', () => {
     expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r')).toEqual({ ...r, cluster: null });
   });
 
+  it('carries what the agent set aside, and a pick that keeps the agent’s verdict', () => {
+    const verdict = { id: 'c1', basis: 'OPR 09824 ≤ 10310', setAside: 'OPR ≥ 10311' };
+    const agent = { view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: { id: 'c1', by: 'agent', basis: verdict.basis, setAside: verdict.setAside } } as const;
+    expect(routeToHash(agent)).toBe('#/p/XD-303-ZD/c/100198/g/51/r/c1/OPR%2009824%20%E2%89%A4%2010310/OPR%20%E2%89%A5%2010311');
+    expect(parseRoute(routeToHash(agent))).toEqual(agent);
+    const pick = { ...agent, cluster: { id: 'c2', by: 'user', verdict } } as const;
+    expect(routeToHash(pick)).toBe('#/p/XD-303-ZD/c/100198/g/51/v/c2/r/c1/OPR%2009824%20%E2%89%A4%2010310/OPR%20%E2%89%A5%2010311');
+    expect(parseRoute(routeToHash(pick))).toEqual(pick);
+  });
+
   it('tells a plate from a catalogue car', () => {
     expect(parseRef('XB-301-ZB')).toEqual({ kind: 'plate', plate: 'XB-301-ZB' });
     expect(parseRef('k19107-CV')).toEqual({ kind: 'car', carId: 19107, carType: 'CV' });

@@ -171,10 +171,17 @@ button {
   text-overflow: ellipsis;
 }
 
-.chip-ktype {
+.chip-ktype,
+.chip-opr {
   font-size: 12px;
   padding-left: 10px;
   border-left: 1px solid var(--hair);
+}
+
+/* The decoded code de fabrication: a fact of this car, in ink, not muted. */
+.chip-opr {
+  color: var(--ink);
+  font-weight: 500;
 }
 
 
@@ -579,6 +586,7 @@ button {
 
 .work > .sheet-wrap {
   flex: 1;
+  padding-block: 12px;
   transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -586,49 +594,6 @@ button {
 .work--held > .sheet-wrap {
   opacity: 0.82;
   filter: grayscale(0.5);
-}
-
-.trace {
-  border-top: 1px solid var(--ink);
-}
-
-.trace div {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-  padding: 6px 0 5px;
-  border-bottom: 1px solid var(--hair);
-  font-size: 13px;
-}
-
-.trace dt {
-  color: var(--mute);
-}
-
-.trace dd {
-  text-align: right;
-  font-size: 12.5px;
-}
-
-.trace div[data-result] {
-  border-bottom: 1px solid var(--ink);
-  font-weight: 600;
-}
-
-.trace div[data-result] dt,
-.trace div[data-result] dd {
-  color: var(--blue);
-}
-
-.trace div[data-result] dd {
-  font-size: 13.5px;
-}
-
-.trace-status {
-  margin-top: 8px;
-  color: var(--mute);
-  font-size: 12.5px;
 }
 
 .ask {
@@ -906,6 +871,20 @@ button {
 .tb-title {
   font-weight: 600;
   font-size: 17px;
+}
+
+.tb-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+}
+
+.tb-head .tb-title {
+  grid-column: 1 / -1;
+}
+
+.tb-prov .tag:last-child {
+  margin-right: 0;
 }
 
 .oe {
@@ -1380,7 +1359,7 @@ button {
 
 .vt-row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1.35fr) minmax(0, 0.75fr) minmax(0, 1fr);
   gap: 0 12px;
   align-items: start;
   width: 100%;
@@ -1551,6 +1530,42 @@ button {
   text-wrap: pretty;
 }
 
+.vt-verdict {
+  grid-column: 2 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+.vt-verdict .tag {
+  margin: 0;
+  font-weight: 600;
+}
+
+.vt-why {
+  color: var(--mute);
+}
+
+/* Set aside by the agent's verdict: still readable, still a radio, visibly not the one. */
+.vt-item[data-mark='aside'] .vt-ref b,
+.vt-item[data-mark='aside'] .vt-diff,
+.vt-item[data-mark='aside'] .vt-app,
+.vt-item[data-mark='aside'] .vt-ref small {
+  color: var(--mute-3);
+}
+
+.vt-item[data-mark='aside'] .vt-letter {
+  border-color: var(--mute-3);
+  color: var(--mute-3);
+}
+
+.vt-item[data-mark='aside'] .vt-why {
+  color: var(--ink);
+}
+
 .vt-app .m {
   color: var(--ink);
 }
@@ -1604,6 +1619,9 @@ button {
   }
   .vt-app {
     grid-area: a;
+  }
+  .vt-verdict {
+    grid-column: 2 / -1;
   }
   .vt-k {
     display: block;
@@ -1767,6 +1785,54 @@ button {
   gap: 4px;
 }
 
+/* Under the field: the result's actions (left), quick actions (right). */
+.dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 4px;
+}
+
+.dock-actions[data-empty]:has(> .dock-acts:empty) {
+  display: none;
+}
+
+.dock-acts:empty {
+  display: none;
+}
+
+.dock-acts .act {
+  padding: 0;
+}
+
+@media (max-width: 759px) {
+  .intake:has(.dock-acts:not(:empty)) .intake-hint {
+    display: none;
+  }
+  .dock-acts {
+    width: 100%;
+  }
+  .dock-acts .act {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 6px;
+  }
+  .dock-acts .act .btn {
+    padding: 0 10px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .dock-acts .add-login,
+  .dock-acts .pick {
+    grid-column: 1 / -1;
+  }
+}
+
+.dock-actions .dock-quick {
+  margin-left: auto;
+}
+
 /* vehicle in context: pinned at the start of the composer */
 .ctx {
   flex: 0 1 auto;
@@ -1820,31 +1886,6 @@ button {
 
 .dock .field-error {
   margin: 0;
-}
-
-.narrow h2 {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--mute);
-  margin-bottom: 6px;
-}
-
-/* ── sheet notes, generic caption ──────────────────────────────────────── */
-
-.sheet-notes {
-  position: absolute;
-  top: 48px;
-  left: 24px;
-  z-index: 2;
-  width: 232px;
-  pointer-events: none;
-}
-
-.sheet-notes h2 {
-  font-size: 11.5px;
-  font-weight: 500;
-  color: var(--mute);
-  margin-bottom: 6px;
 }
 
 .sheet-caption {
@@ -1915,14 +1956,6 @@ button {
   color: var(--line-2);
 }
 
-.sheet-unknown-cap {
-  font-size: 12.5px;
-  color: var(--mute);
-}
-
-.sheet-wrap--stacked > .narrow {
-  padding: 0 4px;
-}
 
 /* ── vehicle save, garage picker ───────────────────────────────────────── */
 
@@ -2689,9 +2722,6 @@ button {
   .work {
     display: flex;
     flex-direction: column;
-  }
-  .narrow .big {
-    font-size: 36px;
   }
   .sheet-wrap {
     padding: 16px var(--gutter) 24px;
