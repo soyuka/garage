@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="46" y="10" width="28" height="12" rx="2" vector-effect="non-scaling-stroke"/>
+<rect x="50" y="22" width="20" height="34" rx="3" vector-effect="non-scaling-stroke"/>
+<line x1="50" y1="32" x2="70" y2="32" vector-effect="non-scaling-stroke"/>
+<line x1="50" y1="40" x2="70" y2="40" vector-effect="non-scaling-stroke"/>
+<line x1="50" y1="48" x2="70" y2="48" vector-effect="non-scaling-stroke"/>
+<path d="M54 56 H66 L64 72 H56 Z" vector-effect="non-scaling-stroke"/>
+<line x1="60" y1="72" x2="34" y2="100" vector-effect="non-scaling-stroke"/>
+<line x1="60" y1="72" x2="86" y2="100" vector-effect="non-scaling-stroke"/>
+<path d="M34 100 Q60 110 86 100" vector-effect="non-scaling-stroke"/>
+<line x1="60" y1="80" x2="60" y2="98" vector-effect="non-scaling-stroke"/>
+<line x1="50" y1="82" x2="48" y2="94" vector-effect="non-scaling-stroke"/>
+<line x1="70" y1="82" x2="72" y2="94" vector-effect="non-scaling-stroke"/>
+</svg>

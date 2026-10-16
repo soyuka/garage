@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M10 84 V68 Q10 62 18 60 L36 56 L48 46 H84 L98 58 L108 62 V84 H100 M76 84 H44 M20 84 H10" vector-effect="non-scaling-stroke"/>
+<circle cx="32" cy="84" r="12" vector-effect="non-scaling-stroke"/>
+<circle cx="32" cy="84" r="5" vector-effect="non-scaling-stroke"/>
+<circle cx="88" cy="84" r="12" vector-effect="non-scaling-stroke"/>
+<circle cx="88" cy="84" r="5" vector-effect="non-scaling-stroke"/>
+<path d="M54 50 L47 56 H66 V50 Z" vector-effect="non-scaling-stroke"/>
+<path d="M70 50 V56 H92 L84 50 Z" vector-effect="non-scaling-stroke"/>
+<line x1="40" y1="34" x2="94" y2="34" vector-effect="non-scaling-stroke"/>
+<line x1="40" y1="28" x2="94" y2="28" vector-effect="non-scaling-stroke"/>
+<line x1="54" y1="28" x2="54" y2="46" vector-effect="non-scaling-stroke"/>
+<line x1="82" y1="28" x2="82" y2="46" vector-effect="non-scaling-stroke"/>
+</svg>

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="20" y="44" width="80" height="44" rx="4" vector-effect="non-scaling-stroke"/>
+<rect x="26" y="28" width="68" height="16" rx="3" vector-effect="non-scaling-stroke"/>
+<rect x="34" y="18" width="52" height="10" rx="2" vector-effect="non-scaling-stroke"/>
+<circle cx="60" cy="68" r="14" vector-effect="non-scaling-stroke"/>
+<circle cx="60" cy="68" r="5" vector-effect="non-scaling-stroke"/>
+<path d="M28 88 L36 100 H84 L92 88" vector-effect="non-scaling-stroke"/>
+<line x1="8" y1="52" x2="20" y2="52" vector-effect="non-scaling-stroke"/>
+<line x1="8" y1="62" x2="20" y2="62" vector-effect="non-scaling-stroke"/>
+<line x1="100" y1="52" x2="112" y2="52" vector-effect="non-scaling-stroke"/>
+<line x1="100" y1="62" x2="112" y2="62" vector-effect="non-scaling-stroke"/>
+<line x1="40" y1="28" x2="40" y2="44" vector-effect="non-scaling-stroke"/>
+<line x1="80" y1="28" x2="80" y2="44" vector-effect="non-scaling-stroke"/>
+</svg>

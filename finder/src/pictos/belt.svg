@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M32 23 L92 23 A15 15 0 0 1 104.4 46.4 L72.8 93.3 A13 13 0 0 1 51.2 93.3 L19.6 46.4 A15 15 0 0 1 32 23 Z" vector-effect="non-scaling-stroke"/>
+<path d="M32 18 L92 18 A20 20 0 0 1 108.6 49.2 L76.9 96.1 A18 18 0 0 1 47.1 96.1 L15.4 49.2 A20 20 0 0 1 32 18 Z" vector-effect="non-scaling-stroke"/>
+<circle cx="32" cy="38" r="6" vector-effect="non-scaling-stroke"/>
+<circle cx="32" cy="38" r="2" vector-effect="non-scaling-stroke"/>
+<circle cx="92" cy="38" r="6" vector-effect="non-scaling-stroke"/>
+<circle cx="92" cy="38" r="2" vector-effect="non-scaling-stroke"/>
+<circle cx="62" cy="86" r="5" vector-effect="non-scaling-stroke"/>
+<circle cx="62" cy="86" r="2" vector-effect="non-scaling-stroke"/>
+</svg>

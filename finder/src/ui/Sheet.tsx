@@ -1,6 +1,8 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { measure } from '../dims';
+import { categoryPicto } from '../picto';
 import type { SheetPhoto } from '../photo';
+import { CategoryPicto } from './CategoryPicto';
 import { useLinger } from './Presence';
 import type { Dimension, Family } from '../types';
 
@@ -15,6 +17,7 @@ interface Props {
   placeholder: ReactNode;
   overlayWidth: number | null;
   photo?: SheetPhoto | null;
+  categoryPath?: string | null;
   status?: ReactNode;
   // A search is running: the drawing area turns the loading carousel whatever the part's family.
   searching?: boolean;
@@ -53,7 +56,7 @@ function useBlockHeight(active: boolean) {
 // the carousel dissolves while the photo or the « ? » comes in over it.
 const CANVAS_EXIT_MS = 360;
 
-export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, status, searching = false, children }: Props) {
+export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, categoryPath = null, status, searching = false, children }: Props) {
   const overlaid = Boolean(overlayWidth && children);
   const [sideRef, blockHeight] = useBlockHeight(overlaid);
   const drawn = family.kind !== 'none' && family.kind !== 'photo' ? family : null;
@@ -87,7 +90,7 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
       )}
       {!searching && family.kind === 'photo' && (
         <div className="sheet-figure" style={side}>
-          {photo ? <CataloguePhoto key={photo.src} photo={photo} /> : !status && <Unknown />}
+          {photo ? <CataloguePhoto key={photo.src} photo={photo} categoryPath={categoryPath} /> : !status && <Fallback categoryPath={categoryPath} />}
         </div>
       )}
       {status && searching ? (
@@ -116,10 +119,10 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
 
 // A reference photo pinned on the sheet: never measured, never dimensioned. A missing or broken image
 // falls back to the « ? ».
-function CataloguePhoto({ photo }: { photo: SheetPhoto }) {
+function CataloguePhoto({ photo, categoryPath }: { photo: SheetPhoto; categoryPath: string | null }) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  if (failed) return <Unknown />;
+  if (failed) return <Fallback categoryPath={categoryPath} />;
   // Pinned only once decoded: a photo that fails never flashes an empty frame before the « ? ».
   return (
     <figure className="sheet-photo" data-loaded={loaded || undefined}>
@@ -129,6 +132,11 @@ function CataloguePhoto({ photo }: { photo: SheetPhoto }) {
       </figcaption>
     </figure>
   );
+}
+
+function Fallback({ categoryPath }: { categoryPath: string | null }) {
+  const picto = categoryPath ? categoryPicto(categoryPath) : null;
+  return picto ? <CategoryPicto picto={picto} /> : <Unknown />;
 }
 
 function Unknown() {

@@ -25,6 +25,28 @@ describe('Sheet without a 3D model', () => {
     expect(html).not.toContain('<figure');
   });
 
+  it('draws the family pictogram, captioned, when there is no photo but a rule matches', () => {
+    const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo: null, categoryPath: 'Système électrique > Démarreur > Charbons' }));
+    expect(html).toContain('class="sheet-picto"');
+    expect(html).toContain('role="img" aria-label="Famille : Démarrage et charge, pas la pièce"');
+    expect(html).toContain('<svg');
+    expect(html).toContain('Famille : Démarrage et charge, pas la pièce');
+    expect(html).not.toContain('sheet-unknown');
+    expect(html).not.toContain('Glisser pour tourner');
+  });
+
+  it('keeps the « ? » when no pictogram rule matches', () => {
+    const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo: null, categoryPath: 'Zorglub > Truc' }));
+    expect(html).toContain('<div class="sheet-unknown"');
+    expect(html).not.toContain('sheet-picto');
+  });
+
+  it('prefers the catalogue photo to the pictogram', () => {
+    const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo, categoryPath: 'Système électrique > Démarreur' }));
+    expect(html).toContain('<figure class="sheet-photo">');
+    expect(html).not.toContain('sheet-picto');
+  });
+
   it('turns the loading carousel while the part is still being narrowed, whatever its family', () => {
     for (const family of [{ kind: 'photo' } as const, { kind: 'none' } as const]) {
       const html = renderToStaticMarkup(createElement(Sheet, { ...base, family, photo: null, ghost: true, searching: true, status: 'Affinage des références…' }));

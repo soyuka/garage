@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<g transform="translate(-8 0)">
+<path d="M52 28 Q26 28 26 60 Q26 92 52 92 H64 V28 Z" vector-effect="non-scaling-stroke"/>
+<path d="M52 38 Q38 40 38 60 Q38 80 52 82" vector-effect="non-scaling-stroke"/>
+<circle cx="48" cy="60" r="8" vector-effect="non-scaling-stroke"/>
+<line x1="76" y1="36" x2="116" y2="30" vector-effect="non-scaling-stroke"/>
+<line x1="76" y1="48" x2="116" y2="46" vector-effect="non-scaling-stroke"/>
+<line x1="76" y1="60" x2="116" y2="60" vector-effect="non-scaling-stroke"/>
+<line x1="76" y1="72" x2="116" y2="74" vector-effect="non-scaling-stroke"/>
+<line x1="76" y1="84" x2="116" y2="90" vector-effect="non-scaling-stroke"/>
+</g>
+</svg>

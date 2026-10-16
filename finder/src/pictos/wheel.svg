@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<circle cx="60" cy="60" r="50" vector-effect="non-scaling-stroke"/>
+<circle cx="60" cy="60" r="42" vector-effect="non-scaling-stroke"/>
+<circle cx="60" cy="60" r="32" vector-effect="non-scaling-stroke"/>
+<circle cx="60" cy="60" r="8" vector-effect="non-scaling-stroke"/>
+<line x1="60" y1="52" x2="60" y2="28" vector-effect="non-scaling-stroke"/>
+<line x1="67.6" y1="57.5" x2="90.4" y2="50.1" vector-effect="non-scaling-stroke"/>
+<line x1="64.7" y1="66.5" x2="78.8" y2="85.9" vector-effect="non-scaling-stroke"/>
+<line x1="55.3" y1="66.5" x2="41.2" y2="85.9" vector-effect="non-scaling-stroke"/>
+<line x1="52.4" y1="57.5" x2="29.6" y2="50.1" vector-effect="non-scaling-stroke"/>
+<circle cx="68.8" cy="47.9" r="2" vector-effect="non-scaling-stroke"/>
+<circle cx="74.3" cy="64.6" r="2" vector-effect="non-scaling-stroke"/>
+<circle cx="60" cy="75" r="2" vector-effect="non-scaling-stroke"/>
+<circle cx="45.7" cy="64.6" r="2" vector-effect="non-scaling-stroke"/>
+<circle cx="51.2" cy="47.9" r="2" vector-effect="non-scaling-stroke"/>
+</svg>

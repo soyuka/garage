@@ -593,6 +593,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           viewLabel={viewLabel(family, category)}
           dimensions={cluster?.dimensions ?? []}
           photo={family.kind === 'photo' ? sheetPhoto(n, cluster, v.carType) : null}
+          categoryPath={category?.path ?? null}
           ghost={loading || !cluster}
           reducedMotion={reducedMotion}
           overlayWidth={block ? overlay : null}
@@ -772,6 +773,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           viewLabel={viewLabel(family, category)}
           dimensions={cluster?.dimensions ?? []}
           photo={family.kind === 'photo' ? sheetPhoto(n, cluster, vehicle?.carType ?? 'PC') : null}
+          categoryPath={category?.path ?? null}
           ghost={!cluster || state.stale}
           reducedMotion={reducedMotion}
           overlayWidth={overlay}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<rect x="8" y="32" width="46" height="48" rx="4" vector-effect="non-scaling-stroke"/>
+<rect x="16" y="40" width="30" height="12" rx="1" vector-effect="non-scaling-stroke"/>
+<path d="M18 68 L32 60" vector-effect="non-scaling-stroke"/>
+<circle cx="38" cy="60" r="2" vector-effect="non-scaling-stroke"/>
+<line x1="16" y1="80" x2="16" y2="94" vector-effect="non-scaling-stroke"/>
+<line x1="26" y1="80" x2="26" y2="94" vector-effect="non-scaling-stroke"/>
+<line x1="36" y1="80" x2="36" y2="94" vector-effect="non-scaling-stroke"/>
+<line x1="46" y1="80" x2="46" y2="94" vector-effect="non-scaling-stroke"/>
+<rect x="68" y="32" width="40" height="34" rx="4" vector-effect="non-scaling-stroke"/>
+<rect x="77" y="40" width="22" height="12" rx="2" vector-effect="non-scaling-stroke"/>
+<path d="M80 46 H84 L88 50 L92 42 L96 46 H98" vector-effect="non-scaling-stroke"/>
+<rect x="74" y="66" width="8" height="28" rx="1" vector-effect="non-scaling-stroke"/>
+<rect x="94" y="66" width="8" height="28" rx="1" vector-effect="non-scaling-stroke"/>
+</svg>

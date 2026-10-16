@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+<path d="M30.7 46.7 L82.3 32.5 A14 14 0 0 1 92.6 58.3 L45.5 83.6 A20 20 0 1 1 30.7 46.7 Z" vector-effect="non-scaling-stroke"/>
+<path d="M29.4 41.9 L81 27.7 A19 19 0 0 1 95 62.7 L47.8 88 A25 25 0 1 1 29.4 41.9 Z" vector-effect="non-scaling-stroke"/>
+<circle cx="36" cy="66" r="8" vector-effect="non-scaling-stroke"/>
+<circle cx="36" cy="66" r="3" vector-effect="non-scaling-stroke"/>
+<circle cx="86" cy="46" r="5" vector-effect="non-scaling-stroke"/>
+<circle cx="86" cy="46" r="2" vector-effect="non-scaling-stroke"/>
+<line x1="49.5" y1="69.6" x2="55.3" y2="71.2" vector-effect="non-scaling-stroke"/>
+<line x1="39.6" y1="79.5" x2="41.2" y2="85.3" vector-effect="non-scaling-stroke"/>
+<line x1="26.1" y1="75.9" x2="21.9" y2="80.1" vector-effect="non-scaling-stroke"/>
+<line x1="22.5" y1="62.4" x2="16.7" y2="60.8" vector-effect="non-scaling-stroke"/>
+<line x1="32.4" y1="52.5" x2="30.8" y2="46.7" vector-effect="non-scaling-stroke"/>
+<line x1="45.9" y1="56.1" x2="50.1" y2="51.9" vector-effect="non-scaling-stroke"/>
+</svg>
