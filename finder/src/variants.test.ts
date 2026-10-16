@@ -40,7 +40,7 @@ describe('variantRows', () => {
   it('lists every part with its letter, OE, representative and the cote that tells them apart', () => {
     const rows = variantRows(n307(), 'PEUGEOT');
     expect(rows.map((r) => r.letter)).toEqual(['A', 'B']);
-    expect(rows[0]).toMatchObject({ id: 'c1', oe: { brand: 'PEUGEOT' }, representative: { brand: 'BOSCH', number: '0 986 141 079' }, articleCount: 90 });
+    expect(rows[0]).toMatchObject({ id: 'c1', oe: { brand: 'PEUGEOT', number: '3812 E0' }, representative: { brand: 'BOSCH', number: '0 986 141 079' }, articleCount: 90 });
     expect(rows[1]).toMatchObject({ id: 'c2', oe: { brand: 'PEUGEOT', number: '3812 E5' }, representative: { brand: 'BOSCH', number: '0 986 141 133' }, articleCount: 11 });
     expect(rows[0]!.differs).toEqual([{ key: 'longeur_rotule', label: 'Longeur rotule', text: `322–338${NNBSP}mm` }]);
     expect(rows[1]!.differs).toEqual([{ key: 'longeur_rotule', label: 'Longeur rotule', text: `358${NNBSP}mm` }]);
@@ -86,11 +86,11 @@ describe('otherDimensions', () => {
 describe('makerOe', () => {
   it('lists the carmaker’s other OE numbers once each, without the headline', () => {
     const n = n307();
-    expect(makerOe(n.clusters[0]!, 'PEUGEOT')).toEqual([
+    expect(makerOe(n.clusters[0]!, 'PEUGEOT', n.clusters)).toEqual([
+      { brand: 'PEUGEOT', number: '16 072 936 80' },
       { brand: 'PEUGEOT', number: '3812' },
-      { brand: 'PEUGEOT', number: '3812 E0' },
     ]);
-    expect(makerOe(n.clusters[1]!, 'PEUGEOT')).toEqual([]);
+    expect(makerOe(n.clusters[1]!, 'PEUGEOT', n.clusters)).toEqual([]);
   });
 });
 

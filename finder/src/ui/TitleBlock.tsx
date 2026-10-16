@@ -37,9 +37,9 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
   const { cluster } = selection;
   const multi = narrowing.clusters.length > 1 && cluster !== null;
   const letter = multi ? variantLetter(selection.index) : null;
-  const otherOe = multi ? makerOe(cluster, vehicle.make) : [];
+  const otherOe = multi ? makerOe(cluster, vehicle.make, narrowing.clusters) : [];
   const otherCotes = multi ? otherDimensions(cluster, narrowing.differsOn) : [];
-  const oe = cluster ? pickOe(cluster, vehicle.make) : null;
+  const oe = cluster ? pickOe(cluster, vehicle.make, narrowing.clusters) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
   const top = eq?.shown.find((v) => !oe || v.number !== oe.number) ?? null;
   const cotes = cluster ? cotesLine(cluster.dimensions) : null;

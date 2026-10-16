@@ -1,5 +1,6 @@
 import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents, relaunchText } from './result';
 import { mapNarrowing } from './api';
+import axialFixture from '../test-fixtures/narrowed-307-axial.json';
 import narrowed from '../test-fixtures/narrowed.json';
 
 const NNBSP = ' ';
@@ -14,6 +15,24 @@ describe('pickOe', () => {
   it('falls back to the first OE number, then to nothing', () => {
     expect(pickOe({ ...c1, oeNumbers: [{ brand: 'FORD', number: '1S7G' }] }, 'MAZDA')).toEqual({ brand: 'FORD', number: '1S7G' });
     expect(pickOe({ ...c1, oeNumbers: [] }, 'MAZDA')).toBeNull();
+  });
+
+  it('numbers every part of a result in the scheme all of them have for the make', () => {
+    const axial = mapNarrowing(axialFixture);
+    const [a, b] = axial.clusters;
+    expect(pickOe(a!, 'PEUGEOT', axial.clusters)).toEqual({ brand: 'PEUGEOT', number: '3812 E0' });
+    expect(pickOe(b!, 'PEUGEOT', axial.clusters)).toEqual({ brand: 'PEUGEOT', number: '3812 E5' });
+  });
+
+  it('keeps the plain choice when the parts share no numbering scheme', () => {
+    const a = { ...c1, id: 'a', oeNumbers: [{ brand: 'PEUGEOT', number: '16 072 936 80' }] };
+    const b = { ...c1, id: 'b', oeNumbers: [{ brand: 'PEUGEOT', number: '3812 E5' }] };
+    expect(pickOe(a, 'PEUGEOT', [a, b])).toEqual({ brand: 'PEUGEOT', number: '16 072 936 80' });
+  });
+
+  it('ignores the make filter when the make is unknown', () => {
+    const a = { ...c1, id: 'a', oeNumbers: [{ brand: 'FORD', number: '1S7G' }] };
+    expect(pickOe(a, null, [a])).toEqual({ brand: 'FORD', number: '1S7G' });
   });
 });
 

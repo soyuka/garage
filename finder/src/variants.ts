@@ -69,7 +69,7 @@ export function variantRows(n: Narrowing, make: string | null): VariantRow[] {
   return n.clusters.map((c, i) => ({
     id: c.id,
     letter: variantLetter(i),
-    oe: pickOe(c, make),
+    oe: pickOe(c, make, n.clusters),
     representative: c.representative,
     articleCount: c.articleCount,
     differs: divergences.map((d) => {
@@ -100,8 +100,8 @@ export function otherDimensions(cluster: Cluster, differsOn: readonly Divergence
 const foldNumber = (r: Reference): string => r.number.replace(/[^0-9a-z]/gi, '').toUpperCase();
 
 // The carmaker's other OE numbers for this part, spelling variants folded (3812 E0 = 3812.E0 = 3812E0).
-export function makerOe(cluster: Cluster, make: string | null): Reference[] {
-  const headline = pickOe(cluster, make);
+export function makerOe(cluster: Cluster, make: string | null, parts: readonly Cluster[] = [cluster]): Reference[] {
+  const headline = pickOe(cluster, make, parts);
   if (!headline) return [];
   const seen = new Set([foldNumber(headline)]);
   return cluster.oeNumbers.filter((r) => {

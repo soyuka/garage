@@ -5,9 +5,20 @@ import type { Cluster, Dimension, Narrowing, Reference, Variant } from './types'
 
 export const sameBrand = (a: string, b: string): boolean => foldText(a).replace(/[^a-z0-9]/g, '') === foldText(b).replace(/[^a-z0-9]/g, '');
 
-export function pickOe(cluster: Cluster, make: string | null): Reference | null {
-  const own = make ? cluster.oeNumbers.find((r) => sameBrand(r.brand, make)) : undefined;
-  return own ?? cluster.oeNumbers[0] ?? null;
+const oeKey = (r: Reference): string => r.number.replace(/[^0-9a-z]/gi, '').toUpperCase();
+const oeShape = (r: Reference): string => oeKey(r).replace(/\d/g, '9').replace(/[A-Z]/g, 'A');
+const ownOe = (cluster: Cluster, make: string): Reference[] => cluster.oeNumbers.filter((r) => sameBrand(r.brand, make));
+
+// Parts of one result are told apart by number, so they should be numbered alike: prefer the OE shape
+// (3812 E0, 3812 E5) that every part has for the make, else the maker's first number.
+export function pickOe(cluster: Cluster, make: string | null, parts: readonly Cluster[] = [cluster]): Reference | null {
+  const own = make ? ownOe(cluster, make) : [];
+  if (make && parts.length > 1) {
+    const shapes = parts.map((p) => new Set(ownOe(p, make).map(oeShape)));
+    const shared = own.find((r) => shapes.every((s) => s.has(oeShape(r))));
+    if (shared) return shared;
+  }
+  return own[0] ?? cluster.oeNumbers[0] ?? null;
 }
 
 export function rankEquivalents(cluster: Cluster, limit = 6): { shown: Variant[]; otherBrands: number } {
