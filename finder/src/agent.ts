@@ -1,7 +1,7 @@
 import { mapNarrowing } from './api';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
-import type { AgentPart, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle } from './types';
+import type { AgentPart, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -174,6 +174,9 @@ export function hubUrl(hub: string, origin: string, topic: string): string {
   url.searchParams.append('match', topic);
   return url.toString();
 }
+
+export const turnVehicle = (v: Vehicle | null): TurnVehicle | null =>
+  v?.carId ? { carId: v.carId, carType: v.carType, make: v.make, model: v.model, engine: v.engineCode, plate: v.plate } : null;
 
 export interface TurnBody {
   instruction: string;

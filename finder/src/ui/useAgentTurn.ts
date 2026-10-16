@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer } from '../agent';
+import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
 import { isAuthenticated, login } from '../auth';
 import type { BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
@@ -101,7 +101,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string): AgentTurn {
       const body = turnBody({
         instruction: text,
         sessionId,
-        vehicle: vehicle?.carId ? { carId: vehicle.carId, carType: vehicle.carType, make: vehicle.make, model: vehicle.model, engine: vehicle.engineCode, plate: vehicle.plate } : null,
+        vehicle: turnVehicle(vehicle),
         pendingContext: options.pendingContext ?? null,
         intent,
         images: options.images,

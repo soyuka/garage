@@ -134,6 +134,16 @@ export async function planPart(body: PlanBody): Promise<PlannedTask> {
   return { task: json['@id'], vehicle: json.vehicle };
 }
 
+export interface RegistrationBody {
+  vin?: string;
+  firstRegistration?: string;
+  cnit?: string;
+  displacement?: string;
+  powerKw?: string;
+  energy?: string;
+  fiscalPower?: string;
+}
+
 export interface SaveBody {
   make: string | null;
   model: string | null;
@@ -142,6 +152,8 @@ export interface SaveBody {
   vin: string | null;
   vehicle?: string;
   confirmNew?: boolean;
+  // Carte grise fields, recorded as facts on the saved vehicle by the same call.
+  registration?: RegistrationBody;
 }
 
 export const saveBody = (v: Vehicle): SaveBody => ({ make: v.make, model: v.model ?? v.modelEn, carId: v.carId, plate: v.plate, vin: v.vin });

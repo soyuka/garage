@@ -15,8 +15,10 @@ interface Props {
   plateRequest?: number;
   hasVehicle?: boolean;
   token?: ReactNode;
-  onText: (route: TextRoute, typed: string) => void;
-  onFiles: (files: File[]) => void;
+  attachments?: readonly File[];
+  onText: (route: TextRoute, typed: string) => void | Promise<boolean>;
+  onAttach: (files: File[]) => void;
+  onDetach?: (index: number) => void;
 }
 
 const PLATE_PLACEHOLDER = 'Plaque : AB-123-CD';
@@ -54,7 +56,25 @@ function CameraIcon() {
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, hasVehicle = categories !== null, token = null, onText, onFiles }: Props) {
+function Chips({ files, disabled, onDetach }: { files: readonly File[]; disabled: boolean; onDetach?: (index: number) => void }) {
+  const previews = useMemo(() => files.map((f) => (f.type.startsWith('image/') ? URL.createObjectURL(f) : null)), [files]);
+  useEffect(() => () => previews.forEach((u) => u && URL.revokeObjectURL(u)), [previews]);
+  return (
+    <ul className="chips" aria-label="Fichiers joints">
+      {files.map((f, i) => (
+        <li key={`${f.name}-${i}`} className="chip-file">
+          {previews[i] ? <img src={previews[i]!} alt="" width="20" height="20" /> : <span className="chip-kind m" aria-hidden="true">{f.type === 'application/pdf' ? 'PDF' : 'VID'}</span>}
+          <span className="chip-file-name">{f.name}</span>
+          <button type="button" className="ctx-remove" disabled={disabled} aria-label={`Retirer ${f.name}`} title="Retirer le fichier" onClick={() => onDetach?.(i)}>
+            ×
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, hasVehicle = categories !== null, token = null, attachments = [], onText, onAttach, onDetach }: Props) {
   const [text, setText] = useState(initial);
   const [over, setOver] = useState(false);
   const [plateHint, setPlateHint] = useState(false);
@@ -77,20 +97,23 @@ export function Intake({ variant, categories, loading = false, initial, context 
   const route = useMemo(() => routeText(text), [text, categories]);
   const hint = context ?? routeHint(route, hasVehicle);
 
-  const submit = () => {
-    if (route.kind === 'empty' || busy) return;
+  const attached = attachments.length > 0;
+  const submit = async () => {
+    if ((route.kind === 'empty' && !attached) || busy) return;
+    const typed = text.trim();
     setText('');
-    onText(route, text.trim());
+    // false: the submit stopped (unreadable file, unknown plate): the typed text stays for the next press.
+    if ((await onText(route, typed)) === false) setText((current) => (current === '' ? typed : current));
   };
 
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
-    submit();
+    void submit();
   };
 
   const files = (list: FileList | null | undefined) => {
     const picked = list ? Array.from(list) : [];
-    if (picked.length > 0 && !busy) onFiles(picked);
+    if (picked.length > 0 && !busy) onAttach(picked);
   };
 
   const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
@@ -128,6 +151,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
       </label>
       <div className="intake-field">
         {token}
+        {attached && <Chips files={attachments} disabled={busy} onDetach={onDetach} />}
         <input
           ref={input}
           id={`${id}-q`}
@@ -162,7 +186,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
         <button type="button" className="intake-icon" onClick={() => picker.current?.click()} disabled={busy} aria-label="Joindre une photo, une vidéo ou un PDF" title="Joindre une photo, une vidéo ou un PDF">
           <PaperclipIcon />
         </button>
-        <button type="submit" className="btn pri intake-go" disabled={route.kind === 'empty' || busy}>
+        <button type="submit" className="btn pri intake-go" disabled={(route.kind === 'empty' && !attached) || busy}>
           {busy ? 'Lecture…' : 'Chercher'}
         </button>
       </div>

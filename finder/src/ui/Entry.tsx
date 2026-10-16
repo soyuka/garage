@@ -1,4 +1,4 @@
-import type { Registration, VinDecode } from '../types';
+import type { VinDecode } from '../types';
 
 export function VinResult({ decode }: { decode: VinDecode }) {
   if (!decode.valid) {
@@ -30,51 +30,6 @@ export function VinResult({ decode }: { decode: VinDecode }) {
         </div>
       </dl>
       <p className="entry-note">Le VIN ne suffit pas à trouver le kType. Saisissez la plaque ou envoyez la carte grise en photo.</p>
-    </div>
-  );
-}
-
-export function CardResult({ data, onPlate, onReset }: { data: Registration; onPlate: (p: string) => void; onReset: () => void }) {
-  return (
-    <div className="card-result">
-      {!data.legible && (
-        <p className="field-error" role="alert">
-          Document peu lisible. Vérifiez chaque champ.
-        </p>
-      )}
-      <table className="reg">
-        <caption className="sr-only">Champs lus sur la carte grise</caption>
-        <tbody>
-          {data.fields.map((f) => (
-            <tr key={f.code}>
-              <th scope="row" className="m">
-                {f.code}
-              </th>
-              <td>{f.label}</td>
-              <td className={f.code === 'A' || f.code === 'E' ? 'm' : undefined}>{f.value}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {data.warnings.length > 0 && (
-        <ul className="warnings">
-          {data.warnings.map((w) => (
-            <li key={w}>{w}</li>
-          ))}
-        </ul>
-      )}
-      <div className="card-actions">
-        {data.plate ? (
-          <button type="button" className="btn pri" onClick={() => onPlate(data.plate!)}>
-            Rechercher <span className="m">{data.plate}</span>
-          </button>
-        ) : (
-          <p className="field-error">Plaque (case A) illisible. Saisissez-la.</p>
-        )}
-        <button type="button" className="btn" onClick={onReset}>
-          Annuler
-        </button>
-      </div>
     </div>
   );
 }

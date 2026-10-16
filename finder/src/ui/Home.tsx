@@ -22,22 +22,24 @@ interface Props {
   // What fills the page below: the recent searches when there are some, else the example.
   below: ReactNode;
   onPick: (v: MyVehicle) => void;
-  onText: (route: TextRoute, typed: string) => void;
-  onFiles: (files: File[]) => void;
+  onText: (route: TextRoute, typed: string) => void | Promise<boolean>;
+  attachments: readonly File[];
+  onAttach: (files: File[]) => void;
+  onDetach: (index: number) => void;
 }
 
 // The home holds the composer itself, under the headline; it docks at the bottom once a search leaves the home.
-export function Home({ starters, mine, mineLoading, busy, note, panel, below, onPick, onText, onFiles }: Props) {
+export function Home({ starters, mine, mineLoading, busy, note, panel, below, onPick, onText, attachments, onAttach, onDetach }: Props) {
   return (
     <div className="home">
       <section className="home-hero" aria-labelledby="entry-title">
         <h1 id="entry-title">{HOME.headline}</h1>
         <p className="entry-lede">{HOME.lede}</p>
-        <Intake variant="home" categories={null} initial="" busy={busy} autoFocus hasVehicle={false} onText={onText} onFiles={onFiles} />
+        <Intake variant="home" categories={null} initial="" busy={busy} autoFocus hasVehicle={false} attachments={attachments} onAttach={onAttach} onDetach={onDetach} onText={onText} />
         {note}
         <div className="home-picks">
           {mineLoading ? <div className="home-pick home-pick--pending" aria-hidden="true" /> : <MyVehicles vehicles={mine} busy={busy} onPick={onPick} />}
-          {starters.length > 0 && <Starters starters={starters} busy={busy} onText={onText} onFiles={onFiles} />}
+          {starters.length > 0 && <Starters starters={starters} busy={busy} onText={onText} onAttach={onAttach} />}
         </div>
         {panel && <div className="entry-panel">{panel}</div>}
       </section>
@@ -47,7 +49,7 @@ export function Home({ starters, mine, mineLoading, busy, note, panel, below, on
 }
 
 // Examples under the composer: one click runs the search, or opens the file picker for a photo.
-function Starters({ starters, busy, onText, onFiles }: { starters: readonly Starter[]; busy: boolean; onText: Props['onText']; onFiles: Props['onFiles'] }) {
+function Starters({ starters, busy, onText, onAttach }: { starters: readonly Starter[]; busy: boolean; onText: Props['onText']; onAttach: Props['onAttach'] }) {
   const picker = useRef<HTMLInputElement>(null);
   return (
     <div className="home-pick" role="group" aria-labelledby="starters-label">
@@ -77,7 +79,7 @@ function Starters({ starters, busy, onText, onFiles }: { starters: readonly Star
         onChange={(e) => {
           const picked = e.target.files ? Array.from(e.target.files) : [];
           e.target.value = '';
-          if (picked.length > 0) onFiles(picked);
+          if (picked.length > 0) onAttach(picked);
         }}
       />
     </div>

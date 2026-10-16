@@ -8,16 +8,19 @@ import { resultSummary } from './followup';
 import { historyEntries, historyFor, type HistoryEntry } from './history';
 import { STARTERS } from './home';
 import { listMyVehicles, pickTarget, type MyVehicle } from './my-vehicles';
-import { MediaError, pickSharpest, prepareImage, sampleVideo, type Frame } from './media';
+import { addAttachments } from './attachments';
+import { MediaError } from './media';
+import { readAttachment } from './read-attachment';
+import { runSubmission, type PendingAsk } from './submit';
 import { buildQuestion } from './question';
 import { parseRef, type Route } from './route';
-import { routeFile, type TextRoute } from './route-input';
-import type { AgentPart, Category, Family, Narrowing, Registration, Vehicle, VinDecode } from './types';
+import type { TextRoute } from './route-input';
+import type { AgentPart, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
-import { CardResult, VinResult } from './ui/Entry';
+import { VinResult } from './ui/Entry';
 import { SaveVehicle } from './ui/Garage';
 import { History } from './ui/History';
 import { Home, Showcase } from './ui/Home';
@@ -41,8 +44,6 @@ const viewLabel = (family: Family, category: Category | null): string => {
   return category ? category.label.toUpperCase() : '';
 };
 
-const MAX_FRAMES = 3;
-const PHOTO_INSTRUCTION = 'Photo de la pièce';
 const SHEET_OVERLAY_MIN = 812;
 
 export function App() {
@@ -53,7 +54,6 @@ export function App() {
 type Panel =
   | { kind: 'none' }
   | { kind: 'vin'; decode: VinDecode }
-  | { kind: 'card'; registration: Registration }
   | { kind: 'reading'; what: string }
   | { kind: 'login'; why: string }
   | { kind: 'error'; message: string };
@@ -70,6 +70,9 @@ function Finder({ api }: { api: FinderApi }) {
   const [route, navigate] = useRoute();
   const authed = isAuthenticated();
   const [panel, setPanel] = useState<Panel>({ kind: 'none' });
+  const [attachments, setAttachments] = useState<File[]>([]);
+  // The turn typed with a carte grise, run once the vehicle it opens is loaded.
+  const [queued, setQueued] = useState<{ ref: string; ask: PendingAsk | null } | null>(null);
   const [journalOpen, setJournalOpen] = useState(false);
   const [slot, setSlot] = useState<HTMLDivElement | null>(null);
   const docked = useMedia('(min-width: 1280px)');
@@ -161,7 +164,8 @@ function Finder({ api }: { api: FinderApi }) {
     });
   };
 
-  const onText = (r: TextRoute, typed: string) => {
+  const onText = (r: TextRoute, typed: string): void | Promise<boolean> => {
+    if (attachments.length > 0) return submitWithFiles(r);
     switch (r.kind) {
       case 'empty':
         return;
@@ -183,49 +187,45 @@ function Finder({ api }: { api: FinderApi }) {
     }
   };
 
-  const readRegistration = (registration: Registration) => {
-    turn.reset();
-    if (route.view !== 'entry') navigate({ view: 'entry' });
-    setPanel({ kind: 'card', registration });
+  const attach = (files: File[]) => {
+    const next = addAttachments(attachments, files);
+    setAttachments(next.files);
+    setPanel(next.error ? { kind: 'error', message: next.error } : { kind: 'none' });
+  };
+  const detach = (index: number) => setAttachments((current) => current.filter((_, i) => i !== index));
+
+  const askPending = (ask: PendingAsk) => {
+    const { text, ...options } = ask;
+    askAgent(text, options);
   };
 
-  const onFiles = async (files: File[]) => {
-    const first = files[0];
-    if (!first) return;
-    const kind = routeFile(first);
-    if (kind.kind === 'unsupported') {
-      setPanel({ kind: 'error', message: kind.reason === 'size' ? 'PDF trop lourd (10 Mo maximum).' : 'Format non pris en charge : photo, vidéo courte ou PDF.' });
-      return;
-    }
+  // Chercher with attachments: read them, then open the car a carte grise names and run the typed search on it.
+  // Returns false when the typed text must stay in the composer.
+  const submitWithFiles = async (route: TextRoute): Promise<boolean> => {
     if (!isAuthenticated()) {
       setPanel({ kind: 'login', why: 'Connexion requise pour lire un fichier. Le fichier n’est pas conservé.' });
-      return;
+      return false;
     }
     try {
-      if (kind.kind === 'pdf') {
-        setPanel({ kind: 'reading', what: 'Lecture de la carte grise…' });
-        readRegistration(await api.extractRegistration(first));
-        return;
+      const outcome = await runSubmission(
+        { route, files: attachments },
+        { api, read: (file) => readAttachment(api, file), status: (what) => setPanel(what ? { kind: 'reading', what } : { kind: 'none' }) },
+      );
+      if (outcome.kind === 'stopped') {
+        setPanel({ kind: 'error', message: outcome.message });
+        return !outcome.keepText;
       }
-      setPanel({ kind: 'reading', what: kind.kind === 'video' ? 'Extraction des images de la vidéo…' : 'Préparation de la photo…' });
-      let frames: Frame[];
-      if (kind.kind === 'video') frames = await sampleVideo(first);
-      else frames = await Promise.all(files.filter((f) => routeFile(f).kind === 'image').slice(0, MAX_FRAMES).map(prepareImage));
-      frames = frames.slice(0, MAX_FRAMES);
-      const sharpest = frames[pickSharpest(frames.map((f) => f.score))]!;
-      setPanel({ kind: 'reading', what: 'Lecture de la photo…' });
-      const intake = await api.photoIntake(sharpest.blob);
-      if (intake.kind === 'carte_grise') return readRegistration(intake.registration);
-      if (intake.kind === 'part') return askAgent(PHOTO_INSTRUCTION, { intent: 'photo', images: frames.map((f) => f.dataUrl), photoHints: intake.part });
-      if (intake.kind === 'build_label') {
-        const code = intake.buildLabel.opr ?? intake.buildLabel.printedCodes.join(' · ');
-        if (code === '') {
-          setPanel({ kind: 'error', message: 'Vignette illisible. Reprenez la photo de plus près, ou saisissez le numéro d’organisation (après « DAM »).' });
-          return;
-        }
-        return askAgent(`Code de fabrication : ${code}`, { buildLabel: intake.buildLabel });
+      setAttachments([]);
+      if (outcome.kind === 'ask') {
+        askPending(outcome.ask);
+        return true;
       }
-      setPanel({ kind: 'error', message: 'Photo non reconnue. Cadrez la pièce, la carte grise ou la vignette de plus près.' });
+      turn.reset();
+      trace.current = null;
+      setQueued({ ref: outcome.ref, ask: outcome.ask });
+      if (!outcome.saved) setPanel({ kind: 'error', message: 'Enregistrement au garage impossible. Le véhicule reste utilisable ici.' });
+      navigate({ view: 'vehicle', ref: outcome.ref });
+      return true;
     } catch (e) {
       const message =
         e instanceof MediaError
@@ -238,8 +238,16 @@ function Finder({ api }: { api: FinderApi }) {
                 : e.message
             : 'Lecture du fichier impossible.';
       setPanel({ kind: 'error', message });
+      return false;
     }
   };
+
+  useEffect(() => {
+    if (!queued || queued.ref !== ref || !v?.carId) return;
+    setQueued(null);
+    if (queued.ask) askPending(queued.ask);
+    else setPanel((p) => (p.kind === 'reading' ? { kind: 'none' } : p));
+  }, [queued, ref, v]);
 
   const closeJournal = useCallback(() => {
     setJournalOpen(false);
@@ -323,7 +331,9 @@ function Finder({ api }: { api: FinderApi }) {
       autoFocus={handoff || (route.view === 'vehicle' && !agentActive)}
       plateRequest={plateRequest}
       onText={onText}
-      onFiles={(f) => void onFiles(f)}
+      attachments={attachments}
+      onAttach={attach}
+      onDetach={detach}
     />
   );
 
@@ -360,7 +370,7 @@ function Finder({ api }: { api: FinderApi }) {
         busy={busyReading}
         note={note}
         panel={
-          error || panel.kind === 'vin' || panel.kind === 'card' ? (
+          error || panel.kind === 'vin' ? (
             <>
               {error && (
                 <p className="field-error" role="alert">
@@ -368,14 +378,15 @@ function Finder({ api }: { api: FinderApi }) {
                 </p>
               )}
               {panel.kind === 'vin' && <VinResult decode={panel.decode} />}
-              {panel.kind === 'card' && <CardResult data={panel.registration} onPlate={(p) => goVehicle(p, 'carte-grise', p)} onReset={() => setPanel({ kind: 'none' })} />}
             </>
           ) : null
         }
         below={showHistory ? <History api={api} entries={historyList} loading={history.status === 'loading'} onOpen={openHistory} /> : <Showcase reducedMotion={reducedMotion} />}
         onPick={pickMine}
         onText={onText}
-        onFiles={(f) => void onFiles(f)}
+        attachments={attachments}
+        onAttach={attach}
+        onDetach={detach}
       />,
       'entry',
     );
