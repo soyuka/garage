@@ -1,15 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M34 50 L42 28 H78 L86 50" vector-effect="non-scaling-stroke"/>
-<path d="M40 48 L46 34 H74 L80 48 Z" vector-effect="non-scaling-stroke"/>
-<path d="M18 50 H102 Q108 52 108 60 V80 H12 V60 Q12 52 18 50 Z" vector-effect="non-scaling-stroke"/>
-<rect x="22" y="41" width="8" height="7" rx="2" vector-effect="non-scaling-stroke"/>
-<rect x="90" y="41" width="8" height="7" rx="2" vector-effect="non-scaling-stroke"/>
-<rect x="15" y="56" width="24" height="12" rx="4" vector-effect="non-scaling-stroke"/>
-<rect x="81" y="56" width="24" height="12" rx="4" vector-effect="non-scaling-stroke"/>
-<rect x="44" y="57" width="32" height="14" rx="2" vector-effect="non-scaling-stroke"/>
-<line x1="44" y1="64" x2="76" y2="64" vector-effect="non-scaling-stroke"/>
-<line x1="12" y1="76" x2="108" y2="76" vector-effect="non-scaling-stroke"/>
-<rect x="44" y="77" width="32" height="5" rx="2" vector-effect="non-scaling-stroke"/>
-<rect x="20" y="80" width="14" height="12" rx="2" vector-effect="non-scaling-stroke"/>
-<rect x="86" y="80" width="14" height="12" rx="2" vector-effect="non-scaling-stroke"/>
+<path d="M16 38 L20 48 L12 58 L18 68 L16 78"  vector-effect="non-scaling-stroke"/>
+<path d="M16 38 H48 L70 56 L100 60 Q108 62 108 68 V78 H92 M68 78 H16"  vector-effect="non-scaling-stroke"/>
+<circle cx="80" cy="78" r="12"  vector-effect="non-scaling-stroke"/>
+<circle cx="80" cy="78" r="5"  vector-effect="non-scaling-stroke"/>
+<path d="M24 44 H46 L58 54 H24 Z"  vector-effect="non-scaling-stroke"/>
+<line x1="40" y1="54" x2="40" y2="72"  vector-effect="non-scaling-stroke"/>
+<path d="M96 62 L106 64 V70 H95 Z"  vector-effect="non-scaling-stroke"/>
+<line x1="94" y1="75" x2="108" y2="75"  vector-effect="non-scaling-stroke"/>
 </svg>

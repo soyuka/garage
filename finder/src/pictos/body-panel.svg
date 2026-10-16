@@ -1,10 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-<path d="M12 78 V64 Q12 56 22 54 L52 50 Q80 38 100 46 L108 56 V78" vector-effect="non-scaling-stroke"/>
-<path d="M36 78 A24 24 0 0 1 84 78" vector-effect="non-scaling-stroke"/>
-<path d="M45 78 A15 15 0 0 1 75 78" vector-effect="non-scaling-stroke"/>
-<path d="M12 78 H36 M84 78 H108" vector-effect="non-scaling-stroke"/>
-<path d="M16 64 Q50 58 100 60" vector-effect="non-scaling-stroke"/>
-<path d="M90 50 L104 56 L102 66 L88 60 Z" vector-effect="non-scaling-stroke"/>
-<path d="M12 78 Q8 88 16 90 H100" vector-effect="non-scaling-stroke"/>
-<circle cx="24" cy="70" r="2" vector-effect="non-scaling-stroke"/>
+<path d="M16 88 V50 Q16 40 28 40 H70 Q92 42 104 56 V88 H84 A22 22 0 0 0 40 88 Z"  vector-effect="non-scaling-stroke"/>
+<path d="M45 88 A17 17 0 0 1 79 88"  vector-effect="non-scaling-stroke"/>
+<path d="M24 62 Q60 52 98 64"  vector-effect="non-scaling-stroke"/>
+<circle cx="25" cy="76" r="2"  vector-effect="non-scaling-stroke"/>
+<circle cx="96" cy="76" r="2"  vector-effect="non-scaling-stroke"/>
 </svg>
