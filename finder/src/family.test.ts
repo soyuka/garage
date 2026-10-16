@@ -440,7 +440,7 @@ describe('partFamily', () => {
     const rotules = real('Direction > Rotules');
     expect(partFamily(rotules, [], 'Rotule de barre de connexion')).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: false });
     expect(partFamily(rotules, [], 'Rotule de direction intérieure, barre de connexion')).toEqual({ kind: 'mesh', mesh: 'axial-joint', approximate: true });
-    expect(partFamily(rotules, [], 'Rotule de direction')).toEqual({ kind: 'photo' });
+    expect(partFamily(rotules, [], 'Rotule de direction')).toEqual({ kind: 'mesh', mesh: 'axial-joint', approximate: true });
     expect(partFamily(real("Allumage / préchauffage > Bougie d'allumage"), [], "Bougie d'allumage")).toEqual({ kind: 'mesh', mesh: 'spark-plug', approximate: false });
   });
 

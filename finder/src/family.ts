@@ -194,12 +194,12 @@ export const MESH_RULES: readonly MeshRule[] = [
 
 // TecDoc product group (generic article) → mesh, read before the category node: one node can hold several
 // groups that are different parts ("Direction > Rotules" holds outer tie rod ends and inner axial joints).
-// An inner axial joint draws its own mesh, never the outer tie rod end.
-// « Rotule de direction » (PT 2066, 2 unchecked articles on the 307) is not confirmed as either: photo too.
+// An inner axial joint draws its own mesh, never the outer tie rod end. « Rotule de direction » (PT 2066,
+// NPS P410A02/03 on the 307) is read as an axial joint from NPS's 410A numbering (inner tie rods), unconfirmed.
 export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null; approximate?: boolean }[] = [
   { group: /rotule de direction interieure|rotule axiale/, mesh: 'axial-joint' },
   { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
-  { group: /^rotule de direction$/, mesh: null },
+  { group: /^rotule de direction$/, mesh: 'axial-joint' },
   { group: /^poulie, vilebrequin/, mesh: 'crankshaft-pulley-damper' },
   { group: /^boitier du thermostat/, mesh: 'thermostat-housing' },
   // Other groups of a leaf drawn as one part: a gasket, a module, a pipe, a housing or a bracket is not that part.
