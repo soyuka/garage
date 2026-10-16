@@ -21,7 +21,7 @@ use Webmozart\Assert\Assert;
  * exactly what GET /narrowed returns (one client mapper), and a model transcribing a 220-article
  * analysis would be slow, costly and lossy. The narrowing reads the article cache narrow_parts fills.
  */
-#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 shown per turn. A category node can hold several TecDoc product groups (precise generic-article names: « Direction > Rotules » holds « Rotule de barre de connexion », the outer tie rod end, AND « Rotule de direction intérieure, barre de connexion », the inner axial joint): then status choose_group comes back with productGroups [{id, name, articleCount}] and nothing is drawn; pick the group whose name matches what the user asked (function and position) and call again with productGroupId. The title shown is the product group name, never your text. rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary whose productGroup (and each cluster\'s productGroup) is what was drawn: check it against the request before end_turn. If clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); status empty means the category (or that product group) holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part.', 'showParts')]
+#[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 shown per turn. A category node can hold several TecDoc product groups (precise generic-article names: « Direction > Rotules » holds « Rotule de barre de connexion », the outer tie rod end, AND « Rotule de direction intérieure, barre de connexion », the inner axial joint): then status choose_group comes back with productGroups [{id, name, articleCount}] and nothing is drawn; pick the group whose name matches what the user asked (function and position) and call again with productGroupId. The title shown is the product group name, never your text. rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary whose productGroup (and each cluster\'s productGroup) is what was drawn: check it against the request before end_turn. If clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); status empty means the category (or that product group) holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part. clusterId selects one of several clusters once something the user gave settles it (a decoded code de fabrication against the clusters\' breakpoints): pass the SAME categoryId and productGroupId as the result on screen plus the cluster id from its summary (c1, c2…); the sheet opens that variant marked « retenue d\'après » your rationale, which is then a short noun phrase naming the basis, e.g. « code de fabrication (OPR 09824 ≤ 10310) ». An id that is not one of that result\'s clusters is refused and nothing is drawn. Redrawing a category already shown this turn does not count against the 4.', 'showParts')]
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE short impersonal French sentence stating what the source says that makes it fit this vehicle, never « Je… ».', 'showWebPart')]
 #[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle. Returns the vehicle\'s catalogue categories.', 'setVehicle')]
 #[AsTool('ask_question', 'Ask the user ONE short French question, answerable in one tap, when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 6 concrete options, each {label shown on the button: a value such as « Avant », not a sentence; value sent back}. Never drop a matching candidate: offer all of them when there are 6 or fewer, otherwise ask a question that splits them first. The finder adds its own « Donner la plaque » button: never offer it yourself. context is a short note to yourself restating what was asked and why, including the remaining candidate carIds; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
@@ -37,7 +37,8 @@ final class FinderRenderTools
 
     private ?FinderVehicle $vehicle = null;
 
-    private int $shown = 0;
+    /** @var array<string, true> categoryId:productGroupId drawn this turn: a redraw (selection) is not a new category */
+    private array $shown = [];
 
     public function __construct(
         private readonly RenderIntentTools $frames,
@@ -51,19 +52,21 @@ final class FinderRenderTools
     public function bindVehicle(?FinderVehicle $vehicle): void
     {
         $this->vehicle = $vehicle;
-        $this->shown = 0;
+        $this->shown = [];
     }
 
     /**
      * @return array<string, mixed>
      */
-    public function showParts(int $categoryId, string $rationale, ?int $productGroupId = null): array
+    public function showParts(int $categoryId, string $rationale, ?int $productGroupId = null, ?string $clusterId = null): array
     {
         if (null === $this->vehicle) {
             return ['status' => 'refused', 'reason' => 'No vehicle yet: identify it (lookup_plate or list_makes/list_models/list_cars), call set_vehicle, then show_parts.'];
         }
         Assert::greaterThan($categoryId, 0);
-        if ($this->shown >= self::MAX_CATEGORIES) {
+        $clusterId = null === $clusterId || '' === trim($clusterId) ? null : trim($clusterId);
+        $key = $categoryId.':'.($productGroupId ?? '');
+        if (!isset($this->shown[$key]) && \count($this->shown) >= self::MAX_CATEGORIES) {
             return ['status' => 'refused', 'reason' => \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES)];
         }
 
@@ -75,7 +78,9 @@ final class FinderRenderTools
         if ($narrowed['groupRequired']) {
             return [
                 'status' => 'choose_group',
-                'reason' => 'This category holds several TecDoc product groups, which are different parts: nothing was drawn. Pick the group whose name matches the part the user asked for (function and position) and call show_parts again with its productGroupId. If none matches, look elsewhere.',
+                'reason' => null !== $clusterId
+                    ? 'A clusterId only exists within one product group: nothing was drawn. Call show_parts again with the productGroupId of the result on screen (in its summary) and this clusterId.'
+                    : 'This category holds several TecDoc product groups, which are different parts: nothing was drawn. Pick the group whose name matches the part the user asked for (function and position) and call show_parts again with its productGroupId. If none matches, look elsewhere.',
                 'productGroups' => $narrowed['productGroups'],
             ];
         }
@@ -83,7 +88,15 @@ final class FinderRenderTools
             return ['status' => 'empty', 'reason' => 'The catalogue lists no article in this category (or this product group) for this vehicle: nothing was drawn. Try the next most plausible sibling category once, then web_search + show_web_part.']
                 + (\count($narrowed['productGroups']) > 1 ? ['productGroups' => $narrowed['productGroups']] : []);
         }
-        ++$this->shown;
+        $clusterIds = array_column($narrowed['clusters'], 'id');
+        if (null !== $clusterId && !\in_array($clusterId, $clusterIds, true)) {
+            return [
+                'status' => 'refused',
+                'reason' => \sprintf('clusterId %s is not a cluster of this result: nothing was drawn. Pick one of clusterIds, from the summary of this same categoryId and productGroupId.', $clusterId),
+                'clusterIds' => $clusterIds,
+            ];
+        }
+        $this->shown[$key] = true;
         $groupName = $narrowed['productGroup']['name'] ?? '';
 
         $this->frames->publishFrame([
@@ -92,7 +105,7 @@ final class FinderRenderTools
             'categoryLabel' => $groupName,
             'rationale' => trim($rationale),
             'narrowed' => $narrowed,
-        ]);
+        ] + (null === $clusterId ? [] : ['selection' => ['clusterId' => $clusterId, 'basis' => trim($rationale)]]));
 
         $several = \count($narrowed['clusters']) > 1;
         $summary = [
@@ -109,7 +122,7 @@ final class FinderRenderTools
                 'oe' => array_map(static fn (array $r): string => $r['brand'].' '.$r['number'], \array_slice($c['oeNumbers'], 0, 2)),
             ] + ($several ? ['applicability' => self::applicabilityLine($c['applicability'] ?? [])] : []), $narrowed['clusters']),
             'differsOn' => array_map(self::differsLine(...), $narrowed['differsOn']),
-        ];
+        ] + (null === $clusterId ? [] : ['selected' => $clusterId]);
         if ($several) {
             $summary['applicabilityCaveat'] = self::APPLICABILITY_CAVEAT;
         }

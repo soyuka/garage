@@ -416,6 +416,83 @@ final class FinderTurnTest extends AppTestCase
         self::assertSame('Oil Filter', $summary['clusters'][0]['productGroup']);
     }
 
+    public function testShowPartsSelectsOneClusterAndTheFrameCarriesItsBasis(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('k1', 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'clusterId' => 'c1', 'rationale' => 'code de fabrication (OPR 09824 ≤ 10310)']),
+            new ToolCall('k2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-select', vehicle: self::PEUGEOT);
+
+        $shown = array_values(array_filter(self::frames('sess-select'), static fn (array $f): bool => 'showParts' === $f['type']));
+        self::assertCount(1, $shown);
+        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)'], $shown[0]['selection']);
+
+        $summary = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('shown', $summary['status']);
+        self::assertSame('c1', $summary['selected']);
+        self::assertArrayHasKey('clusterId', $seen['schemas']['show_parts']['properties'] ?? []);
+    }
+
+    public function testAnUnknownClusterIdIsRefusedAndNothingIsDrawn(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('u1', 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'clusterId' => 'c9', 'rationale' => 'code de fabrication (OPR 09824 ≤ 10310)']),
+            new ToolCall('u2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-unknown-cluster', vehicle: self::PEUGEOT);
+
+        $result = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('refused', $result['status'] ?? null);
+        self::assertSame(['c1', 'c2'], $result['clusterIds'] ?? null);
+        self::assertSame([], array_values(array_filter(self::frames('sess-unknown-cluster'), static fn (array $f): bool => 'showParts' === $f['type'])));
+    }
+
+    public function testAClusterIdWithoutItsProductGroupTellsTheAgentToReuseTheOnScreenGroup(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('n1', 'show_parts', ['categoryId' => 100198, 'clusterId' => 'c1', 'rationale' => 'code de fabrication (OPR 09824 ≤ 10310)']),
+            new ToolCall('n2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-select-nogroup', vehicle: self::PEUGEOT);
+
+        $result = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('choose_group', $result['status'] ?? null);
+        self::assertStringContainsString('productGroupId of the result on screen', $result['reason'] ?? '');
+    }
+
+    public function testRedrawingTheSameCategoryDoesNotSpendTheCategoryCap(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $call = static fn (string $id, ?string $cluster): ToolCall => new ToolCall($id, 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'clusterId' => $cluster, 'rationale' => 'Rotule axiale.']);
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            $call('r1', null), $call('r2', 'c1'), $call('r3', 'c2'), $call('r4', null), $call('r5', 'c1'),
+            new ToolCall('r6', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('rotule axiale', 'sess-redraw', vehicle: self::PEUGEOT);
+
+        self::assertSame(['shown'], array_values(array_unique(array_map(static fn (string $r): string => json_decode($r, true)['status'] ?? '', \array_slice($seen['toolResults'], 0, 5)))));
+    }
+
     public function testShowPartsWithoutAVehicleTellsTheAgentToSetOneFirst(): void
     {
         static::createClient();
