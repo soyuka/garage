@@ -638,6 +638,13 @@ All four items shipped: getModels/getCars keys added and params fixed (5951995);
 in `api/.env` (f643b96); catalog reads served anonymously on a bad token via a lenient `catalog`
 firewall (b58d176); the home placeholder was rewritten (c5a1a6a).
 
+## Finder: tools as a second pass (decided 2026-10-16, not started)
+
+The first prototype ignores workshop tools entirely: the finder agent's leaf list drops the
+« Outils spéciaux » branch and every « Outils » leaf (`api/src/Agent/Finder/FinderCategoryList.php`).
+User decision: tools are a different need, loaded later on a user action from a result page
+(e.g. "outils pour ce remplacement" next to the companions row below), never in the first search.
+
 ## Finder: companion parts as an agentic round (decided 2026-10-15, not started)
 
 On a result page, suggest what usually goes with the part (oil filter → engine oil + sump plug
