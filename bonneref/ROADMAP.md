@@ -8,6 +8,10 @@ Kept separate from the repo-root `FUTURE.md` on purpose. Design system: `bonnere
 
 Shipped, end to end:
 
+- **Production auth (2026-10-16)**: https://auth.bonneref.fr (Casdoor) is the prod auth entrypoint, client
+  `89646c002d2272351ca2` (public PKCE), redirect `https://bonneref.fr/callback`; set in `bonneref/.env.production`.
+  The token exchange goes direct to `<issuer>/api/login/oauth/access_token` (CORS allows https://bonneref.fr);
+  the same-origin `/casdoor/*` proxy remains only for an http issuer (local dev).
 - **Turns without the worker (2026-10-16)**: `AGENT_TURN_DISPATCH=terminate` runs the turn in
   `kernel.terminate` after the 202 (FrankenPHP worker mode, capped by `AGENT_TURN_TIME_LIMIT=120`), no
   retry, the journal row is the record; `MESSENGER_TRANSPORT_DSN` / `MESSENGER_FAILED_TRANSPORT_DSN` =

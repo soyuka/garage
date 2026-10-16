@@ -1,13 +1,16 @@
 // Casdoor Authorization Code + PKCE, public client — adapted from dashboard/src/auth.ts (copied, not
-// imported). Same origin and same Casdoor app as the Atelier, so the token key is shared: signing in
-// on either surface signs in both. The token POST goes through Caddy's same-origin /casdoor/* proxy
-// because a fetch to plain-http Casdoor from the https page is blocked as mixed content.
+// imported). The token POST goes straight to an https issuer (production: https://auth.bonneref.fr,
+// whose CORS allows https://bonneref.fr). Only an http issuer (local dev Casdoor) is reached through
+// Caddy's same-origin /casdoor/* proxy, because a fetch to plain-http Casdoor from the https page is
+// blocked as mixed content.
 
 const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'http://casdoor:8000').replace(/\/$/, '');
 const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? 'monparc-dashboard-0a1b2c3d';
 const SCOPE = 'openid profile email';
 const BASE = import.meta.env.BASE_URL;
 const CALLBACK_PATH = `${BASE}callback`;
+// Shared with the Atelier only where both are served from the same origin (local dev); on
+// bonneref.fr's own origin the token is bonneref's alone.
 const TOKEN_KEY = 'mpa.auth.token';
 const VERIFIER_KEY = 'bonneref.auth.pkce_verifier';
 const STATE_KEY = 'bonneref.auth.state';
@@ -20,7 +23,14 @@ export interface StoredToken {
 }
 
 const redirectUri = (): string => `${window.location.origin}${CALLBACK_PATH}`;
-const tokenEndpoint = (): string => `${window.location.origin}/casdoor/api/login/oauth/access_token`;
+
+export function tokenEndpointFor(issuer: string, origin: string): string {
+  return issuer.startsWith('https://')
+    ? `${issuer}/api/login/oauth/access_token`
+    : `${origin}/casdoor/api/login/oauth/access_token`;
+}
+
+const tokenEndpoint = (): string => tokenEndpointFor(ISSUER, window.location.origin);
 
 export function base64urlEncode(bytes: Uint8Array): string {
   let binary = '';
