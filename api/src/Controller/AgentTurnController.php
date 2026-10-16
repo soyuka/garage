@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Agent\Dispatch\TurnDispatcher;
 use App\Agent\Finder\BuildLabelHints;
 use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderVehicle;
@@ -20,12 +21,12 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\Messenger\MessageBusInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
- * Enqueues one agent turn and acks. The turn itself runs in a `messenger:consume` worker (see
- * {@see \App\MessageHandler\RunAgentTurnHandler}) — never in this request thread, because the
+ * Hands one agent turn to the {@see TurnDispatcher} and acks. The turn itself runs in a
+ * `messenger:consume` worker (see {@see \App\MessageHandler\RunAgentTurnHandler}), or, with
+ * AGENT_TURN_DISPATCH=terminate, after this response is sent — never inside the request, because the
  * agent's multi-round-trip tool loop (persist → catalog → web_search → plan_maintenance → render
  * intents) routinely outruns the request's max_execution_time and was being killed mid-turn with a
  * MaxExecutionTimeError, leaving the work half-done.
@@ -43,7 +44,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class AgentTurnController
 {
     public function __construct(
-        private readonly MessageBusInterface $bus,
+        private readonly TurnDispatcher $turns,
         private readonly Security $security,
         private readonly TurnImageDecoder $images,
         private readonly TurnImageStash $imageStash,
@@ -93,7 +94,7 @@ final class AgentTurnController
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
         // owner is always present — the turn never runs unowned.
-        $this->bus->dispatch(new RunAgentTurn(
+        $this->turns->dispatch(new RunAgentTurn(
             instruction: $instruction,
             sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
             owner: $this->security->getUser()?->getUserIdentifier() ?? '',

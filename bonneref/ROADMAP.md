@@ -8,6 +8,11 @@ Kept separate from the repo-root `FUTURE.md` on purpose. Design system: `bonnere
 
 Shipped, end to end:
 
+- **Turns without the worker (2026-10-16)**: `AGENT_TURN_DISPATCH=terminate` runs the turn in
+  `kernel.terminate` after the 202 (FrankenPHP worker mode, capped by `AGENT_TURN_TIME_LIMIT=120`), no
+  retry, the journal row is the record; `MESSENGER_TRANSPORT_DSN` / `MESSENGER_FAILED_TRANSPORT_DSN` =
+  `in-memory://` keep Messenger off Postgres. Verified live: a turn completed in 6 s with the worker
+  stopped.
 - **Garage page (2026-10-16)**: bonneref ships alone (bonneref.fr), so the toasts no longer link to
   the Atelier. `#/garage` lists every garage vehicle as a title block (plate, make/model, engine,
   kType; machines without plate or kType included); `#/garage/<ulid>` is the vehicle sheet: identity

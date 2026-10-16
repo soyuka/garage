@@ -23,6 +23,12 @@ services:
     App\:
         resource: '../src/'
 
+    # AGENT_TURN_DISPATCH picks where POST /agent/turn runs the turn (see api/.env).
+    App\Agent\Dispatch\TurnDispatcher:
+        factory: ['App\Agent\Dispatch\TurnDispatcherFactory', 'create']
+        arguments:
+            $mode: '%env(enum:App\Agent\Dispatch\TurnDispatchMode:AGENT_TURN_DISPATCH)%'
+
     App\Siv\SivClient:
         arguments:
             $httpClient: '@siv.client'

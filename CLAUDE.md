@@ -105,7 +105,10 @@ control — the hub accepts anonymous subscribers. The dashboard learns its pilo
 
 **Agent turns are async.** `/agent/turn` enqueues; the `worker` container consumes under CLI SAPI so
 the tool loop is unbounded (the in-request version died at 180 s). The pilot path skips this entirely
-— that is its whole point.
+— that is its whole point. `AGENT_TURN_DISPATCH=terminate` (default `messenger`) instead runs the turn
+in `kernel.terminate` of the same request after the 202 is sent, capped by `AGENT_TURN_TIME_LIMIT`
+(default 120 s) — no worker, for bonneref deployed alone; `MESSENGER_FAILED_TRANSPORT_DSN` moves the
+dead letters off Postgres.
 
 **Maintenance domain.** A `MaintenanceRecord` is a *visit* carrying `items[]{type, parts}` and a visit
 cost — not one row per service. Forecasting walks `items[].type` against `ServiceInterval` recurring
