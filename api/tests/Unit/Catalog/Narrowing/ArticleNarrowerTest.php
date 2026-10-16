@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Catalog\Narrowing;
 
 use App\Catalog\Narrowing\ArticleNarrower;
+use App\Catalog\Narrowing\CarMakeResolver;
 use App\Catalog\Narrowing\NarrowingResult;
 use App\Catalog\PartsCatalog;
 use App\PartsApi\CarType;
@@ -349,15 +350,44 @@ final class ArticleNarrowerTest extends TestCase
         $this->assertContains('29625', array_merge(...array_map(static fn ($c): array => array_column($c->variants, 'number'), $result->clusters)));
     }
 
+    public function testTheCarsMakeIsResolvedFromItsCarIdWhenTheClientGivesNone(): void
+    {
+        $this->warmCriteria(2472844);
+
+        $result = $this->narrowRotules(productGroupId: 51, make: null, resolvedMake: 'PEUGEOT');
+
+        $this->assertCount(2, $result->clusters);
+        $this->assertContains('3812.E0', $this->oeOf($result, 0));
+        $this->assertNotContains('3812 E5', $this->oeOf($result, 0));
+        $this->assertContains('3812 E5', $this->oeOf($result, 1));
+        $this->assertNotContains('3812.E0', $this->oeOf($result, 1));
+        $this->assertEquals($this->narrowRotules(productGroupId: 51)->clusters, $result->clusters);
+    }
+
+    public function testTheResolvedMakeWinsOverAContradictingClientMake(): void
+    {
+        $result = $this->narrowRotules(productGroupId: 51, make: 'MAZDA', resolvedMake: 'PEUGEOT');
+
+        $this->assertCount(2, $result->clusters);
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function oeOf(NarrowingResult $result, int $cluster): array
+    {
+        return array_column($result->clusters[$cluster]->oeNumbers, 'number');
+    }
+
     private function warmCriteria(int $artId): void
     {
         $item = $this->cache->getItem('getArticleCriteria.'.sha1('getArticleCriteria?ART_ID='.$artId.'&LANG=6'));
         $this->cache->save($item->set(json_decode(self::fixture(sprintf('getArticleCriteria_%d.json', $artId)), true)));
     }
 
-    private function narrowRotules(?int $productGroupId = null): NarrowingResult
+    private function narrowRotules(?int $productGroupId = null, ?string $make = 'PEUGEOT', ?string $resolvedMake = null): NarrowingResult
     {
-        return $this->narrow(makes: [['makeId' => 88, 'makeName' => 'PEUGEOT'], ['makeId' => 35, 'makeName' => 'CITROËN']], make: 'PEUGEOT', carId: 16182, categoryId: 100198, productGroupId: $productGroupId);
+        return $this->narrow(makes: [['makeId' => 88, 'makeName' => 'PEUGEOT'], ['makeId' => 35, 'makeName' => 'CITROËN']], make: $make, carId: 16182, categoryId: 100198, productGroupId: $productGroupId, resolvedMake: $resolvedMake);
     }
 
     /**
@@ -373,7 +403,7 @@ final class ArticleNarrowerTest extends TestCase
     /**
      * @param list<array{makeId: int, makeName: string}> $makes
      */
-    private function narrow(array $makes = [['makeId' => 1, 'makeName' => 'FORD'], ['makeId' => 2, 'makeName' => 'VOLVO']], ?string $make = 'MAZDA', int $carId = self::CAR_ID, int $categoryId = self::CATEGORY_ID, ?int $productGroupId = null): NarrowingResult
+    private function narrow(array $makes = [['makeId' => 1, 'makeName' => 'FORD'], ['makeId' => 2, 'makeName' => 'VOLVO']], ?string $make = 'MAZDA', int $carId = self::CAR_ID, int $categoryId = self::CATEGORY_ID, ?int $productGroupId = null, ?string $resolvedMake = null): NarrowingResult
     {
         $http = new MockHttpClient(function (string $method, string $url) use ($makes): MockResponse {
             parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
@@ -397,7 +427,17 @@ final class ArticleNarrowerTest extends TestCase
         });
 
         $client = new PartsApiClient($http, array_fill_keys(['getMakes', 'getArticles', 'getArticleCriteria', 'getArticleCrosses'], 'test-key'), $this->cache);
-        $narrower = new ArticleNarrower(new PartsCatalog($client, 6));
+        $resolver = null === $resolvedMake ? null : new class($resolvedMake) implements CarMakeResolver {
+            public function __construct(private readonly string $make)
+            {
+            }
+
+            public function make(int $carId, CarType $carType): string
+            {
+                return $this->make;
+            }
+        };
+        $narrower = new ArticleNarrower(new PartsCatalog($client, 6), makes: $resolver);
 
         return $narrower->narrow($carId, CarType::PassengerCar, $categoryId, $make, $productGroupId);
     }

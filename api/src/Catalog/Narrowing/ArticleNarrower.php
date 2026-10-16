@@ -37,11 +37,13 @@ final class ArticleNarrower
     public function __construct(
         private readonly PartsCatalog $catalog,
         private readonly ArticleClusterer $clusterer = new ArticleClusterer(),
+        private readonly ?CarMakeResolver $makes = null,
     ) {
     }
 
     public function narrow(int $carId, CarType $carType, int $categoryId, ?string $make = null, ?int $productGroupId = null): NarrowingResult
     {
+        $make = $this->makes?->make($carId, $carType) ?? $make;
         $callsBefore = $this->catalog->upstreamCalls();
         $articles = $this->catalog->articles($carId, $categoryId, $carType);
         $productGroups = self::productGroups($articles);
