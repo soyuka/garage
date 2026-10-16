@@ -1875,17 +1875,6 @@ button {
   margin: 0;
 }
 
-.sheet-caption {
-  position: absolute;
-  left: 24px;
-  bottom: 40px;
-  z-index: 2;
-  max-width: calc(100% - 48px);
-  font-size: 12.5px;
-  color: var(--mute);
-  pointer-events: none;
-}
-
 /* A part without a 3D model: its catalogue photo pinned on the sheet as a reference, or a plain « ? ».
    Grayscale + multiply so the photo's white studio ground becomes the paper. No cote ever touches it. */
 .sheet-figure {
@@ -1935,7 +1924,6 @@ button {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 12px;
   color: var(--blue);
 }
 
@@ -1943,16 +1931,6 @@ button {
   display: block;
   width: min(36vh, 240px);
   height: min(36vh, 240px);
-}
-
-.sheet-picto-cap {
-  margin: 0;
-  padding-top: 8px;
-  border-top: 1px solid var(--hair);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--mute);
 }
 
 .sheet-unknown {

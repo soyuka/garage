@@ -25,12 +25,12 @@ describe('Sheet without a 3D model', () => {
     expect(html).not.toContain('<figure');
   });
 
-  it('draws the family pictogram, captioned, when there is no photo but a rule matches', () => {
+  it('draws the family pictogram, uncaptioned, when there is no photo but a rule matches', () => {
     const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo: null, categoryPath: 'Système électrique > Démarreur > Charbons' }));
     expect(html).toContain('class="sheet-picto"');
-    expect(html).toContain('role="img" aria-label="Famille : Démarrage et charge, pas la pièce"');
+    expect(html).toContain('role="img" aria-label="Démarrage et charge"');
     expect(html).toContain('<svg');
-    expect(html).toContain('Famille : Démarrage et charge, pas la pièce');
+    expect(html).not.toMatch(/pas la pièce|Famille|sheet-picto-cap/);
     expect(html).not.toContain('sheet-unknown');
     expect(html).not.toContain('Glisser pour tourner');
   });
@@ -77,5 +77,12 @@ describe('Sheet title while the loading carousel runs', () => {
   it('shows the title once the result is there', () => {
     const html = renderToStaticMarkup(createElement(Sheet, { ...base, viewLabel: 'FILTRE À HUILE', family: meshFamily, searching: false }));
     expect(html).toContain('<div class="sheet-label m">FILTRE À HUILE</div>');
+  });
+});
+
+describe('Sheet with an approximate mesh', () => {
+  it('prints no caption about the shape being a family stand-in', () => {
+    const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: true }, photo: null }));
+    expect(html).not.toMatch(/Forme type|pas la pièce|sheet-caption/);
   });
 });

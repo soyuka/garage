@@ -36,7 +36,6 @@ function extentFor(family: Family, dims: readonly Dimension[]): number {
 }
 
 export const UNKNOWN_LABEL = 'Ni modèle 3D ni photo catalogue';
-export const APPROXIMATE_CAPTION = 'Forme type de la famille, pas la pièce exacte';
 
 // The overlaid title block never clips: a block taller than the sheet (variant table) makes the sheet grow.
 function useBlockHeight(active: boolean) {
@@ -104,7 +103,6 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
           </div>
         )
       )}
-      {!searching && family.kind === 'mesh' && family.approximate && !status && <p className="sheet-caption">{APPROXIMATE_CAPTION}</p>}
       {!searching && drawn && !ghost && <div className="sheet-hint">Glisser pour tourner</div>}
       {overlaid ? (
         <div ref={sideRef} className="sheet-side" style={{ width: overlayWidth! }}>
