@@ -53,6 +53,15 @@ Shipped, end to end:
   splitting criteria first. 307 axial joints (PT 51): « Longeur rotule [mm] » c1 322–338 / c2 358
   (BOSCH's spelling; DELPHI states 322 there). show_parts hands the agent per-cluster values, and
   finder.md has the OPR question offer the tape measure as the alternative.
+- **Several parts on one sheet (2026-10-16)**: when `/narrowed` returns several clusters the title
+  block opens with a variant table (`finder/src/ui/VariantTable.tsx`, `src/variants.ts`): one radio row
+  per part (letter, carmaker OE, representative + count, the splitting `differsOn` cote as a range,
+  OPR / organisation breakpoints). A row pick switches drawing, cotes, OE, Copier/Acheter/Ajouter and
+  équivalences, lives in the URL as `/v/<clusterId>` and is labelled « choisie par vous », never
+  confirmed; the cote question keeps `/k/<clusterId>` and « confirmé par la cote ». Multi-part title
+  blocks add the carmaker's other OE numbers and every other catalogue cote. The sheet grows to fit a
+  tall title block instead of clipping it. Question answers print the cluster's range (`differsOn`
+  min/max), not its representative value. Design: `finder/DESIGN.md` § Variant table.
 - **Agent** `finder` (`api/config/prompts/finder.md`, POST /agent/turn `surface: "finder"`):
   vehicle-less starts (browse makes/models/cars), photos, reference lookup, `show_parts` narrows
   server-side, `set_vehicle`, `ask_question` for what the catalogue can't settle, web finds tagged
