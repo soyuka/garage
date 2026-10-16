@@ -27,8 +27,9 @@ describe('resultSummary', () => {
     expect(text).toContain('par article, pas par véhicule');
   });
 
-  it('says which cluster the user picked', () => {
-    expect(resultSummary('Rotule axiale', twoClusters(), 'k2')).toContain('choisie : [k2]');
+  it('says which cluster was chosen, and how', () => {
+    expect(resultSummary('Rotule axiale', twoClusters(), { id: 'k2', by: 'answer' })).toContain('choisie par la réponse à la question : [k2]');
+    expect(resultSummary('Rotule axiale', twoClusters(), { id: 'k2', by: 'user' })).toContain('choisie par l’utilisateur, non confirmée par le catalogue : [k2]');
   });
 
   it('prints only catalogue cotes, never an estimate', () => {

@@ -1,4 +1,4 @@
-import { Component, lazy, Suspense, type ReactNode } from 'react';
+import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { measure } from '../dims';
 import type { Dimension, Family } from '../types';
 
@@ -31,9 +31,25 @@ function extentFor(family: Family, dims: readonly Dimension[]): number {
 export const GENERIC_CAPTION = 'Pas de modèle 3D : forme générique';
 export const APPROXIMATE_CAPTION = 'Forme type de la famille, pas la pièce exacte';
 
+// The overlaid title block never clips: a block taller than the sheet (variant table) makes the sheet grow.
+function useBlockHeight(active: boolean) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState<number | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!active || !el) return setHeight(null);
+    const observer = new ResizeObserver(() => setHeight(el.getBoundingClientRect().height));
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [active]);
+  return [ref, height] as const;
+}
+
 export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, status, notes, children }: Props) {
+  const overlaid = Boolean(overlayWidth && children);
+  const [sideRef, blockHeight] = useBlockHeight(overlaid);
   return (
-    <div className="sheet">
+    <div className="sheet" style={blockHeight ? { minHeight: Math.ceil(blockHeight) } : undefined}>
       {viewLabel && <div className="sheet-label m">{viewLabel}</div>}
       {notes && <div className="sheet-notes">{notes}</div>}
       {family.kind === 'none' ? (
@@ -57,8 +73,8 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
       {family.kind === 'generic' && !status && <p className="sheet-caption">{GENERIC_CAPTION}</p>}
       {family.kind === 'mesh' && family.approximate && !status && <p className="sheet-caption">{APPROXIMATE_CAPTION}</p>}
       {family.kind !== 'none' && !ghost && <div className="sheet-hint">Glisser pour tourner</div>}
-      {overlayWidth && children ? (
-        <div className="sheet-side" style={{ width: overlayWidth }}>
+      {overlaid ? (
+        <div ref={sideRef} className="sheet-side" style={{ width: overlayWidth! }}>
           {children}
         </div>
       ) : (

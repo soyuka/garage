@@ -1,4 +1,5 @@
 import { cotesLine } from './result';
+import type { ClusterChoice } from './route';
 import type { Cluster, Narrowing } from './types';
 
 // The on-screen result a follow-up continues (POST /agent/turn `summary`). The server caps it at
@@ -16,9 +17,14 @@ function clusterLine(c: Cluster): string {
   return parts.join(' — ');
 }
 
-export function resultSummary(categoryLabel: string, n: Narrowing, chosenClusterId: string | null): string {
+const CHOSEN_BY: Record<ClusterChoice['by'], string> = {
+  answer: 'choisie par la réponse à la question',
+  user: 'choisie par l’utilisateur, non confirmée par le catalogue',
+};
+
+export function resultSummary(categoryLabel: string, n: Narrowing, choice: ClusterChoice | null): string {
   const head = `${categoryLabel} (categoryId ${n.categoryId}) : ${n.clusters.length} pièce${n.clusters.length > 1 ? 's' : ''} distincte${n.clusters.length > 1 ? 's' : ''}`;
-  const chosen = chosenClusterId && n.clusters.some((c) => c.id === chosenClusterId) ? `, choisie : [${chosenClusterId}]` : '';
+  const chosen = choice && n.clusters.some((c) => c.id === choice.id) ? `, ${CHOSEN_BY[choice.by]} : [${choice.id}]` : '';
   let text = `${head}${chosen}.`;
   for (const c of n.clusters) {
     const line = ` ${clusterLine(c)}.`;

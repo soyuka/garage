@@ -14,11 +14,12 @@ import { readAttachment } from './read-attachment';
 import { runSubmission, type PendingAsk } from './submit';
 import { buildQuestion } from './question';
 import { relaunchText } from './result';
-import { parseRef, type Route } from './route';
+import { parseRef, type ClusterChoice, type Route } from './route';
 import type { TextRoute } from './route-input';
 import type { AgentPart, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
 import { carVehicle, rememberCar } from './vehicles';
+import { selectVariant, type SelectionStatus } from './variants';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
 import { VinResult } from './ui/Entry';
@@ -463,16 +464,18 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   // The title is the TecDoc product group narrowed, a far more precise name than the tree node.
   const category = node && n?.productGroup ? { ...node, label: n.productGroup.name } : node;
   const relaunch = n && node ? relaunchText(n, restoredInput, node.label) : null;
-  const clusters = n?.clusters ?? [];
-  const cluster = clusters.find((c) => c.id === (route.view === 'result' ? route.clusterId : null)) ?? clusters[0] ?? null;
-  const confirmed = clusters.length === 1 || (route.view === 'result' && route.clusterId !== null && cluster?.id === route.clusterId);
+  const choice = route.view === 'result' ? route.cluster : null;
+  const selection = selectVariant(n, choice);
+  const { cluster } = selection;
+  const decided = selection.status !== 'open';
+  const choose = (next: ClusterChoice) => route.view === 'result' && navigate({ ...route, cluster: next }, { replace: true });
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const showResult = route.view === 'result' && category !== null && n !== null && n.totalArticles > 0 && relaunch === null;
   const family: Family = category && (showResult || narrowing.status === 'loading') ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
 
   useFollowUp(
     followUp,
-    showResult && category && n ? { summary: resultSummary(category.label, n, route.view === 'result' ? route.clusterId : null), pendingContext: question && !confirmed ? `question affichée : ${question.text}` : null } : null,
+    showResult && category && n ? { summary: resultSummary(category.label, n, decided ? choice : null), pendingContext: question && !decided ? `question affichée : ${question.text}` : null } : null,
   );
 
   if (!v) {
@@ -527,8 +530,8 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   }
   if (loading && family.kind !== 'none') status = <p className="sheet-loading" role="status">Affinage des références…</p>;
 
-  const traceNode = route.view === 'result' && relaunch === null && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
-  const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
+  const traceNode = route.view === 'result' && relaunch === null && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={settledCount(selection.status)} cluster={cluster} /> : null;
+  const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} selection={selection} onPick={(id) => choose({ id, by: 'user' })} family={family} api={api} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
 
   const ask = turn?.state.ask ?? null;
   const waiting = turn !== null && isBusy(turn.state);
@@ -556,10 +559,13 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
       {slot &&
         !ask &&
         question &&
-        createPortal(<QuestionCard question={question} confirmed={confirmed} selected={cluster?.id ?? null} onAnswer={(id) => route.view === 'result' && navigate({ ...route, clusterId: id }, { replace: true })} />, slot)}
+        createPortal(<QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => choose({ id, by: 'answer' })} />, slot)}
     </div>
   );
 }
+
+// A part picked by the user leaves the catalogue's count as it was: only the cote settles it to one.
+const settledCount = (status: SelectionStatus): number | null => (status === 'single' || status === 'answer' ? 1 : null);
 
 function ErrorNote({ message, onRetry }: { message: string; onRetry: () => void }) {
   return (
@@ -622,28 +628,28 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const part = state.parts.find((p) => p.key === webKey) ?? routed ?? state.parts[0] ?? null;
   const category = part ? partCategory(part, categories) : null;
   const n = part?.kind === 'catalog' ? part.narrowing : null;
-  const clusters = n?.clusters ?? [];
-  const chosen = route.view === 'result' && routed === part ? route.clusterId : null;
-  const cluster = clusters.find((c) => c.id === chosen) ?? clusters[0] ?? null;
-  const confirmed = clusters.length === 1 || (chosen !== null && cluster?.id === chosen);
+  const chosen = route.view === 'result' && routed === part ? route.cluster : null;
+  const selection = selectVariant(n, chosen);
+  const { cluster } = selection;
+  const decided = selection.status !== 'open';
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const family: Family = category && part ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
   const overlay = wide && part ? 520 : null;
 
-  const openPart = (p: AgentPart, clusterId: string | null = null) => {
+  const openPart = (p: AgentPart, cluster: ClusterChoice | null = null) => {
     if (p.kind === 'web') {
       setWebKey(p.key);
       if (ref !== '') navigate({ view: 'vehicle', ref }, { replace: true });
       return;
     }
     setWebKey(null);
-    if (ref !== '') navigate({ view: 'result', ref, categoryId: p.categoryId, productGroupId: p.narrowing.productGroup?.id ?? null, clusterId }, { replace: true });
+    if (ref !== '') navigate({ view: 'result', ref, categoryId: p.categoryId, productGroupId: p.narrowing.productGroup?.id ?? null, cluster }, { replace: true });
   };
 
   const first = state.parts[0];
   useEffect(() => {
     if (first && first.kind === 'catalog' && webKey === null && route.view === 'vehicle' && ref !== '')
-      navigate({ view: 'result', ref, categoryId: first.categoryId, productGroupId: first.narrowing.productGroup?.id ?? null, clusterId: null }, { replace: true });
+      navigate({ view: 'result', ref, categoryId: first.categoryId, productGroupId: first.narrowing.productGroup?.id ?? null, cluster: null }, { replace: true });
   }, [first?.key, ref, route.view]);
 
   useFollowUp(
@@ -651,8 +657,8 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
     part === null
       ? { summary: null, pendingContext: state.ask?.context ?? null }
       : {
-          summary: part.kind === 'catalog' && category && n ? resultSummary(category.label, n, chosen) : part.kind === 'web' ? `${part.label} : ${part.brand} ${part.reference} (source web, hors catalogue)` : null,
-          pendingContext: state.ask?.context ?? (question && !confirmed ? `question affichée : ${question.text}` : null),
+          summary: part.kind === 'catalog' && category && n ? resultSummary(category.label, n, decided ? chosen : null) : part.kind === 'web' ? `${part.label} : ${part.brand} ${part.reference} (source web, hors catalogue)` : null,
+          pendingContext: state.ask?.context ?? (question && !decided ? `question affichée : ${question.text}` : null),
         },
   );
 
@@ -681,9 +687,9 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} rationale={part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, { id, by: 'user' })} family={family} api={api} rationale={part.rationale} />
   ) : null;
-  const traceNode = n ? <NarrowingTrace narrowing={{ status: 'ok', data: n }} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
+  const traceNode = n ? <NarrowingTrace narrowing={{ status: 'ok', data: n }} remaining={settledCount(selection.status)} cluster={cluster} /> : null;
 
   return (
     <div className="work">
@@ -709,7 +715,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
         createPortal(
           <>
             {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} />}
-            {!state.ask && question && part && <QuestionCard question={question} confirmed={confirmed} selected={cluster?.id ?? null} onAnswer={(id) => openPart(part, id)} />}
+            {!state.ask && question && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}
           </>,
           slot,
         )}

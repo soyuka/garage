@@ -4,18 +4,20 @@ import type { FinderApi } from '../client';
 import { formatCount } from '../format';
 import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
 import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from '../result';
-import type { Category, Cluster, Family, Narrowing, Reference, Vehicle } from '../types';
+import type { Category, Family, Narrowing, Reference, Vehicle } from '../types';
+import { makerOe, otherDimensions, variantLetter, type Selection } from '../variants';
 import { BuyMenu } from './BuyMenu';
 import { GaragePicker } from './Garage';
 import { useToast } from './Toast';
+import { VariantTable } from './VariantTable';
 import { vehicleEngine, vehicleName } from './VehicleChip';
 
 interface Props {
   vehicle: Vehicle;
   category: Category;
   narrowing: Narrowing;
-  cluster: Cluster | null;
-  confirmed: boolean;
+  selection: Selection;
+  onPick: (clusterId: string) => void;
   family: Family;
   api: FinderApi;
   rationale?: string;
@@ -30,8 +32,13 @@ async function copy(text: string): Promise<boolean> {
   }
 }
 
-export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, family, api, rationale }: Props) {
+export function TitleBlock({ vehicle, category, narrowing, selection, onPick, family, api, rationale }: Props) {
   const toast = useToast();
+  const { cluster } = selection;
+  const multi = narrowing.clusters.length > 1 && cluster !== null;
+  const letter = multi ? variantLetter(selection.index) : null;
+  const otherOe = multi ? makerOe(cluster, vehicle.make) : [];
+  const otherCotes = multi ? otherDimensions(cluster, narrowing.differsOn) : [];
   const oe = cluster ? pickOe(cluster, vehicle.make) : null;
   const eq = cluster ? rankEquivalents(cluster) : null;
   const top = eq?.shown.find((v) => !oe || v.number !== oe.number) ?? null;
@@ -48,10 +55,20 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
         <b className="tb-title">{category.label}</b>
       </div>
 
+      {multi && <VariantTable narrowing={narrowing} make={vehicle.make} selection={selection} onPick={onPick} />}
+
       {headline ? (
         <div className="c s3">
-          <span className="l">{oe ? `Réf. OE · ${oe.brand}` : `Réf. · ${headline.brand}`}</span>
+          <span className="l">
+            {oe ? `Réf. OE · ${oe.brand}` : `Réf. · ${headline.brand}`}
+            {letter && ` · variante ${letter}`}
+          </span>
           <div className="oe m">{headline.number}</div>
+          {otherOe.length > 0 && (
+            <div className="tb-oe-more">
+              <span className="tb-muted">Aussi :</span> <span className="m">{otherOe.map((r) => r.number).join(' · ')}</span>
+            </div>
+          )}
         </div>
       ) : (
         <div className="c s3">
@@ -112,8 +129,17 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
                   <span>{part}</span>
                 </Fragment>
               ))
-            : <span className="tb-muted">non renseignées par le catalogue</span>}
+            : otherCotes.length === 0 && <span className="tb-muted">non renseignées par le catalogue</span>}
         </span>
+        {otherCotes.length > 0 && (
+          <ul className="tb-cotes-more">
+            {otherCotes.map((d) => (
+              <li key={d.key} data-differs={d.differs || undefined}>
+                {d.label} <span className="m">{d.text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="c r">
         <span className="l">Source</span>
@@ -124,7 +150,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
       <div className="c s3 why">
         <span className="l">Pourquoi cette pièce</span>
         {rationale && <span className="why-agent">{rationale}</span>}
-        {whyLine(narrowing, cluster, confirmed)}
+        {whyLine(narrowing, selection, letter)}
         {narrowing.degradedReason && <span className="why-degraded">{degradedMessage(narrowing.degradedReason)}</span>}
         {narrowing.unclassifiedCount > 0 && cluster && (
           <span className="why-quiet">{formatCount(narrowing.unclassifiedCount)} réf. non rattachées.</span>
@@ -202,20 +228,24 @@ function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehi
   );
 }
 
-function whyLine(n: Narrowing, cluster: Cluster | null, confirmed: boolean) {
+function whyLine(n: Narrowing, selection: Selection, letter: string | null) {
+  const { cluster, status } = selection;
   if (!cluster) return <span>Références non regroupées en pièces distinctes.</span>;
   const brands = new Set(cluster.variants.map((v) => v.brand)).size;
   const same = `${formatCount(cluster.articleCount)} réf. de ${formatCount(brands)} marque${brands > 1 ? 's' : ''} pour cette même pièce.`;
-  if (n.clusters.length > 1 && !confirmed) {
+  if (status === 'open') {
     return (
       <span>
-        {n.clusters.length} pièces possibles. Répondez à la question pour trancher. <span className="tag">à confirmer</span>
+        {formatCount(n.clusters.length)} pièces possibles, variante {letter} affichée. Choisissez la variante dans le tableau ou répondez à la question.
       </span>
     );
   }
-  return (
-    <span>
-      {same} {n.clusters.length > 1 && <span className="tag ok">confirmé par la cote</span>}
-    </span>
-  );
+  if (status === 'user') {
+    return (
+      <span>
+        Variante {letter} choisie par vous : le catalogue ne départage pas ces pièces pour ce véhicule. {same}
+      </span>
+    );
+  }
+  return <span>{same}</span>;
 }

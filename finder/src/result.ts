@@ -3,7 +3,7 @@ import { NNBSP } from './format';
 import { foldText } from './search';
 import type { Cluster, Dimension, Narrowing, Reference, Variant } from './types';
 
-const sameBrand = (a: string, b: string): boolean => foldText(a).replace(/[^a-z0-9]/g, '') === foldText(b).replace(/[^a-z0-9]/g, '');
+export const sameBrand = (a: string, b: string): boolean => foldText(a).replace(/[^a-z0-9]/g, '') === foldText(b).replace(/[^a-z0-9]/g, '');
 
 export function pickOe(cluster: Cluster, make: string | null): Reference | null {
   const own = make ? cluster.oeNumbers.find((r) => sameBrand(r.brand, make)) : undefined;

@@ -3,10 +3,14 @@ import type { CarType } from './types';
 
 // A vehicle ref is either a plate ("XB-301-ZB", "1234 AB 56") or a catalogue car the agent identified
 // without one ("k19107-PC").
+// `answer`: settled by the cote question (`/k/<id>`, the only form before 2026-10-16); `user`: picked
+// in the variant table (`/v/<id>`), the user's decision, never presented as confirmed.
+export type ClusterChoice = { id: string; by: 'answer' | 'user' };
+
 export type Route =
   | { view: 'entry' }
   | { view: 'vehicle'; ref: string }
-  | { view: 'result'; ref: string; categoryId: number; productGroupId: number | null; clusterId: string | null };
+  | { view: 'result'; ref: string; categoryId: number; productGroupId: number | null; cluster: ClusterChoice | null };
 
 export type VehicleRef = { kind: 'plate'; plate: string } | { kind: 'car'; carId: number; carType: CarType };
 
@@ -33,8 +37,9 @@ export function parseRoute(hash: string): Route {
     productGroupId = /^[1-9]\d*$/.test(rest[1] ?? '') ? Number(rest[1]) : null;
     rest.splice(0, 2);
   }
-  const clusterId = rest[0] === 'k' && rest[1] ? rest[1] : null;
-  return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, clusterId };
+  const by = rest[0] === 'k' ? 'answer' : rest[0] === 'v' ? 'user' : null;
+  const cluster: ClusterChoice | null = by && rest[1] ? { id: rest[1], by } : null;
+  return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, cluster };
 }
 
 const refHash = (ref: string): string => (CAR.test(ref) ? `#/k/${ref.slice(1)}` : `#/p/${encodeURIComponent(ref.replace(/ /g, ''))}`);
@@ -46,6 +51,6 @@ export function routeToHash(route: Route): string {
     case 'vehicle':
       return refHash(route.ref);
     case 'result':
-      return `${refHash(route.ref)}/c/${route.categoryId}${route.productGroupId ? `/g/${route.productGroupId}` : ''}${route.clusterId ? `/k/${encodeURIComponent(route.clusterId)}` : ''}`;
+      return `${refHash(route.ref)}/c/${route.categoryId}${route.productGroupId ? `/g/${route.productGroupId}` : ''}${route.cluster ? `/${route.cluster.by === 'user' ? 'v' : 'k'}/${encodeURIComponent(route.cluster.id)}` : ''}`;
   }
 }

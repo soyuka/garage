@@ -58,17 +58,18 @@ export function NarrowingTrace({ narrowing, remaining, cluster }: { narrowing: A
 }
 
 // The dimension question built from differsOn: shown above the composer, answered by one click.
-export function QuestionCard({ question, confirmed, selected, onAnswer }: { question: Question; confirmed: boolean; selected: string | null; onAnswer: (clusterId: string) => void }) {
+// `answered`: the cluster this question settled; a part picked in the variant table leaves it unanswered.
+export function QuestionCard({ question, answered, onAnswer }: { question: Question; answered: string | null; onAnswer: (clusterId: string) => void }) {
   return (
     <section className="ask" aria-labelledby="ask-title">
       <h2 id="ask-title" className="sr-only">
-        {confirmed ? 'Réponse' : 'Question'}
+        {answered ? 'Réponse' : 'Question'}
       </h2>
       <p className="ask-q">{question.text}</p>
       {question.hint && <p className="ask-hint">{question.hint}</p>}
       <div className="ask-answers" role="group" aria-label="Réponses">
         {question.answers.map((a) => (
-          <button key={a.clusterId} type="button" className="btn ans" aria-pressed={confirmed && selected === a.clusterId} onClick={() => onAnswer(a.clusterId)}>
+          <button key={a.clusterId} type="button" className="btn ans" aria-pressed={answered === a.clusterId} onClick={() => onAnswer(a.clusterId)}>
             {a.label}
           </button>
         ))}
