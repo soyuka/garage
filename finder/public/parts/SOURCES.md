@@ -166,6 +166,30 @@ Modelled in-house with build123d, owned, shippable. Generic family shapes at nom
 | `wiper-blade.glb` | Flat beam wiper blade | 500 long, beam 15x10 tapering, lip, adaptor 30x15x15, end caps | 228 | 512.0 × 15.0 × 44.64 |
 | `horn.glb` | Disc horn | drum O90 x 35, stepped concentric front, rear stud + slotted bracket 20x2, 2-blade spade | 3484 | 107.5 × 88.0 × 90.0 |
 | `fog-lamp.glb` | Round fog lamp | lens O90 + bezel, housing ~110x100 tapering back, adjust tab, rear connector socket | 1634 | 110.0 × 86.0 × 123.0 |
+| `air-duct.glb` | Corrugated intake hose | O70, ~250 long, 30 deg bend, 6 convolutions, 2 worm-drive clamps | 5944 | 259.46 × 100.31 × 86.0 |
+| `timing-cover.glb` | Timing cover | ~300x200x40 deep, two-lobe outline, 10 bolt bosses, O50 crank seal bore | 5784 | 300.0 × 200.0 × 42.0 |
+| `gasket-head.glb` | 4-cyl head gasket | 420x120x1.5, 4 bores O80 + 0.5 fire rings, 10 bolt holes O12, 6 oval holes | 5172 | 420.0 × 120.0 × 2.0 |
+| `gasket-manifold.glb` | 4-port manifold gasket | 380x50x1.5, 4 ports 35x28 + beads, 8 bolt holes | 5228 | 380.0 × 50.0 × 2.0 |
+| `gasket-flat.glb` | Perimeter gasket | ~300x180 loop, 10 wide, 1.5 thick, 14 bolt-hole ears | 5216 | 312.0 × 192.0 × 1.5 |
+| `shaft-seal.glb` | Radial lip seal | OD52, ID35, width 8, metal case + rubber lip | 1848 | 52.0 × 52.0 × 8.0 |
+| `valve-stem-seal.glb` | Valve stem seal | O13 x 12, bore O6, metal base ring + rubber lip | 2268 | 13.0 × 13.0 × 12.0 |
+| `bearing-shell.glb` | Plain bearing half-shells | O50 journal, width 20, wall 2, tabs, oil hole, separated 8 mm | 1124 | 62.0 × 62.0 × 20.0 |
+| `head-bolt.glb` | M10 head bolt | M10 x 120, hex flange 14 AF, reduced stretch section O8.6 | 2216 | 20.0 × 20.0 × 130.0 |
+| `drain-plug.glb` | M14 sump plug | hex 17 AF x 8, stub O14 x 12, crush washer | 956 | 20.0 × 20.0 × 21.8 |
+| `dipstick.glb` | Oil dipstick | loop O35 x 4, cap O14, blade 3x0.8 x ~500 curved, 2 notches | 1050 | 549.03 × 14.0 × 35.0 |
+| `relay.glb` | Mini relay | 28x28x25 + base, mounting tab, 5 blade terminals | 452 | 28.0 × 30.0 × 33.0 |
+| `blade-fuse.glb` | ATO blade fuse | 19 x 5 x 18, window step, 2 blades 8 long | 68 | 19.0 × 5.0 × 24.0 |
+| `fuse-box.glb` | Fuse/relay box | 200x130x70, lid split line, 2 clips, cable gland | 2212 | 252.0 × 135.0 × 70.0 |
+| `starter-solenoid.glb` | Starter solenoid | O45 x 80, 2 stud terminals + spade, plunger, 2-hole flange | 3204 | 134.0 × 45.0 × 80.0 |
+| `alternator-regulator.glb` | Regulator / brush holder | 60x45x8 plate, connector boss, 2 brush blocks 10, 2 screw holes | 804 | 60.0 × 45.0 × 28.0 |
+| `stalk-switch.glb` | Combination stalk switch | ring O60 hole, body 140 wide, 2 stalks ~120 long, twist ring, connector | 5446 | 331.09 × 98.0 × 45.0 |
+| `tail-lamp.glb` | Rear combination lamp | wedge ~300x150x90, curved face, 2 groove splits, 3 sockets O30 | 4938 | 289.26 × 112.0 × 150.0 |
+| `indicator-lamp.glb` | Indicator lamp | oval 70x30 lens, 35 deep, socket, 2 clips | 2478 | 75.0 × 49.0 × 36.0 |
+| `drl-lamp.glb` | Daytime running light | strip 300x30x40, recessed flat lens, 2 brackets, connector | 1824 | 300.0 × 62.0 × 30.0 |
+| `third-brake-lamp.glb` | High-mounted stop lamp | bar 350x25x40, curved, 2 feet | 790 | 350.0 × 37.0 × 46.0 |
+| `headlamp.glb` | Generic headlamp | ~650 wide trapezoid housing, curved open bezel, projector O70 + reflector O110 rings, 3 tabs, cap O90, connector | 5647 | 625.24 × 381.0 × 288.21 |
+| `level-actuator.glb` | Headlamp levelling motor | O40 x 50, 3-lug bayonet flange, ball rod 30, connector boss | 3871 | 59.0 × 60.16 × 91.0 |
+| `wire-connector.glb` | Repair pigtail connector | 30x20x25 housing + latch ramp, 3 wires O2.5 ~130 long, stripped ends | 5010 | 39.45 × 160.03 × 29.0 |
 
 ## Third party (2026-10-16)
 
