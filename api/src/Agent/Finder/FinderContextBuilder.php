@@ -10,11 +10,16 @@ use App\Message\RunAgentTurn;
  * The user message of a finder turn: the car the page already identified (or the fact that none is
  * known yet), why the page routed the input to the agent, what the photo intake read, and — when the
  * turn answers an ask_question — the question it answers. Turns stay stateless; that breadcrumb is the
- * only memory carried across them.
+ * only memory carried across them. A known vehicle also brings its leaf categories, so the agent picks
+ * by meaning; set_vehicle returns the same list when the agent identifies the car itself.
  */
 final class FinderContextBuilder
 {
     private const int MAX_SUMMARY_LENGTH = 2000;
+
+    public function __construct(private readonly FinderCategoryList $categories)
+    {
+    }
 
     public function build(RunAgentTurn $turn): string
     {
@@ -72,6 +77,11 @@ final class FinderContextBuilder
         if ('' !== $turn->pendingContext) {
             $context .= "Tu viens de poser une question ; la demande ci-dessous est la réponse de l'utilisateur."
                 ."\nContexte de ta question : ".$turn->pendingContext."\n\n";
+        }
+
+        if (null !== $vehicle) {
+            $context .= "Catégories du catalogue pour ce véhicule (id + nom, sous [rubrique]) :\n"
+                .$this->categories->forVehicle($vehicle->carId, $vehicle->carType)."\n\n";
         }
 
         return $context.'Demande : '.$turn->instruction;

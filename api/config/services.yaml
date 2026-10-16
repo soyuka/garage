@@ -84,11 +84,12 @@ services:
         autoconfigure: false
 
     # The catalogue READ tools only — an allowlist, so a new garage write tool can never reach the finder.
+    # No list_part_categories: the finder picks from the full leaf list (FinderCategoryList), never by keyword.
     app.finder.mcp_toolbox:
         class: App\Mcp\Agent\McpToolbox
         arguments:
             $server: '@mcp.server.garage'
-            $only: ['lookup_plate', 'decode_vin', 'list_makes', 'list_models', 'list_cars', 'list_part_categories', 'get_service_parts', 'decode_build_code']
+            $only: ['lookup_plate', 'decode_vin', 'list_makes', 'list_models', 'list_cars', 'get_service_parts', 'decode_build_code']
 
     app.finder.composite_toolbox:
         class: App\Agent\Toolbox\CompositeToolbox

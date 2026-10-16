@@ -23,7 +23,7 @@ use Webmozart\Assert\Assert;
  */
 #[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 shown per turn. A category node can hold several TecDoc product groups (precise generic-article names: « Direction > Rotules » holds « Rotule de barre de connexion », the outer tie rod end, AND « Rotule de direction intérieure, barre de connexion », the inner axial joint): then status choose_group comes back with productGroups [{id, name, articleCount}] and nothing is drawn; pick the group whose name matches what the user asked (function and position) and call again with productGroupId. The title shown is the product group name, never your text. rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary whose productGroup (and each cluster\'s productGroup) is what was drawn: check it against the request before end_turn. If clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, not per car: see applicabilityCaveat); status empty means the category (or that product group) holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part.', 'showParts')]
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE short impersonal French sentence stating what the source says that makes it fit this vehicle, never « Je… ».', 'showWebPart')]
-#[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle.', 'setVehicle')]
+#[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle. Returns the vehicle\'s catalogue categories.', 'setVehicle')]
 #[AsTool('ask_question', 'Ask the user ONE short French question, answerable in one tap, when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 6 concrete options, each {label shown on the button: a value such as « Avant », not a sentence; value sent back}. Never drop a matching candidate: offer all of them when there are 6 or fewer, otherwise ask a question that splits them first. The finder adds its own « Donner la plaque » button: never offer it yourself. context is a short note to yourself restating what was asked and why, including the remaining candidate carIds; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
 final class FinderRenderTools
 {
@@ -43,6 +43,7 @@ final class FinderRenderTools
         private readonly RenderIntentTools $frames,
         private readonly ArticleNarrower $narrower,
         private readonly VehicleIndex $index,
+        private readonly FinderCategoryList $categories,
     ) {
     }
 
@@ -167,7 +168,8 @@ final class FinderRenderTools
             'plate' => $plate,
         ]);
 
-        return 'ok: the finder now shows this vehicle; continue with list_part_categories and show_parts.';
+        return "ok: the finder now shows this vehicle. Its catalogue categories (id + name, under [section]); pick by meaning and pass the id to show_parts:\n"
+            .$this->categories->forVehicle($vehicle->carId, $vehicle->carType);
     }
 
     /**
