@@ -144,7 +144,6 @@ button {
   white-space: nowrap;
   cursor: pointer;
   min-width: 0;
-  transition: border-color 0.15s;
 }
 
 .chip:hover {
@@ -214,7 +213,6 @@ button {
   font: 500 13px var(--sans);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 
 .btn:hover {
@@ -587,7 +585,7 @@ button {
 .work > .sheet-wrap {
   flex: 1;
   padding-block: 12px;
-  transition: opacity 0.15s cubic-bezier(0.16, 1, 0.3, 1), filter 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.24s var(--ease-out);
 }
 
 /* A follow-up is running: the result it continues stays readable until the agent shows its own. */
@@ -1065,11 +1063,23 @@ button {
 }
 
 .sk {
+  position: relative;
   display: block;
   height: 14px;
   margin-top: 3px;
   border-radius: 3px;
-  background: linear-gradient(90deg, var(--tint) 0%, var(--panel-2) 50%, var(--tint) 100%) 0 0 / 200% 100%;
+  overflow: hidden;
+  background: var(--tint);
+}
+
+/* The sheen is a gradient layer sliding across: transform only, no repaint per frame. */
+.sk::after,
+.skeleton-text::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, var(--panel-2) 50%, transparent 100%);
+  transform: translateX(-100%);
   animation: sheen 1.4s linear infinite;
 }
 
@@ -1078,16 +1088,17 @@ button {
 }
 
 .skeleton-text {
+  position: relative;
+  overflow: hidden;
   color: transparent;
-  background: linear-gradient(90deg, var(--tint) 0%, var(--panel-2) 50%, var(--tint) 100%) 0 0 / 200% 100%;
+  background: var(--tint);
   border-radius: 4px;
   width: max-content;
-  animation: sheen 1.4s linear infinite;
 }
 
 @keyframes sheen {
   to {
-    background-position: -200% 0;
+    transform: translateX(100%);
   }
 }
 
@@ -1233,7 +1244,6 @@ button {
   font: 500 13px var(--sans);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
 }
 
 .part-tab:last-child {
@@ -1345,14 +1355,26 @@ button {
 
 .vt-item {
   position: relative;
+  isolation: isolate;
   border-top: 1px solid var(--hair);
   background: var(--bg);
-  transition: background 0.15s;
 }
 
-.vt-item:hover,
-.vt-item[data-checked] {
+/* The row fill is a layer under the content: hover and selection fade its opacity, nothing repaints. */
+.vt-item::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background: var(--tint);
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-out);
+  pointer-events: none;
+}
+
+.vt-item:hover::before,
+.vt-item[data-checked]::before {
+  opacity: 1;
 }
 
 .vt-item:has(.vt-pick:focus-visible) {
@@ -1416,7 +1438,6 @@ button {
   background: none;
   color: var(--ink);
   cursor: copy;
-  transition: color 0.15s, background 0.15s;
 }
 
 .copy-btn:hover,
@@ -1605,11 +1626,23 @@ button {
   border-radius: var(--radius);
   background: var(--bg);
   padding: 0 4px 0 0;
-  transition: border-color 0.15s, background 0.15s, box-shadow 0.2s var(--ease-out);
+  position: relative;
 }
 
-.intake-field:focus-within {
+/* Focus halo painted once on a pseudo-element; only its opacity animates. */
+.intake-field::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
   box-shadow: 0 0 0 3px rgba(43, 89, 195, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s var(--ease-out);
+}
+
+.intake-field:focus-within::after {
+  opacity: 1;
 }
 
 .intake[data-over='true'] .intake-field {
@@ -1643,7 +1676,6 @@ button {
   background: none;
   color: var(--mute);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
 }
 
 .intake-icon:hover {
@@ -1827,7 +1859,6 @@ button {
   background: none;
   color: var(--mute);
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
 }
 
 .ctx-remove:hover {
@@ -2168,7 +2199,6 @@ button {
   color: var(--mute);
   font: 500 12.5px var(--sans);
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
 }
 
 .journal-btn {
@@ -2251,7 +2281,6 @@ button {
   background: var(--bg);
   color: var(--ink);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
 }
 
 .icon-btn:hover {
@@ -2345,7 +2374,6 @@ button {
   background: none;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
 }
 
 .journal-row:hover,
