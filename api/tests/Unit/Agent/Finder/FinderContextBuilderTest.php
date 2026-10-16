@@ -10,6 +10,8 @@ use App\Agent\Finder\FinderContextBuilder;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\TurnSurface;
 use App\Catalog\PartsCatalog;
+use App\Knowledge\BuildCode\BuildCodeDecoders;
+use App\Knowledge\BuildCode\PsaBuildCodeDecoder;
 use App\Message\RunAgentTurn;
 use App\PartsApi\PartsApiClient;
 use App\Tests\Mock\FixtureHttpClient;
@@ -29,7 +31,7 @@ final class FinderContextBuilderTest extends TestCase
         $this->assertStringContainsString('rotule axiale 307 : deux montages selon le n° d\'organisation', $context);
         $this->assertStringContainsString('OPR 10512', $context);
         $this->assertStringContainsString('DAM 10512 ; 1051288', $context);
-        $this->assertStringContainsString('decode_build_code', $context);
+        $this->assertStringContainsString('set_build_code', $context);
         $this->assertStringEndsWith('Demande : mon OPR est 10512', $context);
     }
 
@@ -89,6 +91,37 @@ final class FinderContextBuilderTest extends TestCase
         $this->assertLessThan(strpos($context, 'Demande : '), strpos($context, '100198 Rotules'));
     }
 
+    public function testTheCarsDecodedCodeIsCarriedWithItsDate(): void
+    {
+        $vehicle = FinderVehicle::fromPayload(['carId' => 16182, 'make' => 'PEUGEOT', 'buildCode' => ['organisationNumber' => '09824', 'date' => '2003-10-02', 'codeKind' => 'dam']]);
+
+        $this->assertSame('09824', $vehicle?->organisationNumber);
+        $this->assertStringContainsString(
+            'Code de fabrication du véhicule (déjà décodé, ne le redemande pas) : OPR 09824, fabriqué le 2003-10-02. Compare-le directement aux ruptures OPR des pièces : quand il tranche, sélectionne la variante (show_parts clusterId) sans poser la question.',
+            $this->builder()->build($this->turn(vehicle: $vehicle)),
+        );
+    }
+
+    public function testTheCodeWithoutADecoderIsPrintedWithoutADate(): void
+    {
+        $vehicle = FinderVehicle::fromPayload(['carId' => 19107, 'make' => 'MAZDA', 'buildCode' => ['organisationNumber' => '09824']]);
+
+        $context = $this->builder()->build($this->turn(vehicle: $vehicle));
+
+        $this->assertStringContainsString('OPR 09824.', $context);
+        $this->assertStringNotContainsString('fabriqué le', $context);
+    }
+
+    public function testAMalformedBuildCodeNeverRejectsTheVehicle(): void
+    {
+        foreach ([['organisationNumber' => 'abc'], ['organisationNumber' => 982], 'x', []] as $buildCode) {
+            $vehicle = FinderVehicle::fromPayload(['carId' => 16182, 'buildCode' => $buildCode]);
+            $this->assertNotNull($vehicle);
+            $this->assertNull($vehicle->organisationNumber);
+        }
+        $this->assertStringNotContainsString('Code de fabrication du véhicule', $this->builder()->build($this->turn(vehicle: new FinderVehicle(16182))));
+    }
+
     public function testNoVehicleNoCategoryList(): void
     {
         $context = $this->builder()->build($this->turn(vehicle: null));
@@ -101,7 +134,7 @@ final class FinderContextBuilderTest extends TestCase
     {
         $client = new PartsApiClient(new FixtureHttpClient(\dirname(__DIR__, 3).'/Fixtures'), ['getSearchTree' => 'test-key'], new ArrayAdapter());
 
-        return new FinderContextBuilder(new FinderCategoryList(new PartsCatalog($client, 6)));
+        return new FinderContextBuilder(new FinderCategoryList(new PartsCatalog($client, 6)), new BuildCodeDecoders([new PsaBuildCodeDecoder()]));
     }
 
     private function turn(

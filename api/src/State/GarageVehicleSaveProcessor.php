@@ -14,6 +14,9 @@ use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
 use App\Garage\VehicleWriteResolver;
+use App\Knowledge\BuildCode\BuildCodeDecoders;
+use App\Knowledge\BuildCode\InvalidBuildCode;
+use App\Knowledge\MakeName;
 use App\Maintenance\VehicleFactWriter;
 use App\Mercure\DomainPublisher;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -41,6 +44,7 @@ final class GarageVehicleSaveProcessor implements ProcessorInterface
         private readonly DocumentManager $documentManager,
         private readonly DomainPublisher $publisher,
         private readonly VehicleFactWriter $factWriter,
+        private readonly BuildCodeDecoders $decoders,
     ) {
     }
 
@@ -86,7 +90,10 @@ final class GarageVehicleSaveProcessor implements ProcessorInterface
         $this->documentManager->flush();
         $this->publisher->publishVehicle($vehicle, $resolution->created ? 'created' : 'updated');
 
-        $facts = null === $data->registration ? [] : self::registrationFacts($data->registration);
+        $facts = [
+            ...(null === $data->registration ? [] : self::registrationFacts($data->registration)),
+            ...$this->buildCodeFacts(self::text($data->buildCode), $vehicle->getMake()),
+        ];
         if ([] !== $facts) {
             $this->factWriter->set($vehicle, $facts);
         }
@@ -123,6 +130,28 @@ final class GarageVehicleSaveProcessor implements ProcessorInterface
         }
 
         return $facts;
+    }
+
+    /**
+     * @return list<VehicleFact>
+     */
+    private function buildCodeFacts(?string $code, string $make): array
+    {
+        $decoder = null === $code ? null : $this->decoders->forMake(MakeName::normalize($make));
+        if (null === $decoder) {
+            return [];
+        }
+
+        try {
+            $decoded = $decoder->decode($code);
+        } catch (InvalidBuildCode) {
+            return [];
+        }
+
+        return [
+            VehicleFact::fromSource('organisation_number', $decoded->organisationNumber, VehicleFactWriter::BUILD_CODE_SOURCE),
+            VehicleFact::fromSource('build_date', $decoded->date->format('Y-m-d'), VehicleFactWriter::BUILD_CODE_SOURCE),
+        ];
     }
 
     private static function text(?string $value): ?string

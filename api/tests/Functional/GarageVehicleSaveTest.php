@@ -132,6 +132,30 @@ final class GarageVehicleSaveTest extends AppTestCase
         );
     }
 
+    public function testTheBuildCodeIsDecodedIntoFactsSourcedFromTheCodeDeFabrication(): void
+    {
+        $client = static::createClient();
+
+        $body = $this->save($client, self::PEUGEOT + ['buildCode' => '982488', 'registration' => ['energy' => 'GO']]);
+
+        $this->assertResponseStatusCodeSame(201);
+        $facts = $this->factsOf($client, $body['@id'], ['organisation_number' => 'code de fabrication', 'build_date' => 'code de fabrication', 'energy' => 'carte grise']);
+        $this->assertSame(['energy' => ['GO', null], 'organisation_number' => ['09824', null], 'build_date' => ['2003-10-02', null]], $facts);
+    }
+
+    public function testAnUnsupportedMakeOrAnInvalidBuildCodeWritesNothingAndStillSaves(): void
+    {
+        $client = static::createClient();
+
+        $mazda = $this->save($client, ['make' => 'MAZDA', 'model' => '6', 'plate' => 'AB-123-CD', 'buildCode' => '982488']);
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame([], $this->factsOf($client, $mazda['@id']));
+
+        $peugeot = $this->save($client, self::PEUGEOT + ['buildCode' => 'zz']);
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame([], $this->factsOf($client, $peugeot['@id']));
+    }
+
     public function testOnlyTheReadRegistrationFieldsAreRecorded(): void
     {
         $client = static::createClient();
@@ -204,13 +228,15 @@ final class GarageVehicleSaveTest extends AppTestCase
     }
 
     /**
+     * @param array<string, string> $sources expected source per fact key, 'carte grise' otherwise
+     *
      * @return array<string, array{string, string|null}> key => [value, unit]
      */
-    private function factsOf(object $client, string $iri): array
+    private function factsOf(object $client, string $iri, array $sources = []): array
     {
         $facts = [];
         foreach ($client->request('GET', $iri, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()['facts'] as $fact) {
-            $this->assertSame('carte grise', $fact['source']);
+            $this->assertSame($sources[$fact['key']] ?? 'carte grise', $fact['source']);
             $this->assertFalse($fact['verified']);
             $facts[$fact['key']] = [$fact['value'], $fact['unit']];
         }

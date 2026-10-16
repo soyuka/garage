@@ -220,7 +220,7 @@ final class FinderTurnTest extends AppTestCase
         $this->assertResponseStatusCodeSame(202);
         self::assertStringContainsString('rotule axiale 307 : deux montages selon le n° d\'organisation', $seen['context']);
         self::assertStringContainsString('OPR 10512', $seen['context']);
-        self::assertStringContainsString('decode_build_code', $seen['context']);
+        self::assertStringContainsString('set_build_code', $seen['context']);
         self::assertStringContainsString('Rotule axiale (100123) — 2 groupes', $seen['context']);
         self::assertStringContainsString('plaque XB-301-ZB', $seen['context']);
     }
@@ -437,6 +437,62 @@ final class FinderTurnTest extends AppTestCase
         self::assertSame('shown', $summary['status']);
         self::assertSame('c1', $summary['selected']);
         self::assertArrayHasKey('clusterId', $seen['schemas']['show_parts']['properties'] ?? []);
+    }
+
+    public function testShowPartsCarriesWhyTheOtherClustersWereSetAside(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('a1', 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'clusterId' => 'c1', 'rationale' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => ' OPR ≥ 10311 ']),
+            new ToolCall('a2', 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'rationale' => 'Demandé.', 'setAside' => 'ignoré sans clusterId']),
+            new ToolCall('a3', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-setaside', vehicle: self::PEUGEOT);
+
+        $shown = array_values(array_filter(self::frames('sess-setaside'), static fn (array $f): bool => 'showParts' === $f['type']));
+        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => 'OPR ≥ 10311'], $shown[0]['selection']);
+        self::assertArrayNotHasKey('selection', $shown[1]);
+        self::assertArrayHasKey('setAside', $seen['schemas']['show_parts']['properties'] ?? []);
+    }
+
+    public function testSetBuildCodePinsTheDecodedCodeOnThePage(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('b1', 'set_build_code', ['code' => '982488']),
+            new ToolCall('b2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-buildcode', vehicle: self::PEUGEOT);
+
+        $set = array_values(array_filter(self::frames('sess-buildcode'), static fn (array $f): bool => 'setBuildCode' === $f['type']));
+        self::assertSame([['type' => 'setBuildCode', 'organisationNumber' => '09824', 'date' => '2003-10-02', 'codeKind' => 'dam']], $set);
+        $result = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame(['decoded', 'PEUGEOT', '09824'], [$result['status'], $result['make'], $result['organisationNumber']]);
+    }
+
+    public function testSetBuildCodeForAnUnsupportedMakePublishesNothing(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('u1', 'set_build_code', ['code' => '982488']),
+            new ToolCall('u2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-buildcode-mazda', vehicle: self::VEHICLE);
+
+        self::assertSame([], array_values(array_filter(self::frames('sess-buildcode-mazda'), static fn (array $f): bool => 'setBuildCode' === $f['type'])));
+        self::assertSame('unsupported_make', json_decode($seen['toolResults'][0] ?? '', true)['status']);
     }
 
     public function testAnUnknownClusterIdIsRefusedAndNothingIsDrawn(): void

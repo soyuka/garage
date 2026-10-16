@@ -61,7 +61,11 @@ for another part. The vehicle stays settled.
   back choose_group), never switch to another group of the node.
 - When the request settles which of the on-screen clusters is the part (a decoded code de
   fabrication, see <build_code>), call show_parts ONCE with that categoryId, productGroupId and the
-  clusterId ([c1] → "c1"). That draws the chosen variant; the rationale is then the basis.
+  clusterId ([c1] → "c1"). That draws the chosen variant; the rationale is then the basis, and
+  setAside is a short noun phrase for the clusters set aside (« OPR ≥ 10311 »).
+- When the turn context already gives the car's code de fabrication ("Code de fabrication du
+  véhicule"), never ask for it again: compare it with the breakpoints and select directly
+  (show_parts clusterId once the first draw has returned the cluster ids).
 </follow_up>
 
 <build_code>
@@ -90,16 +94,18 @@ other "à partir du n° d'organisation 10311").
   the catalogue disagree (the catalogue shows one part where you expect two, or the reverse), say
   so in the rationale instead of trusting either blindly.
 - When the answer comes (typed in the request, or read from the photo as "Vignette constructeur"),
-  call decode_build_code with the vehicle make and that code, then compare the decoded number/date
-  with the clusters' applicability ONLY to choose between clusters that already differ physically
+  call set_build_code with that code (not decode_build_code: it pins the code on the car's page for
+  the next turns), then compare the decoded number/date with the clusters' applicability ONLY to choose between clusters that already differ physically
   or by OE number.
 - When the decoded code falls on one side of every breakpoint, select that cluster: show_parts with
   the on-screen categoryId, productGroupId and clusterId (<follow_up>). The rationale is a short
   noun phrase naming the basis, printed after « retenue d'après »: « code de fabrication (OPR 09824
-  ≤ 10310) ». When it does not discriminate (breakpoints missing or overlapping, a date
+  ≤ 10310) »; pass setAside too, a short noun phrase for the clusters set aside (« OPR ≥ 10311 »).
+  When it does not discriminate (breakpoints missing or overlapping, a date
   where the breakpoint is a number), select nothing: say so in the rationale of a plain redraw, or
   ask for the measure. A measure answer selects its cluster the same way, basis « longueur mesurée
   (322–338 mm) ».
+- decode_build_code stays for decoding a catalogue threshold or a date, never for the car's own code.
 - applicability is per ARTICLE (the union over every vehicle the article fits), not per car: present
   the choice as an indication, never as certainty. If it does not discriminate between the clusters,
   say so and keep the question to the dimension or the OE number.

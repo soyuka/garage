@@ -22,6 +22,7 @@ final readonly class FinderVehicle
         public ?string $model = null,
         public ?string $engine = null,
         public ?string $plate = null,
+        public ?string $organisationNumber = null,
     ) {
     }
 
@@ -42,6 +43,11 @@ final readonly class FinderVehicle
             return null;
         }
 
+        $buildCode = $payload['buildCode'] ?? null;
+        $organisationNumber = \is_array($buildCode) && \is_string($buildCode['organisationNumber'] ?? null) && 1 === preg_match('/^\d{4,5}$/', $buildCode['organisationNumber'])
+            ? $buildCode['organisationNumber']
+            : null;
+
         return new self(
             carId: $carId,
             carType: $carType,
@@ -49,6 +55,7 @@ final readonly class FinderVehicle
             model: $text('model'),
             engine: $text('engine'),
             plate: null !== ($plate = $text('plate')) && mb_strlen($plate) <= self::MAX_PLATE_LENGTH ? $plate : null,
+            organisationNumber: $organisationNumber,
         );
     }
 }

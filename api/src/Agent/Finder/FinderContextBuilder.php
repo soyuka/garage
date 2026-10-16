@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace App\Agent\Finder;
 
+use App\Knowledge\BuildCode\BuildCodeDecoders;
+use App\Knowledge\BuildCode\InvalidBuildCode;
+use App\Knowledge\MakeName;
 use App\Message\RunAgentTurn;
 
 /**
@@ -17,8 +20,10 @@ final class FinderContextBuilder
 {
     private const int MAX_SUMMARY_LENGTH = 2000;
 
-    public function __construct(private readonly FinderCategoryList $categories)
-    {
+    public function __construct(
+        private readonly FinderCategoryList $categories,
+        private readonly BuildCodeDecoders $decoders,
+    ) {
     }
 
     public function build(RunAgentTurn $turn): string
@@ -34,6 +39,9 @@ final class FinderContextBuilder
                 $vehicle->carId,
                 $vehicle->carType->value,
             );
+            if (null !== $vehicle->organisationNumber) {
+                $context = substr($context, 0, -1).$this->buildCodeLine($vehicle)."\n\n";
+            }
         } else {
             $context = "Aucun véhicule identifié : identifie-le d'abord depuis la demande (plaque, marque, modèle, motorisation), "
                 ."puis appelle set_vehicle avant show_parts. S'il manque de quoi le trouver, demande la plaque avec ask_question.\n\n";
@@ -66,7 +74,7 @@ final class FinderContextBuilder
                 [] === $turn->buildLabel->printedCodes ? null : 'codes : '.implode(' ; ', $turn->buildLabel->printedCodes),
             ]);
             $context .= 'Vignette constructeur lue sur la photo (copie verbatim) : '.implode(' ; ', $read)
-                ." — décode-la avec decode_build_code avant de choisir entre les pièces.\n\n";
+                ." — passe-la à set_build_code avant de choisir entre les pièces.\n\n";
         }
 
         $summary = trim($turn->summary);
@@ -85,5 +93,23 @@ final class FinderContextBuilder
         }
 
         return $context.'Demande : '.$turn->instruction;
+    }
+
+    private function buildCodeLine(FinderVehicle $vehicle): string
+    {
+        $date = null;
+        $decoder = null === $vehicle->make ? null : $this->decoders->forMake(MakeName::normalize($vehicle->make));
+        if (null !== $decoder) {
+            try {
+                $date = $decoder->decode((string) $vehicle->organisationNumber)->date->format('Y-m-d');
+            } catch (InvalidBuildCode) {
+            }
+        }
+
+        return \sprintf(
+            'Code de fabrication du véhicule (déjà décodé, ne le redemande pas) : OPR %s%s. Compare-le directement aux ruptures OPR des pièces : quand il tranche, sélectionne la variante (show_parts clusterId) sans poser la question.',
+            $vehicle->organisationNumber,
+            null === $date ? '' : ', fabriqué le '.$date,
+        );
     }
 }

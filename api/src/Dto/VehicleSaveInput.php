@@ -41,4 +41,8 @@ final class VehicleSaveInput
     #[ApiProperty(description: 'Carte grise fields read by the finder: recorded as facts on the saved (or matched) vehicle, source "carte grise", in the same call. Only non-blank fields are written.')]
     #[Assert\Valid]
     public ?RegistrationFactsInput $registration = null;
+
+    #[ApiProperty(description: 'The car\'s code de fabrication (PSA OPR / DAM / APV) as read by the finder: decoded server-side for the vehicle make and recorded as facts organisation_number and build_date, source "code de fabrication". An unsupported make or an unreadable code writes nothing.')]
+    #[Assert\Length(max: 16)]
+    public ?string $buildCode = null;
 }

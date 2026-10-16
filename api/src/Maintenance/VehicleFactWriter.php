@@ -32,6 +32,9 @@ final class VehicleFactWriter
     // fact tools, and unverified like every non-catalog source.
     public const string REGISTRATION_SOURCE = 'carte grise';
 
+    // Same rule for the build code the finder decoded: written by the vehicle save, never claimable.
+    public const string BUILD_CODE_SOURCE = 'code de fabrication';
+
     public function __construct(
         private readonly DocumentManager $em,
         private readonly VehicleRepository $vehicles,
