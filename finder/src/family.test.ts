@@ -201,7 +201,8 @@ describe('partFamily', () => {
   });
 
   it('keeps a lamp unit off the bulb, and the fog lamp unit on its own mesh', () => {
-    expect(partFamily(real('Carrosserie > Projecteurs principaux / composants > Projecteurs principaux / à insérer'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Carrosserie > Projecteurs principaux / composants > Composants des projecteurs principaux'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Composants pour projecteur antibrouillard'))).toEqual({ kind: 'photo' });
     expect(partFamily(real("Carrosserie > Avant du véhicule > Feu de position / d'encombrement / composants > Feu de stationnement/de position"))).toEqual({ kind: 'photo' });
     expectMeshes([[real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Projecteur antibrouillard / Optique'), 'fog-lamp']]);
   });
@@ -241,7 +242,7 @@ describe('partFamily', () => {
       [cat('Embrayage / composants > Commande d’embrayage > Tuyaux / conduites'), 'fluid-line'],
     ]);
     expect(meshOf(real('Échappement > Tuyaux'))).toBe('oem-mid-pipe');
-    expect(partFamily(cat('Moteur > Alimentation en air > Flexibles/Conduites'))).toEqual({ kind: 'photo' });
+    expect(meshOf(cat('Moteur > Alimentation en air > Flexibles/Conduites'))).toBe('air-duct');
     expect(partFamily(cat('Chauffage / Ventilation > Gaines/tuyaux'))).toEqual({ kind: 'photo' });
     expect(meshOf(cat('Entraînement hybride/électrique > Refroidissement > Tuyauterie et brides'))).toBe('cooling-hardpipe');
   });
@@ -337,25 +338,85 @@ describe('partFamily', () => {
     ]);
   });
 
+  it('draws the engine seals, gaskets, bolts and bearing shells', () => {
+    expectMeshes([
+      [real('Moteur > Culasse / pieces de montage > Joint de culasse'), 'gasket-head'],
+      [real('Moteur > Joints > Joint de culasse'), 'gasket-head'],
+      [real("Moteur > Joints > Joint de collecteur d'admission"), 'gasket-manifold'],
+      [real("Moteur > Joints > Joint de collecteur d'échappement"), 'gasket-manifold'],
+      [real('Moteur > Joints > Joint de carter de distribution'), 'gasket-flat'],
+      [real('Moteur > Joints > Joint du carter de moteur'), 'gasket-flat'],
+      [real('Moteur > Joints > Jeu de joints complet'), 'gasket-flat'],
+      [real("Moteur > Joints > Joint d'eau de refroidissement"), 'gasket-flat'],
+      [cat("Moteur > Lubrification > Radiateur d'huile / pièces de montage > Joint"), 'gasket-flat'],
+      [real("Moteur > Joints > Kit-/bagues d'étanchéité"), 'shaft-seal'],
+      [real("Moteur > Système bielle-manivelle > Kit-/bague d'étanchéité d'arbre radial"), 'shaft-seal'],
+      [real('Moteur > Joints > Joint de tige de soupape'), 'valve-stem-seal'],
+      [real('Moteur > Système bielle-manivelle > Bielle > Coussinet de bielle'), 'bearing-shell'],
+      [cat('Moteur > Système bielle-manivelle > Bielle > Coussinets de bielle'), 'bearing-shell'],
+      [real('Moteur > Système bielle-manivelle > Vilebrequin > Coussinet de vilebrequin'), 'bearing-shell'],
+      [real('Moteur > Culasse / pieces de montage > Vis de culasse'), 'head-bolt'],
+      [real("Moteur > Lubrification > Carter d'huile et pièces de montage > Vis de vidange"), 'drain-plug'],
+      [real("Moteur > Lubrification > Jauge d'huile"), 'dipstick'],
+      [cat('Moteur > Alimentation en air > Flexibles/Conduites'), 'air-duct'],
+      [real('Moteur > Distribution moteur > Carter de distribution / joint'), 'timing-cover'],
+      [cat('Moteur > Distribution moteur > Courroie crantée/tension/guidage > Kit de galets'), 'tensioner-pulley'],
+      [cat('Commande à courroie > Courroie crantée/kit de courroie crantée > Kit de galets'), 'tensioner-pulley'],
+      [cat('Moteur > Support du moteur > Fixation moteur'), 'engine-mount'],
+    ]);
+    for (const path of ["Moteur > Lubrification > Carter d'huile et pièces de montage > Joint", "Moteur > Lubrification > Radiateur d'huile / pièces de montage > Radiateur d'huile"]) {
+      expect([path, meshOf(real(path))]).not.toEqual([path, 'gasket-flat']);
+    }
+    expect(partFamily(real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes'))).toEqual({ kind: 'photo' });
+  });
+
+  it('draws the electrical parts and the lamp units, never a bulb or a components leaf', () => {
+    expectMeshes([
+      [cat('Système électrique > Centrale clignotante/Relais'), 'relay'],
+      [real('Système électrique > Relais'), 'relay'],
+      [real('Système électrique > Plombs'), 'blade-fuse'],
+      [cat('Système électrique > Boîte à fusibles / support'), 'fuse-box'],
+      [real('Système électrique > Démarreur > Contacteur'), 'starter-solenoid'],
+      [real('Système électrique > Alternateur / composants > Régulateur'), 'alternator-regulator'],
+      [cat('Système électrique > Commutateur multifonctionnel / unité de commande'), 'stalk-switch'],
+      [real('Système électrique > Feux > Feu arrière / composants > Feu arrière'), 'tail-lamp'],
+      [real('Carrosserie > Arrière de la voiture > Feu arrière/Composants > Feu arrière'), 'tail-lamp'],
+      [real('Système électrique > Feux > Feu clignotant/composants > Feu clignotant'), 'indicator-lamp'],
+      [real('Carrosserie > Avant du véhicule > Feu clignotant/composants > Feu clignotant'), 'indicator-lamp'],
+      [real('Système électrique > Feux > Feu diurne'), 'drl-lamp'],
+      [real('Système électrique > Feux > Feu-stop / composants > Feu stop additionnel'), 'third-brake-lamp'],
+      [real('Carrosserie > Feux > Feu-stop / composants > Feu stop additionnel'), 'third-brake-lamp'],
+      [real('Système électrique > Projecteurs principaux / composants > Projecteurs principaux / à insérer'), 'headlamp'],
+      [real('Carrosserie > Avant du véhicule > Projecteurs principaux / composants > Projecteurs principaux / à insérer'), 'headlamp'],
+      [cat('Système électrique > Projecteurs principaux / composants > Phares au xénon'), 'headlamp'],
+      [cat('Système électrique > Projecteurs principaux / composants > Module/composants du phare principal'), 'headlamp'],
+      [cat('Système électrique > Projecteurs principaux / composants > Correcteur de portée lumineuse'), 'level-actuator'],
+      [real('Système électrique > Kit/pièces de câble'), 'wire-connector'],
+      [real('Système électrique > Phares supplémentaires/composants > Éclairage de virage/composants'), 'fog-lamp'],
+    ]);
+    expectMeshes([
+      [real('Système électrique > Feux > Feu clignotant/composants > Ampoule de feu clignotant'), 'bulb-p21w'],
+      [real('Carrosserie > Arrière de la voiture > Feu arrière/Composants > Ampoule de feu arrière'), 'bulb-p21w'],
+      [real('Système électrique > Projecteurs principaux / composants > Ampoule pour projecteur principal'), 'bulb-h7'],
+    ]);
+    expect(partFamily(real('Système électrique > Projecteurs principaux / composants > Composants des projecteurs principaux'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Système électrique > Feux > Feu de brouillard arrière/Composants > Composants de feu de brouillard arrière'))).toEqual({ kind: 'photo' });
+  });
+
   it('keeps look-alike categories off the wrong mesh', () => {
     for (const path of [
       'Outils spéciaux > Outils spéciaux suspension d’essieu/guidage des roues/roues > Rotules',
       'Moteur > Système bielle-manivelle > Vilebrequin > Poulies de vilebrequin',
-      'Moteur > Système bielle-manivelle > Vilebrequin > Coussinet de vilebrequin',
       "Suspension d'essieu/Guidage des roues/Roues > Fusée d'essieu / kit de réparation > Kit de réparation",
       'Alimentation carburant > Soupapes',
-      'Moteur > Joints > Joint de tige de soupape',
       'Entraînement des essieux > Arbre de transmission > Paliers/suspension',
-      'Moteur > Système bielle-manivelle > Bielle > Coussinet de bielle',
       'Échappement > Pièces de montage > Pièces détachées de montage > Amortisseur-caoutchouc',
       'Échappement > Pièces de montage > Pièces détachées de montage > Ressort',
       'Nettoyage des vitres > Pompe-à-eau / essuie-glaces',
       'Nettoyage des vitres > Bras d\'essuie-glace / fixation',
-      'Moteur > Joints > Joint de collecteur d\'admission',
       "Refroidissement > Radiateur d'eau/d'huile > Pièces de fixation du radiateur",
       'Carrosserie > Avant du véhicule > Composants/suppléments > Recouvrement/radiateur',
       'Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes',
-      'Système électrique > Alternateur / composants > Régulateur',
       "Boîte de vitesses > Boîte de vitesse automatique > Carter d'huile et pièces de montage > Carter d'huile",
       'Carburation > Carburateurs > Commande / Amortisseurs / Boîtiers',
     ]) {
