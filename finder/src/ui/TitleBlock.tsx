@@ -4,6 +4,7 @@ import { copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEqui
 import type { Category, Narrowing, Vehicle } from '../types';
 import { makerOe, otherDimensions, variantLetter, type Selection } from '../variants';
 import { CopyRef } from './CopyRef';
+import { watchOverflow } from './overflow';
 import { VariantTable } from './VariantTable';
 
 interface Props {
@@ -39,11 +40,9 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, ra
   useLayoutEffect(() => {
     const el = whyBody.current;
     if (!multi || !el) return setWhyLong(false);
-    const measure = () => setWhyLong(whyOpen || el.scrollHeight > el.clientHeight + 1);
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  });
+    if (whyOpen) return;
+    return watchOverflow(el, setWhyLong);
+  }, [multi, whyOpen, cluster?.id, rationale, narrowing.degradedReason, narrowing.unclassifiedCount]);
 
   return (
     <div className={multi ? 'tb tb--multi' : 'tb'} aria-label="Cartouche du résultat">
