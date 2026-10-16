@@ -1,0 +1,903 @@
+{
+ "carId": 16182,
+ "categoryId": 100198,
+ "clusters": [
+  {
+   "id": "c1",
+   "fingerprint": {
+    "cote_d_assemblage": {
+     "label": "Côté d'assemblage",
+     "value": "Essieu avant"
+    },
+    "largeur": {
+     "label": "Largeur [mm]",
+     "value": "36",
+     "min": 36,
+     "max": 37,
+     "unit": "mm",
+     "info": true
+    },
+    "longeur_rotule": {
+     "label": "Longeur rotule [mm]",
+     "value": "338",
+     "min": 322,
+     "max": 338,
+     "unit": "mm",
+     "info": true
+    },
+    "hauteur": {
+     "label": "Hauteur [mm]",
+     "value": "36",
+     "min": 36,
+     "max": 36,
+     "unit": "mm"
+    },
+    "longueur": {
+     "label": "Longueur [mm]",
+     "value": "338",
+     "min": 320,
+     "max": 340,
+     "unit": "mm",
+     "info": true
+    },
+    "thread": {
+     "label": "Taraudage/Filetage 1",
+     "value": "M14x1.5"
+    },
+    "thread_2": {
+     "label": "Taraudage/Filetage 2",
+     "value": "M14x1.5"
+    },
+    "poids": {
+     "label": "Poids [kg]",
+     "value": "0.55",
+     "min": 0.55,
+     "max": 0.55,
+     "unit": "kg",
+     "info": true
+    },
+    "filetage_exterieur": {
+     "label": "Filetage extérieur [mm]",
+     "value": "M14 x 1,5",
+     "info": true
+    }
+   },
+   "oeNumbers": [
+    {
+     "brand": "CITROËN",
+     "number": "3812"
+    },
+    {
+     "brand": "CITROËN",
+     "number": "3812 E0"
+    },
+    {
+     "brand": "CITROËN",
+     "number": "3812.E0"
+    },
+    {
+     "brand": "OPEL",
+     "number": "3812E0"
+    },
+    {
+     "brand": "PEUGEOT",
+     "number": "16 072 936 80"
+    },
+    {
+     "brand": "PEUGEOT",
+     "number": "3812"
+    },
+    {
+     "brand": "PEUGEOT",
+     "number": "3812 E0"
+    },
+    {
+     "brand": "PEUGEOT",
+     "number": "3812.E0"
+    }
+   ],
+   "representative": {
+    "artId": 112767504,
+    "brand": "BOSCH",
+    "number": "0 986 141 079"
+   },
+   "variants": [
+    {
+     "artId": 112767504,
+     "brand": "BOSCH",
+     "number": "0 986 141 079",
+     "tier": 1
+    },
+    {
+     "artId": 9368553,
+     "brand": "DELPHI",
+     "number": "TA1776",
+     "tier": 1
+    },
+    {
+     "artId": 1757415,
+     "brand": "FEBI BILSTEIN",
+     "number": "19935",
+     "tier": 2
+    },
+    {
+     "artId": 2398176,
+     "brand": "FEBI BILSTEIN",
+     "number": "280476",
+     "tier": 2
+    },
+    {
+     "artId": 980872,
+     "brand": "MEYLE",
+     "number": "11-16 031 0015",
+     "tier": 2
+    },
+    {
+     "artId": 3670490,
+     "brand": "RIDEX",
+     "number": "51T0013",
+     "tier": 2
+    },
+    {
+     "artId": 6488494,
+     "brand": "DENCKERMANN",
+     "number": "D180227",
+     "tier": 2
+    },
+    {
+     "artId": 6448737,
+     "brand": "COMLINE",
+     "number": "CTR3030",
+     "tier": 2
+    },
+    {
+     "artId": 5170801,
+     "brand": "KAMOKA",
+     "number": "9020122",
+     "tier": 2
+    },
+    {
+     "artId": 2317606,
+     "brand": "MASTER-SPORT GERMANY",
+     "number": "26059-SET-MS",
+     "tier": 2
+    },
+    {
+     "artId": 95995539,
+     "brand": "HERTH+BUSS JAKOPARTS",
+     "number": "J4840856",
+     "tier": 2
+    },
+    {
+     "artId": 2841562,
+     "brand": "3RG",
+     "number": "34090",
+     "tier": 3
+    },
+    {
+     "artId": 2209538,
+     "brand": "A.B.S.",
+     "number": "240350",
+     "tier": 3
+    },
+    {
+     "artId": 5846172,
+     "brand": "A.Z. Meisterteile",
+     "number": "AZMT-42-010-2593",
+     "tier": 3
+    },
+    {
+     "artId": 26525838,
+     "brand": "ABAKUS",
+     "number": "233-08-018",
+     "tier": 3
+    },
+    {
+     "artId": 3814896,
+     "brand": "AIC",
+     "number": "55074",
+     "tier": 3
+    },
+    {
+     "artId": 7617688,
+     "brand": "AISIN",
+     "number": "JAJPS-003",
+     "tier": 3
+    },
+    {
+     "artId": 14233436,
+     "brand": "ALTE AUTOMOTIVE",
+     "number": "79598AL",
+     "tier": 3
+    },
+    {
+     "artId": 92745926,
+     "brand": "AP XENERGY",
+     "number": "XTA092",
+     "tier": 3
+    },
+    {
+     "artId": 9185374,
+     "brand": "BGA",
+     "number": "SR6722",
+     "tier": 3
+    },
+    {
+     "artId": 5831648,
+     "brand": "BIRTH",
+     "number": "AX0033",
+     "tier": 3
+    },
+    {
+     "artId": 6134057,
+     "brand": "BORG & BECK",
+     "number": "BTR4993",
+     "tier": 3
+    },
+    {
+     "artId": 6134058,
+     "brand": "BORG & BECK",
+     "number": "BTR4993K",
+     "tier": 3
+    },
+    {
+     "artId": 6116872,
+     "brand": "BSG",
+     "number": "BSG 70-310-036",
+     "tier": 3
+    },
+    {
+     "artId": 3497582,
+     "brand": "CORTECO",
+     "number": "49399007",
+     "tier": 3
+    },
+    {
+     "artId": 1337387,
+     "brand": "DAKAtec",
+     "number": "140020",
+     "tier": 3
+    },
+    {
+     "artId": 6670511,
+     "brand": "DAYCO",
+     "number": "DSS1453",
+     "tier": 3
+    },
+    {
+     "artId": 2188903,
+     "brand": "DYS",
+     "number": "24-00869",
+     "tier": 3
+    },
+    {
+     "artId": 2188904,
+     "brand": "DYS",
+     "number": "24-00869K",
+     "tier": 3
+    },
+    {
+     "artId": 17413529,
+     "brand": "DÜRER",
+     "number": "ROTDIR124",
+     "tier": 3
+    },
+    {
+     "artId": 9200772,
+     "brand": "FAI AutoParts",
+     "number": "SS882",
+     "tier": 3
+    },
+    {
+     "artId": 8738048,
+     "brand": "FARE SA",
+     "number": "RA032",
+     "tier": 3
+    },
+    {
+     "artId": 7156107,
+     "brand": "FIRST LINE",
+     "number": "FTR4993",
+     "tier": 3
+    },
+    {
+     "artId": 7156108,
+     "brand": "FIRST LINE",
+     "number": "FTR4993K",
+     "tier": 3
+    },
+    {
+     "artId": 122690523,
+     "brand": "FLENNOR",
+     "number": "FL0992-C",
+     "tier": 3
+    },
+    {
+     "artId": 6961873,
+     "brand": "FRAP",
+     "number": "F2342",
+     "tier": 3
+    },
+    {
+     "artId": 8924864,
+     "brand": "GSP",
+     "number": "S030229",
+     "tier": 3
+    },
+    {
+     "artId": 3280333,
+     "brand": "HART",
+     "number": "427 084",
+     "tier": 3
+    },
+    {
+     "artId": 35164032,
+     "brand": "IAP QUALITY PARTS",
+     "number": "614-52030",
+     "tier": 3
+    },
+    {
+     "artId": 3228446,
+     "brand": "JP GROUP",
+     "number": "4144500200",
+     "tier": 3
+    },
+    {
+     "artId": 32412009,
+     "brand": "KAVO PARTS",
+     "number": "STR-10165",
+     "tier": 3
+    },
+    {
+     "artId": 7829483,
+     "brand": "KEY PARTS",
+     "number": "KTR4993",
+     "tier": 3
+    },
+    {
+     "artId": 3295292,
+     "brand": "KRAFT AUTOMOTIVE",
+     "number": "4306202",
+     "tier": 3
+    },
+    {
+     "artId": 31062218,
+     "brand": "KYB",
+     "number": "KRE4004",
+     "tier": 3
+    },
+    {
+     "artId": 2317604,
+     "brand": "LEMFÖRDER",
+     "number": "26059 01",
+     "tier": 3
+    },
+    {
+     "artId": 1737213,
+     "brand": "MAPCO",
+     "number": "19379",
+     "tier": 3
+    },
+    {
+     "artId": 4280375,
+     "brand": "MAXGEAR",
+     "number": "69-0211",
+     "tier": 3
+    },
+    {
+     "artId": 7386245,
+     "brand": "MDR",
+     "number": "GSP-S030229",
+     "tier": 3
+    },
+    {
+     "artId": 65735118,
+     "brand": "MEHA AUTOMOTIVE",
+     "number": "MH20325",
+     "tier": 3
+    },
+    {
+     "artId": 7976922,
+     "brand": "MERTZ",
+     "number": "M-S0398",
+     "tier": 3
+    },
+    {
+     "artId": 3726770,
+     "brand": "Metalcaucho",
+     "number": "53052",
+     "tier": 3
+    },
+    {
+     "artId": 3615483,
+     "brand": "METZGER",
+     "number": "51016208",
+     "tier": 3
+    },
+    {
+     "artId": 6647736,
+     "brand": "MGA",
+     "number": "DR5653",
+     "tier": 3
+    },
+    {
+     "artId": 7853971,
+     "brand": "MONROE",
+     "number": "L28210",
+     "tier": 3
+    },
+    {
+     "artId": 8518771,
+     "brand": "MOOG",
+     "number": "PE-AX-0860",
+     "tier": 3
+    },
+    {
+     "artId": 7958017,
+     "brand": "MOTAQUIP",
+     "number": "LVTR995",
+     "tier": 3
+    },
+    {
+     "artId": 1162300,
+     "brand": "MTR",
+     "number": "12162218",
+     "tier": 3
+    },
+    {
+     "artId": 8300650,
+     "brand": "NAPA",
+     "number": "NST6095",
+     "tier": 3
+    },
+    {
+     "artId": 3572682,
+     "brand": "NK",
+     "number": "5033725",
+     "tier": 3
+    },
+    {
+     "artId": 9010195,
+     "brand": "NTY",
+     "number": "SDK-PE-001",
+     "tier": 3
+    },
+    {
+     "artId": 530379,
+     "brand": "OCAP",
+     "number": "0601853",
+     "tier": 3
+    },
+    {
+     "artId": 7167708,
+     "brand": "OMG SRL",
+     "number": "G11.4874",
+     "tier": 3
+    },
+    {
+     "artId": 9204986,
+     "brand": "OPEN PARTS",
+     "number": "SSJ1010.11",
+     "tier": 3
+    },
+    {
+     "artId": 7174155,
+     "brand": "OPTIMAL",
+     "number": "G2-1003",
+     "tier": 3
+    },
+    {
+     "artId": 33104167,
+     "brand": "Oyodo",
+     "number": "30K9123-OYO",
+     "tier": 3
+    },
+    {
+     "artId": 3973350,
+     "brand": "ProfiPower",
+     "number": "5S1024",
+     "tier": 3
+    },
+    {
+     "artId": 2116314,
+     "brand": "PROFIT",
+     "number": "2303-0088",
+     "tier": 3
+    },
+    {
+     "artId": 8685670,
+     "brand": "QUARO",
+     "number": "QS1095/HQ",
+     "tier": 3
+    },
+    {
+     "artId": 8682737,
+     "brand": "QUINTON HAZELL",
+     "number": "QR3275S",
+     "tier": 3
+    },
+    {
+     "artId": 8827859,
+     "brand": "REINHOCH",
+     "number": "RH02-2001",
+     "tier": 3
+    },
+    {
+     "artId": 8827891,
+     "brand": "REINHOCH",
+     "number": "RH02-2033",
+     "tier": 3
+    },
+    {
+     "artId": 5230436,
+     "brand": "RTS",
+     "number": "92-00758",
+     "tier": 3
+    },
+    {
+     "artId": 5232003,
+     "brand": "RTS",
+     "number": "92-90508",
+     "tier": 3
+    },
+    {
+     "artId": 2559540,
+     "brand": "SASIC",
+     "number": "3008159",
+     "tier": 3
+    },
+    {
+     "artId": 4856371,
+     "brand": "Schaeffler FAG",
+     "number": "840 0242 10",
+     "tier": 3
+    },
+    {
+     "artId": 3721258,
+     "brand": "SIDEM",
+     "number": "53011",
+     "tier": 3
+    },
+    {
+     "artId": 9610208,
+     "brand": "SKF",
+     "number": "VKDY 323008",
+     "tier": 3
+    },
+    {
+     "artId": 3613920,
+     "brand": "SPIDAN CHASSIS PARTS",
+     "number": "51003",
+     "tier": 3
+    },
+    {
+     "artId": 2833867,
+     "brand": "STARLINE",
+     "number": "34.47.730",
+     "tier": 3
+    },
+    {
+     "artId": 3794778,
+     "brand": "STELLOX",
+     "number": "55-01821-SX",
+     "tier": 3
+    },
+    {
+     "artId": 3794779,
+     "brand": "STELLOX",
+     "number": "55-01821A-SX",
+     "tier": 3
+    },
+    {
+     "artId": 2373779,
+     "brand": "STORM QUALITY PARTS",
+     "number": "27587",
+     "tier": 3
+    },
+    {
+     "artId": 4117427,
+     "brand": "SWAG",
+     "number": "62 91 9935",
+     "tier": 3
+    },
+    {
+     "artId": 3326961,
+     "brand": "TALOSA",
+     "number": "44-09971",
+     "tier": 3
+    },
+    {
+     "artId": 8363230,
+     "brand": "TEKNOROT",
+     "number": "P-653",
+     "tier": 3
+    },
+    {
+     "artId": 4445564,
+     "brand": "TOPRAN",
+     "number": "720 407",
+     "tier": 3
+    },
+    {
+     "artId": 4898045,
+     "brand": "TRISCAN",
+     "number": "8500 28210",
+     "tier": 3
+    },
+    {
+     "artId": 7654768,
+     "brand": "TRW",
+     "number": "JAR650",
+     "tier": 3
+    },
+    {
+     "artId": 9528360,
+     "brand": "VAICO",
+     "number": "V22-0042",
+     "tier": 3
+    },
+    {
+     "artId": 2117606,
+     "brand": "VEMA",
+     "number": "23043",
+     "tier": 3
+    }
+   ],
+   "articleCount": 90,
+   "applicability": [
+    {
+     "name": "Année à partir de",
+     "values": [
+      "200402",
+      "200506",
+      "200706",
+      "200807",
+      "200601"
+     ]
+    },
+    {
+     "name": "Année jusqu'à",
+     "values": [
+      "200505",
+      "200510",
+      "200612",
+      "200708",
+      "200803",
+      "200807",
+      "200812",
+      "200903",
+      "200907",
+      "201001",
+      "201007",
+      "201009",
+      "201010",
+      "201012",
+      "201101",
+      "201212",
+      "200501",
+      "200507",
+      "200508",
+      "200502",
+      "200709"
+     ]
+    },
+    {
+     "name": "pour numéro OPR jusqu’à",
+     "values": [
+      "10310",
+      "10311"
+     ]
+    }
+   ],
+   "productGroup": {
+    "id": 51,
+    "name": "Rotule de direction intérieure, barre de connexion"
+   }
+  },
+  {
+   "id": "c2",
+   "fingerprint": {
+    "cote_d_assemblage": {
+     "label": "Côté d'assemblage",
+     "value": "Essieu avant"
+    },
+    "largeur": {
+     "label": "Largeur [mm]",
+     "value": "36",
+     "min": 36,
+     "max": 36,
+     "unit": "mm",
+     "info": true
+    },
+    "longeur_rotule": {
+     "label": "Longeur rotule [mm]",
+     "value": "358",
+     "min": 358,
+     "max": 358,
+     "unit": "mm",
+     "info": true
+    }
+   },
+   "oeNumbers": [
+    {
+     "brand": "CITROËN",
+     "number": "3812 E5"
+    },
+    {
+     "brand": "PEUGEOT",
+     "number": "3812 E5"
+    }
+   ],
+   "representative": {
+    "artId": 112767557,
+    "brand": "BOSCH",
+    "number": "0 986 141 133"
+   },
+   "variants": [
+    {
+     "artId": 112767557,
+     "brand": "BOSCH",
+     "number": "0 986 141 133",
+     "tier": 1
+    },
+    {
+     "artId": 9369852,
+     "brand": "DELPHI",
+     "number": "TA2463",
+     "tier": 1
+    },
+    {
+     "artId": 2398178,
+     "brand": "FEBI BILSTEIN",
+     "number": "280477",
+     "tier": 2
+    },
+    {
+     "artId": 2472844,
+     "brand": "FEBI BILSTEIN",
+     "number": "29625",
+     "tier": 2
+    },
+    {
+     "artId": 980874,
+     "brand": "MEYLE",
+     "number": "11-16 031 0019",
+     "tier": 2
+    },
+    {
+     "artId": 2210371,
+     "brand": "A.B.S.",
+     "number": "240500",
+     "tier": 3
+    },
+    {
+     "artId": 5846585,
+     "brand": "A.Z. Meisterteile",
+     "number": "AZMT-42-010-3679",
+     "tier": 3
+    },
+    {
+     "artId": 2597484,
+     "brand": "LEMFÖRDER",
+     "number": "30669 01",
+     "tier": 3
+    },
+    {
+     "artId": 7174339,
+     "brand": "OPTIMAL",
+     "number": "G2-1221",
+     "tier": 3
+    },
+    {
+     "artId": 4117683,
+     "brand": "SWAG",
+     "number": "62 92 9625",
+     "tier": 3
+    },
+    {
+     "artId": 9528490,
+     "brand": "VAICO",
+     "number": "V22-0172",
+     "tier": 3
+    }
+   ],
+   "articleCount": 11,
+   "applicability": [
+    {
+     "name": "Année à partir de",
+     "values": [
+      "200402",
+      "200506",
+      "200706",
+      "200807"
+     ]
+    },
+    {
+     "name": "Année jusqu'à",
+     "values": [
+      "200505",
+      "200510",
+      "200612",
+      "200708",
+      "200803",
+      "200807",
+      "200812",
+      "200903",
+      "200907",
+      "201001",
+      "201007",
+      "201009",
+      "201010",
+      "201012",
+      "201101",
+      "201212"
+     ]
+    },
+    {
+     "name": "pour n° OPR (date de fabrication du véhicule)",
+     "values": [
+      "10311"
+     ]
+    }
+   ],
+   "productGroup": {
+    "id": 51,
+    "name": "Rotule de direction intérieure, barre de connexion"
+   }
+  }
+ ],
+ "totalArticles": 288,
+ "totalBrands": 154,
+ "unclassifiedCount": 187,
+ "differsOn": [
+  {
+   "key": "longeur_rotule",
+   "label": "Longeur rotule [mm]",
+   "values": [
+    {
+     "clusterId": "c1",
+     "label": "Longeur rotule [mm]",
+     "value": "338",
+     "min": 322,
+     "max": 338,
+     "unit": "mm",
+     "info": true
+    },
+    {
+     "clusterId": "c2",
+     "label": "Longeur rotule [mm]",
+     "value": "358",
+     "min": 358,
+     "max": 358,
+     "unit": "mm",
+     "info": true
+    }
+   ]
+  }
+ ],
+ "narrowed": true,
+ "upstreamCalls": 0,
+ "applicabilityScope": "article",
+ "productGroup": {
+  "id": 51,
+  "name": "Rotule de direction intérieure, barre de connexion"
+ },
+ "productGroups": [
+  {
+   "id": 914,
+   "name": "Rotule de barre de connexion",
+   "articleCount": 514
+  },
+  {
+   "id": 51,
+   "name": "Rotule de direction intérieure, barre de connexion",
+   "articleCount": 288
+  },
+  {
+   "id": 2066,
+   "name": "Rotule de direction",
+   "articleCount": 2
+  }
+ ],
+ "groupRequired": false
+}

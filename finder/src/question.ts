@@ -1,4 +1,4 @@
-import { NNBSP, formatValue } from './format';
+import { NNBSP, formatRange, formatValue } from './format';
 import { foldText } from './search';
 import type { Narrowing, QuestionOption } from './types';
 
@@ -50,16 +50,20 @@ export function buildQuestion(n: Narrowing, categoryLabel: string): Question | n
   }
 
   const byValue = new Map<string, string>();
-  for (const { value, clusterId } of divergence.values) {
+  const spans = new Map<string, string>();
+  for (const { value, clusterId, min, max } of divergence.values) {
     const held = byValue.get(value);
-    if (held === undefined || (articles.get(clusterId) ?? 0) > (articles.get(held) ?? 0)) byValue.set(value, clusterId);
+    if (held === undefined || (articles.get(clusterId) ?? 0) > (articles.get(held) ?? 0)) {
+      byValue.set(value, clusterId);
+      spans.set(value, min !== null && max !== null && min !== max ? formatRange(min, max) : formatValue(value));
+    }
   }
   const numeric = divergence.unit !== null;
   const values = [...byValue.keys()].sort((a, b) => (numeric ? Number(a) - Number(b) : a.localeCompare(b, 'fr')));
 
   const prefix = /^diametre/.test(divergence.key) && numeric ? `Ø${NNBSP}` : '';
   const unit = numeric && divergence.unit ? `${NNBSP}${divergence.unit}` : '';
-  const shown = values.map((v) => `${prefix}${formatValue(v)}`);
+  const shown = values.map((v) => `${prefix}${spans.get(v) ?? formatValue(v)}`);
 
   return {
     text: `${divergence.label}${ofNoun(categoryLabel)} : ${joinOu(shown)}${unit} ?`,

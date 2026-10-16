@@ -84,7 +84,8 @@ export interface Divergence {
   key: string;
   label: string;
   unit: string | null;
-  values: { clusterId: string; value: string }[];
+  // min/max: the range the cluster spans when its variants differ (`value` is one of them).
+  values: { clusterId: string; value: string; min: number | null; max: number | null }[];
 }
 
 export interface FallbackBrand {

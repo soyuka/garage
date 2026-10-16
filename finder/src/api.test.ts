@@ -120,8 +120,8 @@ describe('mapNarrowing', () => {
       label: 'Hauteur',
       unit: 'mm',
       values: [
-        { clusterId: 'c1', value: '93' },
-        { clusterId: 'c2', value: '85' },
+        { clusterId: 'c1', value: '93', min: 93, max: 93 },
+        { clusterId: 'c2', value: '85', min: null, max: null },
       ],
     });
   });

@@ -179,7 +179,7 @@ function mapDivergence(raw: unknown): Divergence | null {
   const values = list(j.values).flatMap((v) => {
     const clusterId = str(obj(v).clusterId);
     const value = str(obj(v).value);
-    return clusterId && value ? [{ clusterId, value }] : [];
+    return clusterId && value ? [{ clusterId, value, min: num(obj(v).min), max: num(obj(v).max) }] : [];
   });
   const numeric = values.every((v) => /^-?\d+(\.\d+)?$/.test(v.value));
   return { key, label, unit: numeric ? unit : null, values };

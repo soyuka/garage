@@ -13,7 +13,7 @@ describe('buildQuestion', () => {
       c1,
       { ...c1, id: 'c2', articleCount: 5, representative: { artId: 6926893, brand: 'BOSCH', number: 'F 026 407 085' } },
     ],
-    differsOn: [{ key: 'hauteur', label: 'Hauteur', unit: 'mm', values: [{ clusterId: 'c1', value: '93' }, { clusterId: 'c2', value: '85' }] }],
+    differsOn: [{ key: 'hauteur', label: 'Hauteur', unit: 'mm', values: [{ clusterId: 'c1', value: '93', min: null, max: null }, { clusterId: 'c2', value: '85', min: null, max: null }] }],
   };
 
   it('asks the one discriminating dimension, values ascending, unit factored', () => {
@@ -30,7 +30,7 @@ describe('buildQuestion', () => {
     const q = buildQuestion(
       {
         ...n,
-        differsOn: [{ key: 'diametre', label: 'Diamètre', unit: 'mm', values: [{ clusterId: 'c1', value: '300' }, { clusterId: 'c2', value: '278' }] }],
+        differsOn: [{ key: 'diametre', label: 'Diamètre', unit: 'mm', values: [{ clusterId: 'c1', value: '300', min: null, max: null }, { clusterId: 'c2', value: '278', min: null, max: null }] }],
       },
       'Plaquette de frein',
     );
@@ -43,7 +43,7 @@ describe('buildQuestion', () => {
       {
         ...n,
         clusters: [...n.clusters, { ...n.clusters[1]!, id: 'c3' }],
-        differsOn: [{ key: 'epaisseur', label: 'Épaisseur', unit: 'mm', values: [{ clusterId: 'c1', value: '22' }, { clusterId: 'c2', value: '25' }, { clusterId: 'c3', value: '28' }] }],
+        differsOn: [{ key: 'epaisseur', label: 'Épaisseur', unit: 'mm', values: [{ clusterId: 'c1', value: '22', min: null, max: null }, { clusterId: 'c2', value: '25', min: null, max: null }, { clusterId: 'c3', value: '28', min: null, max: null }] }],
       },
       'Étrier de frein',
     );
@@ -55,7 +55,7 @@ describe('buildQuestion', () => {
       {
         ...n,
         clusters: [...n.clusters, { ...n.clusters[1]!, id: 'c3', articleCount: 50 }],
-        differsOn: [{ key: 'hauteur', label: 'Hauteur', unit: 'mm', values: [{ clusterId: 'c1', value: '93' }, { clusterId: 'c2', value: '85' }, { clusterId: 'c3', value: '85' }] }],
+        differsOn: [{ key: 'hauteur', label: 'Hauteur', unit: 'mm', values: [{ clusterId: 'c1', value: '93', min: null, max: null }, { clusterId: 'c2', value: '85', min: null, max: null }, { clusterId: 'c3', value: '85', min: null, max: null }] }],
       },
       'Filtre à huile',
     );
@@ -101,5 +101,14 @@ describe('askChoices', () => {
 
   it('offers the plate even when the agent gave no option', () => {
     expect(askChoices([])).toEqual([{ kind: 'plate', label: 'Donner la plaque' }]);
+  });
+});
+
+describe('buildQuestion on the 307 axial joints', () => {
+  it('prints each answer as the range its part spans, never a picked value', async () => {
+    const axial = (await import('../test-fixtures/narrowed-307-axial.json')).default;
+    const q = buildQuestion(mapNarrowing(axial), 'Rotule de direction intérieure');
+    expect(q?.answers.map((a) => a.label)).toEqual([`322–338${NNBSP}mm`, `358${NNBSP}mm`]);
+    expect(q?.text).toContain(`322–338 ou 358${NNBSP}mm`);
   });
 });
