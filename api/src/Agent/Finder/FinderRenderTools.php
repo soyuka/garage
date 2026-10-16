@@ -108,13 +108,30 @@ final class FinderRenderTools
                 'representative' => $c['representative']['brand'].' '.$c['representative']['number'],
                 'oe' => array_map(static fn (array $r): string => $r['brand'].' '.$r['number'], \array_slice($c['oeNumbers'], 0, 2)),
             ] + ($several ? ['applicability' => self::applicabilityLine($c['applicability'] ?? [])] : []), $narrowed['clusters']),
-            'differsOn' => array_column($narrowed['differsOn'], 'label'),
+            'differsOn' => array_map(self::differsLine(...), $narrowed['differsOn']),
         ];
         if ($several) {
             $summary['applicabilityCaveat'] = self::APPLICABILITY_CAVEAT;
         }
 
         return $summary;
+    }
+
+    /**
+     * @param array{label: string, values: list<array<string, mixed>>} $divergence
+     */
+    private static function differsLine(array $divergence): string
+    {
+        $values = array_map(static function (array $v): string {
+            if (!isset($v['min'], $v['max'])) {
+                return $v['clusterId'].' '.$v['value'];
+            }
+            $range = $v['min'] == $v['max'] ? (string) $v['min'] : $v['min'].'–'.$v['max'];
+
+            return $v['clusterId'].' '.$range.(null === $v['unit'] ? '' : ' '.$v['unit']);
+        }, $divergence['values']);
+
+        return $divergence['label'].' : '.implode(', ', $values);
     }
 
     /**

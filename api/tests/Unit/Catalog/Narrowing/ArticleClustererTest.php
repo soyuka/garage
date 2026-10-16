@@ -77,6 +77,39 @@ final class ArticleClustererTest extends TestCase
         $this->assertSame([], (new ArticleClusterer())->differsOn($clusters));
     }
 
+    public function testClustersAlreadyApartAlsoReportTheMillimetreInfoMeasuresTheyDisagreeOn(): void
+    {
+        $short = self::representative(1, 'ACME', 'A1', 1000, [
+            new ArticleCriterion('Hauteur [mm]', '93'),
+            new ArticleCriterion('Longueur [mm]', '340'),
+            new ArticleCriterion('Largeur [mm]', '36'),
+            new ArticleCriterion('Poids [kg]', '0,55'),
+            new ArticleCriterion("Longueur de l'emballage [mm]", '80'),
+        ]);
+        $long = self::representative(2, 'ACME', 'A2', 1001, [
+            new ArticleCriterion('Hauteur [mm]', '120'),
+            new ArticleCriterion('Longueur [mm]', '359'),
+            new ArticleCriterion('Largeur [mm]', '37'),
+            new ArticleCriterion('Poids [kg]', '0,61'),
+            new ArticleCriterion("Longueur de l'emballage [mm]", '95'),
+        ]);
+
+        $clusters = (new ArticleClusterer())->cluster([$short, $long]);
+        $differs = (new ArticleClusterer())->differsOn($clusters);
+
+        $this->assertCount(2, $clusters);
+        $this->assertSame(['hauteur', 'longueur'], array_column($differs, 'key'));
+        $this->assertSame([$clusters[0]->id => '340', $clusters[1]->id => '359'], array_column($differs[1]['values'], 'value', 'clusterId'));
+    }
+
+    public function testAnInfoMeasureNeverSplits(): void
+    {
+        $short = self::representative(1, 'ACME', 'A1', 1000, [new ArticleCriterion('Hauteur [mm]', '93'), new ArticleCriterion('Longueur [mm]', '340')]);
+        $long = self::representative(2, 'ACME', 'A2', 1001, [new ArticleCriterion('Hauteur [mm]', '93'), new ArticleCriterion('Longueur [mm]', '359')]);
+
+        $this->assertCount(1, (new ArticleClusterer())->cluster([$short, $long]));
+    }
+
     public function testClusterFingerprintReportsTheRangeOfItsMembers(): void
     {
         $a = self::representative(1, 'ACME', 'A1', 1000, [new ArticleCriterion('Hauteur [mm]', '93')]);

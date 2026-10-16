@@ -43,6 +43,10 @@ final class ArticleClusterer
     }
 
     /**
+     * The splitting criteria the clusters disagree on, then the millimetre info measures (never splitting,
+     * suppliers disagree on them) that still tell clusters apart once something else split them: the 307
+     * axial joints split on carmaker OE alone and differ by 20 mm in length.
+     *
      * @param list<Cluster> $clusters
      *
      * @return list<array{key: string, label: string, values: list<array<string, mixed>>}>
@@ -53,7 +57,7 @@ final class ArticleClusterer
         $byKey = [];
         foreach ($clusters as $cluster) {
             foreach ($cluster->merged()->entries as $key => $entry) {
-                if ($entry->info) {
+                if ($entry->info && ('mm' !== $entry->unit || str_contains($key, 'emballage'))) {
                     continue;
                 }
                 $byKey[$key][] = ['cluster' => $cluster, 'entry' => $entry];
@@ -85,6 +89,8 @@ final class ArticleClusterer
                 ),
             ];
         }
+
+        usort($differs, static fn (array $a, array $b): int => ($a['values'][0]['info'] ?? false) <=> ($b['values'][0]['info'] ?? false));
 
         return $differs;
     }

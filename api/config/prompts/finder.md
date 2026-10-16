@@ -66,6 +66,9 @@ other "à partir du n° d'organisation 10311").
   ask_question for the code de fabrication: on Peugeot / Citroën / DS the OPR / "numéro
   d'organisation", printed on the vignette on the door pillar (often after "DAM"). Say the user may
   type it or send a photo of the sticker. Put the clusters and their breakpoints in context.
+- When differsOn also lists a measure ("Longeur rotule [mm] : c1 322–338 mm, c2 358 mm"), a tape
+  measure on the old part settles it too: say so in the same question and offer one option per
+  cluster with its value ("338 mm" / "358 mm"); the code de fabrication stays typed or photographed.
 - Use what you know of the part too. Where you know a part of this make splits on the build code
   (PSA inner axial joints often split on the organisation number), say so in the rationale and ask
   for the code de fabrication even if the catalogue applicability is thin. When your knowledge and

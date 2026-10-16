@@ -318,6 +318,19 @@ final class ArticleNarrowerTest extends TestCase
         $this->assertSame(3, $counts['getArticleCrosses']);
     }
 
+    public function testClustersAlreadyApartListTheLengthThatTellsThemApart(): void
+    {
+        // Split by disjoint PEUGEOT OE only; the joint length (BOSCH spells it « Longeur rotule ») still tells them apart
+        // with a tape measure: 322–338 mm (DELPHI states 322 there) against 358 mm.
+        $result = $this->narrowRotules(productGroupId: 51);
+
+        $this->assertCount(2, $result->clusters);
+        $this->assertSame(['longeur_rotule'], array_column($result->differsOn, 'key'));
+        $byCluster = array_column($result->differsOn[0]['values'], null, 'clusterId');
+        $this->assertSame([322.0, 338.0], [$byCluster['c1']['min'], $byCluster['c1']['max']]);
+        $this->assertSame([358.0, 358.0], [$byCluster['c2']['min'], $byCluster['c2']['max']]);
+    }
+
     public function testAVariantsAlreadyCachedCriteriaJoinItsClustersApplicabilityForFree(): void
     {
         $this->warmCriteria(2472844);
