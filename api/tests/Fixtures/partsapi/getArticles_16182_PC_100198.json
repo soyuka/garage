@@ -1,0 +1,690 @@
+[
+    {
+        "ART_ARTICLE_NR": "34090",
+        "ART_ID": 2841562,
+        "ART_SUP_BRAND": "3RG",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4598
+    },
+    {
+        "ART_ARTICLE_NR": "32200",
+        "ART_ID": 2730803,
+        "ART_SUP_BRAND": "3RG",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4598
+    },
+    {
+        "ART_ARTICLE_NR": "32201",
+        "ART_ID": 2730957,
+        "ART_SUP_BRAND": "3RG",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4598
+    },
+    {
+        "ART_ARTICLE_NR": "32202",
+        "ART_ID": 2731073,
+        "ART_SUP_BRAND": "3RG",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4598
+    },
+    {
+        "ART_ARTICLE_NR": "PU-E-26893",
+        "ART_ID": 127409415,
+        "ART_SUP_BRAND": "4u",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4987
+    },
+    {
+        "ART_ARTICLE_NR": "CI-E-58124",
+        "ART_ID": 122429239,
+        "ART_SUP_BRAND": "4u",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4987
+    },
+    {
+        "ART_ARTICLE_NR": "PU-A-57073",
+        "ART_ID": 114428268,
+        "ART_SUP_BRAND": "4u",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4987
+    },
+    {
+        "ART_ARTICLE_NR": "PU-A-57072",
+        "ART_ID": 124295349,
+        "ART_SUP_BRAND": "4u",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4987
+    },
+    {
+        "ART_ARTICLE_NR": "PU-A-30054",
+        "ART_ID": 128492380,
+        "ART_SUP_BRAND": "4u",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4987
+    },
+    {
+        "ART_ARTICLE_NR": "CI-A-57072",
+        "ART_ID": 117280067,
+        "ART_SUP_BRAND": "4u",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4987
+    },
+    {
+        "ART_ARTICLE_NR": "A30054",
+        "ART_ID": 5499540,
+        "ART_SUP_BRAND": "4U Autoparts",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4420
+    },
+    {
+        "ART_ARTICLE_NR": "A57073",
+        "ART_ID": 5519581,
+        "ART_SUP_BRAND": "4U Autoparts",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4420
+    },
+    {
+        "ART_ARTICLE_NR": "240500",
+        "ART_ID": 2210371,
+        "ART_SUP_BRAND": "A.B.S.",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 206
+    },
+    {
+        "ART_ARTICLE_NR": "240350",
+        "ART_ID": 2209538,
+        "ART_SUP_BRAND": "A.B.S.",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 206
+    },
+    {
+        "ART_ARTICLE_NR": "230044",
+        "ART_ID": 2113741,
+        "ART_SUP_BRAND": "A.B.S.",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 206
+    },
+    {
+        "ART_ARTICLE_NR": "230045",
+        "ART_ID": 2113746,
+        "ART_SUP_BRAND": "A.B.S.",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 206
+    },
+    {
+        "ART_ARTICLE_NR": "AZMT-42-010-3679",
+        "ART_ID": 5846585,
+        "ART_SUP_BRAND": "A.Z. Meisterteile",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 5275
+    },
+    {
+        "ART_ARTICLE_NR": "AZMT-42-010-2593",
+        "ART_ID": 5846172,
+        "ART_SUP_BRAND": "A.Z. Meisterteile",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 5275
+    },
+    {
+        "ART_ARTICLE_NR": "AZMT-42-010-2316",
+        "ART_ID": 5846039,
+        "ART_SUP_BRAND": "A.Z. Meisterteile",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 5275
+    },
+    {
+        "ART_ARTICLE_NR": "AZMT-42-010-3154",
+        "ART_ID": 5846436,
+        "ART_SUP_BRAND": "A.Z. Meisterteile",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 5275
+    },
+    {
+        "ART_ARTICLE_NR": "AZMT-42-010-1368",
+        "ART_ID": 5845602,
+        "ART_SUP_BRAND": "A.Z. Meisterteile",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 5275
+    },
+    {
+        "ART_ARTICLE_NR": "233-08-004",
+        "ART_ID": 31886938,
+        "ART_SUP_BRAND": "ABAKUS",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4657
+    },
+    {
+        "ART_ARTICLE_NR": "233-08-018",
+        "ART_ID": 26525838,
+        "ART_SUP_BRAND": "ABAKUS",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4657
+    },
+    {
+        "ART_ARTICLE_NR": "0 986 141 079",
+        "ART_ID": 112767504,
+        "ART_SUP_BRAND": "BOSCH",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 30
+    },
+    {
+        "ART_ARTICLE_NR": "0 986 141 133",
+        "ART_ID": 112767557,
+        "ART_SUP_BRAND": "BOSCH",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 30
+    },
+    {
+        "ART_ARTICLE_NR": "0 986 140 430",
+        "ART_ID": 112766877,
+        "ART_SUP_BRAND": "BOSCH",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 30
+    },
+    {
+        "ART_ARTICLE_NR": "0 986 140 452",
+        "ART_ID": 112766899,
+        "ART_SUP_BRAND": "BOSCH",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 30
+    },
+    {
+        "ART_ARTICLE_NR": "0 986 140 451",
+        "ART_ID": 112766898,
+        "ART_SUP_BRAND": "BOSCH",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 30
+    },
+    {
+        "ART_ARTICLE_NR": "CTR3030",
+        "ART_ID": 6448737,
+        "ART_SUP_BRAND": "COMLINE",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 421
+    },
+    {
+        "ART_ARTICLE_NR": "CTR2003",
+        "ART_ID": 6448590,
+        "ART_SUP_BRAND": "COMLINE",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 421
+    },
+    {
+        "ART_ARTICLE_NR": "CTR1003",
+        "ART_ID": 6448472,
+        "ART_SUP_BRAND": "COMLINE",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 421
+    },
+    {
+        "ART_ARTICLE_NR": "TA2463",
+        "ART_ID": 9369852,
+        "ART_SUP_BRAND": "DELPHI",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 89
+    },
+    {
+        "ART_ARTICLE_NR": "TA1776",
+        "ART_ID": 9368553,
+        "ART_SUP_BRAND": "DELPHI",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 89
+    },
+    {
+        "ART_ARTICLE_NR": "TA1155",
+        "ART_ID": 9367471,
+        "ART_SUP_BRAND": "DELPHI",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 89
+    },
+    {
+        "ART_ARTICLE_NR": "TA1154",
+        "ART_ID": 9367469,
+        "ART_SUP_BRAND": "DELPHI",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 89
+    },
+    {
+        "ART_ARTICLE_NR": "D180227",
+        "ART_ID": 6488494,
+        "ART_SUP_BRAND": "DENCKERMANN",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 186
+    },
+    {
+        "ART_ARTICLE_NR": "D180243",
+        "ART_ID": 6488508,
+        "ART_SUP_BRAND": "DENCKERMANN",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 186
+    },
+    {
+        "ART_ARTICLE_NR": "D130026",
+        "ART_ID": 6484930,
+        "ART_SUP_BRAND": "DENCKERMANN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 186
+    },
+    {
+        "ART_ARTICLE_NR": "D130028",
+        "ART_ID": 6484932,
+        "ART_SUP_BRAND": "DENCKERMANN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 186
+    },
+    {
+        "ART_ARTICLE_NR": "D130001",
+        "ART_ID": 6484905,
+        "ART_SUP_BRAND": "DENCKERMANN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 186
+    },
+    {
+        "ART_ARTICLE_NR": "19935",
+        "ART_ID": 1757415,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "29625",
+        "ART_ID": 2472844,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "280476",
+        "ART_ID": 2398176,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "280477",
+        "ART_ID": 2398178,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "280450",
+        "ART_ID": 2398066,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "280466",
+        "ART_ID": 2398127,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "10659",
+        "ART_ID": 930185,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "10660",
+        "ART_ID": 930279,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "09317",
+        "ART_ID": 683175,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "280449",
+        "ART_ID": 2398051,
+        "ART_SUP_BRAND": "FEBI BILSTEIN",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 101
+    },
+    {
+        "ART_ARTICLE_NR": "GSP101048",
+        "ART_ID": 122888551,
+        "ART_SUP_BRAND": "G.U.D.",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4844
+    },
+    {
+        "ART_ARTICLE_NR": "GSP101024",
+        "ART_ID": 127967935,
+        "ART_SUP_BRAND": "G.U.D.",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 4844
+    },
+    {
+        "ART_ARTICLE_NR": "GSP201124",
+        "ART_ID": 125442497,
+        "ART_SUP_BRAND": "G.U.D.",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4844
+    },
+    {
+        "ART_ARTICLE_NR": "GSP201125",
+        "ART_ID": 128228480,
+        "ART_SUP_BRAND": "G.U.D.",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4844
+    },
+    {
+        "ART_ARTICLE_NR": "GSP201073",
+        "ART_ID": 115904774,
+        "ART_SUP_BRAND": "G.U.D.",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 4844
+    },
+    {
+        "ART_ARTICLE_NR": "J4840856",
+        "ART_ID": 95995539,
+        "ART_SUP_BRAND": "HERTH+BUSS JAKOPARTS",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 55
+    },
+    {
+        "ART_ARTICLE_NR": "J4830853",
+        "ART_ID": 26721032,
+        "ART_SUP_BRAND": "HERTH+BUSS JAKOPARTS",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 55
+    },
+    {
+        "ART_ARTICLE_NR": "J4820853",
+        "ART_ID": 21791840,
+        "ART_SUP_BRAND": "HERTH+BUSS JAKOPARTS",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 55
+    },
+    {
+        "ART_ARTICLE_NR": "9020128",
+        "ART_ID": 5170807,
+        "ART_SUP_BRAND": "KAMOKA",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 185
+    },
+    {
+        "ART_ARTICLE_NR": "9020122",
+        "ART_ID": 5170801,
+        "ART_SUP_BRAND": "KAMOKA",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 185
+    },
+    {
+        "ART_ARTICLE_NR": "9010214",
+        "ART_ID": 5160134,
+        "ART_SUP_BRAND": "KAMOKA",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 185
+    },
+    {
+        "ART_ARTICLE_NR": "9010224",
+        "ART_ID": 5160150,
+        "ART_SUP_BRAND": "KAMOKA",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 185
+    },
+    {
+        "ART_ARTICLE_NR": "9010223",
+        "ART_ID": 5160149,
+        "ART_SUP_BRAND": "KAMOKA",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 185
+    },
+    {
+        "ART_ARTICLE_NR": "301191603680",
+        "ART_ID": 2564687,
+        "ART_SUP_BRAND": "MAGNETI MARELLI",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 95
+    },
+    {
+        "ART_ARTICLE_NR": "301191603690",
+        "ART_ID": 2564688,
+        "ART_SUP_BRAND": "MAGNETI MARELLI",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 95
+    },
+    {
+        "ART_ARTICLE_NR": "26059-SET-MS",
+        "ART_ID": 2317606,
+        "ART_SUP_BRAND": "MASTER-SPORT GERMANY",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 358
+    },
+    {
+        "ART_ARTICLE_NR": "30669-PCS-MS",
+        "ART_ID": 2597485,
+        "ART_SUP_BRAND": "MASTER-SPORT GERMANY",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 358
+    },
+    {
+        "ART_ARTICLE_NR": "14800-SET-MS",
+        "ART_ID": 1377459,
+        "ART_SUP_BRAND": "MASTER-SPORT GERMANY",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 358
+    },
+    {
+        "ART_ARTICLE_NR": "14799-SET-MS",
+        "ART_ID": 1377031,
+        "ART_SUP_BRAND": "MASTER-SPORT GERMANY",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 358
+    },
+    {
+        "ART_ARTICLE_NR": "12070-SET-MS",
+        "ART_ID": 1144181,
+        "ART_SUP_BRAND": "MASTER-SPORT GERMANY",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 358
+    },
+    {
+        "ART_ARTICLE_NR": "11-16 031 0019",
+        "ART_ID": 980874,
+        "ART_SUP_BRAND": "MEYLE",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 144
+    },
+    {
+        "ART_ARTICLE_NR": "11-16 031 0015",
+        "ART_ID": 980872,
+        "ART_SUP_BRAND": "MEYLE",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 144
+    },
+    {
+        "ART_ARTICLE_NR": "11-16 020 5703/HD",
+        "ART_ID": 980853,
+        "ART_SUP_BRAND": "MEYLE",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 144
+    },
+    {
+        "ART_ARTICLE_NR": "40-16 020 5724/HD",
+        "ART_ID": 3084445,
+        "ART_SUP_BRAND": "MEYLE",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 144
+    },
+    {
+        "ART_ARTICLE_NR": "40-16 020 5723/HD",
+        "ART_ID": 3084444,
+        "ART_SUP_BRAND": "MEYLE",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 144
+    },
+    {
+        "ART_ARTICLE_NR": "P410A03",
+        "ART_ID": 8398002,
+        "ART_SUP_BRAND": "NPS",
+        "PRODUCT GROUP": "Rotule de direction",
+        "PT_ID": 2066,
+        "SUP_ID": 440
+    },
+    {
+        "ART_ARTICLE_NR": "P410A02",
+        "ART_ID": 8398001,
+        "ART_SUP_BRAND": "NPS",
+        "PRODUCT GROUP": "Rotule de direction",
+        "PT_ID": 2066,
+        "SUP_ID": 440
+    },
+    {
+        "ART_ARTICLE_NR": "51T0013",
+        "ART_ID": 3670490,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "51T0013P",
+        "ART_ID": 129150966,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "51T0026",
+        "ART_ID": 3670503,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de direction intérieure, barre de connexion",
+        "PT_ID": 51,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "914T0004",
+        "ART_ID": 5220071,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "914T0013P",
+        "ART_ID": 57887524,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "914T0004P",
+        "ART_ID": 54889840,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "914T0012",
+        "ART_ID": 5220079,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "914T0013",
+        "ART_ID": 5220080,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 6358
+    },
+    {
+        "ART_ARTICLE_NR": "914T0012P",
+        "ART_ID": 48240582,
+        "ART_SUP_BRAND": "RIDEX",
+        "PRODUCT GROUP": "Rotule de barre de connexion",
+        "PT_ID": 914,
+        "SUP_ID": 6358
+    }
+]

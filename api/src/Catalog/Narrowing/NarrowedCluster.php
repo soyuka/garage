@@ -12,6 +12,7 @@ final readonly class NarrowedCluster
      * @param array{artId: int, brand: string, number: string} $representative
      * @param list<array{artId: int, brand: string, number: string, tier: int}>   $variants       tier-ranked
      * @param list<array{name: string, values: list<string>}>                   $applicability  per-article breakpoints, see {@see Applicability}
+     * @param array{id: int, name: string}|null                                 $productGroup
      */
     public function __construct(
         public string $id,
@@ -21,6 +22,7 @@ final readonly class NarrowedCluster
         public array $variants,
         public int $articleCount,
         public array $applicability = [],
+        public ?array $productGroup = null,
     ) {
     }
 

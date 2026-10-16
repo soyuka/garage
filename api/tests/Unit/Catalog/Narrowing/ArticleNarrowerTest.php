@@ -26,12 +26,16 @@ final class ArticleNarrowerTest extends TestCase
     /** @var list<string> */
     private array $failing = [];
 
+    /** @var list<int> */
+    private array $requestedArtIds = [];
+
     private ArrayAdapter $cache;
 
     protected function setUp(): void
     {
         $this->requested = [];
         $this->failing = [];
+        $this->requestedArtIds = [];
         $this->cache = new ArrayAdapter();
     }
 
@@ -220,27 +224,100 @@ final class ArticleNarrowerTest extends TestCase
         $data = $this->narrow()->toArray();
 
         $this->assertEqualsCanonicalizing(
-            ['clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'upstreamCalls', 'fallbackBrands', 'applicabilityScope'],
+            ['clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'upstreamCalls', 'fallbackBrands', 'applicabilityScope', 'productGroup', 'productGroups', 'groupRequired'],
             array_keys($data),
         );
         $this->assertSame('article', $data['applicabilityScope']);
         $this->assertEqualsCanonicalizing(
-            ['id', 'fingerprint', 'oeNumbers', 'representative', 'variants', 'articleCount', 'applicability'],
+            ['id', 'fingerprint', 'oeNumbers', 'representative', 'variants', 'articleCount', 'applicability', 'productGroup'],
             array_keys($data['clusters'][0]),
         );
         $this->assertEqualsCanonicalizing(['artId', 'brand', 'number'], array_keys($data['clusters'][0]['representative']));
         $this->assertEqualsCanonicalizing(['artId', 'brand', 'number', 'tier'], array_keys($data['clusters'][0]['variants'][0]));
     }
 
+    public function testACategoryMixingProductGroupsListsThemWithoutSpendingArticleCalls(): void
+    {
+        $result = $this->narrowRotules();
+
+        $this->assertTrue($result->groupRequired);
+        $this->assertNull($result->productGroup);
+        $this->assertSame([], $result->clusters);
+        $this->assertSame([], $result->differsOn);
+        $this->assertSame(86, $result->totalArticles);
+        $this->assertSame([
+            ['id' => 914, 'name' => 'Rotule de barre de connexion', 'articleCount' => 52],
+            ['id' => 51, 'name' => 'Rotule de direction intérieure, barre de connexion', 'articleCount' => 32],
+            ['id' => 2066, 'name' => 'Rotule de direction', 'articleCount' => 2],
+        ], $result->productGroups);
+        $this->assertSame(['getArticles'], $this->requested);
+        $this->assertSame(1, $result->upstreamCalls);
+    }
+
+    public function testNarrowsInsideTheChosenProductGroupOnly(): void
+    {
+        $result = $this->narrowRotules(productGroupId: 51);
+
+        $this->assertFalse($result->groupRequired);
+        $this->assertSame(['id' => 51, 'name' => 'Rotule de direction intérieure, barre de connexion'], $result->productGroup);
+        $this->assertSame(32, $result->totalArticles);
+        $this->assertCount(3, $result->productGroups);
+
+        $inner = $this->articleIdsOfGroup(51);
+        $this->assertNotSame([], $this->requestedArtIds);
+        $this->assertSame([], array_values(array_diff($this->requestedArtIds, $inner)));
+        $this->assertContains(1757415, $this->requestedArtIds);
+    }
+
+    public function testAProductGroupTheCategoryDoesNotHoldYieldsNoArticle(): void
+    {
+        $result = $this->narrowRotules(productGroupId: 7);
+
+        $this->assertFalse($result->groupRequired);
+        $this->assertNull($result->productGroup);
+        $this->assertSame(0, $result->totalArticles);
+        $this->assertSame([], $result->clusters);
+        $this->assertCount(3, $result->productGroups);
+        $this->assertSame(['getArticles'], $this->requested);
+    }
+
+    public function testASingleGroupCategoryNarrowsWithoutBeingGivenTheGroup(): void
+    {
+        $result = $this->narrow();
+
+        $this->assertFalse($result->groupRequired);
+        $this->assertSame(['id' => 7, 'name' => 'Oil Filter'], $result->productGroup);
+        $this->assertSame([['id' => 7, 'name' => 'Oil Filter', 'articleCount' => 220]], $result->productGroups);
+        $this->assertSame(['id' => 7, 'name' => 'Oil Filter'], $result->clusters[0]->productGroup);
+    }
+
+    private function narrowRotules(?int $productGroupId = null): NarrowingResult
+    {
+        return $this->narrow(makes: [['makeId' => 88, 'makeName' => 'PEUGEOT'], ['makeId' => 35, 'makeName' => 'CITROËN']], make: 'PEUGEOT', carId: 16182, categoryId: 100198, productGroupId: $productGroupId);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function articleIdsOfGroup(int $productTypeId): array
+    {
+        $rows = json_decode(self::fixture('getArticles_16182_PC_100198.json'), true);
+
+        return array_values(array_map(static fn (array $r): int => $r['ART_ID'], array_filter($rows, static fn (array $r): bool => $productTypeId === $r['PT_ID'])));
+    }
+
     /**
      * @param list<array{makeId: int, makeName: string}> $makes
      */
-    private function narrow(array $makes = [['makeId' => 1, 'makeName' => 'FORD'], ['makeId' => 2, 'makeName' => 'VOLVO']], ?string $make = 'MAZDA'): NarrowingResult
+    private function narrow(array $makes = [['makeId' => 1, 'makeName' => 'FORD'], ['makeId' => 2, 'makeName' => 'VOLVO']], ?string $make = 'MAZDA', int $carId = self::CAR_ID, int $categoryId = self::CATEGORY_ID, ?int $productGroupId = null): NarrowingResult
     {
         $http = new MockHttpClient(function (string $method, string $url) use ($makes): MockResponse {
             parse_str((string) parse_url($url, \PHP_URL_QUERY), $query);
             $name = (string) $query['method'];
             $this->requested[] = $name;
+            if (isset($query['ART_ID'])) {
+                $this->requestedArtIds[] = (int) $query['ART_ID'];
+            }
 
             if (\in_array($name, $this->failing, true)) {
                 return new MockResponse((string) json_encode(['error_code' => 5005, 'message' => 'Quota exceeded', 'status' => 500]), ['http_code' => 500]);
@@ -258,7 +335,7 @@ final class ArticleNarrowerTest extends TestCase
         $client = new PartsApiClient($http, array_fill_keys(['getMakes', 'getArticles', 'getArticleCriteria', 'getArticleCrosses'], 'test-key'), $this->cache);
         $narrower = new ArticleNarrower(new PartsCatalog($client, 6));
 
-        return $narrower->narrow(self::CAR_ID, CarType::PassengerCar, self::CATEGORY_ID, $make);
+        return $narrower->narrow($carId, CarType::PassengerCar, $categoryId, $make, $productGroupId);
     }
 
     private static function fixture(string $file): string

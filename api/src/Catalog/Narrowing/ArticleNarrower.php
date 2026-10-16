@@ -35,10 +35,35 @@ final class ArticleNarrower
     ) {
     }
 
-    public function narrow(int $carId, CarType $carType, int $categoryId, ?string $make = null): NarrowingResult
+    public function narrow(int $carId, CarType $carType, int $categoryId, ?string $make = null, ?int $productGroupId = null): NarrowingResult
     {
         $callsBefore = $this->catalog->upstreamCalls();
         $articles = $this->catalog->articles($carId, $categoryId, $carType);
+        $productGroups = self::productGroups($articles);
+
+        if (null === $productGroupId && \count($productGroups) > 1) {
+            return new NarrowingResult(
+                clusters: [],
+                totalArticles: \count($articles),
+                totalBrands: self::countBrands($articles),
+                unclassifiedCount: \count($articles),
+                differsOn: [],
+                narrowed: false,
+                degradedReason: null,
+                upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
+                productGroups: $productGroups,
+                groupRequired: true,
+            );
+        }
+
+        $productGroupId ??= $productGroups[0]['id'] ?? null;
+        $productGroup = null;
+        foreach ($productGroups as $group) {
+            if ($group['id'] === $productGroupId) {
+                $productGroup = ['id' => $group['id'], 'name' => $group['name']];
+            }
+        }
+        $articles = null === $productGroup ? [] : array_values(array_filter($articles, static fn (Article $a): bool => $a->productTypeId === $productGroup['id']));
         $degraded = [];
 
         $representatives = $this->fingerprint($this->pickRepresentatives($articles), $degraded);
@@ -57,6 +82,8 @@ final class ArticleNarrower
                 degradedReason: implode('; ', $degraded),
                 upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
                 fallbackBrands: ArticleGroup::of($categoryId, $articles)['brands'],
+                productGroup: $productGroup,
+                productGroups: $productGroups,
             );
         }
 
@@ -78,6 +105,7 @@ final class ArticleNarrower
                 variants: $variants[$cluster->id],
                 articleCount: \count($variants[$cluster->id]),
                 applicability: Applicability::union(array_map(static fn (Representative $m): array => $m->applicability, $cluster->members)),
+                productGroup: $productGroup,
             );
         }
 
@@ -90,7 +118,30 @@ final class ArticleNarrower
             narrowed: [] === $degraded,
             degradedReason: [] === $degraded ? null : implode('; ', $degraded),
             upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
+            productGroup: $productGroup,
+            productGroups: $productGroups,
         );
+    }
+
+    /**
+     * A category node can hold several TecDoc product groups (generic articles): "Direction > Rotules"
+     * mixes outer tie rod ends with inner axial joints. They are different parts, never one choice.
+     *
+     * @param list<Article> $articles
+     *
+     * @return list<array{id: int, name: string, articleCount: int}> most articles first
+     */
+    private static function productGroups(array $articles): array
+    {
+        $groups = [];
+        foreach ($articles as $article) {
+            $groups[$article->productTypeId] ??= ['id' => $article->productTypeId, 'name' => $article->productGroup, 'articleCount' => 0];
+            ++$groups[$article->productTypeId]['articleCount'];
+        }
+        $groups = array_values($groups);
+        usort($groups, static fn (array $a, array $b): int => $b['articleCount'] <=> $a['articleCount'] ?: $a['id'] <=> $b['id']);
+
+        return $groups;
     }
 
     /**
