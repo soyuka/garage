@@ -99,7 +99,7 @@ export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /maitre-cylindre de frein|servofrein/, mesh: 'brake-master-booster' },
 
   { leaf: /rotules?\/ ?jeu|^tripode|^soufflet$/, within: /entrainement des roues/, mesh: 'axles' },
-  { leaf: /rotule axiale|rotule de direction interieure/, mesh: null },
+  { leaf: /rotule axiale|rotule de direction interieure/, mesh: 'axial-joint' },
   { leaf: /rotule de suspension|rotule de bras/, mesh: 'outer-tie-rod-end' },
   { leaf: /barre de connexion|barre d'accouplement|biellette de direction/, mesh: 'outer-tie-rod-end' },
   { leaf: /rotule/, within: /direction/, mesh: 'outer-tie-rod-end', approximate: false },
@@ -194,10 +194,10 @@ export const MESH_RULES: readonly MeshRule[] = [
 
 // TecDoc product group (generic article) → mesh, read before the category node: one node can hold several
 // groups that are different parts ("Direction > Rotules" holds outer tie rod ends and inner axial joints).
-// An inner axial joint has no mesh of its own: the outer tie rod end would mislead, so it shows its photo.
+// An inner axial joint draws its own mesh, never the outer tie rod end.
 // « Rotule de direction » (PT 2066, 2 unchecked articles on the 307) is not confirmed as either: photo too.
 export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null; approximate?: boolean }[] = [
-  { group: /rotule de direction interieure|rotule axiale/, mesh: null },
+  { group: /rotule de direction interieure|rotule axiale/, mesh: 'axial-joint' },
   { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
   { group: /^rotule de direction$/, mesh: null },
   { group: /^poulie, vilebrequin/, mesh: 'crankshaft-pulley-damper' },

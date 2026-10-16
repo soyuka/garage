@@ -23,7 +23,9 @@ Shipped, end to end:
   restored route without `/g/` on a mixed category shows "Relancer la recherche" (original input to
   the agent). Routes: `p/<plate>/c/<cat>/g/<pt>`, `k/<carId>-<type>/c/<cat>/g/<pt>` (old ones valid).
   Meshes read the product group first; an inner axial joint gets the catalogue photo (no inner
-  tie rod mesh ships), and so does PT 2066 « Rotule de direction » (2 unchecked articles: an
+  tie rod mesh ships; *corrected 2026-10-16*: it is now drawn as `axial-joint`, owned build123d; PT 2066
+  stays photo pending confirmation, NPS P410A02/03 and the NPS 410A series are inner tie rods per autodoc,
+  unconfirmed), and so does PT 2066 « Rotule de direction » (2 unchecked articles: an
   unconfirmed mesh misleads). Copy icons (2026-10-16) sit beside each reference and copy that reference alone (the OE number without brand; an equivalence without its brand); no "Copier la réf." button.
 - **Result clarity pass (2026-10-16, user review of the agent-retained 307 result)**: the « Affinage »
   trace is gone from the result (counts stay in the journal), the `?` stands alone, Véhicule/kType

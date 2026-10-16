@@ -190,6 +190,7 @@ Modelled in-house with build123d, owned, shippable. Generic family shapes at nom
 | `headlamp.glb` | Generic headlamp | ~650 wide trapezoid housing, curved open bezel, projector O70 + reflector O110 rings, 3 tabs, cap O90, connector | 5647 | 625.24 × 381.0 × 288.21 |
 | `level-actuator.glb` | Headlamp levelling motor | O40 x 50, 3-lug bayonet flange, ball rod 30, connector boss | 3871 | 59.0 × 60.16 × 91.0 |
 | `wire-connector.glb` | Repair pigtail connector | 30x20x25 housing + latch ramp, 3 wires O2.5 ~130 long, stripped ends | 5010 | 39.45 × 160.03 × 29.0 |
+| `axial-joint.glb` | Inner tie rod / axial joint | housing O36 x 40, hex 32 AF x 12, stub O14 x 20, dome cap O30, rod O14, total 270, stud flats 12 AF x 10, tip chamfer, lock-ring groove | 4144 | 36.95 × 36.0 × 270.0 |
 
 ## Third party (2026-10-16)
 

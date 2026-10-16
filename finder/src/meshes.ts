@@ -7,6 +7,7 @@ export const MESHES = [
   'alternator',
   'alternator-regulator',
   'alternator-tensioner',
+  'axial-joint',
   'axle-nut',
   'axles',
   'battery',
