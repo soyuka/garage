@@ -107,4 +107,33 @@ describe('single-submit pipeline', () => {
     expect(read).toHaveBeenCalledTimes(2);
     expect(out).toMatchObject({ kind: 'ask', ask: { intent: 'photo', images: ['data:a', 'data:a'] } });
   });
+
+  it('takes the plate typed beside a part photo and sends the photo with the rest as the query', async () => {
+    const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
+    const other: Vehicle = { ...vehicle, plate: 'AB-123-CD', carId: 5, make: 'PEUGEOT', model: '307', modelEn: null };
+    const { api, deps } = setup({ vehicle: vi.fn().mockResolvedValue(other) }, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: ['data:a'] });
+    const out = await runSubmission({ route: routeText('AB-123-CD plaquettes'), files: [photo] }, deps);
+
+    expect(api.vehicle).toHaveBeenCalledWith('AB-123-CD');
+    expect(out).toMatchObject({ kind: 'vehicle', ref: 'AB-123-CD', ask: { text: 'plaquettes', intent: 'photo', images: ['data:a'] } });
+    expect(api.saveVehicle.mock.calls[0]![0]).not.toHaveProperty('registration');
+  });
+
+  it('lets the carte grise plate win over a typed one and says so', async () => {
+    const { api, statuses, deps } = setup();
+    const out = await runSubmission({ route: routeText('AB-123-CD plaquettes'), files: [pdf] }, deps);
+
+    expect(api.vehicle).toHaveBeenCalledWith('XB-301-ZB');
+    expect(out).toMatchObject({ kind: 'vehicle', ref: 'XB-301-ZB', ask: { text: 'plaquettes' } });
+    expect(statuses.at(-1)).toBe('Véhicule : Mazda 6. Plaque saisie AB-123-CD ignorée : la carte grise porte XB-301-ZB.');
+  });
+
+  it('runs a part photo alone on the context vehicle', async () => {
+    const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
+    const { api, deps } = setup({}, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: ['data:a'] });
+    const out = await runSubmission({ route: { kind: 'empty' }, files: [photo] }, deps);
+
+    expect(api.vehicle).not.toHaveBeenCalled();
+    expect(out).toMatchObject({ kind: 'ask', ask: { intent: 'photo' } });
+  });
 });

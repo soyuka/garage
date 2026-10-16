@@ -64,3 +64,24 @@ export function routeFile(file: { type: string; size: number }): FileRoute {
   if (file.type === 'application/pdf') return file.size > MAX_DOCUMENT_BYTES ? { kind: 'unsupported', reason: 'size' } : { kind: 'pdf' };
   return { kind: 'unsupported', reason: 'type' };
 }
+
+export interface ExtractedRef {
+  plate: string | null;
+  vin: string | null;
+  rest: string;
+}
+
+// A plate or VIN typed among other words ("AB-123-CD plaquettes"): the first run of up to three tokens the
+// single-input rules read as one, the remaining words being the part query.
+export function extractVehicleRef(input: string): ExtractedRef {
+  const tokens = input.trim().replace(/\s+/g, ' ').split(' ').filter(Boolean);
+  for (let start = 0; start < tokens.length; start++) {
+    for (let size = Math.min(3, tokens.length - start); size >= 1; size--) {
+      const found = routeText(tokens.slice(start, start + size).join(' '));
+      if (found.kind !== 'plate' && found.kind !== 'vin') continue;
+      const rest = [...tokens.slice(0, start), ...tokens.slice(start + size)].join(' ');
+      return found.kind === 'plate' ? { plate: found.plate, vin: null, rest } : { plate: null, vin: found.vin, rest };
+    }
+  }
+  return { plate: null, vin: null, rest: tokens.join(' ') };
+}

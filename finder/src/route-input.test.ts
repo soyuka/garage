@@ -1,4 +1,4 @@
-import { routeFile, routeText } from './route-input';
+import { extractVehicleRef, routeFile, routeText } from './route-input';
 
 describe('routeText: plates', () => {
   it.each([
@@ -94,5 +94,18 @@ describe('routeFile', () => {
   it('lets a large photo or video through: it is downscaled or sampled on the device', () => {
     expect(routeFile({ type: 'image/jpeg', size: 25 * 1024 * 1024 })).toEqual({ kind: 'image' });
     expect(routeFile({ type: 'video/mp4', size: 200 * 1024 * 1024 })).toEqual({ kind: 'video' });
+  });
+});
+
+describe('extractVehicleRef', () => {
+  it('pulls a plate out of a sentence and leaves the words', () => {
+    expect(extractVehicleRef('AB-123-CD plaquettes')).toEqual({ plate: 'AB-123-CD', vin: null, rest: 'plaquettes' });
+    expect(extractVehicleRef('plaquettes avant ab 123 cd')).toEqual({ plate: 'AB-123-CD', vin: null, rest: 'plaquettes avant' });
+    expect(extractVehicleRef('1234 AB 56 filtre')).toEqual({ plate: '1234 AB 56', vin: null, rest: 'filtre' });
+  });
+
+  it('pulls a VIN and leaves nothing for a plain sentence', () => {
+    expect(extractVehicleRef('JMZGG14F671528417 filtre')).toEqual({ plate: null, vin: 'JMZGG14F671528417', rest: 'filtre' });
+    expect(extractVehicleRef('filtre à huile 307 1.4')).toEqual({ plate: null, vin: null, rest: 'filtre à huile 307 1.4' });
   });
 });
