@@ -62,6 +62,24 @@ Shipped, end to end:
   blocks add the carmaker's other OE numbers and every other catalogue cote; every row shows the OE in the numbering scheme all parts share for the make (`pickOe`, 3812 E0 / 3812 E5), the rest under « Aussi ». Multi-part blocks are shortened: équivalences on one line + « + N autres marques », « Pourquoi cette pièce » clamped to 2 lines (both expandable). At 1440×900 the actions end at y 871 (was 938), still under the composer dock when a question card is open (dock top ≈ 696). The sheet grows to fit a
   tall title block instead of clipping it. Question answers print the cluster's range (`differsOn`
   min/max), not its representative value. Design: `finder/DESIGN.md` § Variant table.
+- **Agent selects a variant (2026-10-16)**: `show_parts` takes `clusterId`; an id outside that
+  narrowing is refused (`clusterIds` listed, nothing drawn), a clusterId without the productGroupId on a
+  mixed node comes back choose_group telling the agent to reuse the on-screen group, and redrawing a
+  category already shown that turn no longer spends the 4-category cap. The frame carries
+  `selection {clusterId, basis}`; the sheet opens that variant marked « retenue d'après <basis> »
+  (route `/r/<clusterId>/<basis>`, DESIGN § Variant table, Agent selection). The follow-up summary
+  names `productGroupId` next to `categoryId`, and finder.md tells the agent to reuse both. Chosen over
+  a separate `select_part(clusterId, basis)`: turns are stateless, so that tool would need the
+  category and group anyway to know which narrowing c1 belongs to (several parts per turn, c1 exists in
+  each), and a new frame type acting on a part the page may not hold as an agent part (a held,
+  route-driven result). One frame, one mapper, the validation done where the narrowing is at hand.
+  The repeated group is made safe instead: the summary carries it, and a missing one is corrected.
+  Fixes turn 01M520BZ7BSSB0Z36G1EVG66TV (decoded OPR 09824 ≤ 10310 → c1, screen kept « à confirmer »).
+- **Build-code question (2026-10-16)**: finder.md now has the question cover both ways (« Code de
+  fabrication (vignette de porte) ou longueur mesurée ? ») with options at the cluster ranges
+  (322–338 mm / 358 mm), never a length answering a code question; a question naming the code de
+  fabrication gets the finder's « Photo de la vignette » button (camera / picker → `build_label`
+  intake) in place of « Donner la plaque ».
 - **Agent** `finder` (`api/config/prompts/finder.md`, POST /agent/turn `surface: "finder"`):
   vehicle-less starts (browse makes/models/cars), photos, reference lookup, `show_parts` narrows
   server-side, `set_vehicle`, `ask_question` for what the catalogue can't settle, web finds tagged
@@ -128,7 +146,13 @@ break / 2.0 DI) instead of guessing.
   state 320–322 mm and land in the 338 mm cluster: unexplained, unverified.
 - FEBI spells the thread "Dimension du filetage extérieur": not read as a thread (`THREAD` slug
   regex), so it is skipped. RIDEX's "Filetage extérieur [mm]" lands as an info measure.
-- The rotule axiale agent path (choose_group → group 51 → OPR question) has not run live end to end.
+- The rotule axiale agent path (choose_group → group 51 → OPR question → decode → show_parts
+  clusterId) has not run live end to end; the selection, refusal and redraw paths are covered by
+  scripted turns only (`FinderTurnTest`). The « Photo de la vignette » button is untested in a
+  browser on a phone (the picker open relies on the click's transient activation through an effect).
+- `FinderTurnTest::testFinderTurnRunsTheFinderAgentAndStreamsTheNarrowedParts` fails on `main`
+  before 2026-10-16's selection work: it expects `list_part_categories` in the finder toolbox, which
+  `FinderToolsTest::testTheFinderAgentHasNoKeywordCategorySearch` (and the leaf-list design) forbids.
 - The leaf-list category choice (2026-10-16) has not run live; Claude-tokenizer size of the list unmeasured
   (no live call). Watch the journal's cache-write tokens on the first live turn.
 - Dimension labels can overlap for a moment when the part is seen edge-on (height vs thread note).
