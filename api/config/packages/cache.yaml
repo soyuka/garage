@@ -16,6 +16,11 @@ framework:
             cache.partsapi:
                 adapter: cache.adapter.doctrine_dbal
                 default_lifetime: 0
+            # Catalogue photos proxied for parts without a 3D model (App\Catalog\ArticlePhotos), keyed by
+            # the media URL getArticleMedia gave: an image never changes behind its content-hashed URL.
+            cache.article_photos:
+                adapter: cache.adapter.doctrine_dbal
+                default_lifetime: 0
             # Motul Oil Advisor responses (search + SSR recommendations) — a vehicle's
             # recommended grade is stable, so cache forever and stay polite to the upstream.
             cache.motul:

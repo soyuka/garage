@@ -113,6 +113,28 @@ final class PartsCatalog
     }
 
     /**
+     * The category's articles only when the listing is already cached: never an upstream call.
+     *
+     * @return list<Article>|null
+     */
+    public function cachedArticles(int $carId, int $categoryId, CarType $carType): ?array
+    {
+        $rows = $this->client->peek('getArticles', ['carId' => $carId, 'carType' => $carType->value, 'strId' => $categoryId, 'lang' => $this->lang]);
+
+        return null === $rows ? null : array_map(Article::fromPartsApi(...), $rows);
+    }
+
+    /**
+     * @return list<ArticleMedia>
+     */
+    public function articleMedia(int $artId): array
+    {
+        $rows = $this->client->fetch('getArticleMedia', ['ART_ID' => $artId, 'LANG' => $this->lang]);
+
+        return array_map(ArticleMedia::fromPartsApi(...), $rows);
+    }
+
+    /**
      * Criteria are per ARTICLE, the union over every vehicle it fits — not per vehicle.
      *
      * @return list<ArticleCriterion>

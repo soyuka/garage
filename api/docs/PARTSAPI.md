@@ -31,7 +31,7 @@ instead of the alphabetically-first no-names. MCP/agent path only; REST stays fu
 
 ## Narrowing methods (verified live 2026-10-15, "TecDoc 2026 Q2")
 
-Keys `PARTSAPI_KEY_getArticleCriteria` / `_getArticleCrosses` (`getArticleMedia` was verified too but is not used: the finder shows its own 3D blueprint, not TecDoc photos). Test keys are capped at
+Keys `PARTSAPI_KEY_getArticleCriteria` / `_getArticleCrosses` / `_getArticleMedia` (media back 2026-10-16, only for parts without a 3D model: see below). Test keys are capped at
 **50 calls/day/method**; a refusal is `{error_code:5005,status:500}`. Unlike `getArticles`, these three take
 UPPERCASE params `ART_ID` and `LANG` (`getArticles` uses lowercase `lang`). They are article facts, cached
 forever (not in `PartsApiClient::CATALOG_METHODS`).
@@ -40,8 +40,10 @@ forever (not in `PartsApiClient::CATALOG_METHODS`).
 |---|---|---|
 | getArticleCriteria | `[{CRITERIA_NAME, CRITERIA_VALUE}]` | **Per ARTICLE, not per vehicle**: the union over every vehicle the article fits (MANN W 712/73 lists engine code "Perkins 404D-22", multi-valued "Année à partir de", VIN breakpoints). Application-level criteria cannot discriminate for one car; only physical ones (dimensions with a `[unit]`, thread, filter type) can. Names are truncated at ~45 chars upstream (`Diamètre intérieur de la bague d'étanchéité [`). Thread is spelled `Filetage "3/4-16 UNF"` on one brand and `Taraudage/Filetage 1 "3/4\"-16"` on another. |
 | getArticleCrosses | `[{ART_BRAND, ART_DISPLAY_NR, ART_ID\|null, ART_PRODUCT_NAME}]` | A loose INTERCHANGE list, not an equivalence class (W 712/73: 495 crosses, 186 brands, 16 different MAHLE numbers), so never cluster on it. It does carry OE numbers: entries whose brand is a vehicle maker (MAZDA LF10-14-302, FORD 1S7G-6714-CA, VOLVO 30711781). |
+| getArticleMedia | `[{ART_MEDIA_DESCRIPTION, ART_MEDIA_SOURCE, ART_MEDIA_SUP_ID, ART_MEDIA_TYPE}]` | Verified live 2026-10-16 on BOSCH 0 986 141 133 (artId 112767557): 5 entries, all `Illustration`, `ART_MEDIA_TYPE: "JPG"` while the source is a `.webp` on `https://img.autodatabases.ru/images/<SUP_ID>/<sha1>.webp`. That host returned NXDOMAIN on 2026-10-16 (Cloudflare DoH, `autodatabases.ru` itself resolves), so no image currently loads. Served only through `GET /cars/{carId}/part-categories/{categoryId}/articles/{artId}/photo` (`App\Catalog\ArticlePhotos`): the article must be in a cached listing, first https entry only, bytes cached forever in `cache.article_photos`, fetched through `NoPrivateNetworkHttpClient`, type sniffed (jpeg/png/webp/gif only). |
 
-Fixtures: every `getArticleCriteria_<id>.json` / `getArticleCrosses_<id>.json` is a real response, exported from
+Fixtures: `getArticleMedia_112767557.json` is the real 2026-10-16 response; the image it points to is
+synthetic (`tests/Fixtures/media/`), its host being unresolvable. Every `getArticleCriteria_<id>.json` / `getArticleCrosses_<id>.json` is a real response, exported from
 the live cache for the 8 representatives of the Mazda 6 oil filter (kType 19107, category 100259). Dates and VIN
 breakpoints are not available per car through these methods.
 

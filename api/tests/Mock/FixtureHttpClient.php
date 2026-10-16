@@ -18,6 +18,8 @@ use Symfony\Contracts\HttpClient\ResponseStreamInterface;
  * Exceptions to "copied from real responses":
  *  - getMakes_PC.json is a 3-entry subset of the live-verified 536-make response
  *    (shape {makeId, makeName} verified 2026-06-12, see docs/PARTSAPI.md);
+ *  - media/images/30/94cfd50f….webp is a synthetic image: its real host img.autodatabases.ru did
+ *    not resolve on 2026-10-16 (NXDOMAIN), so the real bytes could not be captured;
  *  - carId 500200 is a sentinel triggering the real 5002 "bad key for this method"
  *    error envelope, for the error-is-never-cached-nor-counted tests.
  */
@@ -59,6 +61,14 @@ final class FixtureHttpClient implements HttpClientInterface
 
         if (str_contains($host, 'partsapi.ru')) {
             return $this->partsApiResponse($query);
+        }
+
+        if ('img.autodatabases.ru' === $host) {
+            $file = $this->fixturesDir.'/media'.($parts['path'] ?? '');
+
+            return is_file($file)
+                ? new MockResponse(file_get_contents($file), ['http_code' => 200, 'response_headers' => ['content-type' => 'image/webp']])
+                : new MockResponse('not found', ['http_code' => 404]);
         }
 
         if (str_contains($host, 'motul.com')) {
@@ -111,7 +121,7 @@ final class FixtureHttpClient implements HttpClientInterface
             'getSearchTree' => sprintf('getSearchTree_%s_%s.json', $query['carId'] ?? '', $query['carType'] ?? ''),
             'getArticles' => sprintf('getArticles_%s_%s_%s.json', $query['carId'] ?? '', $query['carType'] ?? '', $query['strId'] ?? ''),
             'GetFillVolumes' => sprintf('GetFillVolumes_%s.json', $query['carId'] ?? ''),
-            'getArticleCriteria', 'getArticleCrosses' => sprintf('%s_%s.json', $method, $query['ART_ID'] ?? ''),
+            'getArticleCriteria', 'getArticleCrosses', 'getArticleMedia' => sprintf('%s_%s.json', $method, $query['ART_ID'] ?? ''),
             default => null,
         };
 

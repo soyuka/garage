@@ -41,8 +41,14 @@ services:
                 GetFillVolumes: '%env(PARTSAPI_KEY_GetFillVolumes)%'
                 getArticleCrosses: '%env(PARTSAPI_KEY_getArticleCrosses)%'
                 getArticleCriteria: '%env(PARTSAPI_KEY_getArticleCriteria)%'
+                getArticleMedia: '%env(PARTSAPI_KEY_getArticleMedia)%'
             $cache: '@cache.partsapi'
             $catalogTtl: '%env(int:PARTSAPI_CATALOG_TTL)%'
+
+    # The image host is whatever a getArticleMedia response names: never let it resolve to our own network.
+    article_photos.http_client:
+        class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
+        arguments: ['@http_client']
 
     App\Catalog\PartsCatalog:
         arguments:
@@ -299,6 +305,10 @@ when@test:
                 $token: '%env(API_PLAQUE_TOKEN)%'
                 $cache: '@cache.siv'
                 $retryDelayMs: 0
+
+        # NoPrivateNetworkHttpClient resolves the host itself before the request, which the fixture
+        # host cannot satisfy; the guard has its own unit test (ArticlePhotosTest).
+        article_photos.http_client: '@http_client'
 
         App\Tests\Mock\FixtureHttpClient:
             decorates: http_client
