@@ -20,6 +20,7 @@ final class Applicability
         '/^ann[ée]e /u',
         '/^num[ée]ro de ch[âa]ssis/u',
         "/^(?:n[°º]?|№|num[ée]ro) ?d['’]organisation/u",
+        '/^(?:pour )?(?:n[°º]?|№|num[ée]ro) ?opr/u',
         '/^(?:n[°º]? ?|№ ?|num[ée]ro )de s[ée]rie/u',
     ];
 
