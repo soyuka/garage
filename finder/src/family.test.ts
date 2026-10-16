@@ -224,6 +224,42 @@ describe('partFamily', () => {
     expect(partFamily(real("Allumage / préchauffage > Bougie d'allumage"), [], "Bougie d'allumage")).toEqual({ kind: 'mesh', mesh: 'spark-plug', approximate: false });
   });
 
+  it('shows the photo for a product group that is not the part its leaf is drawn as', () => {
+    for (const [path, group] of [
+      ['Filtre > Filtre à huile', "Joint, filtre à huile"],
+      ['Filtre > Filtre à huile', 'Module de filtre à huile'],
+      ['Moteur > Alimentation en air > Filtre à air / carter', "Tuyau d'aspiration, alimentation d'air"],
+      ['Moteur > Alimentation en air > Filtre à air / carter', 'Boîte, filtre à air'],
+      ['Refroidissement > Interrupteur / capteur', "Capteur, température d'huile"],
+      ['Refroidissement > Interrupteur / capteur', 'Kit rép. de câble, capteur de temp. liquide de refroidis.'],
+      ['Refroidissement > Joint/Thermostat > Thermostat', 'Boîtier du thermostat'],
+      ['Moteur > Support du moteur > Support moteur', 'Support de palier, support du moteur'],
+      ['Moteur > Support du moteur > Support moteur', 'Butée élastique, support du moteur'],
+    ] as const) {
+      expect([group, partFamily(cat(path), [], group)]).toEqual([group, { kind: 'photo' }]);
+    }
+  });
+
+  it('keeps the leaf mesh for the product groups that are the part', () => {
+    expect(partFamily(cat('Filtre > Filtre à huile'), [], 'Filtre à huile')).toEqual({ kind: 'filter', filter: 'oil' });
+    expect(partFamily(cat('Refroidissement > Interrupteur / capteur'), [], 'Sonde, température du liquide de refroidissement')).toMatchObject({ kind: 'mesh', mesh: 'coolant-temperature-sensor' });
+    expect(partFamily(cat('Refroidissement > Joint/Thermostat > Thermostat'), [], 'Thermostat, liquide de refroidissement')).toMatchObject({ kind: 'mesh', mesh: 'thermostat' });
+    expect(partFamily(cat('Moteur > Support du moteur > Support moteur'), [], 'Support moteur')).toMatchObject({ kind: 'mesh', mesh: 'engine-mount' });
+  });
+
+  it('draws the crankshaft pulley for its product group inside the mixed pulley leaf', () => {
+    const pulley = cat('Moteur > Commande à courroie > Poulie');
+    expect(partFamily(pulley, [], 'Poulie, vilebrequin')).toEqual({ kind: 'mesh', mesh: 'crankshaft-pulley-damper', approximate: true });
+    expect(partFamily(pulley, [], 'Poulie, pompe de direction assistée')).toEqual({ kind: 'photo' });
+    expect(partFamily(pulley, [], 'Jeu de courroies trapézoïdales à nervures')).toEqual({ kind: 'photo' });
+  });
+
+  it('never draws a disc brake for a drum kit, nor for a kit that may be drums', () => {
+    expect(partFamily(cat('Dispositif de freinage > Frein à tambour > Kit de freins'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Dispositif de freinage > Frein de haute performance > Kit de freins'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Dispositif de freinage > Frein à disque > Kit de freins'))).toMatchObject({ kind: 'brake' });
+  });
+
   it('gives every family without a mesh the catalogue photo instead of a drawing', () => {
     expect(partFamily(cat('Accessoires > Chaîne à neige'))).toEqual({ kind: 'photo' });
     expect(partFamily(cat('Dispositif de freinage > Liquide de frein'))).toEqual({ kind: 'photo' });

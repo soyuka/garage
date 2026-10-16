@@ -140,6 +140,9 @@ export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null;
   { group: /rotule de direction interieure|rotule axiale/, mesh: null },
   { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
   { group: /^rotule de direction$/, mesh: null },
+  { group: /^poulie, vilebrequin/, mesh: 'crankshaft-pulley-damper' },
+  // Other groups of a leaf drawn as one part: a gasket, a module, a pipe, a housing or a bracket is not that part.
+  { group: /^joint, filtre a huile|^module de filtre a huile|^tuyau d'aspiration|^boite, filtre a air|^capteur, temperature d'huile|^kit rep\. de cable|^boitier du thermostat|^support de palier|^butee elastique/, mesh: null },
 ];
 
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = [], productGroup: string | null = null): Family {
@@ -153,6 +156,7 @@ export function partFamily(category: { path: string; name: string }, dimensions:
   if (/filtre a huile/.test(leaf)) return { kind: 'filter', filter: 'oil' };
   if (/filtre a carburant/.test(leaf) && isCylindrical(dimensions)) return { kind: 'filter', filter: 'fuel' };
   if (/filtre a air/.test(leaf) && isCylindrical(dimensions)) return { kind: 'filter', filter: 'air' };
+  if (/frein a tambour|frein de haute performance/.test(path) && /^kit de freins/.test(leaf)) return { kind: 'photo' };
   if (BRAKE.test(path) && !/plaquette/.test(leaf)) return { kind: 'brake', axle: axleFrom(path, dimensions), component: /disque de freins?/.test(path) ? 'disc' : 'other' };
 
   const rule = MESH_RULES.find((r) => r.leaf.test(leaf) && (!r.within || r.within.test(path)) && !(r.except && r.except.test(path)));
