@@ -49,19 +49,21 @@ describe('turnReducer', () => {
     expect(part.narrowing.clusters[0]?.representative.brand).toBe('MANN-FILTER');
   });
 
-  it('carries the variant the agent retained, and drops a malformed selection', () => {
+  it('carries the variant the agent retained under the id the server stored, and drops a malformed selection', () => {
     const basis = 'code de fabrication (OPR 09824 ≤ 10310)';
-    const f = parseFrame(JSON.stringify({ type: 'showParts', categoryId: 100198, categoryLabel: 'Rotule', rationale: basis, narrowed, selection: { clusterId: 'c1', basis } }));
-    expect(f).toMatchObject({ type: 'showParts', selection: { clusterId: 'c1', basis } });
+    const id = '01JA5Z3M8Q6W4XK7T2N9R0BCDE';
+    const f = parseFrame(JSON.stringify({ type: 'showParts', categoryId: 100198, categoryLabel: 'Rotule', rationale: basis, narrowed, selection: { id, clusterId: 'c1', basis } }));
+    expect(f).toMatchObject({ type: 'showParts', selection: { id, clusterId: 'c1', basis, setAside: null } });
     const part = turnReducer(running(), frame(f!)).parts[0]!;
-    expect(part.kind === 'catalog' && part.selection).toEqual({ clusterId: 'c1', basis });
+    expect(part.kind === 'catalog' && part.selection).toEqual({ id, clusterId: 'c1', basis, setAside: null });
     expect(parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { clusterId: 3 } }))).toMatchObject({ selection: null });
+    expect(parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { clusterId: 'c1', basis } }))).toMatchObject({ selection: null });
     const plain = turnReducer(running(), frame({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: null })).parts[0]!;
     expect(plain.kind === 'catalog' && plain.selection).toBeNull();
   });
 
   it('carries what the agent set aside with the variant it retained', () => {
-    const f = parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { clusterId: 'c1', basis: 'b', setAside: 'OPR ≥ 10311' } }));
+    const f = parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { id: '01JA5Z3M8Q6W4XK7T2N9R0BCDE', clusterId: 'c1', basis: 'b', setAside: 'OPR ≥ 10311' } }));
     expect(f).toMatchObject({ selection: { clusterId: 'c1', basis: 'b', setAside: 'OPR ≥ 10311' } });
   });
 

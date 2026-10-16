@@ -185,7 +185,7 @@ function whyLine(n: Narrowing, selection: Selection, letter: string | null) {
     );
   }
   if (status === 'user' && selection.verdict) {
-    const retained = n.clusters.findIndex((c) => c.id === selection.verdict!.id);
+    const retained = n.clusters.findIndex((c) => c.id === selection.verdict!.clusterId);
     return (
       <span>
         Variante {letter} choisie par vous. Le code de fabrication désigne la variante {variantLetter(retained)}{basis ? ` (${basis})` : ''}. {same}

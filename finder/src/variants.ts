@@ -1,8 +1,8 @@
 import { dimText, findDim, threadOf, type DimKey } from './dims';
 import { NNBSP, formatValue } from './format';
 import { pickOe, sameBrand } from './result';
-import type { ClusterChoice, Verdict } from './route';
-import type { Applicability, Cluster, Dimension, Divergence, Narrowing, Reference } from './types';
+import type { ClusterChoice } from './route';
+import type { AgentSelection, Applicability, Cluster, Dimension, Divergence, Narrowing, Reference, StoredSelection } from './types';
 
 // `open`: several parts and nobody chose, the first is shown. `answer`: the cote question settled it.
 // `user`: picked in the variant table, the user's call, not the catalogue's. `agent`: retained by the
@@ -14,32 +14,45 @@ export interface Selection {
   cluster: Cluster | null;
   index: number;
   status: SelectionStatus;
-  verdict?: Verdict | null;
+  verdict?: AgentSelection | null;
 }
 
-const verdictOf = (choice: ClusterChoice): Verdict | null =>
-  choice.by === 'agent' ? { id: choice.id, basis: choice.basis, setAside: choice.setAside ?? '' } : choice.by === 'user' ? (choice.verdict ?? null) : null;
+export const choiceSelectionId = (choice: ClusterChoice | null): string | null =>
+  choice?.by === 'agent' ? choice.selectionId : choice?.by === 'user' ? (choice.retained?.selectionId ?? null) : null;
 
-export function selectVariant(n: Narrowing | null, choice: ClusterChoice | null): Selection {
+// A stored selection vouches only for the car, category and product group it was made on.
+export function storedVerdict(stored: StoredSelection, here: { carId: number | null; categoryId: number; productGroupId: number | null }): AgentSelection | null {
+  if (stored.carId !== here.carId || stored.categoryId !== here.categoryId) return null;
+  if (here.productGroupId !== null && stored.productGroupId !== here.productGroupId) return null;
+  return { id: stored.id, clusterId: stored.clusterId, basis: stored.basis, setAside: stored.setAside };
+}
+
+// `known`: the selection the server vouched for (frame or GET /agent/selections/{id}). An agent route
+// it does not back is shown as nobody's choice: the route names ids, never what the agent said.
+export function selectVariant(n: Narrowing | null, choice: ClusterChoice | null, known: AgentSelection | null = null): Selection {
   const clusters = n?.clusters ?? [];
   if (clusters.length === 0) return { cluster: null, index: -1, status: 'open' };
   if (clusters.length === 1) return { cluster: clusters[0]!, index: 0, status: 'single' };
+  const open: Selection = { cluster: clusters[0]!, index: 0, status: 'open', verdict: null };
+  const sid = choiceSelectionId(choice);
+  const retainedId = choice?.by === 'agent' ? choice.id : choice?.by === 'user' ? choice.retained?.id : undefined;
+  const verdict = known && sid === known.id && retainedId === known.clusterId && clusters.some((c) => c.id === known.clusterId) ? known : null;
+  if (choice?.by === 'agent' && !verdict) return open;
   const index = choice ? clusters.findIndex((c) => c.id === choice.id) : -1;
-  if (index === -1) return { cluster: clusters[0]!, index: 0, status: 'open', verdict: null };
-  const verdict = verdictOf(choice!);
-  return { cluster: clusters[index]!, index, status: choice!.by, verdict: verdict && clusters.some((c) => c.id === verdict.id) ? verdict : null };
+  if (index === -1) return open;
+  return { cluster: clusters[index]!, index, status: choice!.by, verdict };
 }
 
 export type VariantMark = 'retained' | 'aside' | null;
 
-export const variantMark = (selection: Selection, clusterId: string): VariantMark => (selection.verdict ? (selection.verdict.id === clusterId ? 'retained' : 'aside') : null);
+export const variantMark = (selection: Selection, clusterId: string): VariantMark => (selection.verdict ? (selection.verdict.clusterId === clusterId ? 'retained' : 'aside') : null);
 
 // A row pick is the user's call; the agent's verdict stays on the table, and picking its row returns to it.
 export function pickChoice(selection: Selection, clusterId: string): ClusterChoice {
   const v = selection.verdict;
   if (!v) return { id: clusterId, by: 'user' };
-  if (v.id === clusterId) return { id: v.id, by: 'agent', basis: v.basis, ...(v.setAside ? { setAside: v.setAside } : {}) };
-  return { id: clusterId, by: 'user', verdict: v };
+  if (v.clusterId === clusterId) return { id: v.clusterId, by: 'agent', selectionId: v.id };
+  return { id: clusterId, by: 'user', retained: { id: v.clusterId, selectionId: v.id } };
 }
 
 // The cote question stays until something settled the part; the agent's verdict did.

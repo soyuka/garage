@@ -1,5 +1,5 @@
 import { mapPhotoIntake } from './api';
-import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapRegistration, mapVehicle, mapVin } from './api';
+import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapRegistration, mapSelection, mapVehicle, mapVin } from './api';
 import narrowed from '../test-fixtures/narrowed.json';
 import vehicle from '../test-fixtures/vehicle.json';
 import vin from '../test-fixtures/vin.json';
@@ -201,5 +201,20 @@ describe('mapPhotoIntake', () => {
   it('falls back to other on anything unexpected', () => {
     expect(mapPhotoIntake({ kind: 'carte_grise' })).toEqual({ kind: 'other' });
     expect(mapPhotoIntake(null)).toEqual({ kind: 'other' });
+  });
+});
+
+describe('mapSelection', () => {
+  const raw = { id: '01JA5Z3M8Q6W4XK7T2N9R0BCDE', carId: 16182, carType: 'PC', categoryId: 100198, productGroupId: 51, clusterId: 'c1', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' };
+
+  it('reads the stored selection', () => {
+    expect(mapSelection(raw)).toEqual(raw);
+    expect(mapSelection({ ...raw, productGroupId: null, setAside: null })).toMatchObject({ productGroupId: null, setAside: null });
+  });
+
+  it('refuses a malformed answer', () => {
+    expect(() => mapSelection({ ...raw, id: 'x' })).toThrow(ApiError);
+    expect(() => mapSelection({ ...raw, clusterId: '' })).toThrow(ApiError);
+    expect(() => mapSelection({ ...raw, carId: 'x' })).toThrow(ApiError);
   });
 });

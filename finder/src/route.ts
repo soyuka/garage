@@ -5,20 +5,20 @@ import type { CarType } from './types';
 // without one ("k19107-PC").
 // `answer`: settled by the cote question (`/k/<id>`, the only form before 2026-10-16); `user`: picked
 // in the variant table (`/v/<id>`), the user's decision, never presented as confirmed; `agent`: retained
-// by the agent from what the user gave (`/r/<id>/<basis>/<setAside>`), an indication resting on
-// per-article data. A pick after the agent's verdict keeps it (`/v/<id>/r/<id>/<basis>/<setAside>`).
-export interface Verdict {
+// by the agent (`/r/<id>/<selectionId>`), the selection the server stored when show_parts selected. A
+// pick after the agent's verdict keeps it (`/v/<id>/r/<id>/<selectionId>`). The route carries ids only:
+// the basis and what was set aside are read from the server, never from the URL.
+export interface Retained {
   id: string;
-  basis: string;
-  setAside: string;
+  selectionId: string;
 }
 
 export type ClusterChoice =
   | { id: string; by: 'answer' }
-  | { id: string; by: 'user'; verdict?: Verdict }
-  | { id: string; by: 'agent'; basis: string; setAside?: string };
+  | { id: string; by: 'user'; retained?: Retained }
+  | { id: string; by: 'agent'; selectionId: string };
 
-export const BASIS_MAX = 160;
+export const SELECTION_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
 export type Route =
   | { view: 'entry' }
@@ -53,30 +53,22 @@ export function parseRoute(hash: string): Route {
   return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, cluster: parseChoice(rest) };
 }
 
-const text = (raw: string | undefined): string => (raw ?? '').trim().slice(0, BASIS_MAX);
-
 function parseChoice(rest: string[]): ClusterChoice | null {
   const id = rest[1];
   if (!id) return null;
   if (rest[0] === 'k') return { id, by: 'answer' };
-  if (rest[0] === 'r') {
-    const setAside = text(rest[3]);
-    return { id, by: 'agent', basis: text(rest[2]), ...(setAside ? { setAside } : {}) };
-  }
+  if (rest[0] === 'r') return SELECTION_ID.test(rest[2] ?? '') ? { id, by: 'agent', selectionId: rest[2]! } : null;
   if (rest[0] !== 'v') return null;
-  const verdict = rest[2] === 'r' ? parseChoice(rest.slice(2)) : null;
-  return verdict?.by === 'agent' ? { id, by: 'user', verdict: { id: verdict.id, basis: verdict.basis, setAside: verdict.setAside ?? '' } } : { id, by: 'user' };
+  const retained = rest[2] === 'r' ? parseChoice(rest.slice(2)) : null;
+  return retained?.by === 'agent' ? { id, by: 'user', retained: { id: retained.id, selectionId: retained.selectionId } } : { id, by: 'user' };
 }
 
 const refHash = (ref: string): string => (CAR.test(ref) ? `#/k/${ref.slice(1)}` : `#/p/${encodeURIComponent(ref.replace(/ /g, ''))}`);
 
 function clusterHash(c: ClusterChoice): string {
   const id = encodeURIComponent(c.id);
-  if (c.by === 'agent') {
-    const tail = c.setAside ? [c.basis, c.setAside] : c.basis ? [c.basis] : [];
-    return `/r/${id}${tail.map((t) => `/${encodeURIComponent(t)}`).join('')}`;
-  }
-  if (c.by === 'user') return `/v/${id}${c.verdict ? clusterHash({ id: c.verdict.id, by: 'agent', basis: c.verdict.basis, setAside: c.verdict.setAside }) : ''}`;
+  if (c.by === 'agent') return `/r/${id}/${c.selectionId}`;
+  if (c.by === 'user') return `/v/${id}${c.retained ? clusterHash({ id: c.retained.id, by: 'agent', selectionId: c.retained.selectionId }) : ''}`;
   return `/k/${id}`;
 }
 

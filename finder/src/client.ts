@@ -1,8 +1,8 @@
-import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapVehicle, mapVin } from './api';
+import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapSelection, mapVehicle, mapVin } from './api';
 import { authFetch } from './auth';
 import { planPart, saveVehicle, type PlanBody, type PlannedTask, type SaveBody, type SavedVehicle } from './garage';
 import { getHistory, getJournal, getJournalDetail, hideFromHistory, type JournalDetail, type JournalRow } from './journal';
-import type { CarType, Category, Narrowing, PhotoIntake, Registration, Vehicle, VinDecode } from './types';
+import type { CarType, Category, Narrowing, PhotoIntake, Registration, StoredSelection, Vehicle, VinDecode } from './types';
 import { vehicleEngine } from './ui/VehicleChip';
 
 // A user-initiated submit (composer or chip click): which rule of the single input led to a catalogue
@@ -29,6 +29,7 @@ export interface FinderApi {
   categories(carId: number, carType: CarType): Promise<Category[]>;
   car(carId: number, carType: CarType): Promise<unknown>;
   narrowed(carId: number, carType: CarType, categoryId: number, make: string | null, productGroupId: number | null, trace?: Trace): Promise<Narrowing>;
+  selection(id: string): Promise<StoredSelection>;
   extractRegistration(file: Blob): Promise<Registration>;
   photoIntake(photo: Blob): Promise<PhotoIntake>;
   journal(): Promise<JournalRow[]>;
@@ -64,6 +65,18 @@ async function getJson(url: string, init: RequestInit = {}): Promise<unknown> {
   return res.json();
 }
 
+// Public by id: a shared link is opened by someone else, so no bearer, and a stale one cannot 401 it.
+async function getSelection(id: string): Promise<StoredSelection> {
+  let res: Response;
+  try {
+    res = await fetch(`/agent/selections/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
+  } catch {
+    throw new ApiError('network');
+  }
+  if (!res.ok) throw new ApiError(classifyStatus(res.status));
+  return mapSelection(await res.json());
+}
+
 export function narrowedPath(carId: number, carType: CarType, categoryId: number, make: string | null, productGroupId: number | null): string {
   const q = new URLSearchParams({ carType });
   if (make) q.set('make', make);
@@ -78,6 +91,7 @@ export const liveApi: FinderApi = {
     mapCategories(await getJson(`/cars/${carId}/part-categories?carType=${carType}`, { headers: LD })),
   car: (carId, carType) => getJson(`/cars/${carId}/identity?carType=${carType}`, { headers: LD }),
   narrowed: async (carId, carType, categoryId, make, productGroupId, trace) => mapNarrowing(await getJson(narrowedPath(carId, carType, categoryId, make, productGroupId), traced(trace))),
+  selection: (id) => getSelection(id),
   extractRegistration: async (file) => {
     const body = new FormData();
     body.append('file', file);

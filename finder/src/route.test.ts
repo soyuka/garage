@@ -40,23 +40,25 @@ describe('route', () => {
     expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/v')).toEqual({ view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: null });
   });
 
-  it('carries a part retained by the agent with its basis, apart from the user and the cote', () => {
-    const basis = 'code de fabrication (OPR 09824 ≤ 10310)';
-    const r = { view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: { id: 'c1', by: 'agent', basis } } as const;
-    expect(routeToHash(r)).toBe('#/p/XD-303-ZD/c/100198/g/51/r/c1/code%20de%20fabrication%20(OPR%2009824%20%E2%89%A4%2010310)');
+  const SEL = '01JA5Z3M8Q6W4XK7T2N9R0BCDE';
+
+  it('carries a part retained by the agent as ids only, the selection the server stored', () => {
+    const r = { view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: { id: 'c1', by: 'agent', selectionId: SEL } } as const;
+    expect(routeToHash(r)).toBe(`#/p/XD-303-ZD/c/100198/g/51/r/c1/${SEL}`);
     expect(parseRoute(routeToHash(r))).toEqual(r);
-    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r/c1')).toEqual({ ...r, cluster: { id: 'c1', by: 'agent', basis: '' } });
-    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r')).toEqual({ ...r, cluster: null });
+    const pick = { ...r, cluster: { id: 'c2', by: 'user', retained: { id: 'c1', selectionId: SEL } } } as const;
+    expect(routeToHash(pick)).toBe(`#/p/XD-303-ZD/c/100198/g/51/v/c2/r/c1/${SEL}`);
+    expect(parseRoute(routeToHash(pick))).toEqual(pick);
   });
 
-  it('carries what the agent set aside, and a pick that keeps the agent’s verdict', () => {
-    const verdict = { id: 'c1', basis: 'OPR 09824 ≤ 10310', setAside: 'OPR ≥ 10311' };
-    const agent = { view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: { id: 'c1', by: 'agent', basis: verdict.basis, setAside: verdict.setAside } } as const;
-    expect(routeToHash(agent)).toBe('#/p/XD-303-ZD/c/100198/g/51/r/c1/OPR%2009824%20%E2%89%A4%2010310/OPR%20%E2%89%A5%2010311');
-    expect(parseRoute(routeToHash(agent))).toEqual(agent);
-    const pick = { ...agent, cluster: { id: 'c2', by: 'user', verdict } } as const;
-    expect(routeToHash(pick)).toBe('#/p/XD-303-ZD/c/100198/g/51/v/c2/r/c1/OPR%2009824%20%E2%89%A4%2010310/OPR%20%E2%89%A5%2010311');
-    expect(parseRoute(routeToHash(pick))).toEqual(pick);
+  it('never reads text from an agent route: old or forged ones fall back to the neutral state', () => {
+    const base = { view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51 } as const;
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r/c1/code%20de%20fabrication%20(OPR%2009824%20%E2%89%A4%2010310)')).toEqual({ ...base, cluster: null });
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r/c1/OPR%2009824/OPR%20%E2%89%A5%2010311')).toEqual({ ...base, cluster: null });
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r/c1')).toEqual({ ...base, cluster: null });
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r')).toEqual({ ...base, cluster: null });
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/v/c2/r/c1/Votre%20v%C3%A9hicule')).toEqual({ ...base, cluster: { id: 'c2', by: 'user' } });
+    expect(JSON.stringify(parseRoute(`#/p/XD-303-ZD/c/100198/g/51/r/c1/${SEL}/OPR%20%E2%89%A5%2010311`))).not.toContain('OPR');
   });
 
   it('tells a plate from a catalogue car', () => {

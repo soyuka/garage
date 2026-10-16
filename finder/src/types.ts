@@ -212,11 +212,21 @@ export interface TurnVehicle {
   buildCode?: { organisationNumber: string };
 }
 
-// The variant the agent retained (show_parts clusterId), the basis it gave and why the others do not fit.
+// The variant the agent retained (show_parts clusterId), as the server stored it under `id`: the basis
+// it gave and why the others do not fit. Only ever read from a frame or GET /agent/selections/{id}.
 export interface AgentSelection {
+  id: string;
   clusterId: string;
   basis: string;
-  setAside?: string;
+  setAside: string | null;
+}
+
+// GET /agent/selections/{id}: the selection plus what it was made for, checked against the screen.
+export interface StoredSelection extends AgentSelection {
+  carId: number;
+  carType: CarType;
+  categoryId: number;
+  productGroupId: number | null;
 }
 
 export interface CatalogPart {

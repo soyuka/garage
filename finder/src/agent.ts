@@ -1,7 +1,7 @@
 import { mapNarrowing } from './api';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
-import { BASIS_MAX } from './route';
+import { SELECTION_ID } from './route';
 import type { AgentPart, AgentSelection, BuildCode, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
 type Json = Record<string, unknown>;
@@ -21,9 +21,8 @@ function options(raw: unknown): QuestionOption[] | null {
 }
 
 function selection(raw: unknown): AgentSelection | null {
-  if (!isObject(raw) || !filled(raw.clusterId)) return null;
-  const setAside = filled(raw.setAside) ? raw.setAside.trim().slice(0, BASIS_MAX) : null;
-  return { clusterId: raw.clusterId, basis: text(raw.basis) ? raw.basis.trim().slice(0, BASIS_MAX) : '', ...(setAside ? { setAside } : {}) };
+  if (!isObject(raw) || !text(raw.id) || !SELECTION_ID.test(raw.id) || !filled(raw.clusterId)) return null;
+  return { id: raw.id, clusterId: raw.clusterId, basis: text(raw.basis) ? raw.basis.trim() : '', setAside: filled(raw.setAside) ? raw.setAside.trim() : null };
 }
 
 export function parseFrame(data: string): FinderFrame | null {

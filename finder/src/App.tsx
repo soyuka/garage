@@ -18,10 +18,10 @@ import { buildQuestion } from './question';
 import { relaunchText } from './result';
 import { parseRef, type ClusterChoice, type Route } from './route';
 import type { TextRoute } from './route-input';
-import type { AgentPart, AgentVehicle, BuildCode, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
+import type { AgentPart, AgentSelection, AgentVehicle, BuildCode, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
 import { rememberCar, resolveCar } from './vehicles';
-import { pickChoice, questionOpen, selectVariant } from './variants';
+import { choiceSelectionId, pickChoice, questionOpen, selectVariant, storedVerdict } from './variants';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
 import { VinResult } from './ui/Entry';
@@ -450,6 +450,20 @@ async function recordBuildCode(api: FinderApi, car: Vehicle | AgentVehicle, code
   await api.saveVehicle({ make: car.make, model: car.model, carId: car.carId, plate: car.plate, vin: null, vehicle: iri, buildCode: code.organisationNumber }).catch(() => undefined);
 }
 
+type ResultPlace = { carId: number | null; categoryId: number; productGroupId: number | null };
+
+// The agent's verdict a route names, as the server stored it: the live frame when it is that same
+// selection, else read by id. Anything the server does not back renders as nobody's choice.
+function useVerdict(api: FinderApi, choice: ClusterChoice | null, here: ResultPlace | null, live: AgentSelection | null = null): { verdict: AgentSelection | null; pending: boolean } {
+  const sid = choiceSelectionId(choice);
+  const fromLive = live !== null && live.id === sid;
+  const read = useAsync(sid !== null && !fromLive ? sid : null, () => api.selection(sid!));
+  if (sid === null) return { verdict: null, pending: false };
+  if (fromLive) return { verdict: live, pending: false };
+  if (read.status === 'ok') return here ? { verdict: storedVerdict(read.data, here), pending: false } : { verdict: null, pending: true };
+  return { verdict: null, pending: read.status !== 'error' };
+}
+
 function useFollowUp(followUp: MutableRefObject<FollowUp | null>, value: FollowUp | null) {
   useEffect(() => {
     followUp.current = value;
@@ -495,10 +509,11 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   const category = node && n?.productGroup ? { ...node, label: n.productGroup.name } : node;
   const relaunch = n && node ? relaunchText(n, restoredInput, node.label) : null;
   const choice = route.view === 'result' ? route.cluster : null;
-  const selection = selectVariant(n, choice);
+  const { verdict, pending } = useVerdict(api, choice, v && route.view === 'result' ? { carId: v.carId, categoryId: route.categoryId, productGroupId: route.productGroupId ?? n?.productGroup?.id ?? null } : null);
+  const selection = selectVariant(n, choice, verdict);
   const { cluster } = selection;
   const decided = selection.status !== 'open';
-  const asking = questionOpen(selection);
+  const asking = questionOpen(selection) && !pending;
   const choose = (next: ClusterChoice) => route.view === 'result' && navigate({ ...route, cluster: next }, { replace: true });
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const showResult = route.view === 'result' && category !== null && n !== null && n.totalArticles > 0 && relaunch === null;
@@ -506,7 +521,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
 
   useFollowUp(
     followUp,
-    showResult && category && n ? { summary: resultSummary(category.label, n, decided ? choice : null), pendingContext: question && !decided && asking ? `question affichée : ${question.text}` : null } : null,
+    showResult && category && n ? { summary: resultSummary(category.label, n, selection), pendingContext: question && !decided && asking ? `question affichée : ${question.text}` : null } : null,
   );
 
   if (!v) {
@@ -639,8 +654,7 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
     : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
 }
 
-const agentChoice = (p: AgentPart): ClusterChoice | null =>
-  p.kind === 'catalog' && p.selection ? { id: p.selection.clusterId, by: 'agent', basis: p.selection.basis, ...(p.selection.setAside ? { setAside: p.selection.setAside } : {}) } : null;
+const agentChoice = (p: AgentPart): ClusterChoice | null => (p.kind === 'catalog' && p.selection ? { id: p.selection.clusterId, by: 'agent', selectionId: p.selection.id } : null);
 
 function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, actionsSlot, followUp, onAsk, onPlate, onLabel }: AgentWorkspaceProps) {
   const reducedMotion = useReducedMotion();
@@ -660,10 +674,12 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const category = part ? partCategory(part, categories) : null;
   const n = part?.kind === 'catalog' ? part.narrowing : null;
   const chosen = route.view === 'result' && routed === part ? route.cluster : null;
-  const selection = selectVariant(n, chosen);
+  const here = vehicle && route.view === 'result' ? { carId: vehicle.carId, categoryId: route.categoryId, productGroupId: route.productGroupId ?? n?.productGroup?.id ?? null } : null;
+  const { verdict, pending } = useVerdict(api, chosen, here, part?.kind === 'catalog' ? part.selection : null);
+  const selection = selectVariant(n, chosen, verdict);
   const { cluster } = selection;
   const decided = selection.status !== 'open';
-  const asking = questionOpen(selection);
+  const asking = questionOpen(selection) && !pending;
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const family: Family = category && part ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
   const overlay = wide && part ? (roomy ? BLOCK_WIDTH_WIDE : BLOCK_WIDTH) : null;
@@ -688,14 +704,14 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const retained = part?.kind === 'catalog' ? part.selection : null;
   useEffect(() => {
     if (part && retained && webKey === null) openPart(part, agentChoice(part));
-  }, [retained?.clusterId, retained?.basis]);
+  }, [retained?.id]);
 
   useFollowUp(
     followUp,
     part === null
       ? { summary: null, pendingContext: state.ask?.context ?? null }
       : {
-          summary: part.kind === 'catalog' && category && n ? resultSummary(category.label, n, decided ? chosen : null) : part.kind === 'web' ? `${part.label} : ${part.brand} ${part.reference} (source web, hors catalogue)` : null,
+          summary: part.kind === 'catalog' && category && n ? resultSummary(category.label, n, selection) : part.kind === 'web' ? `${part.label} : ${part.brand} ${part.reference} (source web, hors catalogue)` : null,
           pendingContext: state.ask?.context ?? (question && !decided && asking ? `question affichée : ${question.text}` : null),
         },
   );

@@ -4,10 +4,11 @@ import { mapNarrowing } from './api';
 import { NNBSP } from './format';
 import axial from '../test-fixtures/narrowed-307-axial.json';
 import mazda from '../test-fixtures/narrowed.json';
-import { applicabilityLines, makerOe, otherDimensions, pickChoice, questionOpen, selectVariant, variantMark, variantRows } from './variants';
+import { applicabilityLines, choiceSelectionId, makerOe, otherDimensions, pickChoice, questionOpen, selectVariant, storedVerdict, variantMark, variantRows } from './variants';
 import { VariantTable } from './ui/VariantTable';
 
 const n307 = () => mapNarrowing(axial);
+const SEL = '01JA5Z3M8Q6W4XK7T2N9R0BCDE';
 
 describe('selectVariant', () => {
   it('shows the only part as settled', () => {
@@ -25,7 +26,8 @@ describe('selectVariant', () => {
   it('drives the sheet with the chosen part and says who chose it', () => {
     expect(selectVariant(n307(), { id: 'c2', by: 'user' })).toMatchObject({ status: 'user', index: 1, cluster: { id: 'c2' } });
     expect(selectVariant(n307(), { id: 'c2', by: 'answer' })).toMatchObject({ status: 'answer', index: 1, cluster: { id: 'c2' } });
-    expect(selectVariant(n307(), { id: 'c1', by: 'agent', basis: 'code de fabrication' })).toMatchObject({ status: 'agent', index: 0, verdict: { id: 'c1', basis: 'code de fabrication', setAside: '' }, cluster: { id: 'c1' } });
+    const stored = { id: SEL, clusterId: 'c1', basis: 'code de fabrication', setAside: null };
+    expect(selectVariant(n307(), { id: 'c1', by: 'agent', selectionId: SEL }, stored)).toMatchObject({ status: 'agent', index: 0, verdict: stored, cluster: { id: 'c1' } });
   });
 
   it('falls back to an open first part when the chosen id is unknown', () => {
@@ -38,33 +40,41 @@ describe('selectVariant', () => {
 });
 
 describe('agent verdict', () => {
-  const retained = { id: 'c1', by: 'agent', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' } as const;
-  const verdict = { id: 'c1', basis: retained.basis, setAside: 'OPR ≥ 10311' };
+  const retained = { id: 'c1', by: 'agent', selectionId: SEL } as const;
+  const verdict = { id: SEL, clusterId: 'c1', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' };
+  const kept = { id: 'c2', by: 'user', retained: { id: 'c1', selectionId: SEL } } as const;
 
   it('keeps the agent’s verdict apart from the part shown', () => {
-    expect(selectVariant(n307(), retained)).toMatchObject({ status: 'agent', index: 0, verdict });
-    expect(selectVariant(n307(), { id: 'c2', by: 'user', verdict })).toMatchObject({ status: 'user', index: 1, verdict });
-    expect(selectVariant(n307(), { id: 'c2', by: 'user' }).verdict).toBeNull();
-    expect(selectVariant(n307(), { id: 'c1', by: 'agent', basis: 'b' }).verdict).toEqual({ id: 'c1', basis: 'b', setAside: '' });
+    expect(selectVariant(n307(), retained, verdict)).toMatchObject({ status: 'agent', index: 0, verdict });
+    expect(selectVariant(n307(), kept, verdict)).toMatchObject({ status: 'user', index: 1, verdict });
+    expect(selectVariant(n307(), { id: 'c2', by: 'user' }, verdict).verdict).toBeNull();
+  });
+
+  it('shows the neutral state while the server has not vouched for the selection, or when it says otherwise', () => {
+    expect(selectVariant(n307(), retained, null)).toMatchObject({ status: 'open', index: 0, verdict: null });
+    expect(selectVariant(n307(), retained, { ...verdict, id: '01JA5Z3M8Q6W4XK7T2N9R0BCDF' })).toMatchObject({ status: 'open', verdict: null });
+    expect(selectVariant(n307(), { id: 'c2', by: 'agent', selectionId: SEL }, verdict)).toMatchObject({ status: 'open', index: 0, verdict: null });
+    expect(selectVariant(n307(), kept, null)).toMatchObject({ status: 'user', index: 1, verdict: null });
   });
 
   it('drops a verdict naming a part that is not in the result', () => {
-    expect(selectVariant(n307(), { id: 'c2', by: 'user', verdict: { ...verdict, id: 'c9' } }).verdict).toBeNull();
+    expect(selectVariant(n307(), { id: 'c9', by: 'agent', selectionId: SEL }, { ...verdict, clusterId: 'c9' })).toMatchObject({ status: 'open', verdict: null });
+    expect(selectVariant(n307(), { ...kept, retained: { id: 'c9', selectionId: SEL } }, { ...verdict, clusterId: 'c9' }).verdict).toBeNull();
   });
 
   it('marks the retained row and sets the others aside, whatever row is shown', () => {
-    const s = selectVariant(n307(), retained);
+    const s = selectVariant(n307(), retained, verdict);
     expect([variantMark(s, 'c1'), variantMark(s, 'c2')]).toEqual(['retained', 'aside']);
-    const picked = selectVariant(n307(), { id: 'c2', by: 'user', verdict });
+    const picked = selectVariant(n307(), kept, verdict);
     expect([variantMark(picked, 'c1'), variantMark(picked, 'c2')]).toEqual(['retained', 'aside']);
     const open = selectVariant(n307(), null);
     expect([variantMark(open, 'c1'), variantMark(open, 'c2')]).toEqual([null, null]);
   });
 
   it('a pick keeps the verdict, and picking the retained row goes back to it', () => {
-    const s = selectVariant(n307(), retained);
-    expect(pickChoice(s, 'c2')).toEqual({ id: 'c2', by: 'user', verdict });
-    expect(pickChoice(selectVariant(n307(), { id: 'c2', by: 'user', verdict }), 'c1')).toEqual(retained);
+    const s = selectVariant(n307(), retained, verdict);
+    expect(pickChoice(s, 'c2')).toEqual(kept);
+    expect(pickChoice(selectVariant(n307(), kept, verdict), 'c1')).toEqual(retained);
     expect(pickChoice(selectVariant(n307(), null), 'c2')).toEqual({ id: 'c2', by: 'user' });
   });
 
@@ -72,8 +82,22 @@ describe('agent verdict', () => {
     expect(questionOpen(selectVariant(n307(), null))).toBe(true);
     expect(questionOpen(selectVariant(n307(), { id: 'c2', by: 'user' }))).toBe(true);
     expect(questionOpen(selectVariant(n307(), { id: 'c2', by: 'answer' }))).toBe(true);
-    expect(questionOpen(selectVariant(n307(), retained))).toBe(false);
-    expect(questionOpen(selectVariant(n307(), { id: 'c2', by: 'user', verdict }))).toBe(false);
+    expect(questionOpen(selectVariant(n307(), retained, verdict))).toBe(false);
+    expect(questionOpen(selectVariant(n307(), kept, verdict))).toBe(false);
+  });
+
+  it('names the selection id a route depends on', () => {
+    expect([choiceSelectionId(retained), choiceSelectionId(kept), choiceSelectionId({ id: 'c2', by: 'user' }), choiceSelectionId(null)]).toEqual([SEL, SEL, null, null]);
+  });
+
+  it('trusts a stored selection only for the car, category and product group on screen', () => {
+    const stored = { ...verdict, carId: 16182, carType: 'PC' as const, categoryId: 100198, productGroupId: 51 };
+    const here = { carId: 16182, categoryId: 100198, productGroupId: 51 };
+    expect(storedVerdict(stored, here)).toEqual(verdict);
+    expect(storedVerdict(stored, { ...here, carId: 19107 })).toBeNull();
+    expect(storedVerdict(stored, { ...here, categoryId: 100259 })).toBeNull();
+    expect(storedVerdict(stored, { ...here, productGroupId: 52 })).toBeNull();
+    expect(storedVerdict(stored, { ...here, productGroupId: null })).toEqual(verdict);
   });
 });
 
@@ -138,7 +162,10 @@ describe('makerOe', () => {
 describe('VariantTable', () => {
   const render = (chosen: string | null, by: 'user' | 'answer' | 'agent' | null) => {
     const n = n307();
-    const selection = selectVariant(n, chosen && by ? (by === 'agent' ? { id: chosen, by, basis: 'code de fabrication (OPR 09824 ≤ 10310)' } : { id: chosen, by }) : null);
+    const selection =
+      chosen && by === 'agent'
+        ? selectVariant(n, { id: chosen, by, selectionId: SEL }, { id: SEL, clusterId: chosen, basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: null })
+        : selectVariant(n, chosen && (by === 'user' || by === 'answer') ? { id: chosen, by } : null);
     return renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: 'PEUGEOT', selection, onPick: () => {} }));
   };
 
@@ -171,7 +198,7 @@ describe('VariantTable', () => {
 
   it('sets the other part aside, still a radio, with what rules it out', () => {
     const n = n307();
-    const selection = selectVariant(n, { id: 'c1', by: 'agent', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' });
+    const selection = selectVariant(n, { id: 'c1', by: 'agent', selectionId: SEL }, { id: SEL, clusterId: 'c1', basis: 'code de fabrication (OPR 09824 ≤ 10310)', setAside: 'OPR ≥ 10311' });
     const html = renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: 'PEUGEOT', selection, onPick: () => {} }));
     expect(html).toMatch(/data-mark="aside"/);
     expect(html).toContain('Ne correspond pas : OPR ≥ 10311');

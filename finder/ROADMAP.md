@@ -87,6 +87,18 @@ Shipped, end to end:
   route-driven result). One frame, one mapper, the validation done where the narrowing is at hand.
   The repeated group is made safe instead: the summary carries it, and a missing one is corrected.
   Fixes turn 01M520BZ7BSSB0Z36G1EVG66TV (decoded OPR 09824 ≤ 10310 → c1, screen kept « à confirmer »).
+- **Agent-pick route hardened (2026-10-16, user: « harden this now »)**: the URL carried the agent's
+  basis and set-aside phrase as free text (`/r/<clusterId>/<basis>/<setAside>`), so an edited share
+  link could make the page claim any verdict, and that text also reached the agent in the follow-up
+  summary. Now `show_parts clusterId` stores a `FinderSelection` (`api/src/Entity/FinderSelection.php`,
+  `api/src/Agent/Finder/FinderSelections.php`; owner, turn id, car, category, group, cluster, basis,
+  setAside, OPR) and the frame carries its ULID; routes are `/r/<clusterId>/<selectionId>` and
+  `/v/<id>/r/<retained>/<selectionId>`. The page reads `GET /agent/selections/{id}` (anonymous, public
+  fields only: no owner, plate, turn or OPR) and trusts it only for the car/category/group/cluster on
+  screen; anything else, old text routes included, renders the neutral state. Other URL text checked:
+  the plate is regex-normalised (`normalisePlate`/`normaliseFni`), the car ref, category and group
+  are digits, cluster ids are only matched against the narrowing (never printed); nothing else from
+  the URL is displayed. DESIGN § Variant table, Agent selection.
 - **Build-code question (2026-10-16)**: finder.md now has the question cover both ways (« Code de
   fabrication (vignette de porte) ou longueur mesurée ? ») with options at the cluster ranges
   (322–338 mm / 358 mm), never a length answering a code question; a question naming the code de

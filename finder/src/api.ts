@@ -1,4 +1,5 @@
 import { normalisePlate } from './format';
+import { SELECTION_ID } from './route';
 import type {
   AgentVehicle,
   Applicability,
@@ -15,6 +16,7 @@ import type {
   Reference,
   Registration,
   RegistrationField,
+  StoredSelection,
   Variant,
   Vehicle,
   VinDecode,
@@ -50,6 +52,25 @@ export function classifyStatus(status: number): ErrorKind {
   if (status === 429) return 'quota';
   if (status >= 500) return 'upstream';
   return 'invalid';
+}
+
+export function mapSelection(raw: unknown): StoredSelection {
+  const j = obj(raw);
+  const id = str(j.id);
+  const clusterId = str(j.clusterId);
+  const carId = num(j.carId);
+  const categoryId = num(j.categoryId);
+  if (id === null || !SELECTION_ID.test(id) || clusterId === null || carId === null || categoryId === null) throw new ApiError('invalid');
+  return {
+    id,
+    carId,
+    carType: j.carType === 'CV' ? 'CV' : 'PC',
+    categoryId,
+    productGroupId: num(j.productGroupId),
+    clusterId,
+    basis: str(j.basis) ?? '',
+    setAside: str(j.setAside),
+  };
 }
 
 export function mapVehicle(raw: unknown): Vehicle {

@@ -1,6 +1,6 @@
 import { cotesLine } from './result';
-import type { ClusterChoice } from './route';
 import type { Cluster, Narrowing } from './types';
+import type { Selection } from './variants';
 
 // The on-screen result a follow-up continues (POST /agent/turn `summary`). The server caps it at
 // ~2000 chars; this stays under so nothing is cut mid-cluster.
@@ -17,17 +17,21 @@ function clusterLine(c: Cluster): string {
   return parts.join(' — ');
 }
 
-const chosenBy = (c: ClusterChoice): string =>
-  c.by === 'agent'
-    ? `retenue d’après ${c.basis || 'ta réponse précédente'}, indication (applicabilité par article)`
-    : c.by === 'answer'
+const chosenBy = (s: Selection): string | null =>
+  s.status === 'agent' && s.verdict
+    ? `retenue d’après ${s.verdict.basis || 'ta réponse précédente'}, indication (applicabilité par article)`
+    : s.status === 'answer'
       ? 'choisie par la réponse à la question'
-      : 'choisie par l’utilisateur, non confirmée par le catalogue';
+      : s.status === 'user'
+        ? 'choisie par l’utilisateur, non confirmée par le catalogue'
+        : null;
 
-export function resultSummary(categoryLabel: string, n: Narrowing, choice: ClusterChoice | null): string {
+// `selection` comes from selectVariant: an agent verdict reaches the agent only once the server vouched for it.
+export function resultSummary(categoryLabel: string, n: Narrowing, selection: Selection | null): string {
   const ids = `categoryId ${n.categoryId}${n.productGroup ? `, productGroupId ${n.productGroup.id}` : ''}`;
   const head = `${categoryLabel} (${ids}) : ${n.clusters.length} pièce${n.clusters.length > 1 ? 's' : ''} distincte${n.clusters.length > 1 ? 's' : ''}`;
-  const chosen = choice && n.clusters.some((c) => c.id === choice.id) ? `, ${chosenBy(choice)} : [${choice.id}]` : '';
+  const how = selection?.cluster ? chosenBy(selection) : null;
+  const chosen = how ? `, ${how} : [${selection!.cluster!.id}]` : '';
   let text = `${head}${chosen}.`;
   for (const c of n.clusters) {
     const line = ` ${clusterLine(c)}.`;
