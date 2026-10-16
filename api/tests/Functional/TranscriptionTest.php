@@ -32,7 +32,7 @@ final class TranscriptionTest extends AppTestCase
 
     public function testAnonymousIsRefused(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $this->post($client, self::AUDIO, authed: false);
 
         $this->assertResponseStatusCodeSame(401);

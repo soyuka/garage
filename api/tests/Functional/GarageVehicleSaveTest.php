@@ -199,7 +199,7 @@ final class GarageVehicleSaveTest extends AppTestCase
 
     public function testAnonymousIsRejected(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
 
         $client->request('POST', '/garage/vehicles/save', ['headers' => ['Content-Type' => 'application/ld+json'], 'json' => self::PEUGEOT]);
 

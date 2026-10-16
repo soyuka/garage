@@ -8,11 +8,9 @@ use App\Mcp\Agent\McpToolbox;
 use Symfony\AI\Platform\Result\ToolCall;
 
 /**
- * The `api` firewall gates every garage WRITE (and POST /agent/turn) behind a Casdoor token,
- * mirroring the protection the MCP tools already have. Reads stay public for now (the dashboard
- * still lists/inspects vehicles anonymously and Mercure is unauthenticated — the latent
- * multi-tenant cluster is the next step). This pins the boundary: anonymous writes 401, the same
- * write with a valid token succeeds.
+ * The `api` firewall is deny-by-default (security.yaml): every garage read and write, and
+ * POST /agent/turn, needs a Casdoor token, mirroring the protection the MCP tools already have.
+ * This pins the boundary: anonymous reads and writes 401, the same write with a valid token succeeds.
  */
 final class GarageWriteAuthTest extends AppTestCase
 {
@@ -26,13 +24,13 @@ final class GarageWriteAuthTest extends AppTestCase
             'type' => 'oil_change',
         ]));
 
-        return $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])
+        return $client->request('GET', '/garage/vehicles', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])
             ->toArray()['hydra:member'][0]['@id'];
     }
 
     public function testAnonymousVehiclePatchIsRejected(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $iri = $this->seedVehicleIri($client);
 
         $client->request('PATCH', $iri, [
@@ -45,7 +43,7 @@ final class GarageWriteAuthTest extends AppTestCase
 
     public function testAnonymousFactPostIsRejected(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $iri = $this->seedVehicleIri($client);
 
         $client->request('POST', $iri.'/facts', [
@@ -58,7 +56,7 @@ final class GarageWriteAuthTest extends AppTestCase
 
     public function testAnonymousAgentTurnIsRejected(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
 
         $client->request('POST', '/agent/turn', [
             'headers' => ['Content-Type' => 'application/json'],
@@ -68,14 +66,14 @@ final class GarageWriteAuthTest extends AppTestCase
         $this->assertResponseStatusCodeSame(401);
     }
 
-    public function testVehicleReadStaysPublic(): void
+    public function testAnonymousVehicleReadIsRejected(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $iri = $this->seedVehicleIri($client);
 
         $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
 
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(401);
     }
 
     public function testAuthenticatedVehiclePatchSucceeds(): void

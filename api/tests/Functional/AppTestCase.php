@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Test\ApiTestCase;
+use ApiPlatform\Test\Client as ApiClient;
 use MongoDB\Client;
 use App\PartsApi\PartsApiResponseStore;
 use App\Siv\SivLookupStore;
@@ -87,6 +88,33 @@ abstract class AppTestCase extends ApiTestCase
      *
      * @return array{Authorization: string}
      */
+    /**
+     * Production is deny-by-default (config/packages/security.yaml), so every client is authenticated
+     * as {@see self::TEST_OWNER} unless the request carries its own Authorization header, which wins
+     * over this default (an owner-scoping test keeps its own token). Use {@see createAnonymousClient()}
+     * to pin anonymous behaviour.
+     *
+     * @param array<mixed> $kernelOptions
+     * @param array<mixed> $defaultOptions
+     */
+    protected static function createClient(array $kernelOptions = [], array $defaultOptions = []): ApiClient
+    {
+        $defaultOptions['headers'] = ($defaultOptions['headers'] ?? []) + self::authHeaders();
+
+        return parent::createClient($kernelOptions, $defaultOptions);
+    }
+
+    /**
+     * A client with no default credentials: the explicit opt-out for tests that assert what an
+     * unauthenticated caller gets.
+     *
+     * @param array<mixed> $kernelOptions
+     */
+    protected static function createAnonymousClient(array $kernelOptions = []): ApiClient
+    {
+        return parent::createClient($kernelOptions);
+    }
+
     protected static function authHeaders(string $sub = 'test-user', string $email = self::TEST_OWNER): array
     {
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];

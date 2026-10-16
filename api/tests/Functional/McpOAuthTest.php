@@ -14,7 +14,7 @@ final class McpOAuthTest extends AppTestCase
 {
     public function testUnauthenticatedMcpCallIsChallenged(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
 
         $response = $client->request('POST', '/mcp', [
             'headers' => [
@@ -42,7 +42,7 @@ final class McpOAuthTest extends AppTestCase
 
     public function testProtectedResourceMetadataIsPublic(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
 
         $response = $client->request('GET', '/.well-known/oauth-protected-resource');
 

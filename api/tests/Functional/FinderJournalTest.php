@@ -320,14 +320,14 @@ final class FinderJournalTest extends AppTestCase
         self::assertArrayNotHasKey('make', $this->rows()[0]->getSearch());
     }
 
-    public function testAnonymousSearchesAreNotJournaled(): void
+    public function testAnonymousSearchesAreRefusedAndNotJournaled(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
             'headers' => ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre à huile'],
         ]);
-        self::assertResponseIsSuccessful();
+        self::assertResponseStatusCodeSame(401);
 
         self::assertSame([], $this->rows());
     }

@@ -28,11 +28,11 @@ final class VinDecodeTest extends AppTestCase
         $this->assertNull($body['checksumValid'], 'check digit is only mandatory in North America');
     }
 
-    public function testGetIsAnonymous(): void
+    public function testAnonymousGetIsRejected(): void
     {
-        static::createClient()->request('GET', '/vins/VF33CKFWB83471925');
+        static::createAnonymousClient()->request('GET', '/vins/VF33CKFWB83471925');
 
-        $this->assertResponseIsSuccessful();
+        $this->assertResponseStatusCodeSame(401);
     }
 
     public function testGetValidatesTheNorthAmericanCheckDigit(): void

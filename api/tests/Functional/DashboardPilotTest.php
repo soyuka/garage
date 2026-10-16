@@ -412,7 +412,7 @@ final class DashboardPilotTest extends AppTestCase
 
     public function testTheLinkRequiresAToken(): void
     {
-        static::createClient()->request('GET', '/agent/link');
+        static::createAnonymousClient()->request('GET', '/agent/link');
 
         $this->assertResponseStatusCodeSame(401);
     }

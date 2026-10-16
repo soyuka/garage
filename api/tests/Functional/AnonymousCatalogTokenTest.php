@@ -11,13 +11,13 @@ final class AnonymousCatalogTokenTest extends AppTestCase
 {
     private const string VIN = '/vins/VF33CKFWB83471925';
 
-    public function testAnInvalidTokenOnACatalogReadIsServedAnonymously(): void
+    public function testAnInvalidTokenOnACatalogReadGets401(): void
     {
         static::createClient()->request('GET', self::VIN, [
             'headers' => ['Authorization' => 'Bearer not-a-valid-token', 'Search-Rule' => 'vin', 'Search-Input' => 'VF33CKFWB83471925'],
         ]);
 
-        self::assertResponseStatusCodeSame(200);
+        self::assertResponseStatusCodeSame(401);
         self::assertSame([], $this->journal());
     }
 

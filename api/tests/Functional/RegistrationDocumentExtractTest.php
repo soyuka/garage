@@ -13,7 +13,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
 
     public function testAnonymousIsRefusedBeforeAnyModelCall(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $this->post($client, self::PNG, 'image/png', authed: false);
 
         $this->assertResponseStatusCodeSame(401);

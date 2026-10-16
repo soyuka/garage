@@ -42,7 +42,7 @@ final class FinderHistoryTest extends AppTestCase
 
     public function testHidingRequiresAuthentication(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $turn = $this->seed('x', self::TEST_OWNER, new \DateTimeImmutable('-1 hour'));
 
         $client->request('POST', '/agent/turns/'.$turn->getId().'/hide', ['json' => []]);

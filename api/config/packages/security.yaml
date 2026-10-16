@@ -23,49 +23,36 @@ security:
             stateless: true
             provider: zitadel
 
-        # The finder's public catalogue reads (vehicles, vins, cars) stay anonymous; the bearer is only
-        # read so an authenticated finder search can be journaled under its owner
-        # (App\Finder\FinderSearchJournalListener). A missing, invalid or expired token is treated as
-        # anonymous (App\Security\LenientAccessTokenAuthenticator) — a stale dashboard token must not
-        # break a public read. Same Casdoor handler as `api` (added per environment below).
-        catalog:
-            pattern: ^/(vehicles|vins|cars)
-            stateless: true
-            provider: zitadel
-
-        # The REST garage surface + the agent turn. The token is OPTIONAL at the firewall (a request
-        # with no token falls through as anonymous so the public garage GETs still work); the
-        # access_control rules below force one on the write methods and on /agent/turn, and an invalid
-        # token is a strict 401 here.
-        api:
-            pattern: ^/(garage|agent|tts|stt|registration-documents|photo-intake)
-            stateless: true
-            provider: zitadel
-
-        # Everything else (the public /api reference data, docs) stays open.
-        main:
+        # The finder's shared link (« Copier le lien ») is opened by someone else, who holds no token;
+        # the id is an unguessable ULID (App\Controller\Finder\FinderSelectionController). A
+        # firewall of its own, not a PUBLIC_ACCESS rule, so a stale bearer cannot 401 it either.
+        public_selection:
+            pattern: ^/agent/selections/
             security: false
+
+        # Everything else is deny-by-default: the REST garage, the agent, the speech and upload
+        # endpoints, and every catalogue read (plate/VIN lookup, /cars, narrowing, photos), which spend
+        # paid upstream quota (SIV, partsapi) for whoever calls them. The API reference (/docs,
+        # entrypoint, contexts) is gated too. The bearer is validated here, so an invalid or expired
+        # token is a strict 401 (App\Security\CasdoorTokenHandler); a token-less request gets
+        # 401 + `WWW-Authenticate: Bearer` from App\Security\BearerEntryPoint.
+        api:
+            pattern: ^/
+            stateless: true
+            provider: zitadel
+            entry_point: App\Security\BearerEntryPoint
 
     access_control:
         # Force a 401 (entry point) for unauthenticated /mcp calls; without this the missing
         # token would simply fall through as anonymous and the tools would run unprotected.
+        # (The challenge also carries the RFC 9728 resource_metadata, McpProtectedResourceChallengeListener.)
         - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
-        # Garage WRITES require a token; GET stays anonymous (reads + Mercure are still public —
-        # the latent multi-tenant cluster is the next step). /agent/turn is gated wholesale.
-        - { path: ^/garage, methods: [POST, PUT, PATCH, DELETE], roles: IS_AUTHENTICATED_FULLY }
-        - { path: ^/agent/turn, roles: IS_AUTHENTICATED_FULLY }
-        # The pilot topic is the only thing keeping one owner's render intents off another's
-        # EventSource (the hub takes anonymous subscribers), so handing it out needs a token.
-        - { path: ^/agent/link, roles: IS_AUTHENTICATED_FULLY }
-        # /tts spends real vendor credits with a server-side key. Authentication is the whole gate;
-        # an open proxy is somebody else's money (docs/voice-plan.md § Phase 1).
-        - { path: ^/tts, roles: IS_AUTHENTICATED_FULLY }
-        # /stt spends this machine's CPU on a speech model. Same reasoning, harsher bill: an open
-        # transcription proxy is a free GPU-less ASR service for strangers (docs/dictation-plan.md).
-        - { path: ^/stt, roles: IS_AUTHENTICATED_FULLY }
-        # /registration-documents sends the upload to a paid vision model: same open-proxy reasoning.
-        - { path: ^/registration-documents, roles: IS_AUTHENTICATED_FULLY }
-        - { path: ^/photo-intake, roles: IS_AUTHENTICATED_FULLY }
+        # Deny by default: every path not opened by a firewall above needs a token. The pilot topic
+        # (/agent/link) is the only thing keeping one owner's render intents off another's EventSource
+        # (the Mercure hub takes anonymous subscribers), /tts, /stt, /registration-documents and
+        # /photo-intake spend vendor credits or CPU, and the garage is owner-scoped: all of them rely
+        # on this rule rather than on a per-route entry.
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
 
 # Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC
 # handler but drops the audience check, because Casdoor sets `aud` to the (per-DCR dynamic)
@@ -77,9 +64,6 @@ when@dev: &casdoor_firewall
                 access_token:
                     token_handler: App\Security\CasdoorTokenHandler
             api:
-                access_token:
-                    token_handler: App\Security\CasdoorTokenHandler
-            catalog:
                 access_token:
                     token_handler: App\Security\CasdoorTokenHandler
 
@@ -95,8 +79,5 @@ when@test:
                     # run for real.
                     token_handler: App\Tests\Security\FakeOidcTokenHandler
             api:
-                access_token:
-                    token_handler: App\Tests\Security\FakeOidcTokenHandler
-            catalog:
                 access_token:
                     token_handler: App\Tests\Security\FakeOidcTokenHandler

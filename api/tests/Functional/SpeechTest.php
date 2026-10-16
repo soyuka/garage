@@ -21,7 +21,7 @@ final class SpeechTest extends AppTestCase
 
     public function testAnonymousIsRefused(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $client->request('POST', '/tts', ['json' => ['text' => 'Vidange enregistrée.']]);
 
         $this->assertResponseStatusCodeSame(401);
@@ -148,7 +148,7 @@ final class SpeechTest extends AppTestCase
 
     public function testGetVoicesRequiresAuthentication(): void
     {
-        $client = static::createClient();
+        $client = static::createAnonymousClient();
         $client->request('GET', '/tts/voices');
 
         $this->assertResponseStatusCodeSame(401);

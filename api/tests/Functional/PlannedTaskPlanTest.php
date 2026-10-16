@@ -93,7 +93,7 @@ final class PlannedTaskPlanTest extends AppTestCase
 
     public function testAnonymousPostIsRejected(): void
     {
-        static::createClient()->request('POST', '/garage/planned-tasks', [
+        static::createAnonymousClient()->request('POST', '/garage/planned-tasks', [
             'headers' => ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => self::payload(),
         ]);
