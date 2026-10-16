@@ -135,10 +135,11 @@ export const MESH_RULES: readonly MeshRule[] = [
 // TecDoc product group (generic article) → mesh, read before the category node: one node can hold several
 // groups that are different parts ("Direction > Rotules" holds outer tie rod ends and inner axial joints).
 // An inner axial joint has no mesh of its own: the outer tie rod end would mislead, so it stays generic.
+// « Rotule de direction » (PT 2066, 2 unchecked articles on the 307) is not confirmed as either: generic too.
 export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null; approximate?: boolean }[] = [
   { group: /rotule de direction interieure|rotule axiale/, mesh: null },
   { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
-  { group: /^rotule de direction$/, mesh: 'outer-tie-rod-end' },
+  { group: /^rotule de direction$/, mesh: null },
 ];
 
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = [], productGroup: string | null = null): Family {
