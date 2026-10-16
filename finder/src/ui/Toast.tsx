@@ -14,6 +14,9 @@ export const useToast = () => useContext(ToastContext);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState<ToastMessage | null>(null);
+  // The text stays during the exit fade instead of vanishing under it.
+  const last = useRef<ToastMessage | null>(null);
+  if (message) last.current = message;
   const timer = useRef<number | undefined>(undefined);
   const show = useCallback<Show>((m) => {
     const next = typeof m === 'string' ? { text: m } : m;
@@ -25,10 +28,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={show}>
       {children}
       <div className="toast" role="status" aria-live="polite" data-open={message !== null} data-link={message?.link !== undefined || message?.action !== undefined}>
-        {message?.text}
-        {message?.link && (
-          <a href={message.link.href} target="_blank" rel="noopener">
-            {message.link.label}
+        {message ? message.text : <span aria-hidden="true">{last.current?.text}</span>}
+        {(message ?? last.current)?.link && (
+          <a href={(message ?? last.current)!.link!.href} target="_blank" rel="noopener" tabIndex={message ? undefined : -1}>
+            {(message ?? last.current)!.link!.label}
           </a>
         )}
         {message?.action && (

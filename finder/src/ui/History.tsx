@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { FinderApi } from '../client';
 import { formatRelative, formatWhen, withoutRemoved, type HistoryEntry } from '../history';
 import { useToast } from './Toast';
@@ -18,20 +18,46 @@ interface Props {
 export function History({ api, entries, loading, onOpen, title = 'Recherches récentes', compact = false }: Props) {
   const toast = useToast();
   const [removed, setRemoved] = useState<ReadonlySet<string>>(new Set());
+  const [leaving, setLeaving] = useState<ReadonlySet<string>>(new Set());
+  const rows = useRef(new Map<string, HTMLLIElement>());
+  const before = useRef<Map<string, number> | null>(null);
   const shown = withoutRemoved(entries, removed);
+
+  // FLIP: the rows under a removed one slide up into its place instead of jumping.
+  useLayoutEffect(() => {
+    const tops = before.current;
+    before.current = null;
+    if (!tops) return;
+    for (const [id, el] of rows.current) {
+      const was = tops.get(id);
+      const dy = was === undefined ? 0 : was - el.getBoundingClientRect().top;
+      if (dy) el.animate([{ transform: `translateY(${dy}px)` }, { transform: 'none' }], { duration: 260, easing: 'cubic-bezier(0.2, 0, 0, 1)' });
+    }
+  }, [removed]);
 
   if (!loading && shown.length === 0) return null;
 
-  const remove = async (e: HistoryEntry) => {
+  const hide = (e: HistoryEntry) => {
+    before.current = new Map([...rows.current].map(([id, el]) => [id, el.getBoundingClientRect().top]));
     setRemoved((r) => new Set(r).add(e.id));
+  };
+
+  const remove = async (e: HistoryEntry) => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setLeaving((l) => new Set(l).add(e.id));
+    window.setTimeout(() => hide(e), reduced ? 0 : 180);
     try {
       await Promise.all(e.ids.map((id) => api.hideFromHistory(id)));
     } catch {
-      setRemoved((r) => {
+      const restore = (r: ReadonlySet<string>) => {
         const next = new Set(r);
         next.delete(e.id);
         return next;
-      });
+      };
+      window.setTimeout(() => {
+        setRemoved(restore);
+        setLeaving(restore);
+      }, 200);
       toast('Recherche non retirée. Réessayez.');
     }
   };
@@ -46,7 +72,14 @@ export function History({ api, entries, loading, onOpen, title = 'Recherches ré
       ) : (
         <ol>
           {shown.map((e) => (
-            <li key={e.id}>
+            <li
+              key={e.id}
+              data-leaving={leaving.has(e.id) || undefined}
+              ref={(el) => {
+                if (el) rows.current.set(e.id, el);
+                else rows.current.delete(e.id);
+              }}
+            >
               <a href={e.hash} onClick={() => onOpen(e)}>
                 <span className="history-input">{e.input || '—'}</span>
                 {!compact && (

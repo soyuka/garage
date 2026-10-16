@@ -51,12 +51,14 @@ type DetailState = { status: 'loading' } | { status: 'ok'; data: JournalDetail }
 interface Props {
   api: FinderApi;
   open: boolean;
+  // Closing: still mounted for its exit slide.
+  leaving?: boolean;
   authed: boolean;
   docked: boolean;
   onClose: () => void;
 }
 
-export function Journal({ api, open, authed, docked, onClose }: Props) {
+export function Journal({ api, open, leaving = false, authed, docked, onClose }: Props) {
   const [rows, setRows] = useState<JournalRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,7 +104,7 @@ export function Journal({ api, open, authed, docked, onClose }: Props) {
 
   return (
     <Layer docked={docked} onClose={onClose}>
-      <aside className={docked ? 'journal journal--docked' : 'journal'} aria-labelledby="journal-title">
+      <aside className={docked ? 'journal journal--docked' : 'journal'} data-leaving={leaving || undefined} aria-labelledby="journal-title">
         <header className="journal-head">
           <h2 id="journal-title" ref={heading} tabIndex={-1}>
             Journal

@@ -2208,18 +2208,6 @@ button {
   box-shadow: -18px 0 48px -28px rgba(34, 36, 40, 0.45);
   overflow-y: auto;
   overscroll-behavior: contain;
-  animation: journal-in 0.32s var(--ease-out);
-}
-
-@keyframes journal-in {
-  from {
-    transform: translateX(24px);
-    clip-path: inset(0 0 0 100%);
-  }
-  to {
-    transform: none;
-    clip-path: inset(0 0 0 0);
-  }
 }
 
 .journal-head {
@@ -2860,7 +2848,11 @@ button {
   }
 }
 
-.sheet-photo,
+.sheet-photo:not([data-loaded]) {
+  opacity: 0;
+}
+
+.sheet-photo[data-loaded],
 .sheet-unknown {
   animation: pin-in 0.42s var(--ease-out) both;
 }
@@ -2868,4 +2860,209 @@ button {
 .sheet-placeholder > *,
 .sheet-status > * {
   animation: rise-in 0.36s var(--ease-out) both;
+}
+
+/* Page changes: the composer docks or undocks as one element, everything else cross-fades. */
+.intake-field {
+  view-transition-name: composer;
+}
+
+.top {
+  view-transition-name: topbar;
+}
+
+::view-transition-group(composer) {
+  animation-duration: 0.46s;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+::view-transition-old(root) {
+  animation: fade-out 0.16s var(--ease-in) both;
+}
+
+::view-transition-new(root) {
+  animation: rise-in 0.34s var(--ease-out) 0.06s both;
+}
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* The result arrives: the title block's cells rise in, 35 ms apart (stays under 250 ms in all). */
+.tb:not(.tb--show) > .c {
+  animation: rise-in 0.38s var(--ease-out) both;
+}
+
+.tb > .c:nth-child(2) { animation-delay: 35ms; }
+.tb > .c:nth-child(3) { animation-delay: 70ms; }
+.tb > .c:nth-child(4) { animation-delay: 105ms; }
+.tb > .c:nth-child(5) { animation-delay: 140ms; }
+.tb > .c:nth-child(n + 6) { animation-delay: 175ms; }
+
+/* A variant pick re-keys the OE, equivalence and cotes cells: they swap in quickly, no stagger. */
+.tb > .c.tb-swap {
+  animation: swap-in 0.26s var(--ease-out) both;
+  animation-delay: 0ms;
+}
+
+@keyframes swap-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+.vt-item[data-checked] .vt-letter {
+  animation: press-in 0.24s var(--ease-out);
+}
+
+@keyframes press-in {
+  from {
+    transform: scale(0.86);
+  }
+}
+
+.vt-verdict {
+  animation: fade-in 0.3s var(--ease-out) both;
+}
+
+/* Dock: question cards, status line, result actions. Exits are faster than entrances. */
+.presence {
+  animation: rise-in var(--t-enter) var(--ease-out) both;
+}
+
+.presence[data-leaving] {
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in);
+  pointer-events: none;
+}
+
+.dock-inner > .dock-status,
+.dock-inner > .dock-line,
+.dock-inner > .field-error {
+  animation: rise-in 0.28s var(--ease-out) both;
+}
+
+.dock-acts .act > * {
+  animation: rise-in 0.3s var(--ease-out) both;
+}
+
+.dock-acts .act > :nth-child(2) { animation-delay: 40ms; }
+.dock-acts .act > :nth-child(3) { animation-delay: 80ms; }
+
+.dock-quick {
+  animation: fade-in 0.3s var(--ease-out) 0.12s both;
+}
+
+.menu-pop {
+  transform-origin: 0 100%;
+  animation: pop-in 0.2s var(--ease-out) both;
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+}
+
+/* Copy: the check pops in for 1.5 s, the copy icon fades back. */
+.copy-btn svg {
+  animation: fade-in 0.18s var(--ease-out);
+}
+
+.copy-btn[data-done] svg {
+  animation: tick-in 0.26s var(--ease-out);
+}
+
+@keyframes tick-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5) rotate(-12deg);
+  }
+}
+
+/* Journal: slides in from the right edge, out faster; the scrim follows. */
+.journal {
+  animation: journal-in 0.34s var(--ease-out);
+}
+
+@keyframes journal-in {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.journal[data-leaving] {
+  opacity: 0;
+  transform: translateX(24px);
+  transition: opacity 0.2s var(--ease-in), transform 0.2s var(--ease-in);
+}
+
+.journal-scrim {
+  animation: fade-in 0.3s var(--ease-out) both;
+  transition: opacity 0.2s var(--ease-in);
+}
+
+.journal-layer:has(.journal[data-leaving]) .journal-scrim {
+  opacity: 0;
+}
+
+/* History: a hidden row slides out, the rows under it FLIP up (ui/History.tsx). */
+.history li {
+  transition: opacity var(--t-exit) var(--ease-in), transform var(--t-exit) var(--ease-in);
+}
+
+.history li[data-leaving] {
+  opacity: 0;
+  transform: translateX(16px);
+}
+
+.history ol > li {
+  animation: rise-in 0.32s var(--ease-out) both;
+}
+
+.history ol > li:nth-child(2) { animation-delay: 30ms; }
+.history ol > li:nth-child(3) { animation-delay: 60ms; }
+.history ol > li:nth-child(4) { animation-delay: 90ms; }
+.history ol > li:nth-child(n + 5) { animation-delay: 120ms; }
+
+/* The decoded build code lands on the chip. */
+.chip-opr {
+  animation: slide-in 0.36s var(--ease-out) both;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+/* Attachment chips pop in, shrink out before they leave the composer. */
+.chip-file {
+  animation: pin-in 0.22s var(--ease-out) both;
+  transition: opacity 0.14s var(--ease-in), transform 0.14s var(--ease-in);
+}
+
+.chip-file[data-leaving] {
+  opacity: 0;
+  transform: scale(0.94);
+}
+
+/* Toast: up in 0.32 s, down in 0.16 s. */
+.toast {
+  transition: opacity 0.16s var(--ease-in), transform 0.16s var(--ease-in);
+}
+
+.toast[data-open='true'] {
+  transition: opacity 0.24s var(--ease-out), transform 0.32s var(--ease-out);
 }

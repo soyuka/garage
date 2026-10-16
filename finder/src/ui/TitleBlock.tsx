@@ -48,7 +48,7 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, ra
       {multi && <VariantTable narrowing={narrowing} make={vehicle.make} selection={selection} onPick={onPick} />}
 
       {headline ? (
-        <div className="c s3">
+        <div key={`oe-${cluster?.id ?? 'none'}`} className="c s3 tb-swap">
           <span className="l">
             {oe ? `Réf. OE · ${oe.brand}` : `Réf. · ${headline.brand}`}
             {letter && ` · variante ${letter}`}
@@ -71,7 +71,7 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, ra
       )}
 
       {eq && eq.shown.length > 0 && (
-        <div className="c s3">
+        <div key={`eq-${cluster?.id ?? 'none'}`} className="c s3 tb-swap">
           <span className="l">Équivalences</span>
           <div className="eq m">
             {eqShown.map((v) => (
@@ -113,7 +113,7 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, ra
         </div>
       )}
 
-      <div className="c s3">
+      <div key={`cotes-${cluster?.id ?? 'none'}`} className="c s3 tb-swap">
         <span className="l">Cotes</span>
         <span className="m tb-cotes">
           {cotes

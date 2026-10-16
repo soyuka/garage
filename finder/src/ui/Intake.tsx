@@ -62,13 +62,22 @@ function CameraIcon() {
 function Chips({ files, disabled, onDetach }: { files: readonly File[]; disabled: boolean; onDetach?: (index: number) => void }) {
   const previews = useMemo(() => files.map((f) => (f.type.startsWith('image/') ? URL.createObjectURL(f) : null)), [files]);
   useEffect(() => () => previews.forEach((u) => u && URL.revokeObjectURL(u)), [previews]);
+  const [leaving, setLeaving] = useState<File | null>(null);
+  const detach = (i: number) => {
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setLeaving(files[i] ?? null);
+    window.setTimeout(() => {
+      setLeaving(null);
+      onDetach?.(i);
+    }, reduced ? 0 : 140);
+  };
   return (
     <ul className="chips" aria-label="Fichiers joints">
       {files.map((f, i) => (
-        <li key={`${f.name}-${i}`} className="chip-file">
+        <li key={`${f.name}-${i}`} className="chip-file" data-leaving={f === leaving || undefined}>
           {previews[i] ? <img src={previews[i]!} alt="" width="20" height="20" /> : <span className="chip-kind m" aria-hidden="true">{f.type === 'application/pdf' ? 'PDF' : 'VID'}</span>}
           <span className="chip-file-name">{f.name}</span>
-          <button type="button" className="ctx-remove" disabled={disabled} aria-label={`Retirer ${f.name}`} title="Retirer le fichier" onClick={() => onDetach?.(i)}>
+          <button type="button" className="ctx-remove" disabled={disabled} aria-label={`Retirer ${f.name}`} title="Retirer le fichier" onClick={() => detach(i)}>
             ×
           </button>
         </li>

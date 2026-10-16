@@ -1,6 +1,7 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { measure } from '../dims';
 import type { SheetPhoto } from '../photo';
+import { useLinger } from './Presence';
 import type { Dimension, Family } from '../types';
 
 const Blueprint = lazy(() => import('../scene/Blueprint').then((m) => ({ default: m.Blueprint })));
@@ -51,16 +52,6 @@ function useBlockHeight(active: boolean) {
 // The canvas outlives the search by its fade when the result has no mesh (photo, « ? », message):
 // the carousel dissolves while the photo or the « ? » comes in over it.
 const CANVAS_EXIT_MS = 360;
-
-function useLinger(on: boolean, ms: number): { mounted: boolean; leaving: boolean } {
-  const [mounted, setMounted] = useState(on);
-  useEffect(() => {
-    if (on) return setMounted(true);
-    const t = window.setTimeout(() => setMounted(false), ms);
-    return () => window.clearTimeout(t);
-  }, [on, ms]);
-  return { mounted: on || mounted, leaving: !on && mounted };
-}
 
 export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, status, searching = false, children }: Props) {
   const overlaid = Boolean(overlayWidth && children);
@@ -127,10 +118,12 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
 // falls back to the « ? ».
 function CataloguePhoto({ photo }: { photo: SheetPhoto }) {
   const [failed, setFailed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   if (failed) return <Unknown />;
+  // Pinned only once decoded: a photo that fails never flashes an empty frame before the « ? ».
   return (
-    <figure className="sheet-photo">
-      <img src={photo.src} alt={photo.alt} decoding="async" onError={() => setFailed(true)} />
+    <figure className="sheet-photo" data-loaded={loaded || undefined}>
+      <img src={photo.src} alt={photo.alt} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />
       <figcaption className="sheet-photo-cap m">
         Photo catalogue · <span className="nw">{photo.reference}</span>
       </figcaption>

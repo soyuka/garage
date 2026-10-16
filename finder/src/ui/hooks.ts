@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../api';
 import { parseRoute, routeToHash, type Route } from '../route';
+import { viewTransition } from './Presence';
 
 export type Async<T> =
   | { status: 'idle' }
@@ -38,7 +39,7 @@ export type Navigate = (r: Route, options?: { replace?: boolean }) => void;
 export function useRoute(): [Route, Navigate] {
   const [route, setRoute] = useState<Route>(() => parseRoute(window.location.hash));
   useEffect(() => {
-    const onHash = () => setRoute(parseRoute(window.location.hash));
+    const onHash = () => viewTransition(() => setRoute(parseRoute(window.location.hash)));
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);

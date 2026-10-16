@@ -30,6 +30,7 @@ import { History } from './ui/History';
 import { Home, Showcase } from './ui/Home';
 import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Async, type Navigate } from './ui/hooks';
 import { Journal } from './ui/Journal';
+import { Presence, useLinger, viewTransition } from './ui/Presence';
 import { useAgentTurn, type AgentTurn, type AskOptions } from './ui/useAgentTurn';
 import { Sheet } from './ui/Sheet';
 import { ResultActions, WebActions } from './ui/ResultActions';
@@ -50,6 +51,7 @@ const viewLabel = (family: Family, category: Category | null): string => {
 };
 
 const SHEET_OVERLAY_MIN = 812;
+const JOURNAL_EXIT_MS = 220;
 const BLOCK_WIDTH = 520;
 const BLOCK_WIDTH_WIDE = 600;
 
@@ -178,15 +180,20 @@ function Finder({ api }: { api: FinderApi }) {
   const askLabel = () => setLabelRequest((n) => n + 1);
 
   const askAgent = (text: string, options: AskOptions = {}) => {
-    setPanel({ kind: 'none' });
     const context = followUp.current;
-    turn.ask(text, {
-      ...options,
-      summary: options.summary ?? context?.summary ?? null,
-      pendingContext: options.pendingContext ?? context?.pendingContext ?? null,
-      continued: options.continued ?? turn.state.parts.length > 0,
-      held: route.view === 'result' && !agentOwns && v?.carId ? { carId: v.carId, carType: v.carType } : null,
-    });
+    const run = () => {
+      setPanel({ kind: 'none' });
+      turn.ask(text, {
+        ...options,
+        summary: options.summary ?? context?.summary ?? null,
+        pendingContext: options.pendingContext ?? context?.pendingContext ?? null,
+        continued: options.continued ?? turn.state.parts.length > 0,
+        held: route.view === 'result' && !agentOwns && v?.carId ? { carId: v.carId, carType: v.carType } : null,
+      });
+    };
+    // Leaving the home for the workspace: the composer docks through a view transition.
+    if (entry) viewTransition(run);
+    else run();
   };
 
   const onText = (r: TextRoute, typed: string): void | Promise<boolean> => {
@@ -369,9 +376,10 @@ function Finder({ api }: { api: FinderApi }) {
   };
   const historyList = history.status === 'ok' ? history.data : [];
 
-  const journal = <Journal api={api} open={journalOpen} authed={authed} docked={docked} onClose={closeJournal} />;
+  const journalShown = useLinger(journalOpen, reducedMotion ? 0 : JOURNAL_EXIT_MS);
+  const journal = <Journal api={api} open={journalShown.mounted} leaving={journalShown.leaving} authed={authed} docked={docked} onClose={closeJournal} />;
   const shell = (main: ReactNode, mode: 'entry' | 'work') => (
-    <div className={['app', `app--${mode}`, journalOpen && docked && 'app--journal'].filter(Boolean).join(' ')}>
+    <div className={['app', `app--${mode}`, journalShown.mounted && docked && 'app--journal'].filter(Boolean).join(' ')}>
       {header}
       <main className="main">{main}</main>
       {mode === 'work' && dock}
@@ -595,13 +603,21 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           {wide && block}
         </Sheet>
       </div>
-      {slot && ask && createPortal(<AgentQuestion ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} onPlate={onPlate} onLabel={onLabel} />, slot)}
+      {slot &&
+        createPortal(
+          <Presence show={ask !== null}>
+            {ask && <AgentQuestion key={ask.question} ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
+          </Presence>,
+          slot,
+        )}
       {actionsSlot && showResult && category && n && createPortal(<ResultActions vehicle={v} category={category} family={family} cluster={cluster} clusters={n.clusters} api={api} />, actionsSlot)}
       {slot &&
-        !ask &&
-        question &&
-        asking &&
-        createPortal(<QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => choose({ id, by: 'answer' })} />, slot)}
+        createPortal(
+          <Presence show={!ask && question !== null && asking}>
+            {!ask && question && asking && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => choose({ id, by: 'answer' })} />}
+          </Presence>,
+          slot,
+        )}
     </div>
   );
 }
@@ -771,8 +787,12 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
       {slot &&
         createPortal(
           <>
-            {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
-            {!state.ask && question && asking && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}
+            <Presence show={state.ask !== null}>
+              {state.ask && <AgentQuestion key={state.ask.question} ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
+            </Presence>
+            <Presence show={!state.ask && question !== null && asking && part !== null}>
+              {!state.ask && question && asking && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}
+            </Presence>
           </>,
           slot,
         )}
