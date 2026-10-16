@@ -157,6 +157,8 @@ function Finder({ api }: { api: FinderApi }) {
 
   const [plateRequest, setPlateRequest] = useState(0);
   const askPlate = () => setPlateRequest((n) => n + 1);
+  const [labelRequest, setLabelRequest] = useState(0);
+  const askLabel = () => setLabelRequest((n) => n + 1);
 
   const askAgent = (text: string, options: AskOptions = {}) => {
     setPanel({ kind: 'none' });
@@ -336,6 +338,7 @@ function Finder({ api }: { api: FinderApi }) {
       hasVehicle={v !== null}
       autoFocus={handoff || (route.view === 'vehicle' && !agentActive)}
       plateRequest={plateRequest}
+      labelRequest={labelRequest}
       onText={onText}
       attachments={attachments}
       onAttach={attach}
@@ -401,7 +404,7 @@ function Finder({ api }: { api: FinderApi }) {
 
   return shell(
     agentOwns ? (
-      <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} followUp={followUp} onAsk={askAgent} onPlate={askPlate} />
+      <AgentWorkspace api={api} route={route} navigate={navigate} vehicle={v} categories={cats ?? []} turn={turn} slot={slot} followUp={followUp} onAsk={askAgent} onPlate={askPlate} onLabel={askLabel} />
     ) : (
       <Workspace
         api={api}
@@ -418,6 +421,7 @@ function Finder({ api }: { api: FinderApi }) {
         onOpenHistory={openHistory}
         onAsk={askAgent}
         onPlate={askPlate}
+        onLabel={askLabel}
       />
     ),
     'work',
@@ -453,9 +457,10 @@ interface WorkspaceProps {
   onOpenHistory: (entry: HistoryEntry) => void;
   onAsk: (text: string, options?: AskOptions) => void;
   onPlate: () => void;
+  onLabel: () => void;
 }
 
-function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, recent, restoredInput, onOpenHistory, onAsk, onPlate }: WorkspaceProps) {
+function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, recent, restoredInput, onOpenHistory, onAsk, onPlate, onLabel }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const v = vehicle.status === 'ok' ? vehicle.data : null;
@@ -557,7 +562,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
         {!wide && traceNode}
         {!wide && block}
       </div>
-      {slot && ask && createPortal(<AgentQuestion ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} onPlate={onPlate} />, slot)}
+      {slot && ask && createPortal(<AgentQuestion ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} onPlate={onPlate} onLabel={onLabel} />, slot)}
       {slot &&
         !ask &&
         question &&
@@ -605,6 +610,7 @@ interface AgentWorkspaceProps {
   followUp: MutableRefObject<FollowUp | null>;
   onAsk: (text: string, options?: AskOptions) => void;
   onPlate: () => void;
+  onLabel: () => void;
 }
 
 function partCategory(part: AgentPart, categories: Category[]): Category {
@@ -616,7 +622,7 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
 
 const agentChoice = (p: AgentPart): ClusterChoice | null => (p.kind === 'catalog' && p.selection ? { id: p.selection.clusterId, by: 'agent', basis: p.selection.basis } : null);
 
-function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, followUp, onAsk, onPlate }: AgentWorkspaceProps) {
+function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, followUp, onAsk, onPlate, onLabel }: AgentWorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const { state } = turn;
@@ -725,7 +731,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
       {slot &&
         createPortal(
           <>
-            {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} />}
+            {state.ask && <AgentQuestion ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
             {!state.ask && question && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}
           </>,
           slot,

@@ -72,11 +72,16 @@ export function buildQuestion(n: Narrowing, categoryLabel: string): Question | n
   };
 }
 
-export type AskChoice = { kind: 'agent'; label: string; value: string } | { kind: 'plate'; label: string };
+export type AskChoice = { kind: 'agent'; label: string; value: string } | { kind: 'plate'; label: string } | { kind: 'label'; label: string };
 
 export const PLATE_LABEL = 'Donner la plaque';
+export const LABEL_PHOTO = 'Photo de la vignette';
 
-// The plate shortcut is added here, not by the agent, so no question can forget it; it sits outside the agent's six.
-export function askChoices(options: QuestionOption[]): AskChoice[] {
-  return [...options.map((o): AskChoice => ({ kind: 'agent', label: o.label, value: o.value })), { kind: 'plate', label: PLATE_LABEL }];
+const BUILD_CODE = /code de fabrication|organisation|vignette|\bOPR\b/i;
+
+// The shortcut is added here, not by the agent, so no question can forget it; it sits outside the agent's six.
+// A code de fabrication question is asked about a known car: the door label photo answers it, the plate does not.
+export function askChoices(options: QuestionOption[], question = ''): AskChoice[] {
+  const extra: AskChoice = BUILD_CODE.test(question) ? { kind: 'label', label: LABEL_PHOTO } : { kind: 'plate', label: PLATE_LABEL };
+  return [...options.map((o): AskChoice => ({ kind: 'agent', label: o.label, value: o.value })), extra];
 }

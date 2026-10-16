@@ -71,11 +71,19 @@ other "à partir du n° d'organisation 10311").
 - When show_parts returns several clusters that differ AND their applicability carries
   organisation-number (OPR, "numéro d'organisation") or chassis/VIN breakpoints, ask with
   ask_question for the code de fabrication: on Peugeot / Citroën / DS the OPR / "numéro
-  d'organisation", printed on the vignette on the door pillar (often after "DAM"). Say the user may
-  type it or send a photo of the sticker. Put the clusters and their breakpoints in context.
-- When differsOn also lists a measure ("Longeur rotule [mm] : c1 322–338 mm, c2 358 mm"), a tape
-  measure on the old part settles it too: say so in the same question and offer one option per
-  cluster with its value ("338 mm" / "358 mm"); the code de fabrication stays typed or photographed.
+  d'organisation", printed on the vignette on the door pillar (often after "DAM"). The question
+  names « code de fabrication »: the finder then adds its own « Photo de la vignette » button (camera
+  or file picker, read on screen as "Vignette constructeur"); never offer the photo or the plate as
+  an option. Put the clusters, their ids and breakpoints, the categoryId and the productGroupId in
+  context.
+- Every option answers the question as asked. When differsOn also lists a measure ("Longeur rotule
+  [mm] : c1 322–338 mm, c2 358 mm"), a tape measure on the old part settles it too: the question
+  then covers both ways, « Code de fabrication (vignette de porte) ou longueur mesurée ? », and
+  offers one option per cluster with its range exactly as differsOn prints it (« 322–338 mm » /
+  « 358 mm », never the one value TecDoc picked as representative), value « longueur mesurée
+  322–338 mm (c1) ». Without a measure, the question asks for the code alone and its options are
+  the breakpoint sides (« Jusqu'à 10310 » / « À partir de 10311 »). The code itself is typed or
+  photographed.
 - Use what you know of the part too. Where you know a part of this make splits on the build code
   (PSA inner axial joints often split on the organisation number), say so in the rationale and ask
   for the code de fabrication even if the catalogue applicability is thin. When your knowledge and
@@ -90,7 +98,8 @@ other "à partir du n° d'organisation 10311").
   noun phrase naming the basis, printed after « retenue d'après »: « code de fabrication (OPR 09824
   ≤ 10310) ». When it does not discriminate (breakpoints missing or overlapping, a date
   where the breakpoint is a number), select nothing: say so in the rationale of a plain redraw, or
-  ask for the measure.
+  ask for the measure. A measure answer selects its cluster the same way, basis « longueur mesurée
+  (322–338 mm) ».
 - applicability is per ARTICLE (the union over every vehicle the article fits), not per car: present
   the choice as an indication, never as certainty. If it does not discriminate between the clusters,
   say so and keep the question to the dimension or the OE number.

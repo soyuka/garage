@@ -13,6 +13,7 @@ interface Props {
   busy?: boolean;
   autoFocus?: boolean;
   plateRequest?: number;
+  labelRequest?: number;
   hasVehicle?: boolean;
   token?: ReactNode;
   attachments?: readonly File[];
@@ -74,7 +75,7 @@ function Chips({ files, disabled, onDetach }: { files: readonly File[]; disabled
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, hasVehicle = categories !== null, token = null, attachments = [], onText, onAttach, onDetach }: Props) {
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, labelRequest = 0, hasVehicle = categories !== null, token = null, attachments = [], onText, onAttach, onDetach }: Props) {
   const [text, setText] = useState(initial);
   const [over, setOver] = useState(false);
   const [plateHint, setPlateHint] = useState(false);
@@ -93,6 +94,11 @@ export function Intake({ variant, categories, loading = false, initial, context 
     setPlateHint(true);
     input.current?.focus();
   }, [plateRequest]);
+  // Still inside the click's user activation, so the browser lets the picker open.
+  useEffect(() => {
+    if (labelRequest === 0) return;
+    (touch ? camera : picker).current?.click();
+  }, [labelRequest]);
 
   const route = useMemo(() => routeText(text), [text, categories]);
   const hint = context ?? routeHint(route, hasVehicle);

@@ -24,6 +24,8 @@ interface Props {
   autoFocus: boolean;
   // Bumped each time the user asks to type a plate: focuses the composer with a plate hint.
   plateRequest: number;
+  // Bumped when the user offers the door label photo: opens the camera or the file picker.
+  labelRequest: number;
   onText: (route: TextRoute, typed: string) => void | Promise<boolean>;
   attachments: readonly File[];
   onAttach: (files: File[]) => void;
@@ -32,7 +34,7 @@ interface Props {
 
 // At the bottom of the viewport on every screen but the home: the agent's line, its open question, quick actions, and the
 // composer that starts or continues a search (text, photo, PDF, video).
-export function Dock({ status, note, slot, quick, context, onClearContext, categories, loading, busy, hasVehicle, autoFocus, plateRequest, onText, attachments, onAttach, onDetach }: Props) {
+export function Dock({ status, note, slot, quick, context, onClearContext, categories, loading, busy, hasVehicle, autoFocus, plateRequest, labelRequest, onText, attachments, onAttach, onDetach }: Props) {
   return (
     <div className="dock">
       <div className="dock-inner">
@@ -48,7 +50,7 @@ export function Dock({ status, note, slot, quick, context, onClearContext, categ
             ))}
           </div>
         )}
-        <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} plateRequest={plateRequest} hasVehicle={hasVehicle}
+        <Intake variant="dock" categories={categories} loading={loading} initial="" busy={busy} autoFocus={autoFocus} plateRequest={plateRequest} labelRequest={labelRequest} hasVehicle={hasVehicle}
           token={context && <ContextToken vehicle={context} onRemove={onClearContext} />}
           onText={onText}
           attachments={attachments}

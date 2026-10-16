@@ -60,7 +60,7 @@ export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: 
   );
 }
 
-export function AgentQuestion({ ask, disabled, onAnswer, onPlate }: { ask: AgentAsk; disabled: boolean; onAnswer: (value: string) => void; onPlate: () => void }) {
+export function AgentQuestion({ ask, disabled, onAnswer, onPlate, onLabel }: { ask: AgentAsk; disabled: boolean; onAnswer: (value: string) => void; onPlate: () => void; onLabel: () => void }) {
   return (
     <section className="ask" aria-labelledby="agent-ask-title">
       <h2 id="agent-ask-title" className="sr-only">
@@ -69,9 +69,9 @@ export function AgentQuestion({ ask, disabled, onAnswer, onPlate }: { ask: Agent
       <p className="ask-q">{ask.question}</p>
       <p className="ask-hint">Ou répondez dans le champ.</p>
       <div className="ask-answers" role="group" aria-label="Réponses">
-        {askChoices(ask.options).map((c) =>
-          c.kind === 'plate' ? (
-            <button key="plate" type="button" className="btn" disabled={disabled} onClick={onPlate}>
+        {askChoices(ask.options, ask.question).map((c) =>
+          c.kind !== 'agent' ? (
+            <button key={c.kind} type="button" className="btn" disabled={disabled} onClick={c.kind === 'plate' ? onPlate : onLabel}>
               {c.label}
             </button>
           ) : (

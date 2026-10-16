@@ -102,6 +102,18 @@ describe('askChoices', () => {
   it('offers the plate even when the agent gave no option', () => {
     expect(askChoices([])).toEqual([{ kind: 'plate', label: 'Donner la plaque' }]);
   });
+
+  it('offers a photo of the door label, not the plate, when the question asks for the code de fabrication', () => {
+    const lengths = [
+      { label: '322–338 mm', value: 'c1' },
+      { label: '358 mm', value: 'c2' },
+    ];
+    const choices = askChoices(lengths, 'Code de fabrication (vignette de porte) ou longueur mesurée ?');
+    expect(choices.at(-1)).toEqual({ kind: 'label', label: 'Photo de la vignette' });
+    expect(choices.filter((c) => c.kind === 'plate')).toHaveLength(0);
+    expect(askChoices(lengths, 'Quel est le n° d’organisation ?').at(-1)?.kind).toBe('label');
+    expect(askChoices(options, 'Quelle version ?').at(-1)?.kind).toBe('plate');
+  });
 });
 
 describe('buildQuestion on the 307 axial joints', () => {
