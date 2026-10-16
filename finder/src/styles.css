@@ -921,19 +921,68 @@ button {
 }
 
 .eq-ref {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.eq-ref .copy-ref {
+  margin-left: 0;
+}
+
+.eq-toggle {
+  border: 0;
+  padding: 0;
+  background: none;
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.eq-toggle:hover,
+.eq-toggle:focus-visible {
+  color: var(--ink);
+}
+
+.why-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.why-body[data-clamped] {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.why-body[data-clamped] > span {
+  display: inline;
+}
+
+.why-body[data-clamped] > span + span::before {
+  content: ' ';
+}
+
+.why-toggle {
+  align-self: flex-start;
   border: 0;
   padding: 0;
   background: none;
   font: inherit;
-  color: var(--ink);
-  cursor: copy;
-  border-radius: 2px;
-  transition: color 0.15s;
+  font-size: 12px;
+  color: var(--mute);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
-.eq-ref:hover,
-.eq-ref:focus-visible {
-  color: var(--blue);
+.why-toggle:hover,
+.why-toggle:focus-visible {
+  color: var(--ink);
 }
 
 .eq-more {
@@ -1322,7 +1371,7 @@ button {
 
 .vt-row {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1.25fr) minmax(0, 0.7fr) minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr) minmax(0, 1.1fr) minmax(0, 1fr);
   gap: 0 12px;
   align-items: start;
   width: 100%;
@@ -1351,26 +1400,91 @@ button {
   color: var(--mute);
 }
 
-.vt-rows button {
-  border: 0;
+.vt-item {
+  position: relative;
   border-top: 1px solid var(--hair);
   background: var(--bg);
-  font: inherit;
-  color: var(--ink);
-  cursor: pointer;
   transition: background 0.15s;
 }
 
-.vt-rows button:hover {
+.vt-item:hover,
+.vt-item[data-checked] {
   background: var(--tint);
 }
 
-.vt-rows button[aria-checked='true'] {
-  background: var(--tint);
-}
-
-.vt-rows button:focus-visible {
+.vt-item:has(.vt-pick:focus-visible) {
+  outline: 2px solid var(--blue);
   outline-offset: -2px;
+}
+
+.vt-pick {
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+
+.vt-pick:focus-visible {
+  outline: 0;
+}
+
+.vt-pick::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.vt-oe {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.copy-ref {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex: none;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+.vt-oe .copy-ref {
+  margin-left: 0;
+}
+
+.oe-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.copy-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  color: var(--ink);
+  cursor: copy;
+  transition: color 0.15s, background 0.15s;
+}
+
+.copy-btn:hover,
+.copy-btn:focus-visible {
+  color: var(--blue);
+  background: var(--tint);
+}
+
+.copy-btn[data-done] {
+  color: var(--blue);
+  cursor: default;
 }
 
 .vt-letter {
@@ -1383,7 +1497,7 @@ button {
   font-weight: 600;
 }
 
-.vt-rows button[aria-checked='true'] .vt-letter {
+.vt-item[data-checked] .vt-letter {
   background: var(--ink);
   color: #fff;
 }
@@ -1465,11 +1579,11 @@ button {
   .vt-row,
   .vt-row--nodiff,
   .vt-row--noapp {
-    grid-template-columns: 24px minmax(0, 1fr) auto;
+    grid-template-columns: 24px minmax(0, 1fr) minmax(0, 45%);
     grid-template-areas: 'l r d' '. a a';
     row-gap: 4px;
   }
-  .vt-letter {
+  .vt-pick {
     grid-area: l;
   }
   .vt-ref {

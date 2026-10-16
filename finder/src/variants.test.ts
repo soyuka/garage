@@ -111,6 +111,15 @@ describe('VariantTable', () => {
     expect(html).toContain('10311');
   });
 
+  it('puts a copy button for each OE beside its row, never inside the radio', () => {
+    const html = render(null, null);
+    expect(html).toContain('aria-label="Copier 3812 E0"');
+    expect(html).toContain('aria-label="Copier 3812 E5"');
+    const radios = html.match(/<button[^>]*role="radio"[\s\S]*?<\/button>/g) ?? [];
+    expect(radios).toHaveLength(2);
+    for (const r of radios) expect(r.match(/<button/g)).toHaveLength(1);
+  });
+
   it('marks a part picked by the user as theirs, never as confirmed', () => {
     const html = render('c2', 'user');
     expect(html).toContain('choisie par vous');

@@ -24,7 +24,7 @@ Shipped, end to end:
   the agent). Routes: `p/<plate>/c/<cat>/g/<pt>`, `k/<carId>-<type>/c/<cat>/g/<pt>` (old ones valid).
   Meshes read the product group first; an inner axial joint gets the generic placeholder (no inner
   tie rod mesh ships), and so does PT 2066 « Rotule de direction » (2 unchecked articles: an
-  unconfirmed mesh misleads). "Copier la réf." copies the OE number alone.
+  unconfirmed mesh misleads). Copy icons (2026-10-16) sit beside each reference and copy that reference alone (the OE number without brand; an equivalence without its brand); no "Copier la réf." button.
 - **Narrowing** (`api/src/Catalog/Narrowing/`): BrandTier top 8 reps → getArticleCriteria → physical
   fingerprint (canonical thread, synonym map, deny list of application-level keys, tolerance
   max(2 mm, 2.5 %)) → cluster → 1 getArticleCrosses per cluster → merge clusters sharing a carmaker OE
@@ -56,10 +56,10 @@ Shipped, end to end:
 - **Several parts on one sheet (2026-10-16)**: when `/narrowed` returns several clusters the title
   block opens with a variant table (`finder/src/ui/VariantTable.tsx`, `src/variants.ts`): one radio row
   per part (letter, carmaker OE, representative + count, the splitting `differsOn` cote as a range,
-  OPR / organisation breakpoints). A row pick switches drawing, cotes, OE, Copier/Acheter/Ajouter and
+  OPR / organisation breakpoints). A row pick switches drawing, cotes, OE, Acheter/Ajouter and
   équivalences, lives in the URL as `/v/<clusterId>` and is labelled « choisie par vous », never
   confirmed; the cote question keeps `/k/<clusterId>` and « confirmé par la cote ». Multi-part title
-  blocks add the carmaker's other OE numbers and every other catalogue cote. The sheet grows to fit a
+  blocks add the carmaker's other OE numbers and every other catalogue cote; every row shows the OE in the numbering scheme all parts share for the make (`pickOe`, 3812 E0 / 3812 E5), the rest under « Aussi ». Multi-part blocks are shortened: équivalences on one line + « + N autres marques », « Pourquoi cette pièce » clamped to 2 lines (both expandable). At 1440×900 the actions end at y 871 (was 938), still under the composer dock when a question card is open (dock top ≈ 696). The sheet grows to fit a
   tall title block instead of clipping it. Question answers print the cluster's range (`differsOn`
   min/max), not its representative value. Design: `finder/DESIGN.md` § Variant table.
 - **Agent** `finder` (`api/config/prompts/finder.md`, POST /agent/turn `surface: "finder"`):
@@ -75,8 +75,7 @@ Shipped, end to end:
   them (133/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
   the active mesh loads; approximate matches captioned "Forme type de la famille, pas la pièce exacte";
   unmapped categories keep the generic chamfered block. Dev contact sheet:
-  https://localhost/finder/dev/meshes.html (not in the build). Title block = result card, Copier /
-  Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
+  https://localhost/finder/dev/meshes.html (not in the build). Title block = result card, Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
   confirmNew) / Copier le lien. "Enregistrer le véhicule" in the top bar (`POST /garage/vehicles/save`,
   same-plate match, different plate = different car, 409 picker when no plate).
 - **Layout (2026-10-15)**: composer docked at the bottom on every width, with the agent status, its

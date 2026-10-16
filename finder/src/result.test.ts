@@ -1,4 +1,4 @@
-import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents, relaunchText } from './result';
+import { copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEquivalents, relaunchText } from './result';
 import { mapNarrowing } from './api';
 import axialFixture from '../test-fixtures/narrowed-307-axial.json';
 import narrowed from '../test-fixtures/narrowed.json';
@@ -24,6 +24,13 @@ describe('pickOe', () => {
     expect(pickOe(b!, 'PEUGEOT', axial.clusters)).toEqual({ brand: 'PEUGEOT', number: '3812 E5' });
   });
 
+  it('does the same without a make, across every carmaker', () => {
+    const axial = mapNarrowing(axialFixture);
+    const [a, b] = axial.clusters.map((c) => pickOe(c, null, axial.clusters)?.number.replace(/[. ]/g, ''));
+    expect(a).toMatch(/^3812E\d$/);
+    expect(b).toMatch(/^3812E\d$/);
+  });
+
   it('keeps the plain choice when the parts share no numbering scheme', () => {
     const a = { ...c1, id: 'a', oeNumbers: [{ brand: 'PEUGEOT', number: '16 072 936 80' }] };
     const b = { ...c1, id: 'b', oeNumbers: [{ brand: 'PEUGEOT', number: '3812 E5' }] };
@@ -33,6 +40,20 @@ describe('pickOe', () => {
   it('ignores the make filter when the make is unknown', () => {
     const a = { ...c1, id: 'a', oeNumbers: [{ brand: 'FORD', number: '1S7G' }] };
     expect(pickOe(a, null, [a])).toEqual({ brand: 'FORD', number: '1S7G' });
+  });
+});
+
+describe('foldEquivalents', () => {
+  const eq = { shown: [1, 2, 3].map((i) => ({ artId: i, brand: `B${i}`, number: `N${i}`, tier: 1 })), otherBrands: 4 };
+
+  it('keeps the first references and counts every brand it hides', () => {
+    const f = foldEquivalents(eq, 1);
+    expect(f.visible.map((v) => v.artId)).toEqual([1]);
+    expect(f.hidden).toBe(6);
+  });
+
+  it('hides nothing when everything fits', () => {
+    expect(foldEquivalents({ shown: eq.shown.slice(0, 1), otherBrands: 0 }, 2)).toEqual({ visible: eq.shown.slice(0, 1), hidden: 0 });
   });
 });
 

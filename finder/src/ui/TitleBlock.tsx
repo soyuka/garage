@@ -1,12 +1,13 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useLayoutEffect, useRef, useState } from 'react';
 import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
 import { formatCount } from '../format';
 import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
-import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from '../result';
+import { copyText, cotesLine, degradedMessage, foldEquivalents, pickOe, rankEquivalents } from '../result';
 import type { Category, Family, Narrowing, Reference, Vehicle } from '../types';
 import { makerOe, otherDimensions, variantLetter, type Selection } from '../variants';
 import { BuyMenu } from './BuyMenu';
+import { copy, CopyRef } from './CopyRef';
 import { GaragePicker } from './Garage';
 import { useToast } from './Toast';
 import { VariantTable } from './VariantTable';
@@ -23,14 +24,7 @@ interface Props {
   rationale?: string;
 }
 
-async function copy(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const EQ_KEEP = 2;
 
 export function TitleBlock({ vehicle, category, narrowing, selection, onPick, family, api, rationale }: Props) {
   const toast = useToast();
@@ -47,9 +41,24 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
   const buyRef = oe ?? top ?? cluster?.representative ?? null;
   const fallback = !cluster ? narrowing.fallbackBrands.slice(0, 6) : [];
   const copyValue = copyText(oe, cluster?.representative ?? null);
+  const [eqOpen, setEqOpen] = useState(false);
+  const [whyOpen, setWhyOpen] = useState(false);
+  const whyBody = useRef<HTMLDivElement>(null);
+  const [whyLong, setWhyLong] = useState(false);
+  const folded = eq && multi && !eqOpen ? foldEquivalents(eq, EQ_KEEP) : null;
+  const eqShown = folded ? folded.visible : (eq?.shown ?? []);
+
+  useLayoutEffect(() => {
+    const el = whyBody.current;
+    if (!multi || !el) return setWhyLong(false);
+    const measure = () => setWhyLong(whyOpen || el.scrollHeight > el.clientHeight + 1);
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  });
 
   return (
-    <div className="tb" aria-label="Cartouche du résultat">
+    <div className={multi ? 'tb tb--multi' : 'tb'} aria-label="Cartouche du résultat">
       <div className="c s3">
         <span className="l">Désignation</span>
         <b className="tb-title">{category.label}</b>
@@ -63,7 +72,10 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
             {oe ? `Réf. OE · ${oe.brand}` : `Réf. · ${headline.brand}`}
             {letter && ` · variante ${letter}`}
           </span>
-          <div className="oe m">{headline.number}</div>
+          <div className="oe-line">
+            <div className="oe m">{headline.number}</div>
+            <CopyRef text={copyValue} />
+          </div>
           {otherOe.length > 0 && (
             <div className="tb-oe-more">
               <span className="tb-muted">Aussi :</span> <span className="m">{otherOe.map((r) => r.number).join(' · ')}</span>
@@ -81,18 +93,28 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
         <div className="c s3">
           <span className="l">Équivalences</span>
           <div className="eq m">
-            {eq.shown.map((v) => (
-              <button
-                key={v.artId}
-                type="button"
-                className="eq-ref"
-                title={`Copier ${v.brand} ${v.number}`}
-                onClick={async () => toast((await copy(`${v.brand} ${v.number}`)) ? `Copié : ${v.brand} ${v.number}` : 'Copie impossible.')}
-              >
+            {eqShown.map((v) => (
+              <span key={v.artId} className="eq-ref">
                 <i>{v.brand}</i> {v.number}
-              </button>
+                <CopyRef text={v.number} label={`${v.number} (${v.brand})`} />
+              </span>
             ))}
-            {eq.otherBrands > 0 && <span className="eq-more">+ {formatCount(eq.otherBrands)} autres marques</span>}
+            {folded ? (
+              folded.hidden > 0 && (
+                <button type="button" className="eq-more eq-toggle" aria-expanded={false} onClick={() => setEqOpen(true)}>
+                  + {formatCount(folded.hidden)} autres marques
+                </button>
+              )
+            ) : (
+              <>
+                {eq.otherBrands > 0 && <span className="eq-more">+ {formatCount(eq.otherBrands)} autres marques</span>}
+                {multi && (
+                  <button type="button" className="eq-more eq-toggle" aria-expanded={true} onClick={() => setEqOpen(false)}>
+                    Réduire
+                  </button>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}
@@ -149,23 +171,20 @@ export function TitleBlock({ vehicle, category, narrowing, selection, onPick, fa
 
       <div className="c s3 why">
         <span className="l">Pourquoi cette pièce</span>
-        {rationale && <span className="why-agent">{rationale}</span>}
-        {whyLine(narrowing, selection, letter)}
-        {narrowing.degradedReason && <span className="why-degraded">{degradedMessage(narrowing.degradedReason)}</span>}
-        {narrowing.unclassifiedCount > 0 && cluster && (
-          <span className="why-quiet">{formatCount(narrowing.unclassifiedCount)} réf. non rattachées.</span>
+        <div className="why-body" ref={whyBody} data-clamped={multi && !whyOpen ? true : undefined}>
+          {rationale && <span className="why-agent">{rationale}</span>}
+          {whyLine(narrowing, selection, letter)}
+          {narrowing.degradedReason && <span className="why-degraded">{degradedMessage(narrowing.degradedReason)}</span>}
+          {narrowing.unclassifiedCount > 0 && cluster && <span className="why-quiet">{formatCount(narrowing.unclassifiedCount)} réf. non rattachées.</span>}
+        </div>
+        {multi && whyLong && (
+          <button type="button" className="why-toggle" aria-expanded={whyOpen} onClick={() => setWhyOpen((o) => !o)}>
+            {whyOpen ? 'Réduire' : 'Lire la suite'}
+          </button>
         )}
       </div>
 
       <div className="act">
-        <button
-          type="button"
-          className="btn pri"
-          disabled={!headline}
-          onClick={async () => toast((await copy(copyValue)) ? `Copié : ${copyValue}` : 'Copie impossible. Sélectionnez la référence.')}
-        >
-          Copier la réf.
-        </button>
         {buyRef && <BuyMenu reference={buyRef} />}
         <AddToVehicle vehicle={vehicle} category={category} family={family} oe={oe} equivalent={top} api={api} />
         <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>

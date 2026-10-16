@@ -1,7 +1,8 @@
-import { useRef, type KeyboardEvent } from 'react';
+import { useId, useRef, type KeyboardEvent } from 'react';
 import { formatCount } from '../format';
 import type { Narrowing } from '../types';
 import { variantRows, type Selection } from '../variants';
+import { CopyRef } from './CopyRef';
 
 interface Props {
   narrowing: Narrowing;
@@ -20,6 +21,7 @@ const STATUS: Record<Selection['status'], { text: string; tone: '' | 'ok' } | nu
 // The drawing's variant table: one row per distinct part, the row picks the part the sheet draws.
 export function VariantTable({ narrowing, make, selection, onPick }: Props) {
   const rows = variantRows(narrowing, make);
+  const uid = useId();
   const group = useRef<HTMLDivElement>(null);
   const differs = rows[0]?.differs ?? [];
   const withApplicability = rows.some((r) => r.breakpoints.length > 0);
@@ -54,22 +56,18 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
           const checked = i === selection.index;
           const ref = r.oe ?? r.representative;
           return (
-            <button
-              key={r.id}
-              type="button"
-              role="radio"
-              aria-checked={checked}
-              tabIndex={checked ? 0 : -1}
-              className={cols}
-              onClick={() => onPick(r.id)}
-              onKeyDown={(e) => move(e, i)}
-            >
-              <span className="vt-letter m">
-                <span className="sr-only">Variante </span>
-                {r.letter}
-              </span>
-              <span className="vt-ref">
-                <b className="m">{ref.number}</b>
+            <div key={r.id} className={`vt-item ${cols}`} data-checked={checked || undefined}>
+              <button type="button" role="radio" aria-checked={checked} aria-describedby={`${uid}-${r.id}`} tabIndex={checked ? 0 : -1} className="vt-pick" onClick={() => onPick(r.id)} onKeyDown={(e) => move(e, i)}>
+                <span className="vt-letter m">
+                  <span className="sr-only">Variante </span>
+                  {r.letter}
+                </span>
+              </button>
+              <span className="vt-ref" id={`${uid}-${r.id}`}>
+                <span className="vt-oe">
+                  <b className="m">{ref.number}</b>
+                  <CopyRef text={ref.number} />
+                </span>
                 <small>
                   {r.representative.brand} <span className="m">{r.representative.number}</span> · {formatCount(r.articleCount)} réf.
                 </small>
@@ -95,7 +93,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
                       ))}
                 </span>
               )}
-            </button>
+            </div>
           );
         })}
       </div>

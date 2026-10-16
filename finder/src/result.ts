@@ -7,13 +7,13 @@ export const sameBrand = (a: string, b: string): boolean => foldText(a).replace(
 
 const oeKey = (r: Reference): string => r.number.replace(/[^0-9a-z]/gi, '').toUpperCase();
 const oeShape = (r: Reference): string => oeKey(r).replace(/\d/g, '9').replace(/[A-Z]/g, 'A');
-const ownOe = (cluster: Cluster, make: string): Reference[] => cluster.oeNumbers.filter((r) => sameBrand(r.brand, make));
+const ownOe = (cluster: Cluster, make: string | null): Reference[] => (make ? cluster.oeNumbers.filter((r) => sameBrand(r.brand, make)) : cluster.oeNumbers);
 
 // Parts of one result are told apart by number, so they should be numbered alike: prefer the OE shape
 // (3812 E0, 3812 E5) that every part has for the make, else the maker's first number.
 export function pickOe(cluster: Cluster, make: string | null, parts: readonly Cluster[] = [cluster]): Reference | null {
-  const own = make ? ownOe(cluster, make) : [];
-  if (make && parts.length > 1) {
+  const own = ownOe(cluster, make);
+  if (parts.length > 1) {
     const shapes = parts.map((p) => new Set(ownOe(p, make).map(oeShape)));
     const shared = own.find((r) => shapes.every((s) => s.has(oeShape(r))));
     if (shared) return shared;
@@ -33,6 +33,11 @@ export function rankEquivalents(cluster: Cluster, limit = 6): { shown: Variant[]
   }
   const shown = firstPerBrand.slice(0, limit);
   return { shown, otherBrands: firstPerBrand.length - shown.length };
+}
+
+export function foldEquivalents(eq: { shown: Variant[]; otherBrands: number }, keep: number): { visible: Variant[]; hidden: number } {
+  const visible = eq.shown.slice(0, keep);
+  return { visible, hidden: eq.shown.length - visible.length + eq.otherBrands };
 }
 
 export function copyText(oe: Reference | null, fallback: Reference | null): string {

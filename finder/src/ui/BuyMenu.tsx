@@ -23,7 +23,7 @@ export function BuyMenu({ reference }: { reference: BuyReference }) {
 
   return (
     <div className="menu" ref={root}>
-      <button type="button" className="btn" aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
+      <button type="button" className="btn pri" aria-haspopup="menu" aria-expanded={open} aria-controls={id} onClick={() => setOpen((o) => !o)}>
         Acheter
         <svg viewBox="0 0 10 6" width="10" height="6" aria-hidden="true">
           <path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.4" />
