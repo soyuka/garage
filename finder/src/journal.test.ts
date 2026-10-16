@@ -75,6 +75,14 @@ describe('mapDetail', () => {
 });
 
 describe('framesOf', () => {
+  it('labels a shown part with the product group the server drew, and skips a group choice that drew nothing', () => {
+    const calls = [
+      { seq: 0, name: 'show_parts', arguments: { categoryId: 100198 }, result: '{"status":"choose_group","productGroups":[]}', at: '', serverSide: false },
+      { seq: 1, name: 'show_parts', arguments: { categoryId: 100198, productGroupId: 51 }, result: '{"status":"shown","categoryLabel":"Rotule de direction intérieure, barre de connexion"}', at: '', serverSide: false },
+    ];
+    expect(framesOf(calls)).toEqual([{ type: 'showParts', label: 'Rotule de direction intérieure, barre de connexion' }]);
+  });
+
   it('lists the frames the render tools emitted, in order', () => {
     const calls = [
       { seq: 0, name: 'list_part_categories', arguments: {}, result: '[]', at: '', serverSide: false },

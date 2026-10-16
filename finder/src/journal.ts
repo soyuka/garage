@@ -162,9 +162,18 @@ export function mapDetail(raw: unknown): JournalDetail {
   };
 }
 
-const FRAME_TOOLS: Record<string, { type: string; label: (args: Json) => string }> = {
+const resultOf = (result: string): Json => {
+  try {
+    return obj(JSON.parse(result));
+  } catch {
+    return {};
+  }
+};
+
+// show_parts' label is the product group the server drew (its result); older rows carried the agent's argument.
+const FRAME_TOOLS: Record<string, { type: string; label: (args: Json, result: Json) => string }> = {
   set_vehicle: { type: 'setVehicle', label: (a) => [a.make, a.model, a.engine].filter((v) => typeof v === 'string' && v !== '').join(' ') },
-  show_parts: { type: 'showParts', label: (a) => String(a.categoryLabel ?? '') },
+  show_parts: { type: 'showParts', label: (a, r) => String(r.categoryLabel ?? a.categoryLabel ?? '') },
   show_web_part: { type: 'showWebPart', label: (a) => [a.brand, a.reference].filter((v) => typeof v === 'string' && v !== '').join(' ') },
   ask_question: { type: 'askQuestion', label: (a) => String(a.question ?? '') },
 };
@@ -172,8 +181,8 @@ const FRAME_TOOLS: Record<string, { type: string; label: (args: Json) => string 
 export function framesOf(calls: readonly JournalToolCall[]): { type: string; label: string }[] {
   return calls.flatMap((c) => {
     const tool = FRAME_TOOLS[c.name];
-    if (!tool || /"status"\s*:\s*"refused"/.test(c.result)) return [];
-    return [{ type: tool.type, label: tool.label(c.arguments) }];
+    if (!tool || /"status"\s*:\s*"(refused|choose_group|empty)"/.test(c.result)) return [];
+    return [{ type: tool.type, label: tool.label(c.arguments, resultOf(c.result)) }];
   });
 }
 

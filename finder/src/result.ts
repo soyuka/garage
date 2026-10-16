@@ -1,7 +1,7 @@
 import { dimText, findDim, threadOf } from './dims';
 import { NNBSP } from './format';
 import { foldText } from './search';
-import type { Cluster, Dimension, Reference, Variant } from './types';
+import type { Cluster, Dimension, Narrowing, Reference, Variant } from './types';
 
 const sameBrand = (a: string, b: string): boolean => foldText(a).replace(/[^a-z0-9]/g, '') === foldText(b).replace(/[^a-z0-9]/g, '');
 
@@ -57,4 +57,12 @@ export function degradedMessage(reason: string): string {
   const french = parts.map((p) => DEGRADED.find(([re]) => re.test(p))?.[1]).filter((m): m is string => m !== undefined);
   if (french.length === parts.length && french.length > 0) return french.join(' ');
   return [...french, 'Réponse partielle du catalogue (quota ou panne).'].join(' ');
+}
+
+// A restored route that names no product group on a category holding several has nothing to show: the
+// search goes back to the agent, which picks the group. No group picker for the user.
+export function relaunchText(n: Narrowing, input: string | null, categoryLabel: string): string | null {
+  if (!n.groupRequired) return null;
+  const typed = input?.trim() ?? '';
+  return typed !== '' ? typed : categoryLabel;
 }

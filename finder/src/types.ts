@@ -93,9 +93,18 @@ export interface FallbackBrand {
   articles: { id: number; number: string }[];
 }
 
+export interface ProductGroup {
+  id: number;
+  name: string;
+}
+
 export interface Narrowing {
   carId: number;
   categoryId: number;
+  // The TecDoc product group narrowed; a category node can hold several, then none is narrowed until one is named.
+  productGroup: ProductGroup | null;
+  productGroups: (ProductGroup & { articleCount: number })[];
+  groupRequired: boolean;
   clusters: Cluster[];
   totalArticles: number;
   totalBrands: number;

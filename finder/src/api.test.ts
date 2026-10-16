@@ -50,6 +50,26 @@ describe('mapCategories', () => {
 describe('mapNarrowing', () => {
   const n = mapNarrowing(narrowed);
 
+  it('maps the product group narrowed and the groups of a mixed category', () => {
+    const mixed = mapNarrowing({
+      groupRequired: true,
+      productGroup: null,
+      productGroups: [
+        { id: 914, name: 'Rotule de barre de connexion', articleCount: 514 },
+        { id: 51, name: 'Rotule de direction intérieure, barre de connexion', articleCount: 288 },
+        { id: 'x', name: 'broken' },
+      ],
+    });
+    expect(mixed.groupRequired).toBe(true);
+    expect(mixed.productGroup).toBeNull();
+    expect(mixed.productGroups).toEqual([
+      { id: 914, name: 'Rotule de barre de connexion', articleCount: 514 },
+      { id: 51, name: 'Rotule de direction intérieure, barre de connexion', articleCount: 288 },
+    ]);
+    expect(mapNarrowing({ productGroup: { id: 51, name: 'Rotule de direction intérieure, barre de connexion' } }).productGroup).toEqual({ id: 51, name: 'Rotule de direction intérieure, barre de connexion' });
+    expect(n.groupRequired).toBe(false);
+  });
+
   it('keeps the headline counts', () => {
     expect(n.totalArticles).toBe(220);
     expect(n.totalBrands).toBe(126);

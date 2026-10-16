@@ -10,6 +10,7 @@ import type {
   FallbackBrand,
   Narrowing,
   PhotoIntake,
+  ProductGroup,
   Reference,
   Registration,
   RegistrationField,
@@ -196,11 +197,24 @@ const mapFallbackBrand = (raw: unknown): FallbackBrand | null => {
   return { brand, tier: int(j.tier, 3), articles };
 };
 
+const mapProductGroup = (raw: unknown): ProductGroup | null => {
+  const j = obj(raw);
+  const id = num(j.id);
+  const name = str(j.name);
+  return id !== null && Number.isInteger(id) && id > 0 && name ? { id, name } : null;
+};
+
 export function mapNarrowing(raw: unknown): Narrowing {
   const j = obj(raw);
   return {
     carId: int(j.carId),
     categoryId: int(j.categoryId),
+    productGroup: mapProductGroup(j.productGroup),
+    productGroups: list(j.productGroups).flatMap((g) => {
+      const group = mapProductGroup(g);
+      return group ? [{ ...group, articleCount: int(obj(g).articleCount) }] : [];
+    }),
+    groupRequired: j.groupRequired === true,
     clusters: list(j.clusters).flatMap((c) => mapCluster(c) ?? []),
     totalArticles: int(j.totalArticles),
     totalBrands: int(j.totalBrands),

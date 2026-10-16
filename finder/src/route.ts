@@ -6,7 +6,7 @@ import type { CarType } from './types';
 export type Route =
   | { view: 'entry' }
   | { view: 'vehicle'; ref: string }
-  | { view: 'result'; ref: string; categoryId: number; clusterId: string | null };
+  | { view: 'result'; ref: string; categoryId: number; productGroupId: number | null; clusterId: string | null };
 
 export type VehicleRef = { kind: 'plate'; plate: string } | { kind: 'car'; carId: number; carType: CarType };
 
@@ -27,8 +27,14 @@ export function parseRoute(hash: string): Route {
   const ref = parts[0] === 'k' ? (CAR.test(`k${parts[1]}`) ? `k${parts[1]}` : null) : (normalisePlate(parts[1]) ?? normaliseFni(parts[1]));
   if (ref === null) return { view: 'entry' };
   if (parts[2] !== 'c' || !/^\d+$/.test(parts[3] ?? '')) return { view: 'vehicle', ref };
-  const clusterId = parts[4] === 'k' && parts[5] ? parts[5] : null;
-  return { view: 'result', ref, categoryId: Number(parts[3]), clusterId };
+  const rest = parts.slice(4);
+  let productGroupId: number | null = null;
+  if (rest[0] === 'g') {
+    productGroupId = /^[1-9]\d*$/.test(rest[1] ?? '') ? Number(rest[1]) : null;
+    rest.splice(0, 2);
+  }
+  const clusterId = rest[0] === 'k' && rest[1] ? rest[1] : null;
+  return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, clusterId };
 }
 
 const refHash = (ref: string): string => (CAR.test(ref) ? `#/k/${ref.slice(1)}` : `#/p/${encodeURIComponent(ref.replace(/ /g, ''))}`);
@@ -40,6 +46,6 @@ export function routeToHash(route: Route): string {
     case 'vehicle':
       return refHash(route.ref);
     case 'result':
-      return `${refHash(route.ref)}/c/${route.categoryId}${route.clusterId ? `/k/${encodeURIComponent(route.clusterId)}` : ''}`;
+      return `${refHash(route.ref)}/c/${route.categoryId}${route.productGroupId ? `/g/${route.productGroupId}` : ''}${route.clusterId ? `/k/${encodeURIComponent(route.clusterId)}` : ''}`;
   }
 }

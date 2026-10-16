@@ -27,7 +27,7 @@ export interface FinderApi {
   vehicle(plate: string, trace?: Trace): Promise<Vehicle>;
   vin(vin: string, trace?: Trace): Promise<VinDecode>;
   categories(carId: number, carType: CarType): Promise<Category[]>;
-  narrowed(carId: number, carType: CarType, categoryId: number, make: string | null, trace?: Trace): Promise<Narrowing>;
+  narrowed(carId: number, carType: CarType, categoryId: number, make: string | null, productGroupId: number | null, trace?: Trace): Promise<Narrowing>;
   extractRegistration(file: Blob): Promise<Registration>;
   photoIntake(photo: Blob): Promise<PhotoIntake>;
   journal(): Promise<JournalRow[]>;
@@ -63,16 +63,19 @@ async function getJson(url: string, init: RequestInit = {}): Promise<unknown> {
   return res.json();
 }
 
+export function narrowedPath(carId: number, carType: CarType, categoryId: number, make: string | null, productGroupId: number | null): string {
+  const q = new URLSearchParams({ carType });
+  if (make) q.set('make', make);
+  if (productGroupId !== null) q.set('productGroupId', String(productGroupId));
+  return `/cars/${carId}/part-categories/${categoryId}/narrowed?${q}`;
+}
+
 export const liveApi: FinderApi = {
   vehicle: async (plate, trace) => mapVehicle(await getJson(`/vehicles/${encodeURIComponent(plate.replace(/[\s-]/g, ''))}`, traced(trace))),
   vin: async (vin, trace) => mapVin(await getJson(`/vins/${encodeURIComponent(vin)}`, traced(trace))),
   categories: async (carId, carType) =>
     mapCategories(await getJson(`/cars/${carId}/part-categories?carType=${carType}`, { headers: LD })),
-  narrowed: async (carId, carType, categoryId, make, trace) => {
-    const q = new URLSearchParams({ carType });
-    if (make) q.set('make', make);
-    return mapNarrowing(await getJson(`/cars/${carId}/part-categories/${categoryId}/narrowed?${q}`, traced(trace)));
-  },
+  narrowed: async (carId, carType, categoryId, make, productGroupId, trace) => mapNarrowing(await getJson(narrowedPath(carId, carType, categoryId, make, productGroupId), traced(trace))),
   extractRegistration: async (file) => {
     const body = new FormData();
     body.append('file', file);

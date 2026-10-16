@@ -1,11 +1,18 @@
 import * as client from './client';
-import { newTrace, traced, vehicleDescriptor } from './client';
+import { narrowedPath, newTrace, traced, vehicleDescriptor } from './client';
 import type { Vehicle } from './types';
 
 describe('client module', () => {
   it('serves the live API only, no recorded mode', () => {
     expect(Object.keys(client)).not.toContain('isDemo');
     expect(Object.keys(client)).toContain('liveApi');
+  });
+});
+
+describe('narrowedPath', () => {
+  it('names the product group only when the route carries one', () => {
+    expect(narrowedPath(16182, 'PC', 100198, 'PEUGEOT', 51)).toBe('/cars/16182/part-categories/100198/narrowed?carType=PC&make=PEUGEOT&productGroupId=51');
+    expect(narrowedPath(19107, 'PC', 100259, null, null)).toBe('/cars/19107/part-categories/100259/narrowed?carType=PC');
   });
 });
 

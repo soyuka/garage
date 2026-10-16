@@ -13,6 +13,7 @@ import { MediaError } from './media';
 import { readAttachment } from './read-attachment';
 import { runSubmission, type PendingAsk } from './submit';
 import { buildQuestion } from './question';
+import { relaunchText } from './result';
 import { parseRef, type Route } from './route';
 import type { TextRoute } from './route-input';
 import type { AgentPart, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
@@ -100,11 +101,14 @@ function Finder({ api }: { api: FinderApi }) {
     agentActive && !held && (route.view !== 'result' || turn.state.parts.some((p) => p.kind === 'catalog' && p.categoryId === route.categoryId));
 
   const categoryId = route.view === 'result' && !agentOwns ? route.categoryId : null;
-  const narrowing = useAsync<Narrowing>(v?.carId && categoryId ? `${v.carId}-${categoryId}` : null, () => {
+  const productGroupId = route.view === 'result' ? route.productGroupId : null;
+  const narrowing = useAsync<Narrowing>(v?.carId && categoryId ? `${v.carId}-${categoryId}-${productGroupId ?? ''}` : null, () => {
     const t = trace.current;
     trace.current = null;
-    return api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make, t ? { ...t, plate: v!.plate, vehicle: v } : undefined);
+    return api.narrowed(v!.carId!, v!.carType, categoryId!, v!.make, productGroupId, t ? { ...t, plate: v!.plate, vehicle: v } : undefined);
   });
+  // What the user typed for the search a history row reopens: a restored mixed category relaunches it.
+  const [restoredInput, setRestoredInput] = useState<string | null>(null);
 
   // A route the turn does not own (back button, history link, typed URL) closes a finished turn.
   useEffect(() => {
@@ -337,10 +341,11 @@ function Finder({ api }: { api: FinderApi }) {
     />
   );
 
-  const openHistory = () => {
+  const openHistory = (entry: HistoryEntry) => {
     turn.reset();
     setPanel({ kind: 'none' });
     trace.current = null;
+    setRestoredInput(entry.input);
   };
   const historyList = history.status === 'ok' ? history.data : [];
 
@@ -407,6 +412,7 @@ function Finder({ api }: { api: FinderApi }) {
         followUp={followUp}
         turn={held ? turn : null}
         recent={authed && route.view === 'vehicle' ? historyFor(historyList, route.ref) : []}
+        restoredInput={restoredInput}
         onOpenHistory={openHistory}
         onAsk={askAgent}
         onPlate={askPlate}
@@ -441,24 +447,28 @@ interface WorkspaceProps {
   turn: AgentTurn | null;
   // Searches already made on this vehicle, offered on its empty sheet.
   recent: HistoryEntry[];
-  onOpenHistory: () => void;
+  restoredInput: string | null;
+  onOpenHistory: (entry: HistoryEntry) => void;
   onAsk: (text: string, options?: AskOptions) => void;
   onPlate: () => void;
 }
 
-function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, recent, onOpenHistory, onAsk, onPlate }: WorkspaceProps) {
+function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot, followUp, turn, recent, restoredInput, onOpenHistory, onAsk, onPlate }: WorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
   const v = vehicle.status === 'ok' ? vehicle.data : null;
 
-  const category = route.view === 'result' && categories.status === 'ok' ? (categories.data.find((c) => c.id === route.categoryId) ?? null) : null;
   const n = narrowing.status === 'ok' ? narrowing.data : null;
+  const node = route.view === 'result' && categories.status === 'ok' ? (categories.data.find((c) => c.id === route.categoryId) ?? null) : null;
+  // The title is the TecDoc product group narrowed, a far more precise name than the tree node.
+  const category = node && n?.productGroup ? { ...node, label: n.productGroup.name } : node;
+  const relaunch = n && node ? relaunchText(n, restoredInput, node.label) : null;
   const clusters = n?.clusters ?? [];
   const cluster = clusters.find((c) => c.id === (route.view === 'result' ? route.clusterId : null)) ?? clusters[0] ?? null;
   const confirmed = clusters.length === 1 || (route.view === 'result' && route.clusterId !== null && cluster?.id === route.clusterId);
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
-  const showResult = route.view === 'result' && category !== null && n !== null && n.totalArticles > 0;
-  const family: Family = category && (showResult || narrowing.status === 'loading') ? partFamily(category, cluster?.dimensions ?? []) : { kind: 'none' };
+  const showResult = route.view === 'result' && category !== null && n !== null && n.totalArticles > 0 && relaunch === null;
+  const family: Family = category && (showResult || narrowing.status === 'loading') ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
 
   useFollowUp(
     followUp,
@@ -502,12 +512,22 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   } else if (narrowing.status === 'error') {
     status = <ErrorNote message={narrowing.error.message} onRetry={narrowing.retry} />;
     placeholder = <p className="sheet-big">{category?.label}</p>;
+  } else if (relaunch !== null) {
+    placeholder = (
+      <div className="sheet-message">
+        <p className="sheet-big">{node?.label}</p>
+        <p>Cette catégorie regroupe plusieurs pièces différentes.</p>
+        <button type="button" className="btn pri" onClick={() => onAsk(relaunch)}>
+          Relancer la recherche
+        </button>
+      </div>
+    );
   } else if (n && n.totalArticles === 0) {
     status = <p className="sheet-message">Aucune référence dans cette catégorie pour ce véhicule.</p>;
   }
   if (loading && family.kind !== 'none') status = <p className="sheet-loading" role="status">Affinage des références…</p>;
 
-  const traceNode = route.view === 'result' && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
+  const traceNode = route.view === 'result' && relaunch === null && narrowing.status !== 'idle' && narrowing.status !== 'error' ? <NarrowingTrace narrowing={narrowing} remaining={confirmed ? 1 : null} cluster={cluster} /> : null;
   const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} cluster={cluster} confirmed={confirmed} family={family} api={api} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
 
   const ask = turn?.state.ask ?? null;
@@ -595,7 +615,10 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const ref = routeRef(route);
 
   // A catalogue part's route is its sheet: shareable, and a reload re-reads the cached narrowing.
-  const routed = route.view === 'result' ? state.parts.find((p) => p.kind === 'catalog' && p.categoryId === route.categoryId) : undefined;
+  const routed =
+    route.view === 'result'
+      ? state.parts.find((p) => p.kind === 'catalog' && p.categoryId === route.categoryId && (route.productGroupId === null || p.narrowing.productGroup?.id === route.productGroupId))
+      : undefined;
   const part = state.parts.find((p) => p.key === webKey) ?? routed ?? state.parts[0] ?? null;
   const category = part ? partCategory(part, categories) : null;
   const n = part?.kind === 'catalog' ? part.narrowing : null;
@@ -604,7 +627,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const cluster = clusters.find((c) => c.id === chosen) ?? clusters[0] ?? null;
   const confirmed = clusters.length === 1 || (chosen !== null && cluster?.id === chosen);
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
-  const family: Family = category && part ? partFamily(category, cluster?.dimensions ?? []) : { kind: 'none' };
+  const family: Family = category && part ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
   const overlay = wide && part ? 520 : null;
 
   const openPart = (p: AgentPart, clusterId: string | null = null) => {
@@ -614,12 +637,13 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
       return;
     }
     setWebKey(null);
-    if (ref !== '') navigate({ view: 'result', ref, categoryId: p.categoryId, clusterId }, { replace: true });
+    if (ref !== '') navigate({ view: 'result', ref, categoryId: p.categoryId, productGroupId: p.narrowing.productGroup?.id ?? null, clusterId }, { replace: true });
   };
 
   const first = state.parts[0];
   useEffect(() => {
-    if (first && first.kind === 'catalog' && webKey === null && route.view === 'vehicle' && ref !== '') navigate({ view: 'result', ref, categoryId: first.categoryId, clusterId: null }, { replace: true });
+    if (first && first.kind === 'catalog' && webKey === null && route.view === 'vehicle' && ref !== '')
+      navigate({ view: 'result', ref, categoryId: first.categoryId, productGroupId: first.narrowing.productGroup?.id ?? null, clusterId: null }, { replace: true });
   }, [first?.key, ref, route.view]);
 
   useFollowUp(

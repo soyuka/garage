@@ -1,4 +1,4 @@
-import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents } from './result';
+import { copyText, cotesLine, degradedMessage, pickOe, rankEquivalents, relaunchText } from './result';
 import { mapNarrowing } from './api';
 import narrowed from '../test-fixtures/narrowed.json';
 
@@ -66,5 +66,22 @@ describe('degradedMessage', () => {
     expect(degradedMessage('no physical criteria available to tell the parts apart')).toMatch(/aucune cote/i);
     expect(degradedMessage('a; b')).toMatch(/catalogue/);
     expect(degradedMessage('images unavailable from the parts catalog (quota or outage)')).toMatch(/Réponse partielle/);
+  });
+});
+
+describe('relaunchText', () => {
+  const mixed = mapNarrowing({ groupRequired: true, totalArticles: 804, productGroups: [{ id: 914, name: 'Rotule de barre de connexion', articleCount: 514 }, { id: 51, name: 'Rotule de direction intérieure, barre de connexion', articleCount: 288 }] });
+
+  it('hands a restored mixed category back to the agent with the original request', () => {
+    expect(relaunchText(mixed, 'rotule axiale', 'Rotules')).toBe('rotule axiale');
+  });
+
+  it('falls back to the category name when the request is unknown (a shared link)', () => {
+    expect(relaunchText(mixed, null, 'Rotules')).toBe('Rotules');
+    expect(relaunchText(mixed, '  ', 'Rotules')).toBe('Rotules');
+  });
+
+  it('never relaunches a result that narrowed', () => {
+    expect(relaunchText(n, 'filtre à huile', 'Filtre à huile')).toBeNull();
   });
 });
