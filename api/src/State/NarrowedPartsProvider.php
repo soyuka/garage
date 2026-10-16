@@ -23,6 +23,7 @@ final class NarrowedPartsProvider implements ProviderInterface
         $parameters = $operation->getParameters();
         $carType = $parameters?->get('carType')?->getValue();
         $make = $parameters?->get('make')?->getValue();
+        $productGroupId = $parameters?->get('productGroupId')?->getValue();
         $carId = (int) $uriVariables['carId'];
         $categoryId = (int) $uriVariables['categoryId'];
 
@@ -31,6 +32,7 @@ final class NarrowedPartsProvider implements ProviderInterface
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
             $categoryId,
             \is_string($make) ? $make : null,
+            is_numeric($productGroupId) ? (int) $productGroupId : null,
         ));
     }
 }

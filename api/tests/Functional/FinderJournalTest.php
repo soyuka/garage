@@ -159,6 +159,34 @@ final class FinderJournalTest extends AppTestCase
         self::assertArrayNotHasKey('categoryLabel', $listed[0]);
     }
 
+    public function testANarrowedSearchInAProductGroupRoutesToItAndTakesItsName(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/16182/part-categories/100198/narrowed?carType=PC&make=PEUGEOT&productGroupId=51', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => 'rotule', 'X-Finder-Plate' => 'XD-303-ZD'],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame(51, $this->rows()[0]->getSearch()['productGroupId']);
+        self::assertSame('Rotule de direction intérieure, barre de connexion', $this->rows()[0]->getCategoryLabel());
+        $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
+        self::assertSame('p/XD-303-ZD/c/100198/g/51', $listed[0]['route']);
+    }
+
+    public function testAMixedCategoryWithoutAGroupIsJournaledAsSuch(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/cars/16182/part-categories/100198/narrowed?carType=PC&make=PEUGEOT', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => 'rotule'],
+        ]);
+        self::assertResponseIsSuccessful();
+
+        self::assertSame('group_required', $this->rows()[0]->getSearch()['outcome']);
+        self::assertArrayNotHasKey('productGroupId', $this->rows()[0]->getSearch());
+    }
+
     public function testANarrowedSearchCarryingThePagePlateRoutesToThePlate(): void
     {
         $client = static::createClient();

@@ -27,6 +27,7 @@ final class NarrowPartsProcessor implements ProcessorInterface
             CarTypeResolver::fromString($data->carType),
             $data->categoryId,
             $data->make,
+            $data->productGroupId,
         );
 
         return ToolResult::of(['status' => 'ok', 'categoryId' => $data->categoryId] + $result->toArray());

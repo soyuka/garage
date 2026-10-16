@@ -99,6 +99,7 @@ final class FinderSearchJournalListener
             'outcome' => match (true) {
                 404 === $status => 'not_found',
                 $status >= 400 => 'error',
+                $data instanceof NarrowedParts && $data->groupRequired => 'group_required',
                 $data instanceof NarrowedParts && !$data->narrowed => 'degraded',
                 default => 'ok',
             },
@@ -170,6 +171,9 @@ final class FinderSearchJournalListener
         if (!$data instanceof NarrowedParts) {
             return null;
         }
+        if ($request->query->has('productGroupId') && null !== $data->productGroup) {
+            return $data->productGroup['name'];
+        }
 
         return $this->catalog->cachedCategoryName($data->carId, $data->categoryId, CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar);
     }
@@ -186,6 +190,7 @@ final class FinderSearchJournalListener
                 // NarrowedParts carries no carType: the route reads it from the query, PC by default.
                 'carType' => (CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar)->value,
                 'categoryId' => $data->categoryId,
+            ] + ($request->query->has('productGroupId') && null !== $data->productGroup ? ['productGroupId' => $data->productGroup['id']] : []) + [
                 'clusterCount' => \count($data->clusters),
                 'totalArticles' => $data->totalArticles,
                 'unclassifiedCount' => $data->unclassifiedCount,

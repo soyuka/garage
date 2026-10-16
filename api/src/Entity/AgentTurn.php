@@ -272,8 +272,14 @@ class AgentTurn
     {
         $this->toolCalls->add($toolCall);
 
-        $label = $toolCall->getArguments()['categoryLabel'] ?? null;
-        if ('show_parts' === $toolCall->getName() && \is_string($label) && '' !== trim($label) && !str_contains($toolCall->getResult(), '"status":"refused"')) {
+        if ('show_parts' !== $toolCall->getName()) {
+            return;
+        }
+        $result = json_decode($toolCall->getResult(), true);
+        $status = \is_array($result) ? ($result['status'] ?? null) : null;
+        // The label shown is the product group name the server returns; rows from before carried the agent's argument.
+        $label = \is_array($result) && \is_string($result['categoryLabel'] ?? null) ? $result['categoryLabel'] : ($toolCall->getArguments()['categoryLabel'] ?? null);
+        if (\is_string($label) && '' !== trim($label) && \in_array($status, [null, 'shown'], true)) {
             $this->categoryLabel = trim($label);
         }
     }

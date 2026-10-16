@@ -19,4 +19,7 @@ final class NarrowPartsInput
 
     #[ApiProperty(description: 'The car\'s make as spelled by lookup_plate (e.g. "MAZDA"). Optional: it lets the car\'s own OE numbers be recognised even when the makes list spells the brand differently.')]
     public ?string $make = null;
+
+    #[ApiProperty(description: 'TecDoc product group id from productGroups, when a previous call answered groupRequired: true')]
+    public ?int $productGroupId = null;
 }

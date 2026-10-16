@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Agent\Journal;
 
 /**
- * The finder hash path a journal row reopens ("p/<plate>[/c/<categoryId>]" or
- * "k/<carId>-<carType>[/c/<categoryId>]", without the "#/"), and the vehicle it names.
+ * The finder hash path a journal row reopens ("p/<plate>[/c/<categoryId>[/g/<productGroupId>]]" or
+ * "k/<carId>-<carType>[/c/<categoryId>[/g/<productGroupId>]]", without the "#/"), and the vehicle it names.
  *
  * @phpstan-type JournalVehicle array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string, engine: ?string}
  */
@@ -26,32 +26,42 @@ final readonly class TurnRoute
      */
     public static function forSearch(array $search): self
     {
-        return self::build(self::vehicle($search), self::int($search['categoryId'] ?? null));
+        return self::build(self::vehicle($search), self::int($search['categoryId'] ?? null), self::int($search['productGroupId'] ?? null));
     }
 
     /**
      * @param array<string, mixed>|null                                $pageVehicle the vehicle the page sent with the turn
-     * @param list<array{name: string, arguments: array<string, mixed>}> $toolCalls   in call order
+     * @param list<array{name: string, arguments: array<string, mixed>, result?: string}> $toolCalls in call order
      */
     public static function forAgent(?array $pageVehicle, array $toolCalls): self
     {
         $vehicle = null === $pageVehicle ? null : self::vehicle($pageVehicle);
         $categoryId = null;
+        $productGroupId = null;
         foreach ($toolCalls as $call) {
             if ('set_vehicle' === $call['name']) {
                 $vehicle = self::vehicle($call['arguments']) ?? $vehicle;
             } elseif ('show_parts' === $call['name']) {
-                $categoryId = self::int($call['arguments']['categoryId'] ?? null) ?? $categoryId;
+                $result = json_decode($call['result'] ?? '', true);
+                if (\is_array($result) && isset($result['status']) && 'shown' !== $result['status']) {
+                    continue;
+                }
+                $shown = self::int($call['arguments']['categoryId'] ?? null);
+                if (null === $shown) {
+                    continue;
+                }
+                $categoryId = $shown;
+                $productGroupId = self::int($result['productGroup']['id'] ?? null) ?? self::int($call['arguments']['productGroupId'] ?? null);
             }
         }
 
-        return self::build($vehicle, $categoryId);
+        return self::build($vehicle, $categoryId, $productGroupId);
     }
 
     /**
      * @param JournalVehicle|null $vehicle
      */
-    private static function build(?array $vehicle, ?int $categoryId): self
+    private static function build(?array $vehicle, ?int $categoryId, ?int $productGroupId = null): self
     {
         if (null === $vehicle) {
             return new self();
@@ -61,7 +71,11 @@ final readonly class TurnRoute
             ? 'p/'.rawurlencode($vehicle['plate'])
             : 'k/'.$vehicle['carId'].'-'.($vehicle['carType'] ?? 'PC');
 
-        return new self(null === $categoryId ? $route : $route.'/c/'.$categoryId, $vehicle);
+        if (null !== $categoryId) {
+            $route .= '/c/'.$categoryId.(null === $productGroupId ? '' : '/g/'.$productGroupId);
+        }
+
+        return new self($route, $vehicle);
     }
 
     /**

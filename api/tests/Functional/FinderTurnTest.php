@@ -24,6 +24,8 @@ final class FinderTurnTest extends AppTestCase
 {
     private const VEHICLE = ['carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR'];
 
+    private const PEUGEOT = ['carId' => 16182, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'engine' => '1.6 16V', 'plate' => 'XD-303-ZD'];
+
     private const PNG = "\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7\x9a\xa0\xa0\x00\x00\x00\x00IEND\xaeB`\x82";
 
     public function testFinderTurnRunsTheFinderAgentAndStreamsTheNarrowedParts(): void
@@ -49,6 +51,9 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('<follow_up>', $seen['system']);
         self::assertStringContainsString('<build_code>', $seen['system']);
         self::assertStringContainsString('decode_build_code', $seen['system']);
+        self::assertStringContainsString('<product_groups>', $seen['system']);
+        self::assertStringContainsString('<self_check>', $seen['system']);
+        self::assertStringContainsString('Rotule de direction intérieure, barre de connexion', $seen['system']);
         self::assertStringContainsString('19107', $seen['context']);
         self::assertStringContainsString('MAZDA', $seen['context']);
         self::assertStringContainsString('filtre à huile', $seen['context']);
@@ -68,12 +73,12 @@ final class FinderTurnTest extends AppTestCase
         $shown = array_values(array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
         self::assertCount(1, $shown);
         self::assertSame(100259, $shown[0]['categoryId']);
-        self::assertSame('Filtre à huile', $shown[0]['categoryLabel']);
+        self::assertSame('Oil Filter', $shown[0]['categoryLabel'], 'the title is the product group name, not the agent\'s categoryLabel');
         self::assertSame('Le filtre à huile se change à chaque vidange.', $shown[0]['rationale']);
 
         $route = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA')->toArray();
         $narrowed = $shown[0]['narrowed'];
-        foreach (['carId', 'categoryId', 'clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'fallbackBrands', 'applicabilityScope'] as $key) {
+        foreach (['carId', 'categoryId', 'clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'fallbackBrands', 'applicabilityScope', 'productGroup', 'productGroups', 'groupRequired'] as $key) {
             self::assertSame($route[$key] ?? null, $narrowed[$key] ?? null, "showParts.narrowed.$key must match GET /narrowed");
         }
 
@@ -346,6 +351,69 @@ final class FinderTurnTest extends AppTestCase
         self::assertCount(1, $summary['clusters']);
         self::assertArrayNotHasKey('applicabilityCaveat', $summary);
         self::assertArrayNotHasKey('applicability', $summary['clusters'][0]);
+    }
+
+    public function testShowPartsOnAMixedCategoryReturnsItsProductGroupsAndDrawsNothing(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('g1', 'show_parts', ['categoryId' => 100198, 'rationale' => 'Demandé.']),
+            new ToolCall('g2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('rotule axiale', 'sess-groups', vehicle: self::PEUGEOT);
+
+        $result = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('choose_group', $result['status'] ?? null);
+        self::assertSame(['Rotule de barre de connexion', 'Rotule de direction intérieure, barre de connexion', 'Rotule de direction'], array_column($result['productGroups'], 'name'));
+        self::assertSame([914, 51, 2066], array_column($result['productGroups'], 'id'));
+        self::assertSame([], array_values(array_filter(self::frames('sess-groups'), static fn (array $f): bool => 'showParts' === $f['type'])));
+    }
+
+    public function testTheShownLabelIsTheProductGroupNameNeverTheAgentsText(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('l1', 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'categoryLabel' => 'Rotule axiale', 'rationale' => 'Demandé.']),
+            new ToolCall('l2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('rotule axiale', 'sess-label', vehicle: self::PEUGEOT);
+
+        $shown = array_values(array_filter(self::frames('sess-label'), static fn (array $f): bool => 'showParts' === $f['type']));
+        self::assertCount(1, $shown);
+        self::assertSame('Rotule de direction intérieure, barre de connexion', $shown[0]['categoryLabel']);
+        self::assertSame(51, $shown[0]['narrowed']['productGroup']['id']);
+
+        $summary = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('shown', $summary['status']);
+        self::assertSame(['id' => 51, 'name' => 'Rotule de direction intérieure, barre de connexion'], $summary['productGroup']);
+
+        $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
+        self::assertSame('Rotule de direction intérieure, barre de connexion', $turns[0]->getCategoryLabel());
+    }
+
+    public function testEachShownClusterNamesItsProductGroup(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('c1', 'show_parts', ['categoryId' => 100259, 'rationale' => 'Demandé.']),
+            new ToolCall('c2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('filtre à huile', 'sess-cluster-group');
+
+        $summary = json_decode($seen['toolResults'][0] ?? '', true);
+        self::assertSame('Oil Filter', $summary['clusters'][0]['productGroup']);
     }
 
     public function testShowPartsWithoutAVehicleTellsTheAgentToSetOneFirst(): void

@@ -122,7 +122,7 @@ final class BackfillJournalVehiclesCommand extends Command
     {
         $route = AgentTurnKind::Search === $turn->getKind()
             ? TurnRoute::forSearch($turn->getSearch())
-            : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments()], $turn->getToolCalls()));
+            : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments(), 'result' => $call->getResult()], $turn->getToolCalls()));
 
         return $route->vehicle;
     }

@@ -76,6 +76,43 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertNotSame([], $content['clusters'][0]['applicability']);
     }
 
+    public function testAMixedCategoryListsItsProductGroupsWithoutNarrowing(): void
+    {
+        $data = static::createClient()->request('GET', '/cars/16182/part-categories/100198/narrowed?make=PEUGEOT')->toArray();
+
+        $this->assertResponseIsSuccessful();
+        $this->assertTrue($data['groupRequired']);
+        $this->assertSame([], $data['clusters']);
+        $this->assertSame([914, 51, 2066], array_column($data['productGroups'], 'id'));
+        $this->assertSame('Rotule de direction intérieure, barre de connexion', $data['productGroups'][1]['name']);
+        $this->assertSame(1, $data['upstreamCalls']);
+    }
+
+    public function testTheChosenProductGroupIsNarrowedAlone(): void
+    {
+        $data = static::createClient()->request('GET', '/cars/16182/part-categories/100198/narrowed?make=PEUGEOT&productGroupId=51')->toArray();
+
+        $this->assertResponseIsSuccessful();
+        $this->assertFalse($data['groupRequired']);
+        $this->assertSame(['id' => 51, 'name' => 'Rotule de direction intérieure, barre de connexion'], $data['productGroup']);
+        $this->assertSame(32, $data['totalArticles']);
+    }
+
+    public function testNarrowPartsToolTakesTheProductGroup(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'narrow_parts',
+            'arguments' => ['carId' => 16182, 'carType' => 'PC', 'categoryId' => 100198, 'make' => 'PEUGEOT', 'productGroupId' => 51],
+        ], 2);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame(51, $content['productGroup']['id']);
+        $this->assertSame(32, $content['totalArticles']);
+    }
+
     public function testNarrowPartsToolSteersTheAgentAwayFromListArticles(): void
     {
         $client = static::createClient();
@@ -88,5 +125,6 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertStringContainsString('list_articles', $tool['description']);
         $this->assertStringContainsString('differsOn', $tool['description']);
         $this->assertStringContainsString('VIN', $tool['description']);
+        $this->assertStringContainsString('productGroupId', $tool['description']);
     }
 }

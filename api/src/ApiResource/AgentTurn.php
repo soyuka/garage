@@ -138,7 +138,7 @@ final class AgentTurn
         $resource->search = [] === $turn->getSearch() ? null : $turn->getSearch();
         $route = AgentTurnKind::Search === $turn->getKind()
             ? TurnRoute::forSearch($turn->getSearch())
-            : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments()], $turn->getToolCalls()));
+            : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments(), 'result' => $call->getResult()], $turn->getToolCalls()));
         $resource->route = $route->route;
         $resource->vehicle = $route->vehicle;
         $resource->categoryLabel = $turn->getCategoryLabel();
