@@ -19,8 +19,11 @@ use App\PartsApi\CarType;
  * representative per brand (best tiers first) is fingerprinted from its criteria, representatives are
  * clustered on physical dimensions, and ONE crosses call per cluster supplies its OE numbers and claims
  * the remaining articles. Clusters whose crosses share a carmaker OE number are then merged: the carmaker
- * itself treats them as interchangeable on this car, however different their dimensions. The call budget is
- * bounded: MAX_REPRESENTATIVES criteria + 1 crosses per cluster.
+ * itself treats them as interchangeable on this car, however different their dimensions. A represented brand
+ * that sells another article the crosses leave unclaimed is selling a second part: that sibling is probed,
+ * and kept apart from a physically matching cluster when the carmaker numbers it differently (no shared
+ * carmaker OE), which is how build-breakpoint splits (PSA OPR) surface. The call budget is bounded:
+ * MAX_REPRESENTATIVES + MAX_SIBLING_PROBES criteria, 1 crosses per cluster and per probe.
  *
  * partsapi quota is scarce (50/day/method on a test key), so any upstream failure degrades the answer
  * (`narrowed: false`) instead of failing it.
@@ -28,6 +31,8 @@ use App\PartsApi\CarType;
 final class ArticleNarrower
 {
     public const MAX_REPRESENTATIVES = 8;
+
+    public const MAX_SIBLING_PROBES = 1;
 
     public function __construct(
         private readonly PartsCatalog $catalog,
@@ -89,6 +94,9 @@ final class ArticleNarrower
 
         $crosses = $this->fetchCrosses($clusters, $degraded);
         [$clusters, $crosses] = $this->mergeOnCarmakerOe($clusters, $crosses, $make);
+        if ([] === $degraded) {
+            [$clusters, $crosses] = $this->probeSiblings($clusters, $crosses, $articles, $make, $degraded);
+        }
         $oeBrands = [] === $crosses ? [] : $this->vehicleMakers($carType, $make, $degraded);
 
         $variants = $this->assign($clusters, $articles, $crosses);
@@ -104,7 +112,7 @@ final class ArticleNarrower
                 representative: ['artId' => $best->artId, 'brand' => $best->brand, 'number' => $best->number],
                 variants: $variants[$cluster->id],
                 articleCount: \count($variants[$cluster->id]),
-                applicability: Applicability::union(array_map(static fn (Representative $m): array => $m->applicability, $cluster->members)),
+                applicability: Applicability::union($this->applicabilities($cluster, $variants[$cluster->id])),
                 productGroup: $productGroup,
             );
         }
@@ -121,6 +129,26 @@ final class ArticleNarrower
             productGroup: $productGroup,
             productGroups: $productGroups,
         );
+    }
+
+    /**
+     * The members' breakpoints, then those of variants whose criteria some earlier search already cached:
+     * free, and a claimed variant may be the one article that states the breakpoint.
+     *
+     * @param list<array{artId: int, brand: string, number: string, tier: int}> $variants
+     *
+     * @return list<array<string, list<string>>>
+     */
+    private function applicabilities(Cluster $cluster, array $variants): array
+    {
+        $sets = array_map(static fn (Representative $m): array => $m->applicability, $cluster->members);
+        $members = array_flip(array_map(static fn (Representative $m): int => $m->artId, $cluster->members));
+        $others = array_values(array_filter(array_column($variants, 'artId'), static fn (int $id): bool => !isset($members[$id])));
+        foreach ($this->catalog->cachedArticleCriteria($others) as $criteria) {
+            $sets[] = Applicability::fromCriteria($criteria);
+        }
+
+        return $sets;
     }
 
     /**
@@ -289,6 +317,129 @@ final class ArticleNarrower
         }
 
         return [$renumbered, array_filter($renumberedCrosses, static fn (array $list): bool => [] !== $list)];
+    }
+
+    /**
+     * @param list<Cluster>                     $clusters
+     * @param array<string, list<ArticleCross>> $crosses  by cluster id
+     * @param list<Article>                     $articles
+     * @param list<string>                      $degraded
+     *
+     * @return array{list<Cluster>, array<string, list<ArticleCross>>}
+     */
+    private function probeSiblings(array $clusters, array $crosses, array $articles, ?string $make, array &$degraded): array
+    {
+        $probed = [];
+        for ($i = 0; $i < self::MAX_SIBLING_PROBES; ++$i) {
+            $sibling = self::unclaimedSibling($clusters, $crosses, $articles, $probed);
+            if (null === $sibling) {
+                break;
+            }
+            $probed[$sibling->id] = true;
+
+            try {
+                $criteria = $this->catalog->articleCriteria($sibling->id);
+            } catch (UpstreamException) {
+                $degraded[] = 'criteria unavailable from the parts catalog (quota or outage): a second part of a represented brand could not be checked';
+                break;
+            }
+            $probe = new Representative($sibling->id, $sibling->brand, $sibling->number, BrandTier::rank($sibling->brand), FingerprintBuilder::fromCriteria($criteria), Applicability::fromCriteria($criteria));
+            if ($probe->fingerprint->isEmpty()) {
+                continue;
+            }
+
+            try {
+                $probeCrosses = $this->catalog->articleCrosses($sibling->id);
+            } catch (UpstreamException) {
+                $degraded[] = 'cross-references unavailable from the parts catalog (quota or outage): a second part of a represented brand could not be checked';
+                break;
+            }
+
+            $probeOe = self::carmakerOe($probeCrosses, $make);
+            $home = null;
+            foreach ($clusters as $cluster) {
+                if (!$cluster->fingerprint->agreesWith($probe->fingerprint)) {
+                    continue;
+                }
+                $clusterOe = self::carmakerOe($crosses[$cluster->id] ?? [], $make);
+                if ([] === $probeOe || [] === $clusterOe || [] !== array_intersect_key($probeOe, $clusterOe)) {
+                    $home = $cluster;
+                    break;
+                }
+            }
+
+            if (null !== $home) {
+                $home->members[] = $probe;
+                usort($home->members, Representative::compare(...));
+                $home->fingerprint = $home->fingerprint->completedBy($probe->fingerprint);
+                $crosses[$home->id] = array_merge($crosses[$home->id] ?? [], $probeCrosses);
+                continue;
+            }
+
+            $id = 'c'.(\count($clusters) + 1);
+            $clusters[] = new Cluster($id, [$probe], $probe->fingerprint);
+            $crosses[$id] = $probeCrosses;
+            [$clusters, $crosses] = $this->mergeOnCarmakerOe($clusters, $crosses, $make);
+        }
+
+        return [$clusters, $crosses];
+    }
+
+    /**
+     * The best-ranked article of a brand that already has a representative, which no member and no cross
+     * of any cluster claims.
+     *
+     * @param list<Cluster>                     $clusters
+     * @param array<string, list<ArticleCross>> $crosses
+     * @param list<Article>                     $articles
+     * @param array<int, true>                  $probed
+     */
+    private static function unclaimedSibling(array $clusters, array $crosses, array $articles, array $probed): ?Article
+    {
+        $brands = [];
+        $claimed = $probed;
+        foreach ($clusters as $cluster) {
+            foreach ($cluster->members as $member) {
+                $brands[$member->brand] = true;
+                $claimed[$member->artId] = true;
+            }
+        }
+        foreach ($crosses as $list) {
+            foreach ($list as $cross) {
+                if (null !== $cross->artId) {
+                    $claimed[$cross->artId] = true;
+                }
+            }
+        }
+
+        $candidates = array_values(array_filter($articles, static fn (Article $a): bool => isset($brands[$a->brand]) && !isset($claimed[$a->id])));
+        usort($candidates, static fn (Article $a, Article $b): int => BrandTier::rank($a->brand) <=> BrandTier::rank($b->brand)
+            ?: strcmp($a->number, $b->number)
+            ?: $a->id <=> $b->id);
+
+        return $candidates[0] ?? null;
+    }
+
+    /**
+     * @param list<ArticleCross> $crosses
+     *
+     * @return array<string, true> normalised OE numbers of the car's own make
+     */
+    private static function carmakerOe(array $crosses, ?string $make): array
+    {
+        if (null === $make || '' === $make) {
+            return [];
+        }
+
+        $carmaker = self::normalize($make);
+        $oe = [];
+        foreach ($crosses as $cross) {
+            if (self::normalize($cross->brand) === $carmaker && '' !== $cross->number) {
+                $oe[self::normalizeOe($cross->number)] = true;
+            }
+        }
+
+        return $oe;
     }
 
     /**

@@ -1,0 +1,34 @@
+[
+    {
+        "CRITERIA_NAME": "Côté d'assemblage",
+        "CRITERIA_VALUE": "Essieu avant droit; Essieu avant gauche"
+    },
+    {
+        "CRITERIA_NAME": "Dimension du filetage extérieur",
+        "CRITERIA_VALUE": "M14 x 1,5"
+    },
+    {
+        "CRITERIA_NAME": "Dimension filetage intérieur",
+        "CRITERIA_VALUE": "M14 x 1,5"
+    },
+    {
+        "CRITERIA_NAME": "Longueur [mm]",
+        "CRITERIA_VALUE": "359"
+    },
+    {
+        "CRITERIA_NAME": "numéro TECDOC du moteur",
+        "CRITERIA_VALUE": "19913; 41050"
+    },
+    {
+        "CRITERIA_NAME": "Poids [kg]",
+        "CRITERIA_VALUE": "0,607"
+    },
+    {
+        "CRITERIA_NAME": "pour n° OPR (date de fabrication du véhicule)",
+        "CRITERIA_VALUE": "10311"
+    },
+    {
+        "CRITERIA_NAME": "pour numéro OE",
+        "CRITERIA_VALUE": "3812.E5"
+    }
+]

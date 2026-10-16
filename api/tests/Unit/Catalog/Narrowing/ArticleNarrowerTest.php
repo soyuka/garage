@@ -155,7 +155,7 @@ final class ArticleNarrowerTest extends TestCase
 
         $counts = array_count_values($this->requested);
         $this->assertSame(1, $counts['getArticles']);
-        $this->assertLessThanOrEqual(8, $counts['getArticleCriteria']);
+        $this->assertLessThanOrEqual(ArticleNarrower::MAX_REPRESENTATIVES + ArticleNarrower::MAX_SIBLING_PROBES, $counts['getArticleCriteria']);
         $this->assertLessThanOrEqual(8, $counts['getArticleCrosses']);
         $this->assertArrayNotHasKey('getArticleMedia', $counts);
         $this->assertSame(\count($this->requested), $result->upstreamCalls);
@@ -289,6 +289,57 @@ final class ArticleNarrowerTest extends TestCase
         $this->assertSame(['id' => 7, 'name' => 'Oil Filter'], $result->productGroup);
         $this->assertSame([['id' => 7, 'name' => 'Oil Filter', 'articleCount' => 220]], $result->productGroups);
         $this->assertSame(['id' => 7, 'name' => 'Oil Filter'], $result->clusters[0]->productGroup);
+    }
+
+    public function testABrandsSecondArticleLeftUnclaimedIsProbedAndKeptApartWhenTheCarmakerNumbersItDifferently(): void
+    {
+        // Real 307 data (2026-10-16): every top brand sells two inner axial joints for this car. BOSCH 0 986 141 079
+        // (338 mm) crosses to PEUGEOT 3812.E0 with FEBI 19935 (OPR up to 10310); its sibling 0 986 141 133 (358 mm)
+        // crosses to PEUGEOT 3812 E5 with FEBI 29625 (OPR 10311). Same thread, so only the carmaker numbers tell them apart.
+        $result = $this->narrowRotules(productGroupId: 51);
+
+        $this->assertCount(2, $result->clusters);
+        [$early, $late] = $result->clusters;
+        $this->assertSame('0 986 141 079', $early->representative['number']);
+        $this->assertSame('0 986 141 133', $late->representative['number']);
+        $this->assertContains('19935', array_column($early->variants, 'number'));
+        $this->assertContains('29625', array_column($late->variants, 'number'));
+        $this->assertNotContains('29625', array_column($early->variants, 'number'));
+
+        $earlyOe = array_map(static fn (string $n): string => str_replace(['.', ' '], '', $n), array_column($early->oeNumbers, 'number'));
+        $lateOe = array_map(static fn (string $n): string => str_replace(['.', ' '], '', $n), array_column($late->oeNumbers, 'number'));
+        $this->assertContains('3812E0', $earlyOe);
+        $this->assertContains('3812E5', $lateOe);
+        $this->assertSame([], array_values(array_intersect($earlyOe, $lateOe)));
+        $this->assertContains('10310', array_column($early->applicability, 'values', 'name')['pour numéro OPR jusqu’à'] ?? []);
+
+        $counts = array_count_values($this->requested);
+        $this->assertSame(ArticleNarrower::MAX_REPRESENTATIVES + ArticleNarrower::MAX_SIBLING_PROBES, $counts['getArticleCriteria']);
+        $this->assertSame(3, $counts['getArticleCrosses']);
+    }
+
+    public function testAVariantsAlreadyCachedCriteriaJoinItsClustersApplicabilityForFree(): void
+    {
+        $this->warmCriteria(2472844);
+
+        $result = $this->narrowRotules(productGroupId: 51);
+
+        $this->assertSame(['10311'], array_column($result->clusters[1]->applicability, 'values', 'name')['pour n° OPR (date de fabrication du véhicule)'] ?? null);
+        $this->assertNotContains(2472844, $this->requestedArtIds);
+    }
+
+    public function testWithoutTheCarsMakeTheProbeJoinsThePartItMatches(): void
+    {
+        $result = $this->narrow(make: null, carId: 16182, categoryId: 100198, productGroupId: 51);
+
+        $this->assertNotContains('29625', array_map(static fn ($c): string => $c->representative['number'], $result->clusters));
+        $this->assertContains('29625', array_merge(...array_map(static fn ($c): array => array_column($c->variants, 'number'), $result->clusters)));
+    }
+
+    private function warmCriteria(int $artId): void
+    {
+        $item = $this->cache->getItem('getArticleCriteria.'.sha1('getArticleCriteria?ART_ID='.$artId.'&LANG=6'));
+        $this->cache->save($item->set(json_decode(self::fixture(sprintf('getArticleCriteria_%d.json', $artId)), true)));
     }
 
     private function narrowRotules(?int $productGroupId = null): NarrowingResult

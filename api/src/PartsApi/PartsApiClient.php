@@ -127,6 +127,27 @@ final class PartsApiClient
     }
 
     /**
+     * The cached responses among several calls of one method, in one cache round trip: never an upstream call.
+     *
+     * @param array<array-key, array<string, int|string>> $paramSets
+     *
+     * @return array<array-key, list<array<string, mixed>>> by the key of each hit's params, misses left out
+     */
+    public function peekMany(string $method, array $paramSets): array
+    {
+        $keys = array_map(fn (array $params): string => $this->cacheKey($method, $params), $paramSets);
+        $byKey = array_flip($keys);
+        $hits = [];
+        foreach ($this->cache->getItems(array_values($keys)) as $key => $item) {
+            if ($item->isHit() && isset($byKey[$key])) {
+                $hits[$byKey[$key]] = $item->get();
+            }
+        }
+
+        return $hits;
+    }
+
+    /**
      * Cache key = <method>.sha1(signature), where the signature is the method + params
      * WITHOUT the secret key. The signature is identical to prototype_1, so the sha1 is
      * byte-stable and already-paid responses import 1:1.

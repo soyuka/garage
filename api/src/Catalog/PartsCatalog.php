@@ -125,6 +125,26 @@ final class PartsCatalog
     }
 
     /**
+     * The criteria of those articles already cached, in one cache round trip: never an upstream call.
+     *
+     * @param list<int> $artIds
+     *
+     * @return array<int, list<ArticleCriterion>> by article id, uncached ones left out
+     */
+    public function cachedArticleCriteria(array $artIds): array
+    {
+        $params = [];
+        foreach ($artIds as $artId) {
+            $params[$artId] = ['ART_ID' => $artId, 'LANG' => $this->lang];
+        }
+
+        return array_map(
+            static fn (array $rows): array => array_map(ArticleCriterion::fromPartsApi(...), $rows),
+            $this->client->peekMany('getArticleCriteria', $params),
+        );
+    }
+
+    /**
      * @return list<ArticleCross>
      */
     public function articleCrosses(int $artId): array
