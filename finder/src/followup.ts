@@ -25,7 +25,8 @@ const chosenBy = (c: ClusterChoice): string =>
       : 'choisie par l’utilisateur, non confirmée par le catalogue';
 
 export function resultSummary(categoryLabel: string, n: Narrowing, choice: ClusterChoice | null): string {
-  const head = `${categoryLabel} (categoryId ${n.categoryId}) : ${n.clusters.length} pièce${n.clusters.length > 1 ? 's' : ''} distincte${n.clusters.length > 1 ? 's' : ''}`;
+  const ids = `categoryId ${n.categoryId}${n.productGroup ? `, productGroupId ${n.productGroup.id}` : ''}`;
+  const head = `${categoryLabel} (${ids}) : ${n.clusters.length} pièce${n.clusters.length > 1 ? 's' : ''} distincte${n.clusters.length > 1 ? 's' : ''}`;
   const chosen = choice && n.clusters.some((c) => c.id === choice.id) ? `, ${chosenBy(choice)} : [${choice.id}]` : '';
   let text = `${head}${chosen}.`;
   for (const c of n.clusters) {

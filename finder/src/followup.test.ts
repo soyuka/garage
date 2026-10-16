@@ -27,6 +27,11 @@ describe('resultSummary', () => {
     expect(text).toContain('par article, pas par véhicule');
   });
 
+  it('names the product group id of the result, so a follow-up never re-narrows without it', () => {
+    const n = { ...twoClusters(), productGroup: { id: 51, name: 'Rotule de direction intérieure, barre de connexion' } };
+    expect(resultSummary('Rotule de direction intérieure, barre de connexion', n, null)).toContain('(categoryId 100198, productGroupId 51)');
+  });
+
   it('says which cluster the agent retained, and on what basis', () => {
     expect(resultSummary('Rotule axiale', twoClusters(), { id: 'k1', by: 'agent', basis: 'code de fabrication (OPR 09824 ≤ 10310)' })).toContain(
       'retenue d’après code de fabrication (OPR 09824 ≤ 10310), indication (applicabilité par article) : [k1]',
