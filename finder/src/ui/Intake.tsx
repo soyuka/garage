@@ -30,7 +30,7 @@ const ACCEPT = 'image/*,video/*,application/pdf';
 export function routeHint(route: TextRoute, hasVehicle: boolean): string {
   switch (route.kind) {
     case 'empty':
-      return 'Photo ou PDF : collez ou glissez le fichier ici.';
+      return '';
     case 'plate':
       return route.format === 'siv' ? 'Plaque SIV' : 'Plaque FNI (ancien format)';
     case 'vin':
