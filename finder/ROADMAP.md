@@ -22,7 +22,7 @@ Shipped, end to end:
   result title is the product group name, never the agent's text. No group picker for the user: a
   restored route without `/g/` on a mixed category shows "Relancer la recherche" (original input to
   the agent). Routes: `p/<plate>/c/<cat>/g/<pt>`, `k/<carId>-<type>/c/<cat>/g/<pt>` (old ones valid).
-  Meshes read the product group first; an inner axial joint gets the generic placeholder (no inner
+  Meshes read the product group first; an inner axial joint gets the catalogue photo (no inner
   tie rod mesh ships), and so does PT 2066 « Rotule de direction » (2 unchecked articles: an
   unconfirmed mesh misleads). Copy icons (2026-10-16) sit beside each reference and copy that reference alone (the OE number without brand; an equivalence without its brand); no "Copier la réf." button.
 - **Narrowing** (`api/src/Catalog/Narrowing/`): BrandTier top 8 reps → getArticleCriteria → physical
@@ -74,8 +74,20 @@ Shipped, end to end:
   (inventory, sizes, licence note: `SOURCES.md`). `family.ts` `MESH_RULES` maps TecDoc categories to
   them (133/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
   the active mesh loads; approximate matches captioned "Forme type de la famille, pas la pièce exacte";
-  unmapped categories keep the generic chamfered block. Dev contact sheet:
-  https://localhost/finder/dev/meshes.html (not in the build). Title block = result card, Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
+  unmapped categories show the catalogue photo or « ? » (below; the generic chamfered block was removed
+  2026-10-16). Dev contact sheet:
+  https://localhost/finder/dev/meshes.html (not in the build) (not in the build).
+- **Catalogue photo where no mesh exists (2026-10-16)**: a part without a mesh shows its shown cluster's
+  representative photo, pinned on the sheet (grayscale + multiply, framed, `Photo catalogue · <marque réf>`,
+  never dimensioned), else a plain « ? ». API proxy `GET /cars/{carId}/part-categories/{categoryId}/articles/{artId}/photo`
+  (`App\Catalog\ArticlePhotos`): getArticleMedia cached forever per artId, only for an article of an
+  already cached listing (never spends quota on an arbitrary id), first https source only, fetched through
+  `NoPrivateNetworkHttpClient`, MIME sniffed (jpeg/png/webp/gif), bytes cached forever in
+  `cache.article_photos`. Proxy, not hot-link: the client never sees or sends an image URL (no SSRF
+  surface, no viewer IP/referrer to the third-party host, one fetch per image ever). Live calls spent:
+  2 (307 axial joint, artIds 112767557 and 112767504). **Blocked upstream**: `img.autodatabases.ru`, the
+  host every media URL points to, was NXDOMAIN on 2026-10-16, so every photo currently falls back to « ? ».
+  Re-check that host; if partsapi moved its images, the proxy follows whatever URL getArticleMedia returns. Title block = result card, Acheter / Ajouter au <véhicule> (409 → inline picker plate · model, re-post with the picked IRI or
   confirmNew) / Copier le lien. "Enregistrer le véhicule" in the top bar (`POST /garage/vehicles/save`,
   same-plate match, different plate = different car, 409 picker when no plate).
 - **Layout (2026-10-15)**: composer docked at the bottom on every width, with the agent status, its
@@ -176,7 +188,7 @@ then; since 2026-10-16 it lists the joint length (see State).
 - Criteria are per ARTICLE (union over every vehicle it fits; W 712/73 lists a Perkins engine code):
   physical criteria are reliable, dates / VIN breakpoints are not usable per car without per-linkage
   data (no key).
-- Media (getArticleMedia) dropped: the product shows the 3D blueprint, not photos.
+- Media (getArticleMedia): dropped 2026-10-15, back 2026-10-16 only where no mesh exists (see Shipped).
 
 ## 3D assets (researched 2026-10-15)
 
