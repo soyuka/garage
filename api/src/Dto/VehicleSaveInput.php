@@ -37,4 +37,8 @@ final class VehicleSaveInput
 
     #[ApiProperty(description: 'Set true to create a new vehicle even though candidates were surfaced.')]
     public bool $confirmNew = false;
+
+    #[ApiProperty(description: 'Carte grise fields read by the finder: recorded as facts on the saved (or matched) vehicle, source "carte grise", in the same call. Only non-blank fields are written.')]
+    #[Assert\Valid]
+    public ?RegistrationFactsInput $registration = null;
 }

@@ -13,6 +13,16 @@ final class GarageVehicleSaveTest extends AppTestCase
 {
     private const array PEUGEOT = ['make' => 'PEUGEOT', 'model' => '307', 'carId' => 9586, 'plate' => 'XB-301-ZB'];
 
+    private const array REGISTRATION = [
+        'vin' => 'VF33CRFJF4Y000001',
+        'firstRegistration' => '2005-03-29',
+        'cnit' => 'MPE0307N20E1',
+        'displacement' => '1997',
+        'powerKw' => '100',
+        'energy' => 'GO',
+        'fiscalPower' => '7',
+    ];
+
     public function testCreatesTheVehicle(): void
     {
         $client = static::createClient();
@@ -100,6 +110,69 @@ final class GarageVehicleSaveTest extends AppTestCase
         $this->assertResponseStatusCodeSame(422);
     }
 
+    public function testRegistrationFactsLandOnTheVehicleSourcedFromTheCarteGrise(): void
+    {
+        $client = static::createClient();
+
+        $body = $this->save($client, self::PEUGEOT + ['registration' => self::REGISTRATION]);
+
+        $this->assertResponseStatusCodeSame(201);
+        $facts = $this->factsOf($client, $body['@id']);
+        $this->assertSame(
+            [
+                'vin' => ['VF33CRFJF4Y000001', null],
+                'first_registration_date' => ['2005-03-29', null],
+                'cnit' => ['MPE0307N20E1', null],
+                'displacement' => ['1997', 'cm³'],
+                'power_kw' => ['100', 'kW'],
+                'energy' => ['GO', null],
+                'fiscal_power' => ['7', 'CV'],
+            ],
+            $facts,
+        );
+    }
+
+    public function testOnlyTheReadRegistrationFieldsAreRecorded(): void
+    {
+        $client = static::createClient();
+
+        $body = $this->save($client, self::PEUGEOT + ['registration' => ['vin' => 'VF33CRFJF4Y000001', 'energy' => ' ']]);
+
+        $this->assertSame(['vin' => ['VF33CRFJF4Y000001', null]], $this->factsOf($client, $body['@id']));
+    }
+
+    public function testSavingTheSameCarteGriseTwiceReusesTheVehicleAndDoesNotDuplicateFacts(): void
+    {
+        $client = static::createClient();
+        $first = $this->save($client, self::PEUGEOT + ['registration' => self::REGISTRATION]);
+
+        $second = $this->save($client, ['plate' => 'xb 301 zb'] + self::PEUGEOT + ['registration' => self::REGISTRATION]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertSame($first['@id'], $second['@id']);
+        $this->assertCount(1, $this->garage($client));
+        $this->assertCount(7, $this->factsOf($client, $first['@id']));
+    }
+
+    public function testAnotherReadReplacesTheFactValue(): void
+    {
+        $client = static::createClient();
+        $first = $this->save($client, self::PEUGEOT + ['registration' => self::REGISTRATION]);
+
+        $this->save($client, self::PEUGEOT + ['registration' => ['fiscalPower' => '8']]);
+
+        $this->assertSame(['8', 'CV'], $this->factsOf($client, $first['@id'])['fiscal_power']);
+    }
+
+    public function testASaveWithoutRegistrationWritesNoFact(): void
+    {
+        $client = static::createClient();
+
+        $body = $this->save($client, self::PEUGEOT);
+
+        $this->assertSame([], $this->factsOf($client, $body['@id']));
+    }
+
     public function testAnonymousIsRejected(): void
     {
         $client = static::createClient();
@@ -128,5 +201,20 @@ final class GarageVehicleSaveTest extends AppTestCase
     private function garage(object $client): array
     {
         return $client->request('GET', '/garage/vehicles', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
+    }
+
+    /**
+     * @return array<string, array{string, string|null}> key => [value, unit]
+     */
+    private function factsOf(object $client, string $iri): array
+    {
+        $facts = [];
+        foreach ($client->request('GET', $iri, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()['facts'] as $fact) {
+            $this->assertSame('carte grise', $fact['source']);
+            $this->assertFalse($fact['verified']);
+            $facts[$fact['key']] = [$fact['value'], $fact['unit']];
+        }
+
+        return $facts;
     }
 }

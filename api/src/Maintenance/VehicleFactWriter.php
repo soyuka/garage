@@ -28,6 +28,10 @@ final class VehicleFactWriter
     // reserved: only the importers write them, which is what keeps `verified` trustworthy.
     public const array WRITABLE_SOURCES = ['user', 'web', 'llm', 'motul'];
 
+    // Written server-side by the vehicle save from a confirmed carte grise: never claimable through the
+    // fact tools, and unverified like every non-catalog source.
+    public const string REGISTRATION_SOURCE = 'carte grise';
+
     public function __construct(
         private readonly DocumentManager $em,
         private readonly VehicleRepository $vehicles,

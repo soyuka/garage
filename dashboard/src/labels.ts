@@ -133,6 +133,13 @@ export const FACT_LABEL: Record<Locale, Record<string, string>> = {
     brakes_ref: 'Référence freins',
     tires_ref: 'Référence pneus',
     gearbox_oil_ref: 'Référence huile de boîte',
+    vin: 'Numéro VIN',
+    first_registration_date: 'Première immatriculation',
+    cnit: 'Code national (CNIT)',
+    displacement: 'Cylindrée',
+    power_kw: 'Puissance nette',
+    energy: 'Énergie',
+    fiscal_power: 'Puissance fiscale',
   },
   en: {
     oil_type: 'Oil type',
@@ -150,6 +157,13 @@ export const FACT_LABEL: Record<Locale, Record<string, string>> = {
     brakes_ref: 'Brakes ref.',
     tires_ref: 'Tyres ref.',
     gearbox_oil_ref: 'Gearbox oil ref.',
+    vin: 'VIN',
+    first_registration_date: 'First registration',
+    cnit: 'National type code (CNIT)',
+    displacement: 'Displacement',
+    power_kw: 'Net power',
+    energy: 'Energy',
+    fiscal_power: 'Fiscal power',
   },
 };
 
