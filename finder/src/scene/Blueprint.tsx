@@ -1,72 +1,115 @@
 import { OrbitControls } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Suspense, useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useRef, useState, type MutableRefObject } from 'react';
 import { Box3, Mesh, Vector3, type Group, type PerspectiveCamera } from 'three';
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib';
 import type { Dimension, Family } from '../types';
 import { BrakePart } from './BrakePart';
-import { FOV, HOME, POLAR_MARGIN, fitDistance, orbitPosition, type Vec3 } from './camera';
+import type { Carousel } from './carousel';
+import { CAROUSEL_HOLD_S, CarouselPart, useCarousel, type CarouselEntry } from './CarouselPart';
+import { FOV, HOME, POLAR_MARGIN, fitDistance, orbitPosition } from './camera';
 import { FilterPart } from './FilterPart';
 import { MeshPart } from './MeshPart';
+import { SweepLayers } from './SweepLayers';
+import type { Layer } from './sweep';
 import { turntableStep } from './turntable';
 
+type DrawnFamily = Exclude<Family, { kind: 'none' } | { kind: 'photo' }>;
+
 interface Props {
-  family: Exclude<Family, { kind: 'none' } | { kind: 'photo' }>;
+  // null while searching for a part that has no mesh (photo or « ? »): only the carousel draws.
+  family: DrawnFamily | null;
   dimensions: readonly Dimension[];
   ghost: boolean;
   reducedMotion: boolean;
   extent: number;
+  // A search is running: random small parts turn and redraw in turn until the result hands off.
+  searching?: boolean;
   // false: a display (home example) that turns on its own and never takes the pointer or the page scroll.
   interactive?: boolean;
 }
 
+type Drawn = { kind: 'carousel'; entry: CarouselEntry } | { kind: 'part'; family: DrawnFamily; dimensions: readonly Dimension[]; ghost: boolean };
+
 const FILL = 0.62;
 const UP = new Vector3(0, 1, 0);
+const CAROUSEL_EXTENT = 150;
+const SWEEP_CAROUSEL_S = 1.1;
+const SWEEP_PART_S = 0.62;
+// Camera reframe rate (1/s): about 0.5 s to settle on a new part.
+const REFRAME_RATE = 7;
 
 // Once the user takes the view, the turntable stays off for the rest of the visit, every part included.
 let taken = false;
 
-const familyKey = (f: Props['family']): string =>
+const familyKey = (f: DrawnFamily): string =>
   f.kind === 'brake' ? `brake-${f.axle}-${f.component}` : f.kind === 'filter' ? `filter-${f.filter}` : `mesh-${f.mesh}`;
+
+interface Fit {
+  group: Group | null;
+  version: number;
+}
 
 // Orbit target = the drawn part's bounding-box centre (the paper fills HiddenLine tags `fit`), camera
 // distance = the framing extent fitted to the drawing area's aspect. Measured on the first frame after
-// a change, once the part's own frame hooks (the filter's scale) have run.
-function Rig({ part, fitKey, extent, display }: { part: RefObject<Group>; fitKey: string; extent: number; display: boolean }) {
+// a change, once the part's own frame hooks (the filter's scale) have run; later parts are eased to
+// along the current view direction, the first one is placed at the home pose.
+function Rig({ fit, extent, display, reducedMotion }: { fit: MutableRefObject<Fit>; extent: number; display: boolean; reducedMotion: boolean }) {
   const camera = useThree((s) => s.camera) as PerspectiveCamera;
   const size = useThree((s) => s.size);
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null;
-  const home = useRef<{ target: Vec3; distance: number } | null>(null);
-  const pending = useRef(true);
+  const measured = useRef(-1);
+  const placed = useRef(false);
+  const goal = useRef<{ target: Vector3; distance: number } | null>(null);
+  const resized = useRef(true);
 
   useEffect(() => {
-    pending.current = true;
-  }, [fitKey, extent, size.width, size.height]);
+    resized.current = true;
+  }, [extent, size.width, size.height]);
 
-  useFrame(() => {
-    if (!controls || !part.current) return;
-    if (pending.current) {
-      pending.current = false;
-      part.current.updateWorldMatrix(true, true);
+  useFrame((_, delta) => {
+    const group = fit.current.group;
+    if (!controls || !group) return;
+    if (measured.current !== fit.current.version || resized.current) {
+      measured.current = fit.current.version;
+      const snap = !placed.current || reducedMotion;
+      resized.current = false;
+      group.updateWorldMatrix(true, true);
       const box = new Box3();
-      part.current.traverse((o) => {
+      group.traverse((o) => {
         if (o instanceof Mesh && o.userData.fit) box.expandByObject(o);
       });
-      const target: Vec3 = box.isEmpty() ? [0, 0, 0] : (box.getCenter(new Vector3()).toArray() as Vec3);
+      const target = box.isEmpty() ? new Vector3() : box.getCenter(new Vector3());
       const distance = fitDistance(extent / 2, FOV, size.width / Math.max(size.height, 1), FILL);
-      home.current = { target, distance };
-      const dir = taken && !display ? camera.position.clone().sub(controls.target).normalize() : new Vector3(...orbitPosition([0, 0, 0], 1, HOME.azimuth, HOME.polar));
-      controls.target.set(...target);
-      camera.position.set(...target).addScaledVector(dir, distance);
-      camera.near = distance / 50;
-      camera.far = distance * 50;
-      camera.updateProjectionMatrix();
-      controls.update();
+      goal.current = { target, distance };
+      if (snap) {
+        placed.current = true;
+        const dir = taken && !display ? camera.position.clone().sub(controls.target).normalize() : new Vector3(...orbitPosition([0, 0, 0], 1, HOME.azimuth, HOME.polar));
+        controls.target.copy(target);
+        camera.position.copy(target).addScaledVector(dir, distance);
+        camera.near = distance / 50;
+        camera.far = distance * 50;
+        camera.updateProjectionMatrix();
+        controls.update();
+        goal.current = null;
+        return;
+      }
     }
+    const g = goal.current;
+    if (!g) return;
+    const k = 1 - Math.exp(-REFRAME_RATE * Math.min(delta, 0.1));
+    const offset = camera.position.clone().sub(controls.target);
+    const distance = offset.length() + (g.distance - offset.length()) * k;
+    controls.target.lerp(g.target, k);
+    camera.position.copy(controls.target).addScaledVector(offset.normalize(), distance);
+    camera.near = distance / 50;
+    camera.far = distance * 50;
+    camera.updateProjectionMatrix();
+    controls.update();
+    if (Math.abs(g.distance - distance) < g.distance * 1e-3 && controls.target.distanceTo(g.target) < g.distance * 1e-3) goal.current = null;
   });
   return null;
 }
-
 function Turntable({ reducedMotion, display }: { reducedMotion: boolean; display: boolean }) {
   const camera = useThree((s) => s.camera);
   const controls = useThree((s) => s.controls) as OrbitControlsImpl | null;
@@ -93,37 +136,84 @@ function Turntable({ reducedMotion, display }: { reducedMotion: boolean; display
   return null;
 }
 
-export function Blueprint({ family, dimensions, ghost, reducedMotion, extent, interactive = true }: Props) {
-  const part = useRef<Group>(null);
-  const fitKey = familyKey(family);
+export function Blueprint({ family, dimensions, ghost, reducedMotion, extent, searching = false, interactive = true }: Props) {
+  const fit = useRef<Fit>({ group: null, version: 0 });
+  const pen = useRef<HTMLDivElement>(null);
+  const { carousel, shown } = useCarousel(searching);
+  const [hold, setHold] = useState(0);
+
+  const layer: Layer<Drawn> | null = searching
+    ? shown
+      ? { key: `carousel-${shown.id}`, item: { kind: 'carousel', entry: shown } }
+      : null
+    : family
+      ? { key: familyKey(family), item: { kind: 'part', family, dimensions, ghost } }
+      : null;
+  const shownExtent = layer?.item.kind === 'part' ? extent : CAROUSEL_EXTENT;
+
   return (
-    <Canvas
-      flat
-      dpr={[1, 2]}
-      gl={{ antialias: true, alpha: true }}
-      camera={{ fov: FOV, near: 1, far: 20000, position: orbitPosition([0, 0, 0], 1000, HOME.azimuth, HOME.polar) as [number, number, number] }}
-      aria-hidden="true"
-    >
-      <Suspense fallback={null}>
-        <group ref={part}>
-          {family.kind === 'filter' && <FilterPart dimensions={dimensions} ghost={ghost} reducedMotion={reducedMotion} />}
-          {family.kind === 'brake' && <BrakePart axle={family.axle} component={family.component} dimensions={dimensions} ghost={ghost} />}
-          {family.kind === 'mesh' && <MeshPart mesh={family.mesh} ghost={ghost} />}
-        </group>
-        <Rig part={part} fitKey={fitKey} extent={extent} display={!interactive} />
-      </Suspense>
-      <OrbitControls
-        makeDefault
-        enabled={interactive}
-        enablePan={false}
-        enableZoom={false}
-        enableDamping={!reducedMotion}
-        dampingFactor={0.08}
-        rotateSpeed={0.6}
-        minPolarAngle={POLAR_MARGIN}
-        maxPolarAngle={Math.PI - POLAR_MARGIN}
-      />
-      <Turntable reducedMotion={reducedMotion} display={!interactive} />
-    </Canvas>
+    <>
+      <Canvas
+        flat
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true }}
+        onCreated={({ gl }) => {
+          gl.localClippingEnabled = true;
+        }}
+        camera={{ fov: FOV, near: 1, far: 20000, position: orbitPosition([0, 0, 0], 1000, HOME.azimuth, HOME.polar) as [number, number, number] }}
+        aria-hidden="true"
+      >
+        <SweepLayers<Drawn>
+          layer={layer}
+          pen={pen}
+          duration={(l) => (reducedMotion ? 0 : l.item.kind === 'carousel' ? SWEEP_CAROUSEL_S : SWEEP_PART_S)}
+          render={(item) =>
+            item.kind === 'carousel' ? (
+              <CarouselPart entry={item.entry} reducedMotion={reducedMotion} />
+            ) : item.family.kind === 'filter' ? (
+              <FilterPart dimensions={item.dimensions} ghost={item.ghost} reducedMotion={reducedMotion} />
+            ) : item.family.kind === 'brake' ? (
+              <BrakePart axle={item.family.axle} component={item.family.component} dimensions={item.dimensions} ghost={item.ghost} />
+            ) : (
+              <MeshPart mesh={item.family.mesh} ghost={item.ghost} />
+            )
+          }
+          onDropped={(l) => {
+            if (l.item.kind === 'carousel') carousel.drop(l.item.entry.id);
+          }}
+          onSettled={(l) => {
+            if (l.item.kind === 'carousel') setHold((n) => n + 1);
+          }}
+          onShown={(group) => {
+            fit.current = { group, version: fit.current.version + 1 };
+          }}
+        />
+        <Rig fit={fit} extent={shownExtent} display={!interactive} reducedMotion={reducedMotion} />
+        {searching && !reducedMotion && hold > 0 && <Advance key={hold} carousel={carousel} />}
+        <OrbitControls
+          makeDefault
+          enabled={interactive}
+          enablePan={false}
+          enableZoom={false}
+          enableDamping={!reducedMotion}
+          dampingFactor={0.08}
+          rotateSpeed={0.6}
+          minPolarAngle={POLAR_MARGIN}
+          maxPolarAngle={Math.PI - POLAR_MARGIN}
+        />
+        <Turntable reducedMotion={reducedMotion} display={!interactive} />
+      </Canvas>
+      <div ref={pen} className="sweep-pen" aria-hidden="true" />
+    </>
   );
+}
+
+// Swaps the carousel's preloaded part in once the current one has been drawn for the hold time.
+function Advance({ carousel }: { carousel: Carousel<CarouselEntry['item']> }) {
+  const waited = useRef(0);
+  useFrame((_, delta) => {
+    waited.current += Math.min(delta, 0.1);
+    if (waited.current >= CAROUSEL_HOLD_S && carousel.advance()) waited.current = -Infinity;
+  });
+  return null;
 }

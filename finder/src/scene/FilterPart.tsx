@@ -141,7 +141,7 @@ function DiameterCote({ cote, label, labelRef, face }: { cote: FilterCotes['diam
     <group>
       <Line points={[cote.from, cote.to]} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} renderOrder={ORDER} {...OVERLAY} />
       <Arrowheads tips={tips} opacity={1} />
-      <Html position={cote.label} zIndexRange={[5, 0]}>
+      <Html position={cote.label} zIndexRange={[5, 0]} wrapperClass="dim-host">
         <span ref={labelRef} className={`dim-label dim-label--${face === 'top' ? 'above' : 'below'}`}>
           {label}
         </span>
@@ -164,7 +164,7 @@ function HeightCote({ cote, label, labelRef }: { cote: FilterCotes['height']; la
     <group>
       <Line points={[...cote.extensions, cote.from, cote.to]} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} renderOrder={ORDER} {...OVERLAY} />
       <Arrowheads tips={tips} opacity={1} />
-      <Html position={cote.label} zIndexRange={[5, 0]}>
+      <Html position={cote.label} zIndexRange={[5, 0]} wrapperClass="dim-host">
         <span ref={labelRef} className="dim-label dim-label--right">
           {label}
         </span>
@@ -185,7 +185,7 @@ function ThreadNote({ cote, label, labelRef }: { cote: FilterCotes['thread']; la
     <group>
       <Line points={segments} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} renderOrder={ORDER} {...OVERLAY} />
       <Arrowheads tips={tips} opacity={1} length={3} width={0.9} />
-      <Html position={cote.label} zIndexRange={[5, 0]}>
+      <Html position={cote.label} zIndexRange={[5, 0]} wrapperClass="dim-host">
         <span ref={labelRef} className="dim-label dim-label--note dim-label--left">
           {label}
         </span>

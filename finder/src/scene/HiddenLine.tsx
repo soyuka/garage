@@ -10,10 +10,13 @@ import { completeRings, type Seg } from './rings';
 // constant number of screen pixels, so it holds under perspective) draws the silhouettes that creases
 // miss on curved surfaces.
 const hullVertex = /* glsl */ `
+  #include <clipping_planes_pars_vertex>
   uniform float uPixels;
   uniform vec2 uResolution;
   void main() {
-    vec4 clip = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    #include <clipping_planes_vertex>
+    vec4 clip = projectionMatrix * mvPosition;
     vec2 dir = (projectionMatrix * vec4(normalize(normalMatrix * normal), 0.0)).xy;
     float len = length(dir);
     if (len > 1e-6) clip.xy += (dir / len) * (2.0 * uPixels / uResolution) * clip.w;
@@ -21,9 +24,13 @@ const hullVertex = /* glsl */ `
   }
 `;
 const hullFragment = /* glsl */ `
+  #include <clipping_planes_pars_fragment>
   uniform vec3 uColor;
   uniform float uOpacity;
-  void main() { gl_FragColor = vec4(uColor, uOpacity); }
+  void main() {
+    #include <clipping_planes_fragment>
+    gl_FragColor = vec4(uColor, uOpacity);
+  }
 `;
 
 // The hull grows outward only, so its visible width equals OUTLINE_PX: matched to the crease lines.
@@ -33,14 +40,18 @@ interface Props {
   geometry: BufferGeometry;
   threshold?: number;
   ghost?: boolean;
+  // Line opacity when it is neither a result (1) nor a ghost (0.28): the loading carousel's parts.
+  opacity?: number;
   rings?: boolean;
 }
 
-export function HiddenLine({ geometry, threshold = 25, ghost = false, rings = false }: Props) {
+export function HiddenLine({ geometry, threshold = 25, ghost = false, opacity: tone, rings = false }: Props) {
   const edges = useMemo(() => {
-    const pos = new EdgesGeometry(geometry, threshold).getAttribute('position');
+    const crease = new EdgesGeometry(geometry, threshold);
+    const pos = crease.getAttribute('position');
     const segs: Seg[] = [];
     for (let i = 0; i + 1 < pos.count; i += 2) segs.push([[pos.getX(i), pos.getY(i), pos.getZ(i)], [pos.getX(i + 1), pos.getY(i + 1), pos.getZ(i + 1)]]);
+    crease.dispose();
     return (rings ? completeRings(segs) : segs).flat();
   }, [geometry, threshold, rings]);
   const hull = useRef<ShaderMaterial>(null);
@@ -48,7 +59,8 @@ export function HiddenLine({ geometry, threshold = 25, ghost = false, rings = fa
     () => ({ uPixels: { value: OUTLINE_PX }, uResolution: { value: new Vector2(1, 1) }, uColor: { value: new Color(DRAFT_BLUE) }, uOpacity: { value: 1 } }),
     [],
   );
-  const opacity = ghost ? 0.28 : 1;
+  const opacity = tone ?? (ghost ? 0.28 : 1);
+  const faint = opacity < 1;
   uniforms.uOpacity.value = opacity;
 
   useFrame(({ size, viewport }) => {
@@ -64,14 +76,15 @@ export function HiddenLine({ geometry, threshold = 25, ghost = false, rings = fa
         <shaderMaterial
           ref={hull}
           side={BackSide}
-          transparent={ghost}
+          clipping
+          transparent={faint}
           uniforms={uniforms}
           vertexShader={hullVertex}
           fragmentShader={hullFragment}
         />
       </mesh>
       {edges.length > 0 && (
-        <Line points={edges} segments color={DRAFT_BLUE} lineWidth={LINE_VISIBLE} transparent={ghost} opacity={opacity} renderOrder={2} polygonOffset polygonOffsetFactor={-4} polygonOffsetUnits={-12} />
+        <Line points={edges} segments color={DRAFT_BLUE} lineWidth={LINE_VISIBLE} transparent={faint} opacity={opacity} renderOrder={2} polygonOffset polygonOffsetFactor={-4} polygonOffsetUnits={-12} />
       )}
     </group>
   );

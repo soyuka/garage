@@ -2783,3 +2783,89 @@ button {
 .chips + input[type='search'] {
   padding-left: 10px;
 }
+
+/* ── motion (2026-10-16, DESIGN.md § Motion) ───────────────────────────── */
+
+:root {
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --t-enter: 0.32s;
+  --t-exit: 0.18s;
+}
+
+/* The plotter pen riding the sweep's cut (scene/SweepLayers.tsx writes its transform and opacity). */
+.sweep-pen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+  width: 1px;
+  height: 1px;
+  background: var(--blue);
+  transform-origin: 0 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.dim-host {
+  transition: opacity 0.26s var(--ease-out) 0.06s;
+}
+
+.sheet-canvas[data-sweeping] .dim-host {
+  opacity: 0;
+  transition: opacity 0.08s var(--ease-in);
+}
+
+.sheet-canvas[data-searching] {
+  cursor: default;
+}
+
+.sheet-canvas[data-leaving] {
+  opacity: 0;
+  transition: opacity 0.36s var(--ease-io);
+}
+
+.sheet-searching {
+  position: absolute;
+  left: 0;
+  bottom: 18px;
+  z-index: 2;
+  width: auto;
+  inset-inline: 0;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--blue);
+  pointer-events: none;
+  animation: fade-in 0.4s var(--ease-out) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes pin-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+.sheet-photo,
+.sheet-unknown {
+  animation: pin-in 0.42s var(--ease-out) both;
+}
+
+.sheet-placeholder > *,
+.sheet-status > * {
+  animation: rise-in 0.36s var(--ease-out) both;
+}

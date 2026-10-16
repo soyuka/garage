@@ -100,7 +100,7 @@ export function DimensionLine({ from, to, offset, label, placement, gap = 1.5, o
     <group>
       <Line points={segments} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} opacity={opacity} renderOrder={ORDER} {...OVERLAY} />
       <Arrowheads tips={tips} opacity={opacity} />
-      <Html position={mid} zIndexRange={[5, 0]}>
+      <Html position={mid} zIndexRange={[5, 0]} wrapperClass="dim-host">
         <span className={`dim-label dim-label--${placement}`}>{label}</span>
       </Html>
     </group>
@@ -126,7 +126,7 @@ export function Leader({ points, label, opacity = 1 }: LeaderProps) {
     <group>
       <Line points={segments} segments color={DRAFT_BLUE} lineWidth={LINE_THIN} opacity={opacity} renderOrder={ORDER} {...OVERLAY} />
       <Arrowheads tips={tips} opacity={opacity} length={3} width={0.9} />
-      <Html position={end} zIndexRange={[5, 0]}>
+      <Html position={end} zIndexRange={[5, 0]} wrapperClass="dim-host">
         <span className="dim-label dim-label--note dim-label--left">{label}</span>
       </Html>
     </group>

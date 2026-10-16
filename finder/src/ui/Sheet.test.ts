@@ -25,10 +25,15 @@ describe('Sheet without a 3D model', () => {
     expect(html).not.toContain('<figure');
   });
 
-  it('draws nothing while the part is still being narrowed', () => {
-    const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo: null, ghost: true, status: 'Affinage des références…' }));
-    expect(html).not.toContain('sheet-unknown');
-    expect(html).not.toContain('<figure');
+  it('turns the loading carousel while the part is still being narrowed, whatever its family', () => {
+    for (const family of [{ kind: 'photo' } as const, { kind: 'none' } as const]) {
+      const html = renderToStaticMarkup(createElement(Sheet, { ...base, family, photo: null, ghost: true, searching: true, status: 'Affinage des références…' }));
+      expect(html).toContain('sheet-canvas');
+      expect(html).toContain('Affinage des références…');
+      expect(html).not.toContain('sheet-unknown');
+      expect(html).not.toContain('<figure');
+      expect(html).not.toContain('Glisser pour tourner');
+    }
   });
 
   it('still answers « ? » for a part that will never have a cluster (a web find)', () => {

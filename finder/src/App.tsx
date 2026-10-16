@@ -516,7 +516,8 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   const asking = questionOpen(selection) && !pending;
   const choose = (next: ClusterChoice) => route.view === 'result' && navigate({ ...route, cluster: next }, { replace: true });
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
-  const showResult = route.view === 'result' && category !== null && n !== null && n.totalArticles > 0 && relaunch === null;
+  const devHold = useDevHold();
+  const showResult = !devHold && route.view === 'result' && category !== null && n !== null && n.totalArticles > 0 && relaunch === null;
   const family: Family = category && (showResult || narrowing.status === 'loading') ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
 
   useFollowUp(
@@ -528,20 +529,14 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
     return (
       <div className="work work--loading" aria-busy="true">
         <div className="sheet-wrap">
-          <div className="sheet">
-            <div className="sheet-status" role="status">
-              <p>
-                Identification de <span className="m">{route.ref}</span>…
-              </p>
-            </div>
-          </div>
+          <Sheet family={{ kind: 'none' }} viewLabel="" dimensions={[]} ghost reducedMotion={reducedMotion} overlayWidth={null} placeholder={null} searching status={`Identification de ${route.ref}…`} />
         </div>
       </div>
     );
   }
 
   const overlay = wide ? (roomy ? BLOCK_WIDTH_WIDE : BLOCK_WIDTH) : null;
-  const loading = narrowing.status === 'loading' || (route.view === 'result' && categories.status === 'loading');
+  const loading = devHold || narrowing.status === 'loading' || (route.view === 'result' && categories.status === 'loading');
 
   let status: ReactNode = null;
   let placeholder: ReactNode = null;
@@ -574,7 +569,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   } else if (n && n.totalArticles === 0) {
     status = <p className="sheet-message">Aucune référence dans cette catégorie pour ce véhicule.</p>;
   }
-  if (loading && family.kind !== 'none') status = <p className="sheet-loading" role="status">Affinage des références…</p>;
+  if (loading) status = 'Affinage des références…';
 
   const block = showResult ? <TitleBlock vehicle={v} category={category} narrowing={n} selection={selection} onPick={(id) => choose(pickChoice(selection, id))} /> : loading && route.view === 'result' ? <TitleSkeleton /> : null;
 
@@ -595,6 +590,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           overlayWidth={block ? overlay : null}
           placeholder={placeholder}
           status={status}
+          searching={loading}
         >
           {wide && block}
         </Sheet>
@@ -608,6 +604,17 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
         createPortal(<QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => choose({ id, by: 'answer' })} />, slot)}
     </div>
   );
+}
+
+// Dev only (`?dev=loading`, stripped from the build): holds a cached result behind the loading carousel
+// until `window.finderRelease()`, so the wait and its hand-off can be reviewed without spending a search.
+function useDevHold(): boolean {
+  const [held, setHeld] = useState(() => import.meta.env.DEV && new URLSearchParams(window.location.search).get('dev') === 'loading');
+  useEffect(() => {
+    if (!held) return;
+    (window as unknown as { finderRelease?: () => void }).finderRelease = () => setHeld(false);
+  }, [held]);
+  return held;
 }
 
 function ErrorNote({ message, onRetry }: { message: string; onRetry: () => void }) {
@@ -725,12 +732,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
       </div>
     );
   } else if (!part) {
-    placeholder = busy ? (
-      <div className="sheet-message">
-        <p className="sheet-big">Recherche en cours</p>
-        <p>{vehicle ? 'Recherche dans le catalogue du véhicule.' : 'Identification du véhicule, puis de la pièce.'}</p>
-      </div>
-    ) : (
+    placeholder = busy ? null : (
       <div className="sheet-message">
         <p className="sheet-big">{state.ask ? 'Question en attente' : 'Aucune pièce'}</p>
         <p>{state.ask ? 'Répondez au-dessus du champ.' : 'Reformulez la demande.'}</p>
@@ -758,7 +760,8 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           reducedMotion={reducedMotion}
           overlayWidth={overlay}
           placeholder={placeholder}
-          status={null}
+          searching={busy && !part}
+          status={busy && !part ? (vehicle ? 'Recherche dans le catalogue du véhicule.' : 'Identification du véhicule, puis de la pièce.') : null}
         >
           {wide && block}
         </Sheet>
