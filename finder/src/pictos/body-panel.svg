@@ -4,4 +4,5 @@
 <path d="M24 62 Q60 52 98 64"  vector-effect="non-scaling-stroke"/>
 <circle cx="25" cy="76" r="2"  vector-effect="non-scaling-stroke"/>
 <circle cx="96" cy="76" r="2"  vector-effect="non-scaling-stroke"/>
+<line x1="30" y1="46" x2="66" y2="46" vector-effect="non-scaling-stroke"/>
 </svg>
