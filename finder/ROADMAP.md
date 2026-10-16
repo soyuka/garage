@@ -271,6 +271,7 @@ then; since 2026-10-16 it lists the joint length (see State).
 
 - Shipped meshes are Wrench extracts (92 files, see `SOURCES.md`), user-approved for this private prototype
   (`finder/public/parts/SOURCES.md`). Only final blueprint GLBs go in the repo.
+- 2026-10-16: owned build123d pipeline (`blueprint-experiment/owned/src/export_all.py`, then webify and a freestyle render check) produces generic family shapes we own; 22 shipped (bulbs, drum brake, lines, cables, pulleys, flywheel, clutch hydraulics, converter, tanks, wiper blade, horn, fog lamp), 10 third-party meshes added from `blueprint-experiment/hunt/`. Licence tiers (user decision 2026-10-16): any licence is fine for the private prototype; owned and CC BY are shippable (CC BY with credit); GrabCAD and Wrench meshes must be replaced before anything public. Next: key the bulb mesh on the article's ECE type (H4 / H7 / P21W / W5W) when the criteria carry it, rather than on the lamp it sits in; owned replacements are ready in `blueprint-experiment/owned` for the Wrench `steering-rack` and `rear-wheel-bearing` and the GrabCAD `water-pump` and `starter-motor`.
 - Not available in Wrench: EGR, A/C compressor and condenser, coolant expansion tank, vacuum pump,
   timing chain, clutch slave cylinder, catalytic converter, gearbox body.
 - Legit route if this ever goes public: parametric three.js for solids of revolution (filters, disc,

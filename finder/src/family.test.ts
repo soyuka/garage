@@ -115,8 +115,8 @@ describe('partFamily', () => {
       ['Moteur > Distribution moteur > Soupape / réglage de soupape > Réglage de soupape', 'hla'],
       ['Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Culbuteur/levier oscillant/pièce de press°', 'hla'],
       ['Moteur > Culasse / pieces de montage > Guide de soupape / joint / réglage', 'valve-spring'],
-      ['Moteur > Alimentation en air > Papillon des gaz /-capteur > Corps papillon', 'itb-tb'],
-      ['Carburation > Mélange air-carburant > Papillon des gaz / tubulure / tuyau de dépression', 'itb-tb'],
+      ['Moteur > Alimentation en air > Papillon des gaz /-capteur > Corps papillon', 'throttle-body'],
+      ['Carburation > Mélange air-carburant > Papillon des gaz / tubulure / tuyau de dépression', 'throttle-body'],
       ['Échappement > Turbocompresseur', 'efr-turbo'],
       ['Moteur > Alimentation en air > Suralimentation > Compresseur/composants', 'efr-turbo'],
       ['Échappement > Collecteur', 'stock-manifold'],
@@ -176,6 +176,167 @@ describe('partFamily', () => {
     for (const [path, mesh] of expected) expect([path, meshOf(cat(path))]).toEqual([path, mesh]);
   });
 
+  const approx = (mesh: MeshId) => ({ kind: 'mesh', mesh, approximate: true });
+  const expectMeshes = (rows: [{ path: string; name: string }, MeshId][]) => {
+    for (const [category, mesh] of rows) expect([category.path, partFamily(category)]).toEqual([category.path, approx(mesh)]);
+  };
+
+  it('draws the bulb matching the lamp it sits in', () => {
+    expectMeshes([
+      [real('Carrosserie > Projecteurs principaux / composants > Ampoule pour projecteur principal'), 'bulb-h7'],
+      [real('Carrosserie > Avant du véhicule > Projecteur longue portée / composants > Ampoule /projecteur longue portée'), 'bulb-h7'],
+      [real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Ampoule pour projecteur antibrouillard'), 'bulb-h7'],
+      [real('Carrosserie > Phares supplémentaires/composants > Projecteur de travail, composants > Ampoule, projecteurs de travail'), 'bulb-h7'],
+      [cat('Système électrique > Assortiments d\'ampoules'), 'bulb-h7'],
+      [real('Carrosserie > Arrière de la voiture > Feu clignotant/composants > Ampoule de feu clignotant'), 'bulb-p21w'],
+      [real('Carrosserie > Arrière de la voiture > Feu-stop / composants > Ampoules pour feux de stop'), 'bulb-p21w'],
+      [real('Carrosserie > Feux > Feu arrière/Composants > Ampoule de feu arrière'), 'bulb-p21w'],
+      [real('Système électrique > Feux > Feu arrière / composants > Ampoule pour feux arrières'), 'bulb-p21w'],
+      [real('Système électrique > Feux > Feu de recul / composants > Ampoule de feu de recul'), 'bulb-p21w'],
+      [real('Système électrique > Feux > Feu de brouillard arrière/Composants > Ampoules de feu de brouillard arrière'), 'bulb-p21w'],
+      [real("Carrosserie > Avant du véhicule > Feu de position / d'encombrement / composants > Ampoule"), 'bulb-w5w'],
+      [real('Système électrique > Feux > Feu éclaireur de plaque/composants > Ampoule du feu éclaireur de plaque'), 'bulb-w5w'],
+      [cat('Système électrique > Phares supplémentaires/composants > Éclairage de virage/composants > Ampoule de virage'), 'bulb-h7'],
+    ]);
+  });
+
+  it('keeps a lamp unit off the bulb, and the fog lamp unit on its own mesh', () => {
+    expect(partFamily(real('Carrosserie > Projecteurs principaux / composants > Projecteurs principaux / à insérer'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real("Carrosserie > Avant du véhicule > Feu de position / d'encombrement / composants > Feu de stationnement/de position"))).toEqual({ kind: 'photo' });
+    expectMeshes([[real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Projecteur antibrouillard / Optique'), 'fog-lamp']]);
+  });
+
+  it('draws a jerrycan for the fluids', () => {
+    expectMeshes([
+      [real('Direction > Huiles'), 'jerrycan-5l'],
+      [real('Moteur > Lubrification > Huiles'), 'jerrycan-5l'],
+      [real('Refroidissement > Antigel'), 'jerrycan-5l'],
+      [real('Dispositif de freinage > Liquide de frein'), 'jerrycan-5l'],
+      [real('Embrayage / composants > Fluide hydraulique'), 'jerrycan-5l'],
+    ]);
+  });
+
+  it('draws the drum brake parts', () => {
+    expectMeshes([
+      [cat('Dispositif de freinage > Frein à tambour > Tambour de frein'), 'brake-drum'],
+      [cat('Dispositif de freinage > Frein à tambour > Garniture/machoire de frein'), 'brake-shoe'],
+      [cat('Dispositif de freinage > Cylindre de roue'), 'wheel-cylinder'],
+      [cat('Dispositif de freinage > Frein à tambour > Cylindre de roue'), 'wheel-cylinder'],
+    ]);
+  });
+
+  it('draws the brake lines and hoses', () => {
+    expectMeshes([
+      [real('Dispositif de freinage > Conduites de frein'), 'brake-line'],
+      [real('Dispositif de freinage > Flexibles de frein'), 'brake-hose'],
+    ]);
+  });
+
+  it('draws a fluid line for the oil, steering, A/C and clutch pipes, not the exhaust or air pipes', () => {
+    expectMeshes([
+      [cat("Moteur > Lubrification > Tuyaux d'huile / Conduites"), 'fluid-line'],
+      [cat("Refroidissement > Tuyauterie et brides > Tuyaux d'huile / Conduites"), 'fluid-line'],
+      [real('Direction > Tuyau de direction / conduite'), 'fluid-line'],
+      [real('Climatisation > Tuyaux/Conduites'), 'fluid-line'],
+      [cat('Embrayage / composants > Commande d’embrayage > Tuyaux / conduites'), 'fluid-line'],
+    ]);
+    expect(meshOf(real('Échappement > Tuyaux'))).toBe('oem-mid-pipe');
+    expect(partFamily(cat('Moteur > Alimentation en air > Flexibles/Conduites'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Chauffage / Ventilation > Gaines/tuyaux'))).toEqual({ kind: 'photo' });
+    expect(meshOf(cat('Entraînement hybride/électrique > Refroidissement > Tuyauterie et brides'))).toBe('cooling-hardpipe');
+  });
+
+  it('draws a control cable for the clutch and the parking brake', () => {
+    expectMeshes([
+      [cat("Embrayage / composants > Commande d'embrayage > Câble d'embrayage"), 'control-cable'],
+      [real('Dispositif de freinage > Levier / câble / tirette'), 'control-cable'],
+      [real('Dispositif de freinage > Freins de stationnement'), 'control-cable'],
+      [real('Dispositif de freinage > Frein à tambour > Freins de stationnement'), 'control-cable'],
+    ]);
+  });
+
+  it('draws the belt pulleys', () => {
+    expectMeshes([
+      [real('Commande à courroie > Poulie roue libre, alternateur'), 'freewheel-pulley'],
+      [real('Moteur > Commande à courroie > Poulie'), 'ribbed-pulley'],
+      [real('Moteur > Distribution moteur > Poulie'), 'ribbed-pulley'],
+      [cat('Refroidissement > Pompe à eau / joint > Poulie'), 'ribbed-pulley'],
+    ]);
+    expect(partFamily(real('Moteur > Système bielle-manivelle > Vilebrequin > Poulies de vilebrequin'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Moteur > Commande à courroie > Poulie'), [], 'Poulie, pompe de direction assistée')).toEqual({ kind: 'photo' });
+  });
+
+  it('draws the flywheel and the clutch hydraulics', () => {
+    expectMeshes([
+      [cat('Embrayage / composants > Volant-moteur'), 'flywheel'],
+      [cat('Moteur > Système bielle-manivelle > Volant-moteur'), 'flywheel'],
+      [real("Embrayage / composants > Commande d'embrayage > Récepteur d'embrayage"), 'clutch-slave-cylinder'],
+      [real("Embrayage / composants > Commande d'embrayage > Cylindre émetteur"), 'clutch-master-cylinder'],
+    ]);
+    expect(partFamily(real('Direction > Volant /- composants'))).toEqual({ kind: 'photo' });
+    expect(meshOf(real('Dispositif de freinage > Maître-cylindre de frein'))).toBe('brake-master-booster');
+  });
+
+  it('draws the vacuum pump, the catalytic converter and the expansion tanks', () => {
+    expectMeshes([
+      [cat('Dispositif de freinage > Pompe à vide'), 'vacuum-pump'],
+      [real('Moteur > Culasse / pieces de montage > Pompe à vide'), 'vacuum-pump'],
+      [real('Échappement > Catalyseur'), 'catalytic-converter'],
+      [real("Refroidissement > Radiateur d'eau/d'huile > Vase d'expansion"), 'expansion-tank'],
+      [real("Direction > Vase d'expansion de l'huile hydraulique"), 'expansion-tank'],
+    ]);
+    expect(meshOf(cat("Refroidissement > Bouchon de vase d'expansion"))).toBe('radiator-cap');
+  });
+
+  it('draws the wiper blade and motor, the horn, and leaves the other window cleaning parts on their photo', () => {
+    expectMeshes([
+      [real("Nettoyage des vitres > Balai d'essuie-glace / raclette"), 'wiper-blade'],
+      [real("Nettoyage des vitres > Moteur d'essuie-glace"), 'wiper-motor'],
+      [real('Système électrique > Avertisseur sonore / trompette'), 'horn'],
+    ]);
+    for (const path of ['Nettoyage des vitres > Gicleur d\'eau de lavage', 'Nettoyage des vitres > Tringlerie d\'essuie-glace / commande', "Nettoyage des vitres > Réservoir d'eau de lavage / conduite"]) {
+      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'photo' }]);
+    }
+  });
+
+  it('draws the speed sensor, the EGR valve and the A/C compressor', () => {
+    expectMeshes([
+      [real("Allumage / préchauffage > Générateur d'impulsions"), 'speed-sensor'],
+      [real("Moteur > Épuration des gaz d'échappement > Recyclage des gaz d'échappement > Module-EGR"), 'egr-valve'],
+      [real("Moteur > Épuration des gaz d'échappement > Recyclage des gaz d'échappement > Soupape, recyclage des gaz d'échappement"), 'egr-valve'],
+      [real("Carburation > Épuration des gaz d'échappement > Recyclage des gaz d'échappement > Vanne EGR/Tube d'aspiration"), 'egr-valve'],
+      [real('Climatisation > Compresseur / composants'), 'ac-compressor'],
+    ]);
+    expect(meshOf(real('Moteur > Alimentation en air > Suralimentation > Compresseur/composants'))).toBe('efr-turbo');
+    expect(partFamily(real("Moteur > Épuration des gaz d'échappement > Recyclage des gaz d'échappement > Joints"))).toEqual({ kind: 'photo' });
+  });
+
+  it('draws the gearbox body, not its parts', () => {
+    expectMeshes([
+      [real('Boîte de vitesses > Boîte de vitesses manuelle > Boîte de vitesses'), 'gearbox'],
+      [real('Boîte de vitesses > Boîte de vitesse automatique > Boîtier/composants'), 'gearbox'],
+      [cat('Boîte de vitesses > Boîte de vitesses manuelle > Carter/composants'), 'gearbox'],
+    ]);
+    for (const path of ['Boîte de vitesses > Boîte de vitesses manuelle > Joints', 'Boîte de vitesses > Boîte de vitesse automatique > Capteur', 'Boîte de vitesses > Boîte de vitesse automatique > Contrôle / hydraulique', 'Boîte de vitesses > Boîte de vitesses manuelle > Commande de boîte de vitesses']) {
+      expect([path, partFamily(cat(path))]).toEqual([path, { kind: 'photo' }]);
+    }
+  });
+
+  it('draws the timing chain kit and guide, not the tensioner', () => {
+    expectMeshes([
+      [real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Kit de distribution par chaîne'), 'timing-chain-kit'],
+      [real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Chaîne de distribution'), 'timing-chain-kit'],
+      [real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Coulisse'), 'timing-chain-kit'],
+    ]);
+    expect(partFamily(real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes'))).toEqual({ kind: 'photo' });
+  });
+
+  it('draws the power steering pump and the intercooler', () => {
+    expectMeshes([
+      [cat("Moteur > Alimentation en air > Suralimentation > Refroidisseur d'air de suralimentation"), 'intercooler'],
+    ]);
+  });
+
   it('keeps look-alike categories off the wrong mesh', () => {
     for (const path of [
       'Outils spéciaux > Outils spéciaux suspension d’essieu/guidage des roues/roues > Rotules',
@@ -184,7 +345,6 @@ describe('partFamily', () => {
       "Suspension d'essieu/Guidage des roues/Roues > Fusée d'essieu / kit de réparation > Kit de réparation",
       'Alimentation carburant > Soupapes',
       'Moteur > Joints > Joint de tige de soupape',
-      'Moteur > Épuration des gaz d\'échappement > Recyclage des gaz d\'échappement > Soupape, recyclage des gaz d\'échappement',
       'Entraînement des essieux > Arbre de transmission > Paliers/suspension',
       'Moteur > Système bielle-manivelle > Bielle > Coussinet de bielle',
       'Échappement > Pièces de montage > Pièces détachées de montage > Amortisseur-caoutchouc',
@@ -196,7 +356,6 @@ describe('partFamily', () => {
       'Carrosserie > Avant du véhicule > Composants/suppléments > Recouvrement/radiateur',
       'Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes',
       'Système électrique > Alternateur / composants > Régulateur',
-      'Commande à courroie > Poulie roue libre, alternateur',
       "Boîte de vitesses > Boîte de vitesse automatique > Carter d'huile et pièces de montage > Carter d'huile",
       'Carburation > Carburateurs > Commande / Amortisseurs / Boîtiers',
     ]) {
@@ -232,7 +391,6 @@ describe('partFamily', () => {
       ['Moteur > Alimentation en air > Filtre à air / carter', 'Boîte, filtre à air'],
       ['Refroidissement > Interrupteur / capteur', "Capteur, température d'huile"],
       ['Refroidissement > Interrupteur / capteur', 'Kit rép. de câble, capteur de temp. liquide de refroidis.'],
-      ['Refroidissement > Joint/Thermostat > Thermostat', 'Boîtier du thermostat'],
       ['Moteur > Support du moteur > Support moteur', 'Support de palier, support du moteur'],
       ['Moteur > Support du moteur > Support moteur', 'Butée élastique, support du moteur'],
     ] as const) {
@@ -254,6 +412,12 @@ describe('partFamily', () => {
     expect(partFamily(pulley, [], 'Jeu de courroies trapézoïdales à nervures')).toEqual({ kind: 'photo' });
   });
 
+  it('draws the thermostat housing for its product group, the thermostat for the leaf', () => {
+    const thermostat = real('Refroidissement > Joint/Thermostat > Thermostat');
+    expect(partFamily(thermostat, [], 'Boîtier du thermostat')).toEqual({ kind: 'mesh', mesh: 'thermostat-housing', approximate: true });
+    expect(partFamily(thermostat, [], 'Thermostat, liquide de refroidissement')).toMatchObject({ mesh: 'thermostat' });
+  });
+
   it('never draws a disc brake for a drum kit, nor for a kit that may be drums', () => {
     expect(partFamily(cat('Dispositif de freinage > Frein à tambour > Kit de freins'))).toEqual({ kind: 'photo' });
     expect(partFamily(cat('Dispositif de freinage > Frein de haute performance > Kit de freins'))).toEqual({ kind: 'photo' });
@@ -262,7 +426,7 @@ describe('partFamily', () => {
 
   it('gives every family without a mesh the catalogue photo instead of a drawing', () => {
     expect(partFamily(cat('Accessoires > Chaîne à neige'))).toEqual({ kind: 'photo' });
-    expect(partFamily(cat('Dispositif de freinage > Liquide de frein'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat("Dispositif de freinage > Témoin d'usure"))).toEqual({ kind: 'photo' });
   });
 });
 

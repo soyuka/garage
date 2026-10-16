@@ -29,6 +29,38 @@ export interface MeshRule {
 }
 
 export const MESH_RULES: readonly MeshRule[] = [
+  // Specific parts that sit in branches pinned to the photo below, or under a generic leaf: above the pins.
+  { leaf: /^ampoules?/, within: /brouillard arriere|feux? arrieres?|feu-stop|feux de stop|feu de recul|clignotant/, mesh: 'bulb-p21w' },
+  { leaf: /^ampoules?/, within: /feu de position|encombrement|plaque/, mesh: 'bulb-w5w' },
+  { leaf: /^ampoules?|^assortiments d'ampoules/, within: /projecteurs? principa|longue portee|antibrouillard|projecteur de travail|virage|assortiments/, mesh: 'bulb-h7' },
+  { leaf: /^projecteur antibrouillard/, mesh: 'fog-lamp' },
+  { leaf: /^(huiles|antigel|liquide de frein|fluide hydraulique)$/, mesh: 'jerrycan-5l' },
+  { leaf: /^tambour de frein/, mesh: 'brake-drum' },
+  { leaf: /^garniture\/machoire de frein|^machoire de frein/, mesh: 'brake-shoe' },
+  { leaf: /^cylindre de roue/, mesh: 'wheel-cylinder' },
+  { leaf: /^conduites? de frein/, mesh: 'brake-line' },
+  { leaf: /^flexibles? de frein/, mesh: 'brake-hose' },
+  { leaf: /^tuyaux? d'huile|^tuyau de direction|^tuyaux ?\/ ?conduites/, mesh: 'fluid-line' },
+  { leaf: /^cable d'embrayage|^levier \/ cable \/ tirette|^freins de stationnement$/, mesh: 'control-cable' },
+  { leaf: /^poulie roue libre/, mesh: 'freewheel-pulley' },
+  { leaf: /^poulie$/, within: /commande a courroie|pompe a eau|distribution moteur/, mesh: 'ribbed-pulley' },
+  { leaf: /^volant-moteur/, mesh: 'flywheel' },
+  { leaf: /^recepteur d'embrayage/, mesh: 'clutch-slave-cylinder' },
+  { leaf: /^cylindre emetteur/, within: /embrayage/, mesh: 'clutch-master-cylinder' },
+  { leaf: /^pompe a vide/, mesh: 'vacuum-pump' },
+  { leaf: /^catalyseur/, mesh: 'catalytic-converter' },
+  { leaf: /^vase d'expansion/, mesh: 'expansion-tank' },
+  { leaf: /^balai d'essuie-glace/, mesh: 'wiper-blade' },
+  { leaf: /^moteur d'essuie-glace/, mesh: 'wiper-motor' },
+  { leaf: /^avertisseur sonore/, mesh: 'horn' },
+  { leaf: /^generateur d'impulsions/, mesh: 'speed-sensor' },
+  { leaf: /^module-egr|^soupape, recyclage des gaz d'echappement|^vanne egr|^controle des gaz d'echappement de rge/, mesh: 'egr-valve' },
+  { leaf: /^compresseur \/ composants/, within: /^climatisation/, mesh: 'ac-compressor' },
+  { leaf: /^boite de vitesses$|^(carter|boitier)\/composants/, within: /^boite de vitesse/, mesh: 'gearbox' },
+  { leaf: /^kit de distribution par chaine|^chaine de distribution|^coulisse$/, mesh: 'timing-chain-kit' },
+  { leaf: /^boitier du thermostat/, mesh: 'thermostat-housing' },
+  { leaf: /^refroidisseur d'air de suralimentation/, mesh: 'intercooler' },
+
   { leaf: /./, within: /outils|boite de vitesse|nettoyage des vitres|carburateur/, mesh: null },
   { leaf: /^composants du demarreur/, mesh: 'starter-gear' },
   { leaf: /^composants de barre de connexion/, mesh: 'outer-tie-rod-end' },
@@ -115,7 +147,7 @@ export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /^soupapes?\b.*accessoires/, within: /distribution|moteur/, mesh: 'intake-valve', variants: [{ when: /echappement/, mesh: 'exhaust-valve' }] },
   { leaf: /^reglage de soupape|^culbuteur/, mesh: 'hla' },
   { leaf: /^guide de soupape/, mesh: 'valve-spring' },
-  { leaf: /^corps papillon|^papillon des gaz/, mesh: 'itb-tb' },
+  { leaf: /^corps papillon|^papillon des gaz/, mesh: 'throttle-body' },
   { leaf: /^turbocompresseur|^compresseur\/composants/, mesh: 'efr-turbo' },
   { leaf: /^collecteur$/, within: /^echappement/, mesh: 'stock-manifold' },
   { leaf: /^tuyaux$/, within: /^echappement/, mesh: 'oem-mid-pipe' },
@@ -141,8 +173,9 @@ export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null;
   { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
   { group: /^rotule de direction$/, mesh: null },
   { group: /^poulie, vilebrequin/, mesh: 'crankshaft-pulley-damper' },
+  { group: /^boitier du thermostat/, mesh: 'thermostat-housing' },
   // Other groups of a leaf drawn as one part: a gasket, a module, a pipe, a housing or a bracket is not that part.
-  { group: /^joint, filtre a huile|^module de filtre a huile|^tuyau d'aspiration|^boite, filtre a air|^capteur, temperature d'huile|^kit rep\. de cable|^boitier du thermostat|^support de palier|^butee elastique/, mesh: null },
+  { group: /^joint, filtre a huile|^module de filtre a huile|^tuyau d'aspiration|^boite, filtre a air|^capteur, temperature d'huile|^kit rep\. de cable|^jeu de courroies|^poulie, pompe de direction assistee|^support de palier|^butee elastique/, mesh: null },
 ];
 
 export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = [], productGroup: string | null = null): Family {
