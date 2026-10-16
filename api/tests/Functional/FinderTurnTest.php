@@ -6,11 +6,13 @@ namespace App\Tests\Functional;
 
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\TurnSurface;
+use App\Entity\FinderSelection;
 use App\Message\RunAgentTurn;
 use App\MessageHandler\RunAgentTurnHandler;
 use App\Repository\AgentTurnRepository;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;
+use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\AI\Platform\Message\Content\Image;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -431,12 +433,61 @@ final class FinderTurnTest extends AppTestCase
 
         $shown = array_values(array_filter(self::frames('sess-select'), static fn (array $f): bool => 'showParts' === $f['type']));
         self::assertCount(1, $shown);
-        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)'], $shown[0]['selection']);
+        self::assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $shown[0]['selection']['id'] ?? '');
+        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)'], array_diff_key($shown[0]['selection'], ['id' => true]));
 
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
         self::assertSame('shown', $summary['status']);
         self::assertSame('c1', $summary['selected']);
         self::assertArrayHasKey('clusterId', $seen['schemas']['show_parts']['properties'] ?? []);
+    }
+
+    public function testASelectionIsStoredAndReadBackByItsIdWithoutOwnerData(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('s0', 'set_build_code', ['code' => '982488']),
+            new ToolCall('s1', 'show_parts', ['categoryId' => 100198, 'productGroupId' => 51, 'clusterId' => 'c1', 'rationale' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => 'OPR ≥ 10311']),
+            new ToolCall('s2', 'end_turn', []),
+        ], $seen));
+
+        self::runFinderTurn('Code de fabrication : 982488', 'sess-stored', vehicle: self::PEUGEOT);
+
+        $shown = array_values(array_filter(self::frames('sess-stored'), static fn (array $f): bool => 'showParts' === $f['type']));
+        $id = $shown[0]['selection']['id'];
+
+        $stored = $container->get(DocumentManager::class)->find(FinderSelection::class, $id);
+        self::assertNotNull($stored);
+        self::assertSame(self::TEST_OWNER, $stored->owner);
+        self::assertSame('09824', $stored->organisationNumber);
+        $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 1);
+        self::assertSame((string) $turns[0]->getId(), $stored->turnId);
+
+        $read = $client->request('GET', '/agent/selections/'.$id, ['headers' => ['Accept' => 'application/json']]);
+        self::assertResponseIsSuccessful();
+        self::assertSame([
+            'id' => $id,
+            'carId' => 16182,
+            'carType' => 'PC',
+            'categoryId' => 100198,
+            'productGroupId' => 51,
+            'clusterId' => 'c1',
+            'basis' => 'code de fabrication (OPR 09824 ≤ 10310)',
+            'setAside' => 'OPR ≥ 10311',
+        ], $read->toArray());
+    }
+
+    public function testAnUnknownOrMalformedSelectionIdIsNotFound(): void
+    {
+        $client = static::createClient();
+
+        $client->request('GET', '/agent/selections/01JA0000000000000000000000', ['headers' => ['Accept' => 'application/json']]);
+        self::assertResponseStatusCodeSame(404);
+        $client->request('GET', '/agent/selections/code%20de%20fabrication', ['headers' => ['Accept' => 'application/json']]);
+        self::assertResponseStatusCodeSame(404);
     }
 
     public function testShowPartsCarriesWhyTheOtherClustersWereSetAside(): void
@@ -454,7 +505,7 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-setaside', vehicle: self::PEUGEOT);
 
         $shown = array_values(array_filter(self::frames('sess-setaside'), static fn (array $f): bool => 'showParts' === $f['type']));
-        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => 'OPR ≥ 10311'], $shown[0]['selection']);
+        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => 'OPR ≥ 10311'], array_diff_key($shown[0]['selection'], ['id' => true]));
         self::assertArrayNotHasKey('selection', $shown[1]);
         self::assertArrayHasKey('setAside', $seen['schemas']['show_parts']['properties'] ?? []);
     }

@@ -74,6 +74,11 @@ final class TurnJournal implements WebSearchTracer
         }
     }
 
+    public function currentTurnId(): ?string
+    {
+        return null === $this->current ? null : (string) $this->current->getId();
+    }
+
     public function recordModel(string $provider, string $model, bool $stream): void
     {
         $this->current?->setProviderModel($provider, $model, $stream);

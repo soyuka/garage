@@ -43,6 +43,8 @@ final class FinderRenderTools
 
     private ?FinderVehicle $vehicle = null;
 
+    private ?string $organisationNumber = null;
+
     /** @var array<string, true> categoryId:productGroupId drawn this turn: a redraw (selection) is not a new category */
     private array $shown = [];
 
@@ -52,6 +54,7 @@ final class FinderRenderTools
         private readonly VehicleIndex $index,
         private readonly FinderCategoryList $categories,
         private readonly BuildCodeDecoders $decoders,
+        private readonly FinderSelections $selections,
     ) {
     }
 
@@ -59,6 +62,7 @@ final class FinderRenderTools
     public function bindVehicle(?FinderVehicle $vehicle): void
     {
         $this->vehicle = $vehicle;
+        $this->organisationNumber = $vehicle?->organisationNumber;
         $this->shown = [];
     }
 
@@ -107,13 +111,23 @@ final class FinderRenderTools
         $this->shown[$key] = true;
         $groupName = $narrowed['productGroup']['name'] ?? '';
 
+        $selection = null === $clusterId ? null : $this->selections->record(
+            $this->vehicle,
+            $categoryId,
+            $narrowed['productGroup']['id'] ?? $productGroupId,
+            $clusterId,
+            trim($rationale),
+            $setAside,
+            $this->organisationNumber,
+        );
+
         $this->frames->publishFrame([
             'type' => 'showParts',
             'categoryId' => $categoryId,
             'categoryLabel' => $groupName,
             'rationale' => trim($rationale),
             'narrowed' => $narrowed,
-        ] + (null === $clusterId ? [] : ['selection' => ['clusterId' => $clusterId, 'basis' => trim($rationale)] + (null === $setAside ? [] : ['setAside' => $setAside])]));
+        ] + (null === $selection ? [] : ['selection' => ['id' => $selection->id, 'clusterId' => $clusterId, 'basis' => $selection->basis] + (null === $setAside ? [] : ['setAside' => $setAside])]));
 
         $several = \count($narrowed['clusters']) > 1;
         $summary = [
@@ -193,6 +207,7 @@ final class FinderRenderTools
         $vehicle = FinderVehicle::fromPayload(['carId' => $carId, 'carType' => $carType, 'make' => $make, 'model' => $model, 'engine' => $engine, 'plate' => $plate]);
         Assert::notNull($vehicle, 'carId must be a positive TecDoc kType and carType PC or CV.');
         $this->vehicle = $vehicle;
+        $this->organisationNumber = null;
         $this->index->record($vehicle->carId, $vehicle->carType, $vehicle->make, $vehicle->model, $vehicle->engine, 'finder');
         $plate = null === $plate || '' === trim($plate) ? null : strtoupper(trim($plate));
 
@@ -233,6 +248,7 @@ final class FinderRenderTools
             return ['status' => 'invalid_input', 'reason' => $e->getMessage()];
         }
 
+        $this->organisationNumber = $decoded->organisationNumber;
         $this->frames->publishFrame([
             'type' => 'setBuildCode',
             'organisationNumber' => $decoded->organisationNumber,
