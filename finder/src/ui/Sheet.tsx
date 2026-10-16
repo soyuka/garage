@@ -66,7 +66,7 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
   const side = overlayWidth ? { right: overlayWidth } : undefined;
   return (
     <div className="sheet" style={blockHeight ? { minHeight: Math.ceil(blockHeight) } : undefined}>
-      {viewLabel && <div className="sheet-label m">{viewLabel}</div>}
+      {viewLabel && !searching && <div className="sheet-label m">{viewLabel}</div>}
       {canvas.mounted && (
         <div className="sheet-canvas" style={side} data-leaving={canvas.leaving || undefined} data-searching={searching || undefined}>
           <SceneBoundary fallback={<div className="sheet-placeholder"><p className="sheet-message">Vue 3D indisponible. Rechargez la page.</p></div>}>

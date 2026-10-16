@@ -63,3 +63,19 @@ describe('Sheet without a 3D model', () => {
     expect(html).toContain('sheet-unknown');
   });
 });
+
+describe('Sheet title while the loading carousel runs', () => {
+  const meshFamily = { kind: 'mesh' } as never;
+
+  it('hides the drawing title while searching, keeps the status line', () => {
+    const html = renderToStaticMarkup(createElement(Sheet, { ...base, viewLabel: 'FILTRE À HUILE', family: meshFamily, searching: true, status: 'Affinage des références…' }));
+    expect(html).not.toContain('sheet-label');
+    expect(html).not.toContain('FILTRE À HUILE');
+    expect(html).toContain('Affinage des références…');
+  });
+
+  it('shows the title once the result is there', () => {
+    const html = renderToStaticMarkup(createElement(Sheet, { ...base, viewLabel: 'FILTRE À HUILE', family: meshFamily, searching: false }));
+    expect(html).toContain('<div class="sheet-label m">FILTRE À HUILE</div>');
+  });
+});
