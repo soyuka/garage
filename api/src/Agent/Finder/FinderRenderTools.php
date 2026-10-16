@@ -144,7 +144,7 @@ final class FinderRenderTools
                 'oe' => array_map(static fn (array $r): string => $r['brand'].' '.$r['number'], \array_slice($c['oeNumbers'], 0, 2)),
             ] + ($several ? ['applicability' => self::applicabilityLine($c['applicability'] ?? [])] : []), $narrowed['clusters']),
             'differsOn' => array_map(self::differsLine(...), $narrowed['differsOn']),
-        ] + (null === $clusterId ? [] : ['selected' => $clusterId]);
+        ] + (null === $selection ? [] : ['selected' => $clusterId, 'selectionId' => $selection->id]);
         if ($several) {
             $summary['applicabilityCaveat'] = self::APPLICABILITY_CAVEAT;
         }

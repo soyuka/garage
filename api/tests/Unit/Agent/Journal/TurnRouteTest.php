@@ -97,6 +97,43 @@ final class TurnRouteTest extends TestCase
         $this->assertSame('k/19107-PC/c/100259/g/7', $route->route);
     }
 
+    public function testAnAgentTurnCarriesTheSelectionTheShownResultStored(): void
+    {
+        $route = TurnRoute::forAgent(['carId' => 16182, 'carType' => 'PC', 'plate' => 'XD-303-ZD'], [
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'productGroupId' => 51, 'clusterId' => 'c1'], 'result' => '{"status":"shown","productGroup":{"id":51,"name":"Rotule"},"selected":"c1","selectionId":"01M53040CGJ0JGQ5BDCCF207BF"}'],
+        ]);
+
+        $this->assertSame('p/XD-303-ZD/c/100198/g/51/r/c1/01M53040CGJ0JGQ5BDCCF207BF', $route->route);
+    }
+
+    public function testALaterShownResultWithoutSelectionDropsIt(): void
+    {
+        $route = TurnRoute::forAgent(['carId' => 16182, 'carType' => 'PC', 'plate' => 'XD-303-ZD'], [
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'productGroupId' => 51], 'result' => '{"status":"shown","productGroup":{"id":51},"selected":"c1","selectionId":"01M53040CGJ0JGQ5BDCCF207BF"}'],
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'productGroupId' => 51], 'result' => '{"status":"shown","productGroup":{"id":51}}'],
+        ]);
+
+        $this->assertSame('p/XD-303-ZD/c/100198/g/51', $route->route);
+    }
+
+    public function testAMalformedSelectionIdIsIgnored(): void
+    {
+        $route = TurnRoute::forAgent(['carId' => 16182, 'carType' => 'PC', 'plate' => 'XD-303-ZD'], [
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'productGroupId' => 51], 'result' => '{"status":"shown","productGroup":{"id":51},"selected":"c1","selectionId":"not-a-ulid"}'],
+        ]);
+
+        $this->assertSame('p/XD-303-ZD/c/100198/g/51', $route->route);
+    }
+
+    public function testASelectionWithoutAProductGroupStillCarriesIt(): void
+    {
+        $route = TurnRoute::forAgent(['carId' => 16182, 'carType' => 'PC', 'plate' => 'XD-303-ZD'], [
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'clusterId' => 'c1'], 'result' => '{"status":"shown","selected":"c1","selectionId":"01M53040CGJ0JGQ5BDCCF207BF"}'],
+        ]);
+
+        $this->assertSame('p/XD-303-ZD/c/100198/r/c1/01M53040CGJ0JGQ5BDCCF207BF', $route->route);
+    }
+
     public function testThePlateIsUrlEncoded(): void
     {
         $this->assertSame('p/AB%2F12', TurnRoute::forSearch(['plate' => 'AB/12'])->route);

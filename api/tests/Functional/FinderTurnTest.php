@@ -439,6 +439,7 @@ final class FinderTurnTest extends AppTestCase
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
         self::assertSame('shown', $summary['status']);
         self::assertSame('c1', $summary['selected']);
+        self::assertSame($shown[0]['selection']['id'], $summary['selectionId']);
         self::assertArrayHasKey('clusterId', $seen['schemas']['show_parts']['properties'] ?? []);
     }
 

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Agent\Journal;
 
 /**
- * The finder hash path a journal row reopens ("p/<plate>[/c/<categoryId>[/g/<productGroupId>]]" or
- * "k/<carId>-<carType>[/c/<categoryId>[/g/<productGroupId>]]", without the "#/"), and the vehicle it names.
+ * The finder hash path a journal row reopens ("p/<plate>[/c/<categoryId>[/g/<productGroupId>][/r/<clusterId>/<selectionId>]]" or
+ * "k/<carId>-<carType>[/c/<categoryId>[/g/<productGroupId>][/r/<clusterId>/<selectionId>]]", without the "#/"), and the vehicle it names.
  *
  * @phpstan-type JournalVehicle array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string, engine: ?string}
  */
@@ -38,6 +38,7 @@ final readonly class TurnRoute
         $vehicle = null === $pageVehicle ? null : self::vehicle($pageVehicle);
         $categoryId = null;
         $productGroupId = null;
+        $selection = null;
         foreach ($toolCalls as $call) {
             if ('set_vehicle' === $call['name']) {
                 $vehicle = self::vehicle($call['arguments']) ?? $vehicle;
@@ -52,16 +53,18 @@ final readonly class TurnRoute
                 }
                 $categoryId = $shown;
                 $productGroupId = self::int($result['productGroup']['id'] ?? null) ?? self::int($call['arguments']['productGroupId'] ?? null);
+                $selection = self::selection($result);
             }
         }
 
-        return self::build($vehicle, $categoryId, $productGroupId);
+        return self::build($vehicle, $categoryId, $productGroupId, $selection);
     }
 
     /**
-     * @param JournalVehicle|null $vehicle
+     * @param JournalVehicle|null                         $vehicle
+     * @param array{clusterId: string, id: string}|null $selection
      */
-    private static function build(?array $vehicle, ?int $categoryId, ?int $productGroupId = null): self
+    private static function build(?array $vehicle, ?int $categoryId, ?int $productGroupId = null, ?array $selection = null): self
     {
         if (null === $vehicle) {
             return new self();
@@ -72,7 +75,9 @@ final readonly class TurnRoute
             : 'k/'.$vehicle['carId'].'-'.($vehicle['carType'] ?? 'PC');
 
         if (null !== $categoryId) {
-            $route .= '/c/'.$categoryId.(null === $productGroupId ? '' : '/g/'.$productGroupId);
+            $route .= '/c/'.$categoryId
+                .(null === $productGroupId ? '' : '/g/'.$productGroupId)
+                .(null === $selection ? '' : '/r/'.rawurlencode($selection['clusterId']).'/'.$selection['id']);
         }
 
         return new self($route, $vehicle);
@@ -100,6 +105,23 @@ final readonly class TurnRoute
             'model' => self::text($data['model'] ?? null),
             'engine' => self::text($data['engine'] ?? null),
         ];
+    }
+
+    /**
+     * @return array{clusterId: string, id: string}|null
+     */
+    private static function selection(mixed $result): ?array
+    {
+        if (!\is_array($result)) {
+            return null;
+        }
+        $clusterId = self::text($result['selected'] ?? null);
+        $id = $result['selectionId'] ?? null;
+        if (null === $clusterId || !\is_string($id) || 1 !== preg_match('/^[0-9A-HJKMNP-TV-Z]{26}$/', $id)) {
+            return null;
+        }
+
+        return ['clusterId' => $clusterId, 'id' => $id];
     }
 
     private static function text(mixed $value): ?string
