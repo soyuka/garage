@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use Psr\Cache\CacheItemPoolInterface;
+use App\PartsApi\MongoPartsApiResponseStore;
+use App\Siv\MongoSivLookupStore;
+use Psr\Clock\ClockInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -14,27 +16,27 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Imports a legacy var/-layout cache directory (the on-disk format prototype_1 and the
- * pre-PostgreSQL version of this app produced) into the cache.siv and cache.partsapi
- * PSR-6 pools. The keys written match exactly what SivClient/PartsApiClient look up, so
+ * pre-PostgreSQL version of this app produced) into the siv_lookups and partsapi_responses
+ * collections. The ids written match exactly what SivClient/PartsApiClient look up, so
  * already-paid responses are served straight from the database afterwards.
  *
  * Expected layout under <dir>:
- *   siv/<PLATE>.json                       full SIV envelope  → cache.siv[<PLATE>]
- *   partsapi/<method>_<sha1>.json          decoded response   → cache.partsapi[<method>.<sha1>]
- *   partsapi/_calls_<method>.json          {"spent": N}       → cache.partsapi[calls.<method>] = N
+ *   siv/<PLATE>.json                       full SIV envelope  → siv_lookups[<PLATE>]
+ *   partsapi/<method>_<sha1>.json          decoded response   → partsapi_responses[<method>.<sha1>]
+ *   partsapi/_calls_<method>.json          {"spent": N}       → ignored: the call ceiling they fed is gone (fff1cf9)
  *
- * Idempotent: every item is overwritten with the source value, so re-running never
- * double-counts the budget counters.
+ * Idempotent: every entry is upserted with the source value.
  */
 #[AsCommand(
     name: 'app:cache:import-legacy',
-    description: 'Import a legacy var/-layout cache dir (siv + partsapi) into the PostgreSQL cache pools.',
+    description: 'Import a legacy var/-layout cache dir (siv + partsapi) into the MongoDB upstream stores.',
 )]
 final class ImportLegacyCacheCommand extends Command
 {
     public function __construct(
-        private readonly CacheItemPoolInterface $sivCache,
-        private readonly CacheItemPoolInterface $partsApiCache,
+        private readonly MongoSivLookupStore $sivStore,
+        private readonly MongoPartsApiResponseStore $partsApiStore,
+        private readonly ClockInterface $clock,
     ) {
         parent::__construct();
     }
@@ -58,7 +60,7 @@ final class ImportLegacyCacheCommand extends Command
         $siv = $this->importSiv($dir.'/siv');
         [$parts, $counters] = $this->importPartsApi($dir.'/partsapi');
 
-        $io->success(sprintf('Imported %d siv, %d partsapi response(s), %d budget counter(s).', $siv, $parts, $counters));
+        $io->success(sprintf('Imported %d siv, %d partsapi response(s); ignored %d dead call counter(s).', $siv, $parts, $counters));
 
         return Command::SUCCESS;
     }
@@ -77,7 +79,7 @@ final class ImportLegacyCacheCommand extends Command
             }
 
             $plate = basename($file, '.json');
-            $this->sivCache->save($this->sivCache->getItem($plate)->set($envelope));
+            $this->sivStore->write($plate, $envelope, $this->clock->now());
             ++$count;
         }
 
@@ -85,7 +87,7 @@ final class ImportLegacyCacheCommand extends Command
     }
 
     /**
-     * @return array{0: int, 1: int} [responses imported, counters imported]
+     * @return array{0: int, 1: int} [responses imported, counters ignored]
      */
     private function importPartsApi(string $dir): array
     {
@@ -98,11 +100,7 @@ final class ImportLegacyCacheCommand extends Command
         foreach (glob($dir.'/*.json') ?: [] as $file) {
             $name = basename($file, '.json');
 
-            if (preg_match('/^_calls_(.+)$/', $name, $m)) {
-                $payload = $this->decode($file);
-                $spent = \is_array($payload) ? (int) ($payload['spent'] ?? 0) : 0;
-                $key = 'calls.'.$m[1];
-                $this->partsApiCache->save($this->partsApiCache->getItem($key)->set($spent));
+            if (str_starts_with($name, '_calls_')) {
                 ++$counters;
                 continue;
             }
@@ -117,8 +115,7 @@ final class ImportLegacyCacheCommand extends Command
                 continue;
             }
 
-            $key = $m[1].'.'.$m[2];
-            $this->partsApiCache->save($this->partsApiCache->getItem($key)->set($data));
+            $this->partsApiStore->write($m[1].'.'.$m[2], $m[1], null, $data, $this->clock->now(), null);
             ++$responses;
         }
 

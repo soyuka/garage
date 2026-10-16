@@ -8,7 +8,6 @@ use App\ApiResource\Article;
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use App\PartsApi\CarType;
-use Psr\Cache\CacheItemPoolInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -27,8 +26,7 @@ final class ArticlePhotos
 
     public function __construct(
         private readonly PartsCatalog $catalog,
-        #[Autowire(service: 'cache.article_photos')]
-        private readonly CacheItemPoolInterface $cache,
+        private readonly ArticlePhotoStore $store,
         #[Autowire(service: 'article_photos.http_client')]
         private readonly HttpClientInterface $images,
         private readonly LoggerInterface $logger,
@@ -61,9 +59,9 @@ final class ArticlePhotos
 
     private function download(string $url): ?ArticlePhoto
     {
-        $item = $this->cache->getItem('photo.'.sha1($url));
-        if ($item->isHit()) {
-            return $item->get();
+        $cached = $this->store->find($url);
+        if (null !== $cached) {
+            return $cached;
         }
 
         try {
@@ -90,7 +88,7 @@ final class ArticlePhotos
         }
 
         $photo = new ArticlePhoto($type, $body);
-        $this->cache->save($item->set($photo));
+        $this->store->save($url, $photo);
 
         return $photo;
     }

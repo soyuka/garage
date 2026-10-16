@@ -7,8 +7,8 @@ namespace App\Tests\Unit\Motul;
 use App\Motul\MotulClient;
 use App\Motul\MotulOilAdvisor;
 use App\Motul\MotulRecommendationParser;
+use App\Tests\Support\InMemoryMotulResponseStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -29,7 +29,7 @@ final class MotulOilAdvisorTest extends TestCase
             return new MockResponse(self::fixture('recommendations_9950.html'));
         });
 
-        return new MotulOilAdvisor(new MotulClient($http, new ArrayAdapter(), new MotulRecommendationParser()));
+        return new MotulOilAdvisor(new MotulClient($http, new InMemoryMotulResponseStore(), new MotulRecommendationParser()));
     }
 
     public function testYearAndEnginePinExactVariantAndReturnGrade(): void
@@ -64,7 +64,7 @@ final class MotulOilAdvisorTest extends TestCase
 
             return new MockResponse(self::fixture('recommendations_9950.html'));
         });
-        $advisor = new MotulOilAdvisor(new MotulClient($http, new ArrayAdapter(), new MotulRecommendationParser()));
+        $advisor = new MotulOilAdvisor(new MotulClient($http, new InMemoryMotulResponseStore(), new MotulRecommendationParser()));
 
         $result = $advisor->adviseVariant('9950');
 
@@ -86,7 +86,7 @@ final class MotulOilAdvisorTest extends TestCase
     public function testNotFoundWhenSearchReturnsNoVehicles(): void
     {
         $http = new MockHttpClient(new MockResponse('{"vehicles":[]}'));
-        $advisor = new MotulOilAdvisor(new MotulClient($http, new ArrayAdapter(), new MotulRecommendationParser()));
+        $advisor = new MotulOilAdvisor(new MotulClient($http, new InMemoryMotulResponseStore(), new MotulRecommendationParser()));
 
         $result = $advisor->advise('nonexistent machine', 2004);
 
@@ -112,7 +112,7 @@ final class MotulOilAdvisorTest extends TestCase
             ? new MockResponse($vehicles)
             : new MockResponse(self::fixture('recommendations_9950.html')));
 
-        return new MotulOilAdvisor(new MotulClient($http, new ArrayAdapter(), new MotulRecommendationParser()));
+        return new MotulOilAdvisor(new MotulClient($http, new InMemoryMotulResponseStore(), new MotulRecommendationParser()));
     }
 
     public function testDropsBrandAndModelMismatchedSearchNoise(): void

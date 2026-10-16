@@ -1,7 +1,8 @@
 doctrine:
     dbal:
-        # DBAL stays only for the upstream HTTP caches (cache.siv, cache.partsapi) — the domain
-        # model lives in MongoDB (config/packages/doctrine_mongodb.yaml). No ORM is configured.
+        # DBAL stays only for the Messenger transports (doctrine://) and for app:cache:migrate-to-mongo,
+        # which reads the retired cache_items table — the domain model and the upstream response stores
+        # live in MongoDB (config/packages/doctrine_mongodb.yaml). No ORM is configured.
         url: '%env(resolve:DATABASE_URL)%'
         profiling_collect_backtrace: '%kernel.debug%'
 

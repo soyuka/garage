@@ -6,7 +6,6 @@ namespace App\PartsApi;
 
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -46,7 +45,7 @@ final class PartsApiClient
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly array $keys,
-        private readonly CacheItemPoolInterface $cache,
+        private readonly PartsApiResponseStore $store,
         private readonly int $catalogTtl = 2592000,
     ) {
     }
@@ -58,9 +57,10 @@ final class PartsApiClient
      */
     public function fetch(string $method, array $params): array
     {
-        $cacheItem = $this->cache->getItem($this->cacheKey($method, $params));
-        if ($cacheItem->isHit()) {
-            return $cacheItem->get();
+        $cacheKey = $this->cacheKey($method, $params);
+        $cached = $this->store->find($cacheKey);
+        if (null !== $cached) {
+            return $cached;
         }
 
         $key = $this->keys[$method] ?? '';
@@ -103,11 +103,7 @@ final class PartsApiClient
                 : UpstreamException::definitive(self::SOURCE, $reason);
         }
 
-        if (\in_array($method, self::CATALOG_METHODS, true)) {
-            $cacheItem->expiresAfter($this->catalogTtl);
-        }
-
-        $this->cache->save($cacheItem->set($data));
+        $this->store->save($cacheKey, $method, $params, $data, \in_array($method, self::CATALOG_METHODS, true) ? $this->catalogTtl : null);
 
         return $data;
     }
@@ -121,13 +117,11 @@ final class PartsApiClient
      */
     public function peek(string $method, array $params): ?array
     {
-        $item = $this->cache->getItem($this->cacheKey($method, $params));
-
-        return $item->isHit() ? $item->get() : null;
+        return $this->store->find($this->cacheKey($method, $params));
     }
 
     /**
-     * The cached responses among several calls of one method, in one cache round trip: never an upstream call.
+     * The cached responses among several calls of one method, in one store round trip: never an upstream call.
      *
      * @param array<array-key, array<string, int|string>> $paramSets
      *
@@ -136,11 +130,11 @@ final class PartsApiClient
     public function peekMany(string $method, array $paramSets): array
     {
         $keys = array_map(fn (array $params): string => $this->cacheKey($method, $params), $paramSets);
-        $byKey = array_flip($keys);
+        $found = $this->store->findMany(array_values(array_unique($keys)));
         $hits = [];
-        foreach ($this->cache->getItems(array_values($keys)) as $key => $item) {
-            if ($item->isHit() && isset($byKey[$key])) {
-                $hits[$byKey[$key]] = $item->get();
+        foreach ($keys as $paramsKey => $key) {
+            if (isset($found[$key])) {
+                $hits[$paramsKey] = $found[$key];
             }
         }
 

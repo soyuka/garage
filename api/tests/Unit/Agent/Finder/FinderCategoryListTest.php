@@ -9,8 +9,8 @@ use App\Catalog\PartsCatalog;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
 use App\Tests\Mock\FixtureHttpClient;
+use App\Tests\Support\InMemoryPartsApiResponseStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -57,6 +57,6 @@ final class FinderCategoryListTest extends TestCase
 
     private function list(HttpClientInterface $http): FinderCategoryList
     {
-        return new FinderCategoryList(new PartsCatalog(new PartsApiClient($http, ['getSearchTree' => 'test-key'], new ArrayAdapter()), 6));
+        return new FinderCategoryList(new PartsCatalog(new PartsApiClient($http, ['getSearchTree' => 'test-key'], new InMemoryPartsApiResponseStore()), 6));
     }
 }

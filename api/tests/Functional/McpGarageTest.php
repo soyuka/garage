@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Agent\SelectedVehicleContext;
+use App\Entity\PartsApiResponse;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -287,7 +288,10 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('partsapi', $firstFact['source']);
         $this->assertTrue($firstFact['verified']);
 
-        $callsAfterFirst = self::partsApiCache()->getItem('calls.GetFillVolumes')->get();
+        $responses = static::getContainer()->get(DocumentManager::class)->getDocumentCollection(PartsApiResponse::class);
+        $this->assertSame(1, $responses->countDocuments(['method' => 'GetFillVolumes']));
+        // An upstream fetch stores its response, so an empty store after the second query proves none happened.
+        $responses->deleteMany([]);
 
         $second = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
@@ -301,10 +305,9 @@ final class McpGarageTest extends AppTestCase
 
         $this->assertSame('ok', $second['result']['structuredContent']['status']);
 
-        $callsAfterSecond = self::partsApiCache()->getItem('calls.GetFillVolumes')->get();
         $this->assertSame(
-            $callsAfterFirst,
-            $callsAfterSecond,
+            0,
+            $responses->countDocuments(['method' => 'GetFillVolumes']),
             'The second query must be served from the garage, not re-fetched upstream.',
         );
     }

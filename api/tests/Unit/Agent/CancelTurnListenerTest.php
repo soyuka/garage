@@ -4,17 +4,16 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent;
 
-use App\I18n\LocaleContext;
-use Symfony\Component\HttpFoundation\RequestStack;
-use App\Agent\TurnCancellations;
 use App\Agent\Ui\CancelTurnListener;
 use App\Agent\Ui\RenderIntentTools;
-use App\Tests\Mock\TestDashboardChannel;
+use App\I18n\LocaleContext;
 use App\Tests\Mock\RecordingHub;
+use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Support\InMemoryTurnCancellations;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class CancelTurnListenerTest extends TestCase
 {
@@ -22,7 +21,7 @@ final class CancelTurnListenerTest extends TestCase
 
     public function testEndsTheTurnAndToastsWhenCancelWasRequested(): void
     {
-        $cancellations = new TurnCancellations(new ArrayAdapter());
+        $cancellations = new InMemoryTurnCancellations();
         $cancellations->request('sess-abc');
 
         $hub = new RecordingHub();
@@ -42,7 +41,7 @@ final class CancelTurnListenerTest extends TestCase
 
     public function testDoesNothingWhenNoCancelRequested(): void
     {
-        $cancellations = new TurnCancellations(new ArrayAdapter());
+        $cancellations = new InMemoryTurnCancellations();
 
         $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create());
         $render->bindSession(self::SESSION_TOPIC);
@@ -55,7 +54,7 @@ final class CancelTurnListenerTest extends TestCase
 
     public function testYieldsToAnAlreadySetResult(): void
     {
-        $cancellations = new TurnCancellations(new ArrayAdapter());
+        $cancellations = new InMemoryTurnCancellations();
         $cancellations->request('sess-abc');
 
         $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create());

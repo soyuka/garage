@@ -15,8 +15,8 @@ use App\Knowledge\BuildCode\PsaBuildCodeDecoder;
 use App\Message\RunAgentTurn;
 use App\PartsApi\PartsApiClient;
 use App\Tests\Mock\FixtureHttpClient;
+use App\Tests\Support\InMemoryPartsApiResponseStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 
 final class FinderContextBuilderTest extends TestCase
 {
@@ -132,7 +132,7 @@ final class FinderContextBuilderTest extends TestCase
 
     private function builder(): FinderContextBuilder
     {
-        $client = new PartsApiClient(new FixtureHttpClient(\dirname(__DIR__, 3).'/Fixtures'), ['getSearchTree' => 'test-key'], new ArrayAdapter());
+        $client = new PartsApiClient(new FixtureHttpClient(\dirname(__DIR__, 3).'/Fixtures'), ['getSearchTree' => 'test-key'], new InMemoryPartsApiResponseStore());
 
         return new FinderContextBuilder(new FinderCategoryList(new PartsCatalog($client, 6)), new BuildCodeDecoders([new PsaBuildCodeDecoder()]));
     }

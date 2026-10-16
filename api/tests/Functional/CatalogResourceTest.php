@@ -22,7 +22,7 @@ final class CatalogResourceTest extends AppTestCase
             ],
         ]);
         // Cache key signature must stay stable with the already-paid live response
-        $this->assertTrue(self::partsApiCache()->getItem('getMakes.8dfd0ff78534b11449383e60daa7f02a758cdf60')->isHit());
+        $this->assertNotNull(self::partsApiStore()->find('getMakes.8dfd0ff78534b11449383e60daa7f02a758cdf60'));
     }
 
     public function testListMakesFilteredBySearch(): void

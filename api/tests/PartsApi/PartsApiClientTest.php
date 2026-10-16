@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\PartsApi;
 
 use App\PartsApi\PartsApiClient;
+use App\Tests\Support\InMemoryPartsApiResponseStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -61,6 +61,6 @@ final class PartsApiClientTest extends TestCase
             return new MockResponse(json_encode([['id' => 1]]), ['http_code' => 200]);
         });
 
-        return new PartsApiClient($httpClient, ['getArticles' => 'k', 'getSearchTree' => 'k', 'getMakes' => 'k'], new ArrayAdapter(0, true, 0, 0, $clock), $catalogTtl);
+        return new PartsApiClient($httpClient, ['getArticles' => 'k', 'getSearchTree' => 'k', 'getMakes' => 'k'], new InMemoryPartsApiResponseStore($clock ?? new MockClock()), $catalogTtl);
     }
 }

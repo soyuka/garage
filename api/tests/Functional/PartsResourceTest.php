@@ -24,7 +24,7 @@ final class PartsResourceTest extends AppTestCase
         }
 
         // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
-        $this->assertTrue(self::partsApiCache()->getItem('getSearchTree.97ff21a115d6a2e60b1f29051da1bf103af7b480')->isHit());
+        $this->assertNotNull(self::partsApiStore()->find('getSearchTree.97ff21a115d6a2e60b1f29051da1bf103af7b480'));
     }
 
     public function testPartCategoriesFullTree(): void
@@ -78,7 +78,7 @@ final class PartsResourceTest extends AppTestCase
             ],
         ]);
         // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
-        $this->assertTrue(self::partsApiCache()->getItem('getArticles.3d7aa63567129c07408d60598fd5bcab162d4379')->isHit());
+        $this->assertNotNull(self::partsApiStore()->find('getArticles.3d7aa63567129c07408d60598fd5bcab162d4379'));
     }
 
     public function testArticlesFallBackToTheDeclaredCarTypeDefault(): void
@@ -120,8 +120,7 @@ final class PartsResourceTest extends AppTestCase
         $client->request('GET', '/cars/34247/fill-volumes');
         $this->assertResponseIsSuccessful();
 
-        $pool = self::partsApiCache();
-        $this->assertTrue($pool->getItem('GetFillVolumes.9082864561dcc88578d6b6c1925d0f43870e3a97')->isHit());
+        $this->assertNotNull(self::partsApiStore()->find('GetFillVolumes.9082864561dcc88578d6b6c1925d0f43870e3a97'));
     }
 
     public function testUpstreamErrorIsNotCached(): void
@@ -131,9 +130,8 @@ final class PartsResourceTest extends AppTestCase
         $client->request('GET', '/cars/500200/part-categories?carType=PC');
 
         $this->assertResponseStatusCodeSame(502);
-        $pool = self::partsApiCache();
         // key for getSearchTree?carId=500200&carType=PC&lang=4 — must remain a miss
-        $this->assertFalse($pool->getItem('getSearchTree.c668305e64deefb873dec5a84f559c5468af8e41')->isHit());
+        $this->assertNull(self::partsApiStore()->find('getSearchTree.c668305e64deefb873dec5a84f559c5468af8e41'));
     }
 
     public function testInvalidCarTypeIsRejected(): void

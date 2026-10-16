@@ -6,8 +6,8 @@ namespace App\Tests\Unit\Motul;
 
 use App\Motul\MotulClient;
 use App\Motul\MotulRecommendationParser;
+use App\Tests\Support\InMemoryMotulResponseStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -22,7 +22,7 @@ final class MotulClientTest extends TestCase
     {
         $client = new MotulClient(
             new MockHttpClient(new MockResponse(self::fixture('search-vehicle_mazda6.json'))),
-            new ArrayAdapter(),
+            new InMemoryMotulResponseStore(),
             new MotulRecommendationParser(),
         );
 
@@ -43,7 +43,7 @@ final class MotulClientTest extends TestCase
     {
         $client = new MotulClient(
             new MockHttpClient(new MockResponse(self::fixture('recommendations_9950.html'))),
-            new ArrayAdapter(),
+            new InMemoryMotulResponseStore(),
             new MotulRecommendationParser(),
         );
 
@@ -61,7 +61,7 @@ final class MotulClientTest extends TestCase
 
             return new MockResponse(self::fixture('search-vehicle_mazda6.json'));
         });
-        $client = new MotulClient($http, new ArrayAdapter(), new MotulRecommendationParser());
+        $client = new MotulClient($http, new InMemoryMotulResponseStore(), new MotulRecommendationParser());
 
         $client->searchVehicle('mazda 6');
         $client->searchVehicle('mazda 6');

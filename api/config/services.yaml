@@ -33,7 +33,13 @@ services:
         arguments:
             $httpClient: '@siv.client'
             $token: '%env(API_PLAQUE_TOKEN)%'
-            $cache: '@cache.siv'
+
+    # Paid upstream responses live in MongoDB collections, not a cache: see the Entity docblocks.
+    App\Siv\SivLookupStore: '@App\Siv\MongoSivLookupStore'
+    App\PartsApi\PartsApiResponseStore: '@App\PartsApi\MongoPartsApiResponseStore'
+    App\Motul\MotulResponseStore: '@App\Motul\MongoMotulResponseStore'
+    App\Catalog\ArticlePhotoStore: '@App\Catalog\MongoArticlePhotoStore'
+    App\Agent\TurnCancellations: '@App\Agent\MongoTurnCancellations'
 
     App\PartsApi\PartsApiClient:
         arguments:
@@ -48,7 +54,6 @@ services:
                 getArticleCrosses: '%env(PARTSAPI_KEY_getArticleCrosses)%'
                 getArticleCriteria: '%env(PARTSAPI_KEY_getArticleCriteria)%'
                 getArticleMedia: '%env(PARTSAPI_KEY_getArticleMedia)%'
-            $cache: '@cache.partsapi'
             $catalogTtl: '%env(int:PARTSAPI_CATALOG_TTL)%'
 
     # The image host is whatever a getArticleMedia response names: never let it resolve to our own network.
@@ -63,7 +68,6 @@ services:
 
     App\Motul\MotulClient:
         arguments:
-            $cache: '@cache.motul'
             $locale: '%env(MOTUL_LOCALE)%'
             $bu: '%env(MOTUL_BU)%'
 
@@ -261,11 +265,6 @@ services:
         arguments:
             $inner: '@.inner'
 
-    App\Command\ImportLegacyCacheCommand:
-        arguments:
-            $sivCache: '@cache.siv'
-            $partsApiCache: '@cache.partsapi'
-
     # The S3-compatible client backing the maintenance-bills Flysystem storage (config/packages/
     # flysystem.yaml). pathStyleEndpoint is required for MinIO and other non-AWS S3 servers, which
     # serve buckets as a path segment (host/bucket/key) rather than a vhost (bucket.host/key). In
@@ -309,7 +308,7 @@ when@test:
             arguments:
                 $httpClient: '@http_client'
                 $token: '%env(API_PLAQUE_TOKEN)%'
-                $cache: '@cache.siv'
+                $store: '@App\Siv\SivLookupStore'
                 $retryDelayMs: 0
 
         # NoPrivateNetworkHttpClient resolves the host itself before the request, which the fixture

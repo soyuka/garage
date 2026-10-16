@@ -681,3 +681,28 @@ runs the companions, not a hand-curated table.**
 - Guardrails: companions must be catalogue categories that exist for this kType
   (`list_part_categories`), one-sentence "why" in the finder voice, never a fabricated reference;
   respect `max_tool_calls: 25`.
+
+## Upstream stores moved to MongoDB — what is left (2026-10-16)
+
+The DBAL cache pools (`cache.siv`, `cache.partsapi`, `cache.motul`, `cache.article_photos`,
+`cache.turn_images`) and the `cache.app`-backed `TurnCancellations` are Mongo collections now, and the
+dev `cache_items` rows were migrated (`app:cache:migrate-to-mongo`: siv 7/7, partsapi 163 of 166 + 3 dead
+`calls.*` counters, motul 19/19). Not done:
+
+- **The API still needs Postgres** for the Messenger transports (`MESSENGER_TRANSPORT_DSN` /
+  `MESSENGER_FAILED_TRANSPORT_DSN=doctrine://…`). Dropping Postgres from the API means another transport
+  (or `AGENT_TURN_DISPATCH=terminate` + an in-memory/Mongo failure store).
+- **`cache_items` is still in Postgres, untouched on purpose.** No pool declares it any more, so
+  `doctrine:migrations:diff` will now propose `DROP TABLE cache_items` — accept it only after the
+  migration has run in every environment that has data. The namespaces derive from that environment's
+  `cache.prefix.seed` (project dir + container class), so run the command *in* each env (a prod
+  container computes the prod namespaces).
+- **2 rows left behind under namespace `BxO5KZraMS`** (written 2026-06-24 under an unknown seed): an
+  empty `getSearchTree.2c98d20e…` response (`a:0:{}`) and `calls.getSearchTree = 1`. Passed
+  `--ignore-namespace=BxO5KZraMS`; nothing of value.
+- **No catalogue photo was ever stored** (0 `article_photos` rows): `img.autodatabases.ru` does not
+  resolve, so `NoPrivateNetworkHttpClient` refuses it (see `api/docs/PARTSAPI.md`). The Mongo photo path
+  is covered by `tests/Functional/Store/ArticlePhotoStoreTest.php` only, not live.
+- **`tests/Unit/Agent/CancelTurnListenerTest::testEndsTheTurnAndToastsWhenCancelWasRequested` is red,
+  pre-existing**: `RenderIntentTools::toast()` now defers to `pendingToast` when a session is bound, so the
+  hub has no toast at assertion time. Unrelated to the store move.

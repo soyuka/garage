@@ -37,7 +37,7 @@ Four, and a task rarely touches only one:
 
 | surface | what it is | read first |
 | --- | --- | --- |
-| `api/` | Symfony 7 / API Platform. Domain in MongoDB (Doctrine ODM); Postgres backs HTTP caches + Casdoor; MinIO holds maintenance bills; Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
+| `api/` | Symfony 7 / API Platform. Domain and the paid upstream responses (SIV, partsapi, Motul, photos) in MongoDB (Doctrine ODM); Postgres backs the Messenger queue + Casdoor; MinIO holds maintenance bills; Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
 | `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `dashboard/CHOREOGRAPHY.md`, `dashboard/PROVENANCE.md` |
 | `stage/` | The pilot harness — **current workstream**. Its own `CLAUDE.md` is the operator protocol (not repo guidance), `.mcp.json` points the session at the public MCP server, `bin/atelier` is the launcher. | `stage/CLAUDE.md`, `docs/pilot.md`, `CONFERENCE.md` |
 | `admin/` | Vite SPA, largely dormant. | — |

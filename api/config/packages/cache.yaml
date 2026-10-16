@@ -1,40 +1,7 @@
 framework:
     cache:
-        # Both upstream caches live in PostgreSQL via the DBAL adapter, backed by the
-        # default Doctrine connection. The Symfony↔Doctrine schema listener makes
-        # doctrine:migrations:diff emit the cache_items table from these pools.
-        default_doctrine_dbal_provider: doctrine.dbal.default_connection
-
-        pools:
-            # Paid upstream HTTP responses — immutable facts about a vehicle, so the pool
-            # default never expires (default_lifetime: 0). The exception is the partsapi
-            # catalog snapshot (getArticles/getSearchTree): PartsApiClient sets a per-item
-            # TTL from PARTSAPI_CATALOG_TTL because the upstream data is refreshed quarterly.
-            cache.siv:
-                adapter: cache.adapter.doctrine_dbal
-                default_lifetime: 0
-            cache.partsapi:
-                adapter: cache.adapter.doctrine_dbal
-                default_lifetime: 0
-            # Catalogue photos proxied for parts without a 3D model (App\Catalog\ArticlePhotos), keyed by
-            # the media URL getArticleMedia gave: an image never changes behind its content-hashed URL.
-            cache.article_photos:
-                adapter: cache.adapter.doctrine_dbal
-                default_lifetime: 0
-            # Motul Oil Advisor responses (search + SSR recommendations) — a vehicle's
-            # recommended grade is stable, so cache forever and stay polite to the upstream.
-            cache.motul:
-                adapter: cache.adapter.doctrine_dbal
-                default_lifetime: 0
-            # A finder turn's photos, between the HTTP request and the worker (TurnImageStash): kept out
-            # of the queued message so a dead-lettered turn never retains them. Short-lived on purpose.
-            cache.turn_images:
-                adapter: cache.adapter.doctrine_dbal
-                default_lifetime: 900
-
-when@test:
-    framework:
-        cache:
-            pools:
-                cache.turn_images:
-                    adapter: cache.adapter.array
+        # No application pool lives in PostgreSQL any more (2026-10-16): the paid upstream responses
+        # (SIV, partsapi, Motul, catalogue photos) and the short-lived turn hand-offs (finder photos,
+        # cancel flags) are MongoDB collections — see the src/Entity docblocks and
+        # app:cache:migrate-to-mongo, which reads the retired cache_items table. Only the framework
+        # defaults remain (cache.app / cache.system on the per-container filesystem).

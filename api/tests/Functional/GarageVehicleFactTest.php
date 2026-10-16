@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\MaintenanceRecord;
+use App\Entity\PartsApiResponse;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -60,14 +61,16 @@ final class GarageVehicleFactTest extends AppTestCase
         $iri = '/garage/vehicles/'.$vehicle->getId();
 
         $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $callsAfterFirst = self::partsApiCache()->getItem('calls.GetFillVolumes')->get();
+        $responses = static::getContainer()->get(DocumentManager::class)->getDocumentCollection(PartsApiResponse::class);
+        $this->assertSame(1, $responses->countDocuments(['method' => 'GetFillVolumes']));
+        // An upstream fetch stores its response, so an empty store after the second read proves none happened.
+        $responses->deleteMany([]);
 
         $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']]);
-        $callsAfterSecond = self::partsApiCache()->getItem('calls.GetFillVolumes')->get();
 
         $this->assertSame(
-            $callsAfterFirst,
-            $callsAfterSecond,
+            0,
+            $responses->countDocuments(['method' => 'GetFillVolumes']),
             'Once backfilled, the catalog specs are persisted — a second read must not re-fetch upstream.',
         );
     }

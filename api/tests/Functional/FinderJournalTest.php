@@ -9,6 +9,7 @@ use App\Entity\AgentTurn;
 use App\Entity\AgentTurnKind;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
+use App\Entity\PartsApiResponse;
 use App\Repository\AgentTurnRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 
@@ -121,7 +122,7 @@ final class FinderJournalTest extends AppTestCase
     public function testANarrowedSearchSpendsNoCallOnAnUncachedTree(): void
     {
         $client = static::createClient();
-        static::getContainer()->get('cache.partsapi')->clear();
+        static::getContainer()->get(DocumentManager::class)->getDocumentCollection(PartsApiResponse::class)->deleteMany([]);
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
             'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url', 'Search-Input' => '100259'],

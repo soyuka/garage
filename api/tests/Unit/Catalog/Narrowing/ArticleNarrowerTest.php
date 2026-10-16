@@ -10,8 +10,8 @@ use App\Catalog\Narrowing\NarrowingResult;
 use App\Catalog\PartsCatalog;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
+use App\Tests\Support\InMemoryPartsApiResponseStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -30,14 +30,14 @@ final class ArticleNarrowerTest extends TestCase
     /** @var list<int> */
     private array $requestedArtIds = [];
 
-    private ArrayAdapter $cache;
+    private InMemoryPartsApiResponseStore $store;
 
     protected function setUp(): void
     {
         $this->requested = [];
         $this->failing = [];
         $this->requestedArtIds = [];
-        $this->cache = new ArrayAdapter();
+        $this->store = new InMemoryPartsApiResponseStore();
     }
 
     public function testTheMazdaOilFilterIsOnePartTheCarmakerSellsInTwoSizes(): void
@@ -178,13 +178,13 @@ final class ArticleNarrowerTest extends TestCase
     {
         $this->narrow();
 
-        $criteria = $this->cache->getItem('getArticleCriteria.'.sha1('getArticleCriteria?ART_ID=9674372&LANG=6'));
-        $this->assertTrue($criteria->isHit());
-        $this->assertArrayNotHasKey('expiry', $criteria->getMetadata());
+        $criteria = $this->store->entries['getArticleCriteria.'.sha1('getArticleCriteria?ART_ID=9674372&LANG=6')] ?? null;
+        $this->assertNotNull($criteria);
+        $this->assertNull($criteria['expiresAt']);
 
-        $articles = $this->cache->getItem('getArticles.'.sha1('getArticles?carId=19107&carType=PC&lang=6&strId=100259'));
-        $this->assertTrue($articles->isHit());
-        $this->assertArrayHasKey('expiry', $articles->getMetadata());
+        $articles = $this->store->entries['getArticles.'.sha1('getArticles?carId=19107&carType=PC&lang=6&strId=100259')] ?? null;
+        $this->assertNotNull($articles);
+        $this->assertNotNull($articles['expiresAt']);
     }
 
     public function testDegradesWhenCrossesQuotaIsExhausted(): void
@@ -381,8 +381,7 @@ final class ArticleNarrowerTest extends TestCase
 
     private function warmCriteria(int $artId): void
     {
-        $item = $this->cache->getItem('getArticleCriteria.'.sha1('getArticleCriteria?ART_ID='.$artId.'&LANG=6'));
-        $this->cache->save($item->set(json_decode(self::fixture(sprintf('getArticleCriteria_%d.json', $artId)), true)));
+        $this->store->save('getArticleCriteria.'.sha1('getArticleCriteria?ART_ID='.$artId.'&LANG=6'), 'getArticleCriteria', ['ART_ID' => $artId, 'LANG' => 6], json_decode(self::fixture(sprintf('getArticleCriteria_%d.json', $artId)), true), null);
     }
 
     private function narrowRotules(?int $productGroupId = null, ?string $make = 'PEUGEOT', ?string $resolvedMake = null): NarrowingResult
@@ -426,7 +425,7 @@ final class ArticleNarrowerTest extends TestCase
             return new MockResponse((string) $body, ['response_headers' => ['content-type' => 'application/json']]);
         });
 
-        $client = new PartsApiClient($http, array_fill_keys(['getMakes', 'getArticles', 'getArticleCriteria', 'getArticleCrosses'], 'test-key'), $this->cache);
+        $client = new PartsApiClient($http, array_fill_keys(['getMakes', 'getArticles', 'getArticleCriteria', 'getArticleCrosses'], 'test-key'), $this->store);
         $resolver = null === $resolvedMake ? null : new class($resolvedMake) implements CarMakeResolver {
             public function __construct(private readonly string $make)
             {

@@ -6,7 +6,8 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Test\ApiTestCase;
 use MongoDB\Client;
-use Psr\Cache\CacheItemPoolInterface;
+use App\PartsApi\PartsApiResponseStore;
+use App\Siv\SivLookupStore;
 
 abstract class AppTestCase extends ApiTestCase
 {
@@ -80,11 +81,6 @@ abstract class AppTestCase extends ApiTestCase
     }
 
     /**
-     * The two upstream caches now live in PostgreSQL; DAMA wraps every test in a
-     * rolled-back transaction, so cache rows written by one test never leak into
-     * the next — no manual wipe needed.
-     */
-    /**
      * Authorization header for a write request against the `api` firewall (^/garage, ^/agent/turn).
      * The token is decoded by {@see \App\Tests\Security\FakeOidcTokenHandler}; the firewall,
      * ZitadelUserProvider and find-or-create all run for real. Merge into a request's headers.
@@ -96,13 +92,14 @@ abstract class AppTestCase extends ApiTestCase
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];
     }
 
-    protected static function sivCache(): CacheItemPoolInterface
+    /** Lives in the test Mongo database, so the per-test drop above isolates it too. */
+    protected static function sivStore(): SivLookupStore
     {
-        return static::getContainer()->get('cache.siv');
+        return static::getContainer()->get(SivLookupStore::class);
     }
 
-    protected static function partsApiCache(): CacheItemPoolInterface
+    protected static function partsApiStore(): PartsApiResponseStore
     {
-        return static::getContainer()->get('cache.partsapi');
+        return static::getContainer()->get(PartsApiResponseStore::class);
     }
 }

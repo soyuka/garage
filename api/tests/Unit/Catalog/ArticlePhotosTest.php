@@ -8,10 +8,11 @@ use App\Catalog\ArticlePhotos;
 use App\Catalog\PartsCatalog;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
+use App\Tests\Support\InMemoryArticlePhotoStore;
+use App\Tests\Support\InMemoryPartsApiResponseStore;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\NoPrivateNetworkHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
@@ -60,7 +61,7 @@ final class ArticlePhotosTest extends TestCase
                 default => [],
             }, \JSON_THROW_ON_ERROR));
         });
-        $catalog = new PartsCatalog(new PartsApiClient($partsApi, ['getArticles' => 'k', 'getArticleMedia' => 'k'], new ArrayAdapter()));
+        $catalog = new PartsCatalog(new PartsApiClient($partsApi, ['getArticles' => 'k', 'getArticleMedia' => 'k'], new InMemoryPartsApiResponseStore()));
         $catalog->articles(16182, 100198, CarType::PassengerCar);
 
         $images = new MockHttpClient(function (string $method, string $url): MockResponse {
@@ -69,6 +70,6 @@ final class ArticlePhotosTest extends TestCase
             return new MockResponse('RIFF....WEBPVP8 ', ['http_code' => 200]);
         });
 
-        return new ArticlePhotos($catalog, new ArrayAdapter(), new NoPrivateNetworkHttpClient($images), new NullLogger());
+        return new ArticlePhotos($catalog, new InMemoryArticlePhotoStore(), new NoPrivateNetworkHttpClient($images), new NullLogger());
     }
 }

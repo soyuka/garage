@@ -6,7 +6,6 @@ namespace App\Siv;
 
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -28,7 +27,7 @@ final class SivClient
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly string $token,
-        private readonly CacheItemPoolInterface $cache,
+        private readonly SivLookupStore $store,
         private readonly int $maxRetries = 2,
         private readonly int $retryDelayMs = 1000,
     ) {
@@ -49,10 +48,10 @@ final class SivClient
             return null;
         }
 
-        $item = $this->cache->getItem($plate);
-        if ($item->isHit()) {
+        $cached = $this->store->find($plate);
+        if (null !== $cached) {
             // A negative hit (unknown plate) is cached as an envelope with no `data` → resolves to null.
-            return $item->get()['data'] ?? null;
+            return $cached['data'] ?? null;
         }
 
         if ('' === $this->token) {
@@ -65,7 +64,7 @@ final class SivClient
         $dataError = (string) ($envelope['data']['erreur'] ?? '');
 
         if (200 === $errorCode && '' === $dataError && \is_array($envelope['data'] ?? null)) {
-            $this->cache->save($item->set($envelope));
+            $this->store->save($plate, $envelope);
 
             return $envelope['data'];
         }
@@ -75,7 +74,7 @@ final class SivClient
         // not re-billed to the paid SIV API. Transient errors below stay uncached for later retry.
         if ('' !== $dataError || 404 === $errorCode) {
             unset($envelope['data']);
-            $this->cache->save($item->set($envelope));
+            $this->store->save($plate, $envelope);
 
             return null;
         }

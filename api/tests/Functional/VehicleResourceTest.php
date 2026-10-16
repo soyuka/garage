@@ -52,12 +52,12 @@ final class VehicleResourceTest extends AppTestCase
         $client->request('GET', '/vehicles/XC302ZC');
 
         $this->assertResponseIsSuccessful();
-        $item = self::sivCache()->getItem('XC302ZC');
-        $this->assertTrue($item->isHit());
+        $envelope = self::sivStore()->find('XC302ZC');
+        $this->assertNotNull($envelope);
 
         // Writer must persist the full envelope (prototype_1-compatible), not the bare payload —
         // the reader does $envelope['data'] and a cache hit must round-trip.
-        $this->assertArrayHasKey('data', $item->get());
+        $this->assertArrayHasKey('data', $envelope);
 
         $client->request('GET', '/vehicles/XC302ZC');
         $this->assertResponseIsSuccessful();
@@ -67,9 +67,8 @@ final class VehicleResourceTest extends AppTestCase
     public function testLookupIsServedFromCacheWithoutUpstreamCall(): void
     {
         // Seed a plate that has NO fixture: any upstream call would 404 it.
-        $pool = self::sivCache();
         $envelope = json_decode((string) file_get_contents(\dirname(__DIR__).'/Fixtures/siv/XC302ZC.json'), true);
-        $pool->save($pool->getItem('CACHED99')->set($envelope));
+        self::sivStore()->save('CACHED99', $envelope);
 
         $client = static::createClient();
         $client->request('GET', '/vehicles/CACHED99');
@@ -88,8 +87,8 @@ final class VehicleResourceTest extends AppTestCase
         // The unknown plate is cached as a negative marker (no `data` → no PII) so a repeat lookup
         // is not re-billed to the paid SIV API. Transient errors staying uncached is covered by the
         // SivClient unit test.
-        $item = self::sivCache()->getItem('ZZ999ZZ');
-        $this->assertTrue($item->isHit());
-        $this->assertArrayNotHasKey('data', $item->get());
+        $envelope = self::sivStore()->find('ZZ999ZZ');
+        $this->assertNotNull($envelope);
+        $this->assertArrayNotHasKey('data', $envelope);
     }
 }

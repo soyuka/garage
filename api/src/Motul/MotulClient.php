@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Motul;
 
 use App\Exception\UpstreamException;
-use Psr\Cache\CacheItemPoolInterface;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
@@ -33,7 +32,7 @@ final class MotulClient
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
-        private readonly CacheItemPoolInterface $cache,
+        private readonly MotulResponseStore $store,
         private readonly MotulRecommendationParser $parser,
         private readonly string $locale = 'fr-FR',
         private readonly string $bu = 'FRA',
@@ -80,13 +79,13 @@ final class MotulClient
      */
     private function cached(string $key, callable $producer): array
     {
-        $item = $this->cache->getItem($key);
-        if ($item->isHit()) {
-            return $item->get();
+        $cached = $this->store->find($key);
+        if (null !== $cached) {
+            return $cached;
         }
 
         $data = $producer();
-        $this->cache->save($item->set($data));
+        $this->store->save($key, $data);
 
         return $data;
     }

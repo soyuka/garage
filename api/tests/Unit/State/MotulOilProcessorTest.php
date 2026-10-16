@@ -17,8 +17,9 @@ use App\Motul\MotulOilAdvisor;
 use App\Motul\MotulRecommendationParser;
 use App\Siv\SivClient;
 use App\State\MotulOilProcessor;
+use App\Tests\Support\InMemoryMotulResponseStore;
+use App\Tests\Support\InMemorySivLookupStore;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\HttpClient\MockHttpClient;
 use Symfony\Component\HttpClient\Response\MockResponse;
 
@@ -40,7 +41,7 @@ final class MotulOilProcessorTest extends TestCase
                     ? file_get_contents(self::FIX.'search-vehicle_mazda6.json')
                     : file_get_contents(self::FIX.'recommendations_9950.html'),
             )),
-            new ArrayAdapter(),
+            new InMemoryMotulResponseStore(),
             new MotulRecommendationParser(),
         ));
 
@@ -51,7 +52,7 @@ final class MotulOilProcessorTest extends TestCase
                 'code_erreur' => 200,
             ], \JSON_THROW_ON_ERROR))),
             'siv-token',
-            new ArrayAdapter(),
+            new InMemorySivLookupStore(),
         );
 
         $vehicle = new Vehicle('MAZDA', '6', VehicleType::Car, 'siv', year: 2004, plate: 'AA-123-BB');
@@ -86,13 +87,13 @@ final class MotulOilProcessorTest extends TestCase
 
                 return new MockResponse(file_get_contents(self::FIX.'recommendations_9950.html'));
             }),
-            new ArrayAdapter(),
+            new InMemoryMotulResponseStore(),
             new MotulRecommendationParser(),
         ));
 
         $siv = new SivClient(new MockHttpClient(static function (): MockResponse {
             throw new \LogicException('motulId path must not hit SIV.');
-        }), 'siv-token', new ArrayAdapter());
+        }), 'siv-token', new InMemorySivLookupStore());
 
         $processor = new MotulOilProcessor(
             $advisor,
@@ -119,7 +120,7 @@ final class MotulOilProcessorTest extends TestCase
                     ? file_get_contents(self::FIX.'search-vehicle_mazda6.json')
                     : file_get_contents(self::FIX.'recommendations_9950.html'),
             )),
-            new ArrayAdapter(),
+            new InMemoryMotulResponseStore(),
             new MotulRecommendationParser(),
         ));
 
@@ -130,7 +131,7 @@ final class MotulOilProcessorTest extends TestCase
                 'code_erreur' => 200,
             ], \JSON_THROW_ON_ERROR))),
             'siv-token',
-            new ArrayAdapter(),
+            new InMemorySivLookupStore(),
         );
 
         $vehicle = new Vehicle('MAZDA', '6', VehicleType::Car, 'siv', year: 2004, plate: 'AA-123-BB', engineVariant: '1.8');
