@@ -154,6 +154,8 @@ export interface SaveBody {
   confirmNew?: boolean;
   // Carte grise fields, recorded as facts on the saved vehicle by the same call.
   registration?: RegistrationBody;
+  // The car's code de fabrication (OPR): decoded server-side, recorded as organisation_number + build_date.
+  buildCode?: string;
 }
 
 export const saveBody = (v: Vehicle): SaveBody => ({ make: v.make, model: v.model ?? v.modelEn, carId: v.carId, plate: v.plate, vin: v.vin });

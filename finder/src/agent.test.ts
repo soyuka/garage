@@ -1,4 +1,4 @@
-import { hubUrl, initialTurn, parseFrame, sessionTopic, turnBody, turnReducer } from './agent';
+import { hubUrl, initialTurn, parseFrame, sessionTopic, turnBody, turnReducer, turnVehicle } from './agent';
 import narrowed from '../test-fixtures/narrowed.json';
 import type { FinderFrame, TurnState } from './types';
 
@@ -58,6 +58,20 @@ describe('turnReducer', () => {
     expect(parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { clusterId: 3 } }))).toMatchObject({ selection: null });
     const plain = turnReducer(running(), frame({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: null })).parts[0]!;
     expect(plain.kind === 'catalog' && plain.selection).toBeNull();
+  });
+
+  it('carries what the agent set aside with the variant it retained', () => {
+    const f = parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { clusterId: 'c1', basis: 'b', setAside: 'OPR ≥ 10311' } }));
+    expect(f).toMatchObject({ selection: { clusterId: 'c1', basis: 'b', setAside: 'OPR ≥ 10311' } });
+  });
+
+  it('pins the decoded build code on the turn, a malformed one is dropped', () => {
+    const f = parseFrame(JSON.stringify({ type: 'setBuildCode', organisationNumber: '09824', date: '2003-10-02', codeKind: 'dam' }));
+    expect(f).toEqual({ type: 'setBuildCode', organisationNumber: '09824', date: '2003-10-02' });
+    expect(turnReducer(running(), frame(f!)).buildCode).toEqual({ organisationNumber: '09824', date: '2003-10-02' });
+    expect(parseFrame(JSON.stringify({ type: 'setBuildCode', organisationNumber: '9', date: '2003-10-02' }))).toBeNull();
+    expect(parseFrame(JSON.stringify({ type: 'setBuildCode', organisationNumber: '09824', date: 'oct' }))).toBeNull();
+    expect(initialTurn.buildCode).toBeNull();
   });
 
   it('keeps several parts in arrival order, web finds included', () => {
@@ -193,6 +207,12 @@ describe('transport helpers', () => {
       pendingContext: 'essieu ?',
     });
     expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: { carId: 1, carType: 'CV', make: null, model: null, engine: null } })).not.toHaveProperty('pendingContext');
+  });
+
+  it('sends the build code known for the car with its vehicle', () => {
+    const v = { plate: 'XD-303-ZD', make: 'PEUGEOT', model: '307', modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId: 16182, carType: 'PC' } as const;
+    expect(turnVehicle(v, { organisationNumber: '09824', date: '2003-10-02' })).toMatchObject({ carId: 16182, buildCode: { organisationNumber: '09824' } });
+    expect(turnVehicle(v, null)).not.toHaveProperty('buildCode');
   });
 
   it('carries the on-screen result, the plate and a build label on a follow-up', () => {

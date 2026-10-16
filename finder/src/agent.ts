@@ -2,7 +2,7 @@ import { mapNarrowing } from './api';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
 import { BASIS_MAX } from './route';
-import type { AgentPart, AgentSelection, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
+import type { AgentPart, AgentSelection, BuildCode, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -13,7 +13,7 @@ const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 const NOTHING_FOUND = 'Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.';
 const CANCELLED = 'Demande interrompue.';
 
-export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, stale: false, held: null };
+export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, buildCode: null, stale: false, held: null };
 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
@@ -21,7 +21,9 @@ function options(raw: unknown): QuestionOption[] | null {
 }
 
 function selection(raw: unknown): AgentSelection | null {
-  return isObject(raw) && filled(raw.clusterId) ? { clusterId: raw.clusterId, basis: text(raw.basis) ? raw.basis.trim().slice(0, BASIS_MAX) : '' } : null;
+  if (!isObject(raw) || !filled(raw.clusterId)) return null;
+  const setAside = filled(raw.setAside) ? raw.setAside.trim().slice(0, BASIS_MAX) : null;
+  return { clusterId: raw.clusterId, basis: text(raw.basis) ? raw.basis.trim().slice(0, BASIS_MAX) : '', ...(setAside ? { setAside } : {}) };
 }
 
 export function parseFrame(data: string): FinderFrame | null {
@@ -61,6 +63,10 @@ export function parseFrame(data: string): FinderFrame | null {
       const opts = options(j.options);
       return filled(j.question) && opts !== null && text(j.context) ? { type: 'askQuestion', question: j.question, options: opts, context: j.context } : null;
     }
+    case 'setBuildCode':
+      return filled(j.organisationNumber) && /^\d{4,5}$/.test(j.organisationNumber) && filled(j.date) && /^\d{4}-\d{2}-\d{2}$/.test(j.date)
+        ? { type: 'setBuildCode', organisationNumber: j.organisationNumber, date: j.date }
+        : null;
     case 'setVehicle': {
       const nullable = (v: unknown): string | null => (filled(v) ? v.trim() : null);
       if (typeof j.carId !== 'number' || !Number.isInteger(j.carId) || j.carId <= 0 || (j.carType !== 'PC' && j.carType !== 'CV')) return null;
@@ -144,6 +150,8 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
       };
     case 'askQuestion':
       return { ...state, ask: { question: frame.question, options: frame.options, context: frame.context } };
+    case 'setBuildCode':
+      return { ...state, buildCode: { organisationNumber: frame.organisationNumber, date: frame.date } };
     case 'setVehicle': {
       const { type: _type, ...vehicle } = frame;
       const same = state.held !== null && state.held.carId === vehicle.carId && state.held.carType === vehicle.carType;
@@ -181,8 +189,10 @@ export function hubUrl(hub: string, origin: string, topic: string): string {
   return url.toString();
 }
 
-export const turnVehicle = (v: Vehicle | null): TurnVehicle | null =>
-  v?.carId ? { carId: v.carId, carType: v.carType, make: v.make, model: v.model, engine: v.engineCode, plate: v.plate } : null;
+export const turnVehicle = (v: Vehicle | null, buildCode: BuildCode | null = null): TurnVehicle | null =>
+  v?.carId
+    ? { carId: v.carId, carType: v.carType, make: v.make, model: v.model, engine: v.engineCode, plate: v.plate, ...(buildCode ? { buildCode: { organisationNumber: buildCode.organisationNumber } } : {}) }
+    : null;
 
 export interface TurnBody {
   instruction: string;

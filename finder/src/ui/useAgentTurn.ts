@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
 import { isAuthenticated, login } from '../auth';
-import type { BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
+import type { BuildCode, BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
 const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
 const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
@@ -56,7 +56,7 @@ export interface AgentTurn {
 }
 
 // `ref` is the route's vehicle ref ('' on the entry page, where a turn starts without a vehicle).
-export function useAgentTurn(vehicle: Vehicle | null, ref: string): AgentTurn {
+export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: BuildCode | null = null): AgentTurn {
   const [state, dispatch] = useReducer(turnReducer, initialTurn);
   const [needsLogin, setNeedsLogin] = useState<{ text: string; intent: TurnIntent } | null>(null);
   const pending = useMemo(() => readPending(ref), [ref]);
@@ -101,7 +101,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string): AgentTurn {
       const body = turnBody({
         instruction: text,
         sessionId,
-        vehicle: turnVehicle(vehicle),
+        vehicle: turnVehicle(vehicle, buildCode),
         pendingContext: options.pendingContext ?? null,
         intent,
         images: options.images,
@@ -118,7 +118,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string): AgentTurn {
         dispatch({ type: 'fail', message: e instanceof Error ? e.message : SILENT });
       });
     },
-    [vehicle, sessionId],
+    [vehicle, buildCode, sessionId],
   );
 
   const cancel = useCallback(() => {

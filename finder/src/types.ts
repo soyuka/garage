@@ -164,7 +164,14 @@ export type FinderFrame =
   | { type: 'showParts'; categoryId: number; categoryLabel: string; rationale: string; narrowed: unknown; selection?: AgentSelection | null }
   | { type: 'showWebPart'; categoryLabel: string; reference: string; brand: string; sourceUrl: string; sourceTitle: string; rationale: string }
   | { type: 'askQuestion'; question: string; options: QuestionOption[]; context: string }
+  | { type: 'setBuildCode'; organisationNumber: string; date: string }
   | ({ type: 'setVehicle' } & AgentVehicle);
+
+// The car's code de fabrication, decoded server-side (set_build_code): PSA OPR and the day it counts to.
+export interface BuildCode {
+  organisationNumber: string;
+  date: string;
+}
 
 export interface AgentVehicle {
   carId: number;
@@ -202,12 +209,14 @@ export interface TurnVehicle {
   model: string | null;
   engine: string | null;
   plate?: string | null;
+  buildCode?: { organisationNumber: string };
 }
 
-// The variant the agent retained (show_parts clusterId), and the basis it gave.
+// The variant the agent retained (show_parts clusterId), the basis it gave and why the others do not fit.
 export interface AgentSelection {
   clusterId: string;
   basis: string;
+  setAside?: string;
 }
 
 export interface CatalogPart {
@@ -249,6 +258,7 @@ export interface TurnState {
   ask: AgentAsk | null;
   notice: string | null;
   vehicle: AgentVehicle | null;
+  buildCode: BuildCode | null;
   // A follow-up keeps the previous turn's parts on screen until it shows its own.
   stale: boolean;
   // A follow-up sent from a deterministic result keeps that result on screen until the turn shows a
