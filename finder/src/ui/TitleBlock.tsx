@@ -39,7 +39,7 @@ export function TitleBlock({ vehicle, category, narrowing, cluster, confirmed, f
   const headline = oe ?? (cluster ? cluster.representative : null);
   const buyRef = oe ?? top ?? cluster?.representative ?? null;
   const fallback = !cluster ? narrowing.fallbackBrands.slice(0, 6) : [];
-  const copyValue = oe ? copyText(oe, top) : cluster ? copyText(null, { ...cluster.representative, tier: 1 }) : '';
+  const copyValue = copyText(oe, cluster?.representative ?? null);
 
   return (
     <div className="tb" aria-label="Cartouche du résultat">

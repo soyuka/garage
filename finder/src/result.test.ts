@@ -34,9 +34,13 @@ describe('rankEquivalents', () => {
 });
 
 describe('copyText', () => {
-  it('copies the OE reference and the top equivalent', () => {
-    expect(copyText({ brand: 'MAZDA', number: 'LF10-14-302' }, { artId: 1, brand: 'MANN-FILTER', number: 'W 712/73', tier: 1 })).toBe('MAZDA LF10-14-302 · MANN-FILTER W 712/73');
-    expect(copyText(null, { artId: 1, brand: 'MANN-FILTER', number: 'W 712/73', tier: 1 })).toBe('MANN-FILTER W 712/73');
+  it('copies the OE number alone: no make, no equivalent, no part name', () => {
+    expect(copyText({ brand: 'MAZDA', number: 'LF10-14-302' }, { brand: 'MANN-FILTER', number: 'W 712/73' })).toBe('LF10-14-302');
+  });
+
+  it('copies the reference number alone when the carmaker number is unknown', () => {
+    expect(copyText(null, { brand: 'MANN-FILTER', number: 'W 712/73' })).toBe('W 712/73');
+    expect(copyText(null, null)).toBe('');
   });
 });
 

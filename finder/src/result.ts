@@ -24,10 +24,8 @@ export function rankEquivalents(cluster: Cluster, limit = 6): { shown: Variant[]
   return { shown, otherBrands: firstPerBrand.length - shown.length };
 }
 
-const refText = (r: Reference): string => `${r.brand} ${r.number}`;
-
-export function copyText(oe: Reference | null, top: Variant | null): string {
-  return [oe, top].filter((r): r is Reference => r !== null).map(refText).join(' · ');
+export function copyText(oe: Reference | null, fallback: Reference | null): string {
+  return (oe ?? fallback)?.number ?? '';
 }
 
 export function cotesLine(dims: readonly Dimension[]): string | null {
