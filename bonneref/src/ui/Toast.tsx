@@ -6,6 +6,9 @@ export interface ToastMessage {
   action?: { label: string; onClick: () => void };
 }
 
+// An in-app hash link stays in the tab; anything else opens beside it.
+export const linkTarget = (href: string): { target?: '_blank'; rel?: 'noopener' } => (href.startsWith('#') ? {} : { target: '_blank', rel: 'noopener' });
+
 type Show = (message: string | ToastMessage) => void;
 
 const ToastContext = createContext<Show>(() => undefined);
@@ -30,7 +33,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast" role="status" aria-live="polite" data-open={message !== null} data-link={message?.link !== undefined || message?.action !== undefined}>
         {message ? message.text : <span aria-hidden="true">{last.current?.text}</span>}
         {(message ?? last.current)?.link && (
-          <a href={(message ?? last.current)!.link!.href} target="_blank" rel="noopener" tabIndex={message ? undefined : -1}>
+          <a href={(message ?? last.current)!.link!.href} {...linkTarget((message ?? last.current)!.link!.href)} tabIndex={message ? undefined : -1}>
             {(message ?? last.current)!.link!.label}
           </a>
         )}

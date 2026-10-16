@@ -1,4 +1,4 @@
-import { addLabel, atelierHref, maintenanceType, planBody, planPart, PlanError, saveBody, saveVehicle } from './garage';
+import { addLabel, garageHref, maintenanceType, planBody, planPart, PlanError, saveBody, saveVehicle } from './garage';
 import type { Category, Vehicle } from './types';
 
 const vehicle: Vehicle = {
@@ -51,9 +51,10 @@ describe('planBody', () => {
   });
 });
 
-describe('atelierHref', () => {
-  it('deep-links the Atelier hash route by the vehicle IRI segment', () => {
-    expect(atelierHref('/garage/vehicles/01KW9RF0ZAFP', 'https://localhost')).toBe('https://localhost/#/v/01KW9RF0ZAFP');
+describe('garageHref', () => {
+  it('opens the vehicle sheet of the garage page, in bonneref, by the IRI ULID', () => {
+    expect(garageHref('/garage/vehicles/01M4X5D9R4FV02S6Q9XW30PBZK')).toBe('#/garage/01M4X5D9R4FV02S6Q9XW30PBZK');
+    expect(garageHref('/garage/vehicles/oops')).toBe('#/garage');
   });
 });
 

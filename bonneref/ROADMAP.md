@@ -8,6 +8,17 @@ Kept separate from the repo-root `FUTURE.md` on purpose. Design system: `bonnere
 
 Shipped, end to end:
 
+- **Garage page (2026-10-16)**: bonneref ships alone (bonneref.fr), so the toasts no longer link to
+  the Atelier. `#/garage` lists every garage vehicle as a title block (plate, make/model, engine,
+  kType; machines without plate or kType included); `#/garage/<ulid>` is the vehicle sheet: identity
+  block, facts table (French label, value through `format.ts`, source, per-row delete), open planned
+  tasks with their part refs + brands, « Chercher une pièce » (same path as a Mes véhicules pick, absent
+  without plate and kType) and « Supprimer le véhicule ». Read-only otherwise; health / nextDue and done
+  tasks are never shown (private product). Deletes confirm inline, no browser dialog. Logged out or 401:
+  a « Se connecter » prompt that returns to the same hash. Header link « Garage ». Toasts after
+  « Enregistrer le véhicule » / « Ajouter au … » say « Voir le véhicule » → `#/garage/<ulid>`, same
+  tab (`Toast.tsx` `linkTarget`). Code: `src/garage-vehicles.ts`, `src/garage-labels.ts` (labels copied
+  from `dashboard/src/labels.ts`), `src/ui/GaragePage.tsx`. Captures `.impeccable/review/garage-*`.
 - **Single input** (text / photo / video) over a blank drawing sheet. Local rules first
   (`bonneref/src/route-input.ts`): plate (SIV / FNI) → `GET /vehicles/{plate}`; VIN → `GET /vins/{vin}`
   (sunrise/vin, model year only for North-American VINs); reference shape → agent `intent=reference`;

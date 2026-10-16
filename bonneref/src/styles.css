@@ -2159,6 +2159,430 @@ button {
   padding: 9px 4px;
 }
 
+/* ── garage (#/garage, #/garage/<id>) ──────────────────────────────────── */
+
+.top-link {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  margin-left: auto;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--mute);
+  font: 500 12.5px var(--sans);
+  text-decoration: none;
+}
+
+.top-link:hover,
+.top-link[aria-current='page'] {
+  color: var(--ink);
+  border-color: var(--hair);
+}
+
+.top-link + .journal-btn {
+  margin-left: 0;
+}
+
+.garage {
+  width: min(880px, 100%);
+  margin: 0 auto;
+  padding: clamp(24px, 5vh, 48px) var(--gutter) 64px;
+}
+
+.garage-crumb {
+  margin-bottom: 10px;
+  font-size: 12.5px;
+  color: var(--mute);
+}
+
+.garage-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.garage-head h1 {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+.garage-head > .sk--big {
+  flex: 0 0 40%;
+}
+
+.garage-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.garage-head + .field-error {
+  margin: -8px 0 16px;
+}
+
+/* Title block, as on the result sheet: 1.5px graphite frame, 1px graphite cell rules, no radius. */
+.gtb {
+  display: grid;
+  background: var(--bg);
+  border: 1.5px solid var(--ink);
+  color: var(--ink);
+}
+
+.gc-v {
+  min-width: 0;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.gtb .plate {
+  font-size: 13px;
+}
+
+.gtb-title {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.garage-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.gtb--card {
+  grid-template-columns: 10em minmax(0, 1fr) minmax(0, 1fr) 10em;
+  grid-template-areas:
+    'plate name name year'
+    'engine engine engine ktype';
+  text-decoration: none;
+}
+
+.gc-plate { grid-area: plate; }
+.gc-name { grid-area: name; }
+.gc-year { grid-area: year; }
+.gc-engine { grid-area: engine; }
+.gc-ktype { grid-area: ktype; }
+
+a.gtb--card:hover .c {
+  background: var(--tint);
+}
+
+.gtb--sheet {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-areas:
+    'plate vin vin year'
+    'name name engine engine'
+    'code ktype usage added';
+}
+
+.gs-plate { grid-area: plate; }
+.gs-vin { grid-area: vin; }
+.gs-year { grid-area: year; }
+.gs-name { grid-area: name; }
+.gs-engine { grid-area: engine; }
+.gs-code { grid-area: code; }
+.gs-ktype { grid-area: ktype; }
+.gs-usage { grid-area: usage; }
+.gs-added { grid-area: added; }
+
+.gs-kind {
+  display: block;
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.garage-sec {
+  margin-top: 36px;
+}
+
+.garage-sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.garage-sec-head h2 {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mute);
+}
+
+.garage-sec-head .m {
+  font-size: 12px;
+}
+
+.garage-count {
+  font-size: 13px;
+  color: var(--mute);
+}
+
+.garage-none,
+.garage-empty {
+  padding: 12px 6px;
+  border-top: 1px solid var(--ink);
+  font-size: 13.5px;
+  color: var(--mute);
+  text-wrap: pretty;
+}
+
+.garage-empty p:first-child {
+  color: var(--ink);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.gfacts,
+.gplanned,
+.gp-parts {
+  list-style: none;
+  padding: 0;
+}
+
+.gfacts,
+.gplanned {
+  border-top: 1px solid var(--ink);
+}
+
+.gf-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 0.8fr) 28px;
+  align-items: center;
+  gap: 12px;
+  min-height: 38px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--hair);
+  font-size: 13.5px;
+}
+
+.gf-row:not(.gf-row--head):hover {
+  background: var(--tint);
+}
+
+.gf-row:has(.confirm) {
+  background: var(--tint);
+}
+
+.gf-row[data-busy] {
+  opacity: 0.55;
+}
+
+.gf-row--head {
+  min-height: 0;
+  padding-block: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--mute);
+}
+
+.gf-value {
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.gf-source {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.gf-del {
+  justify-self: end;
+}
+
+.gf-row {
+  position: relative;
+}
+
+/* The question lays over the row's right end, so the row keeps the table's columns. */
+.gf-del .confirm {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  padding: 0 6px 0 16px;
+  background: var(--tint);
+}
+
+.garage-x {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+}
+
+.garage-x:hover {
+  color: var(--ink);
+  background: var(--bg);
+  box-shadow: inset 0 0 0 1px var(--hair);
+}
+
+.confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 8px;
+}
+
+.confirm-q {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.btn--danger {
+  color: var(--error-ink);
+  border-color: var(--error-line);
+}
+
+.btn--danger:hover {
+  background: var(--error-tint);
+  border-color: var(--error);
+}
+
+.gplanned > li {
+  display: grid;
+  grid-template-columns: minmax(0, 14em) minmax(0, 1fr);
+  gap: 6px 16px;
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--hair);
+  font-size: 13.5px;
+}
+
+.gp-task {
+  font-weight: 500;
+}
+
+.gp-parts {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gp-parts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.gp-parts i {
+  font-style: normal;
+  font-weight: 500;
+}
+
+.gp-parts .m {
+  font-size: 13px;
+}
+
+.gp-label {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.garage-login {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 52ch;
+  padding: 18px 20px;
+  background: var(--tint);
+  border-radius: 8px;
+  text-wrap: pretty;
+}
+
+@media (max-width: 759px) {
+  .top-link {
+    order: 2;
+    padding: 0 6px;
+  }
+  .garage-head h1 {
+    font-size: 22px;
+  }
+  .gtb--card {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'plate year'
+      'name name'
+      'engine engine'
+      'ktype ktype';
+  }
+  .gc-name,
+  .gc-engine {
+    border-right: 0;
+  }
+  .gtb .gc-engine {
+    border-bottom: 1px solid var(--ink);
+  }
+  .gtb--sheet {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      'plate year'
+      'vin vin'
+      'name name'
+      'engine engine'
+      'code ktype'
+      'usage added';
+  }
+  .gs-vin,
+  .gs-name,
+  .gs-ktype {
+    border-right: 0;
+  }
+  .gtb .gs-code,
+  .gtb .gs-ktype {
+    border-bottom: 1px solid var(--ink);
+  }
+  .gf-row--head {
+    display: none;
+  }
+  .gf-row {
+    grid-template-columns: minmax(0, 1fr) minmax(28px, auto);
+    grid-template-areas:
+      'label del'
+      'value del'
+      'source del';
+    gap: 2px 12px;
+    padding-block: 8px;
+  }
+  .gf-label { grid-area: label; }
+  .gf-value { grid-area: value; }
+  .gf-source { grid-area: source; }
+  .gf-del { grid-area: del; }
+  .gf-del .confirm {
+    position: static;
+    padding: 0;
+    background: none;
+  }
+  .gf-del:has(.confirm) {
+    grid-area: auto;
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin-top: 6px;
+  }
+  .gplanned > li {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .entry-examples {
   display: flex;
   flex-wrap: wrap;

@@ -1,4 +1,5 @@
 import { authFetch } from './auth';
+import { parseRoute, routeToHash } from './route';
 import type { Category, Family, Reference, Vehicle } from './types';
 
 const title = (s: string): string => s.charAt(0) + s.slice(1).toLowerCase();
@@ -72,7 +73,8 @@ export function planBody(v: Vehicle, category: Category, family: Family, oe: Ref
   };
 }
 
-export const atelierHref = (vehicleIri: string, origin: string): string => `${origin}/#/v/${vehicleIri.split('/').pop() ?? ''}`;
+// The garage page's sheet of a saved vehicle; an IRI without a ULID falls back to the list.
+export const garageHref = (vehicleIri: string): string => routeToHash(parseRoute(`#/garage/${vehicleIri.split('/').pop() ?? ''}`));
 
 export type PlanErrorKind = 'auth' | 'ambiguous' | 'invalid' | 'network' | 'failed';
 

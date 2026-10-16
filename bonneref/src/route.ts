@@ -23,6 +23,8 @@ export const SELECTION_ID = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 export type Route =
   | { view: 'entry' }
   | { view: 'vehicle'; ref: string }
+  | { view: 'garage' }
+  | { view: 'garageVehicle'; id: string }
   | { view: 'result'; ref: string; categoryId: number; productGroupId: number | null; cluster: ClusterChoice | null };
 
 export type VehicleRef = { kind: 'plate'; plate: string } | { kind: 'car'; carId: number; carType: CarType };
@@ -40,6 +42,7 @@ export function parseRef(ref: string): VehicleRef | null {
 
 export function parseRoute(hash: string): Route {
   const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  if (parts[0] === 'garage') return parts[1] !== undefined && SELECTION_ID.test(parts[1]) ? { view: 'garageVehicle', id: parts[1] } : { view: 'garage' };
   if ((parts[0] !== 'p' && parts[0] !== 'k') || parts[1] === undefined) return { view: 'entry' };
   const ref = parts[0] === 'k' ? (CAR.test(`k${parts[1]}`) ? `k${parts[1]}` : null) : (normalisePlate(parts[1]) ?? normaliseFni(parts[1]));
   if (ref === null) return { view: 'entry' };
@@ -78,6 +81,10 @@ export function routeToHash(route: Route): string {
       return '#/';
     case 'vehicle':
       return refHash(route.ref);
+    case 'garage':
+      return '#/garage';
+    case 'garageVehicle':
+      return `#/garage/${route.id}`;
     case 'result':
       return `${refHash(route.ref)}/c/${route.categoryId}${route.productGroupId ? `/g/${route.productGroupId}` : ''}${route.cluster ? clusterHash(route.cluster) : ''}`;
   }

@@ -26,6 +26,7 @@ import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Ag
 import { Dock, type QuickAction } from './ui/Dock';
 import { VinResult } from './ui/Entry';
 import { SaveVehicle } from './ui/Garage';
+import { GaragePage } from './ui/GaragePage';
 import { History } from './ui/History';
 import { Home, Showcase } from './ui/Home';
 import { useAsync, useMedia, useReducedMotion, useRoute, useWideEnough, type Async, type Navigate } from './ui/hooks';
@@ -73,7 +74,7 @@ export interface FollowUp {
   pendingContext: string | null;
 }
 
-const routeRef = (route: Route): string => (route.view === 'entry' ? '' : route.ref);
+const routeRef = (route: Route): string => ('ref' in route ? route.ref : '');
 
 function Finder({ api }: { api: FinderApi }) {
   const [route, navigate] = useRoute();
@@ -340,6 +341,9 @@ function Finder({ api }: { api: FinderApi }) {
           {v.carId !== null && <SaveVehicle key={ref} vehicle={v} buildCode={buildCode} api={api} />}
         </div>
       )}
+      <a className="top-link" href="#/garage" aria-current={route.view === 'garage' || route.view === 'garageVehicle' ? 'page' : undefined}>
+        Garage
+      </a>
       <button ref={journalButton} type="button" className="journal-btn" aria-expanded={journalOpen} onClick={() => setJournalOpen((o) => !o)}>
         Journal
       </button>
@@ -389,6 +393,8 @@ function Finder({ api }: { api: FinderApi }) {
     </div>
   );
 
+  if (route.view === 'garage' || route.view === 'garageVehicle') return shell(<GaragePage route={route} navigate={navigate} onSearch={pickMine} />, 'entry');
+
   if (entry) {
     const error =
       vehicle.status === 'error'
@@ -433,7 +439,7 @@ function Finder({ api }: { api: FinderApi }) {
     ) : (
       <Workspace
         api={api}
-        route={route as Exclude<Route, { view: 'entry' }>}
+        route={route as WorkRoute}
         vehicle={vehicle}
         categories={categories}
         narrowing={narrowing}
@@ -486,9 +492,11 @@ function useFollowUp(followUp: MutableRefObject<FollowUp | null>, value: FollowU
   );
 }
 
+type WorkRoute = Extract<Route, { view: 'vehicle' | 'result' }>;
+
 interface WorkspaceProps {
   api: FinderApi;
-  route: Exclude<Route, { view: 'entry' }>;
+  route: WorkRoute;
   vehicle: Async<Vehicle> & { retry: () => void };
   categories: Async<Category[]> & { retry: () => void };
   narrowing: Async<Narrowing> & { retry: () => void };

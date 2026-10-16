@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
-import { atelierHref, PlanError, saveBody, type GarageCandidate } from '../garage';
+import { garageHref, PlanError, saveBody, type GarageCandidate } from '../garage';
 import type { BuildCode, Vehicle } from '../types';
 import { useToast } from './Toast';
 
@@ -38,7 +38,7 @@ const SAVE_FAILURE: Record<string, string> = {
   invalid: 'Refusé par le garage : marque ou modèle manquant.',
   network: 'Garage injoignable. Vérifiez la connexion et réessayez.',
   failed: 'Enregistrement impossible. Réessayez.',
-  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Choisissez-le dans l’Atelier.',
+  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Réessayez.',
 };
 
 export function SaveVehicle({ vehicle, buildCode = null, api }: { vehicle: Vehicle; buildCode?: BuildCode | null; api: FinderApi }) {
@@ -50,7 +50,7 @@ export function SaveVehicle({ vehicle, buildCode = null, api }: { vehicle: Vehic
     setState({ kind: 'saving' });
     try {
       const saved = await api.saveVehicle({ ...saveBody(vehicle), ...(buildCode ? { buildCode: buildCode.organisationNumber } : {}), ...extra });
-      toast({ text: saved.created ? 'Véhicule enregistré dans le garage.' : 'Déjà dans le garage.', link: { href: atelierHref(saved.vehicle, window.location.origin), label: 'Voir dans l’Atelier' } });
+      toast({ text: saved.created ? 'Véhicule enregistré dans le garage.' : 'Déjà dans le garage.', link: { href: garageHref(saved.vehicle), label: 'Voir le véhicule' } });
       setState({ kind: 'saved' });
     } catch (e) {
       if (e instanceof PlanError && e.kind === 'auth') return setState({ kind: 'login' });

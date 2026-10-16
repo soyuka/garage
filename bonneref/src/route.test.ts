@@ -61,6 +61,15 @@ describe('route', () => {
     expect(JSON.stringify(parseRoute(`#/p/XD-303-ZD/c/100198/g/51/r/c1/${SEL}/OPR%20%E2%89%A5%2010311`))).not.toContain('OPR');
   });
 
+  it('opens the garage list and one garage vehicle by its ULID', () => {
+    const id = '01M4X5D9R4FV02S6Q9XW30PBZK';
+    expect(parseRoute('#/garage')).toEqual({ view: 'garage' });
+    expect(parseRoute(`#/garage/${id}`)).toEqual({ view: 'garageVehicle', id });
+    expect(routeToHash({ view: 'garage' })).toBe('#/garage');
+    expect(routeToHash({ view: 'garageVehicle', id })).toBe(`#/garage/${id}`);
+    expect(parseRoute('#/garage/not-a-ulid')).toEqual({ view: 'garage' });
+  });
+
   it('tells a plate from a catalogue car', () => {
     expect(parseRef('XB-301-ZB')).toEqual({ kind: 'plate', plate: 'XB-301-ZB' });
     expect(parseRef('k19107-CV')).toEqual({ kind: 'car', carId: 19107, carType: 'CV' });

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
-import { addLabel, atelierHref, planBody, PlanError, type GarageCandidate } from '../garage';
+import { addLabel, garageHref, planBody, PlanError, type GarageCandidate } from '../garage';
 import { actionRefs } from '../result';
 import type { Category, Cluster, Family, Reference, Vehicle, WebPart } from '../types';
 import { BuyMenu } from './BuyMenu';
@@ -45,7 +45,7 @@ export function WebActions({ part }: { part: WebPart }) {
 type AddState = { kind: 'idle' } | { kind: 'saving' } | { kind: 'login' } | { kind: 'pick'; candidates: GarageCandidate[] };
 
 const PLAN_FAILURE: Record<string, string> = {
-  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Choisissez-le dans l’Atelier, puis réessayez.',
+  ambiguous: 'Plusieurs véhicules correspondent dans le garage. Réessayez.',
   invalid: 'Refusé par le garage : marque ou modèle manquant.',
   network: 'Garage injoignable. Vérifiez la connexion et réessayez.',
   failed: 'Ajout au garage impossible. Réessayez.',
@@ -61,7 +61,7 @@ function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehi
     setState({ kind: 'saving' });
     try {
       const { vehicle: iri } = await api.planPart({ ...planBody(vehicle, category, family, oe, equivalent), ...extra });
-      toast({ text: `${category.label} ajouté au plan d’entretien.`, link: { href: atelierHref(iri, window.location.origin), label: 'Voir dans l’Atelier' } });
+      toast({ text: `${category.label} ajouté au plan d’entretien.`, link: { href: garageHref(iri), label: 'Voir le véhicule' } });
       setState({ kind: 'idle' });
     } catch (e) {
       if (e instanceof PlanError && e.kind === 'auth') return setState({ kind: 'login' });

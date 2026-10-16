@@ -1,0 +1,127 @@
+// French labels for the garage's snake_case vocabulary (fact keys, service types, fact sources, units).
+// Seeded from dashboard/src/labels.ts (copied, not imported: bonneref ships alone). An unmapped key
+// reads humanized, never as a raw snake_case key.
+
+const FACT: Record<string, string> = {
+  oil_type: 'Type d’huile',
+  oil_capacity: 'Capacité d’huile',
+  coolant: 'Liquide de refroidissement',
+  coolant_type: 'Liquide de refroidissement',
+  coolant_capacity: 'Capacité liquide de refroidissement',
+  brake_fluid: 'Liquide de frein',
+  brake_fluid_type: 'Liquide de frein',
+  brake_fluid_capacity: 'Capacité liquide de frein',
+  gearbox_oil_type: 'Huile de boîte',
+  gearbox_oil_capacity: 'Capacité huile de boîte',
+  power_steering_oil_type: 'Huile de direction assistée',
+  power_steering_oil_capacity: 'Capacité huile de direction assistée',
+  ac_refrigerant_type: 'Gaz de climatisation',
+  ac_refrigerant_capacity: 'Charge de climatisation',
+  ac_oil_type: 'Huile de climatisation',
+  ac_oil_capacity: 'Capacité huile de climatisation',
+  fuel_tank_capacity: 'Capacité du réservoir',
+  spark_plug_ref: 'Référence bougie',
+  oil_filter_ref: 'Référence filtre à huile',
+  air_filter_ref: 'Référence filtre à air',
+  fuel_filter_ref: 'Référence filtre à carburant',
+  cabin_filter_ref: 'Référence filtre habitacle',
+  timing_belt_ref: 'Référence courroie de distribution',
+  battery_ref: 'Référence batterie',
+  brakes_ref: 'Référence freins',
+  tires_ref: 'Référence pneus',
+  gearbox_oil_ref: 'Référence huile de boîte',
+  vin: 'Numéro VIN',
+  organisation_number: 'Numéro d’organisation (OPR)',
+  build_organisation_number: 'Numéro d’organisation (OPR)',
+  build_date: 'Date de fabrication',
+  build_plant: 'Usine de fabrication',
+  first_registration_date: 'Première immatriculation',
+  cnit: 'Code national (CNIT)',
+  type_variant: 'Type, variante, version',
+  type_approval: 'Réception CE',
+  body_type: 'Carrosserie',
+  seats: 'Places assises',
+  displacement: 'Cylindrée',
+  engine_displacement: 'Cylindrée',
+  engine_code: 'Code moteur',
+  gearbox_code: 'Code boîte de vitesses',
+  engine_power: 'Puissance',
+  power_kw: 'Puissance nette',
+  energy: 'Énergie',
+  fuel_type: 'Carburant',
+  fiscal_power: 'Puissance fiscale',
+  co2_emissions: 'Émissions de CO₂',
+  emission_standard: 'Norme antipollution',
+  noise_level: 'Niveau sonore',
+  gross_vehicle_weight: 'PTAC',
+  gross_combination_weight: 'PTRA',
+  kerb_weight: 'Poids à vide',
+  kerb_weight_national: 'Poids à vide national',
+  front_axle_max_load: 'Charge max. essieu avant',
+  rear_axle_max_load: 'Charge max. essieu arrière',
+  tires_front_dimensions: 'Pneus avant',
+  tires_rear_dimensions: 'Pneus arrière',
+  tire_pressure_normal: 'Pression des pneus',
+  tire_pressure_loaded: 'Pression des pneus en charge',
+  tire_pressure_spare: 'Pression roue de secours',
+  tires_original_fitment: 'Pneus d’origine',
+  paint_code: 'Code peinture',
+};
+
+const SERVICE: Record<string, string> = {
+  oil_change: 'Vidange',
+  inspection: 'Contrôle technique',
+  spark_plug: 'Bougies',
+  spark_plugs: 'Bougies',
+  brake_fluid: 'Liquide de frein',
+  brake_pads: 'Plaquettes de frein',
+  brake_discs: 'Disques de frein',
+  air_filter: 'Filtre à air',
+  cabin_filter: 'Filtre d’habitacle',
+  fuel_filter: 'Filtre à carburant',
+  oil_filter: 'Filtre à huile',
+  timing_belt: 'Courroie de distribution',
+  coolant: 'Liquide de refroidissement',
+  chain: 'Chaîne',
+  tyres: 'Pneus',
+  tires: 'Pneus',
+  engine_mount: 'Support moteur',
+  water_pump: 'Pompe à eau',
+  thermostat: 'Thermostat',
+  ignition_coil: 'Bobine d’allumage',
+  injector: 'Injecteur',
+  brakes: 'Freins',
+  gearbox_oil: 'Huile de boîte',
+  clutch: 'Embrayage',
+  battery: 'Batterie',
+};
+
+const SOURCE: Record<string, string> = {
+  partsapi: 'TecDoc',
+  siv: 'SIV',
+  user: 'Vous',
+  web: 'Web',
+  llm: 'Connaissance générale',
+  motul: 'Motul',
+  log: 'Entretien',
+  'carte grise': 'Carte grise',
+  'code de fabrication': 'Code de fabrication',
+};
+
+const UNIT: Record<string, string> = {
+  liter: 'L',
+  liters: 'L',
+  litre: 'L',
+  l: 'L',
+  gramme: 'g',
+  cm3: 'cm³',
+};
+
+const capital = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+const humanize = (key: string): string => capital(key.replace(/_/g, ' '));
+
+export const factLabel = (key: string): string => FACT[key] ?? humanize(key);
+export const serviceLabel = (type: string): string => SERVICE[type] ?? humanize(type);
+export const sourceLabel = (source: string): string => SOURCE[source] ?? capital(source);
+export const unitLabel = (unit: string): string => UNIT[unit.toLowerCase()] ?? unit;
+export const sentence = capital;

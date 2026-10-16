@@ -1,4 +1,4 @@
-import { formatCount, formatMeasure, formatPlateInput, isPlate, isVinShape, normalisePlate, normaliseVin } from './format';
+import { formatCount, formatDate, formatMeasure, formatPlateInput, isPlate, isVinShape, normalisePlate, normaliseVin } from './format';
 
 const NNBSP = ' ';
 
@@ -48,5 +48,20 @@ describe('numbers', () => {
     expect(formatMeasure('93', 'mm')).toBe(`93${NNBSP}mm`);
     expect(formatMeasure('1.5', 'bar')).toBe(`1,5${NNBSP}bar`);
     expect(formatMeasure('Filtre vissé', null)).toBe('Filtre vissé');
+  });
+});
+
+describe('formatDate', () => {
+  it('prints a timestamp as a French calendar date, in Paris time', () => {
+    expect(formatDate('2026-10-14T12:15:19+00:00')).toBe('14 octobre 2026');
+    expect(formatDate('2026-06-20T23:04:26+00:00')).toBe('21 juin 2026');
+  });
+
+  it('prints a bare date as written, whatever the time zone', () => {
+    expect(formatDate('2004-09-15')).toBe('15 septembre 2004');
+  });
+
+  it('leaves what is not a date alone', () => {
+    expect(formatDate('bientôt')).toBe('bientôt');
   });
 });

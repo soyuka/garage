@@ -54,3 +54,15 @@ export function formatMeasure(value: string, unit: string | null): string {
   const v = formatValue(value);
   return unit ? `${v}${NNBSP}${unit}` : v;
 }
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+const longDate = (timeZone: string) => new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', timeZone });
+const PARIS = longDate('Europe/Paris');
+const CALENDAR = longDate('UTC');
+
+// A bare YYYY-MM-DD is a calendar day as written (UTC); a timestamp is read in Paris time.
+export function formatDate(value: string): string {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return (DAY.test(value) ? CALENDAR : PARIS).format(d);
+}

@@ -39,7 +39,7 @@ export function historyEntries(rows: readonly JournalRow[]): HistoryEntry[] {
   for (const row of [...rows].sort((a, b) => Date.parse(b.startedAt) - Date.parse(a.startedAt))) {
     if (row.route === null) continue;
     const route = parseRoute(`#/${row.route}`);
-    if (route.view === 'entry') continue;
+    if (route.view !== 'vehicle' && route.view !== 'result') continue;
     const hash = routeToHash(route);
     const withCluster = route.view === 'result' && route.cluster !== null;
     const key = route.view === 'result' ? routeToHash({ ...route, cluster: null }) : hash;
