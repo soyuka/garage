@@ -25,6 +25,18 @@ Shipped, end to end:
   Meshes read the product group first; an inner axial joint gets the catalogue photo (no inner
   tie rod mesh ships), and so does PT 2066 « Rotule de direction » (2 unchecked articles: an
   unconfirmed mesh misleads). Copy icons (2026-10-16) sit beside each reference and copy that reference alone (the OE number without brand; an equivalence without its brand); no "Copier la réf." button.
+- **Result clarity pass (2026-10-16, user review of the agent-retained 307 result)**: the « Affinage »
+  trace is gone from the result (counts stay in the journal), the `?` stands alone, Véhicule/kType
+  cells dropped (the chip says it), Source tag moved into Désignation, Cotes full width, title block
+  600px from 1280px. The agent's verdict marks the rows (« Votre véhicule » + basis; the others « Ne
+  correspond pas : <setAside> », muted, still selectable) and closes the cote question. Acheter /
+  Ajouter / Copier le lien moved under the composer and act on the shown variant. The decoded build
+  code rides with the car: `set_build_code` → `setBuildCode` frame → chip « OPR 09824 · oct. 2003 »,
+  `sessionStorage` per car, sent back on every turn (the agent selects without asking), and written
+  as garage facts `organisation_number` + `build_date` when the car is a garage row. Fold measured:
+  1440×900 0 px overflow (unsettled, retained, single part); 390×844 designation + variant table + OE
+  above the dock. Captures `.impeccable/review/clarity-*.png`. See DESIGN.md (Title Block, Variant
+  table, Vehicle chip, Result actions).
 - **Narrowing** (`api/src/Catalog/Narrowing/`): BrandTier top 8 reps → getArticleCriteria → physical
   fingerprint (canonical thread, synonym map, deny list of application-level keys, tolerance
   max(2 mm, 2.5 %)) → cluster → 1 getArticleCrosses per cluster → merge clusters sharing a carmaker OE
@@ -129,6 +141,12 @@ without plate (16.6 s, $0.044, 3 partsapi calls) → correctly asks which of 4 v
 break / 2.0 DI) instead of guessing.
 
 ## Open
+
+- A garage car opened in a new tab does not show its `organisation_number` fact on the chip: GET
+  /garage/vehicles carries no facts. Read it back (facts on the list, or one facts call on open) so
+  the code also survives across sessions. A shared link does not carry the chip's OPR either.
+- `set_build_code` and the `setAside` phrase have not run live with the model yet (fake-platform
+  tests only): check the agent calls it instead of decode_build_code and fills setAside.
 
 - Companion parts ("Souvent changé avec") as an agentic round — decided, not started; see repo-root `FUTURE.md` § "Finder: companion parts".
 
