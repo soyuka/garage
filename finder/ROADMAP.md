@@ -4,7 +4,7 @@ Private MVP (never sold). Flat frontend at https://localhost/finder/ on the exis
 `dashboard/` (the Atelier) stays. The pain it targets: finding the correct reference for a part.
 Kept separate from the repo-root `FUTURE.md` on purpose. Design system: `finder/DESIGN.md`.
 
-## State (2026-10-15)
+## State (2026-10-16)
 
 Shipped, end to end:
 
@@ -14,10 +14,24 @@ Shipped, end to end:
   known category → `GET /cars/{carId}/part-categories/{id}/narrowed`; else agent turn. Photo/video →
   `POST /photo-intake` (one vision call: carte_grise | part | other; section C never extracted, file
   never stored); video = 3 frames sampled in the browser.
+- **Product groups (2026-10-16)**: a category node can hold several TecDoc product groups (PT_ID +
+  name, kept from getArticles). `/narrowed`, `narrow_parts` and `show_parts` take `productGroupId`;
+  with several groups and none given they answer `groupRequired` / `choose_group` with the groups and
+  spend no criteria/crosses call. The agent picks the group itself (finder.md `<product_groups>`,
+  glossary) and checks every shown group against the request before end_turn (`<self_check>`); the
+  result title is the product group name, never the agent's text. No group picker for the user: a
+  restored route without `/g/` on a mixed category shows "Relancer la recherche" (original input to
+  the agent). Routes: `p/<plate>/c/<cat>/g/<pt>`, `k/<carId>-<type>/c/<cat>/g/<pt>` (old ones valid).
+  Meshes read the product group first; an inner axial joint gets the generic placeholder (no inner
+  tie rod mesh ships). "Copier la réf." copies the OE number alone.
 - **Narrowing** (`api/src/Catalog/Narrowing/`): BrandTier top 8 reps → getArticleCriteria → physical
   fingerprint (canonical thread, synonym map, deny list of application-level keys, tolerance
   max(2 mm, 2.5 %)) → cluster → 1 getArticleCrosses per cluster → merge clusters sharing a carmaker OE
   → ranges + `differsOn`. Mazda 6 oil filter: 220 → 1 part, OE LF05-14-302A, no question.
+  Sibling probe (2026-10-16): the best-ranked article of a represented brand that no member or cross
+  claims is fingerprinted (+1 criteria, +1 crosses) and kept apart from a physically matching cluster
+  when it shares no carmaker OE with it. Cluster applicability also unions the already-cached criteria
+  of claimed variants (no call). OPR criteria ("pour numéro OPR …") now count as applicability.
 - **Agent** `finder` (`api/config/prompts/finder.md`, POST /agent/turn `surface: "finder"`):
   vehicle-less starts (browse makes/models/cars), photos, reference lookup, `show_parts` narrows
   server-side, `set_vehicle`, `ask_question` for what the catalogue can't settle, web finds tagged
@@ -64,8 +78,14 @@ break / 2.0 DI) instead of guessing.
   "rotule axiale peugeot 307" → code de fabrication typed AND as a vignette photo (`build_label`).
   None of the 2026-10-15 agent paths ran live. The `?demo` mode was removed 2026-10-15 (user
   decision): captures use the real app on cached data.
-- Applicability values are per article: check on real 307 data whether they discriminate at all
-  between the clusters; if never, drop the question rather than keep a weak signal.
+- Checked on real 307 data (2026-10-16): the OPR applicability does discriminate the two inner axial
+  joints (see below), so the build-code question stays.
+- `Longueur` is shown but never splits (only hauteur / diamètres do): the 307 axial joints differ by
+  length (338–340 vs 358–359 mm) and are told apart only by the carmaker OE. Making length split for
+  tie rods would surface it as a dimension question; not done (supplier conventions vary elsewhere).
+- FEBI spells the thread "Dimension du filetage extérieur": not read as a thread (`THREAD` slug
+  regex), so it is skipped. RIDEX's "Filetage extérieur [mm]" lands as an info measure.
+- The rotule axiale agent path (choose_group → group 51 → OPR question) has not run live end to end.
 - Dimension labels can overlap for a moment when the part is seen edge-on (height vs thread note).
 - A follow-up from a deterministic result switches to the agent sheet ("Recherche en cours") instead
   of keeping the deterministic sheet up until the agent answers.
@@ -91,6 +111,28 @@ break / 2.0 DI) instead of guessing.
   https://a.storyblok.com/f/297549/x/00d0febb87/gtc-en.pdf
 - Scraping Oscaro/Autodoc/Mister-Auto: no (French database law, sui generis right). Manufacturer
   catalogs (MANN, 210k cross-refs) have no public API.
+
+## Product groups inside one category (found 2026-10-16)
+
+"rotule axiale" on Peugeot 307 XD-303-ZD (carId 16182 PC) showed two OUTER tie rod ends. Category
+100198 "Direction > Rotules" holds 804 articles in three product groups: PT 914 « Rotule de barre de
+connexion » ×514 (outer), PT 51 « Rotule de direction intérieure, barre de connexion » ×288 (inner
+axial joint), PT 2066 « Rotule de direction » ×2. The narrowing ignored the group, so BrandTier's 8
+reps all came from the outer group. Fixture: `getArticles_16182_PC_100198.json` (trimmed: tier 1/2
+brands + 5 others per group).
+
+Inside PT 51 every top brand sells two joints for this car, same M14×1.5 thread:
+
+| | FEBI 19935 / BOSCH 0 986 141 079 | FEBI 29625 / BOSCH 0 986 141 133 |
+| --- | --- | --- |
+| length | 340 / 338 mm | 359 / 358 mm |
+| carmaker OE (crosses) | PEUGEOT 3812.E0, 16 072 936 80 | PEUGEOT 3812 E5, 16 072 917 80 |
+| OPR criterion | "pour numéro OPR jusqu’à" 10310 | "pour n° OPR (date de fabrication du véhicule)" 10311 |
+
+One representative per brand only ever fingerprinted the first (alphabetical) article, so the E5
+joints stayed unclassified; the sibling probe fixes that. Live narrowing of 100198 + PT 51 now gives
+2 clusters (BOSCH 0 986 141 079 with FEBI 19935, BOSCH 0 986 141 133 with FEBI 29625 and 280477),
+`differsOn` empty, each with its OPR applicability: the agent asks for the code de fabrication.
 
 ## What the partsapi data really is (probed 2026-10-15, fixtures in `api/tests/Fixtures/partsapi/`)
 
