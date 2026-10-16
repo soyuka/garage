@@ -49,6 +49,17 @@ describe('turnReducer', () => {
     expect(part.narrowing.clusters[0]?.representative.brand).toBe('MANN-FILTER');
   });
 
+  it('carries the variant the agent retained, and drops a malformed selection', () => {
+    const basis = 'code de fabrication (OPR 09824 ≤ 10310)';
+    const f = parseFrame(JSON.stringify({ type: 'showParts', categoryId: 100198, categoryLabel: 'Rotule', rationale: basis, narrowed, selection: { clusterId: 'c1', basis } }));
+    expect(f).toMatchObject({ type: 'showParts', selection: { clusterId: 'c1', basis } });
+    const part = turnReducer(running(), frame(f!)).parts[0]!;
+    expect(part.kind === 'catalog' && part.selection).toEqual({ clusterId: 'c1', basis });
+    expect(parseFrame(JSON.stringify({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: { clusterId: 3 } }))).toMatchObject({ selection: null });
+    const plain = turnReducer(running(), frame({ type: 'showParts', categoryId: 1, categoryLabel: 'x', rationale: '', narrowed, selection: null })).parts[0]!;
+    expect(plain.kind === 'catalog' && plain.selection).toBeNull();
+  });
+
   it('keeps several parts in arrival order, web finds included', () => {
     let s = turnReducer(running(), frame({ type: 'showParts', categoryId: 1, categoryLabel: 'Courroie de distribution', rationale: '', narrowed }));
     s = turnReducer(s, frame({ type: 'showWebPart', categoryLabel: 'Pompe à eau', reference: 'PA1234', brand: 'GRAF', sourceUrl: 'https://example.org/pa', sourceTitle: 'Graf', rationale: 'r' }));

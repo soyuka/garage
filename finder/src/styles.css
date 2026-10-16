@@ -255,6 +255,15 @@ button {
   font-weight: 500;
 }
 
+/* An indication, not a confirmation: dashed like a hidden line, and it may wrap (it carries the basis). */
+.tag.agent {
+  border: 1px dashed var(--blue);
+  background: var(--bg);
+  color: var(--ink);
+  white-space: normal;
+  max-width: 100%;
+}
+
 .tag.warn {
   border-color: #d9b380;
   background: var(--warn-tint);

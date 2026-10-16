@@ -161,7 +161,7 @@ export type FinderFrame =
   | { type: 'status'; message: string; tool?: string }
   | { type: 'toast'; tone: 'info' | 'ok' | 'warn' | 'alarm'; message: string }
   // `narrowed` is the GET /cars/{carId}/part-categories/{categoryId}/narrowed body, minus JSON-LD keys.
-  | { type: 'showParts'; categoryId: number; categoryLabel: string; rationale: string; narrowed: unknown }
+  | { type: 'showParts'; categoryId: number; categoryLabel: string; rationale: string; narrowed: unknown; selection?: AgentSelection | null }
   | { type: 'showWebPart'; categoryLabel: string; reference: string; brand: string; sourceUrl: string; sourceTitle: string; rationale: string }
   | { type: 'askQuestion'; question: string; options: QuestionOption[]; context: string }
   | ({ type: 'setVehicle' } & AgentVehicle);
@@ -204,6 +204,12 @@ export interface TurnVehicle {
   plate?: string | null;
 }
 
+// The variant the agent retained (show_parts clusterId), and the basis it gave.
+export interface AgentSelection {
+  clusterId: string;
+  basis: string;
+}
+
 export interface CatalogPart {
   kind: 'catalog';
   key: string;
@@ -211,6 +217,7 @@ export interface CatalogPart {
   label: string;
   rationale: string;
   narrowing: Narrowing;
+  selection: AgentSelection | null;
 }
 
 export interface WebPart {

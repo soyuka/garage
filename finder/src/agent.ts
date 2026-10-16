@@ -1,7 +1,8 @@
 import { mapNarrowing } from './api';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
-import type { AgentPart, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
+import { BASIS_MAX } from './route';
+import type { AgentPart, AgentSelection, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -17,6 +18,10 @@ export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
   return raw.flatMap((o) => (isObject(o) && filled(o.label) && text(o.value) ? [{ label: o.label, value: o.value }] : []));
+}
+
+function selection(raw: unknown): AgentSelection | null {
+  return isObject(raw) && filled(raw.clusterId) ? { clusterId: raw.clusterId, basis: text(raw.basis) ? raw.basis.trim().slice(0, BASIS_MAX) : '' } : null;
 }
 
 export function parseFrame(data: string): FinderFrame | null {
@@ -38,7 +43,7 @@ export function parseFrame(data: string): FinderFrame | null {
         : null;
     case 'showParts':
       return typeof j.categoryId === 'number' && filled(j.categoryLabel) && isObject(j.narrowed)
-        ? { type: 'showParts', categoryId: j.categoryId, categoryLabel: j.categoryLabel, rationale: text(j.rationale) ? j.rationale : '', narrowed: j.narrowed }
+        ? { type: 'showParts', categoryId: j.categoryId, categoryLabel: j.categoryLabel, rationale: text(j.rationale) ? j.rationale : '', narrowed: j.narrowed, selection: selection(j.selection) }
         : null;
     case 'showWebPart':
       return filled(j.categoryLabel) && filled(j.reference) && text(j.brand) && text(j.sourceUrl) && /^https?:\/\//.test(j.sourceUrl)
@@ -118,6 +123,7 @@ function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
           label: frame.categoryLabel,
           rationale: frame.rationale,
           narrowing: mapNarrowing(frame.narrowed),
+          selection: frame.selection ?? null,
         }),
       };
     case 'showWebPart':

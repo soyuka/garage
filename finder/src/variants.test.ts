@@ -25,6 +25,7 @@ describe('selectVariant', () => {
   it('drives the sheet with the chosen part and says who chose it', () => {
     expect(selectVariant(n307(), { id: 'c2', by: 'user' })).toMatchObject({ status: 'user', index: 1, cluster: { id: 'c2' } });
     expect(selectVariant(n307(), { id: 'c2', by: 'answer' })).toMatchObject({ status: 'answer', index: 1, cluster: { id: 'c2' } });
+    expect(selectVariant(n307(), { id: 'c1', by: 'agent', basis: 'code de fabrication' })).toMatchObject({ status: 'agent', index: 0, basis: 'code de fabrication', cluster: { id: 'c1' } });
   });
 
   it('falls back to an open first part when the chosen id is unknown', () => {
@@ -95,9 +96,9 @@ describe('makerOe', () => {
 });
 
 describe('VariantTable', () => {
-  const render = (chosen: string | null, by: 'user' | 'answer' | null) => {
+  const render = (chosen: string | null, by: 'user' | 'answer' | 'agent' | null) => {
     const n = n307();
-    const selection = selectVariant(n, chosen && by ? { id: chosen, by } : null);
+    const selection = selectVariant(n, chosen && by ? (by === 'agent' ? { id: chosen, by, basis: 'code de fabrication (OPR 09824 ≤ 10310)' } : { id: chosen, by }) : null);
     return renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: 'PEUGEOT', selection, onPick: () => {} }));
   };
 
@@ -118,6 +119,13 @@ describe('VariantTable', () => {
     const radios = html.match(/<button[^>]*role="radio"[\s\S]*?<\/button>/g) ?? [];
     expect(radios).toHaveLength(2);
     for (const r of radios) expect(r.match(/<button/g)).toHaveLength(1);
+  });
+
+  it('marks a part retained by the agent with its basis, never as the user’s or as confirmed', () => {
+    const html = render('c1', 'agent');
+    expect(html).toContain('retenue d’après code de fabrication (OPR 09824 ≤ 10310)');
+    expect(html).not.toContain('confirmé');
+    expect(html).not.toContain('choisie par vous');
   });
 
   it('marks a part picked by the user as theirs, never as confirmed', () => {

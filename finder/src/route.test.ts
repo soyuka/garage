@@ -40,6 +40,15 @@ describe('route', () => {
     expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/v')).toEqual({ view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: null });
   });
 
+  it('carries a part retained by the agent with its basis, apart from the user and the cote', () => {
+    const basis = 'code de fabrication (OPR 09824 ≤ 10310)';
+    const r = { view: 'result', ref: 'XD-303-ZD', categoryId: 100198, productGroupId: 51, cluster: { id: 'c1', by: 'agent', basis } } as const;
+    expect(routeToHash(r)).toBe('#/p/XD-303-ZD/c/100198/g/51/r/c1/code%20de%20fabrication%20(OPR%2009824%20%E2%89%A4%2010310)');
+    expect(parseRoute(routeToHash(r))).toEqual(r);
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r/c1')).toEqual({ ...r, cluster: { id: 'c1', by: 'agent', basis: '' } });
+    expect(parseRoute('#/p/XD-303-ZD/c/100198/g/51/r')).toEqual({ ...r, cluster: null });
+  });
+
   it('tells a plate from a catalogue car', () => {
     expect(parseRef('XB-301-ZB')).toEqual({ kind: 'plate', plate: 'XB-301-ZB' });
     expect(parseRef('k19107-CV')).toEqual({ kind: 'car', carId: 19107, carType: 'CV' });

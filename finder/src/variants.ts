@@ -5,13 +5,15 @@ import type { ClusterChoice } from './route';
 import type { Applicability, Cluster, Dimension, Divergence, Narrowing, Reference } from './types';
 
 // `open`: several parts and nobody chose, the first is shown. `answer`: the cote question settled it.
-// `user`: picked in the variant table, the user's call, not the catalogue's.
-export type SelectionStatus = 'single' | 'answer' | 'user' | 'open';
+// `user`: picked in the variant table, the user's call, not the catalogue's. `agent`: retained by the
+// agent on `basis` (a decoded code de fabrication against per-article breakpoints), an indication.
+export type SelectionStatus = 'single' | 'answer' | 'user' | 'agent' | 'open';
 
 export interface Selection {
   cluster: Cluster | null;
   index: number;
   status: SelectionStatus;
+  basis?: string;
 }
 
 export function selectVariant(n: Narrowing | null, choice: ClusterChoice | null): Selection {
@@ -20,7 +22,8 @@ export function selectVariant(n: Narrowing | null, choice: ClusterChoice | null)
   if (clusters.length === 1) return { cluster: clusters[0]!, index: 0, status: 'single' };
   const index = choice ? clusters.findIndex((c) => c.id === choice.id) : -1;
   if (index === -1) return { cluster: clusters[0]!, index: 0, status: 'open' };
-  return { cluster: clusters[index]!, index, status: choice!.by };
+  const picked = { cluster: clusters[index]!, index };
+  return choice!.by === 'agent' ? { ...picked, status: 'agent', basis: choice!.basis } : { ...picked, status: choice!.by };
 }
 
 export const variantLetter = (index: number): string => (index < 26 ? String.fromCharCode(65 + index) : String(index + 1));

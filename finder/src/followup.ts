@@ -17,14 +17,16 @@ function clusterLine(c: Cluster): string {
   return parts.join(' — ');
 }
 
-const CHOSEN_BY: Record<ClusterChoice['by'], string> = {
-  answer: 'choisie par la réponse à la question',
-  user: 'choisie par l’utilisateur, non confirmée par le catalogue',
-};
+const chosenBy = (c: ClusterChoice): string =>
+  c.by === 'agent'
+    ? `retenue d’après ${c.basis || 'ta réponse précédente'}, indication (applicabilité par article)`
+    : c.by === 'answer'
+      ? 'choisie par la réponse à la question'
+      : 'choisie par l’utilisateur, non confirmée par le catalogue';
 
 export function resultSummary(categoryLabel: string, n: Narrowing, choice: ClusterChoice | null): string {
   const head = `${categoryLabel} (categoryId ${n.categoryId}) : ${n.clusters.length} pièce${n.clusters.length > 1 ? 's' : ''} distincte${n.clusters.length > 1 ? 's' : ''}`;
-  const chosen = choice && n.clusters.some((c) => c.id === choice.id) ? `, ${CHOSEN_BY[choice.by]} : [${choice.id}]` : '';
+  const chosen = choice && n.clusters.some((c) => c.id === choice.id) ? `, ${chosenBy(choice)} : [${choice.id}]` : '';
   let text = `${head}${chosen}.`;
   for (const c of n.clusters) {
     const line = ` ${clusterLine(c)}.`;

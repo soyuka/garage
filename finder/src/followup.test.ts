@@ -27,6 +27,12 @@ describe('resultSummary', () => {
     expect(text).toContain('par article, pas par véhicule');
   });
 
+  it('says which cluster the agent retained, and on what basis', () => {
+    expect(resultSummary('Rotule axiale', twoClusters(), { id: 'k1', by: 'agent', basis: 'code de fabrication (OPR 09824 ≤ 10310)' })).toContain(
+      'retenue d’après code de fabrication (OPR 09824 ≤ 10310), indication (applicabilité par article) : [k1]',
+    );
+  });
+
   it('says which cluster was chosen, and how', () => {
     expect(resultSummary('Rotule axiale', twoClusters(), { id: 'k2', by: 'answer' })).toContain('choisie par la réponse à la question : [k2]');
     expect(resultSummary('Rotule axiale', twoClusters(), { id: 'k2', by: 'user' })).toContain('choisie par l’utilisateur, non confirmée par le catalogue : [k2]');

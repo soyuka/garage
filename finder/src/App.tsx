@@ -614,6 +614,8 @@ function partCategory(part: AgentPart, categories: Category[]): Category {
     : { id: part.kind === 'catalog' ? part.categoryId : 0, name: part.label, path: part.label, segments: [part.label], label: part.label, leaf: true };
 }
 
+const agentChoice = (p: AgentPart): ClusterChoice | null => (p.kind === 'catalog' && p.selection ? { id: p.selection.clusterId, by: 'agent', basis: p.selection.basis } : null);
+
 function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot, followUp, onAsk, onPlate }: AgentWorkspaceProps) {
   const reducedMotion = useReducedMotion();
   const [wrapRef, wide] = useWideEnough(SHEET_OVERLAY_MIN);
@@ -651,8 +653,14 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const first = state.parts[0];
   useEffect(() => {
     if (first && first.kind === 'catalog' && webKey === null && route.view === 'vehicle' && ref !== '')
-      navigate({ view: 'result', ref, categoryId: first.categoryId, productGroupId: first.narrowing.productGroup?.id ?? null, cluster: null }, { replace: true });
+      navigate({ view: 'result', ref, categoryId: first.categoryId, productGroupId: first.narrowing.productGroup?.id ?? null, cluster: agentChoice(first) }, { replace: true });
   }, [first?.key, ref, route.view]);
+
+  // A redraw that retains a variant (show_parts clusterId) opens it: the route carries the choice and its basis.
+  const retained = part?.kind === 'catalog' ? part.selection : null;
+  useEffect(() => {
+    if (part && retained && webKey === null) openPart(part, agentChoice(part));
+  }, [retained?.clusterId, retained?.basis]);
 
   useFollowUp(
     followUp,
@@ -689,14 +697,14 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, { id, by: 'user' })} family={family} api={api} rationale={part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, { id, by: 'user' })} family={family} api={api} rationale={part.selection ? undefined : part.rationale} />
   ) : null;
   const traceNode = n ? <NarrowingTrace narrowing={{ status: 'ok', data: n }} remaining={settledCount(selection.status)} cluster={cluster} /> : null;
 
   return (
     <div className="work">
       <div ref={wrapRef} className={['sheet-wrap', state.parts.length > 1 && 'sheet-wrap--parts', !wide && 'sheet-wrap--stacked'].filter(Boolean).join(' ')}>
-        {state.parts.length > 1 && part && <PartSwitcher parts={state.parts} selected={part.key} onSelect={(key) => { const p = state.parts.find((x) => x.key === key); if (p) openPart(p); }} />}
+        {state.parts.length > 1 && part && <PartSwitcher parts={state.parts} selected={part.key} onSelect={(key) => { const p = state.parts.find((x) => x.key === key); if (p) openPart(p, agentChoice(p)); }} />}
         <Sheet
           family={family}
           viewLabel={viewLabel(family, category)}

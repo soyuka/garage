@@ -11,12 +11,15 @@ interface Props {
   onPick: (clusterId: string) => void;
 }
 
-const STATUS: Record<Selection['status'], { text: string; tone: '' | 'ok' } | null> = {
+const STATUS: Record<Selection['status'], { text: string; tone: '' | 'ok' | 'agent' } | null> = {
   open: { text: 'à confirmer', tone: '' },
   user: { text: 'choisie par vous', tone: '' },
   answer: { text: 'confirmé par la cote', tone: 'ok' },
+  agent: { text: 'retenue', tone: 'agent' },
   single: null,
 };
+
+const statusText = (selection: Selection, text: string): string => (selection.status === 'agent' && selection.basis ? `${text} d’après ${selection.basis}` : text);
 
 // The drawing's variant table: one row per distinct part, the row picks the part the sheet draws.
 export function VariantTable({ narrowing, make, selection, onPick }: Props) {
@@ -43,7 +46,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
         <span className="l" id="vt-title">
           Variantes · {formatCount(rows.length)} pièces distinctes
         </span>
-        {status && <span className={status.tone ? `tag ${status.tone}` : 'tag'}>{status.text}</span>}
+        {status && <span className={status.tone ? `tag ${status.tone}` : 'tag'}>{statusText(selection, status.text)}</span>}
       </div>
       <div className={`${cols} vt-head`} aria-hidden="true">
         <span>Var.</span>

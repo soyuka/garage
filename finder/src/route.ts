@@ -4,8 +4,11 @@ import type { CarType } from './types';
 // A vehicle ref is either a plate ("XB-301-ZB", "1234 AB 56") or a catalogue car the agent identified
 // without one ("k19107-PC").
 // `answer`: settled by the cote question (`/k/<id>`, the only form before 2026-10-16); `user`: picked
-// in the variant table (`/v/<id>`), the user's decision, never presented as confirmed.
-export type ClusterChoice = { id: string; by: 'answer' | 'user' };
+// in the variant table (`/v/<id>`), the user's decision, never presented as confirmed; `agent`: retained
+// by the agent from what the user gave (`/r/<id>/<basis>`), an indication resting on per-article data.
+export type ClusterChoice = { id: string; by: 'answer' | 'user' } | { id: string; by: 'agent'; basis: string };
+
+export const BASIS_MAX = 160;
 
 export type Route =
   | { view: 'entry' }
@@ -37,12 +40,19 @@ export function parseRoute(hash: string): Route {
     productGroupId = /^[1-9]\d*$/.test(rest[1] ?? '') ? Number(rest[1]) : null;
     rest.splice(0, 2);
   }
-  const by = rest[0] === 'k' ? 'answer' : rest[0] === 'v' ? 'user' : null;
-  const cluster: ClusterChoice | null = by && rest[1] ? { id: rest[1], by } : null;
+  const by = rest[0] === 'k' ? 'answer' : rest[0] === 'v' ? 'user' : rest[0] === 'r' ? 'agent' : null;
+  const cluster: ClusterChoice | null =
+    by && rest[1] ? (by === 'agent' ? { id: rest[1], by, basis: (rest[2] ?? '').trim().slice(0, BASIS_MAX) } : { id: rest[1], by }) : null;
   return { view: 'result', ref, categoryId: Number(parts[3]), productGroupId, cluster };
 }
 
 const refHash = (ref: string): string => (CAR.test(ref) ? `#/k/${ref.slice(1)}` : `#/p/${encodeURIComponent(ref.replace(/ /g, ''))}`);
+
+function clusterHash(c: ClusterChoice): string {
+  const id = encodeURIComponent(c.id);
+  if (c.by === 'agent') return `/r/${id}${c.basis ? `/${encodeURIComponent(c.basis)}` : ''}`;
+  return `/${c.by === 'user' ? 'v' : 'k'}/${id}`;
+}
 
 export function routeToHash(route: Route): string {
   switch (route.view) {
@@ -51,6 +61,6 @@ export function routeToHash(route: Route): string {
     case 'vehicle':
       return refHash(route.ref);
     case 'result':
-      return `${refHash(route.ref)}/c/${route.categoryId}${route.productGroupId ? `/g/${route.productGroupId}` : ''}${route.cluster ? `/${route.cluster.by === 'user' ? 'v' : 'k'}/${encodeURIComponent(route.cluster.id)}` : ''}`;
+      return `${refHash(route.ref)}/c/${route.categoryId}${route.productGroupId ? `/g/${route.productGroupId}` : ''}${route.cluster ? clusterHash(route.cluster) : ''}`;
   }
 }

@@ -259,6 +259,13 @@ function whyLine(n: Narrowing, selection: Selection, letter: string | null) {
       </span>
     );
   }
+  if (status === 'agent') {
+    return (
+      <span>
+        Variante {letter} retenue{selection.basis ? ` d’après ${selection.basis}` : ''}. L’applicabilité du catalogue est donnée par article, pas pour ce véhicule : une indication, à vérifier sur la pièce démontée. {same}
+      </span>
+    );
+  }
   if (status === 'user') {
     return (
       <span>
