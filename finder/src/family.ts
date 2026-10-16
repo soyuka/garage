@@ -39,7 +39,8 @@ export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /maitre-cylindre de frein|servofrein/, mesh: 'brake-master-booster' },
 
   { leaf: /rotules?\/ ?jeu|^tripode|^soufflet$/, within: /entrainement des roues/, mesh: 'axles' },
-  { leaf: /rotule de suspension|rotule de bras|rotule axiale/, mesh: 'outer-tie-rod-end' },
+  { leaf: /rotule axiale|rotule de direction interieure/, mesh: null },
+  { leaf: /rotule de suspension|rotule de bras/, mesh: 'outer-tie-rod-end' },
   { leaf: /barre de connexion|barre d'accouplement|biellette de direction/, mesh: 'outer-tie-rod-end' },
   { leaf: /rotule/, within: /direction/, mesh: 'outer-tie-rod-end', approximate: false },
   { leaf: /cremaillere/, mesh: 'steering-rack' },
@@ -131,7 +132,20 @@ export const MESH_RULES: readonly MeshRule[] = [
   { leaf: /^palier guide/, mesh: 'pilot-bearing' },
 ];
 
-export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = []): Family {
+// TecDoc product group (generic article) → mesh, read before the category node: one node can hold several
+// groups that are different parts ("Direction > Rotules" holds outer tie rod ends and inner axial joints).
+// An inner axial joint has no mesh of its own: the outer tie rod end would mislead, so it stays generic.
+export const PRODUCT_GROUP_RULES: readonly { group: RegExp; mesh: MeshId | null; approximate?: boolean }[] = [
+  { group: /rotule de direction interieure|rotule axiale/, mesh: null },
+  { group: /^rotule de barre de connexion/, mesh: 'outer-tie-rod-end', approximate: false },
+  { group: /^rotule de direction$/, mesh: 'outer-tie-rod-end' },
+];
+
+export function partFamily(category: { path: string; name: string }, dimensions: readonly Dimension[] = [], productGroup: string | null = null): Family {
+  const group = productGroup === null ? null : foldText(productGroup);
+  const groupRule = group === null ? undefined : PRODUCT_GROUP_RULES.find((r) => r.group.test(group));
+  if (groupRule) return groupRule.mesh === null ? { kind: 'generic' } : { kind: 'mesh', mesh: groupRule.mesh, approximate: groupRule.approximate ?? true };
+
   const path = foldText(category.path);
   const leaf = path.split(' > ').at(-1) ?? path;
   if (/habitacle/.test(path)) return { kind: 'generic' };

@@ -141,7 +141,6 @@ describe('partFamily', () => {
   it('maps the usual French TecDoc names, specific before generic, either side of the car', () => {
     const expected: [string, MeshId][] = [
       ['Direction > Rotule de direction', 'outer-tie-rod-end'],
-      ['Direction > Rotule axiale', 'outer-tie-rod-end'],
       ['Suspension > Bras de suspension / Triangle avant gauche', 'front-lower-control-arm'],
       ['Suspension > Bras de suspension supérieur droit', 'front-upper-control-arm'],
       ['Suspension > Silent-bloc de bras de suspension', 'lower-control-arm-bushing'],
@@ -208,9 +207,21 @@ describe('partFamily', () => {
   it('captions a family-generic shape as an approximation, a like-for-like part not', () => {
     expect(partFamily(real('Direction > Rotules'))).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: false });
     expect(partFamily(real("Suspension d'essieu/Guidage des roues/Roues > Rotules > Rotule de suspension"))).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: true });
-    expect(partFamily(cat('Direction > Rotule axiale'))).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: true });
     expect(partFamily(real("Allumage / préchauffage > Bougie d'allumage"))).toEqual({ kind: 'mesh', mesh: 'spark-plug', approximate: false });
     expect(partFamily(real("Suspension d'essieu/Guidage des roues/Roues > Bras oscillant / suspension > Bras (transversal, longitudinal, oblique)"))).toMatchObject({ approximate: true });
+  });
+
+  it('never draws the outer tie rod end for an inner axial joint', () => {
+    expect(partFamily(cat('Direction > Rotule axiale'))).toEqual({ kind: 'generic' });
+    expect(partFamily(cat('Direction > Rotule de direction intérieure'))).toEqual({ kind: 'generic' });
+  });
+
+  it('reads the TecDoc product group before the category node it sits in', () => {
+    const rotules = real('Direction > Rotules');
+    expect(partFamily(rotules, [], 'Rotule de barre de connexion')).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: false });
+    expect(partFamily(rotules, [], 'Rotule de direction intérieure, barre de connexion')).toEqual({ kind: 'generic' });
+    expect(partFamily(rotules, [], 'Rotule de direction')).toEqual({ kind: 'mesh', mesh: 'outer-tie-rod-end', approximate: true });
+    expect(partFamily(real("Allumage / préchauffage > Bougie d'allumage"), [], "Bougie d'allumage")).toEqual({ kind: 'mesh', mesh: 'spark-plug', approximate: false });
   });
 
   it('gives every family without a mesh the generic placeholder', () => {
