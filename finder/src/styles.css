@@ -883,6 +883,26 @@ button {
   grid-column: 1 / -1;
 }
 
+.tb-degraded {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--warn);
+}
+
+/* One footnote line: the catalogue caveat under a variant table, or a single part's agent rationale. */
+.tb-note,
+.vt-note {
+  font-size: 12px;
+  color: var(--mute);
+  text-wrap: pretty;
+}
+
+.vt-note {
+  padding: 6px 14px 10px;
+  border-top: 1px solid var(--hair);
+}
+
 .tb-prov .tag:last-child {
   margin-right: 0;
 }
@@ -934,45 +954,6 @@ button {
   color: var(--ink);
 }
 
-.why-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.why-body[data-clamped] {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
-}
-
-.why-body[data-clamped] > span {
-  display: inline;
-}
-
-.why-body[data-clamped] > span + span::before {
-  content: ' ';
-}
-
-.why-toggle {
-  align-self: flex-start;
-  border: 0;
-  padding: 0;
-  background: none;
-  font: inherit;
-  font-size: 12px;
-  color: var(--mute);
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.why-toggle:hover,
-.why-toggle:focus-visible {
-  color: var(--ink);
-}
-
 .eq-more {
   color: var(--mute);
   font-family: var(--sans);
@@ -1014,28 +995,6 @@ button {
 
 .tb-cotes span {
   white-space: nowrap;
-}
-
-.why {
-  background: var(--tint);
-  font-size: 13px;
-  text-wrap: pretty;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.why .l {
-  margin-bottom: 0;
-}
-
-.why-degraded {
-  color: var(--warn);
-}
-
-.why-quiet {
-  color: var(--mute);
-  font-size: 12px;
 }
 
 .sheet-side .tb {
@@ -1328,10 +1287,6 @@ button {
   font-weight: 400;
   font-size: 12px;
   text-decoration: none;
-}
-
-.why-agent {
-  color: var(--ink);
 }
 
 /* ── variant table (several distinct parts) ────────────────────────────── */

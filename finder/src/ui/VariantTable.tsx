@@ -106,6 +106,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
           );
         })}
       </div>
+      <p className="vt-note">Applicabilité du catalogue, à vérifier sur la pièce démontée.</p>
     </div>
   );
 }

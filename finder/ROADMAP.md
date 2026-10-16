@@ -71,7 +71,7 @@ Shipped, end to end:
   OPR / organisation breakpoints). A row pick switches drawing, cotes, OE, Acheter/Ajouter and
   équivalences, lives in the URL as `/v/<clusterId>` and is labelled « choisie par vous », never
   confirmed; the cote question keeps `/k/<clusterId>` and « confirmé par la cote ». Multi-part title
-  blocks add the carmaker's other OE numbers and every other catalogue cote; every row shows the OE in the numbering scheme all parts share for the make (`pickOe`, 3812 E0 / 3812 E5), the rest under « Aussi ». Multi-part blocks are shortened: équivalences on one line + « + N autres marques », « Pourquoi cette pièce » clamped to 2 lines (both expandable). At 1440×900 the actions end at y 871 (was 938), still under the composer dock when a question card is open (dock top ≈ 696). The sheet grows to fit a
+  blocks add the carmaker's other OE numbers and every other catalogue cote; every row shows the OE in the numbering scheme all parts share for the make (`pickOe`, 3812 E0 / 3812 E5), the rest under « Aussi ». Multi-part blocks are shortened: équivalences on one line + « + N autres marques » (expandable); « Pourquoi cette pièce » was clamped to 2 lines until its removal the same day. At 1440×900 the actions end at y 871 (was 938), still under the composer dock when a question card is open (dock top ≈ 696). The sheet grows to fit a
   tall title block instead of clipping it. Question answers print the cluster's range (`differsOn`
   min/max), not its representative value. Design: `finder/DESIGN.md` § Variant table.
 - **Agent selects a variant (2026-10-16)**: `show_parts` takes `clusterId`; an id outside that
@@ -87,6 +87,16 @@ Shipped, end to end:
   route-driven result). One frame, one mapper, the validation done where the narrowing is at hand.
   The repeated group is made safe instead: the summary carries it, and a missing one is corrected.
   Fixes turn 01M520BZ7BSSB0Z36G1EVG66TV (decoded OPR 09824 ≤ 10310 → c1, screen kept « à confirmer »).
+- **« Pourquoi cette pièce » removed (2026-10-16, user decision)**: it mixed the per-article caveat
+  with internal counts (« 90 réf. de 83 marques », « 187 réf. non rattachées ») that mean nothing to a
+  particulier. Multi-part: the reason stays on the retained row, and one footnote closes the variant
+  table, « Applicabilité du catalogue, à vérifier sur la pièce démontée. ». Single part: the agent's
+  rationale is that footnote; a deterministic result with no rationale gets none. A degraded answer's
+  message moved under the designation. Counts stay in the journal drawer (Articles, Non classés).
+  `Lire la suite` and its overflow watcher are gone with the clamp. DESIGN § Title Block. Captures
+  re-taken from a hand-inserted dev selection (removed after): `.impeccable/review/clarity-retained-*.png`,
+  `clarity-single-*.png`; 1440×900 overflow 0 px for both, no « Lire la suite » in the retained state;
+  forged, unknown-id and old text routes render « à confirmer » with the question card and no marker.
 - **Agent-pick route hardened (2026-10-16, user: « harden this now »)**: the URL carried the agent's
   basis and set-aside phrase as free text (`/r/<clusterId>/<basis>/<setAside>`), so an edited share
   link could make the page claim any verdict, and that text also reached the agent in the follow-up

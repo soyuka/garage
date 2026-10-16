@@ -741,7 +741,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const block = !part ? null : part.kind === 'web' ? (
     <WebTitleBlock vehicle={vehicle} part={part} />
   ) : category && n && vehicle ? (
-    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, pickChoice(selection, id))} rationale={part.selection ? undefined : part.rationale} />
+    <TitleBlock vehicle={vehicle} category={category} narrowing={n} selection={selection} onPick={(id) => openPart(part, pickChoice(selection, id))} rationale={part.rationale} />
   ) : null;
 
   return (
