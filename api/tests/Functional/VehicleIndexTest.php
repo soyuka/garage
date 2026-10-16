@@ -69,7 +69,7 @@ final class VehicleIndexTest extends AppTestCase
         $header = rawurlencode((string) json_encode(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 · LF']));
 
         static::createClient()->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['X-Finder-Vehicle' => $header],
+            'headers' => self::authHeaders() + ['Search-Vehicle' => $header],
         ]);
         self::assertResponseIsSuccessful();
 

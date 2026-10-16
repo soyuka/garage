@@ -67,7 +67,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $narrowed = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre à huile'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre à huile'],
         ])->toArray();
         self::assertResponseIsSuccessful();
 
@@ -107,7 +107,7 @@ final class FinderJournalTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => '100259'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url', 'Search-Input' => '100259'],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -124,7 +124,7 @@ final class FinderJournalTest extends AppTestCase
         static::getContainer()->get('cache.partsapi')->clear();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => '100259'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url', 'Search-Input' => '100259'],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -164,7 +164,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/16182/part-categories/100198/narrowed?carType=PC&make=PEUGEOT&productGroupId=51', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => 'rotule', 'X-Finder-Plate' => 'XD-303-ZD'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url', 'Search-Input' => 'rotule', 'Search-Plate' => 'XD-303-ZD'],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -179,7 +179,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/16182/part-categories/100198/narrowed?carType=PC&make=PEUGEOT', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Input' => 'rotule'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url', 'Search-Input' => 'rotule'],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -192,7 +192,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre', 'X-Finder-Plate' => rawurlencode(' XB-301-ZB ')],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre', 'Search-Plate' => rawurlencode(' XB-301-ZB ')],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -207,7 +207,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre', 'X-Finder-Plate' => str_repeat('A', 21)],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre', 'Search-Plate' => str_repeat('A', 21)],
         ]);
 
         self::assertArrayNotHasKey('plate', $this->rows()[0]->getSearch());
@@ -217,7 +217,7 @@ final class FinderJournalTest extends AppTestCase
     {
         $client = static::createClient();
 
-        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'plate', 'X-Finder-Input' => 'XC-302-ZC']]);
+        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'plate', 'Search-Input' => 'XC-302-ZC']]);
         self::assertResponseIsSuccessful();
 
         $search = $this->rows()[0]->getSearch();
@@ -249,7 +249,7 @@ final class FinderJournalTest extends AppTestCase
     {
         $client = static::createClient();
 
-        $client->request('GET', '/vehicles/ZZ999ZZ', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'plate', 'X-Finder-Input' => 'zz 999 zz']]);
+        $client->request('GET', '/vehicles/ZZ999ZZ', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'plate', 'Search-Input' => 'zz 999 zz']]);
 
         $rows = $this->rows();
         self::assertCount(1, $rows);
@@ -264,10 +264,10 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url', 'X-Finder-Search' => 'abc'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url', 'Search-Id' => 'abc'],
         ]);
         self::assertResponseIsSuccessful();
-        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'url']]);
+        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url']]);
         self::assertResponseIsSuccessful();
 
         self::assertSame([], $this->rows());
@@ -276,7 +276,7 @@ final class FinderJournalTest extends AppTestCase
     public function testTheRequestsOfOneSearchShareOneRow(): void
     {
         $client = static::createClient();
-        $headers = self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'plate', 'X-Finder-Input' => 'XC-302-ZC', 'X-Finder-Search' => '6f1c0a52-1d0e-4a54-9a07-2d4f3c2a9e11'];
+        $headers = self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'plate', 'Search-Input' => 'XC-302-ZC', 'Search-Id' => '6f1c0a52-1d0e-4a54-9a07-2d4f3c2a9e11'];
 
         $client->request('GET', '/vehicles/XC302ZC', ['headers' => $headers]);
         self::assertResponseIsSuccessful();
@@ -298,7 +298,7 @@ final class FinderJournalTest extends AppTestCase
         $vehicle = rawurlencode(json_encode(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR · LF'], \JSON_THROW_ON_ERROR));
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre à huile', 'X-Finder-Vehicle' => $vehicle],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre à huile', 'Search-Vehicle' => $vehicle],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -311,7 +311,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre', 'X-Finder-Vehicle' => '%7Bnot-json'],
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre', 'Search-Vehicle' => '%7Bnot-json'],
         ]);
         self::assertResponseIsSuccessful();
 
@@ -324,7 +324,7 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
 
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', [
-            'headers' => ['Accept' => 'application/ld+json', 'X-Finder-Rule' => 'category', 'X-Finder-Input' => 'filtre à huile'],
+            'headers' => ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre à huile'],
         ]);
         self::assertResponseIsSuccessful();
 

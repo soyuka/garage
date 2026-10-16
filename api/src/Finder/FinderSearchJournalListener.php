@@ -26,22 +26,22 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * Journals the finder's deterministic searches — plate, VIN, category narrowing — in the agent-turn
  * journal (kind search), so the drawer shows every catalogue spend, not only the agent's. Only a
- * user-initiated submit is journaled: the finder sends X-Finder-Rule and X-Finder-Input (the typed
+ * user-initiated submit is journaled: the finder sends Search-Rule and Search-Input (the typed
  * text) on a composer submit or chip click, and neither on restores, hash loads and background
- * fetches. The requests of one submit share an X-Finder-Search id and fold into one row. Only an
+ * fetches. The requests of one submit share one Search-Id and fold into one row. Only an
  * authenticated request has an owner to journal under. Best-effort: a failed write is logged.
  */
 final class FinderSearchJournalListener
 {
-    public const string RULE_HEADER = 'X-Finder-Rule';
+    public const string RULE_HEADER = 'Search-Rule';
 
-    public const string INPUT_HEADER = 'X-Finder-Input';
+    public const string INPUT_HEADER = 'Search-Input';
 
-    public const string PLATE_HEADER = 'X-Finder-Plate';
+    public const string PLATE_HEADER = 'Search-Plate';
 
-    public const string SEARCH_HEADER = 'X-Finder-Search';
+    public const string SEARCH_HEADER = 'Search-Id';
 
-    public const string VEHICLE_HEADER = 'X-Finder-Vehicle';
+    public const string VEHICLE_HEADER = 'Search-Vehicle';
 
     private const int MAX_SEARCH_ID_LENGTH = 64;
 

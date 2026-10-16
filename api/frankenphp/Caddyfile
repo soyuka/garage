@@ -43,7 +43,7 @@
 			header({'Accept': '*text/html*'})
 			&& !path(
 				'/docs*', '/graphql*', '/bundles*', '/contexts*', '/_profiler*', '/_wdt*',
-				'/mcp*', '/agent*', '/garage*', '/.well-known*', '/finder*',
+				'/mcp*', '/agent*', '/garage*', '/.well-known*', '/bonneref*',
 				'*.json*', '*.html', '*.csv', '*.yml', '*.yaml', '*.xml'
 			)
 		)
@@ -65,10 +65,17 @@
 			reverse_proxy http://{$CASDOOR_UPSTREAM:casdoor:8000}
 		}
 
-		# finder SPA (its own Vite dev server, base /finder/): assets, HMR websocket and HTML all live
-		# under /finder, so one handle routes them before @frontend sends HTML to the dashboard.
-		handle /finder* {
-			reverse_proxy http://{$FINDER_UPSTREAM:finder:5173}
+		# Legacy /finder URLs (the frontend's former name) keep working: handle_path strips the prefix,
+		# so {uri} is the remainder and the redirect lands under /bonneref. The #fragment never
+		# reaches the server and the browser carries it across the redirect.
+		handle_path /finder* {
+			redir * /bonneref{uri} 308
+		}
+
+		# bonneref SPA (its own Vite dev server, base /bonneref/): assets, HMR websocket and HTML all
+		# live under /bonneref, so one handle routes them before @frontend sends HTML to the dashboard.
+		handle /bonneref* {
+			reverse_proxy http://{$BONNEREF_UPSTREAM:bonneref:5173}
 		}
 
 		# Vite dev server. Default upstream lets a PHP-only stack (no dashboard service) still parse;

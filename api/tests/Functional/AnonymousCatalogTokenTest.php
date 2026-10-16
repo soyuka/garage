@@ -14,7 +14,7 @@ final class AnonymousCatalogTokenTest extends AppTestCase
     public function testAnInvalidTokenOnACatalogReadIsServedAnonymously(): void
     {
         static::createClient()->request('GET', self::VIN, [
-            'headers' => ['Authorization' => 'Bearer not-a-valid-token', 'X-Finder-Rule' => 'vin', 'X-Finder-Input' => 'VF33CKFWB83471925'],
+            'headers' => ['Authorization' => 'Bearer not-a-valid-token', 'Search-Rule' => 'vin', 'Search-Input' => 'VF33CKFWB83471925'],
         ]);
 
         self::assertResponseStatusCodeSame(200);
@@ -24,7 +24,7 @@ final class AnonymousCatalogTokenTest extends AppTestCase
     public function testAValidTokenOnACatalogReadIsJournaled(): void
     {
         static::createClient()->request('GET', self::VIN, [
-            'headers' => self::authHeaders() + ['X-Finder-Rule' => 'vin', 'X-Finder-Input' => 'VF33CKFWB83471925'],
+            'headers' => self::authHeaders() + ['Search-Rule' => 'vin', 'Search-Input' => 'VF33CKFWB83471925'],
         ]);
 
         self::assertResponseStatusCodeSame(200);

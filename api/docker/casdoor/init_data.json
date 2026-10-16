@@ -18,7 +18,8 @@
       "clientSecret": "monparc-dashboard-secret-9f8e7d6c5b4a39281706",
       "redirectUris": [
         "https://localhost/callback",
-        "https://localhost/finder/callback"
+        "https://localhost/finder/callback",
+        "https://localhost/bonneref/callback"
       ],
       "grantTypes": [
         "authorization_code",
