@@ -1,6 +1,6 @@
 import { useFrame, useThree } from '@react-three/fiber';
 import { Suspense, useEffect, useLayoutEffect, useReducer, useRef, type ReactNode, type RefObject } from 'react';
-import { Box3, Material, Mesh, Plane, Sphere, Vector3, type Group, type Object3D, type PerspectiveCamera } from 'three';
+import { Box3, Material, Mesh, Plane, Vector3, type Group, type Object3D, type PerspectiveCamera } from 'three';
 import { EMPTY, markReady, present, step, sweepEase, type Layer, type SweepState } from './sweep';
 
 interface Props<T> {
@@ -24,7 +24,7 @@ const forward = new Vector3();
 const dir = new Vector3();
 const normal = new Vector3();
 const eye = new Vector3();
-const centre = new Vector3();
+const corner = new Vector3();
 
 function setClip(root: Object3D, planes: Plane[]) {
   root.traverse((o) => {
@@ -34,12 +34,13 @@ function setClip(root: Object3D, planes: Plane[]) {
   });
 }
 
-function boundingSphere(root: Object3D): Sphere | null {
-  const box = new Box3();
+const scratch = new Box3();
+function worldBox(root: Object3D): Box3 | null {
+  scratch.makeEmpty();
   root.traverse((o) => {
-    if (o instanceof Mesh && o.userData.fit) box.expandByObject(o);
+    if (o instanceof Mesh && o.userData.fit) scratch.expandByObject(o);
   });
-  return box.isEmpty() ? null : box.getBoundingSphere(new Sphere());
+  return scratch.isEmpty() ? null : scratch;
 }
 
 function Ready({ onReady }: { onReady: () => void }) {
@@ -55,7 +56,6 @@ export function SweepLayers<T>({ layer, duration, render, onDropped, onSettled, 
   const state = useRef<SweepState<T>>(EMPTY);
   const [, rerender] = useReducer((n: number) => n + 1, 0);
   const groups = useRef(new Map<string, Group>());
-  const spheres = useRef(new Map<string, Sphere>());
   const planeIn = useRef<Plane[]>([KEEP_ALL.clone()]);
   const planeOut = useRef<Plane[]>([KEEP_ALL.clone()]);
   const sweeping = useRef(false);
@@ -72,10 +72,7 @@ export function SweepLayers<T>({ layer, duration, render, onDropped, onSettled, 
   const ready = (key: string) => () => {
     state.current = markReady(state.current, key);
     const g = groups.current.get(key);
-    if (!g) return;
-    const s = boundingSphere(g);
-    if (s) spheres.current.set(key, s);
-    onShown(g);
+    if (g) onShown(g);
   };
 
   useFrame((_, delta) => {
@@ -85,7 +82,6 @@ export function SweepLayers<T>({ layer, duration, render, onDropped, onSettled, 
     state.current = next;
     if (s.progress < 1 && next.progress >= 1 && next.shown) onSettled(next.shown);
     if (dropped.length) {
-      dropped.forEach((l) => spheres.current.delete(l.key));
       dropped.forEach(onDropped);
       rerender();
     }
@@ -95,7 +91,8 @@ export function SweepLayers<T>({ layer, duration, render, onDropped, onSettled, 
 
     if (!live) {
       planeIn.current[0]!.copy(next.ready ? KEEP_ALL : KEEP_NONE);
-      planeOut.current[0]!.copy(KEEP_ALL);
+      // A dropped layer can outlive its last frame until React unmounts it: keep it hidden meanwhile.
+      planeOut.current[0]!.copy(next.ready ? KEEP_NONE : KEEP_ALL);
       if (sweeping.current && el) {
         el.style.opacity = '0';
         el.parentElement?.removeAttribute('data-sweeping');
@@ -104,7 +101,7 @@ export function SweepLayers<T>({ layer, duration, render, onDropped, onSettled, 
       return;
     }
 
-    // Screen extent of both layers, from their bounding spheres (turning does not change a sphere).
+    // Screen extent of both layers: their world boxes projected, so the pen spans the parts, not the sheet.
     camera.updateMatrixWorld();
     camera.matrixWorld.extractBasis(right, up, forward);
     forward.negate();
@@ -114,15 +111,16 @@ export function SweepLayers<T>({ layer, duration, render, onDropped, onSettled, 
     let hi = -Infinity;
     let left = Infinity;
     let rightmost = -Infinity;
-    for (const sphere of spheres.current.values()) {
-      centre.copy(sphere.center).project(camera);
-      const depth = Math.max(eye.distanceTo(sphere.center), 1e-3);
-      const ry = sphere.radius / (depth * tanHalf);
-      const rx = ry / camera.aspect;
-      lo = Math.min(lo, centre.y - ry);
-      hi = Math.max(hi, centre.y + ry);
-      left = Math.min(left, centre.x - rx);
-      rightmost = Math.max(rightmost, centre.x + rx);
+    for (const g of groups.current.values()) {
+      const box = worldBox(g);
+      if (!box) continue;
+      for (let i = 0; i < 8; i++) {
+        corner.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z).project(camera);
+        lo = Math.min(lo, corner.y);
+        hi = Math.max(hi, corner.y);
+        left = Math.min(left, corner.x);
+        rightmost = Math.max(rightmost, corner.x);
+      }
     }
     if (!Number.isFinite(lo)) {
       lo = -1;
