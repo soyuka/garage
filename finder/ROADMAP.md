@@ -37,6 +37,15 @@ Shipped, end to end:
   1440×900 0 px overflow (unsettled, retained, single part); 390×844 designation + variant table + OE
   above the dock. Captures `.impeccable/review/clarity-*.png`. See DESIGN.md (Title Block, Variant
   table, Vehicle chip, Result actions).
+- **Motion pass (2026-10-16, « a pretty demo, full motion »)**: while a search runs the sheet
+  redraws random small Wrench parts under a plotter pen (two clipping planes through the eye), at most
+  two meshes loaded, disposed on drop; the result hands off through the same sweep and the camera
+  eases to it. View transitions dock the composer from the home; title block cells rise in and swap
+  per variant; question cards, journal, history rows, chips, toasts and the Acheter menu enter and
+  leave on transform/opacity, exits faster. Hover colour transitions and the skeleton sheen no longer
+  repaint per frame (loading sheet: 0 Layout, 0 Paint over 4 s). A web find's Acheter moved to the
+  dock row; its reference got the copy icon. `?dev=loading` (dev server only) holds a cached result
+  behind the carousel for review. See DESIGN.md § Motion; captures `.impeccable/review/motion-*`.
 - **Narrowing** (`api/src/Catalog/Narrowing/`): BrandTier top 8 reps → getArticleCriteria → physical
   fingerprint (canonical thread, synonym map, deny list of application-level keys, tolerance
   max(2 mm, 2.5 %)) → cluster → 1 getArticleCrosses per cluster → merge clusters sharing a carmaker OE
@@ -167,6 +176,10 @@ break / 2.0 DI) instead of guessing.
 - A garage car opened in a new tab does not show its `organisation_number` fact on the chip: GET
   /garage/vehicles carries no facts. Read it back (facts on the list, or one facts call on open) so
   the code also survives across sessions. A shared link does not carry the chip's OPR either.
+- Motion: the agent-turn hand-off (carousel → part arriving by a `showParts` frame) shares the
+  narrowing path's Sheet and sweep but was not watched live (turns cost money); check it on the next
+  paid live test. The result's real mesh still loads through drei's `useGLTF`, which caches it for
+  the session (only the carousel meshes are disposed).
 - `set_build_code` and the `setAside` phrase have not run live with the model yet (fake-platform
   tests only): check the agent calls it instead of decode_build_code and fills setAside.
 
