@@ -95,7 +95,9 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   Logging a service auto-closes its planned task; do not also dismiss it or usage double-counts.
 - **Agent turns run async** on the `worker` container (CLI SAPI, unbounded); the in-request version
   died at the 180 s limit. `AGENT_TURN_DISPATCH=terminate` runs it in `kernel.terminate` after the
-  202 instead (no worker, bonneref deployed alone), capped by `AGENT_TURN_TIME_LIMIT`.
+  202 instead (no worker, bonneref deployed alone), capped by `AGENT_TURN_TIME_LIMIT`. Without
+  Postgres, also set `SKIP_DATABASE_WAIT=1`: `.env` always declares `DATABASE_URL`, so the entrypoint
+  otherwise waits 60 s for it and exits 1.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
   `TypeInfoDescriber`.
 - **One unnamed Mercure hub per *configuration*.** Mercure 1.0 refuses a second one anywhere, and
