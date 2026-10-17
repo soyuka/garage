@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\TurnCancellations;
+use App\Agent\TurnSettlement;
 use App\Entity\AgentTurnStatus;
+use App\Message\RunAgentTurn;
 use App\Repository\AgentTurnRepository;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;
@@ -81,11 +84,68 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $kernel->terminate($request, $response);
 
         $frames = self::frames('sess-deferred-boom');
-        self::assertSame(['type' => 'turn', 'phase' => 'end'], $frames[array_key_last($frames)]);
+        self::assertSame(['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed'], $frames[array_key_last($frames)]);
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
         self::assertStringContainsString('boom', (string) $turns[0]->getError());
+    }
+
+    public function testTurnFailingBeforeItsLoopStillEndsFailed(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $container->set(TurnCancellations::class, new class implements TurnCancellations {
+            public function request(string $sessionId): void
+            {
+            }
+
+            public function isRequested(string $sessionId): bool
+            {
+                return false;
+            }
+
+            public function clear(string $sessionId): void
+            {
+                throw new \RuntimeException('The file "/app/config/prompts/finder.md" does not exist or is not readable.');
+            }
+        });
+
+        [$kernel, $request] = self::turnRequest('sess-deferred-early');
+        $response = $kernel->handle($request);
+        self::assertSame(202, $response->getStatusCode());
+
+        $kernel->terminate($request, $response);
+
+        self::assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], self::frames('sess-deferred-early'));
+        $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
+        self::assertCount(1, $turns);
+        self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
+        self::assertStringContainsString('finder.md', (string) $turns[0]->getError());
+    }
+
+    public function testTurnKilledByAFatalIsEndedFailedAtShutdown(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $settlement = $container->get(TurnSettlement::class);
+        $turn = new RunAgentTurn(
+            owner: self::TEST_OWNER,
+            instruction: 'Quelle viscosité ?',
+            sessionTopic: 'https://localhost/agent/sessions/sess-fatal',
+        );
+
+        $settlement->open($turn);
+        $settlement->onShutdown(['type' => \E_ERROR, 'message' => 'Maximum execution time of 120 seconds exceeded', 'file' => '', 'line' => 0]);
+
+        self::assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], self::frames('sess-fatal'));
+        $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
+        self::assertCount(1, $turns);
+        self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
+        self::assertStringContainsString('Maximum execution time', (string) $turns[0]->getError());
+
+        $settlement->onShutdown(null);
+        self::assertCount(1, self::frames('sess-fatal'), 'a settled turn is not ended twice');
     }
 
     /**

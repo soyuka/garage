@@ -18,6 +18,7 @@ use App\Agent\Ui\RepeatedToolFailureGuard;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
 use App\Agent\TurnCancellations;
+use App\Agent\TurnSettlement;
 use App\Agent\WebSearchBudget;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
@@ -74,6 +75,7 @@ final readonly class RunAgentTurnHandler
         private LocaleContext $locale,
         private SelectedVehicleContext $selectedVehicle,
         private TurnCancellations $cancellations,
+        private TurnSettlement $settlement,
         private LoggerInterface $logger,
     ) {
     }
@@ -172,15 +174,12 @@ final readonly class RunAgentTurnHandler
 
             throw $e;
         } finally {
-            // Persist the debug journal for this turn — completed, capped or failed alike, so a run
-            // that misbehaved stays inspectable. Best-effort: a journal write never sinks the turn.
-            $this->journal->finish($status, $error);
             if (null !== $message->imageStash) {
                 $this->imageStash->forget($message->imageStash);
             }
-            // Always settle the dashboard's progress heartbeat — even if the loop threw and Messenger
-            // is about to retry — or the UI would stay stuck in the busy state.
-            $this->renderTools->signalTurnPhase('end');
+            // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike,
+            // even if Messenger is about to retry — or the UI would stay stuck in the busy state.
+            $this->settlement->settle($status, $error);
         }
     }
 }

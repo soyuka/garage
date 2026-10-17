@@ -1,4 +1,4 @@
-import { hubUrl, initialTurn, parseFrame, sessionTopic, turnBody, turnReducer, turnVehicle } from './agent';
+import { hubUrl, initialTurn, parseFrame, SILENCE_MS, SILENT, silent, sessionTopic, TURN_FAILED, turnBody, turnReducer, turnVehicle } from './agent';
 import narrowed from '../test-fixtures/narrowed.json';
 import type { FinderFrame, TurnState } from './types';
 
@@ -17,6 +17,12 @@ describe('parseFrame', () => {
     expect(parseFrame(JSON.stringify({ type: 'showParts', categoryLabel: 'x' }))).toBeNull();
     expect(parseFrame(JSON.stringify({ type: 'askQuestion', question: 'q', options: 'nope', context: '' }))).toBeNull();
     expect(parseFrame(JSON.stringify({ type: 'showWebPart', categoryLabel: 'x', reference: 'R', brand: 'B', sourceUrl: 'javascript:alert(1)', sourceTitle: 't', rationale: '' }))).toBeNull();
+  });
+
+  it('reads the failed outcome of a turn end, and only that one', () => {
+    expect(parseFrame(JSON.stringify({ type: 'turn', phase: 'end', outcome: 'failed' }))).toEqual({ type: 'turn', phase: 'end', outcome: 'failed' });
+    expect(parseFrame(JSON.stringify({ type: 'turn', phase: 'end', outcome: 'whatever' }))).toEqual({ type: 'turn', phase: 'end' });
+    expect(parseFrame(JSON.stringify({ type: 'turn', phase: 'end' }))).toEqual({ type: 'turn', phase: 'end' });
   });
 
   it('keeps only well-formed question options', () => {
@@ -120,6 +126,32 @@ describe('turnReducer', () => {
     const failed = turnReducer(running(), { type: 'fail', message: 'Le serveur ne répond pas.' });
     expect(failed.phase).toBe('failed');
     expect(turnReducer(failed, frame({ type: 'turn', phase: 'end' }))).toBe(failed);
+  });
+});
+
+describe('turn failure', () => {
+  const failedEnd = frame({ type: 'turn', phase: 'end', outcome: 'failed' });
+
+  it('leaves the busy state as failed on a failed turn end', () => {
+    const s = turnReducer(running(), failedEnd);
+    expect(s.phase).toBe('failed');
+    expect(s.status).toBeNull();
+    expect(s.notice).toBe(TURN_FAILED);
+  });
+
+  it('fails a turn whose end beat the POST acknowledgement', () => {
+    expect(turnReducer(turnReducer(initialTurn, { type: 'start', instruction: 'x' }), failedEnd).phase).toBe('failed');
+  });
+
+  it('ends a failed frame and a silence timeout in the same state', () => {
+    const s = turnReducer(running(), frame({ type: 'status', message: 'Je cherche…' }));
+    expect(turnReducer(s, failedEnd)).toEqual({ ...turnReducer(s, { type: 'fail', message: SILENT }), notice: TURN_FAILED });
+  });
+
+  it('times out on frame inactivity, not on total duration', () => {
+    expect(silent(0, SILENCE_MS)).toBe(false);
+    expect(silent(0, SILENCE_MS + 1)).toBe(true);
+    expect(silent(10 * SILENCE_MS, 10 * SILENCE_MS + 1_000)).toBe(false);
   });
 });
 

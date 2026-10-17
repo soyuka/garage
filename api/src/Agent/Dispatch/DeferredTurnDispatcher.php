@@ -20,9 +20,11 @@ use Symfony\Component\Messenger\Stamp\TransportNamesStamp;
  * was flushed; the PHP thread stays busy for the turn's duration.
  *
  * It goes through the bus on the `sync` transport rather than calling the handler, so the Messenger
- * middleware stack still applies. A failed turn is logged and not rethrown: the handler has already
- * journalled it and published the `turn end` frame, and there is neither a retry nor a dead letter
- * here — re-running an expensive LLM turn in the request thread is not worth it.
+ * middleware stack still applies, {@see TurnSettlementMiddleware} included. A failed turn is logged
+ * and not rethrown: it is already journalled and ended with a failed `turn end` frame, and there is
+ * neither a retry nor a dead letter here — re-running an expensive LLM turn in the request thread is
+ * not worth it. A turn the time limit kills never reaches the catch: the settlement's shutdown hook
+ * ends that one.
  */
 final class DeferredTurnDispatcher implements TurnDispatcher
 {

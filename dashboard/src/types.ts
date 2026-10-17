@@ -373,7 +373,7 @@ export type UIAction =
   // a fallback, not the contract.
   | { type: 'status'; message: string; tool?: string }
   // Turn lifecycle — drives the busy/working state. Carries no reducer state.
-  | { type: 'turn'; phase: 'start' | 'end' };
+  | { type: 'turn'; phase: 'start' | 'end'; outcome?: 'failed' };
 
 /** What the document viewer opens — a `showDocument` frame's payload, or one built from a row/bill. */
 export type DocumentSpec = Omit<Extract<UIAction, { type: 'showDocument' }>, 'type'>;

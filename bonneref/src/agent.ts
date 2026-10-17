@@ -12,6 +12,12 @@ const filled = (v: unknown): v is string => text(v) && v.trim() !== '';
 
 const NOTHING_FOUND = 'Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.';
 const CANCELLED = 'Demande interrompue.';
+export const TURN_FAILED = 'Recherche interrompue (erreur serveur). Réessayez ou choisissez une catégorie.';
+export const SILENT = 'Pas de réponse. Réessayez ou choisissez une catégorie.';
+// Last resort when no frame at all arrives: the server ends every failed turn with a failed `turn end`.
+export const SILENCE_MS = 90_000;
+
+export const silent = (lastFrameAt: number, now: number): boolean => now - lastFrameAt > SILENCE_MS;
 
 export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, buildCode: null, stale: false, held: null };
 
@@ -35,6 +41,7 @@ export function parseFrame(data: string): FinderFrame | null {
   if (!isObject(j)) return null;
   switch (j.type) {
     case 'turn':
+      if (j.phase === 'end' && j.outcome === 'failed') return { type: 'turn', phase: 'end', outcome: 'failed' };
       return j.phase === 'start' || j.phase === 'end' ? { type: 'turn', phase: j.phase } : null;
     case 'status':
       return filled(j.message) ? { type: 'status', message: j.message, ...(text(j.tool) ? { tool: j.tool } : {}) } : null;
@@ -101,10 +108,13 @@ function upsert(state: TurnState, part: AgentPart): AgentPart[] {
   return next;
 }
 
+const failed = (state: TurnState, message: string): TurnState => ({ ...state, phase: 'failed', status: null, notice: message });
+
 function applyFrame(state: TurnState, frame: FinderFrame): TurnState {
   switch (frame.type) {
     case 'turn':
       if (frame.phase === 'start') return { ...state, phase: 'running' };
+      if (frame.outcome === 'failed') return failed(state, TURN_FAILED);
       return {
         ...state,
         phase: 'done',
@@ -170,7 +180,7 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
     case 'cancel':
       return state.phase === 'sending' || state.phase === 'running' ? { ...state, phase: 'done', status: null, notice: CANCELLED } : state;
     case 'fail':
-      return { ...state, phase: 'failed', status: null, notice: action.message };
+      return failed(state, action.message);
     case 'reset':
       return initialTurn;
   }

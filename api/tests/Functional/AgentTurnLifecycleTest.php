@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\TurnCancellations;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;
 
@@ -56,6 +57,41 @@ final class AgentTurnLifecycleTest extends AppTestCase
 
         $phases = $this->turnPhases($container->get(RecordingHub::class), 'sess-boom');
         $this->assertContains('end', $phases, 'expected a turn end even when the agent loop throws');
+    }
+
+    public function testTurnFailingBeforeItsLoopEndsFailedOnTheMessengerPath(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+        $container->set(TurnCancellations::class, new class implements TurnCancellations {
+            public function request(string $sessionId): void
+            {
+            }
+
+            public function isRequested(string $sessionId): bool
+            {
+                return false;
+            }
+
+            public function clear(string $sessionId): void
+            {
+                throw new \RuntimeException('store down');
+            }
+        });
+
+        try {
+            $client->request('POST', '/agent/turn', [
+                'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+                'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-early'],
+            ]);
+        } catch (\Throwable) {
+        }
+
+        $frames = array_values(array_filter(
+            array_map(static fn ($u): array => json_decode($u->getData(), true), $container->get(RecordingHub::class)->updates),
+            static fn (array $f): bool => 'turn' === ($f['type'] ?? null),
+        ));
+        $this->assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], $frames);
     }
 
     /**

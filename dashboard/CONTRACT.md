@@ -91,7 +91,7 @@ major-unit euros the client converts.
   vehicle, iri, resource}` — `resource` is the full `VehicleSummary`; drives the live data cascade,
   **no follow-up fetch**.
 - **Session frames** (session topic): the real `UIAction` union +
-  - `{type:'turn', phase:'start'|'end'}` → busy
+  - `{type:'turn', phase:'start'|'end', outcome?:'failed'}` → busy (`outcome` only on a turn that died server-side)
   - `{type:'status', message, tool?}` → narration line + Noyau pulse. `tool` is the server's own tool
     key (`StepNarrator` is keyed by it) and is what the step chip is derived from; `message` is prose.
     Optional: a pilot's `narrate_step` has no tool to name, and a server predating the field still

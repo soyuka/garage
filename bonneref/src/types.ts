@@ -157,7 +157,8 @@ export interface QuestionOption {
 }
 
 export type FinderFrame =
-  | { type: 'turn'; phase: 'start' | 'end' }
+  // `outcome: 'failed'`: the turn died server-side (api/src/Agent/TurnSettlement.php); absent on a normal end.
+  | { type: 'turn'; phase: 'start' | 'end'; outcome?: 'failed' }
   | { type: 'status'; message: string; tool?: string }
   | { type: 'toast'; tone: 'info' | 'ok' | 'warn' | 'alarm'; message: string }
   // `narrowed` is the GET /cars/{carId}/part-categories/{categoryId}/narrowed body, minus JSON-LD keys.

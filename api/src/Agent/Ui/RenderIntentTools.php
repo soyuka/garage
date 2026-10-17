@@ -72,7 +72,7 @@ final class RenderIntentTools
      * dashboard's progress heartbeat knows the worker is running and when it settles. The HTTP 202
      * ack can no longer carry that signal now the turn runs out of the request thread.
      */
-    public function signalTurnPhase(string $phase): void
+    public function signalTurnPhase(string $phase, bool $failed = false): void
     {
         Assert::inArray($phase, ['start', 'end']);
 
@@ -88,7 +88,7 @@ final class RenderIntentTools
             $this->pendingToast = null;
         }
 
-        $this->publish(['type' => 'turn', 'phase' => $phase]);
+        $this->publish(['type' => 'turn', 'phase' => $phase] + ($failed ? ['outcome' => 'failed'] : []));
     }
 
     /**

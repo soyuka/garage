@@ -1,13 +1,11 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
+import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
 import { isAuthenticated, login } from '../auth';
 import type { BuildCode, BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
 const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
 const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
-const SILENCE_MS = 90_000;
 const PENDING_KEY = 'bonneref.agent.pending';
-const SILENT = 'Pas de réponse. Réessayez ou choisissez une catégorie.';
 
 interface Pending {
   ref: string;
@@ -78,7 +76,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
   useEffect(() => {
     if (!busy) return;
     const timer = window.setInterval(() => {
-      if (Date.now() - lastFrame.current > SILENCE_MS) {
+      if (silent(lastFrame.current, Date.now())) {
         dispatch({ type: 'fail', message: SILENT });
         void postCancel(sessionId);
       }
