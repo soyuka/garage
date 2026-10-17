@@ -1,7 +1,7 @@
 // Public home copy: `.impeccable/review/homepage-copy.md` (direction 2, particuliers first).
 export const HOME = {
   headline: 'La réf. d’origine et ses équivalences.',
-  lede: 'Saisissez la plaque ou le modèle, puis la pièce. La pièce s’affiche avec le numéro du constructeur, ses dimensions et les autres marques qui la fabriquent.',
+  lede: 'Saisissez la plaque ou le modèle, puis la pièce recherchée. Ajoutez une photo d’une carte grise, d’une plaque constructeur ou moteur pour affiner si besoin.',
   ledeSignedOut: 'Connectez-vous pour chercher une pièce. Voici ce que vous obtenez\u00a0: le numéro du constructeur, les dimensions et les autres marques qui la fabriquent.',
   placeholder: 'plaquettes de frein clio 3…',
 } as const;
