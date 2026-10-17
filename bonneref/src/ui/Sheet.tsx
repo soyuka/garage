@@ -1,5 +1,6 @@
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { measure } from '../dims';
+import { sheetLine } from '../narration';
 import { categoryPicto } from '../picto';
 import { fetchPhotoBlob, type SheetPhoto } from '../photo';
 import { CategoryPicto } from './CategoryPicto';
@@ -21,6 +22,10 @@ interface Props {
   status?: ReactNode;
   // A search is running: the drawing area turns the loading carousel whatever the part's family.
   searching?: boolean;
+  // The agent's live sentence: takes the searching line's place, and shows over a part being refined.
+  narration?: string | null;
+  // Shown under the part when nothing is being narrated.
+  hint?: string | null;
   children?: ReactNode;
 }
 
@@ -55,13 +60,14 @@ function useBlockHeight(active: boolean) {
 // the carousel dissolves while the photo or the « ? » comes in over it.
 const CANVAS_EXIT_MS = 360;
 
-export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, categoryPath = null, status, searching = false, children }: Props) {
+export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, categoryPath = null, status, searching = false, narration = null, hint = null, children }: Props) {
   const overlaid = Boolean(overlayWidth && children);
   const [sideRef, blockHeight] = useBlockHeight(overlaid);
   const drawn = family.kind !== 'none' && family.kind !== 'photo' ? family : null;
   const canvas = useLinger(searching || drawn !== null, reducedMotion ? 0 : CANVAS_EXIT_MS);
   const lastDrawn = useRef(drawn);
   if (drawn) lastDrawn.current = drawn;
+  const line = sheetLine({ narration, status, searching, hint });
   const side = overlayWidth ? { right: overlayWidth } : undefined;
   return (
     <div className="sheet" style={blockHeight ? { minHeight: Math.ceil(blockHeight) } : undefined}>
@@ -92,9 +98,9 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
           {photo ? <CataloguePhoto key={photo.src} photo={photo} categoryPath={categoryPath} /> : !status && <Fallback categoryPath={categoryPath} />}
         </div>
       )}
-      {status && searching ? (
-        <p className="sheet-searching m" role="status" style={side ? { right: side.right } : undefined}>
-          {status}
+      {line ? (
+        <p key={String(line.text)} className={`sheet-line sheet-line--${line.kind}`} role={line.kind === 'narration' ? 'status' : undefined} style={side}>
+          {line.text}
         </p>
       ) : (
         status && (

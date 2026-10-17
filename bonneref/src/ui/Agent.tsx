@@ -6,14 +6,17 @@ import { vehicleEngine, vehicleName } from './VehicleChip';
 
 interface StatusProps {
   state: TurnState;
+  // The sheet shows the agent's live sentence: the dock keeps the question, the cancel button and the outcome.
+  narrated: boolean;
   needsLogin: string | null;
   onCancel: () => void;
   onRetry: () => void;
   onSignIn: () => void;
 }
 
-// One line above the composer: what was asked, what the agent is doing, how it ended.
-export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: StatusProps) {
+// Above the composer: what was asked and how it ended, the cancel button while busy. What the agent is doing
+// is told under the drawing when the sheet is up (`narrated`).
+export function AgentStatus({ state, narrated, needsLogin, onCancel, onRetry, onSignIn }: StatusProps) {
   if (needsLogin !== null) {
     return (
       <div className="dock-status">
@@ -33,7 +36,7 @@ export function AgentStatus({ state, needsLogin, onCancel, onRetry, onSignIn }: 
     <div className="dock-status" aria-busy={busy}>
       <p className="dock-line">
         <span className="dock-q">« {state.instruction} »</span>
-        {busy && (
+        {busy && !narrated && (
           <span className="agent-status" role="status">
             <span className="agent-dot" aria-hidden="true" />
             {state.status ?? 'Lecture de la demande…'}

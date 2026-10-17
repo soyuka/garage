@@ -1,5 +1,5 @@
 import { dimText, findDim, threadOf, type DimKey } from './dims';
-import { NNBSP, formatValue } from './format';
+import { NNBSP, formatCount, formatValue } from './format';
 import { pickOe, sameBrand } from './result';
 import type { ClusterChoice } from './route';
 import type { AgentSelection, Applicability, Cluster, Dimension, Divergence, Narrowing, Reference, StoredSelection } from './types';
@@ -124,6 +124,14 @@ export function variantRows(n: Narrowing, make: string | null): VariantRow[] {
     }),
     breakpoints: applicabilityLines(c.applicability).filter((a) => BREAKPOINT.test(a.label)),
   }));
+}
+
+// Under the drawing while several parts are listed and nobody settled it: the table's own count.
+// The question card names the cote to answer; this line adds the count and points at the composer.
+export function refineHint(n: Narrowing | null, make: string | null, selection: Selection): string | null {
+  if (!n || selection.status !== 'open') return null;
+  const count = variantRows(n, make).length;
+  return count > 1 ? `${formatCount(count)} pièces possibles. Précisez ci-dessous pour trancher.` : null;
 }
 
 export interface OtherCote extends VariantCote {

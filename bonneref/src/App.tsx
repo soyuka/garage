@@ -21,8 +21,10 @@ import { parseRef, type ClusterChoice, type Route } from './route';
 import type { TextRoute } from './route-input';
 import type { AgentPart, AgentSelection, AgentVehicle, BuildCode, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
+import { composerPlaceholder, submitLabel } from './composer';
+import { narration } from './narration';
 import { rememberCar, resolveCar } from './vehicles';
-import { choiceSelectionId, pickChoice, questionOpen, selectVariant, storedVerdict } from './variants';
+import { choiceSelectionId, pickChoice, questionOpen, refineHint, selectVariant, storedVerdict } from './variants';
 import { AgentQuestion, AgentStatus, PartSwitcher, WebTitleBlock } from './ui/Agent';
 import { Dock, type QuickAction } from './ui/Dock';
 import { VinResult } from './ui/Entry';
@@ -371,7 +373,7 @@ function Finder({ api }: { api: FinderApi }) {
 
   const dock = (
     <Dock
-      status={<AgentStatus state={turn.state} needsLogin={turn.needsLogin} onCancel={turn.cancel} onRetry={() => turn.ask(turn.state.instruction)} onSignIn={turn.signIn} />}
+      status={<AgentStatus state={turn.state} narrated={agentOwns} needsLogin={turn.needsLogin} onCancel={turn.cancel} onRetry={() => turn.ask(turn.state.instruction)} onSignIn={turn.signIn} />}
       note={note}
       slot={setSlot}
       actions={setActionsSlot}
@@ -382,6 +384,8 @@ function Finder({ api }: { api: FinderApi }) {
       loading={categories.status === 'loading'}
       busy={busyReading}
       hasVehicle={v !== null}
+      submitLabel={submitLabel(route, turn.state)}
+      placeholder={composerPlaceholder(route, turn.state, v !== null)}
       autoFocus={handoff || (route.view === 'vehicle' && !agentActive)}
       plateRequest={plateRequest}
       focusRequest={focusRequest}
@@ -629,6 +633,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           placeholder={placeholder}
           status={status}
           searching={loading}
+          hint={showResult && !loading && !waiting ? refineHint(n, v.make, selection) : null}
         >
           {wide && block}
         </Sheet>
@@ -808,6 +813,8 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           overlayWidth={overlay}
           placeholder={placeholder}
           searching={busy && !part}
+          narration={narration(state)}
+          hint={busy ? null : refineHint(n, vehicle?.make ?? null, selection)}
           status={busy && !part ? (vehicle ? 'Recherche dans le catalogue du véhicule.' : 'Identification du véhicule, puis de la pièce.') : null}
         >
           {wide && block}

@@ -4,7 +4,7 @@ import { mapNarrowing } from './api';
 import { NNBSP } from './format';
 import axial from '../test-fixtures/narrowed-307-axial.json';
 import mazda from '../test-fixtures/narrowed.json';
-import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, othersLabel, otherDimensions, pickChoice, questionOpen, selectVariant, storedVerdict, variantMark, variantRows } from './variants';
+import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, othersLabel, otherDimensions, pickChoice, questionOpen, refineHint, selectVariant, storedVerdict, variantMark, variantRows } from './variants';
 import { VariantTable } from './ui/VariantTable';
 
 const n307 = () => mapNarrowing(axial);
@@ -261,5 +261,28 @@ describe('othersLabel', () => {
     expect(othersLabel(3, false)).toBe('Voir les 3 autres références (ne correspondent pas)');
     expect(othersLabel(1, true)).toBe('Masquer l’autre référence');
     expect(othersLabel(3, true)).toBe('Masquer les 3 autres références');
+  });
+});
+
+describe('refineHint', () => {
+  const verdict = { id: SEL, clusterId: 'c1', basis: 'code de fabrication', setAside: null };
+
+  it('counts the parts the variant table lists while none is settled', () => {
+    const n = n307();
+    expect(refineHint(n, null, selectVariant(n, null))).toBe(`${n.clusters.length} pièces possibles. Précisez ci-dessous pour trancher.`);
+  });
+
+  it('is the table’s own count, not a recount', () => {
+    const n = n307();
+    expect(refineHint(n, null, selectVariant(n, null))).toContain(`${variantRows(n, null).length} pièces`);
+  });
+
+  it('is silent for a single part, once retained, confirmed or picked, and with no result', () => {
+    const n = n307();
+    expect(refineHint(mapNarrowing(mazda), null, selectVariant(mapNarrowing(mazda), null))).toBeNull();
+    expect(refineHint(n, null, selectVariant(n, { id: 'c1', by: 'agent', selectionId: SEL }, verdict))).toBeNull();
+    expect(refineHint(n, null, selectVariant(n, { id: 'c2', by: 'answer' }))).toBeNull();
+    expect(refineHint(n, null, selectVariant(n, { id: 'c2', by: 'user' }))).toBeNull();
+    expect(refineHint(null, null, selectVariant(null, null))).toBeNull();
   });
 });

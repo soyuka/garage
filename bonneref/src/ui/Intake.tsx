@@ -16,6 +16,9 @@ interface Props {
   focusRequest?: number;
   labelRequest?: number;
   hasVehicle?: boolean;
+  // The dock's wording follows what typing does: `Chercher` starts a search, `Envoyer` adds to the current one.
+  submitLabel?: string;
+  placeholder?: string;
   token?: ReactNode;
   // Under the field, before the hint: the result's actions in the dock.
   below?: ReactNode;
@@ -87,7 +90,7 @@ function Chips({ files, disabled, onDetach }: { files: readonly File[]; disabled
   );
 }
 
-export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, focusRequest = 0, labelRequest = 0, hasVehicle = categories !== null, token = null, below = null, attachments = [], onText, onAttach, onDetach }: Props) {
+export function Intake({ variant, categories, loading = false, initial, context = null, busy = false, autoFocus = false, plateRequest = 0, focusRequest = 0, labelRequest = 0, hasVehicle = categories !== null, submitLabel = 'Chercher', placeholder, token = null, below = null, attachments = [], onText, onAttach, onDetach }: Props) {
   const [text, setText] = useState(initial);
   const [over, setOver] = useState(false);
   const [plateHint, setPlateHint] = useState(false);
@@ -169,7 +172,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
       role="search"
     >
       <label htmlFor={`${id}-q`} className="sr-only">
-        Plaque, VIN ou pièce
+        {submitLabel === 'Envoyer' ? 'Précisez la recherche : année, moteur, cote' : 'Plaque, VIN ou pièce'}
       </label>
       <div className="intake-field">
         {token}
@@ -179,12 +182,12 @@ export function Intake({ variant, categories, loading = false, initial, context 
           id={`${id}-q`}
           type="search"
           aria-describedby={`${id}-hint`}
-          placeholder={plateHint ? PLATE_PLACEHOLDER : loading ? 'Chargement des catégories…' : hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder}
+          placeholder={plateHint ? PLATE_PLACEHOLDER : loading ? 'Chargement des catégories…' : (placeholder ?? (hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder))}
           value={text}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}
-          enterKeyHint="search"
+          enterKeyHint={submitLabel === 'Envoyer' ? 'send' : 'search'}
           onChange={(e) => setText(e.target.value)}
           onBlur={() => setPlateHint(false)}
           onPaste={onPaste}
@@ -209,7 +212,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           <PaperclipIcon />
         </button>
         <button type="submit" className="btn pri intake-go" disabled={(route.kind === 'empty' && !attached) || busy}>
-          {busy ? 'Lecture…' : 'Chercher'}
+          {busy ? 'Lecture…' : submitLabel}
         </button>
       </div>
       {below}
