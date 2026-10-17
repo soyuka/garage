@@ -1,5 +1,6 @@
 **/*.log
 **/*.md
+!config/prompts/*.md
 **/*.php~
 **/*.dist.php
 **/*.dist
