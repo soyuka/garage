@@ -9,7 +9,8 @@ describe('Sheet without a 3D model', () => {
   it('pins the catalogue photo on the sheet, captioned, with no drag hint and no canvas', () => {
     const html = renderToStaticMarkup(createElement(Sheet, { ...base, family: { kind: 'photo' }, photo }));
     expect(html).toContain('<figure class="sheet-photo">');
-    expect(html).toContain(`src="${photo.src.replace(/&/g, '&amp;')}"`);
+    // The API route needs the bearer an <img> cannot send: the photo arrives later as a blob URL.
+    expect(html).not.toContain(`src="${photo.src.replace(/&/g, '&amp;')}"`);
     expect(html).toContain('<figcaption class="sheet-photo-cap m">Photo catalogue · <span class="nw">BOSCH 0 986 141 133</span></figcaption>');
     expect(html).not.toContain('Glisser pour tourner');
     expect(html).not.toContain('sheet-canvas');
