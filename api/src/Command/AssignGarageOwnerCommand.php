@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace App\Command;
 
+use App\Entity\AgentTurn;
+use App\Entity\FinderSelection;
 use App\Entity\MaintenanceRecord;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
+use App\Entity\VehicleDocument;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -28,11 +31,18 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 #[AsCommand(
     name: 'app:garage:assign-owner',
-    description: 'Assign garage rows (vehicles + maintenance) to an owner.',
+    description: 'Assign garage rows (vehicles, maintenance, documents, finder selections, journal) to an owner.',
 )]
 final class AssignGarageOwnerCommand extends Command
 {
-    private const array COLLECTIONS = [Vehicle::class, PlannedMaintenance::class, MaintenanceRecord::class];
+    private const array COLLECTIONS = [
+        Vehicle::class,
+        PlannedMaintenance::class,
+        MaintenanceRecord::class,
+        VehicleDocument::class,
+        FinderSelection::class,
+        AgentTurn::class,
+    ];
 
     public function __construct(private readonly DocumentManager $dm)
     {
