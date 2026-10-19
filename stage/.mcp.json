@@ -2,10 +2,7 @@
   "mcpServers": {
     "mon-parc-auto": {
       "type": "http",
-      "url": "https://garage.soyuka.me/mcp",
-      "headers": {
-        "Authorization": "Bearer ${MPA_STAGE_TOKEN}"
-      }
+      "url": "https://garage.soyuka.me/mcp"
     }
   }
 }

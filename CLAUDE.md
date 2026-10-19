@@ -19,7 +19,8 @@ cloudflared tunnel --config api/docker/cloudflared/config.yml run >> stage/var/c
 ```
 
 Then report: `https://localhost` (Atelier, self-signed cert), `https://garage.soyuka.me/mcp` (public
-MCP), Casdoor on `:8000`. Mint an MCP token with `stage/bin/mint-token` when one is needed.
+MCP). Auth is the hosted Casdoor at `https://auth.bonneref.fr` (no local container): Claude Code does the
+OAuth itself on first MCP connect (protected-resource metadata → DCR → browser login).
 
 `stage/bin/atelier` does all three **and then launches a fresh `claude` inside `stage/`** with the
 Atelier output style — that is the presenter's entry point, run from a terminal, not from inside an
@@ -37,7 +38,7 @@ Four, and a task rarely touches only one:
 
 | surface | what it is | read first |
 | --- | --- | --- |
-| `api/` | Symfony 7 / API Platform. Domain and the paid upstream responses (SIV, partsapi, Motul, photos) in MongoDB (Doctrine ODM); Postgres backs the Messenger queue + Casdoor; MinIO holds maintenance bills; Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
+| `api/` | Symfony 7 / API Platform. Domain and the paid upstream responses (SIV, partsapi, Motul, photos) in MongoDB (Doctrine ODM); Postgres backs the Messenger queue only; MinIO holds maintenance bills; Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
 | `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `dashboard/CHOREOGRAPHY.md`, `dashboard/PROVENANCE.md` |
 | `stage/` | The pilot harness — **current workstream**. Its own `CLAUDE.md` is the operator protocol (not repo guidance), `.mcp.json` points the session at the public MCP server, `bin/atelier` is the launcher. | `stage/CLAUDE.md`, `docs/pilot.md`, `CONFERENCE.md` |
 | `admin/` | Vite SPA, largely dormant. | — |
@@ -115,8 +116,9 @@ cost — not one row per service. Forecasting walks `items[].type` against `Serv
 rules plus usage, composing a health figure; a per-vehicle schedule overrides the generic interval.
 Logging a service auto-closes the matching planned task — never also call `dismiss_maintenance`.
 
-**Auth.** Casdoor is the OIDC server, chosen because it supports anonymous RFC 7591 DCR (stock Goose
-and Claude Desktop self-register). Owner identity is the Casdoor `sub`, carried through MCP and the
+**Auth.** Casdoor, hosted at `https://auth.bonneref.fr` (not in this stack), is the OIDC server, chosen
+because it supports anonymous RFC 7591 DCR (stock Goose and Claude Desktop self-register). Owner identity
+is the Casdoor `email` claim (not `sub`, which Casdoor re-mints), carried through MCP and the
 agent by `OwnerContext`; every garage read/write is owner-scoped.
 
 **Contracts are single-owner.** A change that crosses `api/` and `dashboard/` (a new `UIAction`, a new

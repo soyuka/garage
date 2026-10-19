@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Logical backup of the three stores that hold real state:
 #   mongodb  — the garage domain (vehicles, facts, maintenance records, planned tasks, users)
-#   database — Postgres: the `casdoor` DB (owner identities the Mongo data is scoped to) + `app`
+#   database — Postgres: the `app` DB (Messenger queue)
 #   minio    — maintenance bill binaries referenced by Mongo records
 # Logical dumps, not a volume tar: portable across engine versions and inspectable.
 set -euo pipefail
@@ -50,7 +50,7 @@ echo "→ $DEST"
 echo "mongodump $MONGODB_DB"
 compose exec -T mongodb mongodump --db="$MONGODB_DB" --archive --gzip --quiet > "$DEST/mongodb-$MONGODB_DB.archive.gz"
 
-# pg_dumpall, not pg_dump: it carries roles plus BOTH databases (app and casdoor).
+# pg_dumpall, not pg_dump: it carries roles plus every database.
 echo "pg_dumpall"
 compose exec -T database pg_dumpall -U "$POSTGRES_USER" | gzip > "$DEST/postgres-all.sql.gz"
 
@@ -78,9 +78,6 @@ zgrep -q "PostgreSQL database cluster dump complete" "$DEST/postgres-all.sql.gz"
   echo "postgres   $(compose exec -T database postgres --version)"
   echo "mongo_db   $MONGODB_DB"
   echo "pg_dbs     $(zgrep -o '^\\connect .*' "$DEST/postgres-all.sql.gz" | awk '{print $2}' | paste -sd, -)"
-  # Casdoor's identity tables are in the `postgres` database, NOT a `casdoor` one (verified
-  # 2026-09-10: app.conf sets dbName=casdoor but the pg driver uses dataSourceName's dbname=postgres).
-  echo "casdoor_in postgres"
   echo "s3_bucket  $S3_BUCKET"
   echo
   # Per-collection counts make a restore verifiable: compare these against the restored DB.

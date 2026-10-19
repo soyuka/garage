@@ -56,15 +56,6 @@
 	# route {} enforces strict first-match-wins in file order, so the @frontend proxy is tried
 	# before the PHP rewrite (Caddy's default directive order runs rewrite before reverse_proxy).
 	route {
-		# Same-origin proxy to Casdoor for the SPA's OAuth token exchange. The dashboard page is
-		# served over HTTPS, so a fetch() to the plain-http Casdoor (http://casdoor:8000) is blocked
-		# as mixed active content. Routing the token POST through this HTTPS origin removes the block;
-		# the token `iss` is Casdoor's app.conf origin (http://casdoor:8000), independent of the URL
-		# the browser used, so the API's issuer/JWKS check is unaffected. handle_path strips /casdoor.
-		handle_path /casdoor/* {
-			reverse_proxy http://{$CASDOOR_UPSTREAM:casdoor:8000}
-		}
-
 		# Legacy /finder URLs (the frontend's former name) keep working: handle_path strips the prefix,
 		# so {uri} is the remainder and the redirect lands under /bonneref. The #fragment never
 		# reaches the server and the browser carries it across the redirect.

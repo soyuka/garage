@@ -2,15 +2,13 @@
 # (gitignored, it carries the tunnel UUID) after `cloudflared tunnel create mpa-stage`.
 #
 # It MUST be a named tunnel. A quick tunnel hands out a fresh random *.trycloudflare.com hostname on
-# every restart, and that hostname is baked into three places — Casdoor's `origin`, CASDOOR_ISSUER,
-# and the connector entry in Claude Desktop — so a changing hostname means reconfiguring all three
-# before every rehearsal.
+# every restart, and that hostname is baked into the connector entry in Claude Desktop and into
+# MCP_ALLOWED_HOSTS — so a changing hostname means reconfiguring both before every rehearsal.
 #
 # Setup, once the interactive `cloudflared tunnel login` has written ~/.cloudflared/cert.pem:
 #
 #   cloudflared tunnel create mpa-stage
 #   cloudflared tunnel route dns mpa-stage garage.soyuka.me
-#   cloudflared tunnel route dns mpa-stage auth.soyuka.me
 #   cloudflared tunnel --config docker/cloudflared/config.yml run
 #
 # This publishes the local stack on the public internet for as long as it runs. That is the whole
@@ -31,9 +29,5 @@ ingress:
   # Desktop — unreachable, and the failure surfaces at the far end where we cannot see it.
   - hostname: garage.soyuka.me
     service: http://localhost:80
-
-  # Casdoor, at a root origin, on the port compose already publishes.
-  - hostname: auth.soyuka.me
-    service: http://localhost:8000
 
   - service: http_status:404

@@ -339,9 +339,8 @@ translation key.
 
 **Scope:** `stage/CLAUDE.md:21,50,60-64,75-93` and `stage/.claude/output-styles/atelier.md:11` mandate
 French presenter copy and French narration — an English demo needs an `en` output style and an English
-beat sheet. Casdoor's login is `defaultLanguage = "en"` in all three `api/docker/casdoor/app.conf*`
-files, i.e. already English and already inconsistent with a French app; a language change there must
-land in all three or it becomes a fourth stage/dev divergence. `admin/` has zero French strings and
+beat sheet. Casdoor's login page is now the hosted `auth.bonneref.fr` (its language is that instance's setting,
+no longer a file in this repo). `admin/` has zero French strings and
 needs nothing. `dashboard/src/scene/shopping.ts:68-70` links Mister-Auto and Auto-Doc, French
 storefronts — a real choice, not a string.
 
@@ -513,17 +512,12 @@ verified failing with `src/` untouched. Symptom in `testListMakes`: the returned
 `structuredContent === null`. Smells like a fixture/response-shape drift or a stale cache row rather
 than a logic bug. Attribution is settled; the cause is not.
 
-## Stage token — `mint-token` mints nothing (found 2026-10-02)
+## Stage token — resolved 2026-10-18
 
-`stage/bin/mint-token` selects the newest `claude-desktop` row from Casdoor's `token` table and
-prints it; it never issues or refreshes a token. Its header ("re-run at every Atelier launch rather
-than cached") reads as if a re-run renews it — it does not. Once the newest row passes its 168 h
-`exp`, `stage/bin/atelier` exports an expired `MPA_STAGE_TOKEN` and the pilot session gets
-`401 invalid_token` on both `https://localhost/mcp` and `https://garage.soyuka.me/mcp` (verified
-2026-10-02: exp 1790941722, ~3 h past). Only a fresh OAuth (`/mcp` reconnect) unblocks it.
-
-Fix options: exchange the row's `refresh_token` against Casdoor (`grant_type=refresh_token`) when
-`exp` is past, or at minimum decode `exp` and fail loudly instead of exporting a dead token.
+`stage/bin/mint-token` (selected the newest `claude-desktop` row from the local Casdoor `token` table,
+never refreshed it, so an expired `MPA_STAGE_TOKEN` gave `401 invalid_token` after 168 h) is gone with the
+local Casdoor. The stage session now authenticates through Claude Code's native MCP OAuth against
+`auth.bonneref.fr`; no static bearer exists to expire.
 
 ## Documentation search — variant-blind ranking (found 2026-10-02)
 

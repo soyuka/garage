@@ -18,7 +18,7 @@ Persistence is split on purpose:
   `turn_cancellations`), each behind a `*Store` interface. Stores bypass the unit of work (read-only
   hydration, single upserts); expiry is a TTL index *and* a read-time check, since the TTL monitor runs
   once a minute. TTL indexes are created by the entrypoint (`doctrine:mongodb:schema:create --index`).
-- **Postgres** — the Messenger transports (`doctrine://`) and Casdoor's own store. The retired DBAL
+- **Postgres** — the Messenger transports (`doctrine://`). The retired DBAL
   cache pools' `cache_items` table is only read by `app:cache:migrate-to-mongo` (2026-10-16). Never the
   domain model.
 - **MinIO / S3** — maintenance bill binaries; metadata stays on the Mongo record.
@@ -112,6 +112,6 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
 
 ## Docs
 
-`docs/PLAN.md` (architecture + upstream joining facts), `docs/AUTH.md` (Casdoor first-boot setup),
+`docs/PLAN.md` (architecture + upstream joining facts), `docs/AUTH.md` (hosted Casdoor at auth.bonneref.fr),
 `docs/PARTSAPI.md` (per-method keys, call budget), `docs/TEST.md`, `docs/AGENT_PROVIDER.md`.
 Resolved review notes live in `docs/resolved/`.

@@ -26,6 +26,5 @@
 ###> app: stage profile (the conference rig — CONFERENCE.md) ###
 # Real secrets and the tunnel UUID. Templates are tracked as *.dist alongside each.
 /.env.stage
-/docker/casdoor/app.conf.stage
 /docker/cloudflared/config.yml
 ###< app ###

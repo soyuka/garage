@@ -1,7 +1,8 @@
-# Authentication — Casdoor OIDC on `/mcp` and the REST garage
+# Authentication — hosted Casdoor OIDC on `/mcp` and the REST garage
 
-Two firewalls are OAuth2-protected against the same Casdoor authorization server; Symfony
-validates bearer tokens locally against Casdoor's JWKS (issuer + signature, **no audience**):
+Auth is the **hosted Casdoor at <https://auth.bonneref.fr>**, outside this compose stack (dev and stage
+alike; there is no local `casdoor` container). Two firewalls are OAuth2-protected against it; Symfony
+validates bearer tokens locally against its JWKS (issuer + signature, **no audience**):
 
 - **`/mcp`** — the MCP endpoint (MCP authorization spec, building on RFC 9728). Clients self-register
   via anonymous DCR.
@@ -28,11 +29,11 @@ advertises neither DCR nor URL-based client IDs, so stock Goose cannot register 
 | --- | --- |
 | Firewall + custom token handler | `config/packages/security.yaml`, `config/services.yaml` |
 | Token handler (JWKS + signature + issuer, **no audience** — see below) | `src/Security/CasdoorTokenHandler.php` |
-| User provisioned from claims (find-or-create on `sub`) | `src/Security/ZitadelUserProvider.php`, `src/Entity/User.php` |
+| User provisioned from claims (find-or-create; the tenant key is the `email` claim, `config/services.yaml:4`) | `src/Security/ZitadelUserProvider.php`, `src/Entity/User.php` |
 | RFC 9728 metadata endpoint | `src/Controller/Mcp/ProtectedResourceMetadataController.php` |
 | `WWW-Authenticate` challenge on 401 | `src/EventListener/McpProtectedResourceChallengeListener.php` |
 | `api` firewall + write/agent `access_control` | `config/packages/security.yaml` |
-| Casdoor server + dashboard OAuth app seed | `compose.yaml` (`casdoor`), `docker/casdoor/app.conf`, `docker/casdoor/init_data.json` |
+| Issuer | `CASDOOR_ISSUER=https://auth.bonneref.fr` (`.env`, `.env.stage`; injected as container env by `compose.stage.yaml`) |
 | Dashboard OAuth client (PKCE) + `authFetch` | `dashboard/src/auth.ts`, `dashboard/src/AuthGate.tsx` |
 
 ## Why a custom token handler (no audience check)
@@ -60,71 +61,65 @@ a subset of users, add a scope/role check inside the handler.
 4. `CasdoorTokenHandler` validates the JWT, `ZitadelUserProvider` resolves/creates the `User`,
    the tool runs.
 
-## One-time Casdoor setup
+## The hosted Casdoor
 
-`docker compose up` starts Casdoor at <http://localhost:8000> (console + SPA on the same
-origin; the production `casbin/casdoor` image is used, not `casdoor-all-in-one`, whose
-authorization endpoint lives on a separate `:7001` and breaks the browser redirect). It seeds
-a built-in org/app and an admin on first boot. Then:
+Discovery: <https://auth.bonneref.fr/.well-known/openid-configuration> (`issuer` is
+`https://auth.bonneref.fr`, `registration_endpoint` is advertised). The php container fetches discovery
+and the JWKS from it server-side on token verification, so it needs outbound https; `CASDOOR_ISSUER`
+must equal the discovery `issuer` character for character or every token is rejected.
 
-1. Log in to the console at <http://localhost:8000> as **`built-in` / `admin` / `123`**.
-2. **Organization "built-in" → set `dcrPolicy` to `open`** (Dynamic Client Registration is
-   **disabled by default**). This is what lets Goose register anonymously. Verify:
+Nothing about this instance is seeded from this repo. What the repo's clients rely on:
 
-   ```sh
-   # discovery advertises the registration endpoint
-   curl -s http://localhost:8000/.well-known/openid-configuration | grep registration_endpoint
-   # anonymous registration returns 201 (after dcrPolicy=open)
-   curl -s -o /dev/null -w '%{http_code}\n' -X POST http://localhost:8000/api/oauth/register \
-     -H 'Content-Type: application/json' \
-     -d '{"client_name":"probe","redirect_uris":["http://127.0.0.1:51763/oauth_callback"],"token_endpoint_auth_method":"none"}'
-   ```
+| Client | Registration | Where |
+| --- | --- | --- |
+| MCP clients (Claude Code, Claude Desktop, Goose) | anonymous DCR, self-registered into the `bonneref` org | Caddy rewrite on the auth host, see below |
+| The Atelier (`dashboard/`) | its own **public PKCE application** on `auth.bonneref.fr` | see below |
+| bonneref (`bonneref/`) | pre-registered client `89646c002d2272351ca2` | owned by that surface |
 
-3. (Optional) Add social Identity Providers (Google, GitHub) under Providers and enable them on
-   the built-in app — real client IDs/secrets go in the Casdoor console, never in this repo.
+Identity: the owner is the `email` claim, not `sub` (Casdoor re-mints `sub`), so one human is one tenant
+whichever client signed them in.
 
-`dcrPolicy` is an organization setting, not an init-time flag, so it can be toggled live
-without re-initialising. It can also be set via the API (`POST /api/update-organization`).
+## DCR lands in the `bonneref` organization
 
-## Dashboard login (browser OAuth + PKCE)
+Casdoor registers an anonymous DCR client in `built-in` unless the call carries `?organization=`
+(`controllers/oauth_dcr.go:64-67`), and discovery always advertises the bare `/api/oauth/register`
+(`object/wellknown_oidc_discovery.go:140`), so stock clients can never pick the org. The Caddy site
+`auth.bonneref.fr` (server `/etc/caddy/Caddyfile`) appends `organization=bonneref` to a
+`POST /api/oauth/register` that has none, and "Enable dynamic client registration" is on for the
+`bonneref` org only. Verified 2026-10-19: anonymous register → 201 with bonneref branding inherited.
 
-Unlike Goose (anonymous DCR), the SPA dashboard uses a **pre-registered public client** seeded
-declaratively in `docker/casdoor/init_data.json` (the `dashboard` application: Authorization Code +
-refresh_token grants, one redirect URI `https://localhost/callback`, no usable secret). Casdoor's
-`InitDb()` always creates the built-in org/app/admin and applies init data **additively/idempotently**
-(an object is created only if absent), so the seed only adds the dashboard app and never clobbers
-the built-ins. The binary's workdir is `/` and `app.conf` has `initDataFile = "./init_data.json"`, so
-compose mounts it at `/init_data.json`.
+## Atelier login (browser OAuth + PKCE)
 
-Apply it (the seed runs at Casdoor boot, so an existing instance needs a restart — additive, no data loss):
+Unlike MCP clients, the SPA uses a **pre-registered public client** on the hosted Casdoor. Create it in the
+Casdoor console (Applications) with:
 
-```sh
-docker compose up -d --force-recreate casdoor
-# verify the app exists
-curl -s http://localhost:8000/.well-known/openid-configuration >/dev/null   # discovery up
-```
+- grant types Authorization Code + refresh_token, no usable secret (PKCE public client);
+- redirect URI `https://localhost/callback`;
+- **CORS allowing `https://localhost`**: the token `POST` is a cross-origin `fetch()` straight to
+  `https://auth.bonneref.fr/api/login/oauth/access_token` (the old same-origin `/casdoor/*` Caddy proxy is
+  gone);
+- its client id supplied to the SPA as `VITE_CASDOOR_CLIENT_ID` (default in `dashboard/src/auth.ts`).
 
 The SPA flow (`dashboard/src/auth.ts`): `login()` redirects to `/login/oauth/authorize` with a PKCE
-`code_challenge`; the user signs in on Casdoor's hosted page (the seeded **admin / 123**, any user you
-add, or a social IdP); Casdoor redirects to `https://localhost/callback?code=…`; `completeLoginIfCallback()`
-exchanges the code at the token endpoint sending the `code_verifier` and **no client secret** (Casdoor
-skips the secret check when a PKCE challenge is present — `object/token_oauth.go`); the JWT access token
-is stored and sent as `Authorization: Bearer` on every garage write + `/agent/turn` via `authFetch`.
-A 401 drops the token and bounces back to login.
+`code_challenge`; the user signs in on Casdoor's hosted page; Casdoor redirects to
+`https://localhost/callback?code=…`; `completeLoginIfCallback()` exchanges the code sending the
+`code_verifier` and **no client secret** (Casdoor skips the secret check when a PKCE challenge is present,
+`object/token_oauth.go`); the JWT access token is stored and sent as `Authorization: Bearer` on every garage
+write + `/agent/turn` via `authFetch`. A 401 drops the token and bounces back to login.
 
-To log in you just need a Casdoor user — the seeded **admin / 123** works, or add one under
-**Users** in the console. No social provider required (GitHub/Google are the optional step above).
+## MCP clients
+
+`/mcp` clients do the whole dance themselves (see "Bootstrap flow"): Claude Code on first connect follows
+the 401 challenge and protected-resource metadata to `auth.bonneref.fr`, registers by DCR and opens a browser
+for login. There is no static bearer or token-minting script. See `MCP_CLAUDE.md`.
 
 ## Environment variables
 
 | Var | Purpose | Default |
 | --- | --- | --- |
-| `CASDOOR_ISSUER` | Public issuer URL (`iss`); discovery at `$ISSUER/.well-known/openid-configuration`, JWKS at the `jwks_uri` it points to | `http://localhost:8000` |
-| `CASDOOR_PORT` | Host port the `casdoor` service publishes | `8000` |
+| `CASDOOR_ISSUER` | Issuer URL (`iss`); discovery at `$ISSUER/.well-known/openid-configuration`, JWKS at the `jwks_uri` it points to | `https://auth.bonneref.fr` |
 
 There is intentionally **no audience variable** — see "Why a custom token handler" above.
-Database credentials and `origin` live in `docker/casdoor/app.conf` (not env-interpolated);
-supply your own file with real secrets for production.
 
 ## Tests
 

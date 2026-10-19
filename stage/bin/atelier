@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Launches Claude Code on the Atelier stage, bringing up everything the pilot session needs:
-# the docker stack, a freshly minted MCP token, and the cloudflared tunnel that publishes
-# garage.soyuka.me. Usage: ./bin/atelier [claude args...]
+# the docker stack and the cloudflared tunnel that publishes garage.soyuka.me. The MCP server's
+# OAuth is Claude Code's own: on first connect it follows the protected-resource metadata to
+# auth.bonneref.fr (DCR + browser login). Usage: ./bin/atelier [claude args...]
 set -euo pipefail
 
 STAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -23,7 +24,7 @@ say() { printf '\033[2matelier:\033[0m %s\n' "$1" >&2; }
 # --- 1. the stack ------------------------------------------------------------------------------
 # minio_init is a one-shot that exits after seeding the bucket, so it can never appear in the
 # running set — checking for it would make us restart a perfectly healthy stack on every launch.
-REQUIRED_SERVICES=(database mongodb php worker casdoor dashboard minio)
+REQUIRED_SERVICES=(database mongodb php worker dashboard minio)
 
 missing_services() {
   local running missing=()
@@ -91,12 +92,6 @@ else
   tunnel_reachable || { echo "atelier: tunnel never came up, see $TUNNEL_LOG" >&2; exit 1; }
   say "tunnel up on garage.soyuka.me"
 fi
-
-# --- 3. the token ------------------------------------------------------------------------------
-# Read after the stack is confirmed up: mint-token queries the database container directly.
-MPA_STAGE_TOKEN="$("$STAGE_DIR/bin/mint-token")"
-export MPA_STAGE_TOKEN
-say "token minted"
 
 # Not `exec` — the shell has to survive Claude so the trap can close the tunnel behind us.
 cd "$STAGE_DIR"

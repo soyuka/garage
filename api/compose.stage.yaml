@@ -31,11 +31,3 @@ services:
       # no error anywhere. Keep these in lockstep with php above.
       CASDOOR_ISSUER: ${CASDOOR_ISSUER}
       APP_SECRET: ${APP_SECRET}
-
-  casdoor:
-    volumes:
-      # Stage app.conf: real DB credentials and `origin` moved off http://casdoor:8000 to the public
-      # host. app.conf is NOT env-interpolated (see its own header), which is why this is a whole
-      # second file rather than a variable.
-      - ./docker/casdoor/app.conf.stage:/conf/app.conf:ro
-      - ./docker/casdoor/init_data.json:/init_data.json:ro

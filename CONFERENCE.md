@@ -43,6 +43,13 @@ If a beat only works because something was slowed down, the beat is wrong and ge
 
 ## Workstream A — the transport (highest risk, therefore first)
 
+> **2026-10-18 — auth moved off this stack.** Casdoor is no longer local: the issuer is the hosted
+> `https://auth.bonneref.fr` (discovery + DCR verified live). There is one public host
+> (`garage.soyuka.me`), no `auth.soyuka.me`, no `docker/casdoor/*`, no `/casdoor/*` Caddy proxy and no
+> `stage/bin/mint-token`; the stage Claude session does native MCP OAuth. Items below describing the
+> local Casdoor (dev `admin/123`, origin in `app.conf`, the empty-`cert` DCR bug) are the history of that
+> setup and no longer apply; whether the hosted instance's DCR clients sign JWTs correctly is unverified.
+
 Voice comes from Claude Desktop / mobile. That makes the MCP server a **remote connector**, not a
 localhost one, and rewrites the auth story. Good news: most of it already exists.
 
@@ -81,25 +88,21 @@ localhost one, and rewrites the auth story. Good news: most of it already exists
    NOT optional under this option.
 
    **It must be a NAMED tunnel.** A quick tunnel hands out a fresh random `*.trycloudflare.com`
-   hostname per restart, and that hostname is baked into Casdoor's origin, `CASDOOR_ISSUER` and the
-   Claude Desktop connector entry — three reconfigurations before every rehearsal. Unusable.
+   hostname per restart, and that hostname is baked into `MCP_ALLOWED_HOSTS` and the Claude Desktop
+   connector entry — reconfigurations before every rehearsal. Unusable.
 
    Network fallback regardless: **4G hotspot, tested under stage-like conditions.**
 
 1b. **Harden the dev defaults before the tunnel opens, not after.**
-   `docker/casdoor/init_data.json` seeds `built-in/admin` with password `123`, and Casdoor is the
-   authorization server gating `/mcp` — publicly reachable, that is a trivial takeover of the issuer
-   of every token protecting the API. Same class, lower severity: Postgres `!ChangeMe!`
+   *(Obsolete for Casdoor since 2026-10-18: the local seed with `built-in/admin` password `123` is gone.)*
+   Same class, lower severity: Postgres `!ChangeMe!`
    (`compose.yaml:110`), MinIO `minioadmin` (`compose.yaml:152`), and `APP_SECRET` must be freshly
    generated for this — it is the HMAC key deriving the pilot topic, and `mercure { anonymous }`
    (`frankenphp/Caddyfile:25`) means that topic string *is* the access control.
-2. **Casdoor reachable at that public origin** with DCR enabled (Org Settings → `dcrPolicy`; docs are
-   inconsistent about the default, verify live) and Claude's callback added to the allowed redirect URIs.
-   Its origin must move off `http://casdoor:8000` in BOTH `docker/casdoor/app.conf` and
-   `CASDOOR_ISSUER` (`.env:50`) — `CasdoorTokenHandler` validates issuer + signature, so a mismatch
-   rejects every token. Verify afterwards that the SPA's own login still works from `https://localhost`:
-   it reaches Casdoor through the same-origin `/casdoor/*` proxy, and an origin-based redirect may now
-   bounce the browser out to the public host mid-flow.
+2. **Casdoor reachable at a public origin** with DCR enabled. Now the hosted `https://auth.bonneref.fr`
+   (`CASDOOR_ISSUER` in `.env` and `.env.stage`) — `CasdoorTokenHandler` validates issuer + signature, so
+   the value must equal the discovery `issuer` exactly. The SPA reaches it directly (no proxy), so that
+   instance's CORS must allow `https://localhost`.
 3. **Verify the full discovery chain end to end**, once, and write the transcript into `docs/pilot.md`:
    `GET /mcp` → 401 + `WWW-Authenticate` → protected-resource metadata → Casdoor authorization-server
    metadata → DCR → PKCE → bearer → `tools/list`.
@@ -119,9 +122,9 @@ Desktop performs — fix it in the local fork while you are in here.
 Provisioned and confirmed working end to end, from the public internet.
 
 - Tunnel `mpa-stage` = `e445b3a1-1362-4816-804a-5d0379458b46`, 4 QUIC edge connections (cdg).
-  CNAMEs `garage.soyuka.me` + `auth.soyuka.me` route to it. Config:
+  CNAME `garage.soyuka.me` routes to it (`auth.soyuka.me` retired 2026-10-18). Config:
   `api/docker/cloudflared/config.yml` (gitignored; template `.dist` alongside).
-- Stage profile: `api/.env.stage` + `api/compose.stage.yaml` + `api/docker/casdoor/app.conf.stage`.
+- Stage profile: `api/.env.stage` + `api/compose.stage.yaml`.
   Bring up with
   `docker compose --env-file .env.stage -f compose.yaml -f compose.override.yaml -f compose.stage.yaml up -d`,
   then `rm -rf var/cache` **inside** the php container and restart `php` + `worker`.
@@ -131,7 +134,7 @@ Provisioned and confirmed working end to end, from the public internet.
   `http://` from the request and advertises a non-HTTPS metadata URL that Claude Desktop refuses.
   With it: `www-authenticate: Bearer resource_metadata="https://garage.soyuka.me/.well-known/oauth-protected-resource"`.
 - Chain confirmed publicly: metadata → `resource: https://garage.soyuka.me/mcp`,
-  `authorization_servers: [https://auth.soyuka.me]` → AS discovery (`issuer` matches
+  `authorization_servers: [https://auth.bonneref.fr]` → AS discovery (`issuer` matches
   `CASDOOR_ISSUER` exactly) → JWKS 200 → **anonymous DCR issues a client_id**. Two probe clients
   were created during this and deleted afterwards.
 - **`dcr_policy` was already `open`** on the `built-in` org — this Casdoor build defaults to it, so

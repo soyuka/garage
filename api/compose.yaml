@@ -11,8 +11,8 @@ services:
       DEFAULT_URI: ${DEFAULT_URI:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}}
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
       MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      # Postgres backs the DBAL HTTP caches (cache.siv, cache.partsapi) and Casdoor — NOT the
-      # domain model, which now lives in MongoDB via Doctrine ODM (MONGODB_URL below).
+      # Postgres backs the DBAL HTTP caches (cache.siv, cache.partsapi) and the Messenger
+      # queue — NOT the domain model, which now lives in MongoDB via Doctrine ODM (MONGODB_URL below).
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=${POSTGRES_CHARSET:-utf8}
       # Domain store: the garage (vehicles, facts, maintenance records, planned tasks, users).
       # Built from components (like DATABASE_URL) so the host `mongodb` is always the compose
@@ -57,15 +57,9 @@ services:
         published: ${HTTP3_PORT:-443}
         protocol: udp
     # CasdoorTokenHandler fetches the OIDC discovery doc + JWKS server-side to verify token
-    # signatures. The issuer (CASDOOR_ISSUER) is also the token `iss`, so it must be ONE URL
-    # that resolves identically here and on the host (Goose/browser). We use the bare service
-    # name `casdoor`: this container resolves it via the compose network DNS, and the host
-    # resolves it to loopback via an /etc/hosts entry (`127.0.0.1 casdoor`) reaching the
-    # published :8000. (`casdoor.localhost` does NOT work: glibc hard-codes the .localhost TLD
-    # to loopback inside the container, shadowing any extra_hosts mapping.)
+    # signatures. The issuer (CASDOOR_ISSUER) is the hosted Casdoor, https://auth.bonneref.fr, and
+    # is also the token `iss`; this container only needs outbound https to reach it.
     depends_on:
-      casdoor:
-        condition: service_started
       database:
         condition: service_healthy
       mongodb:
@@ -129,7 +123,7 @@ services:
 
 ###> doctrine/mongodb-odm-bundle ###
   # MongoDB — the domain store (Doctrine ODM). Holds the garage: vehicles, facts, maintenance
-  # records, planned tasks and users. The HTTP upstream caches and Casdoor stay on Postgres.
+  # records, planned tasks and users. The HTTP upstream caches stay on Postgres.
   mongodb:
     image: mongo:7
     restart: unless-stopped
@@ -170,39 +164,6 @@ services:
       until mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin} && mc ready local; do echo 'waiting for minio'; sleep 1; done;
       mc mb --ignore-existing local/${S3_BUCKET:-maintenance};
       exit 0"
-
-  # Casdoor — OIDC authorization server protecting /mcp (and any future /api firewall).
-  # Chosen over Zitadel because stock Goose (rmcp) self-registers via anonymous RFC 7591
-  # Dynamic Client Registration, which Casdoor supports and Zitadel does not. Reuses the
-  # Postgres container. NOTE: despite `dbName = casdoor` in app.conf, the tables land in the
-  # `postgres` database — the pg driver uses dataSourceName's `dbname=postgres` and no `casdoor`
-  # database is ever created (verified 2026-09-10; matters for backup/restore). Config lives
-  # in docker/casdoor/app.conf — `origin` there MUST match the public URL so discovery
-  # advertises the right authorization_endpoint (the production image serves the SPA on :8000,
-  # unlike casdoor-all-in-one which splits it onto :7001 and breaks the browser redirect).
-  #
-  # One-time setup after first boot (see docs/AUTH.md): log in as the seeded admin
-  # (built-in/admin / 123) and set Organization "built-in" → dcrPolicy = "open" to allow
-  # Goose's anonymous client registration. Dev defaults are insecure; externalize for prod.
-  #
-  # init_data.json seeds the `dashboard` OAuth app (Authorization Code + PKCE public client) used
-  # by the SPA. app.conf has initDataFile = "./init_data.json" and the binary's workdir is `/`, so
-  # it is mounted at /init_data.json. Casdoor's InitDb() always creates the built-in org/app/admin
-  # unconditionally, and init data is additive/idempotent (an object is created only if absent), so
-  # this seed never clobbers the built-in objects — it just adds the dashboard app on first boot.
-  casdoor:
-    restart: unless-stopped
-    image: casbin/casdoor:latest
-    environment:
-      RUNNING_IN_DOCKER: "true"
-    volumes:
-      - ./docker/casdoor/app.conf:/conf/app.conf:ro
-      - ./docker/casdoor/init_data.json:/init_data.json:ro
-    depends_on:
-      database:
-        condition: service_healthy
-    ports:
-      - "${CASDOOR_PORT:-8000}:8000"
 
   # The Atelier's local voice (docs/voice-plan.md). Reached only when TTS_BACKEND=pockettts; the
   # container is inert otherwise, so it costs nothing but disk while ElevenLabs is selected.
