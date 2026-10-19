@@ -1,11 +1,10 @@
 // Casdoor Authorization Code + PKCE, public client — adapted from dashboard/src/auth.ts (copied, not
-// imported). The token POST goes straight to an https issuer (production: https://auth.bonneref.fr,
-// whose CORS allows https://bonneref.fr). Only an http issuer (local dev Casdoor) is reached through
-// Caddy's same-origin /casdoor/* proxy, because a fetch to plain-http Casdoor from the https page is
-// blocked as mixed content.
+// imported). The token POST goes straight to the issuer (https://auth.bonneref.fr), whose CORS must
+// allow the page origin. Local dev signs in on auth.bonneref.fr too, so its https://localhost
+// callback must be a registered redirect URI on that app.
 
-const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'http://casdoor:8000').replace(/\/$/, '');
-const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? 'monparc-dashboard-0a1b2c3d';
+const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'https://auth.bonneref.fr').replace(/\/$/, '');
+const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? '89646c002d2272351ca2';
 const SCOPE = 'openid profile email';
 const BASE = import.meta.env.BASE_URL;
 const CALLBACK_PATH = `${BASE}callback`;
@@ -24,13 +23,7 @@ export interface StoredToken {
 
 const redirectUri = (): string => `${window.location.origin}${CALLBACK_PATH}`;
 
-export function tokenEndpointFor(issuer: string, origin: string): string {
-  return issuer.startsWith('https://')
-    ? `${issuer}/api/login/oauth/access_token`
-    : `${origin}/casdoor/api/login/oauth/access_token`;
-}
-
-const tokenEndpoint = (): string => tokenEndpointFor(ISSUER, window.location.origin);
+export const TOKEN_ENDPOINT = `${ISSUER}/api/login/oauth/access_token`;
 
 export function base64urlEncode(bytes: Uint8Array): string {
   let binary = '';
@@ -110,7 +103,7 @@ async function exchangeCallback(): Promise<boolean> {
   const code = url.searchParams.get('code');
   if (!code || !verifier || url.searchParams.get('state') !== expectedState) throw new Error('invalid OAuth callback');
 
-  const res = await fetch(tokenEndpoint(), {
+  const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({

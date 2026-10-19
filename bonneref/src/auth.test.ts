@@ -1,16 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { tokenEndpointFor } from './auth';
+import { TOKEN_ENDPOINT } from './auth';
 
-describe('tokenEndpointFor', () => {
-  it('posts straight to an https issuer', () => {
-    expect(tokenEndpointFor('https://auth.bonneref.fr', 'https://bonneref.fr')).toBe(
-      'https://auth.bonneref.fr/api/login/oauth/access_token',
-    );
-  });
-
-  it('keeps the same-origin proxy for an http issuer', () => {
-    expect(tokenEndpointFor('http://casdoor:8000', 'https://localhost')).toBe(
-      'https://localhost/casdoor/api/login/oauth/access_token',
-    );
+describe('TOKEN_ENDPOINT', () => {
+  it('posts straight to the https issuer', () => {
+    expect(TOKEN_ENDPOINT).toBe('https://auth.bonneref.fr/api/login/oauth/access_token');
   });
 });
