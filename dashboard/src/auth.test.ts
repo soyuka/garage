@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { base64urlEncode, decodeJwtClaims, isTokenFresh, pkceChallenge, tokenExpiryMs, validateCallback } from './auth';
+import {
+  TOKEN_ENDPOINT,
+  base64urlEncode,
+  decodeJwtClaims,
+  isTokenFresh,
+  pkceChallenge,
+  tokenExpiryMs,
+  validateCallback,
+} from './auth';
 
 // Pure-core tests for the OAuth/PKCE transport. The thin window/storage/fetch glue is left untested
 // (trivial wiring) — this pins the security-bearing logic: PKCE math, token-freshness skew, the
@@ -21,6 +29,12 @@ describe('pkceChallenge', () => {
     const verifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
     const challenge = await pkceChallenge(verifier);
     expect(challenge).toBe('E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM');
+  });
+});
+
+describe('TOKEN_ENDPOINT', () => {
+  it('posts straight to the https issuer', () => {
+    expect(TOKEN_ENDPOINT).toBe('https://auth.bonneref.fr/api/login/oauth/access_token');
   });
 });
 

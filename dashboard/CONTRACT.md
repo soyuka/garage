@@ -10,7 +10,8 @@
 Atelier is served **same-origin behind Caddy at `https://localhost`** (it is Caddy's `@frontend`
 upstream — see `../api/frankenphp/Caddyfile` + `../api/compose.override.yaml`). Therefore:
 
-- All REST + the hub + Casdoor are same-origin → **no CORS, no mixed-content**.
+- All REST + the hub are same-origin → **no CORS, no mixed-content**. Casdoor is NOT: it is the hosted
+  `https://auth.bonneref.fr`, so its CORS must allow `https://localhost` (token POST is cross-origin).
 - `VITE_API_BASE = https://localhost` is used for **both** fetch URLs **and** the absolute Mercure
   topic IRIs (the publisher builds topics from `DEFAULT_URI = https://localhost`, so a subscription
   string must equal that exactly).
@@ -21,14 +22,14 @@ upstream — see `../api/frankenphp/Caddyfile` + `../api/compose.override.yaml`)
 - **Login** = full-page redirect to `${ISSUER}/login/oauth/authorize` with `code_challenge` (S256),
   `state`, `redirect_uri = ${origin}/callback`. Verifier + state in `sessionStorage` (single-use);
   the resulting access token (a Casdoor-signed **JWT**) in `localStorage`.
-- **Token exchange** is a `fetch()` POST to **`${origin}/casdoor/api/login/oauth/access_token`** — the
-  same-origin Caddy proxy to `http://casdoor:8000` (a direct `fetch` to plain-http Casdoor from the
-  https page is blocked as mixed content). The token's `iss` stays Casdoor's app.conf origin, so the
-  API's issuer check is unaffected.
+- **Token exchange** is a `fetch()` POST straight to **`${ISSUER}/api/login/oauth/access_token`**
+  (`https://auth.bonneref.fr`; no same-origin proxy any more). The token's `iss` is that issuer, which
+  must equal the API's `CASDOOR_ISSUER`.
 - **`authFetch`** attaches `Authorization: Bearer <jwt>` when a non-expired token exists. **Public
   `GET` reads need no Bearer**; `/agent/turn` + **all writes are gated**. A **401 wipes the token and
-  bounces to login** (re-auth, never silent-fail). ISSUER `http://casdoor:8000`, CLIENT_ID
-  `monparc-dashboard-0a1b2c3d`, redirect URI `https://localhost/callback` (already seeded).
+  bounces to login** (re-auth, never silent-fail). ISSUER `https://auth.bonneref.fr`, CLIENT_ID
+  `671b8c86d75444f3f4c4` (default in `src/auth.ts`; the public PKCE app must exist on the hosted
+  Casdoor), redirect URI `https://localhost/callback`.
 - ⚠️ Reads working without a Bearer gives false confidence — gate-verify with a real **write** 2xx.
 
 ## REST (API Platform, `application/ld+json`)

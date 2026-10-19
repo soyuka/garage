@@ -4,8 +4,8 @@ import react from '@vitejs/plugin-react';
 // The Atelier dashboard is served SAME-ORIGIN behind Caddy at https://localhost — it is Caddy's
 // `@frontend` upstream (FRONTEND_UPSTREAM=dashboard:5173 in api/compose.override.yaml). The browser
 // never talks to Vite directly, so there is no dev proxy and
-// no CORS: every backend path (/garage, /agent, /.well-known/mercure, /casdoor) is same-origin, and
-// the OAuth callback lands at https://localhost/callback (already a registered Casdoor redirect URI).
+// no CORS: every backend path (/garage, /agent, /.well-known/mercure) is same-origin, and
+// the OAuth callback lands at https://localhost/callback (must be registered on the auth.bonneref.fr Atelier app).
 //
 // HMR must phone home over wss on :443 (Caddy's TLS) on a dedicated path so the Caddyfile @frontend
 // matcher forwards the upgrade instead of letting it fall through to PHP.

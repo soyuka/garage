@@ -16,16 +16,15 @@
 
 import { currentLocale } from './i18n/locale';
 
-const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'http://casdoor:8000').replace(/\/$/, '');
-const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? 'monparc-dashboard-0a1b2c3d';
+const ISSUER = (import.meta.env.VITE_CASDOOR_ISSUER ?? 'https://auth.bonneref.fr').replace(/\/$/, '');
+const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? '671b8c86d75444f3f4c4';
 const API = import.meta.env.VITE_API_BASE ?? '';
 const SCOPE = 'openid profile email';
 
-// The authorize step is a top-level navigation (plain http is fine — mixed-content only governs
-// subresource fetches). The token exchange is a fetch() from the https page, so it MUST go through
-// the same-origin Caddy /casdoor/* proxy (a direct fetch to http://casdoor:8000 is blocked).
+// The authorize step is a top-level navigation. The token POST goes straight to the issuer
+// (auth.bonneref.fr), whose CORS must allow the page origin.
 const AUTHORIZE_ENDPOINT = `${ISSUER}/login/oauth/authorize`;
-const tokenEndpoint = (): string => `${window.location.origin}/casdoor/api/login/oauth/access_token`;
+export const TOKEN_ENDPOINT = `${ISSUER}/api/login/oauth/access_token`;
 
 const CALLBACK_PATH = '/callback';
 const TOKEN_KEY = 'mpa.auth.token';
@@ -210,7 +209,7 @@ async function exchangeCallback(): Promise<boolean> {
     redirect_uri: redirectUri(),
     code_verifier: check.verifier,
   });
-  const res = await fetch(tokenEndpoint(), {
+  const res = await fetch(TOKEN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body,
