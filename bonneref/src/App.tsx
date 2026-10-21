@@ -5,7 +5,6 @@ import { ApiError } from './api';
 import { liveApi, newTrace, type FinderApi, type Trace } from './client';
 import { gateView } from './gate';
 import { partFamily } from './family';
-import { sheetPhoto } from './photo';
 import { resultSummary } from './followup';
 import { historyEntries, historyFor, type HistoryEntry } from './history';
 import { STARTERS } from './home';
@@ -625,7 +624,6 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           family={family}
           viewLabel={viewLabel(family, category)}
           dimensions={cluster?.dimensions ?? []}
-          photo={family.kind === 'photo' ? sheetPhoto(n, cluster, v.carType) : null}
           categoryPath={category?.path ?? null}
           ghost={loading || !cluster}
           reducedMotion={reducedMotion}
@@ -806,7 +804,6 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           family={family}
           viewLabel={viewLabel(family, category)}
           dimensions={cluster?.dimensions ?? []}
-          photo={family.kind === 'photo' ? sheetPhoto(n, cluster, vehicle?.carType ?? 'PC') : null}
           categoryPath={category?.path ?? null}
           ghost={!cluster || state.stale}
           reducedMotion={reducedMotion}

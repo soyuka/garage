@@ -1892,8 +1892,7 @@ button {
   margin: 0;
 }
 
-/* A part without a 3D model: its catalogue photo pinned on the sheet as a reference, or a plain « ? ».
-   Grayscale + multiply so the photo's white studio ground becomes the paper. No cote ever touches it. */
+/* A part without a 3D model: its family pictogram or a plain « ? ». No cote ever touches it. */
 .sheet-figure {
   position: absolute;
   inset: 0;
@@ -1901,40 +1900,6 @@ button {
   place-items: center;
   padding: 64px 32px 48px;
   pointer-events: none;
-}
-
-.sheet-photo {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: min(360px, 100%);
-  margin: 0;
-  padding: 12px 12px 10px;
-  border: 1px solid var(--hair);
-  background: var(--bg);
-}
-
-.sheet-photo img {
-  display: block;
-  width: 100%;
-  height: auto;
-  max-height: min(42vh, 300px);
-  object-fit: contain;
-  filter: grayscale(1) contrast(1.08);
-  mix-blend-mode: multiply;
-}
-
-.sheet-photo-cap {
-  padding-top: 8px;
-  border-top: 1px solid var(--hair);
-  font-size: 11.5px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  color: var(--mute);
-}
-
-.sheet-photo-cap .nw {
-  white-space: nowrap;
 }
 
 .sheet-picto {
@@ -3325,11 +3290,6 @@ a.gtb--card:hover .c {
   }
 }
 
-.sheet-photo:not([data-loaded]) {
-  opacity: 0;
-}
-
-.sheet-photo[data-loaded],
 .sheet-picto,
 .sheet-unknown {
   animation: pin-in 0.42s var(--ease-out) both;

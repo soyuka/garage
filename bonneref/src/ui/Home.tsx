@@ -119,7 +119,7 @@ export function Showcase({ reducedMotion }: { reducedMotion: boolean }) {
       <div className="show-sheet">
         <div className="sheet-label m">EXEMPLE · VUE 3D — {s.label.toUpperCase()}</div>
         <div className="show-canvas">
-          {s.family.kind !== 'none' && s.family.kind !== 'photo' && (
+          {s.family.kind !== 'none' && s.family.kind !== 'generic' && (
             <Suspense fallback={null}>
               <Blueprint family={s.family} dimensions={s.dimensions} ghost={false} reducedMotion={reducedMotion} extent={extent()} interactive={false} />
             </Suspense>

@@ -138,7 +138,7 @@ export type Family =
   | { kind: 'brake'; axle: 'front' | 'rear'; component: 'disc' | 'other' }
   | { kind: 'filter'; filter: 'oil' | 'fuel' | 'air' }
   | { kind: 'mesh'; mesh: MeshId; approximate: boolean }
-  | { kind: 'photo' }
+  | { kind: 'generic' }
   | { kind: 'none' };
 
 // ── Agent turn contract (POST /agent/turn with surface "finder") ─────────────────────────────────

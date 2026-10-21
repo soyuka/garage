@@ -170,7 +170,7 @@ Shipped, end to end:
   unmapped categories show the catalogue photo or « ? » (below; the generic chamfered block was removed
   2026-10-16). Dev contact sheet:
   https://localhost/bonneref/dev/meshes.html (not in the build) (not in the build).
-- **Catalogue photo where no mesh exists (2026-10-16)**: a part without a mesh shows its shown cluster's
+- **Catalogue photo where no mesh exists (2026-10-16)**: *Removed 2026-10-21: no catalogue photo source (TecDoc DB has no article media); the proxy route and the sheet photo are deleted, the pictogram / « ? » fallback remains.* a part without a mesh shows its shown cluster's
   representative photo, pinned on the sheet (grayscale + multiply, framed, `Photo catalogue · <marque réf>`,
   never dimensioned), else a plain « ? ». API proxy `GET /cars/{carId}/part-categories/{categoryId}/articles/{artId}/photo`
   (`App\Catalog\ArticlePhotos`): getArticleMedia cached forever per artId, only for an article of an

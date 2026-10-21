@@ -14,7 +14,7 @@ import { SweepLayers } from './SweepLayers';
 import type { Layer } from './sweep';
 import { turntableStep } from './turntable';
 
-type DrawnFamily = Exclude<Family, { kind: 'none' } | { kind: 'photo' }>;
+type DrawnFamily = Exclude<Family, { kind: 'none' } | { kind: 'generic' }>;
 
 interface Props {
   // null while searching for a part that has no mesh (photo or « ? »): only the carousel draws.

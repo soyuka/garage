@@ -2,7 +2,6 @@ import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode 
 import { measure } from '../dims';
 import { sheetLine } from '../narration';
 import { categoryPicto } from '../picto';
-import { fetchPhotoBlob, type SheetPhoto } from '../photo';
 import { CategoryPicto } from './CategoryPicto';
 import { useLinger } from './Presence';
 import type { Dimension, Family } from '../types';
@@ -17,7 +16,6 @@ interface Props {
   reducedMotion: boolean;
   placeholder: ReactNode;
   overlayWidth: number | null;
-  photo?: SheetPhoto | null;
   categoryPath?: string | null;
   status?: ReactNode;
   // A search is running: the drawing area turns the loading carousel whatever the part's family.
@@ -40,7 +38,7 @@ function extentFor(family: Family, dims: readonly Dimension[]): number {
   return 150;
 }
 
-export const UNKNOWN_LABEL = 'Ni modèle 3D ni photo catalogue';
+export const UNKNOWN_LABEL = 'Pas de modèle 3D';
 
 // The overlaid title block never clips: a block taller than the sheet (variant table) makes the sheet grow.
 function useBlockHeight(active: boolean) {
@@ -56,14 +54,14 @@ function useBlockHeight(active: boolean) {
   return [ref, height] as const;
 }
 
-// The canvas outlives the search by its fade when the result has no mesh (photo, « ? », message):
-// the carousel dissolves while the photo or the « ? » comes in over it.
+// The canvas outlives the search by its fade when the result has no mesh (pictogram, « ? », message):
+// the carousel dissolves while the pictogram or the « ? » comes in over it.
 const CANVAS_EXIT_MS = 360;
 
-export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, photo = null, categoryPath = null, status, searching = false, narration = null, hint = null, children }: Props) {
+export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, placeholder, overlayWidth, categoryPath = null, status, searching = false, narration = null, hint = null, children }: Props) {
   const overlaid = Boolean(overlayWidth && children);
   const [sideRef, blockHeight] = useBlockHeight(overlaid);
-  const drawn = family.kind !== 'none' && family.kind !== 'photo' ? family : null;
+  const drawn = family.kind !== 'none' && family.kind !== 'generic' ? family : null;
   const canvas = useLinger(searching || drawn !== null, reducedMotion ? 0 : CANVAS_EXIT_MS);
   const lastDrawn = useRef(drawn);
   if (drawn) lastDrawn.current = drawn;
@@ -93,9 +91,9 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
           {placeholder}
         </div>
       )}
-      {!searching && family.kind === 'photo' && (
+      {!searching && family.kind === 'generic' && (
         <div className="sheet-figure" style={side}>
-          {photo ? <CataloguePhoto key={photo.src} photo={photo} categoryPath={categoryPath} /> : !status && <Fallback categoryPath={categoryPath} />}
+          {!status && <Fallback categoryPath={categoryPath} />}
         </div>
       )}
       {line ? (
@@ -118,45 +116,6 @@ export function Sheet({ family, viewLabel, dimensions, ghost, reducedMotion, pla
       )}
     </div>
   );
-}
-
-// A reference photo pinned on the sheet: never measured, never dimensioned. A missing or broken image
-// falls back to the « ? ».
-function CataloguePhoto({ photo, categoryPath }: { photo: SheetPhoto; categoryPath: string | null }) {
-  const [failed, setFailed] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const objectUrl = useObjectUrl(photo.src, () => setFailed(true));
-  if (failed) return <Fallback categoryPath={categoryPath} />;
-  // Pinned only once decoded: a photo that fails never flashes an empty frame before the « ? ».
-  return (
-    <figure className="sheet-photo" data-loaded={loaded || undefined}>
-      {objectUrl && <img src={objectUrl} alt={photo.alt} decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
-      <figcaption className="sheet-photo-cap m">
-        Photo catalogue · <span className="nw">{photo.reference}</span>
-      </figcaption>
-    </figure>
-  );
-}
-
-// The photo route is authenticated: fetched with the bearer, shown from a blob URL revoked when the
-// key changes or the figure unmounts.
-function useObjectUrl(src: string, onFail: () => void): string | null {
-  const [url, setUrl] = useState<string | null>(null);
-  useEffect(() => {
-    let live = true;
-    let made: string | null = null;
-    void fetchPhotoBlob(src).then((blob) => {
-      if (!live) return;
-      if (!blob) return onFail();
-      made = URL.createObjectURL(blob);
-      setUrl(made);
-    });
-    return () => {
-      live = false;
-      if (made) URL.revokeObjectURL(made);
-    };
-  }, [src]);
-  return url;
 }
 
 function Fallback({ categoryPath }: { categoryPath: string | null }) {

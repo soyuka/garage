@@ -40,7 +40,7 @@ describe('partFamily', () => {
     expect(partFamily(cat('Filtre > Filtre à carburant'), round)).toEqual({ kind: 'filter', filter: 'fuel' });
     expect(meshOf(real('Filtre > Filtre à air'))).toBe('air-filter');
     expect(meshOf(real('Filtre > Filtre à carburant'))).toBe('fuel-filter');
-    expect(partFamily(cat('Filtre > Filtre à air pour habitacle'), round)).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Filtre > Filtre à air pour habitacle'), round)).toEqual({ kind: 'generic' });
   });
 
   it('maps the real Mazda tree categories to their mesh', () => {
@@ -201,9 +201,9 @@ describe('partFamily', () => {
   });
 
   it('keeps a lamp unit off the bulb, and the fog lamp unit on its own mesh', () => {
-    expect(partFamily(real('Carrosserie > Projecteurs principaux / composants > Composants des projecteurs principaux'))).toEqual({ kind: 'photo' });
-    expect(partFamily(real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Composants pour projecteur antibrouillard'))).toEqual({ kind: 'photo' });
-    expect(partFamily(real("Carrosserie > Avant du véhicule > Feu de position / d'encombrement / composants > Feu de stationnement/de position"))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Carrosserie > Projecteurs principaux / composants > Composants des projecteurs principaux'))).toEqual({ kind: 'generic' });
+    expect(partFamily(real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Composants pour projecteur antibrouillard'))).toEqual({ kind: 'generic' });
+    expect(partFamily(real("Carrosserie > Avant du véhicule > Feu de position / d'encombrement / composants > Feu de stationnement/de position"))).toEqual({ kind: 'generic' });
     expectMeshes([[real('Carrosserie > Avant du véhicule > Projecteur antibrouillard/ composants > Projecteur antibrouillard / Optique'), 'fog-lamp']]);
   });
 
@@ -243,7 +243,7 @@ describe('partFamily', () => {
     ]);
     expect(meshOf(real('Échappement > Tuyaux'))).toBe('oem-mid-pipe');
     expect(meshOf(cat('Moteur > Alimentation en air > Flexibles/Conduites'))).toBe('air-duct');
-    expect(partFamily(cat('Chauffage / Ventilation > Gaines/tuyaux'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Chauffage / Ventilation > Gaines/tuyaux'))).toEqual({ kind: 'generic' });
     expect(meshOf(cat('Entraînement hybride/électrique > Refroidissement > Tuyauterie et brides'))).toBe('cooling-hardpipe');
   });
 
@@ -263,8 +263,8 @@ describe('partFamily', () => {
       [real('Moteur > Distribution moteur > Poulie'), 'ribbed-pulley'],
       [cat('Refroidissement > Pompe à eau / joint > Poulie'), 'ribbed-pulley'],
     ]);
-    expect(partFamily(real('Moteur > Système bielle-manivelle > Vilebrequin > Poulies de vilebrequin'))).toEqual({ kind: 'photo' });
-    expect(partFamily(cat('Moteur > Commande à courroie > Poulie'), [], 'Poulie, pompe de direction assistée')).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Moteur > Système bielle-manivelle > Vilebrequin > Poulies de vilebrequin'))).toEqual({ kind: 'generic' });
+    expect(partFamily(cat('Moteur > Commande à courroie > Poulie'), [], 'Poulie, pompe de direction assistée')).toEqual({ kind: 'generic' });
   });
 
   it('draws the flywheel and the clutch hydraulics', () => {
@@ -274,7 +274,7 @@ describe('partFamily', () => {
       [real("Embrayage / composants > Commande d'embrayage > Récepteur d'embrayage"), 'clutch-slave-cylinder'],
       [real("Embrayage / composants > Commande d'embrayage > Cylindre émetteur"), 'clutch-master-cylinder'],
     ]);
-    expect(partFamily(real('Direction > Volant /- composants'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Direction > Volant /- composants'))).toEqual({ kind: 'generic' });
     expect(meshOf(real('Dispositif de freinage > Maître-cylindre de frein'))).toBe('brake-master-booster');
   });
 
@@ -296,7 +296,7 @@ describe('partFamily', () => {
       [real('Système électrique > Avertisseur sonore / trompette'), 'horn'],
     ]);
     for (const path of ['Nettoyage des vitres > Gicleur d\'eau de lavage', 'Nettoyage des vitres > Tringlerie d\'essuie-glace / commande', "Nettoyage des vitres > Réservoir d'eau de lavage / conduite"]) {
-      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'photo' }]);
+      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'generic' }]);
     }
   });
 
@@ -309,7 +309,7 @@ describe('partFamily', () => {
       [real('Climatisation > Compresseur / composants'), 'ac-compressor'],
     ]);
     expect(meshOf(real('Moteur > Alimentation en air > Suralimentation > Compresseur/composants'))).toBe('efr-turbo');
-    expect(partFamily(real("Moteur > Épuration des gaz d'échappement > Recyclage des gaz d'échappement > Joints"))).toEqual({ kind: 'photo' });
+    expect(partFamily(real("Moteur > Épuration des gaz d'échappement > Recyclage des gaz d'échappement > Joints"))).toEqual({ kind: 'generic' });
   });
 
   it('draws the gearbox body, not its parts', () => {
@@ -319,7 +319,7 @@ describe('partFamily', () => {
       [cat('Boîte de vitesses > Boîte de vitesses manuelle > Carter/composants'), 'gearbox'],
     ]);
     for (const path of ['Boîte de vitesses > Boîte de vitesses manuelle > Joints', 'Boîte de vitesses > Boîte de vitesse automatique > Capteur', 'Boîte de vitesses > Boîte de vitesse automatique > Contrôle / hydraulique', 'Boîte de vitesses > Boîte de vitesses manuelle > Commande de boîte de vitesses']) {
-      expect([path, partFamily(cat(path))]).toEqual([path, { kind: 'photo' }]);
+      expect([path, partFamily(cat(path))]).toEqual([path, { kind: 'generic' }]);
     }
   });
 
@@ -329,7 +329,7 @@ describe('partFamily', () => {
       [real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Chaîne de distribution'), 'timing-chain-kit'],
       [real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Coulisse'), 'timing-chain-kit'],
     ]);
-    expect(partFamily(real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes'))).toEqual({ kind: 'generic' });
   });
 
   it('draws the power steering pump and the intercooler', () => {
@@ -367,7 +367,7 @@ describe('partFamily', () => {
     for (const path of ["Moteur > Lubrification > Carter d'huile et pièces de montage > Joint", "Moteur > Lubrification > Radiateur d'huile / pièces de montage > Radiateur d'huile"]) {
       expect([path, meshOf(real(path))]).not.toEqual([path, 'gasket-flat']);
     }
-    expect(partFamily(real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Moteur > Distribution moteur > Chaîne de distribution/tension/guidage > Tendeur de chaînes'))).toEqual({ kind: 'generic' });
   });
 
   it('draws the electrical parts and the lamp units, never a bulb or a components leaf', () => {
@@ -399,8 +399,8 @@ describe('partFamily', () => {
       [real('Carrosserie > Arrière de la voiture > Feu arrière/Composants > Ampoule de feu arrière'), 'bulb-p21w'],
       [real('Système électrique > Projecteurs principaux / composants > Ampoule pour projecteur principal'), 'bulb-h7'],
     ]);
-    expect(partFamily(real('Système électrique > Projecteurs principaux / composants > Composants des projecteurs principaux'))).toEqual({ kind: 'photo' });
-    expect(partFamily(cat('Système électrique > Feux > Feu de brouillard arrière/Composants > Composants de feu de brouillard arrière'))).toEqual({ kind: 'photo' });
+    expect(partFamily(real('Système électrique > Projecteurs principaux / composants > Composants des projecteurs principaux'))).toEqual({ kind: 'generic' });
+    expect(partFamily(cat('Système électrique > Feux > Feu de brouillard arrière/Composants > Composants de feu de brouillard arrière'))).toEqual({ kind: 'generic' });
   });
 
   it('keeps look-alike categories off the wrong mesh', () => {
@@ -420,7 +420,7 @@ describe('partFamily', () => {
       "Boîte de vitesses > Boîte de vitesse automatique > Carter d'huile et pièces de montage > Carter d'huile",
       'Carburation > Carburateurs > Commande / Amortisseurs / Boîtiers',
     ]) {
-      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'photo' }]);
+      expect([path, partFamily(real(path))]).toEqual([path, { kind: 'generic' }]);
     }
   });
 
@@ -455,7 +455,7 @@ describe('partFamily', () => {
       ['Moteur > Support du moteur > Support moteur', 'Support de palier, support du moteur'],
       ['Moteur > Support du moteur > Support moteur', 'Butée élastique, support du moteur'],
     ] as const) {
-      expect([group, partFamily(cat(path), [], group)]).toEqual([group, { kind: 'photo' }]);
+      expect([group, partFamily(cat(path), [], group)]).toEqual([group, { kind: 'generic' }]);
     }
   });
 
@@ -469,8 +469,8 @@ describe('partFamily', () => {
   it('draws the crankshaft pulley for its product group inside the mixed pulley leaf', () => {
     const pulley = cat('Moteur > Commande à courroie > Poulie');
     expect(partFamily(pulley, [], 'Poulie, vilebrequin')).toEqual({ kind: 'mesh', mesh: 'crankshaft-pulley-damper', approximate: true });
-    expect(partFamily(pulley, [], 'Poulie, pompe de direction assistée')).toEqual({ kind: 'photo' });
-    expect(partFamily(pulley, [], 'Jeu de courroies trapézoïdales à nervures')).toEqual({ kind: 'photo' });
+    expect(partFamily(pulley, [], 'Poulie, pompe de direction assistée')).toEqual({ kind: 'generic' });
+    expect(partFamily(pulley, [], 'Jeu de courroies trapézoïdales à nervures')).toEqual({ kind: 'generic' });
   });
 
   it('draws the thermostat housing for its product group, the thermostat for the leaf', () => {
@@ -480,14 +480,14 @@ describe('partFamily', () => {
   });
 
   it('never draws a disc brake for a drum kit, nor for a kit that may be drums', () => {
-    expect(partFamily(cat('Dispositif de freinage > Frein à tambour > Kit de freins'))).toEqual({ kind: 'photo' });
-    expect(partFamily(cat('Dispositif de freinage > Frein de haute performance > Kit de freins'))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Dispositif de freinage > Frein à tambour > Kit de freins'))).toEqual({ kind: 'generic' });
+    expect(partFamily(cat('Dispositif de freinage > Frein de haute performance > Kit de freins'))).toEqual({ kind: 'generic' });
     expect(partFamily(cat('Dispositif de freinage > Frein à disque > Kit de freins'))).toMatchObject({ kind: 'brake' });
   });
 
   it('gives every family without a mesh the catalogue photo instead of a drawing', () => {
-    expect(partFamily(cat('Accessoires > Chaîne à neige'))).toEqual({ kind: 'photo' });
-    expect(partFamily(cat("Dispositif de freinage > Témoin d'usure"))).toEqual({ kind: 'photo' });
+    expect(partFamily(cat('Accessoires > Chaîne à neige'))).toEqual({ kind: 'generic' });
+    expect(partFamily(cat("Dispositif de freinage > Témoin d'usure"))).toEqual({ kind: 'generic' });
   });
 });
 
