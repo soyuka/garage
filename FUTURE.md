@@ -700,3 +700,6 @@ dev `cache_items` rows were migrated (`app:cache:migrate-to-mongo`: siv 7/7, par
 - **`tests/Unit/Agent/CancelTurnListenerTest::testEndsTheTurnAndToastsWhenCancelWasRequested` is red,
   pre-existing**: `RenderIntentTools::toast()` now defers to `pendingToast` when a session is bound, so the
   hub has no toast at assertion time. Unrelated to the store move.
+- **`tests/Functional/McpMaintenanceTest::testEditMaintenanceOnAnUnknownRecordIsNotFoundNotAnError` is red,
+  pre-existing** (verified on main 6280d54, 2026-10-21): `edit_maintenance` on an unknown record answers
+  `invalid_input` where the test expects `not_found`. Unrelated to the TecDoc catalog branch.

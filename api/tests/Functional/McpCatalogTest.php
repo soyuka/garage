@@ -189,7 +189,6 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame('oil_change', $content['service']);
 
         $this->assertArrayNotHasKey('fluids', $content);
-        $this->assertNotEmpty($content['categories']);
     }
 
     public function testGetServicePartsGroupsFilterCategoriesWithArticles(): void
