@@ -242,11 +242,6 @@ export const fr = {
     historySteps: ['ouverture du carnet…', 'relecture des visites…'] as [string, string],
     historyFail: 'carnet indisponible',
     historyResult: 'Voici l’historique des visites.',
-    fluids: 'Capacités fluides',
-    fluidsSteps: ['consultation des capacités…', 'lecture des specs fluides…'] as [string, string],
-    fluidsFail: 'le catalogue ne répond pas',
-    fluidsEmpty: 'aucune capacité fluide connue pour ce véhicule',
-    fluidsResult: 'Voici les capacités de fluides.',
     parts: 'Pièces à commander',
     partsSteps: ['relecture des tâches ouvertes…', 'rassemblement des références…'] as [string, string],
     partsFail: 'pièces indisponibles',
@@ -636,7 +631,7 @@ export const fr = {
   },
 
   fluid: {
-    /** Fallback name for a fill volume the catalogue gave no usable title. */
+    /** Fallback name for a fluid line that has no label. */
     fallbackLabel: 'Fluide',
   },
 

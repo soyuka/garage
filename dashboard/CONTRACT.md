@@ -166,8 +166,9 @@ renders it verbatim) and a node surface is read-only — a fetched value is not 
 Without `nodes`, `show_fact(['oil_capacity'])` after a successful lookup renders an EMPTY panel.
 
 `SpecNode` also carries an optional `volumeLitres?: number | null` (2026-09-05) — the fluid station's
-body seam (`fluidVolumes.ts`), not a display value: `fluids.ts` sets it from the raw `FillVolume`
-volume/unit (litres straight, `ml` divided down, `null` for a mass), absent for an info-only node.
+body seam (`fluidVolumes.ts`), not a display value: litres straight, `null` for a mass, absent for an info-only
+node. **2026-10-21:** its only producer (`fluids.ts`, the fill-volumes fetch) was removed; the field is kept for
+wire-supplied `nodes`.
 
 ⚠️ **`renderSuggestions` and `patchPanel` DO NOT EXIST** (a `docs/ui.md` sketch artifact). Never build
 against them.

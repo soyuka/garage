@@ -14,7 +14,6 @@ import {
   createVehicle,
   deleteVehicle,
   deleteVehicleFact,
-  getFillVolumes,
   getSivVehicle,
   getVehicle,
   getVehicleBundle,
@@ -33,7 +32,6 @@ import {
   type VehiclePatch,
 } from './garage';
 import { pickAcknowledgement } from './noyau/acknowledge';
-import { fluidNodes } from './fluids';
 import { carteGriseNodes } from './siv';
 import { defaultUsageUnit } from './edit';
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from './router';
@@ -736,31 +734,6 @@ export function Atelier() {
             failMessage: t.chip.historyFail,
             resolve: async () => ({ effect: openHistory }),
             spokenResult: t.chip.historyResult,
-          }),
-      });
-    }
-    if (b.vehicle.kType != null) {
-      const kType = b.vehicle.kType;
-      chips.push({
-        label: t.chip.fluids,
-        disabled: locked,
-        zone: 'colonne',
-        onClick: () =>
-          runLocalAnswer({
-            steps: t.chip.fluidsSteps,
-            failMessage: t.chip.fluidsFail,
-            resolve: async () => {
-              let vols;
-              try {
-                vols = await getFillVolumes(kType);
-              } catch {
-                throw new Error(t.chip.fluidsFail);
-              }
-              const nodes = fluidNodes(vols, locale);
-              if (nodes.length === 0) throw new Error(t.chip.fluidsEmpty);
-              return { focus: { panel: 'specs', keys: [], title: t.chip.fluids, nodes } };
-            },
-            spokenResult: t.chip.fluidsResult,
           }),
       });
     }

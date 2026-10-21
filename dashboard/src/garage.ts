@@ -12,7 +12,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { API, authFetch } from './auth';
-import type { FillVolume } from './fluids';
 import type { PageLabel } from './scene/documentViewer';
 import type { SivVehicle } from './siv';
 import type {
@@ -123,15 +122,6 @@ export async function getVehicleBundle(iri: string): Promise<VehicleBundle> {
 }
 
 // ── Catalog / SIV reads (net-new §5.1 + §5.8 — feed the deterministic wayfinder chips) ─────────────
-
-/**
- * GET a car's fluid capacities + specs (§5.8 FillVolume ★) — engine oil / gearbox / brake fluid /
- * coolant / A-C refrigerant. Keyed by kType (the TecDoc carId). Hydra collection. Backs "Capacités fluides".
- */
-export async function getFillVolumes(kType: number): Promise<FillVolume[]> {
-  const res = await authFetch(`${API}/cars/${kType}/fill-volumes`, { headers: { Accept: LD } });
-  return hydraMembers<FillVolume>(await okJson(res, 'fill-volumes fetch'));
-}
 
 /**
  * GET the SIV registration identity for a plate (§5.1 Vehicle ★) — power / displacement / gearbox /

@@ -580,7 +580,9 @@ over `--at-dur-swap`; reduced motion cuts.
 
 ### Fluids — the volumes (2026-09-05)
 
-Third station. « Capacités fluides » already projects the catalogue's fill volumes as `SpecNode`s into
+**Note, 2026-10-21 (removed): the « Capacités fluides » chip and its `GET /cars/{kType}/fill-volumes` fetch are gone — the source (the server endpoint and `get_fill_volumes`, no TecDoc equivalent) no longer exists, and `fluids.ts` with it. The station below stays wired to any `showFact` `nodes` carrying `volumeLitres`, but nothing in the dashboard produces them any more; the rows are kept as the record of the decision.**
+
+Third station. « Capacités fluides » (removed, see note) projected the catalogue's fill volumes as `SpecNode`s into
 the specs column (`fluids.ts`, `focus.panel: 'specs'`). Each **volume** gets a body: a **cylinder
 standing on the disc in a row in front of the car**, facing the camera's home azimuth (row centre at
 radius 2.3, 0.42 m apart, radius 0.15 m), **height = litres × 0.14 m, capped at 1.4 m; past the cap the
