@@ -17,6 +17,7 @@ use App\Mercure\DomainPublisher;
 use App\Repository\MaintenanceRecordRepository;
 use App\Security\OwnerContext;
 use Mcp\Schema\Result\CallToolResult;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * MCP `edit_maintenance` tool: a sparse in-place edit of one logged visit, addressed by its @id.
@@ -51,7 +52,7 @@ final class EditMaintenanceProcessor implements ProcessorInterface
 
         try {
             $recordId = $this->iriConverter->getResourceFromIri($data->record)->id;
-        } catch (ItemNotFoundException) {
+        } catch (ItemNotFoundException|NotFoundHttpException) {
             return ToolResult::of([
                 'status' => 'not_found',
                 'reason' => sprintf('No maintenance record at %s.', $data->record),

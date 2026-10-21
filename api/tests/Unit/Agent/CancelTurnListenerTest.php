@@ -35,8 +35,11 @@ final class CancelTurnListenerTest extends TestCase
         $this->assertSame('', $event->getResult()->getContent());
         $this->assertFalse($cancellations->isRequested('sess-abc'), 'the flag is cleared once honoured');
 
-        $toasts = array_filter($hub->updates, static fn ($u): bool => str_contains($u->getData(), '"toast"'));
-        $this->assertNotEmpty($toasts, 'the user is told the turn was interrupted');
+        $toasts = static fn (): array => array_filter($hub->updates, static fn ($u): bool => str_contains($u->getData(), '"toast"'));
+        $this->assertEmpty($toasts(), 'a bound session holds its toast until the turn settles');
+
+        $render->signalTurnPhase('end');
+        $this->assertNotEmpty($toasts(), 'the user is told the turn was interrupted');
     }
 
     public function testDoesNothingWhenNoCancelRequested(): void

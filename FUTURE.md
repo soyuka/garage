@@ -697,9 +697,9 @@ dev `cache_items` rows were migrated (`app:cache:migrate-to-mongo`: siv 7/7, par
 - **No catalogue photo was ever stored** (0 `article_photos` rows): `img.autodatabases.ru` does not
   resolve, so `NoPrivateNetworkHttpClient` refuses it (see `api/docs/PARTSAPI.md`). The Mongo photo path
   is covered by `tests/Functional/Store/ArticlePhotoStoreTest.php` only, not live (photo path and test removed 2026-10-21).
-- **`tests/Unit/Agent/CancelTurnListenerTest::testEndsTheTurnAndToastsWhenCancelWasRequested` is red,
-  pre-existing**: `RenderIntentTools::toast()` now defers to `pendingToast` when a session is bound, so the
+- ~~**`tests/Unit/Agent/CancelTurnListenerTest::testEndsTheTurnAndToastsWhenCancelWasRequested` is red,
+  pre-existing**~~ (fixed 2026-10-21: the test now flushes via `signalTurnPhase('end')`, the code was right): `RenderIntentTools::toast()` now defers to `pendingToast` when a session is bound, so the
   hub has no toast at assertion time. Unrelated to the store move.
-- **`tests/Functional/McpMaintenanceTest::testEditMaintenanceOnAnUnknownRecordIsNotFoundNotAnError` is red,
-  pre-existing** (verified on main 6280d54, 2026-10-21): `edit_maintenance` on an unknown record answers
+- ~~**`tests/Functional/McpMaintenanceTest::testEditMaintenanceOnAnUnknownRecordIsNotFoundNotAnError` is red,
+  pre-existing**~~ (fixed 2026-10-21: since 681f460 the record provider throws `NotFoundHttpException`, which `EditMaintenanceProcessor` now maps to `not_found`) (verified on main 6280d54, 2026-10-21): `edit_maintenance` on an unknown record answers
   `invalid_input` where the test expects `not_found`. Unrelated to the TecDoc catalog branch.
