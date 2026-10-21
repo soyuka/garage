@@ -29,6 +29,5 @@ seed() {
 }
 seed getSearchTree 3
 seed getArticles 1
-seed GetFillVolumes 1
 
 php "$API_DIR/bin/console" app:cache:import-legacy "$STAGE_DIR"

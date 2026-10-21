@@ -34,6 +34,44 @@ final class FingerprintBuilderTest extends TestCase
         $this->assertSame(1.0, $fingerprint->entries['pression_d_ouverture_clapet_de_derivation']->number);
     }
 
+    public function testTheTecdoc2020SealDiametersKeyOnTheirCriterionIdNotTheirRenamedLabel(): void
+    {
+        $fingerprint = FingerprintBuilder::fromCriteria([
+            new ArticleCriterion('Hauteur [mm]', '93', 209),
+            new ArticleCriterion('Diamètre extérieur [mm]', '76', 497),
+            new ArticleCriterion('Diamètre extérieur 2 [mm]', '71', 979),
+            new ArticleCriterion('Diamètre intérieur 2 [mm]', '62', 996),
+            new ArticleCriterion('Filetage', '3/4-16 UNF', 289),
+            new ArticleCriterion('Diamètre extérieur 3 [mm]', '50', 3000),
+        ]);
+
+        $this->assertEqualsCanonicalizing(
+            ['hauteur', 'diametre_exterieur', 'diametre_exterieur_de_la_bague_d_etancheite', 'diametre_interieur_de_la_bague_d_etancheite', 'thread', 'diametre_exterieur_3'],
+            array_keys($fingerprint->entries),
+        );
+        $this->assertFalse($fingerprint->entries['diametre_exterieur_de_la_bague_d_etancheite']->info);
+        $this->assertSame('Diamètre extérieur 2 [mm]', $fingerprint->entries['diametre_exterieur_de_la_bague_d_etancheite']->label);
+        $this->assertTrue($fingerprint->entries['diametre_exterieur_3']->info);
+    }
+
+    public function testWithoutACriterionIdTheNameStillDecides(): void
+    {
+        $fingerprint = FingerprintBuilder::fromCriteria([new ArticleCriterion('Diamètre extérieur 2 [mm]', '71')]);
+
+        $this->assertTrue($fingerprint->entries['diametre_exterieur_2']->info);
+    }
+
+    public function testTheTecdoc2020ChassisAndSerialSpellingsNeverSplit(): void
+    {
+        $fingerprint = FingerprintBuilder::fromCriteria([
+            new ArticleCriterion('Nº de châssis à partir de', '176451; 130831'),
+            new ArticleCriterion('Nº de série', 'GG; GY'),
+            new ArticleCriterion('Année à partir de', '200406; 200907'),
+        ]);
+
+        $this->assertTrue($fingerprint->isEmpty());
+    }
+
     /**
      * @return iterable<string, array{string, string}>
      */

@@ -7,7 +7,6 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageVehicle;
-use App\Garage\GarageResolver;
 use App\Garage\GarageVehicleView;
 use App\Repository\VehicleRepository;
 use App\Security\OwnerContext;
@@ -26,7 +25,6 @@ final class GarageVehicleProvider implements ProviderInterface
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly GarageVehicleView $view,
-        private readonly GarageResolver $resolver,
         private readonly OwnerContext $owner,
     ) {
     }
@@ -42,11 +40,6 @@ final class GarageVehicleProvider implements ProviderInterface
         if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
             return null;
         }
-
-        // The dashboard card reads its facts straight off this GET. Self-heal a row whose kType was
-        // known but whose catalog spec sheet was never fetched, so oil capacity/spec stop showing
-        // "non renseignée" when the catalog has them. No-op when already filled or no kType.
-        $this->resolver->backfillCatalogSpecs($vehicle);
 
         $resource = GarageVehicle::fromEntity($vehicle);
         $resource->facts = $this->view->factsOf($vehicle);

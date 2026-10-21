@@ -20,6 +20,6 @@ final class ShowFactInput
     /**
      * @var list<ShowFactNodeInput>
      */
-    #[ApiProperty(description: 'Lines YOU fetched, projected as-is instead of filtering the stored facts — the way to show fill volumes, an oil grade or a carte grise, none of which are facts on the vehicle. Given `nodes`, `keys` no longer selects the content (it only spotlights car regions).')]
+    #[ApiProperty(description: 'Lines YOU fetched, projected as-is instead of filtering the stored facts — the way to show an oil grade or a carte grise, none of which are facts on the vehicle. Given `nodes`, `keys` no longer selects the content (it only spotlights car regions).')]
     public array $nodes = [];
 }

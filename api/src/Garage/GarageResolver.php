@@ -4,40 +4,23 @@ declare(strict_types=1);
 
 namespace App\Garage;
 
-use App\Catalog\PartsCatalog;
-use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
-use App\Entity\VehicleFact;
-use App\Exception\MissingApiKeyException;
-use App\Exception\UpstreamException;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
-use Psr\Log\LoggerInterface;
-use Psr\Log\NullLogger;
 use Symfony\Component\Uid\Ulid;
 
 /**
  * The read resolver for the self-strengthening store.
  *
- * Phase 1 read order: shared garage → upstream (write-through) → miss. The "user garage"
+ * Phase 1 read order: shared garage → miss. The "user garage"
  * and promotion layers are deferred (no auth yet — see the root TODO.md "Architecture — Garage store").
  */
 class GarageResolver
 {
-    // The synthetic KNOWN item the catalog write-through hangs its fill-volume specs on: an open,
-    // untargeted maintenance item (off the checklist) whose attributes feed the facts projection.
-    // The vehicle has no fact store of its own, so the catalog spec sheet IS a maintenance item.
-    public const string CATALOG_SPECS_TYPE = 'catalog_specs';
-
     public function __construct(
         private readonly VehicleRepository $vehicles,
         private readonly DocumentManager $entityManager,
-        private readonly PartsCatalog $catalog,
-        private readonly FillVolumeFactMapper $fillVolumeFactMapper,
         private readonly VehicleWriteResolver $writeResolver,
-        private readonly OwnerContext $owner,
-        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -52,59 +35,12 @@ class GarageResolver
     }
 
     /**
-     * Resolve a vehicle from the shared garage, falling back to a write-through of upstream
-     * fill volumes when a carId is supplied. Returns null on a total miss (no garage row and
-     * no usable upstream data) — the caller turns that into the not_in_catalog contract.
+     * Resolve a vehicle from the shared garage. Returns null on a miss — the caller turns that into
+     * the not_in_catalog contract.
      */
-    public function resolve(string $make, string $model, ?int $year, VehicleType $vehicleType, ?int $carId): ?Vehicle
+    public function resolve(string $make, string $model, ?int $year, VehicleType $vehicleType): ?Vehicle
     {
-        $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
-        if (null !== $vehicle) {
-            return $vehicle;
-        }
-
-        if (null === $carId) {
-            return null;
-        }
-
-        return $this->writeThroughFillVolumes($make, $model, $year, $vehicleType, $carId);
-    }
-
-    /**
-     * Self-heal a vehicle whose kType was known all along but whose catalog spec sheet was never
-     * fetched — the state a row added by plate lookup / update_vehicle is in (those write the
-     * identity and kType but never the fill volumes). Fetches the catalog fluid specs once and
-     * hangs them on a {@see self::CATALOG_SPECS_TYPE} item, exactly like the create-time
-     * write-through. Idempotent: a row that already carries the spec sheet (or has no kType, or
-     * whose kType yields nothing upstream) is left untouched. Returns true only when it wrote.
-     *
-     * Side-effecting on a read is the self-strengthening-store contract (the create-time
-     * write-through already writes on a get_vehicle_facts miss). Upstream responses are cached at
-     * the client, so a kType that yields nothing is not re-fetched on the hot path beyond the cache.
-     */
-    public function backfillCatalogSpecs(Vehicle $vehicle): bool
-    {
-        $carId = $vehicle->getKType();
-        if (null === $carId) {
-            return false;
-        }
-        foreach ($vehicle->getPlannedTasks() as $task) {
-            if (self::CATALOG_SPECS_TYPE === $task->getType()) {
-                return false;
-            }
-        }
-
-        // Best-effort enrichment on a plain read: an upstream hiccup must never 500 the vehicle GET.
-        // A null facts result (upstream down or empty) leaves the card un-backfilled until the next read.
-        $facts = $this->fetchCatalogFacts($carId, 'catalog spec backfill skipped: {reason}');
-        if (null === $facts) {
-            return false;
-        }
-
-        $this->persistCatalogSpecs($vehicle, $facts);
-        $this->entityManager->flush();
-
-        return true;
+        return $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
     }
 
     /**
@@ -161,71 +97,5 @@ class GarageResolver
         $this->entityManager->flush();
 
         return UpdateVehicleOutcome::written($vehicle);
-    }
-
-    private function writeThroughFillVolumes(string $make, string $model, ?int $year, VehicleType $vehicleType, int $carId): ?Vehicle
-    {
-        // Same contract as backfillCatalogSpecs: an upstream hiccup is a catalog MISS, not a 500.
-        // A null facts result → the caller maps it to not_in_catalog, like a genuine empty response.
-        $facts = $this->fetchCatalogFacts($carId, 'fill-volume write-through skipped: {reason}');
-        if (null === $facts) {
-            return null;
-        }
-
-        $vehicle = new Vehicle($make, $model, $vehicleType, 'partsapi', year: $year, kType: $carId);
-        $vehicle->setOwner($this->owner->require());
-        $this->entityManager->persist($vehicle);
-        $this->persistCatalogSpecs($vehicle, $facts);
-        $this->entityManager->flush();
-
-        return $vehicle;
-    }
-
-    /**
-     * Fetch the catalog fluid specs for a kType and map them to facts. The shared body of the
-     * create-time write-through and the read-time backfill: an upstream hiccup (partsapi quota 401,
-     * timeout, missing key) is swallowed as a MISS — logged under $skipReason (a message template with
-     * a {reason} placeholder) and returned as null, never thrown. An empty spec sheet is also null.
-     *
-     * @return list<array{key: string, value: string, unit: string|null}>|null
-     */
-    private function fetchCatalogFacts(int $carId, string $skipReason): ?array
-    {
-        try {
-            $volumes = $this->catalog->fillVolumes($carId);
-        } catch (UpstreamException|MissingApiKeyException $e) {
-            $this->logger->warning($skipReason, [
-                'reason' => $e->getMessage(),
-                'kType' => $carId,
-                'exception' => $e,
-            ]);
-
-            return null;
-        }
-
-        $facts = $this->fillVolumeFactMapper->toFacts($volumes);
-
-        return [] === $facts ? null : $facts;
-    }
-
-    /**
-     * Hang the catalog fluid specs on a KNOWN item (no target → off the checklist); the facts
-     * projection reads them back. source 'partsapi' ⇒ verified, so they take precedence over any
-     * agent-supplied spec for the same key. Persists the item; the caller owns the flush.
-     *
-     * @param list<array{key: string, value: string, unit: string|null}> $facts
-     */
-    private function persistCatalogSpecs(Vehicle $vehicle, array $facts): void
-    {
-        $specs = new PlannedMaintenance($vehicle, self::CATALOG_SPECS_TYPE, 'partsapi', owner: $vehicle->getOwner());
-        foreach ($facts as $fact) {
-            $specs->setAttribute(VehicleFact::fromSource(
-                key: $fact['key'],
-                value: $fact['value'],
-                source: 'partsapi',
-                unit: $fact['unit'],
-            ));
-        }
-        $this->entityManager->persist($specs);
     }
 }

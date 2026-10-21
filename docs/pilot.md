@@ -32,7 +32,7 @@ each one as a session-bound `#[AsTool]`.
 | --- | --- |
 | `narrate_step(message)` | one running step sentence on the heartbeat; the first one lifts the orb |
 | `select_vehicle(vehicle)` | drives that car into the workshop — **call it first** if your answer is about another vehicle |
-| `show_fact(keys, title, nodes)` | focused spec panel for the SELECTED vehicle: `keys` filters its STORED facts, `nodes` projects lines you FETCHED (fill volumes, oil grade, carte grise) |
+| `show_fact(keys, title, nodes)` | focused spec panel for the SELECTED vehicle: `keys` filters its STORED facts, `nodes` projects lines you FETCHED (oil grade, carte grise; fill volumes (removed 2026-10-21: no TecDoc equivalent)) |
 | `focus_view(panel, keys)` | raise "tasks", "specs", "carnet" (history + spend), "parts" (shopping list) or "docs" (the LIST of manuals, technical notes, quotes, bills) and light the matching body regions |
 | `read_documentation_page(vehicle, document, page)` | the FULL text of one page (pdftotext layout, tables aligned) — call it after `search_documentation` when the answer is not entirely in the 300-char snippet. `page` is the physical page of the hit. Unknown id → `not_found`, page out of range or no extracted text → `invalid_input`. Answer from it, cite `sourceRef` + `pageLabel`, then `show_document` |
 | `show_document(vehicle, document, page, highlight)` | open ONE vehicle document in the Atelier viewer, centred. Call it after `search_documentation` with the hit's `documentId` and `page` (physical page, not `pageLabel`) and your query as `highlight`; or with a `list_documents` id for page 1. Unknown id → `not_found`, page out of range → `invalid_input`, nothing opens. Still cite `sourceRef` + `pageLabel` in your answer |

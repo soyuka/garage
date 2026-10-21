@@ -19,7 +19,6 @@ final class DenyByDefaultTest extends AppTestCase
         yield 'car identity' => ['/cars/12345/identity?carType=PC'];
         yield 'narrowing' => ['/cars/12345/part-categories/1/narrowed?carType=PC'];
         yield 'articles' => ['/cars/12345/part-categories/1/articles?carType=PC'];
-        yield 'article photo' => ['/cars/12345/part-categories/1/articles/678/photo?carType=PC'];
         yield 'makes' => ['/makes'];
         yield 'garage vehicles' => ['/garage/vehicles'];
         yield 'garage vehicle' => ['/garage/vehicles/unknown'];

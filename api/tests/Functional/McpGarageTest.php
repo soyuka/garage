@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Agent\SelectedVehicleContext;
-use App\Entity\PartsApiResponse;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -266,90 +265,38 @@ final class McpGarageTest extends AppTestCase
         $this->assertArrayHasKey('addedAt', $oilType);
     }
 
-    public function testWriteThroughPersistsUpstreamFactsAndServesFromGarage(): void
+    public function testBillPartFactWinsOverAgentFactForTheSameKey(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $first = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'get_vehicle_facts',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'carId' => 34247,
-                'keys' => ['oil_capacity'],
-            ],
-        ], 3);
-
-        $firstContent = $first['result']['structuredContent'];
-        $this->assertSame('ok', $firstContent['status']);
-        $firstFact = $firstContent['facts'][0];
-        $this->assertSame('partsapi', $firstFact['source']);
-        $this->assertTrue($firstFact['verified']);
-
-        $responses = static::getContainer()->get(DocumentManager::class)->getDocumentCollection(PartsApiResponse::class);
-        $this->assertSame(1, $responses->countDocuments(['method' => 'GetFillVolumes']));
-        // An upstream fetch stores its response, so an empty store after the second query proves none happened.
-        $responses->deleteMany([]);
-
-        $second = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'get_vehicle_facts',
-            'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'carId' => 34247,
-            ],
-        ], 4);
-
-        $this->assertSame('ok', $second['result']['structuredContent']['status']);
-
-        $this->assertSame(
-            0,
-            $responses->countDocuments(['method' => 'GetFillVolumes']),
-            'The second query must be served from the garage, not re-fetched upstream.',
-        );
-    }
-
-    public function testVerifiedFactWinsOverAgentFactForTheSameKey(): void
-    {
-        $client = static::createClient();
-        $sessionId = $this->initialize($client);
-
-        // Seed a verified partsapi fact via the write-through path (lands on the catalog_specs item).
         $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'get_vehicle_facts',
+            'name' => 'log_maintenance',
             'arguments' => [
-                'make' => 'IVECO',
-                'model' => 'DAILY',
-                'vehicleType' => 'cv',
-                'carId' => 34247,
+                'make' => 'MAZDA',
+                'model' => 'MAZDA6',
+                'items' => [['type' => 'oil_filter', 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER']]]],
+                'performedAt' => '2026-06-15',
             ],
         ], 3);
 
-        // The agent records a contradicting llm value on a service item. The write succeeds — there
-        // is no refusal anymore — but the projection must still surface the VERIFIED catalog value.
         $plan = $this->planFact($client, $sessionId, [
-            'make' => 'IVECO',
-            'model' => 'DAILY',
-            'vehicleType' => 'cv',
-            'key' => 'oil_capacity',
-            'value' => '9000',
-            'unit' => 'liter',
+            'make' => 'MAZDA',
+            'model' => 'MAZDA6',
+            'key' => 'oil_filter_ref',
+            'value' => 'GUESS 1',
             'source' => 'llm',
         ], 4);
         $this->assertSame('ok', $plan['result']['structuredContent']['status']);
 
         $reread = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
-            'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv', 'keys' => ['oil_capacity']],
+            'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6', 'keys' => ['oil_filter_ref']],
         ], 5);
 
-        $fact = $this->factByKey($reread['result']['structuredContent']['facts'], 'oil_capacity');
-        $this->assertSame('partsapi', $fact['source'], 'The verified catalog value must win the projection.');
-        $this->assertTrue($fact['verified']);
-        $this->assertNotSame('9000', $fact['value']);
+        $fact = $this->factByKey($reread['result']['structuredContent']['facts'], 'oil_filter_ref');
+        $this->assertSame('log', $fact['source'], 'The logged bill part must win the projection.');
+        $this->assertSame('MANN-FILTER W712/73', $fact['value']);
     }
 
     public function testYearQualifiedFactIsFoundOnRequery(): void
@@ -654,9 +601,9 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        // Seed a catalog vehicle carrying its kType via the write-through path.
+        // Seed a vehicle carrying its kType.
         $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'get_vehicle_facts',
+            'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'IVECO',
                 'model' => 'DAILY',
@@ -726,35 +673,6 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('ok', $content['status']);
         $this->assertSame($iri, $content['vehicle']['@id']);
         $this->assertSame('oil_capacity', $content['facts'][0]['key']);
-    }
-
-    public function testGetVehicleFactsByIriBackfillsCatalogSpecsWhenKTypeKnown(): void
-    {
-        $client = static::createClient();
-        $sessionId = $this->initialize($client);
-
-        // A user-created row carrying a kType but no spec sheet — exactly what plate lookup leaves.
-        $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
-        $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007, kType: 19107);
-        $vehicle->setOwner(self::TEST_OWNER);
-        $dm->persist($vehicle);
-        $dm->flush();
-        $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
-
-        // Reading facts by @id alone (the dashboard's selected-vehicle handle) backfills the catalog
-        // fill volumes from the kType, so the oil capacity is no longer missing.
-        $content = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'get_vehicle_facts',
-            'arguments' => ['vehicle' => $iri, 'keys' => ['oil_capacity']],
-        ], 3)['result']['structuredContent'];
-
-        $this->assertSame('ok', $content['status']);
-        $oilCapacity = $this->factByKey($content['facts'], 'oil_capacity');
-        $this->assertSame('4.3', $oilCapacity['value']);
-        $this->assertSame('partsapi', $oilCapacity['source']);
-        $this->assertTrue($oilCapacity['verified']);
     }
 
     public function testGetVehicleFactsByUnknownIriIsNotFound(): void

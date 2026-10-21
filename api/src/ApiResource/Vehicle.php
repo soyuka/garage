@@ -66,7 +66,7 @@ final class Vehicle
     public ?int $seats = null;
     public ?int $weightKg = null;
 
-    #[ApiProperty(description: 'TecDoc kType — the vehicle modification id. Key for list_part_categories, list_articles and get_fill_volumes.')]
+    #[ApiProperty(description: 'TecDoc kType — the vehicle modification id. Key for list_part_categories and list_articles.')]
     public ?int $carId = null;
 
     #[ApiProperty(description: 'TecDoc vehicle type: PC (passenger car) or CV (commercial vehicle). Required alongside carId by the parts tools.')]

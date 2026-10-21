@@ -4,13 +4,13 @@ mcp:
         garage:
             name: 'mon-parc-auto'
             version: '0.1.0'
-            description: 'French vehicle parts catalog and a personal vehicle garage. Look up parts, articles and fluid specs from TecDoc by registration plate (plaque d''immatriculation) or brand; and save, track and forecast maintenance for any vehicle you own.'
+            description: 'French vehicle parts catalog and a personal vehicle garage. Look up parts and articles from TecDoc by registration plate (plaque d''immatriculation) or brand; and save, track and forecast maintenance for any vehicle you own.'
             instructions: >-
                 This server has two sides: a read-only TecDoc catalog, and a writable personal garage.
 
                 CATALOG (read): start with lookup_plate to resolve a French registration plate into
                 vehicle information including its TecDoc carId (kType) and carType (PC or CV). Then use
-                list_part_categories, list_articles and get_fill_volumes with that carId. Alternatively
+                list_part_categories and list_articles with that carId. Alternatively
                 browse by brand with list_makes, list_models and list_cars.
 
                 GARAGE (read + write): the user keeps their own vehicles here. To plan intended work use

@@ -15,7 +15,7 @@ final class ServicePartsInput
     public string $carType = 'PC';
 
     #[ApiProperty(
-        description: 'The maintenance service to bundle parts and fluids for.',
+        description: 'The maintenance service to bundle parts for.',
         schema: ['type' => 'string', 'enum' => ['oil_change', 'filters', 'brakes', 'spark_plugs']],
     )]
     public string $service;

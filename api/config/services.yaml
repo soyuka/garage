@@ -38,7 +38,6 @@ services:
     App\Siv\SivLookupStore: '@App\Siv\MongoSivLookupStore'
     App\PartsApi\PartsApiResponseStore: '@App\PartsApi\MongoPartsApiResponseStore'
     App\Motul\MotulResponseStore: '@App\Motul\MongoMotulResponseStore'
-    App\Catalog\ArticlePhotoStore: '@App\Catalog\MongoArticlePhotoStore'
     App\Agent\TurnCancellations: '@App\Agent\MongoTurnCancellations'
 
     App\PartsApi\PartsApiClient:
@@ -50,21 +49,29 @@ services:
                 getCars: '%env(PARTSAPI_KEY_getCars)%'
                 getSearchTree: '%env(PARTSAPI_KEY_getSearchTree)%'
                 getArticles: '%env(PARTSAPI_KEY_getArticles)%'
-                GetFillVolumes: '%env(PARTSAPI_KEY_GetFillVolumes)%'
                 getArticleCrosses: '%env(PARTSAPI_KEY_getArticleCrosses)%'
                 getArticleCriteria: '%env(PARTSAPI_KEY_getArticleCriteria)%'
-                getArticleMedia: '%env(PARTSAPI_KEY_getArticleMedia)%'
             $catalogTtl: '%env(int:PARTSAPI_CATALOG_TTL)%'
 
-    # The image host is whatever a getArticleMedia response names: never let it resolve to our own network.
-    article_photos.http_client:
-        class: Symfony\Component\HttpClient\NoPrivateNetworkHttpClient
-        arguments: ['@http_client']
-
-    App\Catalog\PartsCatalog:
+    App\Catalog\PartsApiCatalog:
         arguments:
             # partsapi language id for group/article names (6 = Français, 4 = English GB)
             $lang: '%env(int:PARTSAPI_LANG)%'
+
+    # CATALOG_SOURCE picks who answers every catalogue read (api/.env). The locator builds only the selected
+    # one: with tecdoc, no partsapi service (client, keys, store) is ever instantiated.
+    App\Catalog\TecdocCatalog:
+        arguments:
+            $path: '%env(TECDOC_CATALOG_PATH)%'
+            $lang: '%env(int:PARTSAPI_LANG)%'
+
+    App\Catalog\PartsCatalog:
+        factory: ['App\Catalog\PartsCatalogFactory', 'create']
+        arguments:
+            $source: '%env(enum:App\Catalog\CatalogSource:CATALOG_SOURCE)%'
+            $catalogs: !service_locator
+                partsapi: '@App\Catalog\PartsApiCatalog'
+                tecdoc: '@App\Catalog\TecdocCatalog'
 
     App\Motul\MotulClient:
         arguments:
@@ -310,10 +317,6 @@ when@test:
                 $token: '%env(API_PLAQUE_TOKEN)%'
                 $store: '@App\Siv\SivLookupStore'
                 $retryDelayMs: 0
-
-        # NoPrivateNetworkHttpClient resolves the host itself before the request, which the fixture
-        # host cannot satisfy; the guard has its own unit test (ArticlePhotosTest).
-        article_photos.http_client: '@http_client'
 
         App\Tests\Mock\FixtureHttpClient:
             decorates: http_client

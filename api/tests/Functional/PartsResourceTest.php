@@ -95,34 +95,6 @@ final class PartsResourceTest extends AppTestCase
         $this->assertSame('Oil Filter', $data['hydra:member'][0]['productGroup']);
     }
 
-    public function testFillVolumesMappedToFrenchLabelsAndSiUnits(): void
-    {
-        $client = static::createClient();
-        $response = $client->request('GET', '/cars/34247/fill-volumes');
-
-        $this->assertResponseIsSuccessful();
-        $data = $response->toArray();
-
-        $byLabel = array_column($data['hydra:member'], null, 'label');
-        $this->assertArrayHasKey('Huile moteur (avec filtre)', $byLabel);
-        $this->assertSame(5.5, $byLabel['Huile moteur (avec filtre)']['volume']);
-        $this->assertSame('liter', $byLabel['Huile moteur (avec filtre)']['unit']);
-
-        // Russian-unit duplicate rows (л., гр.) must be filtered out
-        $units = array_unique(array_column($data['hydra:member'], 'unit'));
-        $this->assertNotContains('л.', $units);
-        $this->assertNotContains('гр.', $units);
-    }
-
-    public function testSuccessfulPartsCallIsCached(): void
-    {
-        $client = static::createClient();
-        $client->request('GET', '/cars/34247/fill-volumes');
-        $this->assertResponseIsSuccessful();
-
-        $this->assertNotNull(self::partsApiStore()->find('GetFillVolumes.9082864561dcc88578d6b6c1925d0f43870e3a97'));
-    }
-
     public function testUpstreamErrorIsNotCached(): void
     {
         $client = static::createClient();

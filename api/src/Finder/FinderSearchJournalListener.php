@@ -11,7 +11,6 @@ use App\Catalog\PartsCatalog;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\PartsApi\CarType;
-use App\PartsApi\PartsApiClient;
 use App\Repository\AgentTurnRepository;
 use App\Vehicle\VehicleIndex;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -59,7 +58,6 @@ final class FinderSearchJournalListener
 
     public function __construct(
         private readonly Security $security,
-        private readonly PartsApiClient $partsApi,
         private readonly PartsCatalog $catalog,
         private readonly DocumentManager $documentManager,
         private readonly AgentTurnRepository $turns,
@@ -76,7 +74,7 @@ final class FinderSearchJournalListener
             return;
         }
         $request->attributes->set(self::STARTED, hrtime(true));
-        $request->attributes->set(self::CALLS, $this->partsApi->upstreamCallsByMethod);
+        $request->attributes->set(self::CALLS, $this->catalog->upstreamCallsByMethod());
     }
 
     #[AsEventListener(event: KernelEvents::TERMINATE)]
@@ -108,7 +106,7 @@ final class FinderSearchJournalListener
 
         $before = $request->attributes->get(self::CALLS, []);
         $spent = [];
-        foreach ($this->partsApi->upstreamCallsByMethod as $method => $count) {
+        foreach ($this->catalog->upstreamCallsByMethod() as $method => $count) {
             $spent[$method] = $count - ($before[$method] ?? 0);
         }
 

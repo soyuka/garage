@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\Finder;
 
 use App\Agent\Finder\FinderCategoryList;
-use App\Catalog\PartsCatalog;
+use App\Catalog\PartsApiCatalog;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
 use App\Tests\Mock\FixtureHttpClient;
@@ -57,6 +57,6 @@ final class FinderCategoryListTest extends TestCase
 
     private function list(HttpClientInterface $http): FinderCategoryList
     {
-        return new FinderCategoryList(new PartsCatalog(new PartsApiClient($http, ['getSearchTree' => 'test-key'], new InMemoryPartsApiResponseStore()), 6));
+        return new FinderCategoryList(new PartsApiCatalog(new PartsApiClient($http, ['getSearchTree' => 'test-key'], new InMemoryPartsApiResponseStore()), 6));
     }
 }

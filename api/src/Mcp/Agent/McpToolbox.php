@@ -37,7 +37,7 @@ class McpToolbox implements ToolboxInterface
      * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.)
      *
      * Excluded from the garage agent: the make/model browse roots (lookup_plate / list_cars resolve the
-     * carId directly) and get_fill_volumes. An explicit `$only` allowlist (the finder, which may start
+     * carId directly). An explicit `$only` allowlist (the finder, which may start
      * from "307 1.4 hdi" with no plate) can name them back. list_part_categories / list_articles stay
      * visible: the service flow uses the single get_service_parts call, but brand and reference
      * questions the open tasks cannot answer are routed to the catalog walk by the system prompt, so
@@ -46,7 +46,6 @@ class McpToolbox implements ToolboxInterface
     private const BROWSE_ROOTS = [
         'list_makes',
         'list_models',
-        'get_fill_volumes',
     ];
 
     private const EXCLUDED = [

@@ -16,9 +16,10 @@ final class McpServerTest extends AppTestCase
         $result = $this->call($client, $sessionId, 'tools/list', [], 2);
 
         $tools = array_column($result['result']['tools'], 'name');
-        foreach (['lookup_plate', 'list_makes', 'list_models', 'list_cars', 'list_part_categories', 'list_articles', 'get_fill_volumes'] as $tool) {
+        foreach (['lookup_plate', 'list_makes', 'list_models', 'list_cars', 'list_part_categories', 'list_articles'] as $tool) {
             $this->assertContains($tool, $tools);
         }
+        $this->assertNotContains('get_fill_volumes', $tools);
     }
 
     /**
@@ -62,20 +63,6 @@ final class McpServerTest extends AppTestCase
         $this->assertSame('IVECO', $content['make']);
         $this->assertSame(34247, $content['carId']);
         $this->assertSame('CV', $content['carType']);
-    }
-
-    public function testGetFillVolumesTool(): void
-    {
-        $client = static::createClient();
-        $sessionId = $this->initialize($client);
-
-        $result = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'get_fill_volumes',
-            'arguments' => ['carId' => 34247],
-        ], 4);
-
-        $labels = array_column($result['result']['structuredContent']['hydra:member'], 'label');
-        $this->assertContains('Huile moteur (avec filtre)', $labels);
     }
 
     /**

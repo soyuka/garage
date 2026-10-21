@@ -147,19 +147,21 @@ final class McpSetVehicleFactsTest extends AppTestCase
         $this->assertSame('fresh', $facts[0]['value']);
     }
 
-    public function testAnUnverifiedWriteNeverDisplacesAVerifiedCatalogFact(): void
+    public function testAnUnverifiedWriteNeverDisplacesABillPartFact(): void
     {
-        $client = static::createClient();
-        $sessionId = $this->initialize($client);
-        $iri = $this->tool($client, $sessionId, 'update_vehicle', ['make' => 'MAZDA', 'model' => 'MAZDA6', 'year' => 2007, 'carId' => 19107], 2)['vehicle']['@id'];
-        $catalog = $this->tool($client, $sessionId, 'get_vehicle_facts', ['vehicle' => $iri, 'keys' => ['oil_capacity']], 3)['facts'];
-        $this->assertSame('partsapi', $catalog[0]['source']);
+        [$client, $sessionId, $iri] = $this->clientWithVehicle();
+        $this->tool($client, $sessionId, 'log_maintenance', [
+            'vehicle' => $iri,
+            'items' => [['type' => 'oil_filter', 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER']]]],
+            'performedAt' => '2026-06-15',
+        ], 3);
 
-        $result = $this->tool($client, $sessionId, 'set_vehicle_facts', ['vehicle' => $iri, 'facts' => [['key' => 'oil_capacity', 'value' => '9.9', 'unit' => 'L', 'source' => 'llm']]], 4);
+        $result = $this->tool($client, $sessionId, 'set_vehicle_facts', ['vehicle' => $iri, 'facts' => [['key' => 'oil_filter_ref', 'value' => 'GUESS 1', 'source' => 'llm']]], 4);
 
-        $this->assertSame(['oil_capacity'], $result['shadowed']);
-        $after = $this->tool($client, $sessionId, 'get_vehicle_facts', ['vehicle' => $iri, 'keys' => ['oil_capacity']], 5)['facts'];
-        $this->assertSame('partsapi', $after[0]['source']);
+        $this->assertSame(['oil_filter_ref'], $result['shadowed']);
+        $after = $this->tool($client, $sessionId, 'get_vehicle_facts', ['vehicle' => $iri, 'keys' => ['oil_filter_ref']], 5)['facts'];
+        $this->assertSame('log', $after[0]['source']);
+        $this->assertSame('MANN-FILTER W712/73', $after[0]['value']);
     }
 
     /**

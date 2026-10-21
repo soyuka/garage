@@ -19,7 +19,7 @@ use App\Maintenance\VehicleFactsProjector;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
- * MCP `get_vehicle_facts` tool: resolves a vehicle (shared garage → upstream write-through)
+ * MCP `get_vehicle_facts` tool: resolves a vehicle (shared garage)
  * and returns its facts with provenance, or a structured not_in_catalog result on a total
  * miss. The miss is a RESULT, never an exception, so it cannot surface as a -32603 error.
  *
@@ -39,7 +39,7 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         // Addressed by @id (e.g. the dashboard's selected vehicle): dereference the handle straight
-        // to its row — no make/model, no catalog write-through (the row already exists).
+        // to its row — no make/model (the row already exists).
         if (null !== $data->vehicle) {
             return $this->factsByIri($data->vehicle, $data->keys);
         }
@@ -50,7 +50,7 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
         }
 
         $type = VehicleType::from($data->vehicleType);
-        $vehicle = $this->resolver->resolve($data->make, $data->model, $data->year, $type, $data->carId);
+        $vehicle = $this->resolver->resolve($data->make, $data->model, $data->year, $type);
 
         $identity = [
             'make' => $data->make,
@@ -106,11 +106,6 @@ final class GetVehicleFactsProcessor implements ProcessorInterface
      */
     private function okResult(Vehicle $vehicle, array $keys, array $identity): CallToolResult
     {
-        // Self-heal a row whose kType was known but whose catalog spec sheet was never fetched
-        // (added by plate lookup / update_vehicle) — so a fact query by @id no longer comes back
-        // empty when the catalog has the answer. No-op when already filled or the kType is unknown.
-        $this->resolver->backfillCatalogSpecs($vehicle);
-
         $facts = [];
         foreach ($this->factsProjector->forVehicle($vehicle) as $fact) {
             if ([] !== $keys && !\in_array($fact->getKey(), $keys, true)) {

@@ -7,7 +7,7 @@ namespace App\Tests\Unit\Catalog\Narrowing;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Catalog\Narrowing\CarMakeResolver;
 use App\Catalog\Narrowing\NarrowingResult;
-use App\Catalog\PartsCatalog;
+use App\Catalog\PartsApiCatalog;
 use App\PartsApi\CarType;
 use App\PartsApi\PartsApiClient;
 use App\Tests\Support\InMemoryPartsApiResponseStore;
@@ -150,7 +150,7 @@ final class ArticleNarrowerTest extends TestCase
         $this->assertSame($sorted, $tiers);
     }
 
-    public function testColdCacheCallBudgetNeverTouchesMedia(): void
+    public function testColdCacheCallBudget(): void
     {
         $result = $this->narrow();
 
@@ -158,7 +158,6 @@ final class ArticleNarrowerTest extends TestCase
         $this->assertSame(1, $counts['getArticles']);
         $this->assertLessThanOrEqual(ArticleNarrower::MAX_REPRESENTATIVES + ArticleNarrower::MAX_SIBLING_PROBES, $counts['getArticleCriteria']);
         $this->assertLessThanOrEqual(8, $counts['getArticleCrosses']);
-        $this->assertArrayNotHasKey('getArticleMedia', $counts);
         $this->assertSame(\count($this->requested), $result->upstreamCalls);
     }
 
@@ -436,7 +435,7 @@ final class ArticleNarrowerTest extends TestCase
                 return $this->make;
             }
         };
-        $narrower = new ArticleNarrower(new PartsCatalog($client, 6), makes: $resolver);
+        $narrower = new ArticleNarrower(new PartsApiCatalog($client, 6), makes: $resolver);
 
         return $narrower->narrow($carId, CarType::PassengerCar, $categoryId, $make, $productGroupId);
     }

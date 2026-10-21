@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use App\Catalog\ArticlePhoto;
-use App\Catalog\ArticlePhotoStore;
 use App\Command\LegacyCacheNamespaces;
 use App\Entity\PartsApiResponse;
 use App\Entity\TurnImageBatch;
@@ -45,7 +43,6 @@ final class MigrateCacheToMongoCommandTest extends AppTestCase
         $this->seed('cache.partsapi', self::EXPIRED, [['STR_ID' => 1]], $now - 3000, 1000);
         $this->seed('cache.partsapi', 'calls.getArticles', 50, $now);
         $this->seed('cache.motul', self::RECS, ['html' => '<html/>'], $now);
-        $this->seed('cache.article_photos', 'photo.'.sha1('https://img/x.jpg'), new ArticlePhoto('image/jpeg', "\xFF\xD8bytes"), $now);
         $this->seed('cache.turn_images', 'turn_images_01K7Q0000000000000000000000', [['mimeType' => 'image/png', 'bytes' => base64_encode("\x89PNG")]], $now, 900);
 
         $tester = $this->migrate([]);
@@ -53,7 +50,6 @@ final class MigrateCacheToMongoCommandTest extends AppTestCase
         $this->assertSame(0, $tester->getStatusCode(), $tester->getDisplay());
         $this->assertSame(['code_erreur' => 200, 'data' => ['marque' => 'RENAULT']], static::getContainer()->get(SivLookupStore::class)->find('AB123CD'));
         $this->assertSame(['html' => '<html/>'], static::getContainer()->get(MotulResponseStore::class)->find(self::RECS));
-        $this->assertEquals(new ArticlePhoto('image/jpeg', "\xFF\xD8bytes"), static::getContainer()->get(ArticlePhotoStore::class)->find('https://img/x.jpg'));
 
         $parts = $this->rawAll(PartsApiResponse::class);
         $this->assertSame([self::GET_ARTICLES, self::GET_MAKES], array_keys($parts));

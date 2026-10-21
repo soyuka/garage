@@ -31,14 +31,14 @@ Coverage legend:
    coverage exists but is thinner than cars.
 
 6. **Cagiva T4 350 — oil type and amount?**
-   ⚠️ Vintage moto (1980s). Oil amount = `toOils`/`GetFillVolumes`; oil spec =
+   ⚠️ Vintage moto (1980s). Oil amount = `toOils` (`GetFillVolumes` (removed 2026-10-21: no TecDoc equivalent)); oil spec =
    `toDopusk`. Coverage for obscure/old bikes doubtful → likely LLM fallback.
 
 ## Endpoint families relevant to these queries
 
 - **TecDoc parts** (built): `getMakes`→`getModels`→`getCars`→`getSearchTree`→`getArticles`→`getArticle`
 - **АВТОНОРМЫ** (not wired): `GetNormsMakes/Models/Motors`, `GetNormsTimes` (labor norms),
-  `GetFillVolumes` (fluid capacities)
+  ~~`GetFillVolumes` (fluid capacities)~~ (removed 2026-10-21: no TecDoc equivalent)
 - **ТехОбслуживание / maintenance** (not wired): `toMakes/toModels/toTypes`, `toParts`
   (maintenance parts per modification), `toDopusk` (oil/fluid OEM approvals), `toOils` (fill volumes)
 - **VIN / plate entry**: `VINdecode`, `decodeVINus`, `VINdecodeOE`, `getPartsbyVIN`,

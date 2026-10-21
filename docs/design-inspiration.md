@@ -31,7 +31,7 @@ So the agent would look something up, get real data back, and have nowhere to pu
 a `toast` — prose — which is exactly what `stage/CLAUDE.md` forbids: *"Never answer a question in
 prose that could have been a panel."* The protocol banned the failure the contract forced.
 
-Sharpest case: ask « elle prend combien d'huile ? ». The agent calls `get_fill_volumes`, gets the
+Sharpest case: ask « elle prend combien d'huile ? ». The agent calls `get_fill_volumes` (removed 2026-10-21: no TecDoc equivalent), gets the
 answer, calls `show_fact(['oil_capacity'])` — **empty panel**, because that key is not a stored fact.
 The panel was emptiest exactly when the agent had done the most work.
 

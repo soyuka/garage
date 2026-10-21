@@ -23,9 +23,6 @@ final class GetVehicleFactsInput
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['car', 'moto', 'cv', 'groundscare'], 'description' => 'Vehicle segment. Defaults to "car".'])]
     public string $vehicleType = 'car';
 
-    #[ApiProperty(description: 'TecDoc kType (carId) from lookup_plate or list_cars. When given and the garage misses, fluid facts are fetched from the catalog and persisted.')]
-    public ?int $carId = null;
-
     /**
      * @var list<string>
      */

@@ -6,8 +6,6 @@ namespace App\Command;
 
 use App\Agent\Finder\TurnImage;
 use App\Agent\Finder\TurnImageStash;
-use App\Catalog\ArticlePhoto;
-use App\Catalog\MongoArticlePhotoStore;
 use App\Motul\MongoMotulResponseStore;
 use App\PartsApi\MongoPartsApiResponseStore;
 use App\Persistence\BsonPayload;
@@ -32,11 +30,11 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  */
 #[AsCommand(
     name: 'app:cache:migrate-to-mongo',
-    description: 'Migrate the PostgreSQL cache_items pools (siv, partsapi, motul, article photos, turn images) into MongoDB.',
+    description: 'Migrate the PostgreSQL cache_items pools (siv, partsapi, motul, turn images) into MongoDB.',
 )]
 final class MigrateCacheToMongoCommand extends Command
 {
-    private const array POOLS = ['cache.siv', 'cache.partsapi', 'cache.motul', 'cache.article_photos', 'cache.turn_images'];
+    private const array POOLS = ['cache.siv', 'cache.partsapi', 'cache.motul', 'cache.turn_images'];
     private const array TYPE_MAP = ['root' => 'array', 'document' => 'array', 'array' => 'array'];
 
     public function __construct(
@@ -46,7 +44,6 @@ final class MigrateCacheToMongoCommand extends Command
         private readonly MongoSivLookupStore $siv,
         private readonly MongoPartsApiResponseStore $partsApi,
         private readonly MongoMotulResponseStore $motul,
-        private readonly MongoArticlePhotoStore $photos,
         private readonly TurnImageStash $turnImages,
         private readonly ClockInterface $clock,
     ) {
@@ -198,16 +195,6 @@ final class MigrateCacheToMongoCommand extends Command
                 }
 
                 return $this->roundTrips($value) ?? fn () => $this->motul->write($key, $value, $fetchedAt);
-
-            case 'cache.article_photos':
-                if (!preg_match('/^photo\.[0-9a-f]{40}$/', $key)) {
-                    return 'key is not photo.<sha1>';
-                }
-                if (!$value instanceof ArticlePhoto) {
-                    return sprintf('expected an %s, got %s', ArticlePhoto::class, get_debug_type($value));
-                }
-
-                return fn () => $this->photos->write($key, null, $value, $fetchedAt);
 
             case 'cache.turn_images':
                 if (null === $expiresAt) {

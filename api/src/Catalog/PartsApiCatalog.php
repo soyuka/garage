@@ -6,7 +6,6 @@ namespace App\Catalog;
 
 use App\ApiResource\Article;
 use App\ApiResource\Car;
-use App\ApiResource\FillVolume;
 use App\ApiResource\Make;
 use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
@@ -19,7 +18,7 @@ use App\Vehicle\VehicleIndex;
  * names (6 = Français, 4 = English GB — see docs/PARTSAPI.md); it is part of the cache key,
  * so switching languages re-fetches each method once.
  */
-final class PartsCatalog
+final class PartsApiCatalog implements PartsCatalog
 {
     public function __construct(
         private readonly PartsApiClient $client,
@@ -125,16 +124,6 @@ final class PartsCatalog
     }
 
     /**
-     * @return list<ArticleMedia>
-     */
-    public function articleMedia(int $artId): array
-    {
-        $rows = $this->client->fetch('getArticleMedia', ['ART_ID' => $artId, 'LANG' => $this->lang]);
-
-        return array_map(ArticleMedia::fromPartsApi(...), $rows);
-    }
-
-    /**
      * Criteria are per ARTICLE, the union over every vehicle it fits — not per vehicle.
      *
      * @return list<ArticleCriterion>
@@ -181,13 +170,8 @@ final class PartsCatalog
         return $this->client->upstreamCalls;
     }
 
-    /**
-     * @return list<FillVolume>
-     */
-    public function fillVolumes(int $carId): array
+    public function upstreamCallsByMethod(): array
     {
-        $rows = $this->client->fetch('GetFillVolumes', ['carId' => $carId]);
-
-        return FillVolume::fromPartsApi($rows);
+        return $this->client->upstreamCallsByMethod;
     }
 }

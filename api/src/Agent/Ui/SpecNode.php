@@ -8,7 +8,7 @@ namespace App\Agent\Ui;
  * One already-formatted line of a {@see RenderIntentTools::showFact()} PROJECTION — the way a FETCHED
  * surface (fluid capacities, oil viscosity, the SIV carte grise) reaches the spec panel. Those values
  * live nowhere on the vehicle, so the `keys` filter over stored facts can never select them: without
- * nodes, `show_fact(["oil_capacity"])` after a successful get_fill_volumes renders an EMPTY panel.
+ * nodes, `show_fact(["oil_type"])` after a successful get_motul_oil renders an EMPTY panel.
  *
  * Modelled as a class (not an `array{key, label}` shape) for the same reason {@see ActionPart} is:
  * TypeInfo degrades an array-shape to "array of strings", hiding the keys from the LLM, whereas an

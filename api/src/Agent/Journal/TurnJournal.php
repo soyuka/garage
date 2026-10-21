@@ -5,11 +5,11 @@ declare(strict_types=1);
 namespace App\Agent\Journal;
 
 use App\Agent\WebSearch\WebSearchTracer;
+use App\Catalog\PartsCatalog;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
 use App\Message\RunAgentTurn;
-use App\PartsApi\PartsApiClient;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
 
@@ -39,14 +39,14 @@ final class TurnJournal implements WebSearchTracer
     public function __construct(
         private readonly DocumentManager $documentManager,
         private readonly LoggerInterface $logger,
-        private readonly ?PartsApiClient $partsApi = null,
+        private readonly ?PartsCatalog $catalog = null,
     ) {
     }
 
     public function begin(RunAgentTurn $message, string $context): void
     {
         $this->toolSeq = 0;
-        $this->partsApiBefore = $this->partsApi?->upstreamCallsByMethod ?? [];
+        $this->partsApiBefore = $this->catalog?->upstreamCallsByMethod() ?? [];
         $this->current = new AgentTurn(
             owner: $message->owner,
             sessionId: $this->sessionId($message->sessionTopic),
@@ -154,9 +154,9 @@ final class TurnJournal implements WebSearchTracer
         }
 
         $turn->finish($status, $error);
-        if (null !== $this->partsApi) {
+        if (null !== $this->catalog) {
             $spent = [];
-            foreach ($this->partsApi->upstreamCallsByMethod as $method => $count) {
+            foreach ($this->catalog->upstreamCallsByMethod() as $method => $count) {
                 $spent[$method] = $count - ($this->partsApiBefore[$method] ?? 0);
             }
             $turn->recordPartsApiCalls($spent);

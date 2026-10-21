@@ -19,8 +19,8 @@ use Mcp\Schema\Result\CallToolResult;
 /**
  * MCP `get_service_parts` tool: the intent-level shortcut over the catalog primitives.
  * For a service (oil change, filters, brakes, spark plugs) it resolves the relevant part
- * categories, their articles and the matching fluid specs in one call — so the host does
- * not have to walk list_part_categories → list_articles → get_fill_volumes by hand.
+ * categories and their articles in one call — so the host does
+ * not have to walk list_part_categories → list_articles by hand.
  *
  * @implements ProcessorInterface<ServicePartsInput, CallToolResult>
  */
@@ -78,31 +78,7 @@ final class ServicePartsProcessor implements ProcessorInterface
             'status' => 'ok',
             'service' => $service->value,
             'carId' => $data->carId,
-            'fluids' => $this->fluidsFor($service, $data->carId),
             'categories' => $categories,
         ]);
-    }
-
-    /**
-     * @return list<array<string, mixed>>
-     */
-    private function fluidsFor(ServiceKind $service, int $carId): array
-    {
-        $labels = $service->fluidLabels();
-        if ([] === $labels) {
-            return [];
-        }
-
-        $fluids = [];
-        foreach ($this->catalog->fillVolumes($carId) as $fillVolume) {
-            foreach ($labels as $needle) {
-                if (false !== mb_stripos($fillVolume->label, $needle)) {
-                    $fluids[] = (array) $fillVolume;
-                    break;
-                }
-            }
-        }
-
-        return $fluids;
     }
 }

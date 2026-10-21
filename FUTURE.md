@@ -138,7 +138,7 @@ explicitly forbids.
   wayfinder chip could raise it, so « quand j'ai fait la dernière vidange ? » and « j'ai dépensé
   combien ? » had no agent-driven surface.
 - **`show_fact` accepts projected `nodes`.** `Focus.nodes: SpecNode[]` was client-only, so
-  `get_fill_volumes` / `get_motul_oil` / `lookup_plate` results could not be projected —
+  `get_fill_volumes` (tool removed 2026-10-21) / `get_motul_oil` / `lookup_plate` results could not be projected —
   `show_fact(['oil_capacity'])` rendered an EMPTY panel precisely when the agent had done the work.
 
 ### 5. Parc-level surface  ★ biggest hole, needs design first
@@ -323,7 +323,7 @@ if that setup changes.
 **Gap:** four different French-by-origin surfaces, each needing a different answer, none of them a
 translation key.
 
-- `api/src/ApiResource/FillVolume.php:45-66` `LABELS_FR` is a Russian→French map. **Careful:**
+- `api/src/ApiResource/FillVolume.php:45-66` (file removed 2026-10-21) `LABELS_FR` is a Russian→French map. **Careful:**
   `App\Catalog\ServiceKind::fluidLabels()` matches against its French *output*, so translating it in
   place silently breaks fluid matching.
 - `api/src/Maintenance/MaintenanceTypeNormalizer.php` — ~80 French input aliases. English aliases must
@@ -696,7 +696,7 @@ dev `cache_items` rows were migrated (`app:cache:migrate-to-mongo`: siv 7/7, par
   `--ignore-namespace=BxO5KZraMS`; nothing of value.
 - **No catalogue photo was ever stored** (0 `article_photos` rows): `img.autodatabases.ru` does not
   resolve, so `NoPrivateNetworkHttpClient` refuses it (see `api/docs/PARTSAPI.md`). The Mongo photo path
-  is covered by `tests/Functional/Store/ArticlePhotoStoreTest.php` only, not live.
+  is covered by `tests/Functional/Store/ArticlePhotoStoreTest.php` only, not live (photo path and test removed 2026-10-21).
 - **`tests/Unit/Agent/CancelTurnListenerTest::testEndsTheTurnAndToastsWhenCancelWasRequested` is red,
   pre-existing**: `RenderIntentTools::toast()` now defers to `pendingToast` when a session is bound, so the
   hub has no toast at assertion time. Unrelated to the store move.

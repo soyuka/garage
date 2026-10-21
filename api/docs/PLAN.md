@@ -16,10 +16,10 @@ upstream behavior — golden source for formats, codes and caveats).
 | Source | Role | Auth | Status |
 |---|---|---|---|
 | api.apiplaqueimmatriculation.com | plate → SIV vehicle data + TecDoc kType | `API_PLAQUE_TOKEN` | ✅ token in `.env.local` |
-| api.partsapi.ru | TecDoc parts tree/articles + fill volumes, makes/models | `PARTSAPI_KEY_<method>` (one key **per method**) | ✅ 4 method keys (see docs/PARTSAPI.md) |
+| api.partsapi.ru | TecDoc parts tree/articles, makes/models | `PARTSAPI_KEY_<method>` (one key **per method**) | ✅ 4 method keys (see docs/PARTSAPI.md) |
 
 Key joining fact (verified in prototype): SIV response carries `tecdoc_car_id` = **kType**.
-Same id keys `getSearchTree`, `getArticles` **and** `GetFillVolumes`. Steps 1–3
+Same id keys `getSearchTree` and `getArticles` (`GetFillVolumes` (removed 2026-10-21: no TecDoc equivalent)). Steps 1–3
 (getMakes/getModels/getCars) are only needed for the brand/model browse entry, not for plate flow.
 
 `carType` derivation: SIV `genreVCGNGC` starting `VP` → `PC`, else (`CTTE`, `CAM`, …) → `CV`.
@@ -35,7 +35,7 @@ src/
                                UpstreamException(502) — mapped via api_platform.exception_to_status
   ApiResource/                 DTOs, each with HTTP operation(s) + `mcp:` tools
   State/                       thin providers (HTTP reads) + processors (MCP tools) over shared services
-  Catalog/PartsCatalog.php     domain service: makes/models/cars/categories/articles/fillVolumes
+  Catalog/PartsCatalog.php     domain service: makes/models/cars/categories/articles
   Vehicle/VehicleLookup.php    domain service: plate → Vehicle DTO
 ```
 
@@ -57,15 +57,14 @@ fixes prototype limitation of a single global counter).
 | Car | GET `/makes/{makeId}/models/{modelId}/cars` | `list_cars` | getCars | ❌ pending token → 501 |
 | PartCategory | GET `/cars/{carId}/part-categories?carType=` | `list_part_categories` | getSearchTree | ✅ |
 | Article | GET `/cars/{carId}/part-categories/{categoryId}/articles?carType=` | `list_articles` | getArticles | ✅ |
-| FillVolume | GET `/cars/{carId}/fill-volumes` | `get_fill_volumes` | GetFillVolumes | ✅ |
+| ~~FillVolume~~ | ~~GET `/cars/{carId}/fill-volumes`~~ | ~~`get_fill_volumes`~~ | ~~GetFillVolumes~~ | (removed 2026-10-21: no TecDoc equivalent) |
 
 Naming: **Vehicle** = a registered vehicle (plate). **Car** = a TecDoc modification (kType id).
 `carId` everywhere = kType. Model/Car endpoints are wired but answer **501** until their
 partsapi tokens exist — adding `PARTSAPI_KEY_getModels` / `PARTSAPI_KEY_getCars` to `.env.local`
 activates them with zero code change.
 
-FillVolume mapping (verified prototype facts): RU-unit duplicate rows (`л.`, `гр.`) skipped;
-`fillTitle` is Russian → FR label map ported from prototype `index.php` (`FILL_TITLES_FR`).
+~~FillVolume mapping~~ (removed 2026-10-21: no TecDoc equivalent).
 
 ## Testing
 

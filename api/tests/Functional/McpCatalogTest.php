@@ -174,7 +174,7 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame([], $byCat[999999]['brands']);
     }
 
-    public function testGetServicePartsBundlesEngineOilFluidForOilChange(): void
+    public function testGetServicePartsOilChangeCarriesNoFluidSection(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -188,10 +188,8 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame('ok', $content['status']);
         $this->assertSame('oil_change', $content['service']);
 
-        // the engine-oil capacity + spec come back in the same call, no separate get_fill_volumes
-        $byLabel = array_column($content['fluids'], null, 'label');
-        $this->assertArrayHasKey('Huile moteur (avec filtre)', $byLabel);
-        $this->assertSame(5.5, $byLabel['Huile moteur (avec filtre)']['volume']);
+        $this->assertArrayNotHasKey('fluids', $content);
+        $this->assertNotEmpty($content['categories']);
     }
 
     public function testGetServicePartsGroupsFilterCategoriesWithArticles(): void
@@ -212,9 +210,6 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame('Filters > Air Filter', $byCat[200158]['path']);
         $this->assertSame(4, $byCat[200158]['totalArticles']);
         $this->assertCount(2, $byCat[200158]['brands']);
-
-        // filters carry no fluid spec
-        $this->assertSame([], $content['fluids']);
     }
 
     public function testListModelsReturnsMappedRows(): void

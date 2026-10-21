@@ -40,7 +40,7 @@ final class AgentMcpToolboxTest extends AppTestCase
         // writing the guess onto a vehicle — withholding it from the agent would defeat the point.
         $this->assertContains('list_service_defaults', $names);
 
-        // Withheld: the make/model browse roots and get_fill_volumes.
+        // Withheld: the make/model browse roots. get_fill_volumes is gone altogether.
         $this->assertNotContains('list_makes', $names);
         $this->assertNotContains('list_models', $names);
         $this->assertNotContains('get_fill_volumes', $names);

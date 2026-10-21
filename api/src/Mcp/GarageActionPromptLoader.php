@@ -116,7 +116,7 @@ final class GarageActionPromptLoader implements LoaderInterface
         return self::user(<<<PROMPT
             Prepare the parts and fluids for a {$svc} on my vehicle. Run every step:
             1. Get the carId. {$idLine}
-            2. get_fill_volumes (or get_vehicle_facts) ⇒ oil_type + oil_capacity.
+            2. get_vehicle_facts ⇒ oil_capacity; get_motul_oil ⇒ the oil grade (SAE viscosity).
             3. list_part_categories(carId) then list_articles ⇒ the oil filter ref.
             4. list_articles again ⇒ the drain-plug gasket ref.
             A parts question is NOT answered until steps 3 and 4 have run — never reply with fluids alone. Then present a single shopping list (part references with brand + number, and the oil type + quantity). Do not invent references the catalog did not return.

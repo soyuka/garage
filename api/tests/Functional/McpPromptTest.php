@@ -55,7 +55,9 @@ final class McpPromptTest extends AppTestCase
         $text = $result['result']['messages'][0]['content']['text'];
         $this->assertStringContainsString('XB301ZB', $text);
         $this->assertStringContainsString('lookup_plate', $text);
-        $this->assertStringContainsString('get_fill_volumes', $text);
+        $this->assertStringContainsString('get_vehicle_facts', $text);
+        $this->assertStringContainsString('get_motul_oil', $text);
+        $this->assertStringNotContainsString('get_fill_volumes', $text);
         $this->assertStringContainsString('list_part_categories', $text);
         $this->assertStringContainsString('list_articles', $text);
     }

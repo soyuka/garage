@@ -60,7 +60,7 @@ use Symfony\Component\Validator\Constraints as Assert;
     mcp: [
         'list_cars' => new McpToolCollection(
             title: 'List Vehicle Variants',
-            description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts and fluids tools. Returns at most 30 rows plus total and truncated: when truncated is true the list is INCOMPLETE and cannot be paged, so narrow it with the server-side filters year, capacityLitres, fuel or search (always pass the ones the user gave) and never treat it as complete.',
+            description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts tools. Returns at most 30 rows plus total and truncated: when truncated is true the list is INCOMPLETE and cannot be paged, so narrow it with the server-side filters year, capacityLitres, fuel or search (always pass the ones the user gave) and never treat it as complete.',
             input: CarsInput::class,
             processor: CarsProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
@@ -70,7 +70,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class Car
 {
     public function __construct(
-        #[ApiProperty(identifier: true, description: 'TecDoc kType (carId) — key for part categories, articles and fill volumes')]
+        #[ApiProperty(identifier: true, description: 'TecDoc kType (carId) — key for part categories and articles')]
         public int $id,
         public string $name,
         public ?string $fullName = null,

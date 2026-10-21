@@ -14,7 +14,7 @@ Persistence is split on purpose:
 
 - **MongoDB (Doctrine ODM)** — the domain: vehicles, facts, maintenance records, planned tasks, users.
   Also the paid upstream responses, kept for good (`siv_lookups`, `partsapi_responses`,
-  `motul_responses`, `article_photos`) and the turn hand-offs php → worker (`turn_images`,
+  `motul_responses`; `article_photos` removed 2026-10-21: no catalog photo source, collection left in place) and the turn hand-offs php → worker (`turn_images`,
   `turn_cancellations`), each behind a `*Store` interface. Stores bypass the unit of work (read-only
   hydration, single upserts); expiry is a TTL index *and* a read-time check, since the TTL monitor runs
   once a minute. TTL indexes are created by the entrypoint (`doctrine:mongodb:schema:create --index`).

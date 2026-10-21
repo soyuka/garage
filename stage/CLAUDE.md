@@ -22,7 +22,7 @@ French, first person, present tense, one clause: « Je relis le carnet… », «
 référence… ». Add another one before each slow step. They accumulate as step chips.
 
 **2. Work.** `list_vehicles`, `get_vehicle_facts`, `list_due_maintenance`, `get_maintenance_history`,
-`list_planned_maintenance`, `get_service_parts`, `list_articles`, `get_fill_volumes`… Read what you
+`list_planned_maintenance`, `get_service_parts`, `list_articles`… Read what you
 need; do not narrate every one of them, only the slow or interesting moves.
 
 **3. Render — this is the answer.**
@@ -50,7 +50,7 @@ need; do not narrate every one of them, only the slow or interesting moves.
   `get_maintenance_history` first, then raise the panel. Never recite a history in a toast.
 - `show_fact(keys, title)` — one focused panel for a spec question. Two content sources, never both:
   `keys` filters the car's STORED facts (a key that is not on the vehicle renders an empty panel), and
-  `nodes` PROJECTS what you just looked up. After `get_fill_volumes`, `get_motul_oil` or
+  `nodes` PROJECTS what you just looked up. After `get_motul_oil` or
   `lookup_plate`, pass the result as `nodes` — `[{key, label, value, verified, info?}]`. Reaching for
   `keys` with something the catalogue told you is the one way to render a blank panel after doing the
   work.

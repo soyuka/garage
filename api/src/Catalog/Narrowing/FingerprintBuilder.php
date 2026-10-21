@@ -18,8 +18,8 @@ final class FingerprintBuilder
     private const DENY = [
         '/^ann[ée]e /u',
         '/^code moteur/u',
-        '/^n[°º]? ?de s[ée]rie/u',
-        '/^num[ée]ro de ch[âa]ssis/u',
+        '/^(?:n[°º]? ?|num[ée]ro )de s[ée]rie/u',
+        '/^(?:n[°º]? ?|num[ée]ro )de ch[âa]ssis/u',
         '/^num[ée]ro tecdoc du moteur/u',
         '/^pour le mod[èe]le/u',
         '/^type de v[ée]hicule/u',
@@ -35,6 +35,19 @@ final class FingerprintBuilder
         '/^type_de_disque$/',
         '/^ventile$/',
         '/^nombre_de_pistons$/',
+    ];
+
+    /**
+     * The criteria that decide, by TecDoc criterion id, spelled with the slug the partsapi names produce. The
+     * 2020 extract renamed the seal diameters ("Diamètre extérieur 2 [mm]" for "…de la bague d'étanchéité"), so
+     * the label cannot be trusted where the id is known.
+     */
+    private const ID_SLUGS = [
+        209 => 'hauteur',
+        497 => 'diametre_exterieur',
+        979 => 'diametre_exterieur_de_la_bague_d_etancheite',
+        996 => 'diametre_interieur_de_la_bague_d_etancheite',
+        289 => 'filetage',
     ];
 
     private const THREAD = '/^(?:taraudage_)?filetage(?:_(\d+))?$/';
@@ -79,7 +92,7 @@ final class FingerprintBuilder
                 }
             }
 
-            $slug = mb_strtolower($slugger->slug($base, '_')->toString());
+            $slug = (null === $criterion->id ? null : self::ID_SLUGS[$criterion->id] ?? null) ?? mb_strtolower($slugger->slug($base, '_')->toString());
             if ('' === $slug) {
                 continue;
             }

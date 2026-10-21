@@ -9,7 +9,7 @@ use App\Agent\Finder\FinderCategoryList;
 use App\Agent\Finder\FinderContextBuilder;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\TurnSurface;
-use App\Catalog\PartsCatalog;
+use App\Catalog\PartsApiCatalog;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\PsaBuildCodeDecoder;
 use App\Message\RunAgentTurn;
@@ -134,7 +134,7 @@ final class FinderContextBuilderTest extends TestCase
     {
         $client = new PartsApiClient(new FixtureHttpClient(\dirname(__DIR__, 3).'/Fixtures'), ['getSearchTree' => 'test-key'], new InMemoryPartsApiResponseStore());
 
-        return new FinderContextBuilder(new FinderCategoryList(new PartsCatalog($client, 6)), new BuildCodeDecoders([new PsaBuildCodeDecoder()]));
+        return new FinderContextBuilder(new FinderCategoryList(new PartsApiCatalog($client, 6)), new BuildCodeDecoders([new PsaBuildCodeDecoder()]));
     }
 
     private function turn(

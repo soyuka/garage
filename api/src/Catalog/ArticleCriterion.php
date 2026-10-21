@@ -9,6 +9,7 @@ final readonly class ArticleCriterion
     public function __construct(
         public string $name,
         public string $value,
+        public ?int $id = null,
     ) {
     }
 

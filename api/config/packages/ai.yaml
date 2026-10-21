@@ -254,7 +254,7 @@ ai:
                       info.
 
                     CATALOG (TecDoc): get_service_parts(carId, service) returns, in one call, the part
-                    references (brand + number) AND the matching fluid specs for service ∈ oil_change |
+                    categories with their articles (brand + number) for service ∈ oil_change |
                     filters | brakes | spark_plugs. lookup_plate / list_cars yield the carId. The oil-filter
                     reference comes inside the oil_change result, so attach it from there rather than
                     web-searching a reference the catalog already gives. For a category OUTSIDE those four
@@ -317,8 +317,9 @@ ai:
                          or a chain. One precise call (a second only on NO_RESULTS). Note each spec you
                          find (oil grade/capacity, coolant type, belt-vs-chain) — you record them with
                          set_vehicle_facts in step 4.
-                      3. PRICE — get_service_parts(carId, service) for each catalog service ⇒ part refs +
-                         fluid specs. One call per service, in parallel.
+                      3. PRICE — get_service_parts(carId, service) for each catalog service ⇒ part
+                         categories + articles (no fluid specs: oil capacity = get_vehicle_facts, oil grade =
+                         get_motul_oil). One call per service, in parallel.
                       4. RECORD THE CHECKLIST — plan_maintenance for every due item (catalog services from
                          step 3 AND schedule-only items from step 2). On each, attach the parts
                          (parts:[{ref, brand, label}]). Then ONE set_vehicle_facts call with the specs you

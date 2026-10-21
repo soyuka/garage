@@ -19,7 +19,7 @@ use App\State\UpdateVehicleProcessor;
 
 /**
  * The garage: a self-strengthening vehicle store exposed as MCP tools (no HTTP operations
- * in phase 1). get_vehicle_facts reads shared garage → upstream (write-through) → miss. Facts are
+ * in phase 1). get_vehicle_facts reads the shared garage → miss. Facts are
  * written with set_vehicle_facts / remove_vehicle_facts and read back here as a projection.
  */
 #[ApiResource(
@@ -38,12 +38,10 @@ use App\State\UpdateVehicleProcessor;
         // content processor — so they still populate structuredContent at runtime.
         'get_vehicle_facts' => new McpTool(
             title: 'Vehicle Facts',
-            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Facts are a projection: catalog specs, parts fitted on logged visits, and whatever was recorded with set_vehicle_facts. Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their facts. If you pass carId (TecDoc kType) and the vehicle is in the parts catalog, its fluid specs are fetched and stored. A total miss returns a not_in_catalog result pointing at set_vehicle_facts — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
+            description: 'Get maintenance facts (oil type/capacity, coolant, brake fluid, spark plug…) for a vehicle, each tagged with provenance (source, verified) so you can caveat: "per TecDoc" vs "general knowledge, NOT manufacturer-verified". Facts are a projection: catalog specs, parts fitted on logged visits, and whatever was recorded with set_vehicle_facts. Identify the vehicle by make+model OR, for one you already have a handle on (e.g. the dashboard\'s selected vehicle), by its @id (the `vehicle` argument) — then make/model are unnecessary. Known vehicles return their facts. A total miss returns a not_in_catalog result pointing at set_vehicle_facts — it is NOT an error. Filter to specific facts with keys (e.g. ["oil_capacity"]).',
             input: GetVehicleFactsInput::class,
             structuredContent: false,
             processor: GetVehicleFactsProcessor::class,
-            // readOnlyHint despite the carId write-through: that is transparent catalog caching,
-            // not user-intent mutation — hosts should not gate a lookup behind a confirmation.
             annotations: ['readOnlyHint' => true],
         ),
         'update_vehicle' => new McpTool(
@@ -58,7 +56,7 @@ use App\State\UpdateVehicleProcessor;
         ),
         'set_vehicle_facts' => new McpTool(
             title: 'Set Vehicle Facts',
-            description: 'Record facts about a vehicle: identity and spec data such as build date, paint code, tyre size, engine/gearbox code, fuel type, oil grade/capacity, coolant, part references. This is the ONLY way to store a fact — plan_maintenance does not take them. Identify the vehicle by its @id (from list_vehicles). Each fact is {key, value, unit?, source, url?}. KEYS are snake_case, subject first then aspect: oil_type, oil_capacity, coolant_type, tyre_front_size, paint_code, build_date, engine_code, gearbox_code, fuel_type, distribution_type, oil_filter_ref (a part reference is {part}_ref). Call get_vehicle_facts first and REUSE an existing key instead of inventing a synonym; writing an existing key REPLACES its value. source: "user" when the owner told you the value (it then outranks every other source), "web" with the cited url, "llm" for general knowledge, "motul" for a Motul recommendation. A fact can come back listed in `shadowed`: a verified catalog value or a bill-derived part still wins for that key, so do not tell the owner your value is the one on file. Returns the stored facts. Invalid input (bad key, blank value, unknown source) returns status "invalid_input" with the reason and writes nothing.',
+            description: 'Record facts about a vehicle: identity and spec data such as build date, paint code, tyre size, engine/gearbox code, fuel type, oil grade/capacity, coolant, part references. This is the ONLY way to store a fact — plan_maintenance does not take them. Identify the vehicle by its @id (from list_vehicles). Each fact is {key, value, unit?, source, url?}. KEYS are snake_case, subject first then aspect: oil_type, oil_capacity, coolant_type, tyre_front_size, paint_code, build_date, engine_code, gearbox_code, fuel_type, distribution_type, oil_filter_ref (a part reference is {part}_ref). Call get_vehicle_facts first and REUSE an existing key instead of inventing a synonym; writing an existing key REPLACES its value. source: "user" when the owner told you the value (it then outranks every other source), "web" with the cited url, "llm" for general knowledge, "motul" for a Motul recommendation. A fact can come back listed in `shadowed`: a part fitted on a logged bill or a value the owner set by hand still wins for that key, so do not tell the owner your value is the one on file. Returns the stored facts. Invalid input (bad key, blank value, unknown source) returns status "invalid_input" with the reason and writes nothing.',
             input: SetVehicleFactsInput::class,
             structuredContent: false,
             processor: SetVehicleFactsProcessor::class,
