@@ -1,8 +1,8 @@
 #syntax=docker/dockerfile:1
 
 # Versions
-ARG FRANKENPHP_VERSION=1.12.7
-# FrankenPHP 1.12.7 bundles Mercure 0.24 (1.13.0 bundles 1.0.3); the hub is pinned forward here.
+ARG FRANKENPHP_VERSION=1.13.1
+# FrankenPHP 1.13.1 bundles Mercure 1.0.3; the hub is pinned forward here.
 ARG MERCURE_CADDY_VERSION=v1.1.2
 
 # Rebuilds the FrankenPHP binary with the stock module set, swapping the bundled
