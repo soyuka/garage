@@ -703,3 +703,18 @@ dev `cache_items` rows were migrated (`app:cache:migrate-to-mongo`: siv 7/7, par
 - ~~**`tests/Functional/McpMaintenanceTest::testEditMaintenanceOnAnUnknownRecordIsNotFoundNotAnError` is red,
   pre-existing**~~ (fixed 2026-10-21: since 681f460 the record provider throws `NotFoundHttpException`, which `EditMaintenanceProcessor` now maps to `not_found`) (verified on main 6280d54, 2026-10-21): `edit_maintenance` on an unknown record answers
   `invalid_input` where the test expects `not_found`. Unrelated to the TecDoc catalog branch.
+
+## Shared vehicles — two owners on one car (asked 2026-10-24, not started)
+
+The user moved a Golf (XE-304-ZE) to another bonneref account and wanted both accounts to see it. Not
+possible today: `Vehicle.owner` (`api/src/Entity/Vehicle.php`) is a single string, every garage read
+narrows by owner first (`idx_vehicle_identity` leads with `owner`), and `OwnerContext` scopes MCP, the
+agent and HTTP to that one value. Planned tasks, records, documents, finder selections and the journal
+carry their own `owner` copy (`app:garage:assign-owner` moves them all together).
+
+Open design points:
+- membership shape: `members[]` on the vehicle (owner + viewers/editors) vs a separate share collection;
+  the indexes and every owner-scoped repository query change either way;
+- rights: who edits, who logs visits, who deletes, who can re-share;
+- child rows: records/planned tasks/documents written by a member — owned by the vehicle, not the writer;
+- inviting: by email claim (the owner key), the invitee may not have signed in yet.
