@@ -643,7 +643,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
           </Presence>,
           slot,
         )}
-      {actionsSlot && showResult && category && n && createPortal(<ResultActions vehicle={v} category={category} family={family} cluster={cluster} clusters={n.clusters} api={api} />, actionsSlot)}
+      {actionsSlot && showResult && category && n && createPortal(<ResultActions vehicle={v} category={category} family={family} cluster={cluster} clusters={n.clusters} route={route} api={api} />, actionsSlot)}
       {slot &&
         createPortal(
           <Presence show={!ask && question !== null && asking}>
@@ -817,7 +817,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
           {wide && block}
         </Sheet>
       </div>
-      {actionsSlot && part?.kind === 'catalog' && category && n && vehicle && createPortal(<ResultActions vehicle={vehicle} category={category} family={family} cluster={cluster} clusters={n.clusters} api={api} />, actionsSlot)}
+      {actionsSlot && part?.kind === 'catalog' && category && n && vehicle && createPortal(<ResultActions vehicle={vehicle} category={category} family={family} cluster={cluster} clusters={n.clusters} route={route} api={api} />, actionsSlot)}
       {actionsSlot && part?.kind === 'web' && createPortal(<WebActions key={part.key} part={part} />, actionsSlot)}
       {slot &&
         createPortal(

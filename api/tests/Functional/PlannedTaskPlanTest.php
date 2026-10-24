@@ -91,6 +91,55 @@ final class PlannedTaskPlanTest extends AppTestCase
         $this->assertSame('/garage/vehicles/'.$chosen->getId(), $data['vehicle']);
     }
 
+    public function testFindRouteIsStoredReturnedAndReplacedByTheLatestFind(): void
+    {
+        $client = static::createClient();
+        $first = '/p/XE304ZE/c/100538/g/247/r/c2/01M5QBGXRK7S728KVD7R4VBHY8';
+        $second = '/k/8050-PC/c/100538/v/c1';
+        $payload = self::payload();
+        $payload['parts'] = [['ref' => 'LF05-14-302A', 'brand' => 'MAZDA', 'findRoute' => $first]];
+
+        $data = $client->request('POST', '/garage/planned-tasks', ['headers' => self::headers(), 'json' => $payload])->toArray();
+        $this->assertResponseStatusCodeSame(201);
+        $this->assertSame($first, $data['parts'][0]['findRoute']);
+
+        $payload['parts'] = [['ref' => 'LF05-14-302A']];
+        $data = $client->request('POST', '/garage/planned-tasks', ['headers' => self::headers(), 'json' => $payload])->toArray();
+        $this->assertSame($first, $data['parts'][0]['findRoute']);
+
+        $payload['parts'] = [['ref' => 'LF05-14-302A', 'findRoute' => $second]];
+        $data = $client->request('POST', '/garage/planned-tasks', ['headers' => self::headers(), 'json' => $payload])->toArray();
+        $this->assertCount(1, $data['parts']);
+        $this->assertSame($second, $data['parts'][0]['findRoute']);
+
+        $members = $client->request('GET', $data['vehicle'].'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
+        $this->assertSame($second, $members[0]['parts'][0]['findRoute']);
+    }
+
+    /**
+     * @return iterable<string, array{mixed}>
+     */
+    public static function invalidFindRoutes(): iterable
+    {
+        yield 'javascript scheme' => ['javascript:alert(1)'];
+        yield 'absolute url' => ['//evil.example/p/XE304ZE/c/1'];
+        yield 'leading hash' => ['#/p/XE304ZE/c/100538'];
+        yield 'unknown view' => ['/x/XE304ZE/c/100538'];
+        yield 'too long' => ['/p/XE304ZE/c/100538/r/'.str_repeat('a', 200)];
+        yield 'not a string' => [['/p/XE304ZE/c/1']];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalidFindRoutes')]
+    public function testInvalidFindRouteIs422(mixed $findRoute): void
+    {
+        $payload = self::payload();
+        $payload['parts'] = [['ref' => 'LF05-14-302A', 'findRoute' => $findRoute]];
+
+        static::createClient()->request('POST', '/garage/planned-tasks', ['headers' => self::headers(), 'json' => $payload]);
+
+        $this->assertResponseStatusCodeSame(422);
+    }
+
     public function testAnonymousPostIsRejected(): void
     {
         static::createAnonymousClient()->request('POST', '/garage/planned-tasks', [

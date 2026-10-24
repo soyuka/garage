@@ -5,6 +5,8 @@ const vehicle: Vehicle = {
   plate: 'XB-301-ZB', make: 'MAZDA', model: 'MAZDA6', modelEn: '6 Hatchback', version: '2.0 MZR147', engineCode: 'LFF7',
   powerHp: 200, firstRegistration: '2007-03-29', energy: 'ESSENCE', vin: 'JMZGG14F671528417', carId: 19107, carType: 'PC',
 };
+const ROUTE = '/p/XB-301-ZB/c/100259/g/247/r/c2/01M5QBGXRK7S728KVD7R4VBHY8';
+const HASH = `#${ROUTE}`;
 const oil: Category = { id: 100259, name: 'Oil Filter', path: 'Filtre > Filtre à huile', segments: ['Filtre', 'Filtre à huile'], label: 'Filtre à huile', leaf: true };
 
 describe('addLabel', () => {
@@ -26,7 +28,7 @@ describe('maintenanceType', () => {
 
 describe('planBody', () => {
   it('carries the vehicle identity for dedup and the OE ref plus the chosen equivalent', () => {
-    const body = planBody(vehicle, oil, { kind: 'filter', filter: 'oil' }, { brand: 'MAZDA', number: 'LF05-14-302A' }, { brand: 'MANN-FILTER', number: 'W 712/73' });
+    const body = planBody(vehicle, oil, { kind: 'filter', filter: 'oil' }, { brand: 'MAZDA', number: 'LF05-14-302A' }, { brand: 'MANN-FILTER', number: 'W 712/73' }, HASH);
     expect(body).toEqual({
       make: 'MAZDA',
       model: 'MAZDA6',
@@ -38,16 +40,22 @@ describe('planBody', () => {
       source: 'user',
       addedBy: 'finder',
       parts: [
-        { ref: 'LF05-14-302A', brand: 'MAZDA', label: 'Filtre à huile' },
-        { ref: 'W 712/73', brand: 'MANN-FILTER', label: 'Filtre à huile' },
+        { ref: 'LF05-14-302A', brand: 'MAZDA', label: 'Filtre à huile', findRoute: ROUTE },
+        { ref: 'W 712/73', brand: 'MANN-FILTER', label: 'Filtre à huile', findRoute: ROUTE },
       ],
     });
   });
 
   it('skips a missing OE or an equivalent equal to it', () => {
-    const one = planBody(vehicle, oil, { kind: 'none' }, { brand: 'MAZDA', number: 'X1' }, { brand: 'MAZDA', number: 'X1' });
+    const one = planBody(vehicle, oil, { kind: 'none' }, { brand: 'MAZDA', number: 'X1' }, { brand: 'MAZDA', number: 'X1' }, HASH);
     expect(one.parts).toHaveLength(1);
-    expect(planBody(vehicle, oil, { kind: 'none' }, null, { brand: 'MAHLE', number: 'OC 1182' }).parts).toEqual([{ ref: 'OC 1182', brand: 'MAHLE', label: 'Filtre à huile' }]);
+    expect(planBody(vehicle, oil, { kind: 'none' }, null, { brand: 'MAHLE', number: 'OC 1182' }, HASH).parts).toEqual([{ ref: 'OC 1182', brand: 'MAHLE', label: 'Filtre à huile', findRoute: ROUTE }]);
+  });
+});
+
+describe('planBody findRoute', () => {
+  it('sends no find link when there is no result hash', () => {
+    expect(planBody(vehicle, oil, { kind: 'none' }, { brand: 'MAZDA', number: 'X1' }, null, null).parts).toEqual([{ ref: 'X1', brand: 'MAZDA', label: 'Filtre à huile', findRoute: null }]);
   });
 });
 
@@ -64,7 +72,7 @@ describe('planPart', () => {
   it('POSTs the plan and returns the task and the vehicle IRI', async () => {
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ '@id': '/garage/planned-tasks/01T', vehicle: '/garage/vehicles/01V' }), { status: 201 }));
     vi.stubGlobal('fetch', fetch);
-    const body = planBody(vehicle, oil, { kind: 'filter', filter: 'oil' }, { brand: 'MAZDA', number: 'LF05-14-302A' }, null);
+    const body = planBody(vehicle, oil, { kind: 'filter', filter: 'oil' }, { brand: 'MAZDA', number: 'LF05-14-302A' }, null, HASH);
     await expect(planPart(body)).resolves.toEqual({ task: '/garage/planned-tasks/01T', vehicle: '/garage/vehicles/01V' });
     const [url, init] = fetch.mock.calls[0]!;
     expect(url).toBe('/garage/planned-tasks');
@@ -80,20 +88,20 @@ describe('planPart', () => {
     [500, 'failed'],
   ] as const)('maps HTTP %i to %s', async (status, kind) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('{}', { status })));
-    const err = await planPart(planBody(vehicle, oil, { kind: 'none' }, null, null)).catch((e: unknown) => e);
+    const err = await planPart(planBody(vehicle, oil, { kind: 'none' }, null, null, HASH)).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(PlanError);
     expect((err as PlanError).kind).toBe(kind);
   });
 
   it('maps a network failure', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('offline')));
-    await expect(planPart(planBody(vehicle, oil, { kind: 'none' }, null, null))).rejects.toMatchObject({ kind: 'network' });
+    await expect(planPart(planBody(vehicle, oil, { kind: 'none' }, null, null, HASH))).rejects.toMatchObject({ kind: 'network' });
   });
 
   it('hands back the candidates of an ambiguous match, told apart by plate', async () => {
     const conflict = { status: 'ambiguous_match', candidates: [{ '@id': '/garage/vehicles/01A', make: 'PEUGEOT', model: '307', plate: 'AB-123-CD' }, { '@id': '/garage/vehicles/01B', make: 'PEUGEOT', model: '307', plate: null }, { make: 'x' }] };
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify(conflict), { status: 409 })));
-    const err = (await planPart(planBody(vehicle, oil, { kind: 'none' }, null, null)).catch((e: unknown) => e)) as PlanError;
+    const err = (await planPart(planBody(vehicle, oil, { kind: 'none' }, null, null, HASH)).catch((e: unknown) => e)) as PlanError;
     expect(err.candidates).toEqual([
       { iri: '/garage/vehicles/01A', plate: 'AB-123-CD', name: 'Peugeot 307' },
       { iri: '/garage/vehicles/01B', plate: null, name: 'Peugeot 307' },
@@ -103,7 +111,7 @@ describe('planPart', () => {
   it('re-posts against the vehicle the user picked', async () => {
     const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ '@id': '/garage/planned-tasks/01T', vehicle: '/garage/vehicles/01A' }), { status: 201 }));
     vi.stubGlobal('fetch', fetch);
-    await planPart({ ...planBody(vehicle, oil, { kind: 'none' }, null, null), vehicle: '/garage/vehicles/01A' });
+    await planPart({ ...planBody(vehicle, oil, { kind: 'none' }, null, null, HASH), vehicle: '/garage/vehicles/01A' });
     expect(JSON.parse(fetch.mock.calls[0]![1].body).vehicle).toBe('/garage/vehicles/01A');
   });
 });

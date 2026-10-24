@@ -44,6 +44,7 @@ export interface PlannedPart {
   ref: string;
   brand: string | null;
   label: string | null;
+  findRoute: string | null;
 }
 
 export interface PlannedItem {
@@ -142,7 +143,7 @@ export function mapPlannedParts(raw: unknown): PlannedItem[] {
     const parts = (Array.isArray(j.parts) ? j.parts : []).flatMap((p) => {
       const part = obj(p);
       const ref = str(part.ref);
-      return ref === null ? [] : [{ ref, brand: str(part.brand), label: str(part.label) }];
+      return ref === null ? [] : [{ ref, brand: str(part.brand), label: str(part.label), findRoute: str(part.findRoute) }];
     });
     return [{ id, label: label ? sentence(label) : type ? serviceLabel(type) : 'Pièces prévues', parts }];
   });

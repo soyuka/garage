@@ -36,6 +36,7 @@ export interface PlanPartLine {
   ref: string;
   brand: string;
   label: string;
+  findRoute: string | null;
 }
 
 export interface PlanBody {
@@ -54,11 +55,11 @@ export interface PlanBody {
   confirmNew?: boolean;
 }
 
-export function planBody(v: Vehicle, category: Category, family: Family, oe: Reference | null, equivalent: Reference | null): PlanBody {
+export function planBody(v: Vehicle, category: Category, family: Family, oe: Reference | null, equivalent: Reference | null, resultHash: string | null): PlanBody {
   const parts = [oe, equivalent]
     .filter((r): r is Reference => r !== null)
     .filter((r, i, all) => all.findIndex((o) => o.number === r.number) === i)
-    .map((r) => ({ ref: r.number, brand: r.brand, label: category.label }));
+    .map((r) => ({ ref: r.number, brand: r.brand, label: category.label, findRoute: resultHash?.replace(/^#/, '') ?? null }));
   return {
     make: v.make,
     model: v.model ?? v.modelEn,

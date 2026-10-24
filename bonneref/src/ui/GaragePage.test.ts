@@ -12,7 +12,7 @@ const toro: GarageRow = {
   engineVariant: 'Briggs & Stratton', engineCode: null, vehicleType: 'groundscare', carId: null, carType: 'PC', usage: { value: 3, unit: 'h' }, addedAt: '2026-06-20T23:04:26+00:00',
 };
 const sheet = (vehicle: GarageRow): GarageSheet => ({ vehicle, facts: [{ key: 'paint_code', label: 'Code peinture', value: 'EWP', source: 'Vous', url: null }] });
-const planned: PlannedItem[] = [{ id: '01M4D8R97311BQ0S9NSPR7PC4N', label: 'Embrayage', parts: [{ ref: '623 3150 33', brand: 'LuK', label: "Kit d'embrayage" }] }];
+const planned: PlannedItem[] = [{ id: '01M4D8R97311BQ0S9NSPR7PC4N', label: 'Embrayage', parts: [{ ref: '623 3150 33', brand: 'LuK', label: "Kit d'embrayage", findRoute: null }] }];
 const noop = () => undefined;
 const view = (s: GarageSheet, p: PlannedItem[] = planned) => renderToStaticMarkup(createElement(GarageSheetView, { sheet: s, planned: p, plannedLoading: false, onSearch: noop, onDeleteVehicle: noop, onDeleteFact: noop, deletingFact: null, deletingVehicle: false, error: null }));
 
@@ -50,6 +50,17 @@ describe('GarageSheetView', () => {
     expect(html).not.toContain('Chercher une pièce');
     expect(html).toContain('3 h');
     expect(html).toContain('Aucune pièce prévue');
+  });
+
+  it('links a planned part back to its finder result, and leaves an unlinked or non-result one as text', () => {
+    const route = '/p/XE304ZE/c/100538/g/247/r/c2/01M5QBGXRK7S728KVD7R4VBHY8';
+    const part = (ref: string, findRoute: string | null) => ({ ref, brand: null, label: null, findRoute });
+    const html = view(sheet(peugeot), [{ id: 'T1', label: 'Embrayage', parts: [part('AAA111', route), part('BBB222', null), part('CCC333', '/garage/01M4X5D9R4FV02S6Q9XW30PBZK')] }]);
+    expect(html).toContain(`href="#${route}"`);
+    expect(html.match(/<a class="gp-find" href="#\/p\//g)).toHaveLength(1);
+    expect(html).toMatch(/<a class="gp-find" href="#\/p\/[^>]*>(?:(?!<\/a>).)*AAA111/);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*BBB222/);
+    expect(html).not.toMatch(/<a [^>]*>(?:(?!<\/a>).)*CCC333/);
   });
 
   it('never prints the maintenance forecast', () => {

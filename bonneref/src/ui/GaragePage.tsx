@@ -12,9 +12,10 @@ import {
   type GarageRow,
   type GarageSheet,
   type PlannedItem,
+  type PlannedPart,
 } from '../garage-vehicles';
 import type { MyVehicle } from '../my-vehicles';
-import { routeToHash, type Route } from '../route';
+import { parseRoute, routeToHash, type Route } from '../route';
 import { useAsync, type Navigate } from './hooks';
 import { useToast } from './Toast';
 
@@ -257,9 +258,13 @@ export function GarageSheetView({ sheet, planned, plannedLoading, onSearch, onDe
                   <ul className="gp-parts">
                     {t.parts.map((p, i) => (
                       <li key={`${p.ref}-${i}`}>
-                        {p.brand && <i>{p.brand}</i>}
-                        <span className="m">{p.ref}</span>
-                        {p.label && <span className="gp-label">{p.label}</span>}
+                        {p.findRoute && parseRoute(`#${p.findRoute}`).view === 'result' ? (
+                          <a className="gp-find" href={`#${p.findRoute}`}>
+                            <PlannedPartRow part={p} />
+                          </a>
+                        ) : (
+                          <PlannedPartRow part={p} />
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -452,5 +457,15 @@ export function GaragePage({ route, navigate, onSearch }: { route: GarageRoute; 
         <VehiclePage key={route.id} id={route.id} navigate={navigate} onSearch={onSearch} />
       )}
     </div>
+  );
+}
+
+function PlannedPartRow({ part }: { part: PlannedPart }) {
+  return (
+    <>
+      {part.brand && <i>{part.brand}</i>}
+      <span className="m">{part.ref}</span>
+      {part.label && <span className="gp-label">{part.label}</span>}
+    </>
   );
 }

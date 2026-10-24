@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
 use App\Dto\PlanMaintenanceInput;
+use App\Entity\PlannedPart;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
@@ -55,6 +56,12 @@ final class PlannedTaskPlanProcessor implements ProcessorInterface
         if (null !== $data->targetUsageUnit) {
             $targetUnit = UsageUnit::tryFrom($data->targetUsageUnit)
                 ?? throw new UnprocessableEntityHttpException(sprintf('Unknown targetUsageUnit "%s"; expected km, mi or h.', $data->targetUsageUnit));
+        }
+
+        foreach ($data->parts as $part) {
+            if (\is_array($part) && \array_key_exists('findRoute', $part) && null !== $part['findRoute'] && !PlannedPart::isValidFindRoute($part['findRoute'])) {
+                throw new UnprocessableEntityHttpException('Invalid findRoute on a part.');
+            }
         }
 
         $vehicleType = VehicleType::tryFrom($data->vehicleType)

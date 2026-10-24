@@ -40,6 +40,10 @@ class PlannedPart
     private ?int $priceCents = null;
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $supplier = null;
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $findRoute = null;
+
+    private const FIND_ROUTE_PATTERN = '~^/(p/[A-Z0-9-]{1,20}|k/[1-9][0-9]*-(PC|CV))/c/[0-9]+(/g/[1-9][0-9]*)?(/[kvr]/[A-Za-z0-9_-]{1,32}(/[0-9A-HJKMNP-TV-Z]{26})?){0,2}$~D';
 
     public function __construct(
         string $ref = '',
@@ -49,6 +53,7 @@ class PlannedPart
         ?int $priceCents = null,
         ?string $id = null,
         ?string $supplier = null,
+        ?string $findRoute = null,
     ) {
         $this->ref = $ref;
         $this->label = $label;
@@ -56,11 +61,12 @@ class PlannedPart
         $this->qty = $qty;
         $this->priceCents = $priceCents;
         $this->supplier = $supplier;
+        $this->findRoute = $findRoute;
         $this->id = $id ?? (string) new Ulid();
     }
 
     /**
-     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, id?: string|null} $part
+     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, findRoute?: string|null, id?: string|null} $part
      */
     public static function fromArray(array $part): self
     {
@@ -76,6 +82,7 @@ class PlannedPart
             priceCents: isset($part['priceCents']) ? (int) $part['priceCents'] : null,
             id: $part['id'] ?? null,
             supplier: $part['supplier'] ?? null,
+            findRoute: self::validFindRoute($part['findRoute'] ?? null),
         );
     }
 
@@ -94,6 +101,11 @@ class PlannedPart
         return $this->label;
     }
 
+    public static function isValidFindRoute(mixed $route): bool
+    {
+        return \is_string($route) && \strlen($route) <= 200 && 1 === preg_match(self::FIND_ROUTE_PATTERN, $route);
+    }
+
     public static function normaliseLabel(?string $label): string
     {
         return mb_strtolower(trim((string) $label));
@@ -103,7 +115,7 @@ class PlannedPart
      * Merge-patch a single line: only the supplied keys overwrite (a `ref` is never blanked by an
      * absent key). The shape mirrors {@see self::fromArray()} minus `id` (identity is immutable).
      *
-     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null} $part
+     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, findRoute?: string|null} $part
      */
     public function update(array $part): void
     {
@@ -131,10 +143,14 @@ class PlannedPart
         if (\array_key_exists('supplier', $part)) {
             $this->supplier = null !== $part['supplier'] ? (string) $part['supplier'] : null;
         }
+        $findRoute = self::validFindRoute($part['findRoute'] ?? null);
+        if (null !== $findRoute) {
+            $this->findRoute = $findRoute;
+        }
     }
 
     /**
-     * @return array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string}
+     * @return array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string}
      */
     public function toArray(): array
     {
@@ -154,8 +170,16 @@ class PlannedPart
         if (null !== $this->supplier) {
             $out['supplier'] = $this->supplier;
         }
+        if (null !== $this->findRoute) {
+            $out['findRoute'] = $this->findRoute;
+        }
 
         return $out;
+    }
+
+    private static function validFindRoute(mixed $route): ?string
+    {
+        return self::isValidFindRoute($route) ? $route : null;
     }
 
     /**

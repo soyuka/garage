@@ -2457,6 +2457,13 @@ a.gtb--card:hover .c {
   gap: 2px 8px;
 }
 
+.gp-parts li > .gp-find {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
 .gp-parts i {
   font-style: normal;
   font-weight: 500;

@@ -28,6 +28,11 @@ Shipped, end to end:
   « Enregistrer le véhicule » / « Ajouter au … » say « Voir le véhicule » → `#/garage/<ulid>`, same
   tab (`Toast.tsx` `linkTarget`). Code: `src/garage-vehicles.ts`, `src/garage-labels.ts` (labels copied
   from `dashboard/src/labels.ts`), `src/ui/GaragePage.tsx`. Captures `.impeccable/review/garage-*`.
+- **Planned part links back to its find (2026-10-24)**: « Ajouter au … » sends the result hash
+  (without `#`) as `findRoute` on each part line; the API validates it (422) and stores it on
+  `PlannedPart`, a re-add of the same ref with a new one replaces it. On the garage sheet the part row
+  is an `<a href="#<findRoute>">` back to that result. Parts added before this date have no
+  `findRoute` and stay plain text; no backfill.
 - **Single input** (text / photo / video) over a blank drawing sheet. Local rules first
   (`bonneref/src/route-input.ts`): plate (SIV / FNI) → `GET /vehicles/{plate}`; VIN → `GET /vins/{vin}`
   (sunrise/vin, model year only for North-American VINs); reference shape → agent `intent=reference`;

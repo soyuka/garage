@@ -3,6 +3,7 @@ import { isAuthenticated, login } from '../auth';
 import type { FinderApi } from '../client';
 import { addLabel, garageHref, planBody, PlanError, type GarageCandidate } from '../garage';
 import { actionRefs } from '../result';
+import { routeToHash, type Route } from '../route';
 import type { Category, Cluster, Family, Reference, Vehicle, WebPart } from '../types';
 import { BuyMenu } from './BuyMenu';
 import { copy } from './CopyRef';
@@ -15,17 +16,18 @@ interface Props {
   family: Family;
   cluster: Cluster | null;
   clusters: readonly Cluster[];
+  route: Route;
   api: FinderApi;
 }
 
 // Under the composer on a result: what to do with the variant shown.
-export function ResultActions({ vehicle, category, family, cluster, clusters, api }: Props) {
+export function ResultActions({ vehicle, category, family, cluster, clusters, route, api }: Props) {
   const toast = useToast();
   const refs = cluster ? actionRefs(cluster, vehicle.make, clusters) : { oe: null, equivalent: null, buy: null };
   return (
     <div className="act" role="group" aria-label="Actions sur la pièce">
       {refs.buy && <BuyMenu reference={refs.buy} />}
-      <AddToVehicle vehicle={vehicle} category={category} family={family} oe={refs.oe} equivalent={refs.equivalent} api={api} />
+      <AddToVehicle vehicle={vehicle} category={category} family={family} oe={refs.oe} equivalent={refs.equivalent} resultHash={route.view === 'result' ? routeToHash(route) : null} api={api} />
       <button type="button" className="btn" onClick={async () => toast((await copy(window.location.href)) ? 'Lien copié' : 'Copie impossible.')}>
         Copier le lien
       </button>
@@ -51,7 +53,7 @@ const PLAN_FAILURE: Record<string, string> = {
   failed: 'Ajout au garage impossible. Réessayez.',
 };
 
-function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; api: FinderApi }) {
+function AddToVehicle({ vehicle, category, family, oe, equivalent, resultHash, api }: { vehicle: Vehicle; category: Category; family: Family; oe: Reference | null; equivalent: Reference | null; resultHash: string | null; api: FinderApi }) {
   const toast = useToast();
   const [state, setState] = useState<AddState>({ kind: 'idle' });
   const label = addLabel(vehicle);
@@ -60,7 +62,7 @@ function AddToVehicle({ vehicle, category, family, oe, equivalent, api }: { vehi
     if (!isAuthenticated()) return setState({ kind: 'login' });
     setState({ kind: 'saving' });
     try {
-      const { vehicle: iri } = await api.planPart({ ...planBody(vehicle, category, family, oe, equivalent), ...extra });
+      const { vehicle: iri } = await api.planPart({ ...planBody(vehicle, category, family, oe, equivalent, resultHash), ...extra });
       toast({ text: `${category.label} ajouté au plan d’entretien.`, link: { href: garageHref(iri), label: 'Voir le véhicule' } });
       setState({ kind: 'idle' });
     } catch (e) {

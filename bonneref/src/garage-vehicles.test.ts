@@ -139,10 +139,22 @@ describe('mapPlannedParts', () => {
         id: '01M4D8R97311BQ0S9NSPR7PC4N',
         label: 'Embrayage',
         parts: [
-          { ref: '623 3150 33', brand: 'LuK', label: "Kit d'embrayage" },
-          { ref: 'SAE 75W-80', brand: null, label: 'Huile boîte PK6 — 2,4 ± 0,15 L (MR 361 21A-2), en stock' },
+          { ref: '623 3150 33', brand: 'LuK', label: "Kit d'embrayage", findRoute: null },
+          { ref: 'SAE 75W-80', brand: null, label: 'Huile boîte PK6 — 2,4 ± 0,15 L (MR 361 21A-2), en stock', findRoute: null },
         ],
       },
+    ]);
+  });
+});
+
+describe('mapPlannedParts findRoute', () => {
+  const task = (parts: unknown[]) => ({ 'hydra:member': [{ id: '01T', type: 'clutch', status: 'open', parts }] });
+  const route = '/p/XE304ZE/c/100538/g/247/r/c2/01M5QBGXRK7S728KVD7R4VBHY8';
+
+  it('keeps the find route of a part added from a result, null for older parts', () => {
+    expect(mapPlannedParts(task([{ ref: 'A1', findRoute: route }, { ref: 'A2' }]))[0]!.parts).toEqual([
+      { ref: 'A1', brand: null, label: null, findRoute: route },
+      { ref: 'A2', brand: null, label: null, findRoute: null },
     ]);
   });
 });
