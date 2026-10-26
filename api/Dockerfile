@@ -1,38 +1,9 @@
 #syntax=docker/dockerfile:1
 
 # Versions
-ARG FRANKENPHP_VERSION=1.13.1
-# FrankenPHP 1.13.1 bundles Mercure 1.0.3; the hub is pinned forward here.
-ARG MERCURE_CADDY_VERSION=v1.1.2
-
-# Rebuilds the FrankenPHP binary with the stock module set, swapping the bundled
-# Mercure hub module for MERCURE_CADDY_VERSION.
-FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-builder-php8.5 AS frankenphp_builder
-
-ARG MERCURE_CADDY_VERSION
-
-COPY --from=caddy:builder /usr/bin/xcaddy /usr/bin/xcaddy
-
-# hadolint ignore=DL3003,SC2046
-# Mercure 1.x needs Go >= 1.27; the builder image ships 1.26 and pins GOTOOLCHAIN=local,
-# which forbids fetching a newer one.
-RUN CGO_ENABLED=1 \
-	GOTOOLCHAIN=auto \
-	XCADDY_SETCAP=1 \
-	XCADDY_GO_BUILD_FLAGS="-ldflags='-w -s' -tags=nobadger,nomysql,nopgx" \
-	CGO_CFLAGS=$(php-config --includes) \
-	CGO_LDFLAGS="$(php-config --ldflags) $(php-config --libs)" \
-	xcaddy build \
-		--output /usr/local/bin/frankenphp \
-		--with github.com/dunglas/frankenphp=./ \
-		--with github.com/dunglas/frankenphp/caddy=./caddy/ \
-		--with github.com/dunglas/caddy-cbrotli \
-		--with github.com/dunglas/mercure/caddy@${MERCURE_CADDY_VERSION} \
-		--with github.com/dunglas/vulcain/caddy
+ARG FRANKENPHP_VERSION=1.13.4
 
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php8.5 AS frankenphp_upstream
-
-COPY --from=frankenphp_builder /usr/local/bin/frankenphp /usr/local/bin/frankenphp
 
 # The different stages of this Dockerfile are meant to be built into separate images
 # https://docs.docker.com/build/building/multi-stage/#stop-at-a-specific-build-stage
