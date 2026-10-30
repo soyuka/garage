@@ -51,7 +51,8 @@ interface PartsCatalog
     public function cachedArticles(int $carId, int $categoryId, CarType $carType): ?array;
 
     /**
-     * Criteria are per ARTICLE, the union over every vehicle it fits, not per vehicle.
+     * The article's attributes, then its link qualifiers merged over EVERY vehicle it fits: the shape partsapi
+     * answers with, for when no vehicle is in scope. With a vehicle, prefer {@see self::vehicleLinkCriteria()}.
      *
      * @return list<ArticleCriterion>
      */
@@ -65,6 +66,17 @@ interface PartsCatalog
      * @return array<int, list<ArticleCriterion>> by article id, uncached ones left out
      */
     public function cachedArticleCriteria(array $artIds): array;
+
+    /**
+     * The criteria of those articles on one vehicle's link (qualifiers of that link only, restricted to the product
+     * group when given), never an upstream call. Null when the catalog cannot tell an article's links apart: partsapi
+     * only knows the union of {@see self::articleCriteria()}.
+     *
+     * @param list<int> $artIds
+     *
+     * @return array<int, VehicleLinkCriteria>|null by article id, every asked id included
+     */
+    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null): ?array;
 
     /**
      * @return list<ArticleCross>

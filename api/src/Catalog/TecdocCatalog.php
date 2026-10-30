@@ -26,8 +26,8 @@ final class TecdocCatalog implements PartsCatalog
     private const int ENGINE_TYPE_TABLE = 80;
 
     private const array PROFILES = [
-        'PC' => ['tree' => 1, 'type' => 'pc_type', 'engines' => 'pc_type_engine', 'genarts' => 'pc_type_genart', 'links' => 'article_pc_type'],
-        'CV' => ['tree' => 2, 'type' => 'cv_type', 'engines' => 'cv_type_engine', 'genarts' => 'cv_type_genart', 'links' => 'article_cv_type'],
+        'PC' => ['tree' => 1, 'type' => 'pc_type', 'engines' => 'pc_type_engine', 'genarts' => 'pc_type_genart', 'links' => 'article_pc_type', 'kind' => 'pc'],
+        'CV' => ['tree' => 2, 'type' => 'cv_type', 'engines' => 'cv_type_engine', 'genarts' => 'cv_type_genart', 'links' => 'article_cv_type', 'kind' => 'cv'],
     ];
 
     private ?PDO $pdo = null;
@@ -188,6 +188,44 @@ final class TecdocCatalog implements PartsCatalog
         return $this->criteria($artIds);
     }
 
+    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null): array
+    {
+        $artIds = array_values(array_unique(array_map(intval(...), $artIds)));
+        if ([] === $artIds) {
+            return [];
+        }
+
+        $params = ['kind' => self::profile($carType)['kind'], 'carId' => $carId];
+        $genart = '';
+        if (null !== $productGroupId) {
+            $genart = 'AND genart_id = :genart';
+            $params['genart'] = $productGroupId;
+        }
+
+        // The unary + keeps SQLite on the vehicle-first primary key: through i_alq_article it would walk every vehicle of each article.
+        $rows = $this->qualifierRows(
+            \sprintf('SELECT DISTINCT article_id, qual_set_id FROM article_link_qualifier WHERE vehicle_kind = :kind AND vehicle_id = :carId AND +article_id IN (%s) %s', implode(',', $artIds), $genart),
+            'q.article_id, q.qual_set_id, i.seq',
+            $params,
+        );
+
+        $sets = [];
+        foreach ($rows as $row) {
+            $value = self::value($row);
+            if (null !== $row['name'] && '' !== $value) {
+                $sets[(int) $row['article_id']][(string) $row['qual_set_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
+            }
+        }
+
+        $attributes = $this->attributes($artIds);
+        $links = [];
+        foreach ($artIds as $artId) {
+            $links[$artId] = new VehicleLinkCriteria($attributes[$artId], array_values($sets[$artId] ?? []));
+        }
+
+        return $links;
+    }
+
     public function articleCrosses(int $artId): array
     {
         $rows = $this->rows(
@@ -251,7 +289,7 @@ final class TecdocCatalog implements PartsCatalog
     }
 
     /**
-     * @return array{tree: int, type: string, engines: string, genarts: string, links: string}
+     * @return array{tree: int, type: string, engines: string, genarts: string, links: string, kind: string}
      */
     private static function profile(CarType $carType): array
     {
@@ -334,59 +372,12 @@ final class TecdocCatalog implements PartsCatalog
             return [];
         }
 
-        $in = implode(',', $artIds);
-        $params = ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE];
-        $texts = <<<'SQL'
-            LEFT JOIN criterion_text fr ON fr.criterion_id = c.criterion_id AND fr.language_id = :lang
-            LEFT JOIN criterion_text de ON de.criterion_id = c.criterion_id AND de.language_id = :fallback
-            LEFT JOIN key_value_text kfr ON kfr.tab_nr = c.key_table_nr AND kfr.key_code = %1$s.key_code AND kfr.language_id = :lang
-            LEFT JOIN key_value_text kde ON kde.tab_nr = c.key_table_nr AND kde.key_code = %1$s.key_code AND kde.language_id = :fallback
-            SQL;
-
-        $attributes = $this->rows(
-            \sprintf(
-                <<<'SQL'
-                    SELECT aa.article_id, c.criterion_id, coalesce(fr.name, de.name) AS name,
-                           aa.value_num, aa.value_text, aa.key_code, coalesce(kfr.text, kde.text) AS key_text,
-                           NULL AS date_year, NULL AS date_month
-                    FROM article_attribute aa
-                    JOIN criterion c ON c.criterion_id = aa.criterion_id
-                    %s
-                    WHERE aa.article_id IN (%s)
-                    ORDER BY aa.article_id, aa.seq
-                    SQL,
-                \sprintf($texts, 'aa'),
-                $in,
-            ),
-            $params,
+        $qualifiers = $this->qualifierRows(
+            \sprintf('SELECT DISTINCT article_id, qual_set_id FROM article_link_qualifier WHERE article_id IN (%s)', implode(',', $artIds)),
+            'q.article_id, name, c.criterion_id',
         );
 
-        $qualifiers = $this->rows(
-            \sprintf(
-                <<<'SQL'
-                    SELECT q.article_id, c.criterion_id, coalesce(fr.name, de.name) AS name,
-                           i.value_num, i.value_text, i.key_code, coalesce(kfr.text, kde.text) AS key_text,
-                           i.date_year, i.date_month
-                    FROM (SELECT DISTINCT article_id, qual_set_id FROM article_link_qualifier WHERE article_id IN (%s)) q
-                    JOIN link_qualifier_item i ON i.qual_set_id = q.qual_set_id
-                    JOIN criterion c ON c.criterion_id = i.criterion_id
-                    %s
-                    ORDER BY q.article_id, name, c.criterion_id
-                    SQL,
-                $in,
-                \sprintf($texts, 'i'),
-            ),
-            $params,
-        );
-
-        $criteria = array_fill_keys($artIds, []);
-        foreach ($attributes as $row) {
-            $value = self::value($row);
-            if (null !== $row['name'] && '' !== $value) {
-                $criteria[(int) $row['article_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
-            }
-        }
-
+        $criteria = $this->attributes($artIds);
         $unions = [];
         foreach ($qualifiers as $row) {
             $value = self::value($row);
@@ -404,6 +395,83 @@ final class TecdocCatalog implements PartsCatalog
         }
 
         return $criteria;
+    }
+
+    /**
+     * @param non-empty-list<int> $artIds
+     *
+     * @return array<int, list<ArticleCriterion>> every asked id
+     */
+    private function attributes(array $artIds): array
+    {
+        $rows = $this->rows(
+            \sprintf(
+                <<<'SQL'
+                    SELECT aa.article_id, c.criterion_id, coalesce(fr.name, de.name) AS name,
+                           aa.value_num, aa.value_text, aa.key_code, coalesce(kfr.text, kde.text) AS key_text,
+                           NULL AS date_year, NULL AS date_month
+                    FROM article_attribute aa
+                    JOIN criterion c ON c.criterion_id = aa.criterion_id
+                    %s
+                    WHERE aa.article_id IN (%s)
+                    ORDER BY aa.article_id, aa.seq
+                    SQL,
+                self::criterionTexts('aa'),
+                implode(',', $artIds),
+            ),
+            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE],
+        );
+
+        $attributes = array_fill_keys($artIds, []);
+        foreach ($rows as $row) {
+            $value = self::value($row);
+            if (null !== $row['name'] && '' !== $value) {
+                $attributes[(int) $row['article_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
+            }
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * @param string                    $links  a SELECT of (article_id, qual_set_id) pairs
+     * @param array<string, int|string> $params the parameters of $links
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function qualifierRows(string $links, string $orderBy, array $params = []): array
+    {
+        return $this->rows(
+            \sprintf(
+                <<<'SQL'
+                    SELECT q.article_id, q.qual_set_id, c.criterion_id, coalesce(fr.name, de.name) AS name,
+                           i.value_num, i.value_text, i.key_code, coalesce(kfr.text, kde.text) AS key_text,
+                           i.date_year, i.date_month
+                    FROM (%s) q
+                    JOIN link_qualifier_item i ON i.qual_set_id = q.qual_set_id
+                    JOIN criterion c ON c.criterion_id = i.criterion_id
+                    %s
+                    ORDER BY %s
+                    SQL,
+                $links,
+                self::criterionTexts('i'),
+                $orderBy,
+            ),
+            $params + ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE],
+        );
+    }
+
+    private static function criterionTexts(string $alias): string
+    {
+        return \sprintf(
+            <<<'SQL'
+                LEFT JOIN criterion_text fr ON fr.criterion_id = c.criterion_id AND fr.language_id = :lang
+                LEFT JOIN criterion_text de ON de.criterion_id = c.criterion_id AND de.language_id = :fallback
+                LEFT JOIN key_value_text kfr ON kfr.tab_nr = c.key_table_nr AND kfr.key_code = %1$s.key_code AND kfr.language_id = :lang
+                LEFT JOIN key_value_text kde ON kde.tab_nr = c.key_table_nr AND kde.key_code = %1$s.key_code AND kde.language_id = :fallback
+                SQL,
+            $alias,
+        );
     }
 
     /**

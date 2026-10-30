@@ -155,6 +155,11 @@ final class PartsApiCatalog implements PartsCatalog
         );
     }
 
+    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null): ?array
+    {
+        return null;
+    }
+
     /**
      * @return list<ArticleCross>
      */

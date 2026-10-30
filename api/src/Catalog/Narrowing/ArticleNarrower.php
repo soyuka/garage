@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Catalog\Narrowing;
 
 use App\ApiResource\Article;
+use App\Catalog\ArticleCriterion;
 use App\Catalog\ArticleCross;
 use App\Catalog\BrandTier;
 use App\Catalog\PartsCatalog;
+use App\Catalog\VehicleLinkCriteria;
 use App\Exception\UpstreamException;
 use App\Mcp\ArticleGroup;
 use App\PartsApi\CarType;
@@ -72,8 +74,10 @@ final class ArticleNarrower
         }
         $articles = null === $productGroup ? [] : array_values(array_filter($articles, static fn (Article $a): bool => $a->productTypeId === $productGroup['id']));
         $degraded = [];
+        $links = $this->catalog->vehicleLinkCriteria($carId, $carType, array_map(static fn (Article $a): int => $a->id, $articles), $productGroup['id'] ?? null);
+        $scope = null === $links ? ApplicabilityScope::Article : ApplicabilityScope::Vehicle;
 
-        $representatives = $this->fingerprint($this->pickRepresentatives($articles), $degraded);
+        $representatives = $this->fingerprint($this->pickRepresentatives($articles), $links, $degraded);
         $clusters = $this->clusterer->cluster($representatives);
 
         if ([] === $clusters) {
@@ -91,17 +95,18 @@ final class ArticleNarrower
                 fallbackBrands: ArticleGroup::of($categoryId, $articles)['brands'],
                 productGroup: $productGroup,
                 productGroups: $productGroups,
+                applicabilityScope: $scope,
             );
         }
 
         $crosses = $this->fetchCrosses($clusters, $degraded);
         [$clusters, $crosses] = $this->mergeOnCarmakerOe($clusters, $crosses, $make);
         if ([] === $degraded) {
-            [$clusters, $crosses] = $this->probeSiblings($clusters, $crosses, $articles, $make, $degraded);
+            [$clusters, $crosses] = $this->probeSiblings($clusters, $crosses, $articles, $make, $links, $degraded);
         }
         $oeBrands = [] === $crosses ? [] : $this->vehicleMakers($carType, $make, $degraded);
 
-        $variants = $this->assign($clusters, $articles, $crosses);
+        $variants = $this->assign($clusters, $articles, $crosses, $links);
         $classified = array_sum(array_map('count', $variants));
 
         $narrowedClusters = [];
@@ -114,7 +119,9 @@ final class ArticleNarrower
                 representative: ['artId' => $best->artId, 'brand' => $best->brand, 'number' => $best->number],
                 variants: $variants[$cluster->id],
                 articleCount: \count($variants[$cluster->id]),
-                applicability: Applicability::union($this->applicabilities($cluster, $variants[$cluster->id])),
+                applicability: null === $links
+                    ? Applicability::union($this->applicabilities($cluster, $variants[$cluster->id]))
+                    : Applicability::shared(array_column($variants[$cluster->id], 'applicability')),
                 productGroup: $productGroup,
             );
         }
@@ -130,6 +137,7 @@ final class ArticleNarrower
             upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
             productGroup: $productGroup,
             productGroups: $productGroups,
+            applicabilityScope: $scope,
         );
     }
 
@@ -137,7 +145,7 @@ final class ArticleNarrower
      * The members' breakpoints, then those of variants whose criteria some earlier search already cached:
      * free, and a claimed variant may be the one article that states the breakpoint.
      *
-     * @param list<array{artId: int, brand: string, number: string, tier: int}> $variants
+     * @param list<array{artId: int, brand: string, number: string, tier: int, applicability?: list<array{conditions: list<array{name: string, values: list<string>}>, pairedWith: list<string>}>}> $variants
      *
      * @return list<array<string, list<string>>>
      */
@@ -200,17 +208,18 @@ final class ArticleNarrower
     }
 
     /**
-     * @param list<Article> $picked
-     * @param list<string>  $degraded
+     * @param list<Article>                        $picked
+     * @param array<int, VehicleLinkCriteria>|null $links
+     * @param list<string>                         $degraded
      *
      * @return list<Representative>
      */
-    private function fingerprint(array $picked, array &$degraded): array
+    private function fingerprint(array $picked, ?array $links, array &$degraded): array
     {
         $representatives = [];
         foreach ($picked as $article) {
             try {
-                $criteria = $this->catalog->articleCriteria($article->id);
+                $criteria = $this->criteria($article->id, $links);
             } catch (UpstreamException) {
                 // The quota is per method: once it refuses, every further representative would too.
                 $degraded[] = 'criteria unavailable from the parts catalog (quota or outage)';
@@ -221,6 +230,22 @@ final class ArticleNarrower
         }
 
         return $representatives;
+    }
+
+    /**
+     * This car's link criteria when the catalog tells links apart, else the article's union over every vehicle.
+     *
+     * @param array<int, VehicleLinkCriteria>|null $links
+     *
+     * @return list<ArticleCriterion>
+     */
+    private function criteria(int $artId, ?array $links): array
+    {
+        if (null === $links) {
+            return $this->catalog->articleCriteria($artId);
+        }
+
+        return ($links[$artId] ?? new VehicleLinkCriteria())->criteria();
     }
 
     /**
@@ -322,14 +347,15 @@ final class ArticleNarrower
     }
 
     /**
-     * @param list<Cluster>                     $clusters
-     * @param array<string, list<ArticleCross>> $crosses  by cluster id
-     * @param list<Article>                     $articles
-     * @param list<string>                      $degraded
+     * @param list<Cluster>                        $clusters
+     * @param array<string, list<ArticleCross>>    $crosses  by cluster id
+     * @param list<Article>                        $articles
+     * @param array<int, VehicleLinkCriteria>|null $links
+     * @param list<string>                         $degraded
      *
      * @return array{list<Cluster>, array<string, list<ArticleCross>>}
      */
-    private function probeSiblings(array $clusters, array $crosses, array $articles, ?string $make, array &$degraded): array
+    private function probeSiblings(array $clusters, array $crosses, array $articles, ?string $make, ?array $links, array &$degraded): array
     {
         $probed = [];
         for ($i = 0; $i < self::MAX_SIBLING_PROBES; ++$i) {
@@ -340,7 +366,7 @@ final class ArticleNarrower
             $probed[$sibling->id] = true;
 
             try {
-                $criteria = $this->catalog->articleCriteria($sibling->id);
+                $criteria = $this->criteria($sibling->id, $links);
             } catch (UpstreamException) {
                 $degraded[] = 'criteria unavailable from the parts catalog (quota or outage): a second part of a represented brand could not be checked';
                 break;
@@ -472,13 +498,14 @@ final class ArticleNarrower
      * unclassified: crosses are a loose interchange list, so merging through them would collapse
      * differently sized parts.
      *
-     * @param list<Cluster>                         $clusters
-     * @param list<Article>                         $articles
-     * @param array<string, list<ArticleCross>> $crosses
+     * @param list<Cluster>                        $clusters
+     * @param list<Article>                        $articles
+     * @param array<string, list<ArticleCross>>    $crosses
+     * @param array<int, VehicleLinkCriteria>|null $links
      *
-     * @return array<string, list<array{artId: int, brand: string, number: string, tier: int}>>
+     * @return array<string, list<array{artId: int, brand: string, number: string, tier: int, applicability?: list<array{conditions: list<array{name: string, values: list<string>}>, pairedWith: list<string>}>}>> see {@see NarrowedCluster::$variants}
      */
-    private function assign(array $clusters, array $articles, array $crosses): array
+    private function assign(array $clusters, array $articles, array $crosses, ?array $links): array
     {
         $claims = [];
         foreach ($crosses as $clusterId => $list) {
@@ -508,7 +535,7 @@ final class ArticleNarrower
             }
         }
 
-        return array_map(static function (array $list): array {
+        return array_map(static function (array $list) use ($links): array {
             usort($list, static fn (Article $a, Article $b): int => BrandTier::rank($a->brand) <=> BrandTier::rank($b->brand)
                 ?: strcasecmp($a->brand, $b->brand)
                 ?: strcmp($a->number, $b->number)
@@ -519,7 +546,7 @@ final class ArticleNarrower
                 'brand' => $a->brand,
                 'number' => $a->number,
                 'tier' => BrandTier::classify($a->brand),
-            ], $list);
+            ] + (null === $links ? [] : ['applicability' => Applicability::ofLink($links[$a->id] ?? new VehicleLinkCriteria())]), $list);
         }, $members);
     }
 

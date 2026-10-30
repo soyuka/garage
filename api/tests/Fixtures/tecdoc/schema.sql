@@ -301,10 +301,10 @@ CREATE TABLE article_link_qualifier (
   vehicle_id INTEGER,
   genart_id INTEGER NOT NULL,
   supplier_id INTEGER NOT NULL,
-  qual_set_id INTEGER NOT NULL
-);
+  qual_set_id INTEGER NOT NULL,
+  PRIMARY KEY (vehicle_kind, vehicle_id, genart_id, article_id, supplier_id, qual_set_id)
+) WITHOUT ROWID;
 CREATE INDEX i_alq_article ON article_link_qualifier(article_id);
-CREATE INDEX i_alq_vehicle ON article_link_qualifier(vehicle_kind, vehicle_id);
 CREATE TABLE link_qualifier_set (
   qual_set_id INTEGER PRIMARY KEY,
   primary_countries TEXT

@@ -106,10 +106,13 @@ other "à partir du n° d'organisation 10311").
   ask for the measure. A measure answer selects its cluster the same way, basis « longueur mesurée
   (322–338 mm) ».
 - decode_build_code stays for decoding a catalogue threshold or a date, never for the car's own code.
-- applicability is per ARTICLE (the union over every vehicle the article fits), not per car: present
+- applicability is per ARTICLE (the union over every vehicle the article fits), not per car, unless
+  applicabilityCaveat says it is per variant (read from that article's own link to this car): present
   the choice as an indication, never as certainty. If it does not discriminate between the clusters,
   say so and keep the question to the dimension or the OE number.
 - Never use applicability to split a single cluster or to discard one.
+- "only with X" in a variant's applicability (TecDoc « uniquement en connexion avec ») names the part it
+  must be fitted with, e.g. the clutch kit that goes with that flywheel: say it.
 </build_code>
 
 <product_groups>
