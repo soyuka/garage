@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace App\Command;
 
-use App\Agent\Finder\TurnImage;
-use App\Agent\Finder\TurnImageStash;
 use App\Motul\MongoMotulResponseStore;
-use App\PartsApi\MongoPartsApiResponseStore;
 use App\Persistence\BsonPayload;
-use App\Siv\MongoSivLookupStore;
 use Doctrine\DBAL\Connection;
 use MongoDB\BSON\Document;
 use Psr\Clock\ClockInterface;
@@ -23,28 +19,25 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 
 /**
- * Moves the retired PostgreSQL cache pools (cache_items) into their MongoDB collections, ids unchanged so
+ * Moves the retired PostgreSQL motul cache pool (cache_items) into its MongoDB collection, ids unchanged so
  * every paid response stays a hit. All-or-nothing: every row is mapped and checked first, and a single row
  * it cannot map, or a namespace it does not recognise, aborts before anything is written. The table is
  * only read, never truncated.
  */
 #[AsCommand(
     name: 'app:cache:migrate-to-mongo',
-    description: 'Migrate the PostgreSQL cache_items pools (siv, partsapi, motul, turn images) into MongoDB.',
+    description: 'Migrate the PostgreSQL cache_items motul pool into MongoDB.',
 )]
 final class MigrateCacheToMongoCommand extends Command
 {
-    private const array POOLS = ['cache.siv', 'cache.partsapi', 'cache.motul', 'cache.turn_images'];
+    private const array POOLS = ['cache.motul'];
     private const array TYPE_MAP = ['root' => 'array', 'document' => 'array', 'array' => 'array'];
 
     public function __construct(
         #[Autowire(service: 'doctrine.dbal.default_connection')]
         private readonly Connection $db,
         private readonly LegacyCacheNamespaces $namespaces,
-        private readonly MongoSivLookupStore $siv,
-        private readonly MongoPartsApiResponseStore $partsApi,
         private readonly MongoMotulResponseStore $motul,
-        private readonly TurnImageStash $turnImages,
         private readonly ClockInterface $clock,
     ) {
         parent::__construct();
@@ -105,8 +98,6 @@ final class MigrateCacheToMongoCommand extends Command
             $mapped = $this->map($pool, $key, $value, $fetchedAt, $expiresAt);
             if (\is_string($mapped)) {
                 $errors[] = sprintf('%s (%s): %s', $row['item_id'], $pool, $mapped);
-            } elseif (null === $mapped) {
-                $stats[$pool]['skipped']['dead call counter'] = ($stats[$pool]['skipped']['dead call counter'] ?? 0) + 1;
             } else {
                 $writes[] = $mapped;
                 ++$stats[$pool]['write'];
@@ -156,36 +147,15 @@ final class MigrateCacheToMongoCommand extends Command
     }
 
     /**
-     * @return \Closure():void|string|null the write, the reason it cannot be mapped, or null for a dead counter
+     * @return \Closure():void|string the write, or the reason it cannot be mapped
      */
-    private function map(string $pool, string $key, mixed $value, \DateTimeImmutable $fetchedAt, ?\DateTimeImmutable $expiresAt): \Closure|string|null
+    private function map(string $pool, string $key, mixed $value, \DateTimeImmutable $fetchedAt, ?\DateTimeImmutable $expiresAt): \Closure|string
     {
-        if (null !== $expiresAt && !\in_array($pool, ['cache.partsapi', 'cache.turn_images'], true)) {
+        if (null !== $expiresAt) {
             return 'carries an expiry its collection does not model';
         }
 
         switch ($pool) {
-            case 'cache.siv':
-                if (!\is_array($value)) {
-                    return sprintf('expected an envelope array, got %s', get_debug_type($value));
-                }
-
-                return $this->roundTrips($value) ?? fn () => $this->siv->write($key, $value, $fetchedAt);
-
-            case 'cache.partsapi':
-                // The ceiling these counted was dropped in fff1cf9; nothing reads them any more.
-                if (preg_match('/^calls\.\w+$/', $key) && \is_int($value)) {
-                    return null;
-                }
-                if (!preg_match('/^(\w+)\.[0-9a-f]{40}$/', $key, $m)) {
-                    return 'key is neither <method>.<sha1> nor calls.<method>';
-                }
-                if (!\is_array($value)) {
-                    return sprintf('expected a decoded response array, got %s', get_debug_type($value));
-                }
-
-                return $this->roundTrips($value) ?? fn () => $this->partsApi->write($key, $m[1], null, $value, $fetchedAt, $expiresAt);
-
             case 'cache.motul':
                 if (!preg_match('/^(search|recs)\.[0-9a-f]{40}$/', $key)) {
                     return 'key is neither search.<sha1> nor recs.<sha1>';
@@ -195,24 +165,6 @@ final class MigrateCacheToMongoCommand extends Command
                 }
 
                 return $this->roundTrips($value) ?? fn () => $this->motul->write($key, $value, $fetchedAt);
-
-            case 'cache.turn_images':
-                if (null === $expiresAt) {
-                    return 'a stashed batch must expire';
-                }
-                if (!\is_array($value) || !array_is_list($value)) {
-                    return 'expected a list of images';
-                }
-                $images = [];
-                foreach ($value as $image) {
-                    $bytes = \is_array($image) && \is_string($image['mimeType'] ?? null) && \is_string($image['bytes'] ?? null) ? base64_decode($image['bytes'], true) : false;
-                    if (false === $bytes) {
-                        return 'an image is not {mimeType, base64 bytes}';
-                    }
-                    $images[] = new TurnImage($image['mimeType'], $bytes);
-                }
-
-                return fn () => $this->turnImages->write($key, $images, $expiresAt);
         }
 
         return sprintf('no mapping for pool %s', $pool);

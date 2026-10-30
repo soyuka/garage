@@ -1,0 +1,1 @@
+{"@context":"\/contexts\/Article","@id":"\/cars\/34247\/part-categories\/999999\/articles","@type":"hydra:Collection","hydra:totalItems":0,"hydra:member":[],"hydra:view":{"@id":"\/cars\/34247\/part-categories\/999999\/articles?carType=CV","@type":"hydra:PartialCollectionView"}}

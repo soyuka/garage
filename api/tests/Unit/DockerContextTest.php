@@ -4,36 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit;
 
-use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Yaml\Yaml;
 
 final class DockerContextTest extends TestCase
 {
     private const string ROOT = __DIR__.'/../..';
-
-    /**
-     * @return iterable<string, array{string}>
-     */
-    public static function configuredFiles(): iterable
-    {
-        foreach ((new Finder())->files()->in(self::ROOT.'/config/packages')->name('*.yaml') as $config) {
-            foreach (self::fileValues(Yaml::parseFile($config->getPathname(), Yaml::PARSE_CUSTOM_TAGS)) as $path) {
-                if (str_starts_with($path, '%kernel.project_dir%/')) {
-                    $relative = substr($path, \strlen('%kernel.project_dir%/'));
-                    yield $config->getFilename().': '.$relative => [$relative];
-                }
-            }
-        }
-    }
-
-    #[DataProvider('configuredFiles')]
-    public function testFileReadByConfigReachesTheImage(string $path): void
-    {
-        self::assertFileExists(self::ROOT.'/'.$path);
-        self::assertFalse(self::ignored($path), \sprintf('api/.dockerignore drops "%s", which the config reads at runtime.', $path));
-    }
 
     public function testMatcherFollowsDockerSemantics(): void
     {
@@ -75,21 +50,5 @@ final class DockerContextTest extends TestCase
         }
 
         return false;
-    }
-
-    /**
-     * @return iterable<string>
-     */
-    private static function fileValues(mixed $node): iterable
-    {
-        if (!\is_array($node)) {
-            return;
-        }
-        foreach ($node as $key => $value) {
-            if ('file' === $key && \is_string($value)) {
-                yield $value;
-            }
-            yield from self::fileValues($value);
-        }
     }
 }

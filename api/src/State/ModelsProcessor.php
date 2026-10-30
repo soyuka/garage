@@ -6,9 +6,9 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Bonneref\BonnerefClient;
+use App\Catalog\CarType;
 use App\ApiResource\Model;
-use App\PartsApi\CarType;
-use App\Catalog\PartsCatalog;
 use App\Dto\ModelsInput;
 use App\Mcp\CappedResult;
 use Mcp\Schema\Result\CallToolResult;
@@ -20,14 +20,14 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class ModelsProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         $carType = CarTypeResolver::fromString($data->carType);
-        $models = $this->catalog->models($data->makeId, $carType);
+        $models = $this->bonneref->models($data->makeId, $carType);
         $search = trim($data->search ?? '');
 
         if ('' !== $search) {
@@ -47,7 +47,7 @@ final class ModelsProcessor implements ProcessorInterface
 
     private function stripMakeName(string $search, int $makeId, CarType $carType): string
     {
-        foreach ($this->catalog->makes($carType) as $make) {
+        foreach ($this->bonneref->makes($carType) as $make) {
             if ($make->id !== $makeId) {
                 continue;
             }

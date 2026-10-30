@@ -9,7 +9,6 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\McpTool;
 use App\Dto\PlateInput;
-use App\PartsApi\CarType;
 use App\State\VehicleLookupProcessor;
 use App\State\VehicleProvider;
 
@@ -81,53 +80,21 @@ final class Vehicle
     /**
      * @param array<string, mixed> $data SIV payload from apiplaqueimmatriculation.com
      */
-    public static function fromSiv(array $data): self
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function fromApi(array $data): self
     {
         $vehicle = new self();
-        $vehicle->plate = (string) ($data['immat'] ?? '');
-        $vehicle->country = (string) ($data['pays'] ?? 'FR');
-        $vehicle->make = self::str($data['marque'] ?? null);
-        $vehicle->model = self::str($data['modele'] ?? null);
-        $vehicle->modelEn = self::str($data['modele_en'] ?? null);
-        $vehicle->version = self::str($data['version'] ?? null);
-        $vehicle->vin = self::str($data['vin'] ?? null);
-        $vehicle->engineCode = self::str($data['code_moteur'] ?? null);
-        $vehicle->firstRegistration = self::str($data['date1erCir_us'] ?? null);
-        $vehicle->energy = self::str($data['energieNGC'] ?? null);
-        $vehicle->bodyType = self::str($data['carrosserieCG'] ?? null);
-        $vehicle->genre = self::str($data['genreVCGNGC'] ?? null);
-        $vehicle->fiscalPower = self::int($data['puisFisc'] ?? null);
-        $vehicle->powerKw = self::int($data['puisFiscReelKW'] ?? null);
-        $vehicle->powerHp = self::int($data['puisFiscReelCH'] ?? null);
-        $vehicle->engineCapacityCcm = self::int($data['ccm'] ?? null);
-        $vehicle->cylinders = self::int($data['cylindres'] ?? null);
-        $vehicle->gearbox = self::str($data['boite_vitesse'] ?? null);
-        $vehicle->seats = self::int($data['nr_passagers'] ?? null);
-        $vehicle->weightKg = self::int($data['ptac'] ?? null);
-        $vehicle->carId = self::int($data['tecdoc_car_id'] ?? null);
-        $vehicle->carType = CarType::fromSivGenre((string) ($data['genreVCGNGC'] ?? ''))->value;
-        $vehicle->tecdocManuId = self::int($data['tecdoc_manu_id'] ?? null);
-        $vehicle->tecdocModelId = self::int($data['tecdoc_model_id'] ?? null);
-
-        return $vehicle;
-    }
-
-    private static function str(mixed $value): ?string
-    {
-        $value = trim((string) $value);
-
-        return '' === $value ? null : $value;
-    }
-
-    /**
-     * SIV numbers come with units ("71 KW", "2287 CM3") — keep the leading integer.
-     */
-    private static function int(mixed $value): ?int
-    {
-        if (null === $value || '' === $value) {
-            return null;
+        $vehicle->plate = (string) ($data['plate'] ?? '');
+        $vehicle->country = (string) ($data['country'] ?? 'FR');
+        foreach (['make', 'model', 'modelEn', 'version', 'vin', 'engineCode', 'firstRegistration', 'energy', 'bodyType', 'genre', 'gearbox', 'carType'] as $field) {
+            $vehicle->{$field} = isset($data[$field]) ? (string) $data[$field] : null;
+        }
+        foreach (['fiscalPower', 'powerKw', 'powerHp', 'engineCapacityCcm', 'cylinders', 'seats', 'weightKg', 'carId', 'tecdocManuId', 'tecdocModelId'] as $field) {
+            $vehicle->{$field} = isset($data[$field]) ? (int) $data[$field] : null;
         }
 
-        return preg_match('/^\s*(\d+)/', (string) $value, $m) ? (int) $m[1] : null;
+        return $vehicle;
     }
 }

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\State;
 
-use App\PartsApi\CarType;
+use App\Catalog\CarType;
 
 /**
  * @internal shared parsing for providers (query filters) and processors (MCP inputs)

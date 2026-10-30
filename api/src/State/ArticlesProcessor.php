@@ -6,7 +6,7 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\Catalog\PartsCatalog;
+use App\Bonneref\BonnerefClient;
 use App\Dto\ArticlesInput;
 use App\Garage\ToolResult;
 use App\Mcp\ArticleGroup;
@@ -21,7 +21,7 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class ArticlesProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
@@ -34,7 +34,7 @@ final class ArticlesProcessor implements ProcessorInterface
             $categoryId = (int) $categoryId;
             $groups[] = ArticleGroup::of(
                 $categoryId,
-                $this->catalog->articles($data->carId, $categoryId, $carType),
+                $this->bonneref->articles($data->carId, $categoryId, $carType),
                 brands: $data->brands,
             );
         }

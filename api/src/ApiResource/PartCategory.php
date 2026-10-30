@@ -81,45 +81,17 @@ final class PartCategory
     }
 
     /**
-     * @param list<array<string, mixed>> $nodes raw getSearchTree response
-     *
-     * @return list<self>
+     * @param array<string, mixed> $row
      */
-    public static function fromPartsApiTree(array $nodes, bool $leafOnly, ?string $search = null): array
+    public static function fromApi(array $row): self
     {
-        // parent map MUST be built from the full set so leaf detection stays correct
-        // regardless of the search/leafOnly filtering applied below
-        $parents = [];
-        foreach ($nodes as $node) {
-            if (null !== ($node['STR_ID_PARENT'] ?? null)) {
-                $parents[(int) $node['STR_ID_PARENT']] = true;
-            }
-        }
-
-        $needle = (null !== $search && '' !== $search) ? $search : null;
-
-        $categories = [];
-        foreach ($nodes as $node) {
-            $leaf = !isset($parents[(int) $node['STR_ID']]);
-            if ($leafOnly && !$leaf) {
-                continue;
-            }
-
-            // path is the match field — superset of the node name (name is the path tail)
-            if (null !== $needle && false === mb_stripos((string) ($node['STR_PATH'] ?? ''), $needle)) {
-                continue;
-            }
-
-            $categories[] = new self(
-                id: (int) $node['STR_ID'],
-                parentId: null !== ($node['STR_ID_PARENT'] ?? null) ? (int) $node['STR_ID_PARENT'] : null,
-                level: (int) ($node['STR_LEVEL'] ?? 0),
-                name: (string) ($node['STR_NODE_NAME'] ?? ''),
-                path: (string) ($node['STR_PATH'] ?? ''),
-                leaf: $leaf,
-            );
-        }
-
-        return $categories;
+        return new self(
+            id: (int) ($row['id'] ?? 0),
+            parentId: isset($row['parentId']) ? (int) $row['parentId'] : null,
+            level: (int) ($row['level'] ?? 0),
+            name: (string) ($row['name'] ?? ''),
+            path: (string) ($row['path'] ?? ''),
+            leaf: (bool) ($row['leaf'] ?? false),
+        );
     }
 }

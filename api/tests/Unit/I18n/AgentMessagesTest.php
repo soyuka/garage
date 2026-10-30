@@ -97,28 +97,6 @@ final class AgentMessagesTest extends TestCase
         }
     }
 
-    public function testTheFinderSpeaksLikeAPartsCounterNotLikeAnAssistant(): void
-    {
-        $fr = AgentMessages::for(Locale::Fr);
-
-        $this->assertSame('Affinage des références…', $fr->finderNarration['show_parts']);
-        $this->assertSame('Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.', $fr->finderNoOp);
-        foreach ([...array_values($fr->finderNarration), $fr->finderNoOp, $fr->finderNotConverged] as $sentence) {
-            $this->assertDoesNotMatchRegularExpression("/\\b(Je|J'|ton|ta|tes|tu)\\b|Reformule\\b|choisis\\b/u", $sentence);
-        }
-    }
-
-    public function testBothCatalogsNarrateTheSameFinderTools(): void
-    {
-        $fr = array_keys(AgentMessages::for(Locale::Fr)->finderNarration);
-        $en = array_keys(AgentMessages::for(Locale::En)->finderNarration);
-        sort($fr);
-        sort($en);
-
-        $this->assertSame($fr, $en);
-        $this->assertNotSame('', trim(AgentMessages::for(Locale::En)->finderNotConverged));
-    }
-
     /** @return iterable<string, array{Locale}> */
     public static function locales(): iterable
     {

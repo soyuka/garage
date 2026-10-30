@@ -6,15 +6,15 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Bonneref\BonnerefClient;
 use App\ApiResource\Model;
-use App\Catalog\PartsCatalog;
 
 /**
  * @implements ProviderInterface<Model>
  */
 final class ModelCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
@@ -25,7 +25,7 @@ final class ModelCollectionProvider implements ProviderInterface
     {
         $carType = $operation->getParameters()?->get('carType')?->getValue();
 
-        return $this->catalog->models(
+        return $this->bonneref->models(
             (int) $uriVariables['makeId'],
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
         );

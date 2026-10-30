@@ -5,10 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Command\LegacyCacheNamespaces;
-use App\Entity\PartsApiResponse;
-use App\Entity\TurnImageBatch;
+use App\Entity\MotulResponse;
 use App\Motul\MotulResponseStore;
-use App\Siv\SivLookupStore;
 use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -18,10 +16,8 @@ use Symfony\Component\Console\Tester\CommandTester;
 
 final class MigrateCacheToMongoCommandTest extends AppTestCase
 {
-    private const string GET_MAKES = 'getMakes.8dfd0ff78534b11449383e60daa7f02a758cdf60';
-    private const string GET_ARTICLES = 'getArticles.3d7aa63567129c07408d60598fd5bcab162d4379';
     private const string RECS = 'recs.55f2787ad9c5b1f223e74fd945d820a460d89e71';
-    private const string EXPIRED = 'getSearchTree.97ff21a115d6a2e60b1f29051da1bf103af7b480';
+    private const string SEARCH = 'search.8dfd0ff78534b11449383e60daa7f02a758cdf60';
 
     private Connection $db;
 
@@ -34,88 +30,66 @@ final class MigrateCacheToMongoCommandTest extends AppTestCase
         $this->db->executeStatement('DELETE FROM cache_items');
     }
 
-    public function testMigratesEveryPoolPreservingExpiry(): void
+    public function testMigratesTheMotulPool(): void
     {
         $now = time();
-        $this->seed('cache.siv', 'AB123CD', ['code_erreur' => 200, 'data' => ['marque' => 'RENAULT']], $now - 50);
-        $this->seed('cache.partsapi', self::GET_MAKES, [['makeId' => 93]], $now - 40);
-        $this->seed('cache.partsapi', self::GET_ARTICLES, [['ART_ID' => 1]], $now - 30, 1000);
-        $this->seed('cache.partsapi', self::EXPIRED, [['STR_ID' => 1]], $now - 3000, 1000);
-        $this->seed('cache.partsapi', 'calls.getArticles', 50, $now);
-        $this->seed('cache.motul', self::RECS, ['html' => '<html/>'], $now);
-        $this->seed('cache.turn_images', 'turn_images_01K7Q0000000000000000000000', [['mimeType' => 'image/png', 'bytes' => base64_encode("\x89PNG")]], $now, 900);
+        $this->seed('cache.motul', self::RECS, ['html' => '<html/>'], $now - 40);
 
         $tester = $this->migrate([]);
 
         $this->assertSame(0, $tester->getStatusCode(), $tester->getDisplay());
-        $this->assertSame(['code_erreur' => 200, 'data' => ['marque' => 'RENAULT']], static::getContainer()->get(SivLookupStore::class)->find('AB123CD'));
         $this->assertSame(['html' => '<html/>'], static::getContainer()->get(MotulResponseStore::class)->find(self::RECS));
-
-        $parts = $this->rawAll(PartsApiResponse::class);
-        $this->assertSame([self::GET_ARTICLES, self::GET_MAKES], array_keys($parts));
-        $this->assertSame([['makeId' => 93]], $parts[self::GET_MAKES]['data']);
-        $this->assertSame('getMakes', $parts[self::GET_MAKES]['method']);
-        $this->assertNull($parts[self::GET_MAKES]['params']);
-        $this->assertNull($parts[self::GET_MAKES]['expiresAt']);
-        $this->assertSame($now - 40, $parts[self::GET_MAKES]['fetchedAt']->toDateTime()->getTimestamp());
-        $this->assertSame($now - 30 + 1000, $parts[self::GET_ARTICLES]['expiresAt']->toDateTime()->getTimestamp());
-
-        $images = $this->rawAll(TurnImageBatch::class);
-        $this->assertSame("\x89PNG", $images['turn_images_01K7Q0000000000000000000000']['images'][0]['bytes']->getData());
-
-        $display = $tester->getDisplay();
-        $this->assertMatchesRegularExpression('/cache\.partsapi\s+\S+\s+4\s+2\s+dead call counter: 1, expired: 1/', $display);
-        $this->assertMatchesRegularExpression('/cache\.siv\s+\S+\s+1\s+1\s/', $display);
+        $this->assertMatchesRegularExpression('/cache\.motul\s+\S+\s+1\s+1\s/', $tester->getDisplay());
     }
 
     public function testDryRunWritesNothing(): void
     {
-        $this->seed('cache.siv', 'AB123CD', ['data' => []], time());
+        $this->seed('cache.motul', self::RECS, ['html' => '<html/>'], time());
 
         $tester = $this->migrate(['--dry-run' => true]);
 
         $this->assertSame(0, $tester->getStatusCode(), $tester->getDisplay());
-        $this->assertNull(static::getContainer()->get(SivLookupStore::class)->find('AB123CD'));
-        $this->assertMatchesRegularExpression('/cache\.siv\s+\S+\s+1\s+1\s/', $tester->getDisplay());
+        $this->assertNull(static::getContainer()->get(MotulResponseStore::class)->find(self::RECS));
+        $this->assertMatchesRegularExpression('/cache\.motul\s+\S+\s+1\s+1\s/', $tester->getDisplay());
     }
 
     public function testIsIdempotent(): void
     {
-        $this->seed('cache.partsapi', self::GET_MAKES, [['makeId' => 93]], time());
+        $this->seed('cache.motul', self::SEARCH, ['vehicles' => []], time());
 
         $this->migrate([]);
         $tester = $this->migrate([]);
 
         $this->assertSame(0, $tester->getStatusCode());
-        $this->assertCount(1, $this->rawAll(PartsApiResponse::class));
+        $this->assertCount(1, $this->rawAll(MotulResponse::class));
     }
 
     public function testFailsLoudlyOnAnUnrecognisedNamespaceUntilExplicitlyIgnored(): void
     {
         $this->db->insert('cache_items', ['item_id' => 'BxO5KZraMS:getSearchTree.x', 'item_data' => 'a:0:{}', 'item_lifetime' => null, 'item_time' => time()]);
-        $this->seed('cache.siv', 'AB123CD', ['data' => []], time());
+        $this->seed('cache.motul', self::RECS, ['html' => '<html/>'], time());
 
         $failed = $this->migrate([]);
         $this->assertSame(1, $failed->getStatusCode());
         $this->assertStringContainsString('BxO5KZraMS', $failed->getDisplay());
-        $this->assertNull(static::getContainer()->get(SivLookupStore::class)->find('AB123CD'), 'nothing is written when anything is unmapped');
+        $this->assertNull(static::getContainer()->get(MotulResponseStore::class)->find(self::RECS), 'nothing is written when anything is unmapped');
 
         $ignored = $this->migrate(['--ignore-namespace' => ['BxO5KZraMS']]);
         $this->assertSame(0, $ignored->getStatusCode(), $ignored->getDisplay());
-        $this->assertNotNull(static::getContainer()->get(SivLookupStore::class)->find('AB123CD'));
+        $this->assertNotNull(static::getContainer()->get(MotulResponseStore::class)->find(self::RECS));
     }
 
     public function testFailsLoudlyOnAValueItCannotMap(): void
     {
-        $this->seed('cache.partsapi', 'getMakes.not-a-sha', [['makeId' => 93]], time());
-        $this->seed('cache.siv', 'AB123CD', 'not an envelope', time());
+        $this->seed('cache.motul', 'recs.not-a-sha', ['html' => '<html/>'], time());
+        $this->seed('cache.motul', self::SEARCH, 'not an array', time());
 
         $tester = $this->migrate([]);
 
         $this->assertSame(1, $tester->getStatusCode());
-        $this->assertStringContainsString('getMakes.not-a-sha', $tester->getDisplay());
-        $this->assertStringContainsString('AB123CD', $tester->getDisplay());
-        $this->assertSame([], $this->rawAll(PartsApiResponse::class));
+        $this->assertStringContainsString('recs.not-a-sha', $tester->getDisplay());
+        $this->assertStringContainsString(self::SEARCH, $tester->getDisplay());
+        $this->assertSame([], $this->rawAll(MotulResponse::class));
     }
 
     private function seed(string $pool, string $key, mixed $value, int $time, ?int $lifetime = null): void

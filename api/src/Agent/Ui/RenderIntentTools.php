@@ -290,17 +290,6 @@ final class RenderIntentTools
     }
 
     /**
-     * Publishes a frame another surface's render tools built (the finder's) on the same bound session,
-     * through the same best-effort path. Not an `#[AsTool]`.
-     *
-     * @param array<string, mixed> $frame
-     */
-    public function publishFrame(array $frame): void
-    {
-        $this->publish($frame);
-    }
-
-    /**
      * @param array<string, mixed> $action a typed UIAction
      */
     private function publish(array $action): void

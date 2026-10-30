@@ -7,8 +7,7 @@ namespace App\Tests\Functional;
 use ApiPlatform\Test\ApiTestCase;
 use ApiPlatform\Test\Client as ApiClient;
 use MongoDB\Client;
-use App\PartsApi\PartsApiResponseStore;
-use App\Siv\SivLookupStore;
+use App\Tests\Mock\BonnerefHttpClient;
 
 abstract class AppTestCase extends ApiTestCase
 {
@@ -34,6 +33,7 @@ abstract class AppTestCase extends ApiTestCase
     protected function setUp(): void
     {
         parent::setUp();
+        BonnerefHttpClient::reset();
 
         $url = $_ENV['MONGODB_URL'] ?? $_SERVER['MONGODB_URL'];
         $db = $_ENV['MONGODB_DB'] ?? $_SERVER['MONGODB_DB'];
@@ -120,14 +120,44 @@ abstract class AppTestCase extends ApiTestCase
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];
     }
 
-    /** Lives in the test Mongo database, so the per-test drop above isolates it too. */
-    protected static function sivStore(): SivLookupStore
+    protected static function bonneref(): BonnerefHttpClient
     {
-        return static::getContainer()->get(SivLookupStore::class);
+        return static::getContainer()->get(BonnerefHttpClient::class);
     }
 
-    protected static function partsApiStore(): PartsApiResponseStore
+    /**
+     * The Mazda 6 / Iveco Daily catalogue the suite shares, as bonneref answers it (fixtures captured from
+     * the catalogue this API used to serve itself). An article route no fixture covers answers an empty
+     * collection, the way a category without articles does.
+     */
+    protected static function catalogue(): BonnerefHttpClient
     {
-        return static::getContainer()->get(PartsApiResponseStore::class);
+        $http = static::bonneref();
+        $empty = ['999999'];
+        foreach (glob(\dirname(__DIR__).'/Fixtures/bonneref/categories_34247_*.json') ?: [] as $file) {
+            foreach (json_decode((string) file_get_contents($file), true)['hydra:member'] as $category) {
+                $empty[] = (string) $category['id'];
+            }
+        }
+        foreach (array_unique($empty) as $categoryId) {
+            $http->fixture('/cars/34247/part-categories/'.$categoryId.'/articles', 'articles_34247_999999');
+        }
+
+        return $http->fixture('/makes', 'makes')
+            ->fixture('/makes/72/models', 'models_72')
+            ->fixture('/makes/72/models/4887/cars', 'cars_72_4887')
+            ->fixture('/cars/34247/part-categories', 'categories_34247_leaf')
+            ->fixture('/cars/34247/part-categories', 'categories_34247_all', ['leafOnly' => 'false'])
+            ->fixture('/cars/34247/part-categories', 'categories_34247_filter', ['search' => 'filter'])
+            ->fixture('/cars/34247/part-categories', 'categories_34247_filtre', ['search' => 'filtre'])
+            ->fixture('/cars/34247/part-categories', 'categories_34247_filtre-a-huile', ['search' => 'filtre à huile'])
+            ->fixture('/cars/34247/part-categories', 'categories_34247_oil-filter', ['search' => 'oil filter'])
+            ->fixture('/cars/34247/part-categories/200158/articles', 'articles_34247_200158')
+            ->fixture('/cars/34247/part-categories/200120/articles', 'articles_34247_200120')
+            ->fixture('/cars/19107/part-categories/100259/narrowed', 'narrowed_19107_100259')
+            ->fixture('/cars/16182/part-categories/100198/narrowed', 'narrowed_16182_100198')
+            ->fixture('/cars/16182/part-categories/100198/narrowed', 'narrowed_16182_100198_pg51', ['productGroupId' => '51'])
+            ->fixture('/vehicles/XC302ZC', 'vehicle_XC302ZC')
+            ->route('/vehicles/ZZ999ZZ', '{}', 404);
     }
 }

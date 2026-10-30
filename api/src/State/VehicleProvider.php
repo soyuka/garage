@@ -7,19 +7,19 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Vehicle;
-use App\Vehicle\VehicleLookup;
+use App\Bonneref\BonnerefClient;
 
 /**
  * @implements ProviderInterface<Vehicle>
  */
 final class VehicleProvider implements ProviderInterface
 {
-    public function __construct(private readonly VehicleLookup $vehicleLookup)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?Vehicle
     {
-        return $this->vehicleLookup->byPlate((string) $uriVariables['plate']);
+        return $this->bonneref->vehicleByPlate((string) $uriVariables['plate']);
     }
 }

@@ -5,15 +5,8 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
-use App\Agent\Finder\BuildLabelHints;
-use App\Agent\Finder\FinderIntent;
-use App\Agent\Finder\FinderVehicle;
-use App\Agent\Finder\InvalidTurnImage;
-use App\Agent\Finder\PartPhotoHints;
-use App\Agent\Finder\TurnImage;
-use App\Agent\Finder\TurnImageDecoder;
-use App\Agent\Finder\TurnImageStash;
 use App\Agent\TurnSurface;
+use App\Bonneref\BonnerefToken;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -46,8 +39,6 @@ final class AgentTurnController
     public function __construct(
         private readonly TurnDispatcher $turns,
         private readonly Security $security,
-        private readonly TurnImageDecoder $images,
-        private readonly TurnImageStash $imageStash,
         #[Autowire('%env(DEFAULT_URI)%')]
         private readonly string $baseUri,
     ) {
@@ -66,30 +57,8 @@ final class AgentTurnController
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
         }
 
-        $surface = TurnSurface::tryFrom((string) ($payload['surface'] ?? TurnSurface::Garage->value));
-        if (null === $surface) {
-            return new JsonResponse(['error' => 'surface must be one of: garage, finder'], Response::HTTP_BAD_REQUEST);
-        }
-
-        $vehicle = null;
-        $intent = FinderIntent::Text;
-        $images = [];
-        if (TurnSurface::Finder === $surface) {
-            if (null !== ($payload['vehicle'] ?? null)) {
-                $vehicle = FinderVehicle::fromPayload(\is_array($payload['vehicle']) ? $payload['vehicle'] : []);
-                if (null === $vehicle) {
-                    return new JsonResponse(['error' => 'vehicle needs a carId (and a PC/CV carType); omit it to let the agent identify the car'], Response::HTTP_BAD_REQUEST);
-                }
-            }
-            $intent = FinderIntent::tryFrom((string) ($payload['intent'] ?? FinderIntent::Text->value));
-            if (null === $intent) {
-                return new JsonResponse(['error' => 'intent must be one of: text, reference, photo'], Response::HTTP_BAD_REQUEST);
-            }
-            try {
-                $images = $this->images->decode($payload['images'] ?? null);
-            } catch (InvalidTurnImage $e) {
-                return new JsonResponse(['error' => $e->getMessage()], $e->status);
-            }
+        if (TurnSurface::Garage->value !== (string) ($payload['surface'] ?? TurnSurface::Garage->value)) {
+            return new JsonResponse(['error' => 'surface must be garage'], Response::HTTP_BAD_REQUEST);
         }
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
@@ -104,13 +73,7 @@ final class AgentTurnController
             // Not a payload field: the browser already announces its language on the request, so the
             // dashboard's choice arrives for free (framework.yaml `set_locale_from_accept_language`).
             locale: Locale::resolve($request->getLocale())->value,
-            surface: $surface,
-            vehicle: $vehicle,
-            intent: $intent,
-            photoHints: TurnSurface::Finder === $surface ? PartPhotoHints::fromPayload($payload['photoHints'] ?? null) : null,
-            imageStash: [] === $images ? null : $this->imageStash->put($images),
-            images: array_map(static fn (TurnImage $i): array => $i->shape(), $images),
-            buildLabel: TurnSurface::Finder === $surface ? BuildLabelHints::fromPayload($payload['buildLabel'] ?? null) : null,
+            accessToken: BonnerefToken::fromRequest($request) ?? '',
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);

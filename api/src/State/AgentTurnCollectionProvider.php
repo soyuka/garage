@@ -11,7 +11,6 @@ use App\Agent\TurnSurface;
 use App\ApiResource\AgentTurn;
 use App\Repository\AgentTurnRepository;
 use App\Security\OwnerContext;
-use App\Vehicle\VehicleIndex;
 
 /**
  * Lists the current owner's agent turns, newest first — the dashboard journal drawer reads it. Scoped
@@ -28,7 +27,6 @@ final class AgentTurnCollectionProvider implements ProviderInterface
         private readonly AgentTurnRepository $turns,
         private readonly OwnerContext $owner,
         private readonly TurnCostEstimator $cost,
-        private readonly VehicleIndex $vehicles,
     ) {
     }
 
@@ -47,19 +45,9 @@ final class AgentTurnCollectionProvider implements ProviderInterface
 
         $history = filter_var($operation->getParameters()?->get('history')?->getValue(), \FILTER_VALIDATE_BOOLEAN);
 
-        $rows = array_map(
+        return array_map(
             fn ($turn): AgentTurn => AgentTurn::summaryOf($turn, $this->cost),
             $this->turns->findForOwner($owner, self::LIMIT, $surface, $history),
         );
-
-        $known = $this->vehicles->findMany(array_values(array_map(
-            static fn (AgentTurn $row): array => ['carId' => $row->vehicle['carId'], 'carType' => $row->vehicle['carType'] ?? null],
-            array_filter($rows, static fn (AgentTurn $row): bool => VehicleIndex::lacksNames($row->vehicle)),
-        )));
-        foreach ($rows as $row) {
-            $row->vehicle = $this->vehicles->complete($row->vehicle, $known);
-        }
-
-        return $rows;
     }
 }

@@ -16,7 +16,6 @@ final class DenyByDefaultTest extends AppTestCase
         yield 'plate lookup' => ['/vehicles/XC302ZC'];
         yield 'vin lookup' => ['/vins/VF33CKFWB83471925'];
         yield 'part categories' => ['/cars/12345/part-categories?carType=PC'];
-        yield 'car identity' => ['/cars/12345/identity?carType=PC'];
         yield 'narrowing' => ['/cars/12345/part-categories/1/narrowed?carType=PC'];
         yield 'articles' => ['/cars/12345/part-categories/1/articles?carType=PC'];
         yield 'makes' => ['/makes'];
@@ -46,14 +45,16 @@ final class DenyByDefaultTest extends AppTestCase
 
     public function testAuthenticatedPlateLookupIsServed(): void
     {
-        static::createAnonymousClient()->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $client = static::createAnonymousClient();
+        static::catalogue();
+        $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
 
         self::assertResponseStatusCodeSame(200);
     }
 
     public function testAuthenticatedVinLookupIsServed(): void
     {
-        static::createAnonymousClient()->request('GET', '/vins/VF33CKFWB83471925', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'vin', 'Search-Input' => 'VF33CKFWB83471925']]);
+        static::createAnonymousClient()->request('GET', '/vins/VF33CKFWB83471925', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
 
         self::assertResponseStatusCodeSame(200);
     }
@@ -85,12 +86,5 @@ final class DenyByDefaultTest extends AppTestCase
 
         self::assertResponseStatusCodeSame(401);
         self::assertStringContainsString('resource_metadata=', $response->getHeaders(false)['www-authenticate'][0] ?? '');
-    }
-
-    public function testSharedSelectionLinkStaysPublic(): void
-    {
-        static::createAnonymousClient()->request('GET', '/agent/selections/01JABCDEFGHJKMNPQRSTVWXYZ0');
-
-        self::assertResponseStatusCodeSame(404);
     }
 }

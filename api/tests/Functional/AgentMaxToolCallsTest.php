@@ -28,6 +28,5 @@ final class AgentMaxToolCallsTest extends AppTestCase
     public static function agents(): iterable
     {
         yield 'garage' => ['garage'];
-        yield 'finder' => ['finder'];
     }
 }

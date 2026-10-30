@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Mcp;
 
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
-use App\Exception\MissingApiKeyException;
 use App\Exception\RecordNotFoundException;
 use App\Exception\UpstreamException;
 use Mcp\Schema\Content\TextContent;
@@ -85,13 +84,6 @@ final class DomainErrorHandler implements RequestHandlerInterface
                 'retryable' => false,
                 'source' => $e->source,
                 'hint' => sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source),
-            ],
-            // Messages name env vars — carry only the source.
-            $e instanceof MissingApiKeyException => [
-                'status' => 'not_configured',
-                'retryable' => false,
-                'source' => $e->source,
-                'hint' => sprintf('%s is not configured on this server. Tell the user this capability is unavailable; do not retry and do not guess an answer.', $e->source),
             ],
             $e instanceof RecordNotFoundException, $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
                 'status' => self::MISS,

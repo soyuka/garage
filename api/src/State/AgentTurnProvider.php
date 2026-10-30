@@ -10,7 +10,6 @@ use App\Agent\Journal\TurnCostEstimator;
 use App\ApiResource\AgentTurn;
 use App\Repository\AgentTurnRepository;
 use App\Security\OwnerContext;
-use App\Vehicle\VehicleIndex;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -26,7 +25,6 @@ final class AgentTurnProvider implements ProviderInterface
         private readonly AgentTurnRepository $turns,
         private readonly OwnerContext $owner,
         private readonly TurnCostEstimator $cost,
-        private readonly VehicleIndex $vehicles,
     ) {
     }
 
@@ -43,9 +41,7 @@ final class AgentTurnProvider implements ProviderInterface
         if (null === $turn) {
             return null;
         }
-        $resource = AgentTurn::fullOf($turn, $this->cost);
-        $resource->vehicle = $this->vehicles->complete($resource->vehicle);
 
-        return $resource;
+        return AgentTurn::fullOf($turn, $this->cost);
     }
 }

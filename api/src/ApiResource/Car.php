@@ -11,7 +11,6 @@ use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Dto\CarsInput;
-use App\PartsApi\PartsApiDate;
 use App\State\CarCollectionProvider;
 use App\State\CarsProcessor;
 use Symfony\Component\Validator\Constraints as Assert;
@@ -90,21 +89,19 @@ final class Car
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    public static function fromApi(array $row): self
     {
-        $capacity = (string) ($row['CAPACITY'] ?? '');
-
         return new self(
-            (int) ($row['CAR_ID'] ?? 0),
-            (string) ($row['CAR_NAME'] ?? ''),
-            self::text($row['FULL_MODEL_NAME'] ?? null),
-            self::text($row['BODY'] ?? null),
-            self::text($row['ENGINE_TYPE'] ?? null),
-            1 === preg_match('#^(\d+)#', $capacity, $m) ? (int) $m[1] : null,
-            isset($row['POWER_KW']) && is_numeric($row['POWER_KW']) ? (int) round((float) $row['POWER_KW']) : null,
-            isset($row['POWER_PS']) && is_numeric($row['POWER_PS']) ? (int) round((float) $row['POWER_PS']) : null,
-            PartsApiDate::yearMonth($row['YEAR_START'] ?? null),
-            PartsApiDate::yearMonth($row['YEAR_END'] ?? null),
+            (int) ($row['id'] ?? 0),
+            (string) ($row['name'] ?? ''),
+            self::text($row['fullName'] ?? null),
+            self::text($row['body'] ?? null),
+            self::text($row['engineType'] ?? null),
+            isset($row['capacityCc']) ? (int) $row['capacityCc'] : null,
+            isset($row['powerKw']) ? (int) $row['powerKw'] : null,
+            isset($row['powerPs']) ? (int) $row['powerPs'] : null,
+            self::text($row['yearFrom'] ?? null),
+            self::text($row['yearTo'] ?? null),
         );
     }
 

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Agent\Journal;
 
 use App\Agent\WebSearch\WebSearchTracer;
-use App\Catalog\PartsCatalog;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
@@ -33,20 +32,15 @@ final class TurnJournal implements WebSearchTracer
     private ?AgentTurn $current = null;
     private int $toolSeq = 0;
 
-    /** @var array<string, int> */
-    private array $partsApiBefore = [];
-
     public function __construct(
         private readonly DocumentManager $documentManager,
         private readonly LoggerInterface $logger,
-        private readonly ?PartsCatalog $catalog = null,
     ) {
     }
 
     public function begin(RunAgentTurn $message, string $context): void
     {
         $this->toolSeq = 0;
-        $this->partsApiBefore = $this->catalog?->upstreamCallsByMethod() ?? [];
         $this->current = new AgentTurn(
             owner: $message->owner,
             sessionId: $this->sessionId($message->sessionTopic),
@@ -62,16 +56,6 @@ final class TurnJournal implements WebSearchTracer
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
         );
         $this->current->setSurface($message->surface);
-        $this->current->setImages($message->images);
-        if (null !== $message->vehicle) {
-            $this->current->setVehicle([
-                'carId' => $message->vehicle->carId,
-                'carType' => $message->vehicle->carType->value,
-                'plate' => $message->vehicle->plate,
-                'make' => $message->vehicle->make,
-                'model' => $message->vehicle->model,
-            ]);
-        }
     }
 
     public function currentTurnId(): ?string
@@ -154,13 +138,6 @@ final class TurnJournal implements WebSearchTracer
         }
 
         $turn->finish($status, $error);
-        if (null !== $this->catalog) {
-            $spent = [];
-            foreach ($this->catalog->upstreamCallsByMethod() as $method => $count) {
-                $spent[$method] = $count - ($this->partsApiBefore[$method] ?? 0);
-            }
-            $turn->recordPartsApiCalls($spent);
-        }
 
         try {
             $this->documentManager->persist($turn);

@@ -6,7 +6,7 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
-use App\Catalog\Narrowing\ArticleNarrower;
+use App\Bonneref\BonnerefClient;
 use App\Dto\NarrowPartsInput;
 use App\Garage\ToolResult;
 use Mcp\Schema\Result\CallToolResult;
@@ -16,20 +16,21 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class NarrowPartsProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly ArticleNarrower $narrower)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        $result = $this->narrower->narrow(
+        $narrowed = get_object_vars($this->bonneref->narrowed(
             $data->carId,
-            CarTypeResolver::fromString($data->carType),
             $data->categoryId,
+            CarTypeResolver::fromString($data->carType),
             $data->make,
             $data->productGroupId,
-        );
+        ));
+        unset($narrowed['carId']);
 
-        return ToolResult::of(['status' => 'ok', 'categoryId' => $data->categoryId] + $result->toArray());
+        return ToolResult::of(['status' => 'ok'] + $narrowed);
     }
 }

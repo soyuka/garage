@@ -23,19 +23,12 @@ security:
             stateless: true
             provider: zitadel
 
-        # The finder's shared link (« Copier le lien ») is opened by someone else, who holds no token;
-        # the id is an unguessable ULID (App\Controller\Finder\FinderSelectionController). A
-        # firewall of its own, not a PUBLIC_ACCESS rule, so a stale bearer cannot 401 it either.
-        public_selection:
-            pattern: ^/agent/selections/
-            security: false
-
         # Everything else is deny-by-default: the REST garage, the agent, the speech and upload
-        # endpoints, and every catalogue read (plate/VIN lookup, /cars, narrowing, photos), which spend
-        # paid upstream quota (SIV, partsapi) for whoever calls them. The API reference (/docs,
-        # entrypoint, contexts) is gated too. The bearer is validated here, so an invalid or expired
-        # token is a strict 401 (App\Security\CasdoorTokenHandler); a token-less request gets
-        # 401 + `WWW-Authenticate: Bearer` from App\Security\BearerEntryPoint.
+        # endpoints, and every catalogue read (plate lookup, /cars, narrowing), which proxy to bonneref
+        # with the caller's own bearer. The API reference (/docs, entrypoint, contexts) is gated too.
+        # The bearer is validated here, so an invalid or expired token is a strict 401
+        # (App\Security\CasdoorTokenHandler); a token-less request gets 401 + `WWW-Authenticate: Bearer`
+        # from App\Security\BearerEntryPoint.
         api:
             pattern: ^/
             stateless: true
@@ -49,9 +42,8 @@ security:
         - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
         # Deny by default: every path not opened by a firewall above needs a token. The pilot topic
         # (/agent/link) is the only thing keeping one owner's render intents off another's EventSource
-        # (the Mercure hub takes anonymous subscribers), /tts, /stt, /registration-documents and
-        # /photo-intake spend vendor credits or CPU, and the garage is owner-scoped: all of them rely
-        # on this rule rather than on a per-route entry.
+        # (the Mercure hub takes anonymous subscribers), /tts and /stt spend vendor credits or CPU, and
+        # the garage is owner-scoped: all of them rely on this rule rather than on a per-route entry.
         - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
 
 # Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC

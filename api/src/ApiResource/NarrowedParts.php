@@ -9,8 +9,6 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\QueryParameter;
-use App\Catalog\Narrowing\ApplicabilityScope;
-use App\Catalog\Narrowing\NarrowingResult;
 use App\Dto\NarrowPartsInput;
 use App\State\NarrowedPartsProvider;
 use App\State\NarrowPartsProcessor;
@@ -18,7 +16,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * The fitment-correct articles of one part category, collapsed into the physically distinct parts
- * they really are (step 5, narrowed). See {@see \App\Catalog\Narrowing\ArticleNarrower}.
+ * they really are (step 5, narrowed).
  */
 #[ApiResource(
     operations: [
@@ -78,33 +76,34 @@ final class NarrowedParts
         public ?string $degradedReason,
         public int $upstreamCalls,
         public ?array $fallbackBrands = null,
-        public string $applicabilityScope = ApplicabilityScope::Article->value,
+        public string $applicabilityScope = 'article',
         public ?array $productGroup = null,
         public array $productGroups = [],
         public bool $groupRequired = false,
     ) {
     }
 
-    public static function from(int $carId, int $categoryId, NarrowingResult $result): self
+    /**
+     * @param array<string, mixed> $data
+     */
+    public static function fromApi(array $data): self
     {
-        $data = $result->toArray();
-
         return new self(
-            carId: $carId,
-            categoryId: $categoryId,
-            clusters: $data['clusters'],
-            totalArticles: $data['totalArticles'],
-            totalBrands: $data['totalBrands'],
-            unclassifiedCount: $data['unclassifiedCount'],
-            differsOn: $data['differsOn'],
-            narrowed: $data['narrowed'],
-            degradedReason: $data['degradedReason'],
-            upstreamCalls: $data['upstreamCalls'],
-            fallbackBrands: $data['fallbackBrands'],
-            applicabilityScope: $data['applicabilityScope'],
-            productGroup: $data['productGroup'],
-            productGroups: $data['productGroups'],
-            groupRequired: $data['groupRequired'],
+            carId: (int) ($data['carId'] ?? 0),
+            categoryId: (int) ($data['categoryId'] ?? 0),
+            clusters: $data['clusters'] ?? [],
+            totalArticles: (int) ($data['totalArticles'] ?? 0),
+            totalBrands: (int) ($data['totalBrands'] ?? 0),
+            unclassifiedCount: (int) ($data['unclassifiedCount'] ?? 0),
+            differsOn: $data['differsOn'] ?? [],
+            narrowed: (bool) ($data['narrowed'] ?? false),
+            degradedReason: $data['degradedReason'] ?? null,
+            upstreamCalls: (int) ($data['upstreamCalls'] ?? 0),
+            fallbackBrands: $data['fallbackBrands'] ?? null,
+            applicabilityScope: (string) ($data['applicabilityScope'] ?? 'article'),
+            productGroup: $data['productGroup'] ?? null,
+            productGroups: $data['productGroups'] ?? [],
+            groupRequired: (bool) ($data['groupRequired'] ?? false),
         );
     }
 }

@@ -6,6 +6,7 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Bonneref\BonnerefClient;
 use App\Dto\MotulOilInput;
 use App\Entity\Vehicle;
 use App\Exception\UpstreamException;
@@ -13,7 +14,6 @@ use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Motul\MotulOilAdvisor;
-use App\Siv\SivClient;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -35,7 +35,7 @@ final class MotulOilProcessor implements ProcessorInterface
         private readonly MotulOilAdvisor $advisor,
         private readonly VehicleIriResolver $iriResolver,
         private readonly GarageResolver $resolver,
-        private readonly SivClient $siv,
+        private readonly BonnerefClient $bonneref,
     ) {
     }
 
@@ -108,9 +108,9 @@ final class MotulOilProcessor implements ProcessorInterface
     }
 
     /**
-     * Best-effort engine displacement from the vehicle's plate (SIV `capacite_litres`, e.g. "1.8",
-     * falling back to the `version` label). The engine is not a stored vehicle field; the plate is
-     * the only place it lives. A miss (no plate / SIV down / no key set) yields null — the advisor
+     * Best-effort engine displacement from the vehicle's plate (the registry's cylinder capacity in litres,
+     * e.g. "1.8", falling back to the `version` label). The engine is not a stored vehicle field; the plate
+     * is the only place it lives. A miss (no plate / bonneref down / unknown plate) yields null — the advisor
      * then narrows by year alone, never an error.
      */
     private function engineFromPlate(Vehicle $vehicle): ?string
@@ -121,22 +121,19 @@ final class MotulOilProcessor implements ProcessorInterface
         }
 
         try {
-            $siv = $this->siv->lookup($plate);
+            $registered = $this->bonneref->vehicleByPlate($plate);
         } catch (\Throwable) {
             return null;
         }
 
-        if (null === $siv) {
+        if (null === $registered) {
             return null;
         }
 
-        $displacement = trim((string) ($siv['capacite_litres'] ?? ''));
-        if ('' !== $displacement) {
-            return $displacement;
+        if (null !== $registered->engineCapacityCcm && $registered->engineCapacityCcm > 0) {
+            return number_format($registered->engineCapacityCcm / 1000, 1, '.', '');
         }
 
-        $version = trim((string) ($siv['version'] ?? ''));
-
-        return '' !== $version ? $version : null;
+        return $registered->version;
     }
 }

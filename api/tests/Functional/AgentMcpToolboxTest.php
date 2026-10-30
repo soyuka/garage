@@ -81,9 +81,10 @@ final class AgentMcpToolboxTest extends AppTestCase
     {
         static::createClient();
         $toolbox = static::getContainer()->get(McpToolbox::class);
+        static::bonneref()->route('/cars/500200/part-categories', '{}', 401);
 
-        // carId 500200 makes the parts-API fixture answer HTTP 401 (auth/rate-limit) — the upstream
-        // failure that once aborted a whole agent turn with an uncaught exception. Since 4a9dc77 it
+        // bonneref answering HTTP 401 (a token it rejects) is the upstream failure that once aborted a
+        // whole agent turn with an uncaught exception. Since 4a9dc77 it
         // comes back as a structured result rather than a ToolExecutionException: that exception's
         // getToolCallResult() discards the message, which is what made a dead upstream and an unknown
         // plate the same string to the model. The status is what lets it tell them apart.
@@ -94,6 +95,6 @@ final class AgentMcpToolboxTest extends AppTestCase
 
         $this->assertSame('upstream_rejected', $result['status']);
         $this->assertFalse($result['retryable'], 'a rejected upstream is not worth retrying');
-        $this->assertSame('the parts catalog', $result['source']);
+        $this->assertSame('the bonneref catalog', $result['source']);
     }
 }

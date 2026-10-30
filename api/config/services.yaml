@@ -29,49 +29,9 @@ services:
         arguments:
             $mode: '%env(enum:App\Agent\Dispatch\TurnDispatchMode:AGENT_TURN_DISPATCH)%'
 
-    App\Siv\SivClient:
-        arguments:
-            $httpClient: '@siv.client'
-            $token: '%env(API_PLAQUE_TOKEN)%'
-
     # Paid upstream responses live in MongoDB collections, not a cache: see the Entity docblocks.
-    App\Siv\SivLookupStore: '@App\Siv\MongoSivLookupStore'
-    App\PartsApi\PartsApiResponseStore: '@App\PartsApi\MongoPartsApiResponseStore'
     App\Motul\MotulResponseStore: '@App\Motul\MongoMotulResponseStore'
     App\Agent\TurnCancellations: '@App\Agent\MongoTurnCancellations'
-
-    App\PartsApi\PartsApiClient:
-        arguments:
-            # partsapi.ru issues one key PER method — see docs/PARTSAPI.md
-            $keys:
-                getMakes: '%env(PARTSAPI_KEY_getMakes)%'
-                getModels: '%env(PARTSAPI_KEY_getModels)%'
-                getCars: '%env(PARTSAPI_KEY_getCars)%'
-                getSearchTree: '%env(PARTSAPI_KEY_getSearchTree)%'
-                getArticles: '%env(PARTSAPI_KEY_getArticles)%'
-                getArticleCrosses: '%env(PARTSAPI_KEY_getArticleCrosses)%'
-                getArticleCriteria: '%env(PARTSAPI_KEY_getArticleCriteria)%'
-            $catalogTtl: '%env(int:PARTSAPI_CATALOG_TTL)%'
-
-    App\Catalog\PartsApiCatalog:
-        arguments:
-            # partsapi language id for group/article names (6 = Français, 4 = English GB)
-            $lang: '%env(int:PARTSAPI_LANG)%'
-
-    # CATALOG_SOURCE picks who answers every catalogue read (api/.env). The locator builds only the selected
-    # one: with tecdoc, no partsapi service (client, keys, store) is ever instantiated.
-    App\Catalog\TecdocCatalog:
-        arguments:
-            $path: '%env(TECDOC_CATALOG_PATH)%'
-            $lang: '%env(int:PARTSAPI_LANG)%'
-
-    App\Catalog\PartsCatalog:
-        factory: ['App\Catalog\PartsCatalogFactory', 'create']
-        arguments:
-            $source: '%env(enum:App\Catalog\CatalogSource:CATALOG_SOURCE)%'
-            $catalogs: !service_locator
-                partsapi: '@App\Catalog\PartsApiCatalog'
-                tecdoc: '@App\Catalog\TecdocCatalog'
 
     App\Motul\MotulClient:
         arguments:
@@ -101,27 +61,6 @@ services:
             $mcpToolbox: '@App\Mcp\Agent\McpToolbox'
             $narrator: '@App\Agent\Ui\StepNarrator'
 
-    # The finder agent (ai.yaml `finder`): its render tools stay out of the `ai.tool` tag so the garage
-    # agent's `tools: true` never picks them up; the finder lists this service explicitly instead.
-    App\Agent\Finder\FinderRenderTools:
-        autoconfigure: false
-
-    # The catalogue READ tools only — an allowlist, so a new garage write tool can never reach the finder.
-    # No list_part_categories: the finder picks from the full leaf list (FinderCategoryList), never by keyword.
-    app.finder.mcp_toolbox:
-        class: App\Mcp\Agent\McpToolbox
-        arguments:
-            $server: '@mcp.server.garage'
-            $only: ['lookup_plate', 'decode_vin', 'list_makes', 'list_models', 'list_cars', 'get_service_parts', 'decode_build_code']
-
-    app.finder.composite_toolbox:
-        class: App\Agent\Toolbox\CompositeToolbox
-        decorates: ai.toolbox.finder
-        arguments:
-            $renderToolbox: '@.inner'
-            $mcpToolbox: '@app.finder.mcp_toolbox'
-            $narrator: '@App\Agent\Ui\StepNarrator'
-
     # Log Anthropic server-side tool use (web_search) per call. Decorates the platform the garage
     # agent runs on: server tools leave no Toolbox call or domain write, so the platform's raw
     # response is the only place their use is observable. The decorated platform is a lazy proxy
@@ -148,25 +87,6 @@ services:
         arguments:
             $platform: '@App\Agent\ServerToolUseLogger.inner'
             $model: '%env(WEB_SEARCH_MODEL)%'
-
-    # Carte grise extraction: one-shot Sonnet 5.5 vision call on the UNDECORATED Anthropic platform, so
-    # the upload never reaches ServerToolUseLogger / the turn journal.
-    App\RegistrationDocument\AnthropicRegistrationDocumentReader:
-        arguments:
-            $platform: '@App\Agent\ServerToolUseLogger.inner'
-            $model: 'claude-sonnet-5-5?max_tokens=2048'
-
-    App\RegistrationDocument\RegistrationDocumentReader:
-        alias: App\RegistrationDocument\AnthropicRegistrationDocumentReader
-
-    # Finder photo intake: the same one-shot vision call, sorting carte grise / part / other.
-    App\PhotoIntake\AnthropicPhotoIntakeReader:
-        arguments:
-            $platform: '@App\Agent\ServerToolUseLogger.inner'
-            $model: 'claude-sonnet-5-5?max_tokens=2048'
-
-    App\PhotoIntake\PhotoIntakeReader:
-        alias: App\PhotoIntake\AnthropicPhotoIntakeReader
 
     # Gemini: Gemini + Google Search grounding. Plain ai.platform.gemini (no decorator on it).
     App\Agent\WebSearch\GeminiWebSearchClient:
@@ -309,14 +229,15 @@ services:
 
 when@test:
     services:
-        # Back to the plain client: `siv.client` is a scoped RetryableHttpClient, and a test must
-        # never be one wiring slip away from billing the real SIV API.
-        App\Siv\SivClient:
+        # bonneref is never reached from a test: routes and fixtures live in the double, which also records
+        # what was forwarded to it.
+        App\Tests\Mock\BonnerefHttpClient:
+            public: true
+
+        App\Bonneref\BonnerefClient:
+            autowire: true
             arguments:
-                $httpClient: '@http_client'
-                $token: '%env(API_PLAQUE_TOKEN)%'
-                $store: '@App\Siv\SivLookupStore'
-                $retryDelayMs: 0
+                $http: '@App\Tests\Mock\BonnerefHttpClient'
 
         App\Tests\Mock\FixtureHttpClient:
             decorates: http_client
@@ -353,21 +274,6 @@ when@test:
                 $http: '@App\Tests\Mock\RecordingTranscriptionHttpClient'
                 $apiKey: '%env(ELEVENLABS_API_KEY)%'
                 $model: '%env(ELEVENLABS_STT_MODEL)%'
-
-        # The model call is never made in tests: the endpoint talks to a scripted reader.
-        App\Tests\Mock\FakeRegistrationDocumentReader:
-            public: true
-
-        App\RegistrationDocument\RegistrationDocumentReader:
-            alias: App\Tests\Mock\FakeRegistrationDocumentReader
-            public: true
-
-        App\Tests\Mock\FakePhotoIntakeReader:
-            public: true
-
-        App\PhotoIntake\PhotoIntakeReader:
-            alias: App\Tests\Mock\FakePhotoIntakeReader
-            public: true
 
         # A default tenant for the suite: garage reads that send no token resolve to the same owner
         # the tests seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.

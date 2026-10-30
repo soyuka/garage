@@ -6,15 +6,15 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Bonneref\BonnerefClient;
 use App\ApiResource\PartCategory;
-use App\Catalog\PartsCatalog;
 
 /**
  * @implements ProviderInterface<PartCategory>
  */
 final class PartCategoryCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
@@ -28,7 +28,7 @@ final class PartCategoryCollectionProvider implements ProviderInterface
         $leafOnly = $parameters?->get('leafOnly')?->getValue();
         $search = $parameters?->get('search')?->getValue();
 
-        return $this->catalog->partCategories(
+        return $this->bonneref->partCategories(
             (int) $uriVariables['carId'],
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
             filter_var($leafOnly, \FILTER_VALIDATE_BOOL, \FILTER_NULL_ON_FAILURE) ?? true,

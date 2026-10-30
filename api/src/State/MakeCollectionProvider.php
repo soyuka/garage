@@ -6,15 +6,15 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Bonneref\BonnerefClient;
 use App\ApiResource\Make;
-use App\Catalog\PartsCatalog;
 
 /**
  * @implements ProviderInterface<Make>
  */
 final class MakeCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
@@ -27,7 +27,7 @@ final class MakeCollectionProvider implements ProviderInterface
         $carType = $parameters?->get('carType')?->getValue();
         $search = $parameters?->get('search')?->getValue();
 
-        return $this->catalog->makes(
+        return $this->bonneref->makes(
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
             \is_string($search) ? $search : null,
         );

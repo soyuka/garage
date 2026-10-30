@@ -65,9 +65,9 @@ if [ "$1" = 'frankenphp' ] || [ "$1" = 'php' ] || [ "$1" = 'bin/console' ]; then
 		fi
 	fi
 
-	# The partsapi catalogue snapshots and the turn hand-offs expire through TTL indexes, which nothing
-	# else creates (ODM declares them, but no schema step runs). Idempotent: an existing index is kept.
-	for document in PartsApiResponse TurnImageBatch TurnCancellation; do
+	# The turn hand-offs expire through TTL indexes, which nothing else creates (ODM declares them, but
+	# no schema step runs). Idempotent: an existing index is kept.
+	for document in TurnCancellation; do
 		php bin/console doctrine:mongodb:schema:create --index --class="App\\Entity\\$document" -q
 	done
 

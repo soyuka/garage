@@ -6,8 +6,8 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Bonneref\BonnerefClient;
 use App\ApiResource\PartCategory;
-use App\Catalog\PartsCatalog;
 use App\Dto\PartCategoriesInput;
 use App\Mcp\CappedResult;
 use Mcp\Schema\Result\CallToolResult;
@@ -21,13 +21,13 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class PartCategoriesProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        $categories = $this->catalog->partCategories($data->carId, CarTypeResolver::fromString($data->carType), $data->leafOnly, $data->search);
+        $categories = $this->bonneref->partCategories($data->carId, CarTypeResolver::fromString($data->carType), $data->leafOnly, $data->search);
 
         return CappedResult::of(
             array_map(static fn (PartCategory $category): array => (array) $category, $categories),

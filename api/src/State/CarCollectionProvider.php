@@ -6,16 +6,15 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
+use App\Bonneref\BonnerefClient;
 use App\ApiResource\Car;
-use App\Catalog\CarFilter;
-use App\Catalog\PartsCatalog;
 
 /**
  * @implements ProviderInterface<Car>
  */
 final class CarCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
@@ -32,14 +31,10 @@ final class CarCollectionProvider implements ProviderInterface
         $fuel = $value('fuel');
         $search = $value('search');
 
-        $cars = $this->catalog->cars(
+        return $this->bonneref->cars(
             (int) $uriVariables['makeId'],
             (int) $uriVariables['modelId'],
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
-        );
-
-        return CarFilter::apply(
-            $cars,
             is_numeric($year) ? (int) $year : null,
             is_numeric($litres) ? (float) $litres : null,
             \is_string($fuel) ? $fuel : null,

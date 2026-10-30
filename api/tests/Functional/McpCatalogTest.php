@@ -14,6 +14,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListPartCategoriesIsCappedAndEnvelopeFree(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         // full IVECO tree (60 nodes) — far over the cap, must be truncated, not dumped
@@ -40,6 +41,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListPartCategoriesPagesThroughTheCapWithOffset(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $args = ['carId' => 34247, 'carType' => 'CV', 'leafOnly' => false];
@@ -79,6 +81,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListPartCategoriesWithSearchFitsUnderCap(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -91,9 +94,10 @@ final class McpCatalogTest extends AppTestCase
         $this->assertFalse($content['truncated']);
     }
 
-    public function testListMakesIsSearchableAndEnvelopeFree(): void
+    public function testListMakesIsEnvelopeFreeAndForwardsTheSearch(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $all = $this->call($client, $sessionId, 'tools/call', [
@@ -107,23 +111,18 @@ final class McpCatalogTest extends AppTestCase
         $this->assertArrayHasKey('name', $all['items'][0]);
         $this->assertArrayNotHasKey('@id', $all['items'][0]);
 
-        $names = array_column($all['items'], 'name');
-        $needle = $names[0];
-
-        $filtered = $this->call($client, $sessionId, 'tools/call', [
+        $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
-            'arguments' => ['search' => $needle],
-        ], 3)['result']['structuredContent'];
+            'arguments' => ['search' => 'maz'],
+        ], 3);
 
-        $this->assertLessThanOrEqual($all['totalItems'], $filtered['totalItems']);
-        foreach ($filtered['items'] as $make) {
-            $this->assertStringContainsStringIgnoringCase($needle, $make['name']);
-        }
+        $this->assertSame('maz', static::bonneref()->lastRequest()['query']['search']);
     }
 
     public function testListArticlesCapsBrandsPerCategory(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         // category 200120 has 12 upstream articles across 12 brands — the per-category cap is MAX_BRANDS
@@ -144,6 +143,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListArticlesGroupsByCategoryInOneCall(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -177,6 +177,7 @@ final class McpCatalogTest extends AppTestCase
     public function testGetServicePartsOilChangeCarriesNoFluidSection(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -194,6 +195,7 @@ final class McpCatalogTest extends AppTestCase
     public function testGetServicePartsGroupsFilterCategoriesWithArticles(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -214,6 +216,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListModelsReturnsMappedRows(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $content = $this->call($client, $sessionId, 'tools/call', [
@@ -243,6 +246,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListModelsSearchMatchesNameWithoutMake(string $search): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $content = $this->call($client, $sessionId, 'tools/call', [
@@ -257,6 +261,7 @@ final class McpCatalogTest extends AppTestCase
     public function testListCarsReturnsMappedRows(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $content = $this->call($client, $sessionId, 'tools/call', [
@@ -274,46 +279,20 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame('2007-08', $row['yearTo']);
     }
 
-    public function testListCarsFiltersServerSide(): void
+    public function testListCarsLeavesTheFiltersToBonneref(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'list_cars',
-            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'year' => 2005, 'capacityLitres' => 2.0],
-        ], 2)['result']['structuredContent'];
-
-        $this->assertSame(5, $content['total']);
-        $this->assertFalse($content['truncated']);
-        $ids = array_column($content['items'], 'id');
-        sort($ids);
-        $this->assertSame([16681, 16683, 16844, 18827, 19107], $ids);
-
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'year' => 2005, 'capacityLitres' => 2.0, 'fuel' => 'essence'],
-        ], 3)['result']['structuredContent'];
+        ], 2);
 
-        $ids = array_column($content['items'], 'id');
-        sort($ids);
-        $this->assertSame([16681, 19107], $ids);
-    }
-
-    public function testListCarsSearchAndUnfilteredTotals(): void
-    {
-        $client = static::createClient();
-        $sessionId = $this->initialize($client);
-
-        $content = $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'list_cars',
-            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'search' => 'gg14'],
-        ], 2)['result']['structuredContent'];
-
-        $this->assertSame(3, $content['total']);
-        $this->assertSame(14, $this->call($client, $sessionId, 'tools/call', [
-            'name' => 'list_cars',
-            'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC'],
-        ], 3)['result']['structuredContent']['total']);
+        $this->assertSame(
+            ['carType' => 'PC', 'year' => '2005', 'capacityLitres' => '2', 'fuel' => 'essence'],
+            static::bonneref()->lastRequest()['query'],
+        );
     }
 }

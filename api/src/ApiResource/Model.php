@@ -12,7 +12,6 @@ use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Dto\ModelsInput;
 use App\State\ModelCollectionProvider;
-use App\PartsApi\PartsApiDate;
 use App\State\ModelsProcessor;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -60,13 +59,16 @@ final class Model
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    /**
+     * @param array<string, mixed> $row
+     */
+    public static function fromApi(array $row): self
     {
         return new self(
-            (int) ($row['modelId'] ?? 0),
-            (string) ($row['modelName'] ?? ''),
-            PartsApiDate::yearMonth($row['yearsFrom'] ?? null),
-            PartsApiDate::yearMonth($row['yearsTo'] ?? null),
+            (int) ($row['id'] ?? 0),
+            (string) ($row['name'] ?? ''),
+            isset($row['yearFrom']) ? (string) $row['yearFrom'] : null,
+            isset($row['yearTo']) ? (string) $row['yearTo'] : null,
         );
     }
 }

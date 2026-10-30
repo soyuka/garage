@@ -9,6 +9,7 @@ final class VehicleResourceTest extends AppTestCase
     public function testPlateLookupReturnsVehicleWithTecdocIds(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/vehicles/XC302ZC');
 
         $this->assertResponseIsSuccessful();
@@ -32,6 +33,7 @@ final class VehicleResourceTest extends AppTestCase
     public function testPlateIsNormalized(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/vehicles/xc-302-zc');
 
         $this->assertResponseIsSuccessful();
@@ -41,54 +43,19 @@ final class VehicleResourceTest extends AppTestCase
     public function testUnknownPlateReturns404(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/vehicles/ZZ999ZZ');
 
         $this->assertResponseStatusCodeSame(404);
     }
 
-    public function testSuccessfulLookupIsCached(): void
+    public function testTheCallersTokenReachesBonneref(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/vehicles/XC302ZC');
 
         $this->assertResponseIsSuccessful();
-        $envelope = self::sivStore()->find('XC302ZC');
-        $this->assertNotNull($envelope);
-
-        // Writer must persist the full envelope (prototype_1-compatible), not the bare payload —
-        // the reader does $envelope['data'] and a cache hit must round-trip.
-        $this->assertArrayHasKey('data', $envelope);
-
-        $client->request('GET', '/vehicles/XC302ZC');
-        $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['make' => 'IVECO']);
-    }
-
-    public function testLookupIsServedFromCacheWithoutUpstreamCall(): void
-    {
-        // Seed a plate that has NO fixture: any upstream call would 404 it.
-        $envelope = json_decode((string) file_get_contents(\dirname(__DIR__).'/Fixtures/siv/XC302ZC.json'), true);
-        self::sivStore()->save('CACHED99', $envelope);
-
-        $client = static::createClient();
-        $client->request('GET', '/vehicles/CACHED99');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertJsonContains(['make' => 'IVECO']);
-    }
-
-    public function testUnknownPlateIsNegativelyCached(): void
-    {
-        $client = static::createClient();
-        $client->request('GET', '/vehicles/ZZ999ZZ');
-
-        $this->assertResponseStatusCodeSame(404);
-
-        // The unknown plate is cached as a negative marker (no `data` → no PII) so a repeat lookup
-        // is not re-billed to the paid SIV API. Transient errors staying uncached is covered by the
-        // SivClient unit test.
-        $envelope = self::sivStore()->find('ZZ999ZZ');
-        $this->assertNotNull($envelope);
-        $this->assertArrayNotHasKey('data', $envelope);
+        $this->assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
     }
 }

@@ -6,8 +6,8 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Bonneref\BonnerefClient;
 use App\ApiResource\Make;
-use App\Catalog\PartsCatalog;
 use App\Dto\MakesInput;
 use App\Mcp\CappedResult;
 use Mcp\Schema\Result\CallToolResult;
@@ -20,13 +20,13 @@ use Mcp\Schema\Result\CallToolResult;
  */
 final class MakesProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        $makes = $this->catalog->makes(CarTypeResolver::fromString($data->carType), $data->search);
+        $makes = $this->bonneref->makes(CarTypeResolver::fromString($data->carType), $data->search);
 
         return CappedResult::of(
             array_map(static fn (Make $make): array => (array) $make, $makes),

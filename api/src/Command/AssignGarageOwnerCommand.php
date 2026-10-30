@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Command;
 
 use App\Entity\AgentTurn;
-use App\Entity\FinderSelection;
 use App\Entity\MaintenanceRecord;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
@@ -31,7 +30,7 @@ use Symfony\Component\Console\Style\SymfonyStyle;
  */
 #[AsCommand(
     name: 'app:garage:assign-owner',
-    description: 'Assign garage rows (vehicles, maintenance, documents, finder selections, journal) to an owner.',
+    description: 'Assign garage rows (vehicles, maintenance, documents, journal) to an owner.',
 )]
 final class AssignGarageOwnerCommand extends Command
 {
@@ -40,7 +39,6 @@ final class AssignGarageOwnerCommand extends Command
         PlannedMaintenance::class,
         MaintenanceRecord::class,
         VehicleDocument::class,
-        FinderSelection::class,
         AgentTurn::class,
     ];
 

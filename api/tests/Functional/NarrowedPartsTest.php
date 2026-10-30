@@ -11,13 +11,14 @@ final class NarrowedPartsTest extends AppTestCase
     public function testNarrowedRouteGroupsArticlesIntoPhysicalParts(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $response = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA');
 
         $this->assertResponseIsSuccessful();
         $data = $response->toArray();
 
         $this->assertTrue($data['narrowed']);
-        $this->assertNull($data['degradedReason']);
+        $this->assertNull($data['degradedReason'] ?? null);
         $this->assertSame(220, $data['totalArticles']);
         $this->assertSame(126, $data['totalBrands']);
         $this->assertCount(1, $data['clusters']);
@@ -34,24 +35,13 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertLessThan(110, $data['unclassifiedCount']);
         $this->assertSame('article', $data['applicabilityScope']);
         $this->assertContains('130831', array_column($part['applicability'], 'values', 'name')['Numéro de châssis (VIN) à partir de'] ?? []);
-
-        // 1 getArticles + 1 getMakes + 8 criteria + 1 crosses per initial cluster, no media
-        $this->assertSame(10 + 2, $data['upstreamCalls']);
-    }
-
-    public function testNarrowedRouteSpendsNothingOnceCached(): void
-    {
-        $client = static::createClient();
-        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA');
-        $second = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA');
-
-        $this->assertResponseIsSuccessful();
-        $this->assertSame(0, $second->toArray()['upstreamCalls']);
     }
 
     public function testNarrowedRouteRejectsAnUnknownCarType(): void
     {
-        static::createClient()->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=XX');
+        $client = static::createClient();
+        static::catalogue();
+        $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=XX');
 
         $this->assertResponseStatusCodeSame(422);
     }
@@ -59,6 +49,7 @@ final class NarrowedPartsTest extends AppTestCase
     public function testNarrowPartsToolReturnsTheSamePayloadAsTheRoute(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -78,19 +69,22 @@ final class NarrowedPartsTest extends AppTestCase
 
     public function testAMixedCategoryListsItsProductGroupsWithoutNarrowing(): void
     {
-        $data = static::createClient()->request('GET', '/cars/16182/part-categories/100198/narrowed?make=PEUGEOT')->toArray();
+        $client = static::createClient();
+        static::catalogue();
+        $data = $client->request('GET', '/cars/16182/part-categories/100198/narrowed?make=PEUGEOT')->toArray();
 
         $this->assertResponseIsSuccessful();
         $this->assertTrue($data['groupRequired']);
         $this->assertSame([], $data['clusters']);
         $this->assertSame([914, 51, 2066], array_column($data['productGroups'], 'id'));
         $this->assertSame('Rotule de direction intérieure, barre de connexion', $data['productGroups'][1]['name']);
-        $this->assertSame(1, $data['upstreamCalls']);
     }
 
     public function testTheChosenProductGroupIsNarrowedAlone(): void
     {
-        $data = static::createClient()->request('GET', '/cars/16182/part-categories/100198/narrowed?make=PEUGEOT&productGroupId=51')->toArray();
+        $client = static::createClient();
+        static::catalogue();
+        $data = $client->request('GET', '/cars/16182/part-categories/100198/narrowed?make=PEUGEOT&productGroupId=51')->toArray();
 
         $this->assertResponseIsSuccessful();
         $this->assertFalse($data['groupRequired']);
@@ -101,6 +95,7 @@ final class NarrowedPartsTest extends AppTestCase
     public function testNarrowPartsToolTakesTheProductGroup(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -116,6 +111,7 @@ final class NarrowedPartsTest extends AppTestCase
     public function testNarrowPartsToolSteersTheAgentAwayFromListArticles(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $listed = $this->call($client, $sessionId, 'tools/list', [], 2);

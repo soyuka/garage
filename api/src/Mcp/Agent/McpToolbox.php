@@ -37,8 +37,7 @@ class McpToolbox implements ToolboxInterface
      * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.)
      *
      * Excluded from the garage agent: the make/model browse roots (lookup_plate / list_cars resolve the
-     * carId directly). An explicit `$only` allowlist (the finder, which may start
-     * from "307 1.4 hdi" with no plate) can name them back. list_part_categories / list_articles stay
+     * carId directly). list_part_categories / list_articles stay
      * visible: the service flow uses the single get_service_parts call, but brand and reference
      * questions the open tasks cannot answer are routed to the catalog walk by the system prompt, so
      * the agent must be able to call it.
@@ -66,15 +65,8 @@ class McpToolbox implements ToolboxInterface
     /** @var list<Tool>|null */
     private ?array $tools = null;
 
-    /**
-     * @param list<string>|null $only an ALLOWLIST on top of the denylist, for an agent that must see a
-     *                                fixed read-only subset (the finder): there, failing closed on a new
-     *                                tool is the point — a garage write must never leak into it
-     */
-    public function __construct(
-        private readonly Server $server,
-        private readonly ?array $only = null,
-    ) {
+    public function __construct(private readonly Server $server)
+    {
     }
 
     public function getTools(): array
@@ -90,10 +82,7 @@ class McpToolbox implements ToolboxInterface
             if (\in_array($definition['name'], self::EXCLUDED, true)) {
                 continue;
             }
-            if (null === $this->only && \in_array($definition['name'], self::BROWSE_ROOTS, true)) {
-                continue;
-            }
-            if (null !== $this->only && !\in_array($definition['name'], $this->only, true)) {
+            if (\in_array($definition['name'], self::BROWSE_ROOTS, true)) {
                 continue;
             }
 

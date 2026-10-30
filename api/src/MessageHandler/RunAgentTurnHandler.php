@@ -5,11 +5,6 @@ declare(strict_types=1);
 namespace App\MessageHandler;
 
 use App\Agent\Exception\RepeatedToolFailureException;
-use App\Agent\Finder\FinderContextBuilder;
-use App\Agent\Finder\FinderRenderTools;
-use App\Agent\Finder\TurnImage;
-use App\Agent\Finder\TurnImageStash;
-use App\Agent\TurnSurface;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\SelectedVehicleContext;
 use App\Agent\TurnContextBuilder;
@@ -20,6 +15,7 @@ use App\Agent\Ui\TurnActivityTracker;
 use App\Agent\TurnCancellations;
 use App\Agent\TurnSettlement;
 use App\Agent\WebSearchBudget;
+use App\Bonneref\BonnerefToken;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\I18n\AgentMessages;
@@ -29,7 +25,6 @@ use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
-use Symfony\AI\Platform\Message\Content\Image;
 use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -60,10 +55,6 @@ final readonly class RunAgentTurnHandler
 {
     public function __construct(
         private AgentInterface $garage,
-        private AgentInterface $finder,
-        private FinderRenderTools $finderTools,
-        private FinderContextBuilder $finderContext,
-        private TurnImageStash $imageStash,
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
         private RepeatedToolFailureGuard $repeatedToolFailureGuard,
@@ -72,6 +63,7 @@ final readonly class RunAgentTurnHandler
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
+        private BonnerefToken $bonnerefToken,
         private LocaleContext $locale,
         private SelectedVehicleContext $selectedVehicle,
         private TurnCancellations $cancellations,
@@ -86,6 +78,9 @@ final readonly class RunAgentTurnHandler
         // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
         // because the handler is a long-lived singleton in the consume worker.
         $this->owner->set($message->owner);
+        // Same shape: the catalogue tools forward the user's own token to bonneref, and the worker has no
+        // request to take it from. Cleared in `finally`, so it never outlives the turn in a long-lived worker.
+        $this->bonnerefToken->set($message->accessToken);
         // Same shape, same reason: the worker has no request, so the interface language rides the turn
         // message. Everything the agent says this turn — the heartbeat, the failure toasts, and the
         // output-language directive in the context — reads off this.
@@ -113,15 +108,8 @@ final readonly class RunAgentTurnHandler
         $this->activityTracker->reset();
         // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
         // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
-        $this->stepNarrator->reset($message->surface);
-        if (TurnSurface::Finder === $message->surface) {
-            $this->finderTools->bindVehicle($message->vehicle);
-        }
-        $images = null === $message->imageStash ? [] : $this->imageStash->get($message->imageStash);
-        [$agent, $context] = match ($message->surface) {
-            TurnSurface::Finder => [$this->finder, $this->finderContext->build($message)],
-            TurnSurface::Garage => [$this->garage, $this->contextBuilder->build($message)],
-        };
+        $this->stepNarrator->reset();
+        $context = $this->contextBuilder->build($message);
         // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so
         // the journal records exactly what the model saw (instruction + inlined facts/tasks).
         $this->journal->begin($message, $context);
@@ -130,8 +118,8 @@ final readonly class RunAgentTurnHandler
         $status = AgentTurnStatus::Completed;
         $error = null;
         try {
-            $result = $agent->call(
-                new MessageBag(Message::ofUser(new Text($context), ...array_map(static fn (TurnImage $i): Image => new Image($i->bytes, $i->mimeType), $images))),
+            $result = $this->garage->call(
+                new MessageBag(Message::ofUser(new Text($context))),
                 ['stream' => true],
             );
 
@@ -150,7 +138,7 @@ final readonly class RunAgentTurnHandler
                 $status = AgentTurnStatus::NoOp;
                 $error = 'Turn ended without any write or render action (prose-only exit).';
                 $this->logger->warning('Garage turn was a no-op: {error}', ['error' => $error]);
-                $this->renderTools->toast(TurnSurface::Finder === $message->surface ? $messages->finderNoOp : $messages->noOp, 'warn');
+                $this->renderTools->toast($messages->noOp, 'warn');
             }
         } catch (MaxIterationsExceededException | RepeatedToolFailureException $e) {
             $status = AgentTurnStatus::Capped;
@@ -163,7 +151,7 @@ final readonly class RunAgentTurnHandler
             // routes the turn straight to the `failed` transport, so capped runs stay visible for
             // monitoring instead of vanishing into a log line.
             $this->logger->warning('Garage turn did not converge, dead-lettering: {error}', ['error' => $e->getMessage()]);
-            $this->renderTools->toast(TurnSurface::Finder === $message->surface ? $messages->finderNotConverged : $messages->notConverged, 'warn');
+            $this->renderTools->toast($messages->notConverged, 'warn');
 
             throw new UnrecoverableMessageHandlerException('Garage turn did not converge.', previous: $e);
         } catch (\Throwable $e) {
@@ -174,9 +162,7 @@ final readonly class RunAgentTurnHandler
 
             throw $e;
         } finally {
-            if (null !== $message->imageStash) {
-                $this->imageStash->forget($message->imageStash);
-            }
+            $this->bonnerefToken->reset();
             // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike,
             // even if Messenger is about to retry — or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);

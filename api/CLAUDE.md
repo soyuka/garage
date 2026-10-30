@@ -13,9 +13,9 @@ Platform cannot express the thing (bill up/download).
 Persistence is split on purpose:
 
 - **MongoDB (Doctrine ODM)** — the domain: vehicles, facts, maintenance records, planned tasks, users.
-  Also the paid upstream responses, kept for good (`siv_lookups`, `partsapi_responses`,
-  `motul_responses`; `article_photos` removed 2026-10-21: no catalog photo source, collection left in place) and the turn hand-offs php → worker (`turn_images`,
-  `turn_cancellations`), each behind a `*Store` interface. Stores bypass the unit of work (read-only
+  Also the paid Motul responses, kept for good (`motul_responses`), and the turn hand-off php → worker
+  (`turn_cancellations`), each behind a `*Store` interface. The parts catalogue and the plate registry
+  (SIV) are not here: they live in bonneref (2026-10-30), reached through `App\Bonneref\BonnerefClient`. Stores bypass the unit of work (read-only
   hydration, single upserts); expiry is a TTL index *and* a read-time check, since the TTL monitor runs
   once a minute. TTL indexes are created by the entrypoint (`doctrine:mongodb:schema:create --index`).
 - **Postgres** — the Messenger transports (`doctrine://`). The retired DBAL
@@ -77,7 +77,8 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
 | `src/Maintenance/` | forecast, health, recorder, schedule planner, facts projector |
 | `src/Agent/` | in-app agent: toolbox, turn context, journal, `Ui/DashboardChannel.php` |
 | `src/Mcp/` | MCP toolbox filtering, prompt loaders, MCP-Apps UI resources |
-| `src/Siv/`, `src/PartsApi/`, `src/Motul/`, `src/Catalog/` | upstreams and the catalogue domain over them |
+| `src/Bonneref/` | `BonnerefClient`: the one door to the catalogue and plate lookup, forwarding the caller's Casdoor bearer (request header, or the token carried by `RunAgentTurn` in the worker / terminate mode via `BonnerefToken`) |
+| `src/Motul/`, `src/Catalog/` | the Motul oil advisor; garage-side catalogue logic (`ServiceKind`, `OpenTaskPartsBackfiller`, `BrandTier`) |
 
 ## Things that have bitten before
 

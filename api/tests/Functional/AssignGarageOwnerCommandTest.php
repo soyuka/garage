@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Entity\AgentTurn;
-use App\Entity\FinderSelection;
 use App\Entity\MaintenanceRecord;
 use App\Entity\PlannedMaintenance;
 use App\Entity\Vehicle;
@@ -21,7 +20,6 @@ final class AssignGarageOwnerCommandTest extends AppTestCase
         PlannedMaintenance::class,
         MaintenanceRecord::class,
         VehicleDocument::class,
-        FinderSelection::class,
         AgentTurn::class,
     ];
 

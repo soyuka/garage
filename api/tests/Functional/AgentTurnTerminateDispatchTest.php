@@ -69,6 +69,30 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         self::assertSame(AgentTurnStatus::Completed, $turns[0]->getStatus());
     }
 
+    public function testTheTurnForwardsTheTokenOfTheRequestThatQueuedItOnceTheRequestIsGone(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        static::catalogue();
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static function ($model, $input): ToolCallResult|string {
+            foreach ($input instanceof MessageBag ? $input->getMessages() : [] as $message) {
+                if ($message instanceof ToolCallMessage) {
+                    return 'Fait.';
+                }
+            }
+
+            return new ToolCallResult([new ToolCall('c1', 'list_part_categories', ['carId' => 34247, 'carType' => 'CV', 'search' => 'filter'])]);
+        }));
+
+        [$kernel, $request] = self::turnRequest('sess-deferred-token');
+        $response = $kernel->handle($request);
+        self::assertNull(static::bonneref()->lastRequest(), 'nothing is asked of bonneref before the response is sent');
+
+        $kernel->terminate($request, $response);
+
+        self::assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
+    }
+
     public function testCrashedTurnIsJournalledFailedAndStillEndsTheTurn(): void
     {
         static::createClient();
@@ -107,7 +131,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
 
             public function clear(string $sessionId): void
             {
-                throw new \RuntimeException('The file "/app/config/prompts/finder.md" does not exist or is not readable.');
+                throw new \RuntimeException('The file "/app/config/prompts/garage.md" does not exist or is not readable.');
             }
         });
 
@@ -121,7 +145,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertStringContainsString('finder.md', (string) $turns[0]->getError());
+        self::assertStringContainsString('garage.md', (string) $turns[0]->getError());
     }
 
     public function testTurnKilledByAFatalIsEndedFailedAtShutdown(): void

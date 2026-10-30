@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace App\Message;
 
-use App\Agent\Finder\BuildLabelHints;
-use App\Agent\Finder\FinderIntent;
-use App\Agent\Finder\FinderVehicle;
-use App\Agent\Finder\PartPhotoHints;
 use App\Agent\TurnSurface;
 
 /**
@@ -37,16 +33,11 @@ final readonly class RunAgentTurn
         // says this turn — the heartbeat, the failure toasts, the answers themselves — follows it.
         public string $locale = 'fr',
         public TurnSurface $surface = TurnSurface::Garage,
-        // Finder turns only: the car the page already resolved. Null on a garage turn.
-        public ?FinderVehicle $vehicle = null,
-        public FinderIntent $intent = FinderIntent::Text,
-        public ?PartPhotoHints $photoHints = null,
-        // Finder photos ride a short-lived stash, never this message (see TurnImageStash): only the
-        // key and each image's shape travel through the queue.
-        public ?string $imageStash = null,
-        /** @var list<array{mimeType: string, bytes: int}> */
-        public array $images = [],
-        public ?BuildLabelHints $buildLabel = null,
+        // The caller's Casdoor access token, forwarded to bonneref by the catalogue tools this turn calls.
+        // It sits in the queue (and in the failed transport) for as long as the message does: accepted,
+        // since the worker has no request to read the header from and bonneref authenticates the same token.
+        #[\SensitiveParameter]
+        public string $accessToken = '',
     ) {
     }
 }

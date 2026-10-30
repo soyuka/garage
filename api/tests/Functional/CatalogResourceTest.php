@@ -9,6 +9,7 @@ final class CatalogResourceTest extends AppTestCase
     public function testListMakes(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/makes');
 
         $this->assertResponseIsSuccessful();
@@ -21,23 +22,26 @@ final class CatalogResourceTest extends AppTestCase
                 ['id' => 72, 'name' => 'MAZDA'],
             ],
         ]);
-        // Cache key signature must stay stable with the already-paid live response
-        $this->assertNotNull(self::partsApiStore()->find('getMakes.8dfd0ff78534b11449383e60daa7f02a758cdf60'));
     }
 
-    public function testListMakesFilteredBySearch(): void
+    public function testListMakesForwardsTheSearchAndTheCallersToken(): void
     {
         $client = static::createClient();
-        $response = $client->request('GET', '/makes?search=ive');
+        static::bonneref()->route('/makes', json_encode(['hydra:member' => [['id' => 55, 'name' => 'IVECO']]], \JSON_THROW_ON_ERROR));
+        $response = $client->request('GET', '/makes?search=ive&carType=CV');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSame(1, $response->toArray()['hydra:totalItems']);
         $this->assertSame('IVECO', $response->toArray()['hydra:member'][0]['name']);
+
+        $sent = static::bonneref()->lastRequest();
+        $this->assertSame(['carType' => 'CV', 'search' => 'ive'], $sent['query']);
+        $this->assertSame(self::authHeaders()['Authorization'], $sent['headers']['authorization']);
     }
 
     public function testListModelsReturnsTheMazdaLines(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $response = $client->request('GET', '/makes/72/models?carType=PC');
 
         $this->assertResponseIsSuccessful();
@@ -54,6 +58,7 @@ final class CatalogResourceTest extends AppTestCase
     public function testListCarsReturnsTheMazda6Variants(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $response = $client->request('GET', '/makes/72/models/4887/cars?carType=PC');
 
         $this->assertResponseIsSuccessful();
@@ -77,25 +82,16 @@ final class CatalogResourceTest extends AppTestCase
         ]);
     }
 
-    public function testListCarsFiltersByYearAndCapacity(): void
+    public function testListCarsLeavesTheFiltersToBonneref(): void
     {
         $client = static::createClient();
-        $response = $client->request('GET', '/makes/72/models/4887/cars?carType=PC&year=2005&capacityLitres=2.0');
+        static::catalogue();
+        $client->request('GET', '/makes/72/models/4887/cars?carType=PC&year=2005&capacityLitres=2.0&fuel=diesel&search=gg');
 
         $this->assertResponseIsSuccessful();
-        $ids = array_column($response->toArray()['hydra:member'], 'id');
-        sort($ids);
-        $this->assertSame([16681, 16683, 16844, 18827, 19107], $ids);
-    }
-
-    public function testListCarsFiltersByFuel(): void
-    {
-        $client = static::createClient();
-        $response = $client->request('GET', '/makes/72/models/4887/cars?carType=PC&year=2005&capacityLitres=2.0&fuel=diesel');
-
-        $this->assertResponseIsSuccessful();
-        $ids = array_column($response->toArray()['hydra:member'], 'id');
-        sort($ids);
-        $this->assertSame([16683, 16844, 18827], $ids);
+        $this->assertSame(
+            ['carType' => 'PC', 'year' => '2005', 'capacityLitres' => '2', 'fuel' => 'diesel', 'search' => 'gg'],
+            static::bonneref()->lastRequest()['query'],
+        );
     }
 }

@@ -9,7 +9,7 @@ use App\Mcp\ArticleGroup;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Pinned against the REAL partsapi response for the Mazda6 2.0 (carId 19107) oil filter
+ * Pinned against the REAL catalogue response for the Mazda6 2.0 (carId 19107) oil filter
  * category: 220 fitment-correct articles, 126 brands, alphabetical by brand. Proves the
  * ranking surfaces recognizable OE brands that the old blind alphabetical slice buried
  * (MANN-FILTER was at position 109, PURFLUX at 164).
@@ -22,12 +22,12 @@ final class ArticleGroupTest extends TestCase
     private function oilFilterArticles(): array
     {
         $rows = json_decode(
-            (string) file_get_contents(__DIR__.'/../../Fixtures/partsapi/getArticles_19107_PC_100259.json'),
+            (string) file_get_contents(__DIR__.'/../../Fixtures/bonneref/articles_19107_100259.json'),
             true,
             flags: \JSON_THROW_ON_ERROR,
-        );
+        )['hydra:member'];
 
-        return array_map(Article::fromPartsApi(...), $rows);
+        return array_map(Article::fromApi(...), $rows);
     }
 
     public function testKeepsFullTotalsRegardlessOfTruncation(): void
@@ -77,10 +77,10 @@ final class ArticleGroupTest extends TestCase
     public function testFallsBackToTopBrandsWhenNoPremiumPresent(): void
     {
         $rows = [
-            ['ART_ID' => 1, 'ART_ARTICLE_NR' => 'X1', 'ART_SUP_BRAND' => 'OSSCA', 'PRODUCT GROUP' => 'Oil Filter', 'PT_ID' => 1, 'SUP_ID' => 1],
-            ['ART_ID' => 2, 'ART_ARTICLE_NR' => 'Y1', 'ART_SUP_BRAND' => 'WILMINK GROUP', 'PRODUCT GROUP' => 'Oil Filter', 'PT_ID' => 1, 'SUP_ID' => 2],
+            ['id' => 1, 'number' => 'X1', 'brand' => 'OSSCA', 'productGroup' => 'Oil Filter', 'productTypeId' => 1, 'supplierId' => 1],
+            ['id' => 2, 'number' => 'Y1', 'brand' => 'WILMINK GROUP', 'productGroup' => 'Oil Filter', 'productTypeId' => 1, 'supplierId' => 2],
         ];
-        $group = ArticleGroup::of(100259, array_map(Article::fromPartsApi(...), $rows));
+        $group = ArticleGroup::of(100259, array_map(Article::fromApi(...), $rows));
 
         $this->assertSame(2, $group['totalBrands']);
         $this->assertFalse($group['truncated']);

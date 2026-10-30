@@ -7,8 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Catalog\OpenTaskPartsBackfiller;
-use App\Catalog\PartsCatalog;
 use App\Catalog\ServiceKind;
+use App\Bonneref\BonnerefClient;
 use App\Dto\ServicePartsInput;
 use App\Garage\ToolResult;
 use App\Mcp\ArticleGroup;
@@ -27,7 +27,7 @@ use Mcp\Schema\Result\CallToolResult;
 final class ServicePartsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PartsCatalog $catalog,
+        private readonly BonnerefClient $bonneref,
         private readonly VehicleRepository $vehicles,
         private readonly OpenTaskPartsBackfiller $backfiller,
         private readonly DomainPublisher $publisher,
@@ -50,7 +50,7 @@ final class ServicePartsProcessor implements ProcessorInterface
         // resolve matching leaf categories, deduped by id across the service's search terms
         $cats = [];
         foreach ($service->categorySearches() as $term) {
-            foreach ($this->catalog->partCategories($data->carId, $carType, true, $term) as $cat) {
+            foreach ($this->bonneref->partCategories($data->carId, $carType, true, $term) as $cat) {
                 $cats[$cat->id] = $cat;
             }
         }
@@ -60,7 +60,7 @@ final class ServicePartsProcessor implements ProcessorInterface
             $categories[] = [
                 'name' => $cat->name,
                 'path' => $cat->path,
-                ...ArticleGroup::of($cat->id, $this->catalog->articles($data->carId, $cat->id, $carType)),
+                ...ArticleGroup::of($cat->id, $this->bonneref->articles($data->carId, $cat->id, $carType)),
             ];
         }
 

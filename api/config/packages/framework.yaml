@@ -16,21 +16,14 @@ framework:
 
     http_client:
         scoped_clients:
-            # The SIV registry is billed per call and single-sourced, so a transient upstream
-            # blip must not reach the user as an answer. This layer covers 5xx / 429 / DNS;
-            # it CANNOT cover a bare idle timeout — RetryableHttpClient yields the timeout chunk
-            # before consulting the retry strategy (verified 2026-09-14: 1 TCP connection with
-            # max_retries=2), which is why App\Siv\SivClient keeps its own transport retry.
-            siv.client:
-                base_uri: 'https://api.apiplaqueimmatriculation.com'
-                retry_failed:
-                    max_retries: 2
-                    delay: 1000
-                    multiplier: 2
-                    # A flat list applies to EVERY method. The default map restricts 500/504 to
-                    # GET/HEAD/PUT/DELETE, and this lookup is a POST — a read in all but verb —
-                    # so without this the two codes most likely to be transient are skipped.
-                    http_codes: [423, 425, 429, 500, 502, 503, 504, 507, 510]
+            # The parts catalogue and the plate registry live in bonneref (BONNEREF_API_URL). The caller's bearer
+            # is added per call by App\Bonneref\BonnerefClient, never configured here.
+            bonneref.client:
+                base_uri: '%env(BONNEREF_API_URL)%'
+                headers:
+                    Accept: 'application/ld+json'
+                timeout: 20
+                max_duration: 60
 
     #esi: true
     #fragments: true

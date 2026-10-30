@@ -9,6 +9,7 @@ final class PartsResourceTest extends AppTestCase
     public function testPartCategoriesDefaultsToLeavesOnly(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $response = $client->request('GET', '/cars/34247/part-categories?carType=CV');
 
         $this->assertResponseIsSuccessful();
@@ -22,14 +23,12 @@ final class PartsResourceTest extends AppTestCase
         foreach ($data['hydra:member'] as $node) {
             $this->assertTrue($node['leaf']);
         }
-
-        // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
-        $this->assertNotNull(self::partsApiStore()->find('getSearchTree.97ff21a115d6a2e60b1f29051da1bf103af7b480'));
     }
 
     public function testPartCategoriesFullTree(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $response = $client->request('GET', '/cars/34247/part-categories?carType=CV&leafOnly=false');
 
         $this->assertResponseIsSuccessful();
@@ -39,6 +38,7 @@ final class PartsResourceTest extends AppTestCase
     public function testPartCategoriesFilteredBySearchOnPath(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $response = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=filter');
 
         $this->assertResponseIsSuccessful();
@@ -56,18 +56,10 @@ final class PartsResourceTest extends AppTestCase
         }
     }
 
-    public function testPartCategoriesSearchIsCaseInsensitive(): void
-    {
-        $client = static::createClient();
-        $lower = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=filter')->toArray();
-        $upper = $client->request('GET', '/cars/34247/part-categories?carType=CV&search=FILTER')->toArray();
-
-        $this->assertSame($lower['hydra:totalItems'], $upper['hydra:totalItems']);
-    }
-
     public function testArticlesForCategory(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/cars/34247/part-categories/200158/articles?carType=CV');
 
         $this->assertResponseIsSuccessful();
@@ -77,38 +69,31 @@ final class PartsResourceTest extends AppTestCase
                 ['number' => 'EK-1522', 'brand' => 'ELOFIC', 'productGroup' => 'Air Filter'],
             ],
         ]);
-        // Cache key signature is method.sha1(params incl. lang); pinned for the default lang=6
-        $this->assertNotNull(self::partsApiStore()->find('getArticles.3d7aa63567129c07408d60598fd5bcab162d4379'));
     }
 
     public function testArticlesFallBackToTheDeclaredCarTypeDefault(): void
     {
         $client = static::createClient();
-        // No ?carType: the value must come from the declared QueryParameter's schema default (PC).
-        // A wrong carType reaches partsapi as an unknown pair and comes back empty, not 404.
-        $response = $client->request('GET', '/cars/19107/part-categories/100259/articles');
+        static::catalogue();
+        $client->request('GET', '/cars/34247/part-categories/200158/articles');
 
         $this->assertResponseIsSuccessful();
-        $data = $response->toArray();
-
-        $this->assertGreaterThan(0, $data['hydra:totalItems']);
-        $this->assertSame('Oil Filter', $data['hydra:member'][0]['productGroup']);
+        $this->assertSame('PC', static::bonneref()->lastRequest()['query']['carType']);
     }
 
-    public function testUpstreamErrorIsNotCached(): void
+    public function testABonnerefOutageIsABadGateway(): void
     {
         $client = static::createClient();
-        // carId 500200 = mock sentinel for the real 5002 "bad key" error envelope
+        static::bonneref()->route('/cars/500200/part-categories', '{}', 503);
         $client->request('GET', '/cars/500200/part-categories?carType=PC');
 
         $this->assertResponseStatusCodeSame(502);
-        // key for getSearchTree?carId=500200&carType=PC&lang=4 — must remain a miss
-        $this->assertNull(self::partsApiStore()->find('getSearchTree.c668305e64deefb873dec5a84f559c5468af8e41'));
     }
 
     public function testInvalidCarTypeIsRejected(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $client->request('GET', '/cars/34247/part-categories?carType=NOPE');
 
         $this->assertResponseStatusCodeSame(422);

@@ -7,14 +7,14 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\NarrowedParts;
-use App\Catalog\Narrowing\ArticleNarrower;
+use App\Bonneref\BonnerefClient;
 
 /**
  * @implements ProviderInterface<NarrowedParts>
  */
 final class NarrowedPartsProvider implements ProviderInterface
 {
-    public function __construct(private readonly ArticleNarrower $narrower)
+    public function __construct(private readonly BonnerefClient $bonneref)
     {
     }
 
@@ -24,15 +24,13 @@ final class NarrowedPartsProvider implements ProviderInterface
         $carType = $parameters?->get('carType')?->getValue();
         $make = $parameters?->get('make')?->getValue();
         $productGroupId = $parameters?->get('productGroupId')?->getValue();
-        $carId = (int) $uriVariables['carId'];
-        $categoryId = (int) $uriVariables['categoryId'];
 
-        return NarrowedParts::from($carId, $categoryId, $this->narrower->narrow(
-            $carId,
+        return $this->bonneref->narrowed(
+            (int) $uriVariables['carId'],
+            (int) $uriVariables['categoryId'],
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
-            $categoryId,
             \is_string($make) ? $make : null,
             is_numeric($productGroupId) ? (int) $productGroupId : null,
-        ));
+        );
     }
 }

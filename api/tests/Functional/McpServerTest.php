@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\HttpClient\Exception\TransportException;
+
 final class McpServerTest extends AppTestCase
 {
     use McpClientTrait;
@@ -11,6 +13,7 @@ final class McpServerTest extends AppTestCase
     public function testToolsAreDiscoverable(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/list', [], 2);
@@ -30,6 +33,7 @@ final class McpServerTest extends AppTestCase
     public function testEveryToolCarriesTitleAndReadOnlyHint(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $tools = [];
@@ -42,7 +46,7 @@ final class McpServerTest extends AppTestCase
             $this->assertArrayHasKey('readOnlyHint', $tool['annotations'] ?? [], "{$name} must declare readOnlyHint");
         }
 
-        // lookup_plate queries an external registry (SIV) → open world.
+        // lookup_plate queries an external registry (proxied through bonneref) → open world.
         $this->assertTrue($tools['lookup_plate']['annotations']['openWorldHint'] ?? null);
         // plan_maintenance writes but is additive: it upserts the open task and never deletes.
         $this->assertFalse($tools['plan_maintenance']['annotations']['readOnlyHint'] ?? null);
@@ -52,6 +56,7 @@ final class McpServerTest extends AppTestCase
     public function testLookupPlateTool(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -66,49 +71,13 @@ final class McpServerTest extends AppTestCase
     }
 
     /**
-     * Domain errors reach the model as a CallToolResult it can read and act on, NOT as a
-     * JSON-RPC -32603 protocol error whose message the agent layer discards
-     * (Symfony\AI ToolExecutionException::getToolCallResult() throws the message away, so
-     * every failure otherwise collapses to the same opaque sentence).
-     *
-     * Supersedes testPendingTokenToolSurfacesAsJsonRpcError / testUnknownPlateToolCall-
-     * SurfacesAsJsonRpcError, which pinned the -32603 shape precisely so that changing it
-     * would be a conscious decision. It is: see docs/archive/TODO.md "MCP error mapping".
-     */
-    public function testMissingApiKeySurfacesAsAStructuredResultWithoutLeakingTheEnvVar(): void
-    {
-        $_SERVER['PARTSAPI_KEY_getModels'] = $_ENV['PARTSAPI_KEY_getModels'] = '';
-
-        try {
-            $client = static::createClient();
-            $sessionId = $this->initialize($client);
-
-            $result = $this->call($client, $sessionId, 'tools/call', [
-                'name' => 'list_models',
-                'arguments' => ['makeId' => 55],
-            ], 5);
-        } finally {
-            $_SERVER['PARTSAPI_KEY_getModels'] = $_ENV['PARTSAPI_KEY_getModels'] = 'test-key';
-        }
-
-        $this->assertArrayNotHasKey('error', $result, 'a missing key is a tool error, not a protocol error');
-
-        $content = $result['result']['structuredContent'];
-        $this->assertSame('not_configured', $content['status']);
-        $this->assertFalse($content['retryable'], 'no amount of retrying configures a key');
-        $this->assertTrue($result['result']['isError']);
-
-        $encoded = json_encode($result, \JSON_THROW_ON_ERROR);
-        $this->assertStringNotContainsString('PARTSAPI_KEY', $encoded, 'never leak env var names to the model');
-    }
-
-    /**
      * An unknown plate is a MISS, not a failure — same contract the garage read tools keep
      * ({@see \App\Garage\ToolResult}), so isError stays false.
      */
     public function testUnknownPlateSurfacesAsANotFoundResult(): void
     {
         $client = static::createClient();
+        static::catalogue();
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [
@@ -125,12 +94,13 @@ final class McpServerTest extends AppTestCase
     }
 
     /**
-     * The 2026-09-14 regression: the SIV stalled, the model was handed an opaque error, and it
+     * The 2026-09-14 regression: the registry stalled, the model was handed an opaque error, and it
      * told the user the plate did not exist. The model must now be able to tell the two apart.
      */
-    public function testSivTimeoutSurfacesAsRetryableAndIsNotConfusedWithAnUnknownPlate(): void
+    public function testARegistryTimeoutSurfacesAsRetryableAndIsNotConfusedWithAnUnknownPlate(): void
     {
         $client = static::createClient();
+        static::bonneref()->route('/vehicles/TT000TT', new TransportException('Idle timeout reached'));
         $sessionId = $this->initialize($client);
 
         $result = $this->call($client, $sessionId, 'tools/call', [

@@ -1,0 +1,1 @@
+{"@context":"\/contexts\/Make","@id":"\/makes","@type":"hydra:Collection","hydra:totalItems":4,"hydra:member":[{"@id":"\/makes\/3854","@type":"Make","id":3854,"name":"ABARTH"},{"@id":"\/makes\/55","@type":"Make","id":55,"name":"IVECO"},{"@id":"\/makes\/93","@type":"Make","id":93,"name":"RENAULT"},{"@id":"\/makes\/72","@type":"Make","id":72,"name":"MAZDA"}]}

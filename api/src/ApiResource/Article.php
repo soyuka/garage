@@ -66,15 +66,18 @@ final class Article
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    /**
+     * @param array<string, mixed> $row
+     */
+    public static function fromApi(array $row): self
     {
         return new self(
-            id: (int) ($row['ART_ID'] ?? 0),
-            number: (string) ($row['ART_ARTICLE_NR'] ?? ''),
-            brand: (string) ($row['ART_SUP_BRAND'] ?? ''),
-            productGroup: (string) ($row['PRODUCT GROUP'] ?? ''),
-            productTypeId: (int) ($row['PT_ID'] ?? 0),
-            supplierId: (int) ($row['SUP_ID'] ?? 0),
+            id: (int) ($row['id'] ?? 0),
+            number: (string) ($row['number'] ?? ''),
+            brand: (string) ($row['brand'] ?? ''),
+            productGroup: (string) ($row['productGroup'] ?? ''),
+            productTypeId: (int) ($row['productTypeId'] ?? 0),
+            supplierId: (int) ($row['supplierId'] ?? 0),
         );
     }
 }
