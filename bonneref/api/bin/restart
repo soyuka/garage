@@ -1,0 +1,41 @@
+#!/usr/bin/env sh
+# Restart procedure after a code/prompt change.
+#
+# Why this exists: `var/` is an ANONYMOUS volume per container (see compose.override.yaml `- /app/var`),
+# NOT the host bind-mount — so `rm -rf var/cache` on the host does nothing, and php and worker each hold
+# a SEPARATE cache. The worker also keeps the compiled container + MCP tool schemas in long-lived process
+# memory, so it serves the OLD schema with new code until restarted (see the worker-stale-cache note).
+#
+# Steps: drop each container's compiled cache, restart both, then warm the API Platform metadata cache
+# with one request (docs.jsonld rebuilds the full resource metadata — the expensive part) so the user's
+# first real request is fast instead of eating the cold recompile.
+#
+# Usage: bin/restart   (run from the api/ directory)
+set -eu
+
+DC="docker compose"
+URL="https://localhost:${HTTPS_PORT:-443}/docs.jsonld"
+
+echo "==> Clearing compiled cache (php + worker; cache:clear is a no-op for stale resource metadata)"
+# rm -rf, not bin/console cache:clear: new ApiResource props are silently dropped otherwise.
+$DC exec -T php rm -rf var/cache/dev var/cache/prod 2>/dev/null || true
+$DC exec -T worker rm -rf var/cache/dev var/cache/prod 2>/dev/null || true
+
+echo "==> Restarting php + worker (drops in-memory compiled container + tool schemas)"
+$DC restart php worker
+
+echo "==> Waiting for php to report healthy"
+i=0
+while [ "$i" -lt 30 ]; do
+  status=$($DC ps --format '{{.Service}} {{.Health}}' 2>/dev/null | awk '$1=="php"{print $2}')
+  [ "$status" = "healthy" ] && break
+  i=$((i + 1))
+  sleep 1
+done
+
+echo "==> Warming metadata cache: $URL"
+code=$(curl -ksS -o /dev/null -w '%{http_code}' "$URL" || echo "000")
+echo "    HTTP $code"
+[ "$code" = "200" ] || { echo "!!  warmup did not return 200"; exit 1; }
+
+echo "==> Done."

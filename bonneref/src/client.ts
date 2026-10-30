@@ -1,4 +1,5 @@
 import { ApiError, classifyStatus, mapCategories, mapNarrowing, mapPhotoIntake, mapRegistration, mapSelection, mapVehicle, mapVin } from './api';
+import { apiUrl } from './api-base';
 import { authFetch } from './auth';
 import { planPart, saveVehicle, type PlanBody, type PlannedTask, type SaveBody, type SavedVehicle } from './garage';
 import { getHistory, getJournal, getJournalDetail, hideFromHistory, type JournalDetail, type JournalRow } from './journal';
@@ -54,7 +55,7 @@ export const traced = (trace?: Trace): RequestInit => ({
 async function getJson(url: string, init: RequestInit = {}): Promise<unknown> {
   let res: Response;
   try {
-    res = await authFetch(url, init);
+    res = await authFetch(apiUrl(url), init);
   } catch {
     throw new ApiError('network');
   }
@@ -69,7 +70,7 @@ async function getJson(url: string, init: RequestInit = {}): Promise<unknown> {
 async function getSelection(id: string): Promise<StoredSelection> {
   let res: Response;
   try {
-    res = await fetch(`/agent/selections/${encodeURIComponent(id)}`, { headers: { Accept: 'application/json' } });
+    res = await fetch(apiUrl(`/agent/selections/${encodeURIComponent(id)}`), { headers: { Accept: 'application/json' } });
   } catch {
     throw new ApiError('network');
   }

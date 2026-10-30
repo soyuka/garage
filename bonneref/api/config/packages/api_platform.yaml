@@ -1,0 +1,23 @@
+api_platform:
+    title: 'bonneref API'
+    version: 0.1.0
+    serializer:
+        hydra_prefix: true
+    formats:
+        jsonld:
+            - application/ld+json
+        html:
+            - text/html
+    patch_formats:
+        json:
+            - application/merge-patch+json
+    enable_swagger_ui: false
+    enable_re_doc: false
+    enable_scalar: true
+    exception_to_status:
+        App\Exception\MissingApiKeyException: !php/const Symfony\Component\HttpFoundation\Response::HTTP_NOT_IMPLEMENTED
+        App\Exception\UpstreamException: !php/const Symfony\Component\HttpFoundation\Response::HTTP_BAD_GATEWAY
+    defaults:
+        stateless: true
+        cache_headers:
+            vary: [Content-Type, Authorization, Origin]

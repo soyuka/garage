@@ -1,0 +1,199 @@
+# yaml-language-server: $schema=../vendor/symfony/dependency-injection/Loader/schema/services.schema.json
+
+parameters:
+    # The token claim that identifies a tenant. NOT `sub`: Casdoor mints a fresh uuid for the
+    # built-in `admin` user every time it re-applies init_data.json, so a sub-keyed owner loses its
+    # data on a restart. The email is the stable seam across reseeds.
+    app.owner_claim: 'email'
+    # One source of truth: config/packages/mcp.yaml routes it, the in-process agent bridge replays against it.
+    app.mcp_path: '/mcp'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    App\:
+        resource: '../src/'
+
+    # AGENT_TURN_DISPATCH picks where POST /agent/turn runs the turn (see .env).
+    App\Agent\Dispatch\TurnDispatcher:
+        factory: ['App\Agent\Dispatch\TurnDispatcherFactory', 'create']
+        arguments:
+            $mode: '%env(enum:App\Agent\Dispatch\TurnDispatchMode:AGENT_TURN_DISPATCH)%'
+
+    App\Siv\SivClient:
+        arguments:
+            $httpClient: '@siv.client'
+            $token: '%env(API_PLAQUE_TOKEN)%'
+
+    # Paid upstream responses live in MongoDB collections, not a cache: see the Entity docblocks.
+    App\Siv\SivLookupStore: '@App\Siv\MongoSivLookupStore'
+    App\Agent\TurnCancellations: '@App\Agent\MongoTurnCancellations'
+
+    # The one catalogue source: the licensed TecDoc dump, derived into a SQLite file (docs/tecdoc-sqlite.md).
+    App\Catalog\TecdocCatalog:
+        arguments:
+            $path: '%env(resolve:TECDOC_CATALOG_PATH)%'
+            $lang: '%env(int:CATALOG_LANG)%'
+
+    App\Catalog\PartsCatalog: '@App\Catalog\TecdocCatalog'
+
+    # Built only through app.finder.mcp_toolbox, which carries the allowlist.
+    App\Mcp\Agent\McpToolbox:
+        abstract: true
+
+    # The finder agent (ai.yaml `finder`): its render tools stay out of the `ai.tool` tag so `tools: true`
+    # never picks them up; the finder lists this service explicitly instead.
+    App\Agent\Finder\FinderRenderTools:
+        autoconfigure: false
+
+    # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server.catalog,
+    # not autowireable by FQCN), so the agent reuses the catalogue tools without HTTP/OAuth. An
+    # allowlist, so a tool added to the server later can never reach the finder unannounced.
+    # No list_part_categories: the finder picks from the full leaf list (FinderCategoryList), never by keyword.
+    app.finder.mcp_toolbox:
+        class: App\Mcp\Agent\McpToolbox
+        arguments:
+            $server: '@mcp.server.catalog'
+            $only: ['lookup_plate', 'decode_vin', 'list_makes', 'list_models', 'list_cars', 'get_service_parts', 'decode_build_code']
+
+    # Merge the catalogue MCP tools into the finder agent's #[AsTool] toolbox. The bundle wires one
+    # toolbox per agent; this decorator (default priority 0) sits INSIDE the bundle's FaultTolerantToolbox
+    # (priority -1024, outermost), so malformed tool calls surface as error tool-results to the model
+    # instead of bubbling to a 500.
+    app.finder.composite_toolbox:
+        class: App\Agent\Toolbox\CompositeToolbox
+        decorates: ai.toolbox.finder
+        arguments:
+            $renderToolbox: '@.inner'
+            $mcpToolbox: '@app.finder.mcp_toolbox'
+            $narrator: '@App\Agent\Ui\StepNarrator'
+
+    # Log Anthropic server-side tool use (web_search) per call. Decorates the platform the finder
+    # agent runs on: server tools leave no Toolbox call, so the platform's raw response is the only
+    # place their use is observable. The decorated platform is a lazy proxy (AiBundle marks
+    # ai.platform.anthropic lazy + proxy), so this decorator must be lazy and carry the same proxy
+    # interface — otherwise the inner profiler decorator (TraceablePlatform) ends up with a proxy tag
+    # but no lazy flag and the container fails to compile.
+    App\Agent\ServerToolUseLogger:
+        decorates: ai.platform.anthropic
+        # Name the undecorated platform so the out-of-band clients can reach Anthropic WITHOUT this
+        # logger — routing a side call through here would double-feed the turn's WebSearchBudget and
+        # overwrite the journal's live model.
+        decoration_inner_name: 'App\Agent\ServerToolUseLogger.inner'
+        lazy: true
+        tags:
+            - { name: proxy, interface: Symfony\AI\Platform\PlatformInterface }
+        arguments:
+            $inner: '@.inner'
+
+    # Out-of-band web search: a focused side call behind the provider-agnostic WebSearchClient seam.
+    # Two backends; WEB_SEARCH_BACKEND selects one.
+    # Anthropic: Haiku + native web_search, on the UNDECORATED platform (.inner).
+    App\Agent\WebSearch\AnthropicWebSearchClient:
+        arguments:
+            $platform: '@App\Agent\ServerToolUseLogger.inner'
+            $model: '%env(WEB_SEARCH_MODEL)%'
+
+    # Carte grise extraction: one-shot Sonnet 5.5 vision call on the UNDECORATED Anthropic platform, so
+    # the upload never reaches ServerToolUseLogger / the turn journal.
+    App\RegistrationDocument\AnthropicRegistrationDocumentReader:
+        arguments:
+            $platform: '@App\Agent\ServerToolUseLogger.inner'
+            $model: 'claude-sonnet-5-5?max_tokens=2048'
+
+    App\RegistrationDocument\RegistrationDocumentReader:
+        alias: App\RegistrationDocument\AnthropicRegistrationDocumentReader
+
+    # Finder photo intake: the same one-shot vision call, sorting carte grise / part / other.
+    App\PhotoIntake\AnthropicPhotoIntakeReader:
+        arguments:
+            $platform: '@App\Agent\ServerToolUseLogger.inner'
+            $model: 'claude-sonnet-5-5?max_tokens=2048'
+
+    App\PhotoIntake\PhotoIntakeReader:
+        alias: App\PhotoIntake\AnthropicPhotoIntakeReader
+
+    # Gemini: Gemini + Google Search grounding. Plain ai.platform.gemini (no decorator on it).
+    App\Agent\WebSearch\GeminiWebSearchClient:
+        arguments:
+            $platform: '@ai.platform.gemini'
+            $model: '%env(GEMINI_WEB_SEARCH_MODEL)%'
+            # Trace the raw Gemini body onto the turn journal so an empty answer is diagnosable.
+            $tracer: '@App\Agent\Journal\TurnJournal'
+
+    # The seam the WebSearchTool depends on: a runtime router picking the backend from WEB_SEARCH_BACKEND.
+    # Service locator so only the selected backend's (lazy) platform is ever instantiated.
+    App\Agent\WebSearch\WebSearchClient:
+        class: App\Agent\WebSearch\SelectableWebSearchClient
+        arguments:
+            $clients: !service_locator
+                anthropic: '@App\Agent\WebSearch\AnthropicWebSearchClient'
+                gemini: '@App\Agent\WebSearch\GeminiWebSearchClient'
+            $backend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
+
+    # Validates Casdoor JWTs for the /mcp and api firewalls (dev/prod). Audience is intentionally
+    # unpinned — see the class docblock. JWKS discovered from CASDOOR_ISSUER, cached in cache.app.
+    App\Security\CasdoorTokenHandler:
+        arguments:
+            $discoveryCache: '@cache.app'
+            $oidcConfigurationCacheKey: 'casdoor_oidc_config'
+            $issuers: ['%env(CASDOOR_ISSUER)%']
+            $claim: '%app.owner_claim%'
+
+
+when@test:
+    services:
+        # Back to the plain client: `siv.client` is a scoped RetryableHttpClient, and a test must
+        # never be one wiring slip away from billing the real SIV API.
+        App\Siv\SivClient:
+            arguments:
+                $httpClient: '@http_client'
+                $token: '%env(API_PLAQUE_TOKEN)%'
+                $store: '@App\Siv\SivLookupStore'
+                $retryDelayMs: 0
+
+        App\Tests\Mock\FixtureHttpClient:
+            decorates: http_client
+            arguments:
+                $fixturesDir: '%kernel.project_dir%/tests/Fixtures'
+
+        # Decodes opaque test tokens in place of the cryptographic OidcTokenHandler. Reads the same
+        # claim as production so the suite covers the tenancy key, not a hardcoded `sub`.
+        App\Tests\Security\FakeOidcTokenHandler:
+            arguments:
+                $claim: '%app.owner_claim%'
+
+        # The model call is never made in tests: the endpoint talks to a scripted reader.
+        App\Tests\Mock\FakeRegistrationDocumentReader:
+            public: true
+
+        App\RegistrationDocument\RegistrationDocumentReader:
+            alias: App\Tests\Mock\FakeRegistrationDocumentReader
+            public: true
+
+        App\Tests\Mock\FakePhotoIntakeReader:
+            public: true
+
+        App\PhotoIntake\PhotoIntakeReader:
+            alias: App\Tests\Mock\FakePhotoIntakeReader
+            public: true
+
+        # A default tenant for the suite: reads that send no token resolve to the same owner the tests
+        # seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.
+        App\Security\OwnerContext:
+            autowire: true
+            arguments:
+                # Must equal AppTestCase::TEST_OWNER (the email claim, so an address).
+                $fallback: 'dashboard@example.com'
+
+        # The finder's in-process MCP bridge, reachable from the test container.
+        test.app.finder.mcp_toolbox:
+            alias: app.finder.mcp_toolbox
+            public: true
+
+        # Capture Mercure publishes (no HTTP) so tests can assert streamed frames.
+        App\Tests\Mock\RecordingHub:
+            decorates: mercure.hub.default
+            public: true

@@ -1,0 +1,27 @@
+mcp:
+    servers:
+        catalog:
+            name: 'bonneref'
+            version: '0.1.0'
+            description: 'French vehicle parts catalog (TecDoc): look up parts and articles by registration plate (plaque d''immatriculation), VIN or brand, and narrow them down to the variant that fits one car.'
+            instructions: >-
+                A read-only TecDoc catalog. Start with lookup_plate to resolve a French registration plate
+                into vehicle information including its TecDoc carId (kType) and carType (PC or CV), or
+                decode_vin for a VIN. Then use list_part_categories and list_articles with that carId, or
+                narrow_parts to cut a category's articles down to the variant that fits this car.
+                Alternatively browse by brand with list_makes, list_models and list_cars. A catalog miss
+                (not_in_catalog) is a normal outcome, not an error.
+            transports:
+                stdio: false
+                http: true
+            http:
+                path: '%app.mcp_path%'
+                # 0.14 made the DNS-rebinding allowlist a bundle option, so the endpoint no longer
+                # needs a hand-written controller to accept a public hostname.
+                allowed_hosts: '%env(csv:MCP_ALLOWED_HOSTS)%'
+            session:
+                store: 'file'
+                directory: '%kernel.cache_dir%/mcp-sessions'
+                ttl: 3600
+            # API Platform contributes the catalogue tools (ApiResource `mcp:` operations).
+            registry: '*'

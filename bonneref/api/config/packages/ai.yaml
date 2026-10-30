@@ -1,0 +1,52 @@
+ai:
+    model:
+        anthropic:
+            claude-sonnet-5-5:
+                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
+                capabilities:
+                    - input-messages
+                    - output-text
+                    - output-streaming
+                    - tool-calling
+                    - output-structured
+                    - thinking
+                    - input-image
+                    - input-pdf
+            claude-haiku-5-5:
+                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
+                capabilities:
+                    - input-messages
+                    - output-text
+                    - output-streaming
+                    - tool-calling
+                    - output-structured
+                    - thinking
+                    - input-image
+                    - input-pdf
+    platform:
+        anthropic:
+            api_key: '%env(ANTHROPIC_API_KEY)%'
+        # Google Gemini — used ONLY by the out-of-band web-search backend (GeminiWebSearchClient).
+        # Lazy: inert unless WEB_SEARCH_BACKEND=gemini selects it.
+        gemini:
+            api_key: '%env(GEMINI_API_KEY)%'
+
+    agent:
+        # The parts finder (the bonneref/ front): free text → parts on the drawing sheet. Haiku 5.5
+        # ($0.10/$0.50 per MTok up to 100K prompt tokens), its own prompt and an explicit, minimal toolset:
+        # the finder render tools + web_search + end_turn here, the catalogue read tools merged in by
+        # app.finder.composite_toolbox (config/services.yaml).
+        finder:
+            platform: 'ai.platform.anthropic'
+            # Haiku 5.5 rejects between_tools (Sonnet-only) and thinks adaptively when `thinking` is unset; thinking
+            # tokens count toward max_tokens and the tokenizer yields ~30% more tokens than 4.5, hence 8192. Effort
+            # (default medium) is the lever instead of disabling thinking, which can make it skip a needed tool call.
+            model: 'claude-haiku-5-5?max_tokens=8192&output_config[effort]=low'
+            tools:
+                - 'App\Agent\Finder\FinderRenderTools'
+                - 'App\Agent\WebSearch\WebSearchTool'
+                - 'App\Agent\Ui\EndTurnTool'
+            fault_tolerant_toolbox: true
+            max_tool_calls: 25
+            prompt:
+                file: '%kernel.project_dir%/config/prompts/finder.md'

@@ -1,3 +1,4 @@
+import { apiUrl } from './api-base';
 import { authFetch } from './auth';
 
 // The finder's journal: GET /agent/turns?surface=finder lists agent turns and deterministic searches
@@ -239,7 +240,7 @@ export function outcomeOf(row: JournalRow): { label: string; tone: 'ok' | 'warn'
 const LD = { Accept: 'application/ld+json' };
 
 export async function getJournal(): Promise<JournalRow[]> {
-  const res = await authFetch('/agent/turns?surface=finder', { headers: LD });
+  const res = await authFetch(apiUrl('/agent/turns?surface=finder'), { headers: LD });
   if (!res.ok) throw new Error(res.status === 401 ? 'Connexion requise pour lire le journal.' : `Journal indisponible (HTTP ${res.status}).`);
   return mapRows(await res.json());
 }
@@ -247,18 +248,18 @@ export async function getJournal(): Promise<JournalRow[]> {
 // The home page's recent searches: the same rows minus what the owner hid. The journal
 // drawer keeps using getJournal, which never hides anything.
 export async function getHistory(): Promise<JournalRow[]> {
-  const res = await authFetch('/agent/turns?surface=finder&history=1', { headers: LD });
+  const res = await authFetch(apiUrl('/agent/turns?surface=finder&history=1'), { headers: LD });
   if (!res.ok) throw new Error(`Historique indisponible (HTTP ${res.status}).`);
   return mapRows(await res.json());
 }
 
 export async function hideFromHistory(id: string): Promise<void> {
-  const res = await authFetch(`${id}/hide`, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}' });
+  const res = await authFetch(apiUrl(`${id}/hide`), { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: '{}' });
   if (!res.ok) throw new Error(`Historique indisponible (HTTP ${res.status}).`);
 }
 
 export async function getJournalDetail(id: string): Promise<JournalDetail> {
-  const res = await authFetch(id, { headers: LD });
+  const res = await authFetch(apiUrl(id), { headers: LD });
   if (!res.ok) throw new Error(`Entrée indisponible (HTTP ${res.status}).`);
   return mapDetail(await res.json());
 }

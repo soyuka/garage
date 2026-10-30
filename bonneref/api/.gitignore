@@ -1,0 +1,24 @@
+
+###> symfony/framework-bundle ###
+/.env.local
+/.env.local.php
+/.env.*.local
+/config/secrets/prod/prod.decrypt.private.php
+/public/bundles/
+/var/
+/vendor/
+###< symfony/framework-bundle ###
+
+###> app: generated config reference ###
+# Auto-generated DI config shapes (config:dump-reference style); regenerated on demand, no need to track.
+/config/reference.php
+###< app ###
+
+###> phpunit/phpunit ###
+/phpunit.xml
+/.phpunit.cache/
+###< phpunit/phpunit ###
+
+###> app: local claude agent scratch ###
+/.claude/agent-memory/
+###< app ###

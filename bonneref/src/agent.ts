@@ -1,4 +1,5 @@
 import { mapNarrowing } from './api';
+import { apiUrl } from './api-base';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
 import { SELECTION_ID } from './route';
@@ -258,7 +259,7 @@ export class TurnRequestError extends Error {
 export async function postTurn(body: TurnBody): Promise<void> {
   let res: Response;
   try {
-    res = await authFetch('/agent/turn', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    res = await authFetch(apiUrl('/agent/turn'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   } catch {
     throw new TurnRequestError('network');
   }
@@ -267,5 +268,5 @@ export async function postTurn(body: TurnBody): Promise<void> {
 }
 
 export async function postCancel(sessionId: string): Promise<void> {
-  await authFetch('/agent/turn/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }).catch(() => undefined);
+  await authFetch(apiUrl('/agent/turn/cancel'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }).catch(() => undefined);
 }

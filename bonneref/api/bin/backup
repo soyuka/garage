@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# Logical backup of the three stores that hold real state:
+#   mongodb  — the garage domain (vehicles, facts, maintenance records, planned tasks, users)
+#   database — Postgres: the `app` DB (Messenger queue)
+#   minio    — maintenance bill binaries referenced by Mongo records
+# Logical dumps, not a volume tar: portable across engine versions and inspectable.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+DEST_ROOT="${MPA_BACKUP_DIR:-$HOME/backups/mon-parc-auto}"
+STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+DEST="$DEST_ROOT/$STAMP"
+
+MONGODB_DB="${MONGODB_DB:-app}"
+POSTGRES_USER="${POSTGRES_USER:-app}"
+S3_BUCKET="${S3_BUCKET:-maintenance}"
+
+# Plain invocation: auto-loads compose.yaml + compose.override.yaml, which is the data-service
+# config in BOTH profiles (the stage launch layers the override too). compose.yaml alone is not
+# a valid project — worker gets its image from the override.
+compose() { docker compose "$@"; }
+
+# Only the data services — php/worker/caddy are irrelevant to a dump and slow to boot.
+SERVICES=(mongodb database minio)
+STARTED=()
+for svc in "${SERVICES[@]}"; do
+  if [ -z "$(compose ps -q --status running "$svc" 2>/dev/null)" ]; then
+    STARTED+=("$svc")
+  fi
+done
+
+if [ ${#STARTED[@]} -gt 0 ]; then
+  echo "starting for backup: ${STARTED[*]}"
+  compose up -d --wait "${STARTED[@]}"
+fi
+
+# Leave the stack as it was found: a backup must not silently change what is running.
+cleanup() {
+  if [ ${#STARTED[@]} -gt 0 ]; then
+    echo "stopping again: ${STARTED[*]}"
+    compose stop "${STARTED[@]}" >/dev/null
+  fi
+}
+trap cleanup EXIT
+
+mkdir -p "$DEST"
+echo "→ $DEST"
+
+echo "mongodump $MONGODB_DB"
+compose exec -T mongodb mongodump --db="$MONGODB_DB" --archive --gzip --quiet > "$DEST/mongodb-$MONGODB_DB.archive.gz"
+
+# pg_dumpall, not pg_dump: it carries roles plus every database.
+echo "pg_dumpall"
+compose exec -T database pg_dumpall -U "$POSTGRES_USER" | gzip > "$DEST/postgres-all.sql.gz"
+
+echo "minio $S3_BUCKET"
+mkdir -p "$DEST/minio"
+docker run --rm --network "$(compose ps -q minio | xargs docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')" \
+  -v "$DEST/minio:/out" --entrypoint /bin/sh minio/mc:latest -c "
+    mc alias set local http://minio:9000 '${S3_ACCESS_KEY:-minioadmin}' '${S3_SECRET_KEY:-minioadmin}' >/dev/null &&
+    mc mirror --quiet --overwrite local/$S3_BUCKET /out/$S3_BUCKET" || {
+  echo "minio mirror failed" >&2; exit 1
+}
+# mc runs as root in the container; hand the objects back to the invoking user.
+docker run --rm -v "$DEST/minio:/out" alpine:3 chown -R "$(id -u):$(id -g)" /out
+
+echo "verifying"
+# --dryRun parses the whole archive and reports the collections it would restore: a real
+# integrity check on the gzip stream and the BSON inside it, without touching any database.
+compose exec -T mongodb mongorestore --archive --gzip --dryRun --quiet < "$DEST/mongodb-$MONGODB_DB.archive.gz"
+gzip -t "$DEST/postgres-all.sql.gz"
+zgrep -q "PostgreSQL database cluster dump complete" "$DEST/postgres-all.sql.gz"
+
+{
+  echo "backup     $STAMP"
+  echo "mongo      $(compose exec -T mongodb mongod --version | head -1)"
+  echo "postgres   $(compose exec -T database postgres --version)"
+  echo "mongo_db   $MONGODB_DB"
+  echo "pg_dbs     $(zgrep -o '^\\connect .*' "$DEST/postgres-all.sql.gz" | awk '{print $2}' | paste -sd, -)"
+  echo "s3_bucket  $S3_BUCKET"
+  echo
+  # Per-collection counts make a restore verifiable: compare these against the restored DB.
+  echo "mongo collections"
+  compose exec -T mongodb mongosh "$MONGODB_DB" --quiet \
+    --eval 'db.getCollectionNames().sort().forEach(c => print("  " + c + " " + db[c].countDocuments({})))'
+  echo
+  (cd "$DEST" && find . -type f -not -name manifest.txt -print0 | sort -z | xargs -0 sha256sum)
+} > "$DEST/manifest.txt"
+
+echo
+du -sh "$DEST"
+cat "$DEST/manifest.txt"

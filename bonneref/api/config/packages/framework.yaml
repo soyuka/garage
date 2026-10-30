@@ -1,0 +1,42 @@
+# see https://symfony.com/doc/current/reference/configuration/framework.html
+framework:
+    secret: '%env(APP_SECRET)%'
+
+    # French is the default and stays it — English is a second catalog beside it (App\I18n\Locale).
+    # `set_locale_from_accept_language` is why nothing needs a custom listener: the dashboard sends
+    # `Accept-Language` on every call, so `$request->getLocale()` is already the answer at the edge.
+    # It only ever yields a locale from `enabled_locales`, so an unsupported language falls back here
+    # rather than reaching a vendor as-is.
+    default_locale: fr
+    enabled_locales: ['fr', 'en']
+    set_locale_from_accept_language: true
+
+    # Note that the session will be started ONLY if you read or write from it.
+    session: true
+
+    http_client:
+        scoped_clients:
+            # The SIV registry is billed per call and single-sourced, so a transient upstream
+            # blip must not reach the user as an answer. This layer covers 5xx / 429 / DNS;
+            # it CANNOT cover a bare idle timeout — RetryableHttpClient yields the timeout chunk
+            # before consulting the retry strategy (verified 2026-09-14: 1 TCP connection with
+            # max_retries=2), which is why App\Siv\SivClient keeps its own transport retry.
+            siv.client:
+                base_uri: 'https://api.apiplaqueimmatriculation.com'
+                retry_failed:
+                    max_retries: 2
+                    delay: 1000
+                    multiplier: 2
+                    # A flat list applies to EVERY method. The default map restricts 500/504 to
+                    # GET/HEAD/PUT/DELETE, and this lookup is a POST — a read in all but verb —
+                    # so without this the two codes most likely to be transient are skipped.
+                    http_codes: [423, 425, 429, 500, 502, 503, 504, 507, 510]
+
+    #esi: true
+    #fragments: true
+
+when@test:
+    framework:
+        test: true
+        session:
+            storage_factory_id: session.storage.factory.mock_file

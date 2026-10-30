@@ -1,0 +1,15 @@
+mercure:
+    hubs:
+        default:
+            url: '%env(default::MERCURE_URL)%'
+            public_url: '%env(default::MERCURE_PUBLIC_URL)%'
+            # RFC 9068 tokens: typ at+jwt, authorization_details instead of the 0.x `mercure` claim.
+            protocol_version: '1.0'
+            jwt:
+                secret: '%env(MERCURE_JWT_SECRET)%'
+                publish: '*'
+                # `aud` defaults to public_url (the hub's pinned resource_identifier), plus url on the publisher token since bundle 0.6.1.
+                claims:
+                    iss: '%env(MERCURE_JWT_ISSUER)%'
+                    sub: 'bonneref'
+                    client_id: 'bonneref'

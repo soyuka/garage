@@ -1,4 +1,5 @@
 import { ApiError, classifyStatus } from './api';
+import { garageUrl } from './api-base';
 import { authFetch } from './auth';
 import { formatDate, formatMeasure, formatValue } from './format';
 import { factLabel, sentence, serviceLabel, sourceLabel, unitLabel } from './garage-labels';
@@ -159,7 +160,7 @@ export function myVehicleOf(row: GarageRow): MyVehicle | null {
 async function request(path: string, init: RequestInit = {}): Promise<Response> {
   let res: Response;
   try {
-    res = await authFetch(path, { ...init, headers: { Accept: 'application/ld+json', ...init.headers } });
+    res = await authFetch(garageUrl(path), { ...init, headers: { Accept: 'application/ld+json', ...init.headers } });
   } catch {
     throw new ApiError('network');
   }

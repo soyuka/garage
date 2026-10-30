@@ -50,3 +50,19 @@ describe('listMyVehicles', () => {
     await expect(listMyVehicles()).resolves.toEqual([]);
   });
 });
+
+describe('listMyVehicles against a split garage API', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it('reads the garage from VITE_GARAGE_API_BASE, not the finder API', async () => {
+    vi.stubEnv('VITE_API_BASE', 'https://localhost:8444');
+    vi.stubEnv('VITE_GARAGE_API_BASE', 'https://localhost');
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ member: [] }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+    await listMyVehicles();
+    expect(fetch.mock.calls[0]![0]).toBe('https://localhost/garage/vehicles');
+  });
+});

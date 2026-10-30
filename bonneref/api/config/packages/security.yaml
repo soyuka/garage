@@ -1,0 +1,81 @@
+security:
+    providers:
+        # Provisions users from validated Casdoor access-token claims (find-or-create on `sub`).
+        zitadel:
+            id: App\Security\ZitadelUserProvider
+
+    firewalls:
+        dev:
+            pattern: ^/(_profiler|_wdt|assets|build)/
+            security: false
+
+        # RFC 9728 metadata must stay public: a client holding a stale token has to read it
+        # to discover the authorization server before it can refresh.
+        oauth_metadata:
+            pattern: ^/\.well-known/oauth-protected-resource$
+            security: false
+
+        # The MCP endpoint is OAuth-protected. The access_token handler is added per
+        # environment below so the test env can swap the cryptographic handler for a stub
+        # (declaring it here too would trip the "multiple token handlers" config check).
+        mcp:
+            pattern: ^/mcp
+            stateless: true
+            provider: zitadel
+
+        # The finder's shared link (« Copier le lien ») is opened by someone else, who holds no token;
+        # the id is an unguessable ULID (App\Controller\Finder\FinderSelectionController). A
+        # firewall of its own, not a PUBLIC_ACCESS rule, so a stale bearer cannot 401 it either.
+        public_selection:
+            pattern: ^/agent/selections/
+            security: false
+
+        # Everything else is deny-by-default: the agent, the upload endpoints, and every catalogue read
+        # (plate/VIN lookup, /cars, narrowing, photos), which spend paid upstream quota (SIV, the model
+        # vendor) for whoever calls them. The API reference (/docs,
+        # entrypoint, contexts) is gated too. The bearer is validated here, so an invalid or expired
+        # token is a strict 401 (App\Security\CasdoorTokenHandler); a token-less request gets
+        # 401 + `WWW-Authenticate: Bearer` from App\Security\BearerEntryPoint.
+        api:
+            pattern: ^/
+            stateless: true
+            provider: zitadel
+            entry_point: App\Security\BearerEntryPoint
+
+    access_control:
+        # Force a 401 (entry point) for unauthenticated /mcp calls; without this the missing
+        # token would simply fall through as anonymous and the tools would run unprotected.
+        # (The challenge also carries the RFC 9728 resource_metadata, McpProtectedResourceChallengeListener.)
+        - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
+        # Deny by default: every path not opened by a firewall above needs a token. /registration-documents
+        # and /photo-intake spend vendor credits, and the journal is owner-scoped: all of them rely on this
+        # rule rather than on a per-route entry.
+        - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
+
+# Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC
+# handler but drops the audience check, because Casdoor sets `aud` to the (per-DCR dynamic)
+# client_id and ignores RFC 8707 — so a stable audience cannot be pinned. See the class docblock.
+when@dev: &casdoor_firewall
+    security:
+        firewalls:
+            mcp:
+                access_token:
+                    token_handler: App\Security\CasdoorTokenHandler
+            api:
+                access_token:
+                    token_handler: App\Security\CasdoorTokenHandler
+
+when@prod: *casdoor_firewall
+
+when@test:
+    security:
+        firewalls:
+            mcp:
+                access_token:
+                    # A real Casdoor-signed JWT cannot be minted offline, so tests decode
+                    # opaque test tokens instead. The firewall and ZitadelUserProvider still
+                    # run for real.
+                    token_handler: App\Tests\Security\FakeOidcTokenHandler
+            api:
+                access_token:
+                    token_handler: App\Tests\Security\FakeOidcTokenHandler

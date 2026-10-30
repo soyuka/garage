@@ -1,0 +1,7 @@
+framework:
+    cache:
+        # No application pool lives in PostgreSQL any more (2026-10-16): the paid upstream responses
+        # (SIV, partsapi, Motul, catalogue photos) and the short-lived turn hand-offs (finder photos,
+        # cancel flags) are MongoDB collections — see the src/Entity docblocks and
+        # app:cache:migrate-to-mongo, which reads the retired cache_items table. Only the framework
+        # defaults remain (cache.app / cache.system on the per-container filesystem).

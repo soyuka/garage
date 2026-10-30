@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
+import { apiOrigin, hubDefault } from '../api-base';
 import { isAuthenticated, login } from '../auth';
 import type { BuildCode, BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
 
-const HUB = import.meta.env.VITE_MERCURE_URL ?? '/.well-known/mercure';
-const API_BASE = import.meta.env.VITE_API_BASE ?? window.location.origin;
 const PENDING_KEY = 'bonneref.agent.pending';
 
 interface Pending {
@@ -62,7 +61,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
   const lastFrame = useRef(0);
 
   useEffect(() => {
-    const source = new EventSource(hubUrl(HUB, window.location.origin, sessionTopic(API_BASE, sessionId)));
+    const source = new EventSource(hubUrl(hubDefault(), window.location.origin, sessionTopic(apiOrigin(), sessionId)));
     source.onmessage = (e: MessageEvent<string>) => {
       const frame = parseFrame(e.data);
       if (!frame) return;

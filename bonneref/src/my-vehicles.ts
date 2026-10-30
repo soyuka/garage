@@ -1,3 +1,4 @@
+import { garageUrl } from './api-base';
 import { authFetch } from './auth';
 import { vehicleShortName } from './garage';
 import { carRef } from './route';
@@ -45,7 +46,7 @@ export function pickTarget(v: MyVehicle): { ref: string; car: AgentVehicle | nul
 
 export async function listMyVehicles(): Promise<MyVehicle[]> {
   try {
-    const res = await authFetch('/garage/vehicles', { headers: { Accept: 'application/ld+json' } });
+    const res = await authFetch(garageUrl('/garage/vehicles'), { headers: { Accept: 'application/ld+json' } });
     return res.ok ? mapMyVehicles(await res.json()) : [];
   } catch {
     return [];

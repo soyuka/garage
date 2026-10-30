@@ -1,0 +1,6 @@
+doctrine:
+    dbal:
+        # DBAL stays only for the Messenger doctrine:// transport (AGENT_TURN_DISPATCH=messenger); the domain
+        # lives in MongoDB (config/packages/doctrine_mongodb.yaml). No ORM is configured.
+        url: '%env(resolve:DATABASE_URL)%'
+        profiling_collect_backtrace: '%kernel.debug%'

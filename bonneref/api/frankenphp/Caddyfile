@@ -1,0 +1,100 @@
+{
+	skip_install_trust
+
+	{$CADDY_GLOBAL_OPTIONS}
+
+	frankenphp {
+		{$FRANKENPHP_CONFIG}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:localhost} {
+	log {
+		{$CADDY_SERVER_LOG_OPTIONS}
+		# Redact the authorization query parameter that can be set by Mercure
+		format filter {
+			request>uri query {
+				replace authorization REDACTED
+			}
+		}
+	}
+
+	root /app/public
+	# Since Caddy 2.11.7 `encode` compresses Server-Sent Events, holding an encoder (several MiB) per
+	# subscriber for the life of the stream, and mixing private updates with attacker-influenced data
+	# in one compressed stream is BREACH-shaped. Mercure 1.0.4 upgrade notes.
+	@compressible not path /.well-known/mercure*
+	encode @compressible zstd br gzip
+
+	vulcain
+
+	{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+	# Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
+	header ?Permissions-Policy "browsing-topics=()"
+
+	# route {} enforces strict first-match-wins in file order (Caddy's default directive order runs
+	# rewrite before reverse_proxy).
+	route {
+		# The hub itself lives on the internal site below, declared exactly once. Browser subscribers
+		# arrive here, so this address forwards to it; Caddy streams an SSE response through
+		# reverse_proxy without buffering.
+		reverse_proxy /.well-known/mercure* http://{$MERCURE_HUB_UPSTREAM:php:80} {
+			header_up Host {$MERCURE_HUB_HOST:php}
+		}
+
+		@phpRoute {
+			not path /.well-known/mercure*
+			not file {path}
+		}
+		rewrite @phpRoute index.php
+
+		@frontController path index.php
+		php @frontController {
+			{$FRANKENPHP_SITE_CONFIG}
+
+			worker {
+				file ./public/index.php
+				{$FRANKENPHP_WORKER_CONFIG}
+			}
+		}
+
+		file_server {
+			hide *.php
+		}
+	}
+}
+
+# The single Mercure hub, on the in-network address the app publishes to. Mercure 1.0 refuses a
+# second unnamed hub anywhere in the configuration, and each `mercure` directive provisions its own. SERVER_NAME can carry several addresses, and addresses that differ in scheme land in
+# different Caddy servers, so a hub on the public site is instantiated once per server and the
+# config is rejected. Declaring it here keeps it to one, whatever SERVER_NAME holds; the public
+# addresses reverse_proxy to it.
+http://php:80 {
+	handle /.well-known/mercure* {
+		mercure {
+			# Mercure 1.0 dropped the top-level publisher_jwt/subscriber_jwt directives: keys now hang off
+			# the issuer that signed the token. `iss` must equal this identifier and `aud` must equal
+			# resource_identifier, both minted by config/packages/mercure.yaml.
+			issuer {$MERCURE_JWT_ISSUER:https://bonneref.fr} {
+				publisher {
+					jwt {env.MERCURE_PUBLISHER_JWT_KEY}
+				}
+				subscriber {
+					jwt {env.MERCURE_SUBSCRIBER_JWT_KEY}
+				}
+			}
+			# Subscribers reach this hub through the public address, so the audience tokens carry is the
+			# public URL and cannot be derived from the request.
+			resource_identifier {$MERCURE_PUBLIC_URL:https://localhost:8444/.well-known/mercure}
+			# Allow anonymous subscribers (double-check that it's what you want)
+			anonymous
+			# Enable the subscription API (double-check that it's what you want)
+			subscriptions
+			# Extra directives
+			{$MERCURE_EXTRA_DIRECTIVES}
+		}
+	}
+}

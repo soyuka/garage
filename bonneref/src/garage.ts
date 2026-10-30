@@ -1,3 +1,4 @@
+import { garageUrl } from './api-base';
 import { authFetch } from './auth';
 import { parseRoute, routeToHash } from './route';
 import type { Category, Family, Reference, Vehicle } from './types';
@@ -123,7 +124,7 @@ const KIND: Record<number, PlanErrorKind> = { 401: 'auth', 403: 'auth', 409: 'am
 export async function planPart(body: PlanBody): Promise<PlannedTask> {
   let res: Response;
   try {
-    res = await authFetch('/garage/planned-tasks', {
+    res = await authFetch(garageUrl('/garage/planned-tasks'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
       body: JSON.stringify(body),
@@ -172,7 +173,7 @@ export interface SavedVehicle {
 export async function saveVehicle(body: SaveBody): Promise<SavedVehicle> {
   let res: Response;
   try {
-    res = await authFetch('/garage/vehicles/save', {
+    res = await authFetch(garageUrl('/garage/vehicles/save'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/ld+json', Accept: 'application/ld+json' },
       body: JSON.stringify(body),

@@ -1,0 +1,118 @@
+---
+# Own project name: this directory is called `api` like mon-parc-auto's, and compose derives container,
+# network and volume names from it. Without this the two stacks would share (and clobber) both.
+name: bonneref-api
+
+services:
+  php:
+    restart: unless-stopped
+    environment: &php_environment
+      SERVER_NAME: ${SERVER_NAME:-https://localhost}
+      DEFAULT_URI: ${DEFAULT_URI:-https://localhost:${HTTPS_PORT:-8444}}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      # Built from components so the host `mongodb` is always the compose service name. Interpolating
+      # ${MONGODB_URL} would inherit .env's host-run value (127.0.0.1) and break in-container connectivity.
+      MONGODB_URL: mongodb://${MONGODB_HOST:-mongodb}:27017
+      MONGODB_DB: ${MONGODB_DB:-bonneref}
+      MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
+      MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://localhost:${HTTPS_PORT:-8444}/.well-known/mercure}
+      # Mercure 1.0 speaks RFC 9068 access tokens: the hub matches the token's `iss` against its
+      # `issuer` block and its `aud` against `resource_identifier`. Both sides read these.
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      MERCURE_JWT_ISSUER: ${MERCURE_JWT_ISSUER:-https://bonneref.fr}
+      # No Postgres by default: turns run in kernel.terminate and Messenger stays in memory. The
+      # `messenger` profile below brings up the worker + Postgres and expects these to be overridden.
+      AGENT_TURN_DISPATCH: ${AGENT_TURN_DISPATCH:-terminate}
+      MESSENGER_TRANSPORT_DSN: ${MESSENGER_TRANSPORT_DSN:-in-memory://}
+      MESSENGER_FAILED_TRANSPORT_DSN: ${MESSENGER_FAILED_TRANSPORT_DSN:-in-memory://}
+      SKIP_DATABASE_WAIT: ${SKIP_DATABASE_WAIT:-1}
+      # The derived TecDoc SQLite (docs/tecdoc-sqlite.md), bind-mounted read-only by the override (dev)
+      # or by the deployment (prod).
+      TECDOC_CATALOG_PATH: /srv/tecdoc/catalog.sqlite
+      CADDY_SERVER_EXTRA_DIRECTIVES: 'header ?Link `</docs.jsonld>; rel="http://www.w3.org/ns/hydra/core#apiDocumentation", </.well-known/mercure>; rel="mercure"`'
+      ###> dunglas/symfony-docker ###
+      SYMFONY_VERSION: ${SYMFONY_VERSION:-}
+      STABILITY: ${STABILITY:-stable}
+      ###< dunglas/symfony-docker ###
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+    ports:
+      - name: http
+        target: 80
+        published: ${HTTP_PORT:-8081}
+        protocol: tcp
+      - name: https
+        target: 443
+        published: ${HTTPS_PORT:-8444}
+        protocol: tcp
+      - name: http3
+        target: 443
+        published: ${HTTP3_PORT:-8444}
+        protocol: udp
+    # CasdoorTokenHandler fetches the OIDC discovery doc + JWKS server-side (CASDOOR_ISSUER), so this
+    # container needs outbound https.
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  # Messenger-mode consumer (AGENT_TURN_DISPATCH=messenger): runs `messenger:consume` under the CLI SAPI
+  # so a turn's tool loop has no request time limit. Off by default.
+  worker:
+    profiles: [messenger]
+    restart: unless-stopped
+    environment: *php_environment
+    command: ["php", "bin/console", "messenger:consume", "async", "failed", "-vvv", "--time-limit=3600"]
+    # The php image's HEALTHCHECK probes FrankenPHP's :2019/metrics, which a consumer does not serve.
+    healthcheck:
+      test: ["CMD-SHELL", "grep -aqs messenger:consume /proc/[0-9]*/cmdline || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    depends_on:
+      php:
+        condition: service_healthy
+      database:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+
+  # Only for AGENT_TURN_DISPATCH=messenger with a doctrine:// transport.
+  database:
+    profiles: [messenger]
+    image: postgres:${POSTGRES_VERSION:-16}-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+      POSTGRES_USER: ${POSTGRES_USER:-app}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "${POSTGRES_DB:-app}", "-U", "${POSTGRES_USER:-app}"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - database_data:/var/lib/postgresql/data:rw
+
+  # The domain store (Doctrine ODM): finder selections, the agent-turn journal, the SIV lookups, the
+  # carId -> vehicle index.
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-bonneref}
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    volumes:
+      - mongodb_data:/data/db
+
+volumes:
+  caddy_data:
+  caddy_config:
+  database_data:
+  mongodb_data:
