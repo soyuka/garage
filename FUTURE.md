@@ -718,3 +718,29 @@ Open design points:
 - rights: who edits, who logs visits, who deletes, who can re-share;
 - child rows: records/planned tasks/documents written by a member — owned by the vehicle, not the writer;
 - inviting: by email claim (the owner key), the invitee may not have signed in yet.
+
+## bonneref split leftovers (2026-10-30)
+
+Split done per `docs/bonneref-extraction.md` (commits 207a586, 439a101). Left behind:
+
+- `show_parts` summarises 4 clusters for kType 19107 / category 100259 while `GET /narrowed` returns 2 —
+  not investigated, may predate the split.
+- `PartsCatalog` (bonneref/api) still carries partsapi-era members (`upstreamCalls*`, `cached*`), and
+  `fromPartsApi` / `partsApiCalls*` names survive because the journal contract and legacy rows use them.
+- mpa journal still knows the finder: `TurnSurface::Finder`, `AgentTurn` finder fields, `TurnRoute`,
+  `ask_question`/`show_parts` in `TerminalToolListener` and `TurnActivityTracker` — kept so legacy rows
+  hydrate. `AgentTurn::selectedId` is dead on the bonneref side.
+- `ServiceKind` duplicated in `api/` and `bonneref/api`. "garage" wording in bonneref's compare_brands
+  disclaimer / BrandRanking description; `DashboardChannel` name kept.
+- Dev wiring: bonneref front needs `VITE_API_BASE=https://localhost:8444` (bonneref/api stack) and mpa
+  `CORS_ALLOW_ORIGIN` must include the front origin; mpa's `/bonneref` + `/finder` Caddy routes and dev
+  `bonneref` service in `api/compose.override.yaml` still exist. mpa dev `BONNEREF_API_URL` defaults to
+  https://bonneref.fr.
+- `.env.local` still holds `PARTSAPI_*` / `API_PLAQUE_TOKEN` in mpa — delete; partsapi keys can be cancelled.
+- The running mpa stack (`api-php-1`, `api-worker-1`) mounted `.claude/worktrees/agent-a7a84712b9ceecd03/api`,
+  not main — recreate it from main, then remove that worktree and the two merged `../bonneref-*` worktrees.
+- Unused deps probably: `symfony/process`, `symfony/mime` in bonneref/api.
+- Prod (deployed 2026-10-30): `garage.env` carries the placeholder `S3_*` the old bonneref env had, so bill
+  uploads on bonneref.fr fail until real values are set. The garage container's Mercure hub is internal only.
+  Stale garage copies (vehicles, planned_maintenance) and `partsapi_responses` still sit in db `bonneref`;
+  drop once the split has run a while. Rollback recipe in `docs/bonneref-extraction.md`.

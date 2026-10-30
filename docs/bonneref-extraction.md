@@ -67,6 +67,17 @@ mpa keeps the rest.
 4. mpa: delete what moved, drop `CATALOG_SOURCE`, `PARTSAPI_*`, `API_PLAQUE_TOKEN`, the `/bonneref` + `/finder`
    Caddy routes and the dev `bonneref` service; CORS for bonneref.fr on `/garage/*`.
 
+Deployed 2026-10-30 at `018aa9f` (server checkout fast-forwarded from detached `f0d0b83` to `main`).
+`~/bonneref.compose.yml`: `bonneref-api` now builds `bonneref/api` (same name, port 5382, catalog mount, `php`
+alias, db `bonneref`); new `bonneref-garage` builds mpa's `api/` (port 5383, `~/bonneref/garage.env`, db
+`garage`, `BONNEREF_API_URL=http://bonneref-api`, publishes to its own hub via `MERCURE_URL=http://localhost/...`
++ `MERCURE_HUB_UPSTREAM=127.0.0.1:80` because `php` resolves to bonneref-api). `vehicles`, `planned_maintenance`,
+`users` copied (not moved) into `garage` (5/10/6). Caddy: `/garage/*` → 5383 before the bonneref-api matcher,
+which gained `/makes` and `/makes/*`. SPA rebuilt from HEAD in `node:22`. Backups and rollback material are all
+suffixed `pre-split-20261030` (mongodump in `~/bonneref/dumps/`, compose, `.env`, Caddy file, site dir, image
+`bonneref-api:pre-split`). Not done: the garage keeps the old placeholder `S3_*` (bonneref had no bucket), so
+maintenance bill uploads on bonneref.fr fail until a real bucket is set; garage's Mercure hub is internal only.
+
 ## Done (mpa side, `api/`, 2026-10-30)
 
 Steps 1 and 4 landed together in the working tree, uncommitted; step 4 stops where noted. Verified against the
