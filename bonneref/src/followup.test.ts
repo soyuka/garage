@@ -30,6 +30,38 @@ describe('resultSummary', () => {
     expect(text).toContain('par article, pas par véhicule');
   });
 
+  describe('vehicle scope', () => {
+    const lowered = (): Narrowing => {
+      const n = twoClusters();
+      const [k1, k2] = n.clusters;
+      return {
+        ...n,
+        applicabilityScope: 'vehicle',
+        clusters: [
+          {
+            ...k1!,
+            applicability: [{ name: 'Année jusqu’à', values: ['200602'] }],
+            variants: [{ artId: 1, brand: 'LuK', number: '415 0463 10', tier: 1, applicability: [{ conditions: [], pairedWith: ['623 3150 ##'] }] }],
+          },
+          k2!,
+        ],
+      };
+    };
+
+    it('says the applicability holds on this car, and lists the notes per variant', () => {
+      const text = resultSummary('Volant moteur', lowered(), null);
+      expect(text).toContain('applicabilité sur ce véhicule : Année jusqu’à 200602');
+      expect(text).toContain('par variante : LuK 415 0463 10 : avec 623 3150 ##');
+      expect(text).not.toContain('par article, pas par véhicule');
+    });
+
+    it('words the agent’s basis as this car’s applicability', () => {
+      const n = lowered();
+      const verdict = { id: SEL, clusterId: 'k1', basis: 'code de fabrication', setAside: null };
+      expect(resultSummary('Volant moteur', n, selectVariant(n, { id: 'k1', by: 'agent', selectionId: SEL }, verdict))).toContain('indication (applicabilité de ce véhicule) : [k1]');
+    });
+  });
+
   it('names the product group id of the result, so a follow-up never re-narrows without it', () => {
     const n = { ...twoClusters(), productGroup: { id: 51, name: 'Rotule de direction intérieure, barre de connexion' } };
     expect(resultSummary('Rotule de direction intérieure, barre de connexion', n, null)).toContain('(categoryId 100198, productGroupId 51)');

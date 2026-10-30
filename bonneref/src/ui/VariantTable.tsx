@@ -25,7 +25,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
   const uid = useId();
   const group = useRef<HTMLDivElement>(null);
   const differs = rows[0]?.differs ?? [];
-  const withApplicability = rows.some((r) => r.breakpoints.length > 0);
+  const withApplicability = rows.some((r) => r.breakpoints.length > 0 || r.variantNotes.length > 0);
   const status = STATUS[selection.status];
   const cols = ['vt-row', differs.length === 0 && 'vt-row--nodiff', !withApplicability && 'vt-row--noapp'].filter(Boolean).join(' ');
 
@@ -74,13 +74,18 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
         )}
         {withApplicability && (
           <span className="vt-app">
-            {r.breakpoints.length === 0
+            {r.breakpoints.length === 0 && r.variantNotes.length === 0
               ? '—'
               : r.breakpoints.map((b) => (
                   <span key={b.label}>
                     {b.label} <span className="m">{b.values.join(' · ')}</span>
                   </span>
                 ))}
+            {r.variantNotes.map((note) => (
+              <span key={note.ref}>
+                <span className="m">{note.ref}</span> : {note.text}
+              </span>
+            ))}
           </span>
         )}
         {mark === 'retained' && (
@@ -105,7 +110,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
       <div className={`${cols} vt-head`} aria-hidden="true">
         <span>Réf. OE</span>
         {differs.length > 0 && <span>{differs.map((d) => d.label).join(' · ')}</span>}
-        {withApplicability && <span>Applicabilité (par article)</span>}
+        {withApplicability && <span>{narrowing.applicabilityScope === 'vehicle' ? 'Applicabilité (ce véhicule)' : 'Applicabilité (par article)'}</span>}
       </div>
       <div ref={group} role="radiogroup" aria-labelledby="vt-title" className="vt-rows">
         {shown.map(renderRow)}

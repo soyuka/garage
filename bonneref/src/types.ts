@@ -57,17 +57,26 @@ export interface Reference {
 export interface Variant extends Reference {
   artId: number;
   tier: number;
+  // Alternatives (any one may hold) this article carries on the car; empty: no condition. Vehicle scope only.
+  applicability: LinkAlternative[];
 }
 
 export interface Representative extends Reference {
   artId: number;
 }
 
-// Application-level criteria, verbatim. They are per ARTICLE (union over every car it fits), not per
-// car: they may only help choose between clusters that already differ, never prove a fit.
+// Application-level criteria, verbatim. Under the 'article' scope they are per ARTICLE (union over every car
+// it fits): they may only help choose between clusters that already differ, never prove a fit. Under
+// 'vehicle' they are what the cluster holds on this car.
 export interface Applicability {
   name: string;
   values: string[];
+}
+
+// One way an article may fit the car: every condition holds, and it is fitted with the `pairedWith` articles.
+export interface LinkAlternative {
+  conditions: Applicability[];
+  pairedWith: string[];
 }
 
 export interface Cluster {
@@ -115,6 +124,7 @@ export interface Narrowing {
   degradedReason: string | null;
   upstreamCalls: number;
   fallbackBrands: FallbackBrand[];
+  applicabilityScope: 'article' | 'vehicle';
 }
 
 export interface RegistrationField {

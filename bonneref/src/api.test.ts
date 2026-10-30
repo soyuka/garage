@@ -110,7 +110,7 @@ describe('mapNarrowing', () => {
   it('keeps variants, OE numbers and the divergence', () => {
     const c1 = n.clusters[0]!;
     expect(c1.oeNumbers).toContainEqual({ brand: 'MAZDA', number: 'LF10-14-302' });
-    expect(c1.variants[0]).toEqual({ artId: 9674372, brand: 'MANN-FILTER', number: 'W 712/73', tier: 1 });
+    expect(c1.variants[0]).toEqual({ artId: 9674372, brand: 'MANN-FILTER', number: 'W 712/73', tier: 1, applicability: [] });
     expect(c1.representative).toEqual({ artId: 9674372, brand: 'MANN-FILTER', number: 'W 712/73' });
     expect(n.differsOn).toEqual([]);
     expect(
@@ -124,6 +124,47 @@ describe('mapNarrowing', () => {
         { clusterId: 'c2', value: '85', min: null, max: null },
       ],
     });
+  });
+
+  it('reads the applicability scope, article when absent or unknown', () => {
+    expect(mapNarrowing({ applicabilityScope: 'vehicle' }).applicabilityScope).toBe('vehicle');
+    expect(mapNarrowing({ applicabilityScope: 'article' }).applicabilityScope).toBe('article');
+    expect(mapNarrowing({}).applicabilityScope).toBe('article');
+    expect(mapNarrowing({ applicabilityScope: 'car' }).applicabilityScope).toBe('article');
+  });
+
+  it('keeps each variant’s alternatives, trimmed, dropping what is empty', () => {
+    const n = mapNarrowing({
+      applicabilityScope: 'vehicle',
+      clusters: [
+        {
+          id: 'k1',
+          fingerprint: {},
+          oeNumbers: [],
+          representative: { artId: 1, brand: 'LuK', number: '415 0463 10' },
+          articleCount: 3,
+          variants: [
+            { artId: 1, brand: 'LuK', number: '415 0463 10', tier: 1, applicability: [{ conditions: [], pairedWith: [' 623 3150 ## '] }] },
+            {
+              artId: 2,
+              brand: 'Sachs',
+              number: '2294 501 196',
+              tier: 1,
+              applicability: [
+                { conditions: [{ name: 'Année jusqu’à', values: [' 200602 ', ''] }, { name: '', values: ['x'] }], pairedWith: ['3000 951 220', ''] },
+                { conditions: [{ name: 'Année à partir de', values: [] }], pairedWith: [] },
+                { conditions: 'junk', pairedWith: 'junk' },
+              ],
+            },
+            { artId: 3, brand: 'Valeo', number: 'V1', tier: 2 },
+          ],
+        },
+      ],
+    });
+    const [luk, sachs, valeo] = n.clusters[0]!.variants;
+    expect(luk!.applicability).toEqual([{ conditions: [], pairedWith: ['623 3150 ##'] }]);
+    expect(sachs!.applicability).toEqual([{ conditions: [{ name: 'Année jusqu’à', values: ['200602'] }], pairedWith: ['3000 951 220'] }]);
+    expect(valeo!.applicability).toEqual([]);
   });
 
   it('keeps per-cluster applicability verbatim, empty when absent', () => {

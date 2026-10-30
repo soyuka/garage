@@ -4,7 +4,8 @@ import { mapNarrowing } from './api';
 import { NNBSP } from './format';
 import axial from '../test-fixtures/narrowed-307-axial.json';
 import mazda from '../test-fixtures/narrowed.json';
-import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, othersLabel, otherDimensions, pickChoice, questionOpen, refineHint, selectVariant, storedVerdict, variantMark, variantRows } from './variants';
+import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, othersLabel, otherDimensions, pickChoice, questionOpen, refineHint, selectVariant, storedVerdict, variantMark, variantNotes, variantRows } from './variants';
+import type { Cluster, Narrowing, Variant } from './types';
 import { VariantTable } from './ui/VariantTable';
 
 const n307 = () => mapNarrowing(axial);
@@ -115,6 +116,72 @@ describe('variantRows', () => {
     const [a, b] = variantRows(n307(), 'PEUGEOT');
     expect(a!.breakpoints).toEqual([{ label: 'Numéro OPR jusqu’à', values: ['10310', '10311'] }]);
     expect(b!.breakpoints).toEqual([{ label: 'N° OPR (date de fabrication du véhicule)', values: ['10311'] }]);
+  });
+});
+
+describe('vehicle scope', () => {
+  const variant = (brand: string, number: string, applicability: Variant['applicability']): Variant => ({ artId: 1, brand, number, tier: 1, applicability });
+  const espace = (): Narrowing => {
+    const base = n307();
+    const one = base.clusters[0]!;
+    const cluster: Cluster = {
+      ...one,
+      applicability: [{ name: 'Année à partir de', values: ['200506'] }, { name: 'Numéro OPR jusqu’à', values: ['10310'] }],
+      variants: [
+        variant('LuK', '415 0463 10', [{ conditions: [], pairedWith: ['623 3150 ##'] }]),
+        variant('Sachs', '2294 501 196', [{ conditions: [{ name: 'Année jusqu’à', values: ['200602'] }], pairedWith: ['3000 951 220', '3000 951 221'] }]),
+        variant('Valeo', 'V1', [
+          { conditions: [{ name: 'Année à partir de', values: ['200506'] }, { name: 'Boîte', values: ['manuelle'] }], pairedWith: [] },
+          { conditions: [{ name: 'Année à partir de', values: ['200506'] }], pairedWith: [] },
+        ]),
+        variant('Exedy', 'E1', []),
+      ],
+    };
+    return { ...base, applicabilityScope: 'vehicle', clusters: [cluster] };
+  };
+
+  it('lists the cluster’s shared conditions unfiltered, dated per car', () => {
+    const [row] = variantRows(espace(), null);
+    expect(row!.breakpoints).toEqual([
+      { label: 'Année à partir de', values: ['06/2005'] },
+      { label: 'Numéro OPR jusqu’à', values: ['10310'] },
+    ]);
+  });
+
+  it('keeps article-scope breakpoints filtered', () => {
+    const n = espace();
+    const [row] = variantRows({ ...n, applicabilityScope: 'article' }, null);
+    expect(row!.breakpoints).toEqual([{ label: 'Numéro OPR jusqu’à', values: ['10310'] }]);
+    expect(row!.variantNotes).toEqual([]);
+  });
+
+  it('notes what only some variants hold, minus the shared conditions, with the paired articles', () => {
+    const [row] = variantRows(espace(), null);
+    expect(row!.variantNotes).toEqual([
+      { ref: 'LuK 415 0463 10', text: 'avec 623 3150 ##' },
+      { ref: 'Sachs 2294 501 196', text: 'Année jusqu’à 02/2006, avec 3000 951 220 / 3000 951 221' },
+    ]);
+  });
+
+  it('joins alternatives with "ou" and skips a variant when any alternative adds nothing to the shared conditions', () => {
+    const c = espace().clusters[0]!;
+    expect(variantNotes({ ...c, variants: [c.variants[2]!] })).toEqual([]);
+    expect(variantNotes({ ...c, variants: [variant('V', '1', [{ conditions: [{ name: 'Boîte', values: ['manuelle'] }], pairedWith: [] }])] })).toEqual([{ ref: 'V 1', text: 'Boîte manuelle' }]);
+    const both: Cluster = {
+      ...c,
+      variants: [variant('A', '1', [{ conditions: [{ name: 'Boîte', values: ['manuelle'] }], pairedWith: [] }, { conditions: [], pairedWith: ['X 1'] }])],
+    };
+    expect(variantNotes(both)).toEqual([{ ref: 'A 1', text: 'Boîte manuelle ou avec X 1' }]);
+    expect(variantNotes({ ...c, variants: [c.variants[3]!, variant('B', '2', [{ conditions: [{ name: 'Année à partir de', values: ['200506'] }], pairedWith: [] }])] })).toEqual([]);
+  });
+
+  it('renders the vehicle header and the notes in the table', () => {
+    const n = espace();
+    const html = renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: null, selection: selectVariant(n, null), onPick: () => {} }));
+    expect(html).toContain('Applicabilité (ce véhicule)');
+    expect(html).toContain('avec 623 3150 ##');
+    const article = renderToStaticMarkup(createElement(VariantTable, { narrowing: { ...n, applicabilityScope: 'article' }, make: null, selection: selectVariant(n, null), onPick: () => {} }));
+    expect(article).toContain('Applicabilité (par article)');
   });
 });
 

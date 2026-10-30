@@ -10,6 +10,7 @@ import type {
   Divergence,
   ErrorKind,
   FallbackBrand,
+  LinkAlternative,
   Narrowing,
   PhotoIntake,
   ProductGroup,
@@ -171,6 +172,21 @@ const mapReference = (raw: unknown): Reference | null => {
   return brand && number ? { brand, number } : null;
 };
 
+const strings = (raw: unknown): string[] => list(raw).flatMap((v) => (typeof v === 'string' && v.trim() !== '' ? [v.trim()] : []));
+
+const mapApplicability = (raw: unknown): Applicability[] =>
+  list(raw).flatMap((a): Applicability[] => {
+    const name = str(obj(a).name);
+    const values = strings(obj(a).values);
+    return name && name.trim() !== '' && values.length > 0 ? [{ name: name.trim(), values }] : [];
+  });
+
+const mapAlternative = (raw: unknown): LinkAlternative[] => {
+  const conditions = mapApplicability(obj(raw).conditions);
+  const pairedWith = strings(obj(raw).pairedWith);
+  return conditions.length > 0 || pairedWith.length > 0 ? [{ conditions, pairedWith }] : [];
+};
+
 function mapCluster(raw: unknown): Cluster | null {
   const j = obj(raw);
   const id = str(j.id);
@@ -181,7 +197,7 @@ function mapCluster(raw: unknown): Cluster | null {
   const variants = list(j.variants).flatMap((v): Variant[] => {
     const ref = mapReference(v);
     const artId = num(obj(v).artId);
-    return ref && artId !== null ? [{ artId, ...ref, tier: int(obj(v).tier, 3) }] : [];
+    return ref && artId !== null ? [{ artId, ...ref, tier: int(obj(v).tier, 3), applicability: list(obj(v).applicability).flatMap(mapAlternative) }] : [];
   });
   return {
     id,
@@ -190,11 +206,7 @@ function mapCluster(raw: unknown): Cluster | null {
     representative: { artId: int(rep.artId), ...repRef },
     variants,
     articleCount: int(j.articleCount),
-    applicability: list(j.applicability).flatMap((a): Applicability[] => {
-      const name = str(obj(a).name);
-      const values = list(obj(a).values).flatMap((v) => (typeof v === 'string' && v.trim() !== '' ? [v.trim()] : []));
-      return name && name.trim() !== '' && values.length > 0 ? [{ name: name.trim(), values }] : [];
-    }),
+    applicability: mapApplicability(j.applicability),
   };
 }
 
@@ -251,6 +263,7 @@ export function mapNarrowing(raw: unknown): Narrowing {
     degradedReason: str(j.degradedReason),
     upstreamCalls: int(j.upstreamCalls),
     fallbackBrands: list(j.fallbackBrands).flatMap((b) => mapFallbackBrand(b) ?? []),
+    applicabilityScope: j.applicabilityScope === 'vehicle' ? 'vehicle' : 'article',
   };
 }
 

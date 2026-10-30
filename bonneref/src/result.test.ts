@@ -44,7 +44,7 @@ describe('pickOe', () => {
 });
 
 describe('foldEquivalents', () => {
-  const eq = { shown: [1, 2, 3].map((i) => ({ artId: i, brand: `B${i}`, number: `N${i}`, tier: 1 })), otherBrands: 4 };
+  const eq = { shown: [1, 2, 3].map((i) => ({ artId: i, brand: `B${i}`, number: `N${i}`, tier: 1, applicability: [] })), otherBrands: 4 };
 
   it('keeps the first references and counts every brand it hides', () => {
     const f = foldEquivalents(eq, 1);
@@ -62,10 +62,10 @@ describe('rankEquivalents', () => {
     const r = rankEquivalents({
       ...c1,
       variants: [
-        { artId: 1, brand: 'NONAME', number: 'N1', tier: 3 },
-        { artId: 2, brand: 'MAHLE', number: 'OC 1', tier: 1 },
-        { artId: 3, brand: 'MAHLE', number: 'OC 2', tier: 1 },
-        { artId: 4, brand: 'PURFLUX', number: 'LS1', tier: 2 },
+        { artId: 1, brand: 'NONAME', number: 'N1', tier: 3, applicability: [] },
+        { artId: 2, brand: 'MAHLE', number: 'OC 1', tier: 1, applicability: [] },
+        { artId: 3, brand: 'MAHLE', number: 'OC 2', tier: 1, applicability: [] },
+        { artId: 4, brand: 'PURFLUX', number: 'LS1', tier: 2, applicability: [] },
       ],
     }, 2);
     expect(r.shown.map((v) => v.number)).toEqual(['OC 1', 'LS1']);

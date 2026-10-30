@@ -2,7 +2,7 @@ import { dimText, findDim, threadOf, type DimKey } from './dims';
 import { NNBSP, formatCount, formatValue } from './format';
 import { pickOe, sameBrand } from './result';
 import type { ClusterChoice } from './route';
-import type { AgentSelection, Applicability, Cluster, Dimension, Divergence, Narrowing, Reference, StoredSelection } from './types';
+import type { AgentSelection, Applicability, Cluster, Dimension, Divergence, LinkAlternative, Narrowing, Reference, StoredSelection } from './types';
 
 // `open`: several parts and nobody chose, the first is shown. `answer`: the cote question settled it.
 // `user`: picked in the variant table, the user's call, not the catalogue's. `agent`: retained by the
@@ -103,6 +103,29 @@ export interface VariantRow {
   articleCount: number;
   differs: VariantCote[];
   breakpoints: ApplicabilityLine[];
+  variantNotes: VariantNote[];
+}
+
+export interface VariantNote {
+  ref: string;
+  text: string;
+}
+
+const lineText = (l: ApplicabilityLine): string => `${l.label} ${l.values.join(' · ')}`;
+
+const alternativeText = (alt: LinkAlternative, shared: readonly Applicability[]): string => {
+  const own = alt.conditions.filter((c) => !c.values.every((v) => shared.some((s) => s.name === c.name && s.values.includes(v))));
+  const parts = applicabilityLines(own).map(lineText);
+  if (alt.pairedWith.length > 0) parts.push(`avec ${alt.pairedWith.join(' / ')}`);
+  return parts.join(', ');
+};
+
+// What a variant holds on top of what every variant of its cluster holds on this car.
+export function variantNotes(cluster: Cluster): VariantNote[] {
+  return cluster.variants.flatMap((v) => {
+    const texts = v.applicability.map((alt) => alternativeText(alt, cluster.applicability));
+    return texts.length === 0 || texts.includes('') ? [] : [{ ref: `${v.brand} ${v.number}`, text: texts.join(' ou ') }];
+  });
 }
 
 const measureText = (d: Dimension): string => (d.number !== null ? `${dimText(d)}${d.unit ? `${NNBSP}${d.unit}` : ''}` : formatValue(d.value));
@@ -111,6 +134,7 @@ export const splitting = (differsOn: readonly Divergence[]): Divergence[] => dif
 
 export function variantRows(n: Narrowing, make: string | null): VariantRow[] {
   const divergences = splitting(n.differsOn);
+  const vehicle = n.applicabilityScope === 'vehicle';
   return n.clusters.map((c) => ({
     id: c.id,
     oe: pickOe(c, make, n.clusters),
@@ -122,7 +146,8 @@ export function variantRows(n: Narrowing, make: string | null): VariantRow[] {
       const text = dim ? measureText(dim) : raw ? `${formatValue(raw)}${d.unit ? `${NNBSP}${d.unit}` : ''}` : '';
       return { key: d.key, label: d.label, text };
     }),
-    breakpoints: applicabilityLines(c.applicability).filter((a) => BREAKPOINT.test(a.label)),
+    breakpoints: vehicle ? applicabilityLines(c.applicability) : applicabilityLines(c.applicability).filter((a) => BREAKPOINT.test(a.label)),
+    variantNotes: vehicle ? variantNotes(c) : [],
   }));
 }
 
