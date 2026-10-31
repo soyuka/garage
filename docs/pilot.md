@@ -98,7 +98,7 @@ Drives a full run against the live stack. Replace `VEHICLE` with an `@id` from `
 instead of read off the car goes in `nodes`, not `keys`.
 
 ```sh
-TOKEN=$(python3 -c "import json;d=json.load(open('$HOME/.claude.json'));print(d['projects']['~/projects/mon-parc-auto.fr/mon-parc-auto.fr']['mcpServers']['mon-parc-auto']['headers']['Authorization'].split()[1])")
+TOKEN=$(python3 -c "import json;d=json.load(open('$HOME/.claude.json'));print(d['projects'][__import__('os').getcwd()]['mcpServers']['mon-parc-auto']['headers']['Authorization'].split()[1])")
 SID=$(curl -sk -D- -o /dev/null -X POST https://localhost/mcp -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"demo","version":"1"}}}' \

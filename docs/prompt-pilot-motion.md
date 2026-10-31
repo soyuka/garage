@@ -1,6 +1,6 @@
 # Agent brief — the pilot-driven motion layer
 
-Hand this file to a fresh agent working in `~/projects/mon-parc-auto.fr/mon-parc-auto.fr`.
+Hand this file to a fresh agent working at the root of this repository.
 It is self-contained: it assumes no memory of the sessions that built the pilot channel.
 
 ---
@@ -92,7 +92,7 @@ Drive the UI over the pilot tools — `narrate_step`, `select_vehicle`, `focus_v
 `mon-parc-auto` server registered, or by raw JSON-RPC:
 
 ```sh
-TOKEN=$(python3 -c "import json;d=json.load(open('$HOME/.claude.json'));print(d['projects']['~/projects/mon-parc-auto.fr/mon-parc-auto.fr']['mcpServers']['mon-parc-auto']['headers']['Authorization'].split()[1])")
+TOKEN=$(python3 -c "import json;d=json.load(open('$HOME/.claude.json'));print(d['projects'][__import__('os').getcwd()]['mcpServers']['mon-parc-auto']['headers']['Authorization'].split()[1])")
 SID=$(curl -sk -D- -o /dev/null -X POST https://localhost/mcp -H "Authorization: Bearer $TOKEN" \
   -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
   -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"probe","version":"1"}}}' \
