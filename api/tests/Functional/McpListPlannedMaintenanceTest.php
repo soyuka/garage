@@ -48,7 +48,6 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
 
         // Spec attributes stay on a task for catalog/legacy data; no tool writes them onto a task now.
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $dm->clear();
         $stored = $dm->getRepository(PlannedMaintenance::class)->findOneBy(['type' => 'oil_change']);
         $stored->setAttribute(VehicleFact::fromSource('oil_capacity', '4.3', 'web', 'L'));

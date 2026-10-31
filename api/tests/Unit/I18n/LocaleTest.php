@@ -12,7 +12,7 @@ final class LocaleTest extends TestCase
 {
     public function testFrenchIsTheDefault(): void
     {
-        $this->assertSame(Locale::Fr, Locale::DEFAULT);
+        $this->assertSame(Locale::Fr, Locale::resolve(null));
     }
 
     #[DataProvider('tags')]

@@ -31,7 +31,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * composer and corrects it themselves before it becomes a turn (dashboard/CHOREOGRAPHY.md
  * § "La dictée", binding rule *nothing is submitted unheard*).
  */
-final class TranscriptionController
+final readonly class TranscriptionController
 {
     /**
      * An instruction is one line. 30 s of opus is ~90 KB, so a body past this is a thumb resting on
@@ -40,9 +40,9 @@ final class TranscriptionController
     private const int MAX_BYTES = 1024 * 1024;
 
     public function __construct(
-        private readonly TranscriptionClient $transcription,
-        private readonly GarageVocabulary $vocabulary,
-        private readonly LoggerInterface $logger,
+        private TranscriptionClient $transcription,
+        private GarageVocabulary $vocabulary,
+        private LoggerInterface $logger,
     ) {
     }
 

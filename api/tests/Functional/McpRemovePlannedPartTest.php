@@ -68,7 +68,6 @@ final class McpRemovePlannedPartTest extends AppTestCase
         $client = static::createClient();
         $client->disableReboot();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', 'CLIO', VehicleType::Car, 'user', year: 2004);
         $vehicle->setOwner('someone-else@example.com');
         $task = new PlannedMaintenance($vehicle, 'oil_change', 'user', parts: [['ref' => 'W 712/75']]);

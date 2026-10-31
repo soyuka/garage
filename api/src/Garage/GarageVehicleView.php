@@ -19,12 +19,12 @@ use App\Maintenance\VehicleHealthCalculator;
  * checklist is not part of this shape — it is its own subresource
  * (GET /garage/vehicles/{id}/planned-tasks), which the dashboard fetches on select.
  */
-final class GarageVehicleView
+final readonly class GarageVehicleView
 {
     public function __construct(
-        private readonly IriConverterInterface $iriConverter,
-        private readonly VehicleFactsProjector $factsProjector,
-        private readonly VehicleHealthCalculator $health,
+        private IriConverterInterface $iriConverter,
+        private VehicleFactsProjector $factsProjector,
+        private VehicleHealthCalculator $health,
     ) {
     }
 

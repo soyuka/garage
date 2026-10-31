@@ -48,7 +48,7 @@ class MaintenanceRecord
      * A part's `priceCents` is a UNIT price in cents; its line total is `priceCents * qty` (qty
      * defaults to 1 when absent) — see {@see getEffectiveCostCents()}.
      *
-     * @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
+     * @var list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     #[ODM\Field(type: 'collection')]
     private array $items = [];
@@ -106,9 +106,9 @@ class MaintenanceRecord
     /**
      * Validate + normalise a visit's line-items: drop empties, keep {type, optional label, parts}.
      *
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     * @param array<array{type?: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
      *
-     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
+     * @return list<array{type: string, label?: string, parts: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     private static function normaliseItems(array $items): array
     {
@@ -137,7 +137,7 @@ class MaintenanceRecord
      * MaintenanceRecordInput and the MCP log/edit tools) yields one consistent shape. Every other key
      * passes through untouched; a part with no price simply carries none (never a 0).
      *
-     * @param list<array<string, mixed>> $parts
+     * @param array<array<string, mixed>> $parts
      *
      * @return list<array<string, mixed>>
      */
@@ -169,7 +169,7 @@ class MaintenanceRecord
     }
 
     /**
-     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
+     * @return list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
      */
     public function getItems(): array
     {

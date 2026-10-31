@@ -17,7 +17,6 @@ final class GarageOwnerScopingGapsTest extends AppTestCase
     private function seedVehicle(string $owner): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', 'CLIO', VehicleType::Car, 'user', year: 2004);
         $vehicle->setOwner($owner);
         $dm->persist($vehicle);

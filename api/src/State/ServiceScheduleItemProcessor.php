@@ -27,13 +27,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<ServiceScheduleInput, ServiceScheduleItem>
  */
-final class ServiceScheduleItemProcessor implements ProcessorInterface
+final readonly class ServiceScheduleItemProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly DocumentManager $em,
-        private readonly OwnerContext $owner,
-        private readonly DomainPublisher $publisher,
+        private VehicleRepository $vehicles,
+        private DocumentManager $em,
+        private OwnerContext $owner,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -48,7 +48,7 @@ final class ServiceScheduleItemProcessor implements ProcessorInterface
 
         $action = MaintenanceAction::tryFrom($data->action);
         if (null === $action) {
-            throw new UnprocessableEntityHttpException(sprintf('action must be one of %s.', implode(', ', MaintenanceAction::values())));
+            throw new UnprocessableEntityHttpException(\sprintf('action must be one of %s.', implode(', ', MaintenanceAction::values())));
         }
 
         $hasUsage = null !== $data->everyUsageValue;

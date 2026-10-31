@@ -6,7 +6,8 @@ namespace App\Tests\Functional;
 
 /**
  * `open_vehicle` — the composite that answers « qu'est-ce que j'ai à faire sur la Mazda ? » in ONE
- * tool call. It replaces the four-call plumbing a pilot run used to need (list_vehicles to find the
+ * tool call. It replaces the four-call plumbing a pilot run used to need (list_vehicles to find the.
+ *
  * @id → select_vehicle → list_due_maintenance → list_planned_maintenance), each of which costs a
  * model round trip that the room watches as dead air.
  */

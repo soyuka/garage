@@ -108,9 +108,9 @@ final class GarageActionPromptLoader implements LoaderInterface
     {
         $svc = null !== $service && '' !== $service ? $service : 'oil_change';
         $idLine = null !== $plate && '' !== $plate
-            ? sprintf('Resolve the vehicle from plate "%s" with lookup_plate to get its carId.', $plate)
+            ? \sprintf('Resolve the vehicle from plate "%s" with lookup_plate to get its carId.', $plate)
             : (null !== $make && '' !== $make
-                ? sprintf('The vehicle is %s %s; get its carId via lookup_plate (if you have a plate) or list_cars.', $make, $model ?? '')
+                ? \sprintf('The vehicle is %s %s; get its carId via lookup_plate (if you have a plate) or list_cars.', $make, $model ?? '')
                 : 'First ask me for the vehicle (plate, or make+model).');
 
         return self::user(<<<PROMPT
@@ -130,13 +130,13 @@ final class GarageActionPromptLoader implements LoaderInterface
     {
         $args = [];
         if (null !== $make && '' !== $make) {
-            $args[] = sprintf('make="%s"', $make);
+            $args[] = \sprintf('make="%s"', $make);
         }
         if (null !== $model && '' !== $model) {
-            $args[] = sprintf('model="%s"', $model);
+            $args[] = \sprintf('model="%s"', $model);
         }
         if (null !== $vehicleType && '' !== $vehicleType) {
-            $args[] = sprintf('vehicleType="%s"', $vehicleType);
+            $args[] = \sprintf('vehicleType="%s"', $vehicleType);
         }
         $argLine = [] === $args ? 'no arguments (the whole garage)' : implode(', ', $args);
 
@@ -155,10 +155,10 @@ final class GarageActionPromptLoader implements LoaderInterface
     {
         $args = [];
         if (null !== $withinDays && '' !== $withinDays) {
-            $args[] = sprintf('withinDays=%s', $withinDays);
+            $args[] = \sprintf('withinDays=%s', $withinDays);
         }
         if (null !== $make && '' !== $make) {
-            $args[] = sprintf('make="%s"', $make);
+            $args[] = \sprintf('make="%s"', $make);
         }
         $argLine = [] === $args ? 'no arguments (whole garage, all upcoming)' : implode(', ', $args);
 
@@ -205,9 +205,9 @@ final class GarageActionPromptLoader implements LoaderInterface
     private static function logService(string $make, string $model, ?string $vehicleType = null, ?string $type = null): array
     {
         $segment = $vehicleType ?? 'car';
-        $vehicle = sprintf('%s %s (%s)', $make, $model, $segment);
+        $vehicle = \sprintf('%s %s (%s)', $make, $model, $segment);
         $typeLine = null !== $type && '' !== $type
-            ? sprintf('The service was: %s.', $type)
+            ? \sprintf('The service was: %s.', $type)
             : 'First ask me what service was performed (oil_change, oil_filter, tires, inspection, repair…; use "other" with a label for anything else).';
 
         return self::user(<<<PROMPT

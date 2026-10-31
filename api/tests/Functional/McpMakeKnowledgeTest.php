@@ -17,7 +17,6 @@ final class McpMakeKnowledgeTest extends AppTestCase
     private function seed(): void
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $dm->persist(new MakeKnowledge(
             ['Peugeot', 'Citroën'],

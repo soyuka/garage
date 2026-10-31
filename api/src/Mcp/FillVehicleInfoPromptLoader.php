@@ -49,7 +49,7 @@ final class FillVehicleInfoPromptLoader implements LoaderInterface
     private static function seed(string $make, string $model, ?string $vehicleType = null): array
     {
         $type = $vehicleType ?? 'car';
-        $vehicle = sprintf('%s %s (%s)', $make, $model, $type);
+        $vehicle = \sprintf('%s %s (%s)', $make, $model, $type);
 
         $text = <<<PROMPT
             You are completing the garage record for {$vehicle}. Work through these steps with me, asking one focused question at a time and writing each answer back to the store as you go.

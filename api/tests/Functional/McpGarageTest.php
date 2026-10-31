@@ -7,7 +7,6 @@ namespace App\Tests\Functional;
 use App\Agent\SelectedVehicleContext;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
-use Doctrine\ODM\MongoDB\DocumentManager;
 
 final class McpGarageTest extends AppTestCase
 {
@@ -121,7 +120,6 @@ final class McpGarageTest extends AppTestCase
 
         // With TORO selected on the dashboard, it must lead even though IVECO is more recent.
         $selected = static::getContainer()->get(SelectedVehicleContext::class);
-        \assert($selected instanceof SelectedVehicleContext);
         $selected->set($toroIri);
 
         $list = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 6)['result']['structuredContent'];
@@ -478,7 +476,6 @@ final class McpGarageTest extends AppTestCase
         // Facts are projected from the vehicle's items: the value + full provenance travel inline, and
         // a fact has no own dereferenceable IRI (no @id, no /garage/vehicle-facts endpoint).
         $oilType = $this->factByKey($facts, 'oil_type');
-        $this->assertNotNull($oilType);
         $this->assertSame('SAE 5W-30', $oilType['value']);
         $this->assertSame('llm', $oilType['source']);
         $this->assertFalse($oilType['verified']);
@@ -640,7 +637,7 @@ final class McpGarageTest extends AppTestCase
             }
         }
 
-        $this->fail(sprintf('No fact with key "%s" in %s', $key, json_encode($facts)));
+        $this->fail(\sprintf('No fact with key "%s" in %s', $key, json_encode($facts)));
     }
 
     public function testGetVehicleFactsByVehicleIri(): void
@@ -701,6 +698,6 @@ final class McpGarageTest extends AppTestCase
             }
         }
 
-        $this->fail(sprintf('No vehicle with make "%s" in %s', $make, json_encode($vehicles)));
+        $this->fail(\sprintf('No vehicle with make "%s" in %s', $make, json_encode($vehicles)));
     }
 }

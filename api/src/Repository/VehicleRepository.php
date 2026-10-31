@@ -78,7 +78,7 @@ final class VehicleRepository extends ServiceDocumentRepository
 
         $qb->addAnd($qb->expr()->addOr(...$match));
 
-        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->execute()->toArray());
+        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getIterator()->toArray());
     }
 
     /**
@@ -93,7 +93,7 @@ final class VehicleRepository extends ServiceDocumentRepository
         return array_values($this->baseQuery()
             ->field('kType')->equals($kType)
             ->sort('addedAt', 'desc')
-            ->getQuery()->execute()->toArray());
+            ->getQuery()->getIterator()->toArray());
     }
 
     /**
@@ -114,7 +114,7 @@ final class VehicleRepository extends ServiceDocumentRepository
             $qb->limit($limit)->skip(max(0, $offset));
         }
 
-        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->execute()->toArray());
+        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getIterator()->toArray());
     }
 
     /**
@@ -158,7 +158,7 @@ final class VehicleRepository extends ServiceDocumentRepository
         return array_values($qb
             ->sort(['updatedAt' => 'desc', 'addedAt' => 'desc'])
             ->limit(max(1, $limit))
-            ->getQuery()->execute()->toArray());
+            ->getQuery()->getIterator()->toArray());
     }
 
     private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType): Builder

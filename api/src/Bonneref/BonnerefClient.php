@@ -48,7 +48,7 @@ final readonly class BonnerefClient
      */
     public function models(int $makeId, CarType $carType = CarType::PassengerCar): array
     {
-        return array_map(Model::fromApi(...), $this->members(sprintf('/makes/%d/models', $makeId), ['carType' => $carType->value]));
+        return array_map(Model::fromApi(...), $this->members(\sprintf('/makes/%d/models', $makeId), ['carType' => $carType->value]));
     }
 
     /**
@@ -56,7 +56,7 @@ final readonly class BonnerefClient
      */
     public function cars(int $makeId, int $modelId, CarType $carType = CarType::PassengerCar, ?int $year = null, ?float $capacityLitres = null, ?string $fuel = null, ?string $search = null): array
     {
-        return array_map(Car::fromApi(...), $this->members(sprintf('/makes/%d/models/%d/cars', $makeId, $modelId), [
+        return array_map(Car::fromApi(...), $this->members(\sprintf('/makes/%d/models/%d/cars', $makeId, $modelId), [
             'carType' => $carType->value,
             'year' => $year,
             'capacityLitres' => $capacityLitres,
@@ -70,7 +70,7 @@ final readonly class BonnerefClient
      */
     public function partCategories(int $carId, CarType $carType = CarType::PassengerCar, bool $leafOnly = true, ?string $search = null): array
     {
-        return array_map(PartCategory::fromApi(...), $this->members(sprintf('/cars/%d/part-categories', $carId), [
+        return array_map(PartCategory::fromApi(...), $this->members(\sprintf('/cars/%d/part-categories', $carId), [
             'carType' => $carType->value,
             'leafOnly' => $leafOnly,
             'search' => $search,
@@ -82,12 +82,12 @@ final readonly class BonnerefClient
      */
     public function articles(int $carId, int $categoryId, CarType $carType = CarType::PassengerCar): array
     {
-        return array_map(Article::fromApi(...), $this->members(sprintf('/cars/%d/part-categories/%d/articles', $carId, $categoryId), ['carType' => $carType->value]));
+        return array_map(Article::fromApi(...), $this->members(\sprintf('/cars/%d/part-categories/%d/articles', $carId, $categoryId), ['carType' => $carType->value]));
     }
 
     public function narrowed(int $carId, int $categoryId, CarType $carType = CarType::PassengerCar, ?string $make = null, ?int $productGroupId = null): NarrowedParts
     {
-        return NarrowedParts::fromApi($this->get(sprintf('/cars/%d/part-categories/%d/narrowed', $carId, $categoryId), [
+        return NarrowedParts::fromApi($this->get(\sprintf('/cars/%d/part-categories/%d/narrowed', $carId, $categoryId), [
             'carType' => $carType->value,
             'make' => $make,
             'productGroupId' => $productGroupId,
@@ -141,13 +141,13 @@ final readonly class BonnerefClient
 
             return $response->toArray();
         } catch (ExceptionInterface $e) {
-            throw UpstreamException::transient(self::SOURCE, sprintf('bonneref %s: %s', $path, $e->getMessage()), $e);
+            throw UpstreamException::transient(self::SOURCE, \sprintf('bonneref %s: %s', $path, $e->getMessage()), $e);
         }
     }
 
     private function failed(string $path, int $status): UpstreamException
     {
-        $message = sprintf('bonneref %s answered %d.', $path, $status);
+        $message = \sprintf('bonneref %s answered %d.', $path, $status);
 
         return $status >= 500 || 429 === $status
             ? UpstreamException::transient(self::SOURCE, $message)

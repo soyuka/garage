@@ -22,12 +22,12 @@ use Symfony\Component\Uid\Ulid;
  * one open task instead of stacking duplicates — the agent re-emits the same plan when it re-reads a
  * service, and the checklist must stay a set, not a pile.
  */
-final class PlannedMaintenancePlanner
+final readonly class PlannedMaintenancePlanner
 {
     public function __construct(
-        private readonly VehicleWriteResolver $writeResolver,
-        private readonly PlannedMaintenanceRepository $tasks,
-        private readonly DocumentManager $entityManager,
+        private VehicleWriteResolver $writeResolver,
+        private PlannedMaintenanceRepository $tasks,
+        private DocumentManager $entityManager,
     ) {
     }
 

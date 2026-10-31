@@ -31,7 +31,7 @@ final class VerbalizerTest extends TestCase
         ];
 
         yield 'middle-dot chain, plus, brackets, dash before a digit' => [
-            "Dépenses TORO 246-H — 1 visite enregistrée · Total dépensé : 280,49 € · Postes principaux : pneus + chambres (commande pneus), vidange complète (huile + filtres), robinetterie essence, batterie · Prochain gros poste : montage des pneus avant (tâche ouverte)",
+            'Dépenses TORO 246-H — 1 visite enregistrée · Total dépensé : 280,49 € · Postes principaux : pneus + chambres (commande pneus), vidange complète (huile + filtres), robinetterie essence, batterie · Prochain gros poste : montage des pneus avant (tâche ouverte)',
             'Dépenses TORO 246-H, 1 visite enregistrée. Total dépensé : deux cent quatre-vingts euros quarante-neuf. Postes principaux : pneus plus chambres, commande pneus, vidange complète, huile plus filtres, robinetterie essence, batterie. Prochain gros poste : montage des pneus avant, tâche ouverte',
         ];
 
@@ -50,7 +50,7 @@ final class VerbalizerTest extends TestCase
             'Je consulte le catalogue',
         ];
 
-        /**
+        /*
          * The trailing « … » reaches the voice VERBATIM, and that is the decision — see the long note in
          * {@see \App\Speech\Verbalizer::rewriteSeparators()}. It is a prosody cue the model obeys with
          * ~0.3–0.5 s of trail-off, which is the bridge into the next line now that the seam is gapless
@@ -64,7 +64,7 @@ final class VerbalizerTest extends TestCase
             'Je consulte le catalogue…',
         ];
 
-        /** The ASCII spelling is NOT the same thing — it collapses to a full stop, as it always has. */
+        /* The ASCII spelling is NOT the same thing — it collapses to a full stop, as it always has. */
         yield 'an ASCII ellipsis still collapses to a single full stop' => [
             'Ouverture du dossier... lecture des données',
             'Ouverture du dossier. lecture des données',
@@ -75,21 +75,21 @@ final class VerbalizerTest extends TestCase
             'Filtre HERTH+BUSS J1313021',
         ];
 
-        /** Feminine units need « une », not the masculine "un" `NumberFormatter` spells by default. */
+        /* Feminine units need « une », not the masculine "un" `NumberFormatter` spells by default. */
         yield 'one hour and one minute take the feminine article' => [
             "Contrôle : 1 h d'immobilisation, 1 min de diagnostic",
             "Contrôle : une heure d'immobilisation, une minute de diagnostic",
         ];
 
-        /** Zero and one euro stay grammatically singular; two and up take the plural. */
+        /* Zero and one euro stay grammatically singular; two and up take the plural. */
         yield 'currency edge values: zero and one euro' => [
             'Reste 1 € sur la carte, 0 € en espèces, 2 € en jetons',
             'Reste un euro sur la carte, zéro euro en espèces, deux euros en jetons',
         ];
 
         yield 'grades dimensions and unhyphenated identifiers are never mistaken for part references' => [
-            "Huile 5W-30, ampoule 246-H, filtre J1313021, référence XB-301-ZB, pneu 16x650-8, indice A3/B3, lot 01M1SM29",
-            "Huile 5W-30, ampoule 246-H, filtre J1313021, référence iks bé, trois zéro un, zède bé, pneu 16x650-8, indice A3/B3, lot 01M1SM29",
+            'Huile 5W-30, ampoule 246-H, filtre J1313021, référence XB-301-ZB, pneu 16x650-8, indice A3/B3, lot 01M1SM29',
+            'Huile 5W-30, ampoule 246-H, filtre J1313021, référence iks bé, trois zéro un, zède bé, pneu 16x650-8, indice A3/B3, lot 01M1SM29',
         ];
 
         yield 'space-grouped numeric part references are shown but not spoken, with their connectors' => [
@@ -122,7 +122,7 @@ final class VerbalizerTest extends TestCase
             'Références bé cinq neuf trois, dix-huit, huit quatre zéro a et bé trois cé huit, dix-huit, huit quatre zéro.',
         ];
 
-        /**
+        /*
          * Only the numeral one carries gender in French ("un"/"une") — every other number is
          * invariant, so a bare 1 next to a non-unit noun is left as the digit rather than spelled with
          * the wrong gender ("un visite"). The voice already reads a lone "1" correctly against its
@@ -138,13 +138,13 @@ final class VerbalizerTest extends TestCase
             '1 visite enregistrée',
         ];
 
-        /** Rule 3 already turned this "1" into the gendered word before rule 7 ever sees it. */
+        /* Rule 3 already turned this "1" into the gendered word before rule 7 ever sees it. */
         yield 'a unit with a known gender still gets the spelled-out feminine article' => [
             '1 h',
             'une heure',
         ];
 
-        /** A decimal never faces the gender question — the value read aloud is "un virgule cinq", not the bare digit. */
+        /* A decimal never faces the gender question — the value read aloud is "un virgule cinq", not the bare digit. */
         yield 'a decimal is still fully spelled out, litres included' => [
             '1,5 L',
             'un virgule cinq litres',
@@ -175,7 +175,7 @@ final class VerbalizerTest extends TestCase
             'References bee five nine three, eighteen, eight four zero ay and bee three cee eight, eighteen, eight four zero.',
         ];
 
-        /**
+        /*
          * English inflects only for 1 ("zero euros", "one euro", "two euros") — unlike French, where
          * 0 stays singular too. Deliberately different rule, not a mirror of the French test above.
          */
@@ -184,7 +184,7 @@ final class VerbalizerTest extends TestCase
             'Balance: one euro on the card, zero euros in cash, two hundred eighty euros in tokens',
         ];
 
-        /** English has no gender ambiguity, but rule 7 keeps the same bare-one exception for symmetry. */
+        /* English has no gender ambiguity, but rule 7 keeps the same bare-one exception for symmetry. */
         yield 'a bare one before a non-unit noun stays a digit' => [
             '1 visit',
             '1 visit',

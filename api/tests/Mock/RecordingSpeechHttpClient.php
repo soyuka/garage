@@ -61,6 +61,9 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
         });
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         return $this->mock->request($method, $url, $options);
@@ -71,12 +74,19 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
         return $this->mock->stream($responses, $timeout);
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function withOptions(array $options): static
     {
         return $this;
     }
 
-    /** The last outgoing request, or null when the endpoint short-circuited before calling the vendor. */
+    /**
+     * The last outgoing request, or null when the endpoint short-circuited before calling the vendor.
+     *
+     * @return array{method: string, url: string, options: array<string, mixed>}|null
+     */
     public function lastRequest(): ?array
     {
         return $this->requests[array_key_last($this->requests)] ?? null;

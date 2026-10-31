@@ -50,7 +50,7 @@ final readonly class ShowDocumentProcessor implements ProcessorInterface
 
         $document = $this->documents->findOneForVehicle($vehicle, $data->document);
         if (null === $document) {
-            return ToolResult::of(['status' => 'not_found', 'reason' => sprintf('No document %s on this vehicle. Use a documentId from list_documents or search_documentation.', $data->document)]);
+            return ToolResult::of(['status' => 'not_found', 'reason' => \sprintf('No document %s on this vehicle. Use a documentId from list_documents or search_documentation.', $data->document)]);
         }
 
         if (null !== $data->page) {
@@ -59,7 +59,7 @@ final readonly class ShowDocumentProcessor implements ProcessorInterface
                 return ToolResult::of(['status' => 'invalid_input', 'reason' => 'This document has no text pages (an image or a scanned file): omit page.']);
             }
             if ($data->page < 1 || $data->page > $pageCount) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('page must be between 1 and %d for this document.', $pageCount)]);
+                return ToolResult::of(['status' => 'invalid_input', 'reason' => \sprintf('page must be between 1 and %d for this document.', $pageCount)]);
             }
         }
 

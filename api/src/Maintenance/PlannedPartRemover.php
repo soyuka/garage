@@ -13,11 +13,11 @@ use Symfony\Component\Uid\Ulid;
  * The one domain call behind dropping a shopping-list line, shared by the REST DELETE on the parts
  * subresource and the `remove_planned_part` MCP tool.
  */
-final class PlannedPartRemover
+final readonly class PlannedPartRemover
 {
     public function __construct(
-        private readonly DocumentManager $em,
-        private readonly DomainPublisher $publisher,
+        private DocumentManager $em,
+        private DomainPublisher $publisher,
     ) {
     }
 

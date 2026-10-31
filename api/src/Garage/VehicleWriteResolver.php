@@ -25,12 +25,12 @@ use Symfony\Component\Uid\Ulid;
  * A freshly created vehicle is persisted but NOT flushed — the caller persists its own child
  * (fact or record) and flushes once.
  */
-final class VehicleWriteResolver
+final readonly class VehicleWriteResolver
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly DocumentManager $entityManager,
-        private readonly OwnerContext $owner,
+        private VehicleRepository $vehicles,
+        private DocumentManager $entityManager,
+        private OwnerContext $owner,
     ) {
     }
 

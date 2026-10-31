@@ -15,11 +15,11 @@ use App\Maintenance\VehicleFactsProjector;
  * follow-up, without inlining every fact into the listing. The `@id` is the dereferenceable
  * GarageVehicle IRI: the agent reuses it as the `vehicle` input and can GET it directly.
  */
-final class VehicleSummaryView
+final readonly class VehicleSummaryView
 {
     public function __construct(
-        private readonly IriConverterInterface $iriConverter,
-        private readonly VehicleFactsProjector $factsProjector,
+        private IriConverterInterface $iriConverter,
+        private VehicleFactsProjector $factsProjector,
     ) {
     }
 

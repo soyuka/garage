@@ -34,7 +34,7 @@ use Symfony\AI\Platform\Result\StreamResult;
  *
  * A second listener rides the same streamed result: {@see EarlyStepNarrationListener} narrates a garage
  * tool call as soon as the model BEGINS it (`ToolCallStart`), rather than waiting for
- * {@see \App\Agent\Toolbox\CompositeToolbox::execute()} at message end — see that listener's docblock.
+ * {@see Toolbox\CompositeToolbox::execute()} at message end — see that listener's docblock.
  *
  * Best-effort: a failure is swallowed, never turning observability into a turn-killing error.
  */

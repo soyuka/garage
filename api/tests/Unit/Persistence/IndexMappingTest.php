@@ -19,14 +19,22 @@ use Symfony\Bundle\FrameworkBundle\Test\KernelTestCase;
  */
 final class IndexMappingTest extends KernelTestCase
 {
+    /**
+     * @param class-string $document
+     *
+     * @return array<mixed>
+     */
     private static function indexesOf(string $document): array
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         return $dm->getClassMetadata($document)->getIndexes();
     }
 
+    /**
+     * @param array<mixed>         $indexes
+     * @param array<string, mixed> $keys
+     */
     private static function hasIndexWithKeys(array $indexes, array $keys): bool
     {
         foreach ($indexes as $index) {

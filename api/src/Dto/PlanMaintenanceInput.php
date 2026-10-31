@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
-use App\Maintenance\MaintenanceType;
 
 final class PlanMaintenanceInput
 {

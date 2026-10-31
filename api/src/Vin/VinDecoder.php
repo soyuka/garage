@@ -44,7 +44,7 @@ final class VinDecoder
         $decoding->country = $vin->getCountry();
         $northAmerican = $this->isNorthAmerican($normalized);
         $decoding->modelYear = $northAmerican && [] !== $years ? max($years) : null;
-        $decoding->modelYearCodeCandidates = $northAmerican ? [] : array_values($years);
+        $decoding->modelYearCodeCandidates = $northAmerican ? [] : $years;
         $decoding->checksumValid = $northAmerican ? $this->checksumMatches($normalized) : null;
 
         return $decoding;

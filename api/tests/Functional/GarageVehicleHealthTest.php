@@ -21,7 +21,6 @@ final class GarageVehicleHealthTest extends AppTestCase
     private function seed(callable $build): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle('TORO', '246-H', VehicleType::GroundsCare, 'user');
         $vehicle->setOwner(self::TEST_OWNER);
@@ -36,7 +35,7 @@ final class GarageVehicleHealthTest extends AppTestCase
     public function testOverdueServiceReadsRed(): void
     {
         $client = static::createClient();
-        $vehicle = $this->seed(function (Vehicle $vehicle): void {
+        $vehicle = $this->seed(static function (Vehicle $vehicle): void {
             // A 12-month oil-change schedule, last done 2018 → overdue regardless of the wall clock.
             $vehicle->setServiceInterval(ServiceInterval::fromSource('oil_change', MaintenanceAction::Change, 'web', everyMonths: 12));
             new MaintenanceRecord($vehicle, [['type' => MaintenanceType::OilChange->value, 'parts' => []]], new \DateTimeImmutable('2018-01-01'), 'user');

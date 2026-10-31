@@ -17,13 +17,13 @@ use Symfony\Component\Routing\Attribute\Route;
  * visit. Owner-gated (firewall ^/garage DELETE + ownership here). Drops the binary from the object
  * store and the metadata from the visit in one unit of work, then fans the vehicle out over Mercure.
  */
-final class DeleteMaintenanceAttachmentController
+final readonly class DeleteMaintenanceAttachmentController
 {
     public function __construct(
-        private readonly OwnedRecordLocator $locator,
-        private readonly MaintenanceAttachmentStorage $storage,
-        private readonly DocumentManager $em,
-        private readonly DomainPublisher $publisher,
+        private OwnedRecordLocator $locator,
+        private MaintenanceAttachmentStorage $storage,
+        private DocumentManager $em,
+        private DomainPublisher $publisher,
     ) {
     }
 

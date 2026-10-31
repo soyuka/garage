@@ -20,7 +20,7 @@ use Symfony\Component\Uid\Ulid;
  * checklist), keyed so one key holds one value there. Replacing a key also tombstones the unverified
  * copies of it on other items, so a superseded value cannot resurface once the new one is removed.
  */
-final class VehicleFactWriter
+final readonly class VehicleFactWriter
 {
     public const string CARRIER_TYPE = 'user_facts';
 
@@ -36,11 +36,11 @@ final class VehicleFactWriter
     public const string BUILD_CODE_SOURCE = 'code de fabrication';
 
     public function __construct(
-        private readonly DocumentManager $em,
-        private readonly VehicleRepository $vehicles,
-        private readonly OwnerContext $owner,
-        private readonly VehicleFactsProjector $projector,
-        private readonly DomainPublisher $publisher,
+        private DocumentManager $em,
+        private VehicleRepository $vehicles,
+        private OwnerContext $owner,
+        private VehicleFactsProjector $projector,
+        private DomainPublisher $publisher,
     ) {
     }
 

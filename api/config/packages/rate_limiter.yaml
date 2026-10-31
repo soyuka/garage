@@ -1,0 +1,23 @@
+framework:
+    rate_limiter:
+        # In-app agent turns spend our Anthropic credits; MCP calls do not (the caller's own model
+        # reasons), so only POST /agent/turn consumes this. Keyed on the owner (Casdoor email).
+        agent_turn:
+            policy: sliding_window
+            limit: '%env(int:AGENT_TURN_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.agent_turn_limiter
+
+    cache:
+        pools:
+            cache.agent_turn_limiter:
+                adapter: cache.app
+
+when@test:
+    framework:
+        cache:
+            pools:
+                # cache.app is a filesystem pool that outlives the kernel, so every functional test
+                # posting a turn as TEST_OWNER would share one budget across the whole run.
+                cache.agent_turn_limiter:
+                    adapter: cache.adapter.array

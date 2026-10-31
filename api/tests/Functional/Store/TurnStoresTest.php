@@ -17,7 +17,7 @@ final class TurnStoresTest extends AppTestCase
     public function testCancellationIsSharedThroughMongoAndExpires(): void
     {
         self::bootKernel();
-        $this->assertInstanceOf(MongoTurnCancellations::class, static::getContainer()->get(TurnCancellations::class));
+        $this->assertInstanceOf(MongoTurnCancellations::class, self::service(TurnCancellations::class));
         $clock = new MockClock('2026-10-16 12:00:00');
         $cancellations = new MongoTurnCancellations(self::dm(), $clock);
 
@@ -42,9 +42,19 @@ final class TurnStoresTest extends AppTestCase
     {
         self::bootKernel();
         foreach ([TurnCancellation::class] as $class) {
-            $ttl = array_filter(self::dm()->getClassMetadata($class)->getIndexes(), static fn (array $i): bool => ['expiresAt' => 1] === $i['keys'] && 0 === ($i['options']['expireAfterSeconds'] ?? null));
+            $ttl = array_filter(self::dm()->getClassMetadata($class)->getIndexes(), self::isTtlIndex(...));
             $this->assertCount(1, $ttl, $class);
         }
+    }
+
+    private static function isTtlIndex(mixed $index): bool
+    {
+        return ['expiresAt' => 1] === $index['keys'] && 0 === ($index['options']['expireAfterSeconds'] ?? null);
+    }
+
+    private static function service(string $id): object
+    {
+        return static::getContainer()->get($id);
     }
 
     private static function dm(): DocumentManager

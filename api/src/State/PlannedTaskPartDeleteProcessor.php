@@ -17,11 +17,11 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<mixed, void>
  */
-final class PlannedTaskPartDeleteProcessor implements ProcessorInterface
+final readonly class PlannedTaskPartDeleteProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly OwnedPlannedTaskLocator $locator,
-        private readonly PlannedPartRemover $remover,
+        private OwnedPlannedTaskLocator $locator,
+        private PlannedPartRemover $remover,
     ) {
     }
 

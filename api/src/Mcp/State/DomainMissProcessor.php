@@ -20,6 +20,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 #[AsDecorator('api_platform.mcp.state_processor')]
 final readonly class DomainMissProcessor implements ProcessorInterface
 {
+    /** @param ProcessorInterface<mixed, mixed> $decorated */
     public function __construct(
         #[AutowireDecorated] private ProcessorInterface $decorated,
     ) {

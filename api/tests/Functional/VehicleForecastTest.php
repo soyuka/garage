@@ -23,7 +23,6 @@ final class VehicleForecastTest extends AppTestCase
     private function seedToro(): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle('TORO', '246-H', VehicleType::GroundsCare, 'user');
         $vehicle->setOwner(self::TEST_OWNER);

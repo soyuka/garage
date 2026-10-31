@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Motul;
 
 use App\Motul\MotulClient;
 use App\Motul\MotulRecommendationParser;
+use App\Motul\MotulVehicle;
 use App\Tests\Support\InMemoryMotulResponseStore;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -29,14 +30,11 @@ final class MotulClientTest extends TestCase
         $vehicles = $client->searchVehicle('mazda 6');
 
         $this->assertNotEmpty($vehicles);
-        $byId = [];
-        foreach ($vehicles as $v) {
-            $byId[$v->id] = $v;
-        }
-        $this->assertArrayHasKey('9950', $byId);
-        $this->assertSame('6', $byId['9950']->model);
-        $this->assertTrue($byId['9950']->coversYear(2004));
-        $this->assertFalse($byId['9950']->coversYear(2010));
+        $matches = array_values(array_filter($vehicles, static fn (MotulVehicle $v): bool => '9950' === $v->id));
+        $this->assertCount(1, $matches);
+        $this->assertSame('6', $matches[0]->model);
+        $this->assertTrue($matches[0]->coversYear(2004));
+        $this->assertFalse($matches[0]->coversYear(2010));
     }
 
     public function testRecommendationsParsesEngineCategory(): void
@@ -56,7 +54,7 @@ final class MotulClientTest extends TestCase
     public function testSuccessfulResponseIsCachedNotRefetched(): void
     {
         $calls = 0;
-        $http = new MockHttpClient(function () use (&$calls): MockResponse {
+        $http = new MockHttpClient(static function () use (&$calls): MockResponse {
             ++$calls;
 
             return new MockResponse(self::fixture('search-vehicle_mazda6.json'));

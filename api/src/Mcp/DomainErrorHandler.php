@@ -36,12 +36,13 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * @implements RequestHandlerInterface<mixed>
  */
 #[AsDecorator('api_platform.mcp.handler')]
-final class DomainErrorHandler implements RequestHandlerInterface
+final readonly class DomainErrorHandler implements RequestHandlerInterface
 {
     private const MISS = 'not_found';
 
+    /** @param RequestHandlerInterface<mixed> $decorated */
     public function __construct(
-        #[AutowireDecorated] private readonly RequestHandlerInterface $decorated,
+        #[AutowireDecorated] private RequestHandlerInterface $decorated,
     ) {
     }
 
@@ -78,12 +79,12 @@ final class DomainErrorHandler implements RequestHandlerInterface
                 'status' => 'upstream_unavailable',
                 'retryable' => true,
                 'source' => $e->source,
-                'hint' => sprintf('%s did not answer in time. This is temporary and says NOTHING about whether the thing you looked up exists — retry, and never report it to the user as "not found".', $e->source),
+                'hint' => \sprintf('%s did not answer in time. This is temporary and says NOTHING about whether the thing you looked up exists — retry, and never report it to the user as "not found".', $e->source),
             ] : [
                 'status' => 'upstream_rejected',
                 'retryable' => false,
                 'source' => $e->source,
-                'hint' => sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source),
+                'hint' => \sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source),
             ],
             $e instanceof RecordNotFoundException, $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
                 'status' => self::MISS,

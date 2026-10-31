@@ -26,7 +26,7 @@ use Symfony\Component\Uid\Ulid;
  * on the visit; a visit can carry several bills, so this appends rather than replaces. Fans the
  * vehicle out over Mercure like any write so the dashboard refreshes.
  */
-final class UploadMaintenanceAttachmentController
+final readonly class UploadMaintenanceAttachmentController
 {
     /** 10 MiB — a scanned multi-page invoice fits comfortably; anything larger is likely a mistake. */
     private const int MAX_BYTES = 10 * 1024 * 1024;
@@ -35,10 +35,10 @@ final class UploadMaintenanceAttachmentController
     private const array ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
     public function __construct(
-        private readonly OwnedRecordLocator $locator,
-        private readonly MaintenanceAttachmentStorage $storage,
-        private readonly DocumentManager $em,
-        private readonly DomainPublisher $publisher,
+        private OwnedRecordLocator $locator,
+        private MaintenanceAttachmentStorage $storage,
+        private DocumentManager $em,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -52,17 +52,17 @@ final class UploadMaintenanceAttachmentController
             throw new UnprocessableEntityHttpException('A file is required in the multipart "file" field.');
         }
         if (!$file->isValid()) {
-            throw new UnprocessableEntityHttpException(sprintf('Upload failed: %s.', $file->getErrorMessage()));
+            throw new UnprocessableEntityHttpException(\sprintf('Upload failed: %s.', $file->getErrorMessage()));
         }
 
         $size = (int) $file->getSize();
         if ($size > self::MAX_BYTES) {
-            throw new UnprocessableEntityHttpException(sprintf('File too large (%d bytes); the limit is %d bytes.', $size, self::MAX_BYTES));
+            throw new UnprocessableEntityHttpException(\sprintf('File too large (%d bytes); the limit is %d bytes.', $size, self::MAX_BYTES));
         }
 
         $mime = (string) $file->getMimeType();
         if (!\in_array($mime, self::ALLOWED_TYPES, true)) {
-            throw new UnprocessableEntityHttpException(sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
+            throw new UnprocessableEntityHttpException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
         }
 
         $recordId = (string) $record->getId();

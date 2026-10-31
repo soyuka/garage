@@ -20,16 +20,16 @@ use Symfony\Component\Uid\Ulid;
  * duplicate the planning path would have caught. Unlike planned items, records are never updated
  * in place: each log() is a new row, so a vehicle accumulates a full service history.
  */
-final class MaintenanceRecorder
+final readonly class MaintenanceRecorder
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly MaintenanceRecordRepository $records,
-        private readonly DocumentManager $entityManager,
-        private readonly VehicleWriteResolver $writeResolver,
-        private readonly PlannedMaintenancePlanner $planner,
-        private readonly PlannedMaintenanceRepository $plannedTasks,
-        private readonly MaintenanceTypeNormalizer $typeNormalizer = new MaintenanceTypeNormalizer(),
+        private VehicleRepository $vehicles,
+        private MaintenanceRecordRepository $records,
+        private DocumentManager $entityManager,
+        private VehicleWriteResolver $writeResolver,
+        private PlannedMaintenancePlanner $planner,
+        private PlannedMaintenanceRepository $plannedTasks,
+        private MaintenanceTypeNormalizer $typeNormalizer = new MaintenanceTypeNormalizer(),
     ) {
     }
 

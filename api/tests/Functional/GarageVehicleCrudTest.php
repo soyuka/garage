@@ -18,7 +18,6 @@ final class GarageVehicleCrudTest extends AppTestCase
     private function seedVehicle(string $make = 'MAZDA', string $model = 'MAZDA6'): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle($make, $model, VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -100,7 +99,6 @@ final class GarageVehicleCrudTest extends AppTestCase
 
         // But the row is only tombstoned, not erased.
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $stored = $dm->getRepository(Vehicle::class)->find((string) $vehicle->getId());
         $this->assertNotNull($stored, 'soft delete keeps the document');
         $this->assertTrue($stored->isDeleted());

@@ -34,7 +34,7 @@ class McpToolbox implements ToolboxInterface
      * meant for the agent, so it fails OPEN — a newly added tool surfaces to the agent automatically
      * and only an explicit entry here hides it. (An allowlist failed closed and silently stripped
      * update_vehicle/plan_maintenance when 586b223 added them without updating this list — the prompt
-     * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.)
+     * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.).
      *
      * Excluded from the garage agent: the make/model browse roots (lookup_plate / list_cars resolve the
      * carId directly). list_part_categories / list_articles stay
@@ -127,10 +127,7 @@ class McpToolbox implements ToolboxInterface
                 throw ToolNotFoundException::notFoundForToolCall($toolCall);
             }
 
-            throw ToolExecutionException::executionFailed(
-                $toolCall,
-                new \RuntimeException((string) ($response['error']['message'] ?? 'tool execution failed')),
-            );
+            throw ToolExecutionException::executionFailed($toolCall, new \RuntimeException((string) ($response['error']['message'] ?? 'tool execution failed')));
         }
 
         $result = $response['result'] ?? [];

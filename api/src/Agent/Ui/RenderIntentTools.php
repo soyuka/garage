@@ -154,11 +154,13 @@ final class RenderIntentTools
         Assert::allStringNotEmpty($keys);
         Assert::allIsInstanceOf($nodes, SpecNode::class);
 
+        // @phpstan-ignore arrayValues.list (model-supplied tool arguments: the list shape is the advertised schema, not a runtime guarantee)
         $action = ['type' => 'showFact', 'keys' => array_values($keys)];
         if (null !== $title && '' !== trim($title)) {
             $action['title'] = $title;
         }
         if ([] !== $nodes) {
+            // @phpstan-ignore arrayValues.list (model-supplied tool arguments: the list shape is the advertised schema, not a runtime guarantee)
             $action['nodes'] = array_map(static fn (SpecNode $n): array => $n->toArray(), array_values($nodes));
         }
         $this->publish($action);
@@ -180,6 +182,7 @@ final class RenderIntentTools
         Assert::allStringNotEmpty($keys);
         $action = ['type' => 'focusView', 'panel' => $panel];
         if ([] !== $keys) {
+            // @phpstan-ignore arrayValues.list (model-supplied tool arguments: the list shape is the advertised schema, not a runtime guarantee)
             $action['keys'] = array_values($keys);
         }
         $this->publish($action);
@@ -232,6 +235,7 @@ final class RenderIntentTools
         Assert::allStringNotEmpty($partKeys);
         $action = ['type' => 'revealAssembly', 'region' => $region];
         if ([] !== $partKeys) {
+            // @phpstan-ignore arrayValues.list (model-supplied tool arguments: the list shape is the advertised schema, not a runtime guarantee)
             $action['partKeys'] = array_values($partKeys);
         }
         $this->publish($action);

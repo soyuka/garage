@@ -33,7 +33,7 @@ final class VehicleDocumentRepository extends ServiceDocumentRepository
             $qb->field('kind')->equals($kind->value);
         }
 
-        return array_values($qb->getQuery()->execute()->toArray());
+        return array_values($qb->getQuery()->getIterator()->toArray());
     }
 
     public function findOneForVehicle(Vehicle $vehicle, string $id): ?VehicleDocument

@@ -29,15 +29,15 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @implements ProcessorInterface<EditMaintenanceInput, CallToolResult>
  */
-final class EditMaintenanceProcessor implements ProcessorInterface
+final readonly class EditMaintenanceProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly MaintenanceRecordRepository $records,
-        private readonly MaintenanceRecorder $recorder,
-        private readonly IriConverterInterface $iriConverter,
-        private readonly OwnerContext $owner,
-        private readonly RecordView $recordView,
-        private readonly DomainPublisher $publisher,
+        private MaintenanceRecordRepository $records,
+        private MaintenanceRecorder $recorder,
+        private IriConverterInterface $iriConverter,
+        private OwnerContext $owner,
+        private RecordView $recordView,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -52,15 +52,16 @@ final class EditMaintenanceProcessor implements ProcessorInterface
 
         try {
             $recordId = $this->iriConverter->getResourceFromIri($data->record)->id;
+            // @phpstan-ignore catch.neverThrown (GarageMaintenanceRecordProvider 404s through getResourceFromIri, whose @throws omits it)
         } catch (ItemNotFoundException|NotFoundHttpException) {
             return ToolResult::of([
                 'status' => 'not_found',
-                'reason' => sprintf('No maintenance record at %s.', $data->record),
+                'reason' => \sprintf('No maintenance record at %s.', $data->record),
             ]);
         } catch (\Throwable) {
             return ToolResult::of([
                 'status' => 'invalid_input',
-                'reason' => sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record),
+                'reason' => \sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record),
             ]);
         }
 
@@ -68,7 +69,7 @@ final class EditMaintenanceProcessor implements ProcessorInterface
         if (null === $record || $record->getVehicle()->getOwner() !== $this->owner->current() || $record->getVehicle()->isDeleted()) {
             return ToolResult::of([
                 'status' => 'not_found',
-                'reason' => sprintf('No maintenance record at %s.', $data->record),
+                'reason' => \sprintf('No maintenance record at %s.', $data->record),
             ]);
         }
 
@@ -85,7 +86,7 @@ final class EditMaintenanceProcessor implements ProcessorInterface
             } catch (\Exception) {
                 return ToolResult::of([
                     'status' => 'invalid_input',
-                    'reason' => sprintf('Invalid performedAt date "%s"; expected an ISO date like "2026-06-15".', $data->performedAt),
+                    'reason' => \sprintf('Invalid performedAt date "%s"; expected an ISO date like "2026-06-15".', $data->performedAt),
                 ]);
             }
         }
@@ -97,7 +98,7 @@ final class EditMaintenanceProcessor implements ProcessorInterface
             if (null === $unit) {
                 return ToolResult::of([
                     'status' => 'invalid_input',
-                    'reason' => sprintf('Unknown usageUnit "%s"; expected km, mi or hours.', $data->usageUnit),
+                    'reason' => \sprintf('Unknown usageUnit "%s"; expected km, mi or hours.', $data->usageUnit),
                 ]);
             }
             $changes['usageUnit'] = $unit;

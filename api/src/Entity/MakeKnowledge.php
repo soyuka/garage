@@ -33,7 +33,7 @@ class MakeKnowledge
     private \DateTimeImmutable $updatedAt;
 
     /**
-     * @param list<string>               $makes
+     * @param list<string>              $makes
      * @param list<MakeKnowledgeSource> $sources
      */
     public function __construct(

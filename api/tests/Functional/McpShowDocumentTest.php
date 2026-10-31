@@ -29,7 +29,6 @@ final class McpShowDocumentTest extends AppTestCase
         $client = static::createClient();
         $client->disableReboot();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', 'CLIO', VehicleType::Car, 'user', year: 2004);
         $vehicle->setOwner($owner);
         $dm->persist($vehicle);
@@ -173,7 +172,6 @@ final class McpShowDocumentTest extends AppTestCase
     {
         [, , $iri, $documentId] = $this->seedManual();
         $toolbox = static::getContainer()->get(McpToolbox::class);
-        \assert($toolbox instanceof McpToolbox);
 
         $names = array_map(static fn ($t): string => $t->getName(), $toolbox->getTools());
         self::assertContains('show_document', $names);

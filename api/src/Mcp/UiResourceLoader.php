@@ -20,7 +20,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * ({@see McpApps::resourceMarker()}), and PHP attribute arguments are constant expressions
  * only — they cannot hold a `\stdClass`.
  */
-final class UiResourceLoader implements LoaderInterface
+final readonly class UiResourceLoader implements LoaderInterface
 {
     public const MAINTENANCE_HISTORY_URI = 'ui://mon-parc-auto/maintenance-history';
 
@@ -34,9 +34,9 @@ final class UiResourceLoader implements LoaderInterface
 
     public function __construct(
         #[Autowire('%kernel.project_dir%/resources/mcp-ui')]
-        private readonly string $appDir,
+        private string $appDir,
         #[Autowire('%kernel.project_dir%/public/design/tokens')]
-        private readonly string $tokenDir,
+        private string $tokenDir,
     ) {
     }
 

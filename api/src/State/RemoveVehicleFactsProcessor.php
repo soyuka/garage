@@ -20,17 +20,18 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<RemoveVehicleFactsInput, CallToolResult>
  */
-final class RemoveVehicleFactsProcessor implements ProcessorInterface
+final readonly class RemoveVehicleFactsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleFactWriter $writer,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly IriConverterInterface $iriConverter,
+        private VehicleFactWriter $writer,
+        private VehicleIriResolver $iriResolver,
+        private IriConverterInterface $iriConverter,
     ) {
     }
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
+        // @phpstan-ignore function.alreadyNarrowedType (deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee)
         $keys = array_values(array_unique(array_filter($data->keys, static fn (mixed $k): bool => \is_string($k) && '' !== trim($k))));
         if ([] === $keys) {
             return ToolResult::of(['status' => 'invalid_input', 'reason' => 'keys must hold at least one fact key.']);

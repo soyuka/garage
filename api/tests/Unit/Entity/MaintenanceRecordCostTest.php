@@ -16,6 +16,9 @@ use PHPUnit\Framework\TestCase;
  */
 final class MaintenanceRecordCostTest extends TestCase
 {
+    /**
+     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     */
     private function record(array $items, ?int $costCents = null): MaintenanceRecord
     {
         $vehicle = new Vehicle('Mazda', '6', VehicleType::Car, 'siv');

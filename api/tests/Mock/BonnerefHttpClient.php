@@ -61,6 +61,9 @@ final class BonnerefHttpClient implements HttpClientInterface
         return $this->route($path, (string) file_get_contents(self::FIXTURES.$name.'.json'), $status, $query);
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         return $this->mock->request($method, $url, $options);
@@ -71,11 +74,17 @@ final class BonnerefHttpClient implements HttpClientInterface
         return $this->mock->stream($responses, $timeout);
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function withOptions(array $options): static
     {
         return $this;
     }
 
+    /**
+     * @return array{method: string, url: string, path: string, query: array<string, string>, headers: array<string, string>}|null
+     */
     public function lastRequest(): ?array
     {
         return [] === self::$requests ? null : self::$requests[array_key_last(self::$requests)];

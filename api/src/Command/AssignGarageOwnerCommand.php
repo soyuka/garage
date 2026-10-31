@@ -65,10 +65,10 @@ final class AssignGarageOwnerCommand extends Command
             $result = $this->dm->getDocumentCollection($class)
                 ->updateMany($match, ['$set' => ['owner' => $owner]]);
 
-            $io->writeln(sprintf('%s: %d matched, %d updated.', $class, $result->getMatchedCount(), $result->getModifiedCount()));
+            $io->writeln(\sprintf('%s: %d matched, %d updated.', $class, $result->getMatchedCount(), $result->getModifiedCount()));
         }
 
-        $io->success(sprintf('Garage rows %s assigned to "%s".', null === $from ? 'with no owner' : sprintf('owned by "%s"', $from), $owner));
+        $io->success(\sprintf('Garage rows %s assigned to "%s".', null === $from ? 'with no owner' : \sprintf('owned by "%s"', $from), $owner));
 
         return Command::SUCCESS;
     }

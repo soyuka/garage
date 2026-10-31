@@ -41,6 +41,6 @@ final class MaintenanceRecordRepository extends ServiceDocumentRepository
             $qb->limit($limit);
         }
 
-        return array_values($qb->getQuery()->execute()->toArray());
+        return array_values($qb->getQuery()->getIterator()->toArray());
     }
 }

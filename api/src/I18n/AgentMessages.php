@@ -102,7 +102,7 @@ final readonly class AgentMessages
                 ],
                 'list_due_maintenance' => [
                     'Je calcule les entretiens à venir…',
-                    "Je vérifie ce qui arrive à échéance…",
+                    'Je vérifie ce qui arrive à échéance…',
                     'Je fais le point sur les échéances…',
                     "J'évalue les prochaines interventions…",
                 ],

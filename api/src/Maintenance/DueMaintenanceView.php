@@ -21,7 +21,7 @@ final class DueMaintenanceView
     }
 
     /**
-     * @return array{@id: string, make: string, model: string, year: int|null, vehicleType: string}
+     * @return array{'@id': string, make: string, model: string, year: int|null, vehicleType: string}
      */
     public function identity(Vehicle $vehicle): array
     {

@@ -27,7 +27,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
     private function listener(\ArrayObject $published): EarlyStepNarrationListener
     {
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use ($published): string {
             $published->append(json_decode($update->getData(), true));
 
             return 'id';
@@ -51,6 +51,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
 
     public function testToolCallStartForAMappedToolNarratesOnceAndMarksItAnnounced(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $listener = $this->listener($published);
 
@@ -64,6 +65,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
 
     public function testToolCallStartForAnUnmappedToolNarratesNothingButStillAnnounces(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $listener = $this->listener($published);
 
@@ -75,6 +77,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
     /** narrate_step's args arrive split across two ToolInputDelta pieces; publish happens once, after the second. */
     public function testNarrateStepPublishesOnceAfterItsArgumentsCompleteAcrossTwoDeltas(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $listener = $this->listener($published);
 
@@ -93,6 +96,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
 
     public function testNarrateStepWhoseJsonNeverCompletesPublishesNothing(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $listener = $this->listener($published);
 

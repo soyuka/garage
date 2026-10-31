@@ -35,10 +35,17 @@ docker compose exec php vendor/bin/phpunit
 docker compose exec php vendor/bin/phpunit tests/Functional/McpOpenVehicleTest.php
 docker compose exec php vendor/bin/phpunit --filter testOpensByQuery
 docker compose exec php php -d memory_limit=1G vendor/bin/phpunit    # ALWAYS — see below
+docker compose exec php composer cs:check
+docker compose exec php composer phpstan
 ```
 
-**No php-cs-fixer and no phpstan in this repo** — the global pre-push gate does not apply here.
-`vendor/bin/phpunit` is the whole toolchain.
+Code quality (2026-10-31): `composer cs` / `composer cs:check` (php-cs-fixer, `@Symfony` +
+`@Symfony:risky` with `declare_strict_types` kept — the risky set's default would strip it from every
+file) and `composer phpstan` (level 6, no baseline, no `ignoreErrors`; it warms the **test** debug
+container first because test-only services like `RecordingHub` live only there). Inline
+`@phpstan-ignore` is reserved for genuine false positives and always carries its reason.
+`tests/PHPStan/OdmMappedPropertiesExtension.php` teaches PHPStan that ODM-mapped properties are
+hydrated/persisted: phpstan-doctrine's equivalent is ORM-only.
 
 **Always raise the memory limit**, not just for the full suite (corrected 2026-09-11): the container's
 `memory_limit` is 128M and building the MCP registry alone costs ~120 MB, so even a single functional
@@ -99,6 +106,11 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   202 instead (no worker, bonneref deployed alone), capped by `AGENT_TURN_TIME_LIMIT`. Without
   Postgres, also set `SKIP_DATABASE_WAIT=1`: `.env` always declares `DATABASE_URL`, so the entrypoint
   otherwise waits 60 s for it and exits 1.
+- **`POST /agent/turn` is rate-limited per owner** (`limiter.agent_turn`, sliding window,
+  `AGENT_TURN_RATE_LIMIT` per hour, default 30): in-app turns spend our Anthropic credits on a public
+  demo. Over the limit: 429 + `Retry-After`, nothing enqueued. MCP calls are not limited (the caller's
+  model reasons). The test env swaps its pool to an array adapter, or every functional test posting as
+  `TEST_OWNER` would share one budget across the run.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
   `TypeInfoDescriber`.
 - **One unnamed Mercure hub per *configuration*.** Mercure 1.0 refuses a second one anywhere, and

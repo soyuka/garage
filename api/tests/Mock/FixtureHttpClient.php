@@ -23,6 +23,9 @@ final class FixtureHttpClient implements HttpClientInterface
         $this->mock = new MockHttpClient($this->respond(...));
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
         return $this->mock->request($method, $url, $options);
@@ -33,6 +36,9 @@ final class FixtureHttpClient implements HttpClientInterface
         return $this->mock->stream($responses, $timeout);
     }
 
+    /**
+     * @param array<string, mixed> $options
+     */
     public function withOptions(array $options): static
     {
         return clone $this;

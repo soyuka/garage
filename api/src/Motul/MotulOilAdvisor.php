@@ -150,7 +150,7 @@ final class MotulOilAdvisor
         }
 
         $result['otherFluids'] = array_values(array_filter(array_map(
-            function (MotulCategory $c): ?array {
+            static function (MotulCategory $c): ?array {
                 if ($c->isEngine() || [] === $c->viscosities()) {
                     return null;
                 }
@@ -273,11 +273,11 @@ final class MotulOilAdvisor
      */
     private function candidate(MotulVehicle $v): array
     {
-        $years = null !== $v->startYear ? sprintf('%d-%s', $v->startYear, $v->endYear ?? '') : null;
+        $years = null !== $v->startYear ? \sprintf('%d-%s', $v->startYear, $v->endYear ?? '') : null;
 
         return array_filter([
             'id' => $v->id,
-            'label' => trim(sprintf('%s %s %s', $v->brand, $v->model, $v->type)),
+            'label' => trim(\sprintf('%s %s %s', $v->brand, $v->model, $v->type)),
             'years' => $years,
             'modelCode' => $v->modelCode,
         ], static fn (mixed $x): bool => null !== $x);

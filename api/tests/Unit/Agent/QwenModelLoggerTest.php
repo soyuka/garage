@@ -79,12 +79,15 @@ final class QwenModelLoggerTest extends TestCase
 
     /**
      * @param array<string, mixed> $data
+     *
+     * @return RawResultInterface&object{reads: int}
      */
     private function rawResult(array $data): RawResultInterface
     {
         return new class($data) implements RawResultInterface {
             public int $reads = 0;
 
+            /** @param array<string, mixed> $data */
             public function __construct(private readonly array $data)
             {
             }

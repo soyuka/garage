@@ -96,7 +96,7 @@ final readonly class OpenVehicleProcessor implements ProcessorInterface
         ]);
     }
 
-    /** @return array{@id: string, label: string} */
+    /** @return array{'@id': string, label: string} */
     private function label(Vehicle $vehicle): array
     {
         return [

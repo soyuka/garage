@@ -21,7 +21,6 @@ final class VehicleDocumentTest extends AppTestCase
     private function seedVehicle(string $owner = self::TEST_OWNER, string $model = 'CLIO'): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', $model, VehicleType::Car, 'user', year: 2004);
         $vehicle->setOwner($owner);
         $dm->persist($vehicle);
@@ -34,7 +33,6 @@ final class VehicleDocumentTest extends AppTestCase
     private function seedPlannedTask(Vehicle $vehicle): string
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $task = new PlannedMaintenance($dm->find(Vehicle::class, (string) $vehicle->getId()), 'gearbox_oil', 'agent');
         $dm->persist($task);
         $dm->flush();
@@ -249,7 +247,6 @@ final class VehicleDocumentTest extends AppTestCase
         self::assertSame(0, $tester->execute($args), $tester->getDisplay());
 
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $collection = $dm->getDocumentCollection(VehicleDocument::class);
         $filter = ['vehicle' => (string) $vehicle->getId()];
         self::assertSame(1, $collection->countDocuments($filter));

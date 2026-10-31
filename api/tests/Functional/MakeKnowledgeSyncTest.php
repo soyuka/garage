@@ -65,7 +65,6 @@ final class MakeKnowledgeSyncTest extends AppTestCase
     private function repository(): MakeKnowledgeRepository
     {
         $repository = static::getContainer()->get(MakeKnowledgeRepository::class);
-        \assert($repository instanceof MakeKnowledgeRepository);
 
         return $repository;
     }
@@ -73,7 +72,6 @@ final class MakeKnowledgeSyncTest extends AppTestCase
     private function clear(): void
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $dm->clear();
     }
 

@@ -40,6 +40,6 @@ final class MaintenanceAttachmentStorage
 
     private function key(string $recordId, string $attachmentId): string
     {
-        return sprintf('%s/%s', $recordId, $attachmentId);
+        return \sprintf('%s/%s', $recordId, $attachmentId);
     }
 }

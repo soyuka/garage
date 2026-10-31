@@ -33,7 +33,7 @@ final class AgentTurnStreamingTest extends AppTestCase
         $receivedOptions = [];
         // Scripted LLM: 1st call → a toast tool call; 2nd → finish. ScriptedStreamPlatform delivers
         // each as a stream, mirroring the real Anthropic platform under stream:true.
-        $platform = new ScriptedStreamPlatform(function ($model, $input, array $options) use (&$receivedOptions): ToolCallResult|string {
+        $platform = new ScriptedStreamPlatform(static function ($model, $input, array $options) use (&$receivedOptions): ToolCallResult|string {
             $receivedOptions = $options;
 
             $executed = 0;

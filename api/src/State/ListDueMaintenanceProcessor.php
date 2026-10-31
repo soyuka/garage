@@ -25,7 +25,7 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<ListDueMaintenanceInput, CallToolResult>
  */
-final class ListDueMaintenanceProcessor implements ProcessorInterface
+final readonly class ListDueMaintenanceProcessor implements ProcessorInterface
 {
     private const array NOTES = [
         'Every due item comes from a per-vehicle recurring rule the user/LLM set (set_maintenance_schedule). There is no general-knowledge fallback: a vehicle with no schedule has no forecast — define its intervals first.',
@@ -35,9 +35,9 @@ final class ListDueMaintenanceProcessor implements ProcessorInterface
     ];
 
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly DueMaintenanceCalculator $calculator,
-        private readonly DueMaintenanceView $dueView,
+        private VehicleRepository $vehicles,
+        private DueMaintenanceCalculator $calculator,
+        private DueMaintenanceView $dueView,
     ) {
     }
 

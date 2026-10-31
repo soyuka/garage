@@ -19,7 +19,6 @@ final class VehicleRepositoryTest extends AppTestCase
     private function persistVehicle(string $make, string $model): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle($make, $model, VehicleType::GroundsCare, 'test');
         $vehicle->setOwner(self::TEST_OWNER);
@@ -33,7 +32,6 @@ final class VehicleRepositoryTest extends AppTestCase
     private function repository(): VehicleRepository
     {
         $repository = static::getContainer()->get(VehicleRepository::class);
-        \assert($repository instanceof VehicleRepository);
 
         return $repository;
     }
@@ -93,7 +91,6 @@ final class VehicleRepositoryTest extends AppTestCase
     private function persistTouched(string $make, string $model, \DateTimeImmutable $at): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle($make, $model, VehicleType::GroundsCare, 'test');
         $vehicle->setOwner(self::TEST_OWNER);

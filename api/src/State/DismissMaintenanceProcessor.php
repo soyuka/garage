@@ -25,14 +25,14 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<DismissMaintenanceInput, CallToolResult>
  */
-final class DismissMaintenanceProcessor implements ProcessorInterface
+final readonly class DismissMaintenanceProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PlannedMaintenancePlanner $planner,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly PlannedTaskView $taskView,
-        private readonly DomainPublisher $publisher,
+        private PlannedMaintenancePlanner $planner,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private PlannedTaskView $taskView,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -80,7 +80,7 @@ final class DismissMaintenanceProcessor implements ProcessorInterface
         if ('task_not_found' === $outcome->status) {
             return ToolResult::of([
                 'status' => 'task_not_found',
-                'reason' => sprintf('No open task "%s"%s on this vehicle\'s checklist — nothing to remove.', $data->type, null !== $data->label ? sprintf(' (%s)', $data->label) : ''),
+                'reason' => \sprintf('No open task "%s"%s on this vehicle\'s checklist — nothing to remove.', $data->type, null !== $data->label ? \sprintf(' (%s)', $data->label) : ''),
             ]);
         }
 

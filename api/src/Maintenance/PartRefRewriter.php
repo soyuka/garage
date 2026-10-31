@@ -7,9 +7,9 @@ namespace App\Maintenance;
 final readonly class PartRefRewriter
 {
     /**
-     * @param list<array<string, mixed>>   $parts
-     * @param list<array{string, string}>  $changes    [from, to] per rewritten ref
-     * @param list<string>                 $collisions refs a rewrite made two lines share
+     * @param list<array<string, mixed>>  $parts
+     * @param list<array{string, string}> $changes    [from, to] per rewritten ref
+     * @param list<string>                $collisions refs a rewrite made two lines share
      */
     private function __construct(
         public array $parts,

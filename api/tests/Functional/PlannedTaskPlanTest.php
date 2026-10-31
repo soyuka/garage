@@ -35,6 +35,9 @@ final class PlannedTaskPlanTest extends AppTestCase
         ];
     }
 
+    /**
+     * @return array<string, string>
+     */
     private static function headers(): array
     {
         return self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'];
@@ -184,7 +187,6 @@ final class PlannedTaskPlanTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $existing = new Vehicle('TORO', '246-H', VehicleType::GroundsCare, 'user');
         $existing->setOwner(self::TEST_OWNER);
         $dm->persist($existing);

@@ -45,7 +45,7 @@ final class AgentTurnRepository extends ServiceDocumentRepository
                 ->sort('startedAt', 'desc')
                 ->limit($limit)
                 ->getQuery()
-                ->execute()
+                ->getIterator()
                 ->toArray()
         );
     }

@@ -14,11 +14,11 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * record's own PATCH/DELETE enforce (a foreign or soft-deleted vehicle's record is a 404). Shared
  * by the three attachment controllers so the tenancy check lives in one place.
  */
-final class OwnedRecordLocator
+final readonly class OwnedRecordLocator
 {
     public function __construct(
-        private readonly MaintenanceRecordRepository $records,
-        private readonly OwnerContext $owner,
+        private MaintenanceRecordRepository $records,
+        private OwnerContext $owner,
     ) {
     }
 

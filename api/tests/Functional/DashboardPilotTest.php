@@ -416,5 +416,4 @@ final class DashboardPilotTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(401);
     }
-
 }

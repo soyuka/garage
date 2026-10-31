@@ -14,6 +14,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -34,13 +35,14 @@ use Symfony\Component\Routing\Attribute\Route;
  * `Request::getSchemeAndHttpHost()` can report the internal scheme/host (e.g. http://php), which
  * would publish render intents to a topic no dashboard listens on.
  */
-final class AgentTurnController
+final readonly class AgentTurnController
 {
     public function __construct(
-        private readonly TurnDispatcher $turns,
-        private readonly Security $security,
+        private TurnDispatcher $turns,
+        private Security $security,
+        private RateLimiterFactoryInterface $agentTurnLimiter,
         #[Autowire('%env(DEFAULT_URI)%')]
-        private readonly string $baseUri,
+        private string $baseUri,
     ) {
     }
 
@@ -63,10 +65,21 @@ final class AgentTurnController
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
         // owner is always present — the turn never runs unowned.
+        $owner = $this->security->getUser()?->getUserIdentifier() ?? '';
+
+        $limit = $this->agentTurnLimiter->create($owner)->consume();
+        if (!$limit->isAccepted()) {
+            return new JsonResponse(
+                ['error' => 'agent turn limit reached'],
+                Response::HTTP_TOO_MANY_REQUESTS,
+                ['Retry-After' => (string) max(1, $limit->getRetryAfter()->getTimestamp() - time())],
+            );
+        }
+
         $this->turns->dispatch(new RunAgentTurn(
             instruction: $instruction,
             sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
-            owner: $this->security->getUser()?->getUserIdentifier() ?? '',
+            owner: $owner,
             selectedId: trim((string) ($payload['selectedId'] ?? '')),
             summary: trim((string) ($payload['summary'] ?? '')),
             pendingContext: trim((string) ($payload['pendingContext'] ?? '')),

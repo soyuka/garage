@@ -32,11 +32,11 @@ final readonly class VehicleDocumentView
 
     public function url(VehicleDocument $document): string
     {
-        return sprintf('/garage/vehicles/%s/documents/%s/file', $document->getVehicle()->getId(), $document->getId());
+        return \sprintf('/garage/vehicles/%s/documents/%s/file', $document->getVehicle()->getId(), $document->getId());
     }
 
     public function pagesUrl(VehicleDocument $document): string
     {
-        return sprintf('/garage/vehicles/%s/documents/%s/pages', $document->getVehicle()->getId(), $document->getId());
+        return \sprintf('/garage/vehicles/%s/documents/%s/pages', $document->getVehicle()->getId(), $document->getId());
     }
 }

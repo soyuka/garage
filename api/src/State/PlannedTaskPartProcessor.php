@@ -7,8 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTaskPart;
-use App\Mercure\DomainPublisher;
 use App\Maintenance\OwnedPlannedTaskLocator;
+use App\Mercure\DomainPublisher;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -20,12 +20,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<PlannedTaskPart, PlannedTaskPart>
  */
-final class PlannedTaskPartProcessor implements ProcessorInterface
+final readonly class PlannedTaskPartProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly OwnedPlannedTaskLocator $locator,
-        private readonly DocumentManager $em,
-        private readonly DomainPublisher $publisher,
+        private OwnedPlannedTaskLocator $locator,
+        private DocumentManager $em,
+        private DomainPublisher $publisher,
     ) {
     }
 

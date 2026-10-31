@@ -20,7 +20,6 @@ final class MaintenanceAttachmentTest extends AppTestCase
     private function seedVehicleIri(): string
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -65,7 +64,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
         ], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
 
         self::assertSame(201, $browser->getResponse()->getStatusCode());
-        $att = json_decode($browser->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR);
+        $att = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
         self::assertSame('facture.pdf', $att['filename']);
         self::assertSame('application/pdf', $att['contentType']);
         self::assertSame(\strlen(self::PDF), $att['size']);
@@ -85,7 +84,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $browser->request('POST', $recordIri.'/attachments', [], [
             'file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf'),
         ], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
-        $url = json_decode($browser->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR)['url'];
+        $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
 
         $browser->request('GET', $url, [], [], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
         $res = $browser->getResponse();
@@ -118,7 +117,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
 
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $auth);
-        $url = json_decode($browser->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR)['url'];
+        $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
 
         $browser->request('DELETE', $url, [], [], $auth);
         self::assertSame(204, $browser->getResponse()->getStatusCode());
@@ -165,7 +164,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
 
         // Owner uploads; intruder can neither download nor delete it.
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $owner);
-        $url = json_decode($browser->getResponse()->getContent(), true, flags: JSON_THROW_ON_ERROR)['url'];
+        $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
 
         $browser->request('GET', $url, [], [], $intruder);
         self::assertSame(404, $browser->getResponse()->getStatusCode());

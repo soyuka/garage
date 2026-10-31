@@ -63,7 +63,7 @@ final class BackfillPlannedPartIdsCommand extends Command
             }
         }
 
-        $io->success(sprintf('%d part line(s) stamped across %d task(s).', $linesStamped, $tasksTouched));
+        $io->success(\sprintf('%d part line(s) stamped across %d task(s).', $linesStamped, $tasksTouched));
 
         return Command::SUCCESS;
     }

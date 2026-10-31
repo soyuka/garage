@@ -20,11 +20,11 @@ use Symfony\Component\Uid\Ulid;
  * UPSERTS each rule keyed by {@see ServiceInterval::key()}: re-sending a cadence refreshes the one
  * rule in place, new cadences append, unmentioned ones stay (additive, like the fact store).
  */
-final class ServiceSchedulePlanner
+final readonly class ServiceSchedulePlanner
 {
     public function __construct(
-        private readonly VehicleWriteResolver $writeResolver,
-        private readonly DocumentManager $entityManager,
+        private VehicleWriteResolver $writeResolver,
+        private DocumentManager $entityManager,
     ) {
     }
 

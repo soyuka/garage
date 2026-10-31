@@ -18,12 +18,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<mixed, null>
  */
-final class GarageVehicleFactDeleteProcessor implements ProcessorInterface
+final readonly class GarageVehicleFactDeleteProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly OwnerContext $owner,
-        private readonly VehicleFactWriter $writer,
+        private VehicleRepository $vehicles,
+        private OwnerContext $owner,
+        private VehicleFactWriter $writer,
     ) {
     }
 
@@ -38,7 +38,7 @@ final class GarageVehicleFactDeleteProcessor implements ProcessorInterface
 
         $key = (string) $uriVariables['key'];
         if ([] === $this->writer->remove($vehicle, [$key])['removed']) {
-            throw new NotFoundHttpException(sprintf('No fact "%s" on this vehicle.', $key));
+            throw new NotFoundHttpException(\sprintf('No fact "%s" on this vehicle.', $key));
         }
 
         return null;

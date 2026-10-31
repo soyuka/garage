@@ -56,7 +56,7 @@ final readonly class TurnContextBuilder
 
         if ('' !== $turn->pendingContext) {
             $context .= "\n\nCarte d'action que tu viens d'afficher à l'utilisateur — sa réponse, même"
-                ." brève (un moteur, un nombre, « oui »), répond À CETTE QUESTION ; interprète-la dans"
+                .' brève (un moteur, un nombre, « oui »), répond À CETTE QUESTION ; interprète-la dans'
                 ." ce contexte plutôt que de repartir de zéro :\n  ".$turn->pendingContext;
         }
 
@@ -81,9 +81,9 @@ final readonly class TurnContextBuilder
         };
 
         return \sprintf(
-            "Write every user-facing string this turn in %s — toast messages, suggestion chips, fact"
-            ." labels and any narration. This is the language of the interface the user is looking at."
-            ." It does NOT change the tool names, the part references or the service-type keys, which"
+            'Write every user-facing string this turn in %s — toast messages, suggestion chips, fact'
+            .' labels and any narration. This is the language of the interface the user is looking at.'
+            .' It does NOT change the tool names, the part references or the service-type keys, which'
             ." stay exactly as the tools define them.\n\n",
             $language,
         );
@@ -157,7 +157,7 @@ final readonly class TurnContextBuilder
         $lines = array_map(static function (PlannedMaintenance $task): string {
             $name = $task->getType().(null !== $task->getLabel() ? ' ('.$task->getLabel().')' : '');
             $target = null !== $task->getTargetUsageValue()
-                ? ' — cible '.$task->getTargetUsageValue().' '.($task->getTargetUsageUnit()?->value ?? '')
+                ? ' — cible '.$task->getTargetUsageValue().' '.($task->getTargetUsageUnit()->value ?? '')
                 : '';
 
             $line = \sprintf('  - [%s] %s%s', $task->getId(), $name, rtrim($target));

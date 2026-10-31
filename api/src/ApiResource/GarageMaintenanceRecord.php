@@ -132,7 +132,7 @@ final class GarageMaintenanceRecord
             'filename' => $attachment->getFilename(),
             'contentType' => $attachment->getContentType(),
             'size' => $attachment->getSize(),
-            'url' => sprintf('/garage/maintenance-records/%s/attachments/%s', $recordId, $attachment->getId()),
+            'url' => \sprintf('/garage/maintenance-records/%s/attachments/%s', $recordId, $attachment->getId()),
         ];
     }
 }

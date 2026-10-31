@@ -13,7 +13,7 @@ use Mcp\Schema\Result\CallToolResult;
  * than an LLM needs and enough to blow the tool-result token cap. This caps the payload at
  * the data root and surfaces totalItems + a narrowing hint so nothing is silently dropped.
  *
- * Items are passed already projected to plain arrays (no JSON-LD @id/@type envelope).
+ * Items are passed already projected to plain arrays (no JSON-LD @id/@var envelope).
  */
 final class CappedResult
 {
@@ -45,7 +45,7 @@ final class CappedResult
         ];
 
         if ($hasMore && !$pageable) {
-            $payload['hint'] = sprintf(
+            $payload['hint'] = \sprintf(
                 '%d %s matched; only the first %d are shown, so this list is INCOMPLETE. Do not page: narrow the result.%s',
                 $total,
                 $noun,
@@ -54,7 +54,7 @@ final class CappedResult
             );
         } elseif ($hasMore) {
             $payload['nextOffset'] = $offset + $returned;
-            $payload['hint'] = sprintf(
+            $payload['hint'] = \sprintf(
                 '%d %s matched; showing %d from offset %d. Page on with offset=%d, or narrow the result.%s',
                 $total,
                 $noun,

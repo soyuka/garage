@@ -6,8 +6,8 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Test\ApiTestCase;
 use ApiPlatform\Test\Client as ApiClient;
-use MongoDB\Client;
 use App\Tests\Mock\BonnerefHttpClient;
+use MongoDB\Client;
 
 abstract class AppTestCase extends ApiTestCase
 {
@@ -43,7 +43,7 @@ abstract class AppTestCase extends ApiTestCase
         // through here would wipe real data on the very first setUp. tests/bootstrap.php forces the
         // `_test` suffix; this refuses to run if that ever fails to apply.
         if (!str_ends_with($db, '_test')) {
-            throw new \RuntimeException(sprintf('Refusing to drop non-test database "%s" — the test DB name must end in "_test".', $db));
+            throw new \RuntimeException(\sprintf('Refusing to drop non-test database "%s" — the test DB name must end in "_test".', $db));
         }
 
         (new Client($url))->dropDatabase($db);
@@ -115,6 +115,9 @@ abstract class AppTestCase extends ApiTestCase
         return parent::createClient($kernelOptions);
     }
 
+    /**
+     * @return array<string, string>
+     */
     protected static function authHeaders(string $sub = 'test-user', string $email = self::TEST_OWNER): array
     {
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];

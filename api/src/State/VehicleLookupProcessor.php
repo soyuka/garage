@@ -27,7 +27,7 @@ final class VehicleLookupProcessor implements ProcessorInterface
         $vehicle = $this->bonneref->vehicleByPlate($data->plate);
 
         if (null === $vehicle) {
-            throw new NotFoundHttpException(sprintf('No vehicle found for plate "%s".', $data->plate));
+            throw new NotFoundHttpException(\sprintf('No vehicle found for plate "%s".', $data->plate));
         }
 
         return $vehicle;

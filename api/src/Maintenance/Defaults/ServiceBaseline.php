@@ -50,10 +50,10 @@ final readonly class ServiceBaseline
         // Fail at load, not inside a tool call: these two pairs are meaningless half-set, and a
         // typo'd entry must break every test run rather than reach the model as a -32603.
         if ((null === $everyUsageValue) !== (null === $everyUsageUnit)) {
-            throw new \InvalidArgumentException(sprintf('Baseline "%s": a usage cadence needs both a value and a unit.', $type));
+            throw new \InvalidArgumentException(\sprintf('Baseline "%s": a usage cadence needs both a value and a unit.', $type));
         }
         if ((null === $discriminantKey) !== ([] === $discriminantValues)) {
-            throw new \InvalidArgumentException(sprintf('Baseline "%s": a discriminant key needs the values it applies to.', $type));
+            throw new \InvalidArgumentException(\sprintf('Baseline "%s": a discriminant key needs the values it applies to.', $type));
         }
     }
 

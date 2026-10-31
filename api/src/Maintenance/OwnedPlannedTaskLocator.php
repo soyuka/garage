@@ -14,11 +14,11 @@ use Symfony\Component\Uid\Ulid;
  * vehicle's task is simply absent. The single tenancy check for the part subresource and the
  * `remove_planned_part` tool.
  */
-final class OwnedPlannedTaskLocator
+final readonly class OwnedPlannedTaskLocator
 {
     public function __construct(
-        private readonly PlannedMaintenanceRepository $tasks,
-        private readonly OwnerContext $owner,
+        private PlannedMaintenanceRepository $tasks,
+        private OwnerContext $owner,
     ) {
     }
 

@@ -17,7 +17,7 @@ final class PopplerPdfTextExtractor implements PdfTextExtractor
         $process->run();
 
         if (!$process->isSuccessful()) {
-            throw new InvalidVehicleDocumentException(sprintf('The PDF could not be read: %s', trim($process->getErrorOutput())));
+            throw new InvalidVehicleDocumentException(\sprintf('The PDF could not be read: %s', trim($process->getErrorOutput())));
         }
 
         $chunks = explode("\f", $process->getOutput());

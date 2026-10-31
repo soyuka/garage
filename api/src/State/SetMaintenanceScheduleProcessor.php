@@ -29,14 +29,14 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<SetMaintenanceScheduleInput, CallToolResult>
  */
-final class SetMaintenanceScheduleProcessor implements ProcessorInterface
+final readonly class SetMaintenanceScheduleProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly ServiceSchedulePlanner $planner,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly ScheduleView $scheduleView,
-        private readonly DomainPublisher $publisher,
+        private ServiceSchedulePlanner $planner,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private ScheduleView $scheduleView,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -105,17 +105,17 @@ final class SetMaintenanceScheduleProcessor implements ProcessorInterface
     private function validateItem(array $item, int $index): ?string
     {
         if (null === ($item['type'] ?? null) || '' === $item['type']) {
-            return sprintf('items[%d]: a non-empty type is required.', $index);
+            return \sprintf('items[%d]: a non-empty type is required.', $index);
         }
         if (null === MaintenanceAction::tryFrom((string) ($item['action'] ?? ''))) {
-            return sprintf('items[%d]: action must be one of %s.', $index, implode(', ', MaintenanceAction::values()));
+            return \sprintf('items[%d]: action must be one of %s.', $index, implode(', ', MaintenanceAction::values()));
         }
         $hasUsage = null !== ($item['everyUsageValue'] ?? null);
         if ($hasUsage !== (null !== ($item['everyUsageUnit'] ?? null))) {
-            return sprintf('items[%d]: everyUsageValue and everyUsageUnit must be provided together.', $index);
+            return \sprintf('items[%d]: everyUsageValue and everyUsageUnit must be provided together.', $index);
         }
         if (!$hasUsage && null === ($item['everyMonths'] ?? null) && null === ($item['firstUsageValue'] ?? null)) {
-            return sprintf('items[%d]: a rule needs at least one cadence (everyUsageValue, everyMonths or firstUsageValue).', $index);
+            return \sprintf('items[%d]: a rule needs at least one cadence (everyUsageValue, everyMonths or firstUsageValue).', $index);
         }
 
         return null;

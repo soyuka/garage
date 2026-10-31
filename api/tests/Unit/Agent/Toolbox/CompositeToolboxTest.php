@@ -4,13 +4,12 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent\Toolbox;
 
-use App\I18n\LocaleContext;
-use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\Toolbox\CompositeToolbox;
 use App\Agent\Ui\RenderIntentTools;
-use App\Tests\Mock\TestDashboardChannel;
 use App\Agent\Ui\StepNarrator;
+use App\I18n\LocaleContext;
 use App\Mcp\Agent\McpToolbox;
+use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\ToolboxInterface;
@@ -18,6 +17,7 @@ use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\ExecutionReference;
 use Symfony\AI\Platform\Tool\Tool;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -35,7 +35,7 @@ final class CompositeToolboxTest extends TestCase
         );
 
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use ($published): string {
             $published->append(json_decode($update->getData(), true));
 
             return 'id';
@@ -61,6 +61,7 @@ final class CompositeToolboxTest extends TestCase
 
     public function testNarratesBeforeRunningAGarageTool(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $toolbox = $this->toolbox($published, $this->mcpToolboxExposing('get_service_parts'));
 
@@ -74,6 +75,7 @@ final class CompositeToolboxTest extends TestCase
 
     public function testDoesNotNarrateRenderIntentTools(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         // The render tool `toast` is NOT in the MCP catalog, so it routes to the render toolbox and
         // must not be narrated (it is itself a UI intent, not a work step).
@@ -87,6 +89,7 @@ final class CompositeToolboxTest extends TestCase
     /** A call the stream already announced (EarlyStepNarrationListener) must not narrate a second time here. */
     public function testDoesNotReNarrateAnMcpCallAlreadyAnnouncedByTheStream(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = new StepNarrator($this->renderTools($published), new LocaleContext(new RequestStack()), static fn (int $n): int => 0);
         $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator);
@@ -102,6 +105,7 @@ final class CompositeToolboxTest extends TestCase
     /** An MCP call the stream never announced still narrates at execute time — the fallback path. */
     public function testStillNarratesAnMcpCallTheStreamNeverAnnounced(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $toolbox = $this->toolbox($published, $this->mcpToolboxExposing('get_service_parts'));
 
@@ -116,11 +120,12 @@ final class CompositeToolboxTest extends TestCase
     /** An announced narrate_step acks without executing — its sentence is already on the ticker. */
     public function testAnAnnouncedNarrateStepReturnsOkWithoutCallingTheRenderToolbox(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $renderCalled = false;
         $render = $this->createStub(ToolboxInterface::class);
         $render->method('getTools')->willReturn([]);
-        $render->method('execute')->willReturnCallback(function (ToolCall $c) use (&$renderCalled): ToolResult {
+        $render->method('execute')->willReturnCallback(static function (ToolCall $c) use (&$renderCalled): ToolResult {
             $renderCalled = true;
 
             return new ToolResult($c, 'render-ok');
@@ -140,6 +145,7 @@ final class CompositeToolboxTest extends TestCase
     /** An unannounced narrate_step still executes as today — it is the one publishing its sentence. */
     public function testAnUnannouncedNarrateStepStillExecutesAgainstTheRenderToolbox(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $toolbox = $this->toolbox($published, $this->mcpToolboxExposing('get_service_parts'));
 
@@ -165,7 +171,7 @@ final class CompositeToolboxTest extends TestCase
     private function renderTools(\ArrayObject $published): RenderIntentTools
     {
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use ($published): string {
             $published->append(json_decode($update->getData(), true));
 
             return 'id';

@@ -26,13 +26,13 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<UpdateVehicleInput, CallToolResult>
  */
-final class UpdateVehicleProcessor implements ProcessorInterface
+final readonly class UpdateVehicleProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly GarageResolver $resolver,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly DomainPublisher $publisher,
+        private GarageResolver $resolver,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private DomainPublisher $publisher,
     ) {
     }
 

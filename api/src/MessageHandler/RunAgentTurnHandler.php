@@ -7,20 +7,20 @@ namespace App\MessageHandler;
 use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\SelectedVehicleContext;
+use App\Agent\TurnCancellations;
 use App\Agent\TurnContextBuilder;
+use App\Agent\TurnSettlement;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\RepeatedToolFailureGuard;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
-use App\Agent\TurnCancellations;
-use App\Agent\TurnSettlement;
 use App\Agent\WebSearchBudget;
 use App\Bonneref\BonnerefToken;
 use App\Entity\AgentTurnStatus;
-use App\Message\RunAgentTurn;
 use App\I18n\AgentMessages;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
+use App\Message\RunAgentTurn;
 use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\AgentInterface;
@@ -29,7 +29,7 @@ use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
-use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlerException;
+use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
 
 /**
  * Runs the garage agent for one turn, out of the HTTP request. Consumed by `messenger:consume`
@@ -140,20 +140,20 @@ final readonly class RunAgentTurnHandler
                 $this->logger->warning('Garage turn was a no-op: {error}', ['error' => $error]);
                 $this->renderTools->toast($messages->noOp, 'warn');
             }
-        } catch (MaxIterationsExceededException | RepeatedToolFailureException $e) {
+        } catch (MaxIterationsExceededException|RepeatedToolFailureException $e) {
             $status = AgentTurnStatus::Capped;
             $error = $e->getMessage();
             // The turn could not converge: either the blunt tool-call cap fired (`max_tool_calls`)
             // or the agent looped on the same failing call (RepeatedToolFailureGuard) — both mean a model
             // that wouldn't converge.
-            // Tell the user, then dead-letter WITHOUT retrying: UnrecoverableMessageHandlerException
+            // Tell the user, then dead-letter WITHOUT retrying: UnrecoverableMessageHandlingException
             // skips the retry policy (a plain rethrow would replay the same expensive runaway 3x) and
             // routes the turn straight to the `failed` transport, so capped runs stay visible for
             // monitoring instead of vanishing into a log line.
             $this->logger->warning('Garage turn did not converge, dead-lettering: {error}', ['error' => $e->getMessage()]);
             $this->renderTools->toast($messages->notConverged, 'warn');
 
-            throw new UnrecoverableMessageHandlerException('Garage turn did not converge.', previous: $e);
+            throw new UnrecoverableMessageHandlingException('Garage turn did not converge.', previous: $e);
         } catch (\Throwable $e) {
             // Any other failure inside the loop: record it on the journal, then let it propagate so
             // Messenger applies its retry policy unchanged.

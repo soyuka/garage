@@ -17,12 +17,12 @@ use Mcp\Schema\Result\CallToolResult;
 /**
  * @implements ProcessorInterface<SearchDocumentationInput, CallToolResult>
  */
-final class SearchDocumentationProcessor implements ProcessorInterface
+final readonly class SearchDocumentationProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly DocumentationSearcher $searcher,
-        private readonly VehicleIriResolver $iriResolver,
+        private VehicleRepository $vehicles,
+        private DocumentationSearcher $searcher,
+        private VehicleIriResolver $iriResolver,
     ) {
     }
 
@@ -36,7 +36,7 @@ final class SearchDocumentationProcessor implements ProcessorInterface
         if (null !== $data->kind) {
             $kind = VehicleDocumentKind::tryFrom($data->kind);
             if (null === $kind) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => sprintf('kind must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value')))]);
+                return ToolResult::of(['status' => 'invalid_input', 'reason' => \sprintf('kind must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value')))]);
             }
         }
 

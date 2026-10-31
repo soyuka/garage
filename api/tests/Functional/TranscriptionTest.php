@@ -7,8 +7,8 @@ namespace App\Tests\Functional;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use App\I18n\Locale;
-use App\Transcription\GarageVocabulary;
 use App\Tests\Mock\RecordingTranscriptionHttpClient;
+use App\Transcription\GarageVocabulary;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 
@@ -252,7 +252,6 @@ final class TranscriptionTest extends AppTestCase
     private function seedVehicle(string $make, string $model, string $owner): void
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle($make, $model, VehicleType::Car, 'user');
         $vehicle->setOwner($owner);
         $dm->persist($vehicle);

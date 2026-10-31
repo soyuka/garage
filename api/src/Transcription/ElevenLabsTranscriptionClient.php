@@ -91,11 +91,7 @@ final readonly class ElevenLabsTranscriptionClient implements TranscriptionClien
             // logs said "HTTP 400" and nothing else, and the cause was found by re-probing the vendor
             // by hand. Truncated because an error body is a sentence, and a proxy's HTML page is not.
             if (200 !== $response->getStatusCode()) {
-                throw new TranscriptionUnavailable(\sprintf(
-                    'Scribe refused the recording (HTTP %d): %s',
-                    $response->getStatusCode(),
-                    mb_substr(trim($response->getContent(throw: false)), 0, 400) ?: '(no detail)',
-                ));
+                throw new TranscriptionUnavailable(\sprintf('Scribe refused the recording (HTTP %d): %s', $response->getStatusCode(), mb_substr(trim($response->getContent(throw: false)), 0, 400) ?: '(no detail)'));
             }
 
             /** @var array{text?: string} $payload */

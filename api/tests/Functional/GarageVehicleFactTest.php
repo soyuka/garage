@@ -19,7 +19,6 @@ final class GarageVehicleFactTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -51,7 +50,6 @@ final class GarageVehicleFactTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -77,7 +75,6 @@ final class GarageVehicleFactTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -109,7 +106,6 @@ final class GarageVehicleFactTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -117,7 +113,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->clear();
         $iri = '/garage/vehicles/'.$vehicle->getId();
 
-        $post = fn (string $value) => $client->request('POST', $iri.'/facts', [
+        $post = static fn (string $value) => $client->request('POST', $iri.'/facts', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => ['key' => 'coolant', 'value' => $value],
         ]);
@@ -134,7 +130,6 @@ final class GarageVehicleFactTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -151,7 +146,6 @@ final class GarageVehicleFactTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user');
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);

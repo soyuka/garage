@@ -26,13 +26,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<MaintenanceRecordInput, GarageMaintenanceRecord>
  */
-final class MaintenanceRecordUpdateProcessor implements ProcessorInterface
+final readonly class MaintenanceRecordUpdateProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly MaintenanceRecordRepository $records,
-        private readonly MaintenanceRecorder $recorder,
-        private readonly OwnerContext $owner,
-        private readonly DomainPublisher $publisher,
+        private MaintenanceRecordRepository $records,
+        private MaintenanceRecorder $recorder,
+        private OwnerContext $owner,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -66,7 +66,7 @@ final class MaintenanceRecordUpdateProcessor implements ProcessorInterface
             try {
                 $changes['performedAt'] = new \DateTimeImmutable($data->performedAt);
             } catch (\Exception) {
-                throw new UnprocessableEntityHttpException(sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
+                throw new UnprocessableEntityHttpException(\sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
             }
         }
 
@@ -74,7 +74,7 @@ final class MaintenanceRecordUpdateProcessor implements ProcessorInterface
             // Dashboard speaks 'h'; the log enum spells engine hours 'hours'.
             $unit = UsageUnit::tryFrom('h' === $data->usageUnit ? 'hours' : $data->usageUnit);
             if (null === $unit) {
-                throw new UnprocessableEntityHttpException(sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
+                throw new UnprocessableEntityHttpException(\sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
             }
             $changes['usageUnit'] = $unit;
         } else {

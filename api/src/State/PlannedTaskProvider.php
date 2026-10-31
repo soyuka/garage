@@ -19,12 +19,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProviderInterface<PlannedTask>
  */
-final class PlannedTaskProvider implements ProviderInterface
+final readonly class PlannedTaskProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly OwnedPlannedTaskLocator $locator,
-        private readonly VehicleFactsProjector $facts,
-        private readonly PlannedTaskFluidEnricher $fluids,
+        private OwnedPlannedTaskLocator $locator,
+        private VehicleFactsProjector $facts,
+        private PlannedTaskFluidEnricher $fluids,
     ) {
     }
 

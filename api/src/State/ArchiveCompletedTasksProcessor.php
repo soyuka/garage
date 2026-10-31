@@ -23,13 +23,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<mixed, ArchiveTasksOutput>
  */
-final class ArchiveCompletedTasksProcessor implements ProcessorInterface
+final readonly class ArchiveCompletedTasksProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly MaintenanceRecorder $recorder,
-        private readonly OwnerContext $owner,
-        private readonly DomainPublisher $publisher,
+        private VehicleRepository $vehicles,
+        private MaintenanceRecorder $recorder,
+        private OwnerContext $owner,
+        private DomainPublisher $publisher,
     ) {
     }
 

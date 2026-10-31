@@ -6,8 +6,8 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
-use App\Bonneref\BonnerefClient;
 use App\ApiResource\Article;
+use App\Bonneref\BonnerefClient;
 
 /**
  * @implements ProviderInterface<Article>

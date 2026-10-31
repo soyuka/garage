@@ -39,11 +39,11 @@ final readonly class UploadVehicleDocumentController
             throw new UnprocessableEntityHttpException('A file is required in the multipart "file" field.');
         }
         if (!$file->isValid()) {
-            throw new UnprocessableEntityHttpException(sprintf('Upload failed: %s.', $file->getErrorMessage()));
+            throw new UnprocessableEntityHttpException(\sprintf('Upload failed: %s.', $file->getErrorMessage()));
         }
 
         $kind = VehicleDocumentKind::tryFrom((string) $request->request->get('kind'))
-            ?? throw new UnprocessableEntityHttpException(sprintf('"kind" must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value'))));
+            ?? throw new UnprocessableEntityHttpException(\sprintf('"kind" must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value'))));
 
         try {
             $document = $this->recorder->record(

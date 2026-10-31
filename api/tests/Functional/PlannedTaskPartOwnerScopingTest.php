@@ -17,7 +17,6 @@ final class PlannedTaskPartOwnerScopingTest extends AppTestCase
     private function seedForeignTask(): array
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', 'CLIO', VehicleType::Car, 'user', year: 2004);
         $vehicle->setOwner('someone-else@example.com');
         $task = new PlannedMaintenance($vehicle, 'oil_change', 'user', parts: [['ref' => 'W 712/75', 'qty' => 1]]);

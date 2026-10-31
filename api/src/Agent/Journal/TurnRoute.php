@@ -30,8 +30,8 @@ final readonly class TurnRoute
     }
 
     /**
-     * @param array<string, mixed>|null                                $pageVehicle the vehicle the page sent with the turn
-     * @param list<array{name: string, arguments: array<string, mixed>, result?: string}> $toolCalls in call order
+     * @param array<string, mixed>|null                                                   $pageVehicle the vehicle the page sent with the turn
+     * @param list<array{name: string, arguments: array<string, mixed>, result?: string}> $toolCalls   in call order
      */
     public static function forAgent(?array $pageVehicle, array $toolCalls): self
     {
@@ -61,7 +61,7 @@ final readonly class TurnRoute
     }
 
     /**
-     * @param JournalVehicle|null                         $vehicle
+     * @param JournalVehicle|null                       $vehicle
      * @param array{clusterId: string, id: string}|null $selection
      */
     private static function build(?array $vehicle, ?int $categoryId, ?int $productGroupId = null, ?array $selection = null): self

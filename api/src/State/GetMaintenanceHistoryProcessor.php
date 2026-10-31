@@ -23,13 +23,13 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<GetMaintenanceHistoryInput, CallToolResult>
  */
-final class GetMaintenanceHistoryProcessor implements ProcessorInterface
+final readonly class GetMaintenanceHistoryProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly MaintenanceRecorder $recorder,
-        private readonly RecordView $recordView,
-        private readonly IriConverterInterface $iriConverter,
-        private readonly VehicleIriResolver $iriResolver,
+        private MaintenanceRecorder $recorder,
+        private RecordView $recordView,
+        private IriConverterInterface $iriConverter,
+        private VehicleIriResolver $iriResolver,
     ) {
     }
 

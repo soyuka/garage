@@ -8,12 +8,12 @@ use App\I18n\AgentMessages;
 use App\I18n\Locale;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\RecordingHub;
+use App\Tests\Mock\ScriptedStreamPlatform;
 use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
-use App\Tests\Mock\ScriptedStreamPlatform;
 
 /**
  * The real agent behind POST /agent/turn: a deterministic instruction drives a scripted LLM
@@ -95,7 +95,7 @@ final class AgentTurnTest extends AppTestCase
         $container = static::getContainer();
 
         $seen = new \ArrayObject();
-        $platform = new ScriptedStreamPlatform(static function ($model, $input) use ($seen): ToolCallResult|string {
+        $platform = new ScriptedStreamPlatform(static function ($model, $input) use ($seen): ToolCallResult {
             foreach ($input instanceof MessageBag ? $input->getMessages() : [] as $message) {
                 $content = $message->getContent();
                 foreach (\is_array($content) ? $content : [$content] as $part) {

@@ -30,7 +30,7 @@ final readonly class MongoTurnCancellations implements TurnCancellations
             ->updateOne()
             ->upsert()
             ->field('id')->equals($this->id($sessionId))
-            ->field('expiresAt')->set($this->clock->now()->modify(sprintf('+%d seconds', self::TTL_SECONDS)))
+            ->field('expiresAt')->set($this->clock->now()->modify(\sprintf('+%d seconds', self::TTL_SECONDS)))
             ->getQuery()
             ->execute();
     }

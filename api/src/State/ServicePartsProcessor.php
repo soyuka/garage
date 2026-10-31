@@ -6,9 +6,9 @@ namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\Bonneref\BonnerefClient;
 use App\Catalog\OpenTaskPartsBackfiller;
 use App\Catalog\ServiceKind;
-use App\Bonneref\BonnerefClient;
 use App\Dto\ServicePartsInput;
 use App\Garage\ToolResult;
 use App\Mcp\ArticleGroup;
@@ -24,13 +24,13 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<ServicePartsInput, CallToolResult>
  */
-final class ServicePartsProcessor implements ProcessorInterface
+final readonly class ServicePartsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly BonnerefClient $bonneref,
-        private readonly VehicleRepository $vehicles,
-        private readonly OpenTaskPartsBackfiller $backfiller,
-        private readonly DomainPublisher $publisher,
+        private BonnerefClient $bonneref,
+        private VehicleRepository $vehicles,
+        private OpenTaskPartsBackfiller $backfiller,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -40,7 +40,7 @@ final class ServicePartsProcessor implements ProcessorInterface
         if (null === $service) {
             return ToolResult::of([
                 'status' => 'error',
-                'message' => sprintf('Unknown service "%s".', $data->service),
+                'message' => \sprintf('Unknown service "%s".', $data->service),
                 'validServices' => array_map(static fn (ServiceKind $s): string => $s->value, ServiceKind::cases()),
             ]);
         }

@@ -18,6 +18,7 @@ class MotulResponse
     #[ODM\Id(strategy: 'NONE', type: 'string')]
     private string $id;
 
+    /** @var array<mixed>|null */
     #[ODM\Field(type: 'raw', nullable: true)]
     private ?array $data = null;
 

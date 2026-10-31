@@ -139,7 +139,7 @@ final readonly class CachingSpeechClient implements SpeechClient
 
     private function settingsKey(): string
     {
-        return json_encode(['speed' => $this->speed], JSON_THROW_ON_ERROR);
+        return json_encode(['speed' => $this->speed], \JSON_THROW_ON_ERROR);
     }
 
     /**

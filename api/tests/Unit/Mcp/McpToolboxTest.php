@@ -22,7 +22,8 @@ final class McpToolboxTest extends TestCase
             ['result' => ['tools' => [['name' => 'list_vehicles']]]],       // 2nd: recovered
         ]);
 
-        $this->assertSame([], $toolbox->getTools(), 'first (failed) fetch yields no tools');
+        $firstFetch = $toolbox->getTools();
+        $this->assertSame([], $firstFetch, 'first (failed) fetch yields no tools');
         $this->assertCount(1, $toolbox->getTools(), 'next fetch re-runs and recovers the catalog');
         $this->assertSame(2, $toolbox->driveCount, 'the empty result must not have been cached');
     }
@@ -52,6 +53,8 @@ final class McpToolboxTest extends TestCase
 
     /**
      * @param list<array<string, mixed>> $responses successive decoded JSON-RPC responses to return
+     *
+     * @return McpToolbox&object{driveCount: int}
      */
     private function toolboxDriving(array $responses): McpToolbox
     {

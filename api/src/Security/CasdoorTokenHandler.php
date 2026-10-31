@@ -41,21 +41,21 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * Casdoor instance signs is accepted) and the {@see ZitadelUserProvider} find-or-create on
  * `sub`; tighten with a scope/role check here if /mcp must be limited to a subset of users.
  */
-final class CasdoorTokenHandler implements AccessTokenHandlerInterface
+final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
 {
-    private readonly AlgorithmManager $signatureAlgorithm;
+    private AlgorithmManager $signatureAlgorithm;
 
     /**
      * @param list<string> $issuers
      */
     public function __construct(
-        private readonly HttpClientInterface $client,
-        private readonly CacheInterface $discoveryCache,
-        private readonly string $oidcConfigurationCacheKey,
-        private readonly array $issuers,
-        private readonly string $claim = 'sub',
-        private readonly ?LoggerInterface $logger = null,
-        private readonly ClockInterface $clock = new Clock(),
+        private HttpClientInterface $client,
+        private CacheInterface $discoveryCache,
+        private string $oidcConfigurationCacheKey,
+        private array $issuers,
+        private string $claim = 'sub',
+        private ?LoggerInterface $logger = null,
+        private ClockInterface $clock = new Clock(),
     ) {
         $this->signatureAlgorithm = new AlgorithmManager([
             new RS256(), new RS512(), new ES256(), new ES384(), new ES512(),

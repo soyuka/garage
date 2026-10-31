@@ -20,13 +20,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<mixed, null>
  */
-final class GarageVehicleDeleteProcessor implements ProcessorInterface
+final readonly class GarageVehicleDeleteProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly DocumentManager $em,
-        private readonly OwnerContext $owner,
-        private readonly DomainPublisher $publisher,
+        private VehicleRepository $vehicles,
+        private DocumentManager $em,
+        private OwnerContext $owner,
+        private DomainPublisher $publisher,
     ) {
     }
 

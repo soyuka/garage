@@ -47,7 +47,7 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->sort('createdAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
-            ->execute()
+            ->getIterator()
             ->toArray();
 
         $actionable = array_values(array_filter($tasks, static fn (PlannedMaintenance $t): bool => $t->isActionable()));
@@ -97,7 +97,7 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->field('type')->equals($type)
             ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
             ->getQuery()
-            ->execute()
+            ->getIterator()
             ->toArray());
     }
 
@@ -118,7 +118,7 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->sort('completedAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
-            ->execute()
+            ->getIterator()
             ->toArray());
     }
 }

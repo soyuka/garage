@@ -60,7 +60,6 @@ final readonly class WebSearchInputProcessor implements InputProcessorInterface
         match ($this->provider) {
             WebSearchProvider::Anthropic => $this->declareAnthropic($options),
             WebSearchProvider::Qwen => $this->declareQwen($options),
-            WebSearchProvider::Off => null,
         };
 
         $input->setOptions($options);

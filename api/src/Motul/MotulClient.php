@@ -16,7 +16,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * ({@see NextData}, {@see MotulRecommendationParser}). Browser-ish headers are required or the
  * gateway/WAF rejects the request. Read-only and rate-respectful: cache hits never re-fetch.
  */
-final class MotulClient
+final readonly class MotulClient
 {
     /** Model-facing name of the service — never the vendor host. */
     private const SOURCE = 'the Motul oil advisor';
@@ -31,11 +31,11 @@ final class MotulClient
     ];
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly MotulResponseStore $store,
-        private readonly MotulRecommendationParser $parser,
-        private readonly string $locale = 'fr-FR',
-        private readonly string $bu = 'FRA',
+        private HttpClientInterface $httpClient,
+        private MotulResponseStore $store,
+        private MotulRecommendationParser $parser,
+        private string $locale = 'fr-FR',
+        private string $bu = 'FRA',
     ) {
     }
 
@@ -69,7 +69,7 @@ final class MotulClient
 
     public function recommendationsUrl(string $vehicleId): string
     {
-        return sprintf('%s/%s/lubricants/recommendations/%s', self::PAGE_BASE, $this->locale, rawurlencode($vehicleId));
+        return \sprintf('%s/%s/lubricants/recommendations/%s', self::PAGE_BASE, $this->locale, rawurlencode($vehicleId));
     }
 
     /**
@@ -104,15 +104,13 @@ final class MotulClient
             $status = $response->getStatusCode();
             $body = $response->getContent(false);
         } catch (ExceptionInterface $e) {
-            throw UpstreamException::transient(self::SOURCE, sprintf('motul.com: %s', $e->getMessage()), $e);
+            throw UpstreamException::transient(self::SOURCE, \sprintf('motul.com: %s', $e->getMessage()), $e);
         }
 
         if (200 !== $status) {
-            $reason = sprintf('motul.com failed (HTTP %d)', $status);
+            $reason = \sprintf('motul.com failed (HTTP %d)', $status);
 
-            throw $status >= 500 || 429 === $status
-                ? UpstreamException::transient(self::SOURCE, $reason)
-                : UpstreamException::definitive(self::SOURCE, $reason);
+            throw $status >= 500 || 429 === $status ? UpstreamException::transient(self::SOURCE, $reason) : UpstreamException::definitive(self::SOURCE, $reason);
         }
 
         return $body;

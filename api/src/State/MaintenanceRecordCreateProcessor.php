@@ -24,11 +24,11 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<MaintenanceRecordInput, GarageMaintenanceRecord>
  */
-final class MaintenanceRecordCreateProcessor implements ProcessorInterface
+final readonly class MaintenanceRecordCreateProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly MaintenanceRecorder $recorder,
-        private readonly DomainPublisher $publisher,
+        private MaintenanceRecorder $recorder,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -44,7 +44,7 @@ final class MaintenanceRecordCreateProcessor implements ProcessorInterface
         try {
             $performedAt = new \DateTimeImmutable($data->performedAt);
         } catch (\Exception) {
-            throw new UnprocessableEntityHttpException(sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
+            throw new UnprocessableEntityHttpException(\sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
         }
 
         $items = $data->resolveItems();
@@ -58,7 +58,7 @@ final class MaintenanceRecordCreateProcessor implements ProcessorInterface
             // 'hours' — normalise before mapping so a card reading lands on the right case.
             $unit = UsageUnit::tryFrom('h' === $data->usageUnit ? 'hours' : $data->usageUnit);
             if (null === $unit) {
-                throw new UnprocessableEntityHttpException(sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
+                throw new UnprocessableEntityHttpException(\sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
             }
         }
 

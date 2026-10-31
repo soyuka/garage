@@ -26,14 +26,14 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<PlanMaintenanceInput, CallToolResult>
  */
-final class PlanMaintenanceProcessor implements ProcessorInterface
+final readonly class PlanMaintenanceProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PlannedMaintenancePlanner $planner,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly PlannedTaskView $taskView,
-        private readonly DomainPublisher $publisher,
+        private PlannedMaintenancePlanner $planner,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private PlannedTaskView $taskView,
+        private DomainPublisher $publisher,
     ) {
     }
 

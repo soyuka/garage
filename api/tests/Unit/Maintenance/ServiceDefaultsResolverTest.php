@@ -24,8 +24,8 @@ final class ServiceDefaultsResolverTest extends TestCase
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
         $this->assertNull($resolution->discriminantKey);
-        $this->assertSame(24, $resolution->baseline()?->everyMonths);
-        $this->assertNull($resolution->baseline()?->everyUsageValue);
+        $this->assertSame(24, $resolution->baseline()->everyMonths);
+        $this->assertNull($resolution->baseline()->everyUsageValue);
     }
 
     public function testAServiceOutsideTheCatalogueIsUnknown(): void
@@ -66,9 +66,9 @@ final class ServiceDefaultsResolverTest extends TestCase
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
         $this->assertSame('chain', $resolution->discriminantValue);
-        $this->assertFalse($resolution->baseline()?->hasCadence());
-        $this->assertNull($resolution->baseline()?->everyUsageValue);
-        $this->assertNull($resolution->baseline()?->everyMonths);
+        $this->assertFalse($resolution->baseline()->hasCadence());
+        $this->assertNull($resolution->baseline()->everyUsageValue);
+        $this->assertNull($resolution->baseline()->everyMonths);
     }
 
     public function testABeltVehicleResolvesToTheBeltCadence(): void
@@ -81,9 +81,9 @@ final class ServiceDefaultsResolverTest extends TestCase
         $resolution = $this->resolver()->resolve('timing_belt', $vehicle);
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
-        $this->assertSame(120000, $resolution->baseline()?->everyUsageValue);
-        $this->assertSame(UsageUnit::Kilometers, $resolution->baseline()?->everyUsageUnit);
-        $this->assertSame(60, $resolution->baseline()?->everyMonths);
+        $this->assertSame(120000, $resolution->baseline()->everyUsageValue);
+        $this->assertSame(UsageUnit::Kilometers, $resolution->baseline()->everyUsageUnit);
+        $this->assertSame(60, $resolution->baseline()->everyMonths);
     }
 
     public function testAnUnrecognisedDiscriminantValueStaysAmbiguous(): void
@@ -116,9 +116,9 @@ final class ServiceDefaultsResolverTest extends TestCase
         $resolution = $this->resolver()->resolve('spark_plug', $vehicle);
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
-        $this->assertSame(100000, $resolution->baseline()?->everyUsageValue);
+        $this->assertSame(100000, $resolution->baseline()->everyUsageValue);
         // Plugs wear by combustion cycles, not by the calendar — no month axis is encoded.
-        $this->assertNull($resolution->baseline()?->everyMonths);
+        $this->assertNull($resolution->baseline()->everyMonths);
     }
 
     public function testTheGroundscareSegmentScopesSparkPlugsToTheEngineHourAxis(): void
@@ -126,7 +126,7 @@ final class ServiceDefaultsResolverTest extends TestCase
         $resolution = $this->resolver()->resolve('spark_plug', $this->mower());
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
-        $this->assertSame(UsageUnit::Hours, $resolution->baseline()?->everyUsageUnit);
+        $this->assertSame(UsageUnit::Hours, $resolution->baseline()->everyUsageUnit);
         $this->assertNull($resolution->discriminantKey);
     }
 
@@ -145,10 +145,10 @@ final class ServiceDefaultsResolverTest extends TestCase
         $mower = $this->resolver()->resolve('oil_change', $this->mower());
         $car = $this->resolver()->resolve('oil_change', $this->car());
 
-        $this->assertSame(50, $mower->baseline()?->everyUsageValue);
-        $this->assertSame(UsageUnit::Hours, $mower->baseline()?->everyUsageUnit);
-        $this->assertSame(15000, $car->baseline()?->everyUsageValue);
-        $this->assertSame(UsageUnit::Kilometers, $car->baseline()?->everyUsageUnit);
+        $this->assertSame(50, $mower->baseline()->everyUsageValue);
+        $this->assertSame(UsageUnit::Hours, $mower->baseline()->everyUsageUnit);
+        $this->assertSame(15000, $car->baseline()->everyUsageValue);
+        $this->assertSame(UsageUnit::Kilometers, $car->baseline()->everyUsageUnit);
     }
 
     public function testAPetrolFuelFilterResolvesToNoScheduledInterval(): void
@@ -159,7 +159,7 @@ final class ServiceDefaultsResolverTest extends TestCase
         $resolution = $this->resolver()->resolve('fuel_filter', $vehicle);
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
-        $this->assertFalse($resolution->baseline()?->hasCadence());
+        $this->assertFalse($resolution->baseline()->hasCadence());
     }
 
     public function testADieselFuelFilterResolvesToAUsageCadence(): void
@@ -170,7 +170,7 @@ final class ServiceDefaultsResolverTest extends TestCase
         $resolution = $this->resolver()->resolve('fuel_filter', $vehicle);
 
         $this->assertSame(ServiceDefaultsStatus::Resolved, $resolution->status);
-        $this->assertSame(40000, $resolution->baseline()?->everyUsageValue);
+        $this->assertSame(40000, $resolution->baseline()->everyUsageValue);
     }
 
     public function testEveryBaselineCarriesItsProvenanceAndReviewDate(): void

@@ -29,13 +29,13 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<MotulOilInput, CallToolResult>
  */
-final class MotulOilProcessor implements ProcessorInterface
+final readonly class MotulOilProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly MotulOilAdvisor $advisor,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly GarageResolver $resolver,
-        private readonly BonnerefClient $bonneref,
+        private MotulOilAdvisor $advisor,
+        private VehicleIriResolver $iriResolver,
+        private GarageResolver $resolver,
+        private BonnerefClient $bonneref,
     ) {
     }
 
@@ -61,7 +61,7 @@ final class MotulOilProcessor implements ProcessorInterface
             if (null === $vehicle) {
                 return ToolResult::of([
                     'status' => 'not_found',
-                    'reason' => sprintf('No vehicle at %s in the garage. Use an @id from list_vehicles.', $data->vehicle),
+                    'reason' => \sprintf('No vehicle at %s in the garage. Use an @id from list_vehicles.', $data->vehicle),
                 ]);
             }
 

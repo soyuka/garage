@@ -48,6 +48,7 @@ final class SpeechControllerTest extends TestCase
     {
         $response = $this->speak(['RIFF', 'fake'], 'audio/wav', diesAfter: true);
 
+        $this->assertInstanceOf(StreamedResponse::class, $response);
         $this->assertSame(['RIFF', 'fake'], self::flushed($response));
     }
 
@@ -76,6 +77,7 @@ final class SpeechControllerTest extends TestCase
     private function speak(array $chunks, string $contentType, bool $diesAfter = false): Response
     {
         $speech = new class($chunks, $contentType, $diesAfter) implements SpeechClient {
+            /** @param list<string> $chunks */
             public function __construct(private readonly array $chunks, private readonly string $contentType, private readonly bool $diesAfter)
             {
             }

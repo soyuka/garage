@@ -13,9 +13,9 @@ use Mcp\Schema\Result\CallToolResult;
  * `vehicleId` a not_found addressed. {@see WriteOutcomeToolResult} maps the two shared error
  * states onto the canonical MCP results so the processors stop hand-rolling the same match block.
  *
- * @property-read string        $status
- * @property-read list<Vehicle> $candidates
- * @property-read string|null   $vehicleId
+ * @property string        $status
+ * @property list<Vehicle> $candidates
+ * @property string|null   $vehicleId
  */
 interface WriteOutcome
 {

@@ -17,6 +17,7 @@ use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\HttpKernel\TerminableInterface;
 
 final class AgentTurnTerminateDispatchTest extends AppTestCase
 {
@@ -86,7 +87,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
 
         [$kernel, $request] = self::turnRequest('sess-deferred-token');
         $response = $kernel->handle($request);
-        self::assertNull(static::bonneref()->lastRequest(), 'nothing is asked of bonneref before the response is sent');
+        $beforeResponse = static::bonneref()->lastRequest();
+        self::assertNull($beforeResponse, 'nothing is asked of bonneref before the response is sent');
 
         $kernel->terminate($request, $response);
 
@@ -173,7 +175,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
     }
 
     /**
-     * @return array{KernelInterface, Request}
+     * @return array{KernelInterface&TerminableInterface, Request}
      */
     private static function turnRequest(string $sessionId): array
     {
@@ -187,6 +189,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
             ],
             content: json_encode(['instruction' => 'Quelle viscosité ?', 'sessionId' => $sessionId], \JSON_THROW_ON_ERROR),
         );
+
+        self::assertInstanceOf(TerminableInterface::class, static::$kernel);
 
         return [static::$kernel, $request];
     }

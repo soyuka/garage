@@ -25,10 +25,10 @@ final class PdfFixture
             }
             $stream .= 'ET';
 
-            $objects[$pageId] = sprintf('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents %d 0 R /Resources << /Font << /F1 3 0 R >> >> >>', $contentId);
-            $objects[$contentId] = sprintf("<< /Length %d >>\nstream\n%s\nendstream", \strlen($stream), $stream);
+            $objects[$pageId] = \sprintf('<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents %d 0 R /Resources << /Font << /F1 3 0 R >> >> >>', $contentId);
+            $objects[$contentId] = \sprintf("<< /Length %d >>\nstream\n%s\nendstream", \strlen($stream), $stream);
         }
-        $objects[2] = sprintf('<< /Type /Pages /Kids [%s] /Count %d >>', implode(' ', $kids), \count($pages));
+        $objects[2] = \sprintf('<< /Type /Pages /Kids [%s] /Count %d >>', implode(' ', $kids), \count($pages));
         $objects[3] = '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>';
         ksort($objects);
 
@@ -36,14 +36,14 @@ final class PdfFixture
         $offsets = [];
         foreach ($objects as $id => $body) {
             $offsets[$id] = \strlen($out);
-            $out .= sprintf("%d 0 obj\n%s\nendobj\n", $id, $body);
+            $out .= \sprintf("%d 0 obj\n%s\nendobj\n", $id, $body);
         }
         $xref = \strlen($out);
-        $out .= sprintf("xref\n0 %d\n0000000000 65535 f \n", \count($objects) + 1);
+        $out .= \sprintf("xref\n0 %d\n0000000000 65535 f \n", \count($objects) + 1);
         foreach ($offsets as $offset) {
-            $out .= sprintf("%010d 00000 n \n", $offset);
+            $out .= \sprintf("%010d 00000 n \n", $offset);
         }
-        $out .= sprintf("trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", \count($objects) + 1, $xref);
+        $out .= \sprintf("trailer\n<< /Size %d /Root 1 0 R >>\nstartxref\n%d\n%%%%EOF\n", \count($objects) + 1, $xref);
 
         return $out;
     }

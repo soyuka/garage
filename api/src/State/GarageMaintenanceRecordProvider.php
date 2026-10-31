@@ -10,7 +10,7 @@ use App\ApiResource\GarageMaintenanceRecord;
 use App\Maintenance\OwnedRecordLocator;
 
 /**
- * Dereferences /garage/maintenance-records/{id} by ULID. Returns null (→ 404) on no match or a foreign owner.
+ * Dereferences /garage/maintenance-records/{id} by ULID. 404s (NotFoundHttpException) on no match or a foreign owner.
  *
  * @implements ProviderInterface<GarageMaintenanceRecord>
  */
@@ -20,7 +20,7 @@ final class GarageMaintenanceRecordProvider implements ProviderInterface
     {
     }
 
-    public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?GarageMaintenanceRecord
+    public function provide(Operation $operation, array $uriVariables = [], array $context = []): GarageMaintenanceRecord
     {
         $id = $uriVariables['id'];
 

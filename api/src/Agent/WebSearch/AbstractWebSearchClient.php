@@ -28,7 +28,7 @@ abstract readonly class AbstractWebSearchClient implements WebSearchClient
 
     final protected function systemPrompt(): string
     {
-        return sprintf(self::SYSTEM_TEMPLATE, $this->searchToolPhrase());
+        return \sprintf(self::SYSTEM_TEMPLATE, $this->searchToolPhrase());
     }
 
     /**

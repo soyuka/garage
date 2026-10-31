@@ -120,9 +120,6 @@ final class PlannedMaintenancePartsTest extends TestCase
         return $part;
     }
 
-    /**
-     * @param list<array{ref: string, label?: string, brand?: string, qty?: int}> $parts
-     */
     public function testProductAliasRefKeepsItsNameOnTheLabelWhileSpellingVariantsDoNot(): void
     {
         $task = $this->task([]);
@@ -146,6 +143,9 @@ final class PlannedMaintenancePartsTest extends TestCase
         self::assertSame(1, $parts[0]['qty']);
     }
 
+    /**
+     * @param list<array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> $parts
+     */
     private function task(array $parts): PlannedMaintenance
     {
         return new PlannedMaintenance(

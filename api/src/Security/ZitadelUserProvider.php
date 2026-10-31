@@ -18,7 +18,7 @@ use Symfony\Component\Security\Core\User\UserInterface;
  *
  * @implements AttributesBasedUserProviderInterface<User>
  */
-final class ZitadelUserProvider implements AttributesBasedUserProviderInterface
+final readonly class ZitadelUserProvider implements AttributesBasedUserProviderInterface
 {
     private const string ROLES_CLAIM = 'urn:zitadel:iam:org:project:roles';
 
@@ -28,8 +28,8 @@ final class ZitadelUserProvider implements AttributesBasedUserProviderInterface
     ];
 
     public function __construct(
-        private readonly UserRepository $users,
-        private readonly DocumentManager $em,
+        private UserRepository $users,
+        private DocumentManager $em,
     ) {
     }
 

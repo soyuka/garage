@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Entity\PlannedMaintenance;
 use App\Entity\VehicleFact;
 use App\Mcp\Agent\McpToolbox;
@@ -16,7 +17,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
     use McpClientTrait;
 
     /**
-     * @return array{0: \ApiPlatform\Test\Client, 1: string, 2: string}
+     * @return array{0: Client, 1: string, 2: string}
      */
     private function clientWithVehicle(): array
     {
@@ -35,7 +36,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
      *
      * @return array<string, mixed>
      */
-    private function tool(\ApiPlatform\Test\Client $client, string $sessionId, string $name, array $arguments, int $id): array
+    private function tool(Client $client, string $sessionId, string $name, array $arguments, int $id): array
     {
         return $this->call($client, $sessionId, 'tools/call', ['name' => $name, 'arguments' => $arguments], $id)['result']['structuredContent'];
     }
@@ -129,7 +130,6 @@ final class McpSetVehicleFactsTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->clientWithVehicle();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $this->tool($client, $sessionId, 'plan_maintenance', ['vehicle' => $iri, 'type' => 'oil_change'], 3);
         $dm->clear();
@@ -250,7 +250,6 @@ final class McpSetVehicleFactsTest extends AppTestCase
         $this->assertSame(['tyre_size'], array_column($facts, 'key'));
 
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $dm->clear();
         $carrier = $dm->getRepository(PlannedMaintenance::class)->findOneBy(['type' => 'user_facts']);
         $this->assertTrue($carrier->attributeByKey('paint_code')->isDeleted(), 'removal is a tombstone, the document survives');

@@ -57,10 +57,10 @@ final class DomainPublishTest extends AppTestCase
         $get = $client->request('GET', $vehicleIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
         foreach ($get as $key => $value) {
             // Skip the JSON-LD envelope and the duplicate `id` (the push keys identity via `@id`).
-            if (in_array($key, ['@context', '@type', 'id'], true)) {
+            if (\in_array($key, ['@context', '@type', 'id'], true)) {
                 continue;
             }
-            $this->assertEquals($value, $resource[$key] ?? null, sprintf('GET "%s" must match the push', $key));
+            $this->assertEquals($value, $resource[$key] ?? null, \sprintf('GET "%s" must match the push', $key));
         }
     }
 }

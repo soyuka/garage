@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\Ui;
 
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\Ui\StepNarrator;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
 use App\Tests\Mock\TestDashboardChannel;
-use App\Agent\Ui\StepNarrator;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -19,15 +19,15 @@ final class StepNarratorTest extends TestCase
 {
     /**
      * @param \ArrayObject<int, array<string, mixed>> $published filled with each published frame
-     * @param null|\Closure(int $count): int           $picker    defaults to always picking the first
-     *                                                             variant, so tests that assert an exact
-     *                                                             sentence stay deterministic without
-     *                                                             caring about the randomised default
+     * @param \Closure(int $count): int|null          $picker    defaults to always picking the first
+     *                                                           variant, so tests that assert an exact
+     *                                                           sentence stay deterministic without
+     *                                                           caring about the randomised default
      */
     private function narrator(\ArrayObject $published, Locale $locale = Locale::Fr, ?\Closure $picker = null): StepNarrator
     {
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use ($published): string {
             $published->append(json_decode($update->getData(), true));
 
             return 'id';
@@ -49,6 +49,7 @@ final class StepNarratorTest extends TestCase
      */
     public function testNarratesAKnownGarageToolWithItsSentenceAndItsToolKey(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published)->forTool('get_service_parts');
 
@@ -65,6 +66,7 @@ final class StepNarratorTest extends TestCase
      */
     public function testFactsAndHistoryNarrateDifferentSentencesAndKeepTheirOwnToolKey(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
         $narrator->forTool('get_vehicle_facts');
@@ -82,6 +84,7 @@ final class StepNarratorTest extends TestCase
     /** With a picker that returns a fixed sequence, the same tool called twice varies its wording. */
     public function testForToolVariesTheWordingAcrossTwoCallsWithAFixedSequencePicker(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $sequence = [0, 1];
         $picker = static function (int $n) use (&$sequence): int {
@@ -107,6 +110,7 @@ final class StepNarratorTest extends TestCase
      */
     public function testForToolNeverRepeatsTheSameVariantEvenWhenThePickerAlwaysReturnsTheSameIndex(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published, picker: static fn (int $n): int => 0);
 
@@ -123,6 +127,7 @@ final class StepNarratorTest extends TestCase
     /** reset() clears the per-tool variant memory too — a stale worker singleton starts fresh each turn. */
     public function testResetClearsTheVariantMemorySoTheFirstVariantCanRepeatOnTheNextTurn(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published, picker: static fn (int $n): int => 0);
 
@@ -137,6 +142,7 @@ final class StepNarratorTest extends TestCase
 
     public function testStaysSilentForAnUnmappedTool(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published)->forTool('some_tool_with_no_sentence');
 
@@ -145,6 +151,7 @@ final class StepNarratorTest extends TestCase
 
     public function testNarratesTheWebSearchStep(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published)->forTool('web_search');
 
@@ -160,9 +167,10 @@ final class StepNarratorTest extends TestCase
      */
     public function testAFreeNarrationCarriesNoToolKey(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use ($published): string {
             $published->append(json_decode($update->getData(), true));
 
             return 'id';
@@ -181,6 +189,7 @@ final class StepNarratorTest extends TestCase
      */
     public function testNarratesInEnglishWhenTheInterfaceIsEnglish(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published, Locale::En)->forTool('get_service_parts');
 
@@ -192,6 +201,7 @@ final class StepNarratorTest extends TestCase
 
     public function testAnUnmappedToolIsSilentInEveryLanguage(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published, Locale::En)->forTool('some_tool_with_no_sentence');
 
@@ -201,6 +211,7 @@ final class StepNarratorTest extends TestCase
     /** announce() is forTool()'s early twin: same sentence, but the id is remembered as announced. */
     public function testAnnounceNarratesAMappedToolAndRemembersTheId(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -216,6 +227,7 @@ final class StepNarratorTest extends TestCase
     /** An unmapped tool stays silent, exactly as forTool(), but the id is still marked announced. */
     public function testAnnounceStaysSilentForAnUnmappedToolButStillRemembersTheId(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -228,6 +240,7 @@ final class StepNarratorTest extends TestCase
     /** announceStep() carries the model's own sentence, with no tool key — narrate_step's shape. */
     public function testAnnounceStepNarratesTheModelAuthoredLineWithNoToolKey(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -239,6 +252,7 @@ final class StepNarratorTest extends TestCase
 
     public function testWasAnnouncedIsFalseForAnUnknownId(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -248,6 +262,7 @@ final class StepNarratorTest extends TestCase
     /** reset() clears the per-turn memory — a stale worker singleton must not leak across turns. */
     public function testResetClearsTheAnnouncedMemory(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 

@@ -25,14 +25,14 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<GetVehicleFactsInput, CallToolResult>
  */
-final class GetVehicleFactsProcessor implements ProcessorInterface
+final readonly class GetVehicleFactsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly GarageResolver $resolver,
-        private readonly FactView $factView,
-        private readonly IriConverterInterface $iriConverter,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleFactsProjector $factsProjector,
+        private GarageResolver $resolver,
+        private FactView $factView,
+        private IriConverterInterface $iriConverter,
+        private VehicleIriResolver $iriResolver,
+        private VehicleFactsProjector $factsProjector,
     ) {
     }
 

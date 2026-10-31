@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use ApiPlatform\Test\Client;
-
 /**
  * The MCP Apps extension (io.modelcontextprotocol/ui) wiring: the server advertises the
  * extension at initialize, the get_maintenance_history tool links a ui:// resource via

@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use App\Agent\TurnCancellations;
 use App\I18n\AgentMessages;
 use App\I18n\LocaleContext;
-use App\Agent\TurnCancellations;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Platform\Result\TextResult;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;

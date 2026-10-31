@@ -178,7 +178,7 @@ final class McpServiceDefaultsTest extends AppTestCase
             }
         }
 
-        $this->fail(sprintf('Tool "%s" is not advertised by the MCP server.', $name));
+        $this->fail(\sprintf('Tool "%s" is not advertised by the MCP server.', $name));
     }
 
     /**
@@ -194,6 +194,6 @@ final class McpServiceDefaultsTest extends AppTestCase
             }
         }
 
-        $this->fail(sprintf('No candidate applies when the discriminant is "%s".', $discriminantValue));
+        $this->fail(\sprintf('No candidate applies when the discriminant is "%s".', $discriminantValue));
     }
 }

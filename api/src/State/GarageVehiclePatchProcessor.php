@@ -7,9 +7,9 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
+use App\Documentation\OwnedVehicleLocator;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
-use App\Documentation\OwnedVehicleLocator;
 use App\Mercure\DomainPublisher;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
@@ -23,12 +23,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<GarageVehicle, GarageVehicle>
  */
-final class GarageVehiclePatchProcessor implements ProcessorInterface
+final readonly class GarageVehiclePatchProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly OwnedVehicleLocator $vehicles,
-        private readonly DocumentManager $em,
-        private readonly DomainPublisher $publisher,
+        private OwnedVehicleLocator $vehicles,
+        private DocumentManager $em,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -45,14 +45,14 @@ final class GarageVehiclePatchProcessor implements ProcessorInterface
         if (null !== $data->usageValue && null !== $data->usageUnit) {
             $unit = UsageUnit::tryFrom($data->usageUnit);
             if (null === $unit) {
-                throw new UnprocessableEntityHttpException(sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
+                throw new UnprocessableEntityHttpException(\sprintf('Unknown usageUnit "%s"; expected km, mi or h.', $data->usageUnit));
             }
             $vehicle->setUsage($data->usageValue, $unit);
         }
 
         $vehicleType = VehicleType::tryFrom($data->vehicleType);
         if (null === $vehicleType) {
-            throw new UnprocessableEntityHttpException(sprintf('Unknown vehicleType "%s".', $data->vehicleType));
+            throw new UnprocessableEntityHttpException(\sprintf('Unknown vehicleType "%s".', $data->vehicleType));
         }
 
         // merge-patch+json re-hydrates unsent fields from the current resource (the provider mapped

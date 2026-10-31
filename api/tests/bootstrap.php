@@ -1,12 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 use Symfony\Component\Dotenv\Dotenv;
 
 require dirname(__DIR__).'/vendor/autoload.php';
 
-if (method_exists(Dotenv::class, 'bootEnv')) {
-    (new Dotenv())->bootEnv(dirname(__DIR__).'/.env');
-}
+(new Dotenv())->bootEnv(dirname(__DIR__).'/.env');
 
 // The compose containers export MONGODB_DB=app as a REAL env var, which overrides .env.test's
 // app_test (Symfony Dotenv never overrides real env vars). AppTestCase drops MONGODB_DB on every

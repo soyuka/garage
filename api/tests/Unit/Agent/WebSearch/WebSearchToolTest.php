@@ -101,9 +101,11 @@ final class WebSearchToolTest extends TestCase
      */
     public function testTheControlFlowTokensAreStableAndDistinct(): void
     {
-        $this->assertSame('NO_RESULTS', WebSearchTool::NO_RESULTS);
-        $this->assertSame('SEARCH_UNAVAILABLE', WebSearchTool::UNAVAILABLE);
-        $this->assertSame('SEARCH_BUDGET_SPENT', WebSearchTool::BUDGET_SPENT);
+        // @phpstan-ignore method.alreadyNarrowedType (a regression pin on the wire tokens ai.yaml matches)
+        $this->assertSame(
+            ['NO_RESULTS', 'SEARCH_UNAVAILABLE', 'SEARCH_BUDGET_SPENT'],
+            [WebSearchTool::NO_RESULTS, WebSearchTool::UNAVAILABLE, WebSearchTool::BUDGET_SPENT],
+        );
     }
 
     public function testBudgetExhaustedAnnouncesItsOwnToken(): void

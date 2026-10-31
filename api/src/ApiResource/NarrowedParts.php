@@ -56,10 +56,10 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class NarrowedParts
 {
     /**
-     * @param list<array<string, mixed>>      $clusters
-     * @param list<array<string, mixed>>      $differsOn
-     * @param list<array<string, mixed>>|null $fallbackBrands
-     * @param array{id: int, name: string}|null $productGroup
+     * @param list<array<string, mixed>>                            $clusters
+     * @param list<array<string, mixed>>                            $differsOn
+     * @param list<array<string, mixed>>|null                       $fallbackBrands
+     * @param array{id: int, name: string}|null                     $productGroup
      * @param list<array{id: int, name: string, articleCount: int}> $productGroups
      */
     public function __construct(

@@ -22,13 +22,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProviderInterface<VehicleForecast>
  */
-final class VehicleForecastProvider implements ProviderInterface
+final readonly class VehicleForecastProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly DueMaintenanceCalculator $calculator,
-        private readonly DueMaintenanceView $view,
-        private readonly OwnerContext $owner,
+        private VehicleRepository $vehicles,
+        private DueMaintenanceCalculator $calculator,
+        private DueMaintenanceView $view,
+        private OwnerContext $owner,
     ) {
     }
 

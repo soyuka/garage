@@ -9,6 +9,8 @@ final class PlannedTaskEditTest extends AppTestCase
     use McpClientTrait;
 
     /**
+     * @param array<string, mixed> $arguments
+     *
      * @return array{client: \ApiPlatform\Test\Client, taskIri: string}
      */
     private function planTask(array $arguments): array

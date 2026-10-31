@@ -74,7 +74,7 @@ final class ImportVehicleDocumentationCommand extends Command
         $status = Command::SUCCESS;
         foreach ((array) $input->getArgument('path') as $path) {
             if (!is_file($path)) {
-                $io->error(sprintf('%s: not a file.', $path));
+                $io->error(\sprintf('%s: not a file.', $path));
                 $status = Command::FAILURE;
                 continue;
             }
@@ -91,12 +91,12 @@ final class ImportVehicleDocumentationCommand extends Command
                     $input->getOption('planned-task'),
                 );
             } catch (InvalidVehicleDocumentException $e) {
-                $io->error(sprintf('%s: %s', $path, $e->getMessage()));
+                $io->error(\sprintf('%s: %s', $path, $e->getMessage()));
                 $status = Command::FAILURE;
                 continue;
             }
 
-            $io->writeln(sprintf('%s -> %s (%d pages)', $path, $document->getId(), $document->getPages()->count()));
+            $io->writeln(\sprintf('%s -> %s (%d pages)', $path, $document->getId(), $document->getPages()->count()));
         }
 
         return $status;

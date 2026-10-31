@@ -47,12 +47,12 @@ final readonly class VehicleDocumentRecorder
     ): VehicleDocument {
         $size = (int) filesize($path);
         if ($size > self::MAX_BYTES) {
-            throw new InvalidVehicleDocumentException(sprintf('File too large (%d bytes); the limit is %d bytes.', $size, self::MAX_BYTES));
+            throw new InvalidVehicleDocumentException(\sprintf('File too large (%d bytes); the limit is %d bytes.', $size, self::MAX_BYTES));
         }
 
         $mime = (string) MimeTypes::getDefault()->guessMimeType($path);
         if (!\in_array($mime, self::ALLOWED_TYPES, true)) {
-            throw new InvalidVehicleDocumentException(sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
+            throw new InvalidVehicleDocumentException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
         }
 
         if (null !== $plannedTaskId) {
@@ -73,7 +73,7 @@ final readonly class VehicleDocumentRecorder
         $existing = null !== $sourceRef ? $this->documents->findBySourceRef($vehicle, $sourceRef, $filename) : null;
         $id = $existing?->getId() ?? (string) new Ulid();
 
-        $stream = fopen($path, 'rb');
+        $stream = fopen($path, 'r');
         try {
             $key = $this->storage->store((string) $vehicle->getId(), $id, $stream);
         } finally {

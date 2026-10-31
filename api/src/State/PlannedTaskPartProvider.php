@@ -17,10 +17,10 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProviderInterface<PlannedTaskPart>
  */
-final class PlannedTaskPartProvider implements ProviderInterface
+final readonly class PlannedTaskPartProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly OwnedPlannedTaskLocator $locator,
+        private OwnedPlannedTaskLocator $locator,
     ) {
     }
 

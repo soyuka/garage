@@ -29,13 +29,13 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
  *
  * @implements ProcessorInterface<PlanMaintenanceInput, PlannedTask|Response>
  */
-final class PlannedTaskPlanProcessor implements ProcessorInterface
+final readonly class PlannedTaskPlanProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PlannedMaintenancePlanner $planner,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly DomainPublisher $publisher,
+        private PlannedMaintenancePlanner $planner,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -55,26 +55,25 @@ final class PlannedTaskPlanProcessor implements ProcessorInterface
         $targetUnit = null;
         if (null !== $data->targetUsageUnit) {
             $targetUnit = UsageUnit::tryFrom($data->targetUsageUnit)
-                ?? throw new UnprocessableEntityHttpException(sprintf('Unknown targetUsageUnit "%s"; expected km, mi or h.', $data->targetUsageUnit));
+                ?? throw new UnprocessableEntityHttpException(\sprintf('Unknown targetUsageUnit "%s"; expected km, mi or h.', $data->targetUsageUnit));
         }
 
         foreach ($data->parts as $part) {
+            // @phpstan-ignore function.alreadyNarrowedType, notIdentical.alwaysTrue (deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee)
             if (\is_array($part) && \array_key_exists('findRoute', $part) && null !== $part['findRoute'] && !PlannedPart::isValidFindRoute($part['findRoute'])) {
                 throw new UnprocessableEntityHttpException('Invalid findRoute on a part.');
             }
         }
 
         $vehicleType = VehicleType::tryFrom($data->vehicleType)
-            ?? throw new UnprocessableEntityHttpException(sprintf('Unknown vehicleType "%s".', $data->vehicleType));
+            ?? throw new UnprocessableEntityHttpException(\sprintf('Unknown vehicleType "%s".', $data->vehicleType));
 
         $vehicleId = null;
         if (null !== $data->vehicle) {
             $resolved = $this->iriResolver->resolve($data->vehicle);
             if ($resolved instanceof CallToolResult) {
                 $reason = $resolved->structuredContent['reason'];
-                throw 'not_found' === $resolved->structuredContent['status']
-                    ? new NotFoundHttpException($reason)
-                    : new UnprocessableEntityHttpException($reason);
+                throw 'not_found' === $resolved->structuredContent['status'] ? new NotFoundHttpException($reason) : new UnprocessableEntityHttpException($reason);
             }
             $vehicleId = $resolved;
         }
@@ -100,7 +99,7 @@ final class PlannedTaskPlanProcessor implements ProcessorInterface
         );
 
         if ('not_found' === $outcome->status) {
-            throw new NotFoundHttpException(sprintf('No vehicle %s in the garage.', $outcome->vehicleId));
+            throw new NotFoundHttpException(\sprintf('No vehicle %s in the garage.', $outcome->vehicleId));
         }
 
         if ('ambiguous' === $outcome->status) {

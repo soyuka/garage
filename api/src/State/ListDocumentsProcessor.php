@@ -17,13 +17,13 @@ use Mcp\Schema\Result\CallToolResult;
 /**
  * @implements ProcessorInterface<ListDocumentsInput, CallToolResult>
  */
-final class ListDocumentsProcessor implements ProcessorInterface
+final readonly class ListDocumentsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly VehicleDocumentRepository $documents,
-        private readonly VehicleDocumentView $view,
-        private readonly VehicleIriResolver $iriResolver,
+        private VehicleRepository $vehicles,
+        private VehicleDocumentRepository $documents,
+        private VehicleDocumentView $view,
+        private VehicleIriResolver $iriResolver,
     ) {
     }
 

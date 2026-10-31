@@ -47,7 +47,7 @@ final readonly class ServiceDefaultsResolver
         if ([] === $candidates) {
             return ServiceDefaultsResolution::unknown(
                 $canonical,
-                sprintf('No reviewed baseline covers "%s"%s. Say so plainly, or look the interval up for this exact vehicle and store it with set_maintenance_schedule.', $canonical, null !== $vehicle ? ' for a '.$vehicle->getVehicleType()->value : ''),
+                \sprintf('No reviewed baseline covers "%s"%s. Say so plainly, or look the interval up for this exact vehicle and store it with set_maintenance_schedule.', $canonical, null !== $vehicle ? ' for a '.$vehicle->getVehicleType()->value : ''),
             );
         }
 
@@ -63,7 +63,7 @@ final readonly class ServiceDefaultsResolver
                 $canonical,
                 $candidates,
                 null,
-                sprintf('Several baselines apply, scoped to different vehicle segments (%s). Pass the vehicle @id so the right segment is used — do NOT pick one.', implode(', ', $this->segmentsOf($candidates))),
+                \sprintf('Several baselines apply, scoped to different vehicle segments (%s). Pass the vehicle @id so the right segment is used — do NOT pick one.', implode(', ', $this->segmentsOf($candidates))),
             );
         }
 
@@ -73,7 +73,7 @@ final readonly class ServiceDefaultsResolver
                 $canonical,
                 $candidates,
                 $key,
-                sprintf('The interval depends on `%s`, which is unknown on this vehicle. Ask the user or look that fact up first — never pick one of these numbers.', $key),
+                \sprintf('The interval depends on `%s`, which is unknown on this vehicle. Ask the user or look that fact up first — never pick one of these numbers.', $key),
             );
         }
 
@@ -90,7 +90,7 @@ final readonly class ServiceDefaultsResolver
             $canonical,
             $candidates,
             $key,
-            sprintf('`%s` is recorded as "%s" on this vehicle, which matches %s of the baselines below. Confirm the value before quoting an interval.', $key, $value, [] === $matching ? 'none' : 'several'),
+            \sprintf('`%s` is recorded as "%s" on this vehicle, which matches %s of the baselines below. Confirm the value before quoting an interval.', $key, $value, [] === $matching ? 'none' : 'several'),
         );
     }
 

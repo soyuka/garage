@@ -48,6 +48,7 @@ final class CapturingTransport extends BaseTransport
             $this->immediate = null;
             $this->handleMessage($frame, $this->sessionId);
 
+            // @phpstan-ignore notIdentical.alwaysFalse (send() sets it re-entrantly, through handleMessage()'s listener)
             if (null !== $this->immediate) {
                 $this->captured[] = $this->decode($this->immediate);
 

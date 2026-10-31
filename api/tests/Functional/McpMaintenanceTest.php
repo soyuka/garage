@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\Uid\Ulid;
+
 final class McpMaintenanceTest extends AppTestCase
 {
     use McpClientTrait;
@@ -314,7 +316,7 @@ final class McpMaintenanceTest extends AppTestCase
         $edit = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'edit_maintenance',
             'arguments' => [
-                'record' => '/garage/maintenance-records/'.new \Symfony\Component\Uid\Ulid(),
+                'record' => '/garage/maintenance-records/'.new Ulid(),
                 'notes' => 'ghost',
             ],
         ], 3);
@@ -828,7 +830,7 @@ final class McpMaintenanceTest extends AppTestCase
             }
         }
 
-        $this->fail(sprintf('No due %s for %s in %s', $type, $make, json_encode($due)));
+        $this->fail(\sprintf('No due %s for %s in %s', $type, $make, json_encode($due)));
     }
 
     /**
@@ -844,7 +846,7 @@ final class McpMaintenanceTest extends AppTestCase
             }
         }
 
-        $this->fail(sprintf('No gaps for %s %s in %s', $make, $model, json_encode($gaps)));
+        $this->fail(\sprintf('No gaps for %s %s in %s', $make, $model, json_encode($gaps)));
     }
 
     /**

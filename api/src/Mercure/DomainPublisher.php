@@ -34,13 +34,13 @@ use Symfony\Component\Mercure\Update;
  * Best-effort, like the render intents: the write already committed, so a hub that is down or
  * untrusted must never turn a successful write into a failure — log and move on.
  */
-final class DomainPublisher
+final readonly class DomainPublisher
 {
     public function __construct(
-        private readonly HubInterface $hub,
-        private readonly IriConverterInterface $iriConverter,
-        private readonly GarageVehicleView $view,
-        private readonly LoggerInterface $logger,
+        private HubInterface $hub,
+        private IriConverterInterface $iriConverter,
+        private GarageVehicleView $view,
+        private LoggerInterface $logger,
     ) {
     }
 

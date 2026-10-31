@@ -25,12 +25,12 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<ListVehiclesInput, CallToolResult>
  */
-final class ListVehiclesProcessor implements ProcessorInterface
+final readonly class ListVehiclesProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly SelectedVehicleContext $selected,
+        private VehicleRepository $vehicles,
+        private VehicleSummaryView $summaryView,
+        private SelectedVehicleContext $selected,
     ) {
     }
 

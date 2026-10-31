@@ -23,7 +23,7 @@ trait WriteOutcomeToolResult
             ]),
             'not_found' => ToolResult::of([
                 'status' => 'not_found',
-                'reason' => sprintf('No vehicle %s in the garage.', $this->vehicleId),
+                'reason' => \sprintf('No vehicle %s in the garage.', $this->vehicleId),
             ]),
             default => null,
         };

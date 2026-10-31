@@ -35,16 +35,16 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
  *
  * @implements ProcessorInterface<VehicleSaveInput, GarageVehicle|Response>
  */
-final class GarageVehicleSaveProcessor implements ProcessorInterface
+final readonly class GarageVehicleSaveProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly VehicleWriteResolver $resolver,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly DocumentManager $documentManager,
-        private readonly DomainPublisher $publisher,
-        private readonly VehicleFactWriter $factWriter,
-        private readonly BuildCodeDecoders $decoders,
+        private VehicleWriteResolver $resolver,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private DocumentManager $documentManager,
+        private DomainPublisher $publisher,
+        private VehicleFactWriter $factWriter,
+        private BuildCodeDecoders $decoders,
     ) {
     }
 
@@ -62,9 +62,7 @@ final class GarageVehicleSaveProcessor implements ProcessorInterface
             $resolved = $this->iriResolver->resolve((string) $data->vehicle);
             if ($resolved instanceof CallToolResult) {
                 $reason = $resolved->structuredContent['reason'];
-                throw 'not_found' === $resolved->structuredContent['status']
-                    ? new NotFoundHttpException($reason)
-                    : new UnprocessableEntityHttpException($reason);
+                throw 'not_found' === $resolved->structuredContent['status'] ? new NotFoundHttpException($reason) : new UnprocessableEntityHttpException($reason);
             }
             $vehicleId = $resolved;
         } elseif (null !== $guard = $this->iriResolver->requireIdentity($make, $model)) {

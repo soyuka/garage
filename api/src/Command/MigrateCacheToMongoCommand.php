@@ -80,13 +80,13 @@ final class MigrateCacheToMongoCommand extends Command
 
             ++$stats[$pool]['read'];
             $fetchedAt = new \DateTimeImmutable('@'.$row['item_time']);
-            $expiresAt = null === $row['item_lifetime'] ? null : $fetchedAt->modify(sprintf('+%d seconds', $row['item_lifetime']));
+            $expiresAt = null === $row['item_lifetime'] ? null : $fetchedAt->modify(\sprintf('+%d seconds', $row['item_lifetime']));
 
             try {
                 $data = \is_resource($row['item_data']) ? stream_get_contents($row['item_data']) : $row['item_data'];
                 $value = $marshaller->unmarshall($data);
             } catch (\Throwable $e) {
-                $errors[] = sprintf('%s: cannot unserialize (%s)', $row['item_id'], $e->getMessage());
+                $errors[] = \sprintf('%s: cannot unserialize (%s)', $row['item_id'], $e->getMessage());
                 continue;
             }
 
@@ -97,7 +97,7 @@ final class MigrateCacheToMongoCommand extends Command
 
             $mapped = $this->map($pool, $key, $value, $fetchedAt, $expiresAt);
             if (\is_string($mapped)) {
-                $errors[] = sprintf('%s (%s): %s', $row['item_id'], $pool, $mapped);
+                $errors[] = \sprintf('%s (%s): %s', $row['item_id'], $pool, $mapped);
             } else {
                 $writes[] = $mapped;
                 ++$stats[$pool]['write'];
@@ -116,12 +116,12 @@ final class MigrateCacheToMongoCommand extends Command
         );
 
         foreach ($ignored as $namespace => $n) {
-            $io->note(sprintf('Left behind %d row(s) under namespace "%s" (--ignore-namespace).', $n, $namespace));
+            $io->note(\sprintf('Left behind %d row(s) under namespace "%s" (--ignore-namespace).', $n, $namespace));
         }
 
         if ([] !== $unknown) {
             foreach ($unknown as $namespace => $n) {
-                $errors[] = sprintf('%d row(s) under unrecognised namespace "%s" — not one of this environment\'s pools; pass --ignore-namespace=%s to leave them behind', $n, $namespace, $namespace);
+                $errors[] = \sprintf('%d row(s) under unrecognised namespace "%s" — not one of this environment\'s pools; pass --ignore-namespace=%s to leave them behind', $n, $namespace, $namespace);
             }
         }
 
@@ -132,7 +132,7 @@ final class MigrateCacheToMongoCommand extends Command
         }
 
         if ($dryRun) {
-            $io->success(sprintf('Dry run: %d document(s) would be written.', \count($writes)));
+            $io->success(\sprintf('Dry run: %d document(s) would be written.', \count($writes)));
 
             return Command::SUCCESS;
         }
@@ -141,7 +141,7 @@ final class MigrateCacheToMongoCommand extends Command
             $write();
         }
 
-        $io->success(sprintf('Wrote %d document(s).', \count($writes)));
+        $io->success(\sprintf('Wrote %d document(s).', \count($writes)));
 
         return Command::SUCCESS;
     }
@@ -161,13 +161,13 @@ final class MigrateCacheToMongoCommand extends Command
                     return 'key is neither search.<sha1> nor recs.<sha1>';
                 }
                 if (!\is_array($value)) {
-                    return sprintf('expected an array, got %s', get_debug_type($value));
+                    return \sprintf('expected an array, got %s', get_debug_type($value));
                 }
 
                 return $this->roundTrips($value) ?? fn () => $this->motul->write($key, $value, $fetchedAt);
         }
 
-        return sprintf('no mapping for pool %s', $pool);
+        return \sprintf('no mapping for pool %s', $pool);
     }
 
     /**

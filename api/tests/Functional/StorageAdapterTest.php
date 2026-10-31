@@ -28,7 +28,6 @@ final class StorageAdapterTest extends KernelTestCase
     {
         self::bootKernel();
         $storage = self::getContainer()->get(MaintenanceAttachmentStorage::class);
-        \assert($storage instanceof MaintenanceAttachmentStorage);
 
         $key = $storage->store('record-1', 'attachment-1', 'bill-bytes');
 
@@ -51,6 +50,11 @@ final class StorageAdapterTest extends KernelTestCase
         );
     }
 
+    private static function service(string $id): object
+    {
+        return self::getContainer()->get($id);
+    }
+
     public function testS3AdapterIsSelectedByEnv(): void
     {
         $_SERVER['STORAGE_ADAPTER'] = $_ENV['STORAGE_ADAPTER'] = 's3';
@@ -59,7 +63,7 @@ final class StorageAdapterTest extends KernelTestCase
         self::bootKernel();
         $container = self::getContainer();
 
-        self::assertInstanceOf(FilesystemOperator::class, $container->get('maintenance.storage'));
+        self::assertInstanceOf(FilesystemOperator::class, self::service('maintenance.storage'));
         self::assertSame($container->get('maintenance.s3'), $container->get('maintenance.storage'));
         self::assertSame($container->get('vehicle_documents.s3'), $container->get('vehicle_documents.storage'));
         self::assertNotSame($container->get('maintenance.local'), $container->get('maintenance.storage'));

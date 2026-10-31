@@ -215,7 +215,11 @@ final class CachingSpeechClientTest extends TestCase
         $this->assertSame(2, $inner->voicesCalls, 'Switching TTS_BACKEND must not serve the other backend\'s cached voice list.');
     }
 
-    /** @return SpeechClient&object{voicesCalls: int} */
+    /**
+     * @param list<SpeechVoice> $voices
+     *
+     * @return SpeechClient&object{voicesCalls: int}
+     */
     private function voicesCountingClient(array $voices): SpeechClient
     {
         return new class($voices) implements SpeechClient {
@@ -286,6 +290,7 @@ final class CachingSpeechClientTest extends TestCase
         return new class($chunks, $completed, $diesFirst) implements SpeechClient {
             public int $calls = 0;
 
+            /** @param list<string> $chunks */
             public function __construct(private readonly array $chunks, private readonly string $completed, private readonly bool $diesFirst)
             {
             }

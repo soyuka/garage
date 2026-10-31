@@ -26,14 +26,14 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<LogMaintenanceInput, CallToolResult>
  */
-final class LogMaintenanceProcessor implements ProcessorInterface
+final readonly class LogMaintenanceProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly MaintenanceRecorder $recorder,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly VehicleSummaryView $summaryView,
-        private readonly RecordView $recordView,
-        private readonly DomainPublisher $publisher,
+        private MaintenanceRecorder $recorder,
+        private VehicleIriResolver $iriResolver,
+        private VehicleSummaryView $summaryView,
+        private RecordView $recordView,
+        private DomainPublisher $publisher,
     ) {
     }
 

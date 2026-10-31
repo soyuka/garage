@@ -77,7 +77,7 @@ final class StepNarrator
      * means "use `random_int`", and autowiring is untouched by it (no service of type `Closure` is
      * ever asked for).
      *
-     * @param null|\Closure(int $count): int $picker
+     * @param \Closure(int $count): int|null $picker
      */
     public function __construct(
         private readonly RenderIntentTools $tools,

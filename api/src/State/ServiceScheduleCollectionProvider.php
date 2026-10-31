@@ -19,11 +19,11 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProviderInterface<ServiceScheduleItem>
  */
-final class ServiceScheduleCollectionProvider implements ProviderInterface
+final readonly class ServiceScheduleCollectionProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly OwnerContext $owner,
+        private VehicleRepository $vehicles,
+        private OwnerContext $owner,
     ) {
     }
 

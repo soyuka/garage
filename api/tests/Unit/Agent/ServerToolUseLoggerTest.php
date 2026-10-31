@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent;
 
-use App\I18n\LocaleContext;
-use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\ServerToolUseLogger;
 use App\Agent\Ui\RenderIntentTools;
-use App\Tests\Mock\TestDashboardChannel;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
+use App\I18n\LocaleContext;
+use App\Tests\Mock\TestDashboardChannel;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -23,6 +22,7 @@ use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -76,6 +76,7 @@ final class ServerToolUseLoggerTest extends TestCase
         $logger->expects($this->never())->method('notice');
 
         $budget = new WebSearchBudget(1);
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $result = $this->decorator($raw, $logger, $budget, new PlainConverter($stream), $published)
             ->invoke('claude', 'hi', ['stream' => true]);
@@ -109,7 +110,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $published ??= new \ArrayObject();
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use ($published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use ($published): string {
             $published->append(json_decode($update->getData(), true));
 
             return 'id';
@@ -124,12 +125,15 @@ final class ServerToolUseLoggerTest extends TestCase
 
     /**
      * @param array<string, mixed> $data
+     *
+     * @return RawResultInterface&object{reads: int}
      */
     private function rawResult(array $data): RawResultInterface
     {
         return new class($data) implements RawResultInterface {
             public int $reads = 0;
 
+            /** @param array<string, mixed> $data */
             public function __construct(private readonly array $data)
             {
             }

@@ -29,7 +29,7 @@ class MakeKnowledgeRepository extends ServiceDocumentRepository
         return array_values($this->createQueryBuilder()
             ->field('makes')->equals(MakeName::normalize($make))
             ->sort('topic', 'asc')
-            ->getQuery()->execute()->toArray());
+            ->getQuery()->getIterator()->toArray());
     }
 
     public function findOneForMake(string $make, string $topic): ?MakeKnowledge
@@ -45,6 +45,6 @@ class MakeKnowledgeRepository extends ServiceDocumentRepository
      */
     public function findEvery(): array
     {
-        return array_values($this->findAll());
+        return $this->findAll();
     }
 }

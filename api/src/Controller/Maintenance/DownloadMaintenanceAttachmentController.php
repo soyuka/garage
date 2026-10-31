@@ -21,11 +21,11 @@ use Symfony\Component\Routing\Attribute\Route;
  * Served inline (Content-Disposition: inline) so the browser renders the PDF/image in place; the
  * original filename rides along for a "Save as".
  */
-final class DownloadMaintenanceAttachmentController
+final readonly class DownloadMaintenanceAttachmentController
 {
     public function __construct(
-        private readonly OwnedRecordLocator $locator,
-        private readonly MaintenanceAttachmentStorage $storage,
+        private OwnedRecordLocator $locator,
+        private MaintenanceAttachmentStorage $storage,
     ) {
     }
 

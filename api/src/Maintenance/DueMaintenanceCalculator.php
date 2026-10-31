@@ -101,7 +101,7 @@ final readonly class DueMaintenanceCalculator
         $daysUntilDue = null;
         $timeOverdue = false;
         if (null !== $interval->getEveryMonths()) {
-            $dueAt = $lastPerformedAt->modify(sprintf('+%d months', $interval->getEveryMonths()));
+            $dueAt = $lastPerformedAt->modify(\sprintf('+%d months', $interval->getEveryMonths()));
             $daysUntilDue = (int) $now->diff($dueAt)->format('%r%a');
             $timeOverdue = $dueAt < $now;
         }
@@ -126,7 +126,7 @@ final readonly class DueMaintenanceCalculator
 
                 $rate = $this->usageRatePerDay($vehicle, $unit);
                 if (null !== $rate) {
-                    $projectedDueAt = $now->modify(sprintf('%+d days', (int) round($usageRemaining / $rate)));
+                    $projectedDueAt = $now->modify(\sprintf('%+d days', (int) round($usageRemaining / $rate)));
                 }
             }
         }

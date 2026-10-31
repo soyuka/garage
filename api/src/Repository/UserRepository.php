@@ -11,7 +11,7 @@ use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 /**
  * @extends ServiceDocumentRepository<User>
  */
-class UserRepository extends ServiceDocumentRepository
+final class UserRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry)
     {

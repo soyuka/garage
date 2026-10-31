@@ -32,7 +32,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * 3.2 s for a short line, 10 s for a medium one (docs/voice.md) — which is the whole gap between the
  * card appearing and the voice starting.
  */
-final class SpeechController
+final readonly class SpeechController
 {
     /**
      * A toast is one line. Anything past this is an upstream bug — refuse it here rather than pay to
@@ -41,8 +41,8 @@ final class SpeechController
     private const int MAX_CHARS = 400;
 
     public function __construct(
-        private readonly SpeechClient $speech,
-        private readonly Verbalizer $verbalizer,
+        private SpeechClient $speech,
+        private Verbalizer $verbalizer,
     ) {
     }
 

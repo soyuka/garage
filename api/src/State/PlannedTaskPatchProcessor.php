@@ -8,8 +8,8 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
 use App\Garage\UsageUnit;
-use App\Maintenance\PlannedMaintenanceStatus;
 use App\Maintenance\OwnedPlannedTaskLocator;
+use App\Maintenance\PlannedMaintenanceStatus;
 use App\Mercure\DomainPublisher;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -23,12 +23,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<PlannedTask, PlannedTask>
  */
-final class PlannedTaskPatchProcessor implements ProcessorInterface
+final readonly class PlannedTaskPatchProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly OwnedPlannedTaskLocator $locator,
-        private readonly DocumentManager $em,
-        private readonly DomainPublisher $publisher,
+        private OwnedPlannedTaskLocator $locator,
+        private DocumentManager $em,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -43,7 +43,7 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
 
         $status = PlannedMaintenanceStatus::tryFrom($data->status);
         if (null === $status) {
-            throw new UnprocessableEntityHttpException(sprintf('Unknown status "%s"; expected open, done or dismissed.', $data->status));
+            throw new UnprocessableEntityHttpException(\sprintf('Unknown status "%s"; expected open, done or dismissed.', $data->status));
         }
 
         // merge-patch+json re-hydrates the unsent fields from the current task, so a parts-only PATCH
@@ -87,10 +87,10 @@ final class PlannedTaskPatchProcessor implements ProcessorInterface
         }
 
         $unit = null;
-        if (isset($target['unit']) && null !== $target['unit']) {
+        if (isset($target['unit'])) {
             $unit = UsageUnit::tryFrom((string) $target['unit']);
             if (null === $unit) {
-                throw new UnprocessableEntityHttpException(sprintf('Unknown target unit "%s"; expected km, mi or h.', $target['unit']));
+                throw new UnprocessableEntityHttpException(\sprintf('Unknown target unit "%s"; expected km, mi or h.', $target['unit']));
             }
         }
 

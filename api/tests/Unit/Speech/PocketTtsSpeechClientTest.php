@@ -21,7 +21,7 @@ final class PocketTtsSpeechClientTest extends TestCase
     public function testItPostsToTheServerConfiguredForThatLocaleAndReturnsWav(): void
     {
         $sent = [];
-        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$sent): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$sent): MockResponse {
             $sent = ['method' => $method, 'url' => $url, 'options' => $options];
 
             return new MockResponse(self::AUDIO);
@@ -45,7 +45,7 @@ final class PocketTtsSpeechClientTest extends TestCase
     public function testEachLocaleReachesItsOwnServer(): void
     {
         $urls = [];
-        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url) use (&$urls): MockResponse {
             $urls[] = $url;
 
             return new MockResponse(self::AUDIO);
@@ -61,7 +61,7 @@ final class PocketTtsSpeechClientTest extends TestCase
     public function testTheTextRidesTheMultipartBodyTheServerExpects(): void
     {
         $body = null;
-        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$body): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$body): MockResponse {
             $body = self::drain($options['body'] ?? '');
 
             return new MockResponse(self::AUDIO);
@@ -80,7 +80,7 @@ final class PocketTtsSpeechClientTest extends TestCase
     public function testALocaleWithNoServerIsUnavailableAndMakesNoCall(): void
     {
         $calls = 0;
-        $http = new MockHttpClient(function () use (&$calls): MockResponse {
+        $http = new MockHttpClient(static function () use (&$calls): MockResponse {
             ++$calls;
 
             return new MockResponse(self::AUDIO);
@@ -205,7 +205,7 @@ final class PocketTtsSpeechClientTest extends TestCase
     public function testStreamIgnoresTheRequestedVoiceParameter(): void
     {
         $urls = [];
-        $http = new MockHttpClient(function (string $method, string $url) use (&$urls): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url) use (&$urls): MockResponse {
             $urls[] = $url;
 
             return new MockResponse(self::AUDIO);

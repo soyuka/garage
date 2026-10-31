@@ -36,7 +36,7 @@ final class HubTokenConfigTest extends TestCase
         $container->getDefinition('mercure.hub.default.jwt.provider')->setPublic(true);
         $container->compile(true);
 
-        $provider = $container->get('mercure.hub.default.jwt.provider');
+        $provider = self::service($container, 'mercure.hub.default.jwt.provider');
         self::assertInstanceOf(TokenProviderInterface::class, $provider);
         [$header, $payload] = array_map(
             static fn (string $part): array => json_decode(base64_decode(strtr($part, '-_', '+/')), true, flags: \JSON_THROW_ON_ERROR),
@@ -48,5 +48,10 @@ final class HubTokenConfigTest extends TestCase
         self::assertEqualsCanonicalizing([self::URL, self::PUBLIC_URL], (array) $payload['aud']);
         self::assertSame(['publish'], $payload['authorization_details'][0]['actions']);
         self::assertSame([['match' => '*']], $payload['authorization_details'][0]['topics']);
+    }
+
+    private static function service(ContainerBuilder $container, string $id): object
+    {
+        return $container->get($id);
     }
 }

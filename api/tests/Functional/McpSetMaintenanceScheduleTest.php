@@ -141,7 +141,7 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
             }
         }
 
-        self::fail(sprintf('No due item for %s %s.', $make, $type));
+        self::fail(\sprintf('No due item for %s %s.', $make, $type));
     }
 
     /**
@@ -157,6 +157,6 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
             }
         }
 
-        self::fail(sprintf('No gaps entry for %s %s.', $make, $model));
+        self::fail(\sprintf('No gaps entry for %s %s.', $make, $model));
     }
 }

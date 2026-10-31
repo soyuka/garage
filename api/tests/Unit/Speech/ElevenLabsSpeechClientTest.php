@@ -9,7 +9,6 @@ use App\Speech\ElevenLabsSpeechClient;
 use App\Speech\SpeechUnavailable;
 use App\Speech\SpeechVoice;
 use App\Speech\Wav;
-use InvalidArgumentException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -25,7 +24,7 @@ final class ElevenLabsSpeechClientTest extends TestCase
     public function testItPostsToTheStreamEndpointWithPcm24000(): void
     {
         $sent = [];
-        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$sent): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$sent): MockResponse {
             $sent = ['method' => $method, 'url' => $url, 'options' => $options];
 
             return new MockResponse(['one', 'two']);
@@ -41,7 +40,7 @@ final class ElevenLabsSpeechClientTest extends TestCase
     public function testTheJsonBodyCarriesTheLocaleAsLanguageCode(): void
     {
         $sent = [];
-        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$sent): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$sent): MockResponse {
             $sent = $options;
 
             return new MockResponse(['one']);
@@ -56,7 +55,7 @@ final class ElevenLabsSpeechClientTest extends TestCase
     public function testTheJsonBodyCarriesTheConfiguredSpeedForElevenV3French(): void
     {
         $sent = [];
-        $http = new MockHttpClient(function (string $method, string $url, array $options) use (&$sent): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$sent): MockResponse {
             $sent = $options;
 
             return new MockResponse(['one']);
@@ -133,7 +132,7 @@ final class ElevenLabsSpeechClientTest extends TestCase
 
     public function testSpeedOutsideElevenLabsSupportedRangeIsRejected(): void
     {
-        $this->expectException(InvalidArgumentException::class);
+        $this->expectException(\InvalidArgumentException::class);
 
         new ElevenLabsSpeechClient(new MockHttpClient(), 'api-key', 'voice-id', 'eleven_v3', 1.21);
     }
@@ -141,7 +140,7 @@ final class ElevenLabsSpeechClientTest extends TestCase
     public function testStreamUsesTheRequestedVoiceOverTheConfiguredOne(): void
     {
         $sent = [];
-        $http = new MockHttpClient(function (string $method, string $url) use (&$sent): MockResponse {
+        $http = new MockHttpClient(static function (string $method, string $url) use (&$sent): MockResponse {
             $sent[] = $url;
 
             return new MockResponse(['one']);

@@ -66,7 +66,7 @@ final class BrandTier
                 'tier' => self::classify($brand),
                 'known' => \array_key_exists(self::normalize($brand), self::rankMap()),
             ],
-            array_values($brands),
+            $brands,
         );
 
         usort(

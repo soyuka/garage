@@ -28,7 +28,7 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<ListServiceDefaultsInput, CallToolResult>
  */
-final class ListServiceDefaultsProcessor implements ProcessorInterface
+final readonly class ListServiceDefaultsProcessor implements ProcessorInterface
 {
     private const array NOTES = [
         'PRECEDENCE, highest first: what the user stated > this vehicle\'s own stored rule (set_maintenance_schedule) or verified fact > these generic baselines. A baseline NEVER outranks a stored rule — if the vehicle already has one, use it and ignore this.',
@@ -39,11 +39,11 @@ final class ListServiceDefaultsProcessor implements ProcessorInterface
     ];
 
     public function __construct(
-        private readonly ServiceDefaultsCatalog $catalog,
-        private readonly ServiceDefaultsResolver $resolver,
-        private readonly ServiceDefaultsView $view,
-        private readonly VehicleIriResolver $iriResolver,
-        private readonly GarageResolver $garage,
+        private ServiceDefaultsCatalog $catalog,
+        private ServiceDefaultsResolver $resolver,
+        private ServiceDefaultsView $view,
+        private VehicleIriResolver $iriResolver,
+        private GarageResolver $garage,
     ) {
     }
 

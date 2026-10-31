@@ -38,9 +38,9 @@ final readonly class PocketTtsSpeechClient implements SpeechClient
 
     /**
      * @param array<string, string> $endpoints  locale value => base URL of the server speaking it;
-     *                                           an empty or missing entry means that language is mute
+     *                                          an empty or missing entry means that language is mute
      * @param string                $voiceLabel the label {@see voices()} answers — one Kyutai model
-     *                                           per process, so this is the whole voice identity
+     *                                          per process, so this is the whole voice identity
      */
     public function __construct(
         private HttpClientInterface $http,

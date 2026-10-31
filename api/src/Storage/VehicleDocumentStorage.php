@@ -21,7 +21,7 @@ final class VehicleDocumentStorage
      */
     public function store(string $vehicleId, string $documentId, $stream): string
     {
-        $key = sprintf('%s/%s', $vehicleId, $documentId);
+        $key = \sprintf('%s/%s', $vehicleId, $documentId);
         $this->filesystem->writeStream($key, $stream);
 
         return $key;

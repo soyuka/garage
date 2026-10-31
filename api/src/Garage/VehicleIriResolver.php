@@ -16,7 +16,7 @@ use Symfony\Component\Uid\Ulid;
  * modes onto the tools' canonical structured results — never an exception, so a bad handle reaches
  * the model as recoverable text instead of a -32603 protocol error:
  *  - a well-formed IRI that resolves to nothing  → not_found     "No vehicle at %s in the garage."
- *  - a malformed / non-vehicle IRI               → invalid_input '"%s" is not a valid vehicle @id…'
+ *  - a malformed / non-vehicle IRI               → invalid_input '"%s" is not a valid vehicle @id…'.
  *
  * Centralises the wording so the (drift-prone) copies scattered across the write/read processors
  * stay in lockstep. {@see requireIdentity()} is the companion guard for the make+model fallback.
@@ -52,7 +52,7 @@ final readonly class VehicleIriResolver
         } catch (\Throwable) {
             return ToolResult::of([
                 'status' => 'invalid_input',
-                'reason' => sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $iri),
+                'reason' => \sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $iri),
             ]);
         }
     }
@@ -65,7 +65,7 @@ final readonly class VehicleIriResolver
     {
         return ToolResult::of([
             'status' => 'not_found',
-            'reason' => sprintf('No vehicle at %s in the garage.', $iri),
+            'reason' => \sprintf('No vehicle at %s in the garage.', $iri),
         ]);
     }
 

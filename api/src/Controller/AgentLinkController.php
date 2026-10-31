@@ -18,11 +18,11 @@ use Symfony\Component\Routing\Attribute\Route;
  * accepts anonymous subscribers, so handing it out is handing out the right to watch that owner's
  * dashboard traffic. The firewall guarantees the token, hence no null owner here.
  */
-final class AgentLinkController
+final readonly class AgentLinkController
 {
     public function __construct(
-        private readonly Security $security,
-        private readonly DashboardChannel $channel,
+        private Security $security,
+        private DashboardChannel $channel,
     ) {
     }
 

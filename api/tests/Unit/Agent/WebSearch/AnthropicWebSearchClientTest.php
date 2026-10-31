@@ -93,6 +93,7 @@ final class AnthropicWebSearchClientTest extends TestCase
     private function platform(array $data, array &$captured): PlatformInterface
     {
         $raw = new class($data) implements RawResultInterface {
+            /** @param array<string, mixed> $data */
             public function __construct(private readonly array $data)
             {
             }
@@ -117,7 +118,7 @@ final class AnthropicWebSearchClientTest extends TestCase
 
         $platform = $this->createMock(PlatformInterface::class);
         $platform->expects($this->once())->method('invoke')->willReturnCallback(
-            function (string|object $model, mixed $input, array $options = []) use ($deferred, &$captured): DeferredResult {
+            static function (string|object $model, mixed $input, array $options = []) use ($deferred, &$captured): DeferredResult {
                 $captured['model'] = $model;
                 $captured['input'] = $input;
                 $captured['options'] = $options;

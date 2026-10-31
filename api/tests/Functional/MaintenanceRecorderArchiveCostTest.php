@@ -22,7 +22,6 @@ final class MaintenanceRecorderArchiveCostTest extends AppTestCase
     private function seedVehicleWithDoneTask(): Vehicle
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);
@@ -41,7 +40,6 @@ final class MaintenanceRecorderArchiveCostTest extends AppTestCase
     {
         $vehicle = $this->seedVehicleWithDoneTask();
         $recorder = static::getContainer()->get(MaintenanceRecorder::class);
-        \assert($recorder instanceof MaintenanceRecorder);
 
         $records = $recorder->archiveCompletedTasks($vehicle, new \DateTimeImmutable());
 
@@ -53,7 +51,6 @@ final class MaintenanceRecorderArchiveCostTest extends AppTestCase
     {
         $vehicle = $this->seedVehicleWithDoneTask();
         $recorder = static::getContainer()->get(MaintenanceRecorder::class);
-        \assert($recorder instanceof MaintenanceRecorder);
 
         $records = $recorder->archiveCompletedTasks($vehicle, new \DateTimeImmutable(), costCents: 7500);
 

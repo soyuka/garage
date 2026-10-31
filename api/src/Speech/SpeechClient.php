@@ -26,10 +26,10 @@ use App\I18n\Locale;
 interface SpeechClient
 {
     /**
-     * @param Locale      $locale the language the text is IN — not a hint, a pronunciation instruction:
-     *                            a multilingual voice reads the same sentence differently depending on it
-     * @param ?string     $voice  a voice id as returned by {@see self::voices()}; null means "use the
-     *                            backend's own default" — a backend with one voice per locale ignores it
+     * @param Locale  $locale the language the text is IN — not a hint, a pronunciation instruction:
+     *                        a multilingual voice reads the same sentence differently depending on it
+     * @param ?string $voice  a voice id as returned by {@see self::voices()}; null means "use the
+     *                        backend's own default" — a backend with one voice per locale ignores it
      *
      * @return SpeechStream the audio as the backend produces it, in the backend's own format
      *

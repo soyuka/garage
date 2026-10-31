@@ -7,9 +7,9 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
+use App\Documentation\OwnedVehicleLocator;
 use App\Dto\VehicleFactInput;
 use App\Entity\VehicleFact;
-use App\Documentation\OwnedVehicleLocator;
 use App\Garage\GarageVehicleView;
 use App\Maintenance\VehicleFactWriter;
 use Symfony\Component\Uid\Ulid;
@@ -23,12 +23,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<VehicleFactInput, GarageVehicle>
  */
-final class GarageVehicleFactProcessor implements ProcessorInterface
+final readonly class GarageVehicleFactProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly OwnedVehicleLocator $vehicles,
-        private readonly GarageVehicleView $view,
-        private readonly VehicleFactWriter $writer,
+        private OwnedVehicleLocator $vehicles,
+        private GarageVehicleView $view,
+        private VehicleFactWriter $writer,
     ) {
     }
 

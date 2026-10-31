@@ -19,12 +19,12 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProviderInterface<GarageMaintenanceRecord>
  */
-final class VehicleMaintenanceRecordCollectionProvider implements ProviderInterface
+final readonly class VehicleMaintenanceRecordCollectionProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly MaintenanceRecordRepository $records,
-        private readonly OwnerContext $owner,
+        private VehicleRepository $vehicles,
+        private MaintenanceRecordRepository $records,
+        private OwnerContext $owner,
     ) {
     }
 

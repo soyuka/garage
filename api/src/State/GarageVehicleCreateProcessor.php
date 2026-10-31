@@ -23,12 +23,12 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
  *
  * @implements ProcessorInterface<VehicleCreateInput, GarageVehicle>
  */
-final class GarageVehicleCreateProcessor implements ProcessorInterface
+final readonly class GarageVehicleCreateProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly DocumentManager $em,
-        private readonly OwnerContext $owner,
-        private readonly DomainPublisher $publisher,
+        private DocumentManager $em,
+        private OwnerContext $owner,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -36,7 +36,7 @@ final class GarageVehicleCreateProcessor implements ProcessorInterface
     {
         $type = null !== $data->vehicleType ? VehicleType::tryFrom($data->vehicleType) : VehicleType::Car;
         if (null === $type) {
-            throw new UnprocessableEntityHttpException(sprintf('Unknown vehicleType "%s".', $data->vehicleType));
+            throw new UnprocessableEntityHttpException(\sprintf('Unknown vehicleType "%s".', $data->vehicleType));
         }
 
         $vehicle = new Vehicle(

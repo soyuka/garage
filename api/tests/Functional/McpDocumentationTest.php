@@ -21,7 +21,6 @@ final class McpDocumentationTest extends AppTestCase
     {
         $client = static::createClient();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', 'CLIO', VehicleType::Car, 'user', year: 2004);
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
@@ -243,7 +242,6 @@ final class McpDocumentationTest extends AppTestCase
         [$client, $sessionId, $iri] = $this->seedManual();
         $documentId = $this->documentId($client, $sessionId, $iri);
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('RENAULT', 'ESPACE', VehicleType::Car, 'user', year: 2010);
         $vehicle->setOwner('someone-else@example.com');
         $dm->persist($vehicle);

@@ -24,11 +24,11 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<PlannedTaskInput, PlannedTask>
  */
-final class PlannedTaskCreateProcessor implements ProcessorInterface
+final readonly class PlannedTaskCreateProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PlannedMaintenancePlanner $planner,
-        private readonly DomainPublisher $publisher,
+        private PlannedMaintenancePlanner $planner,
+        private DomainPublisher $publisher,
     ) {
     }
 
@@ -39,10 +39,10 @@ final class PlannedTaskCreateProcessor implements ProcessorInterface
 
         $targetValue = $data->target['value'] ?? null;
         $targetUnit = null;
-        if (isset($data->target['unit']) && null !== $data->target['unit']) {
+        if (isset($data->target['unit'])) {
             $targetUnit = UsageUnit::tryFrom((string) $data->target['unit']);
             if (null === $targetUnit) {
-                throw new UnprocessableEntityHttpException(sprintf('Unknown target unit "%s"; expected km, mi or h.', $data->target['unit']));
+                throw new UnprocessableEntityHttpException(\sprintf('Unknown target unit "%s"; expected km, mi or h.', $data->target['unit']));
             }
         }
 

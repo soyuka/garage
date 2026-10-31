@@ -23,7 +23,6 @@ final class PlannedTaskArchiveTest extends AppTestCase
     private function seedVehicleWithTasks(): array
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);

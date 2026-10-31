@@ -20,13 +20,13 @@ use App\Repository\VehicleRepository;
  *
  * @implements ProviderInterface<GarageVehicle>
  */
-final class GarageVehicleCollectionProvider implements ProviderInterface
+final readonly class GarageVehicleCollectionProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly VehicleRepository $vehicles,
-        private readonly VehicleFactsProjector $factsProjector,
-        private readonly DueMaintenanceCalculator $calculator,
-        private readonly DueMaintenanceView $dueView,
+        private VehicleRepository $vehicles,
+        private VehicleFactsProjector $factsProjector,
+        private DueMaintenanceCalculator $calculator,
+        private DueMaintenanceView $dueView,
     ) {
     }
 

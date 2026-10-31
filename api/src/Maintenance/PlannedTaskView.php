@@ -14,18 +14,18 @@ use App\Entity\VehicleFact;
  * mirrors {@see RecordView}. The `@id` is the dereferenceable PlannedTask IRI the dashboard PATCHes
  * to tick the task off; `vehicle` is the owning vehicle's IRI.
  */
-final class PlannedTaskView
+final readonly class PlannedTaskView
 {
     public function __construct(
-        private readonly IriConverterInterface $iriConverter,
-        private readonly VehicleFactsProjector $facts,
-        private readonly PlannedTaskFluidEnricher $fluids,
+        private IriConverterInterface $iriConverter,
+        private VehicleFactsProjector $facts,
+        private PlannedTaskFluidEnricher $fluids,
     ) {
     }
 
     /**
      * @return array{
-     *     @id: string,
+     *     '@id': string,
      *     type: string,
      *     label: string|null,
      *     target: array{value: int, unit: string|null}|null,

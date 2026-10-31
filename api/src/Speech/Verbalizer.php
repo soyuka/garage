@@ -49,7 +49,7 @@ final readonly class Verbalizer
         ],
     ];
 
-    /** @var array<value-of<Locale>, array<string, string>> */
+    /** @var array<value-of<Locale>, array<int, string>> */
     private const array SPOKEN_DIGITS = [
         'fr' => ['0' => 'zéro', '1' => 'un', '2' => 'deux', '3' => 'trois', '4' => 'quatre', '5' => 'cinq', '6' => 'six', '7' => 'sept', '8' => 'huit', '9' => 'neuf'],
         'en' => ['0' => 'zero', '1' => 'one', '2' => 'two', '3' => 'three', '4' => 'four', '5' => 'five', '6' => 'six', '7' => 'seven', '8' => 'eight', '9' => 'nine'],
@@ -346,7 +346,7 @@ final readonly class Verbalizer
 
     private function speakPartReferenceGroup(string $group, Locale $locale): string
     {
-        if (ctype_digit($group) && strlen($group) <= 2 && !str_starts_with($group, '0')) {
+        if (ctype_digit($group) && \strlen($group) <= 2 && !str_starts_with($group, '0')) {
             return (new \NumberFormatter($locale->value, \NumberFormatter::SPELLOUT))->format((int) $group);
         }
 

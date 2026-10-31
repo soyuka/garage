@@ -94,6 +94,7 @@ final class MaintenanceRecordInput
                 continue;
             }
 
+            // @phpstan-ignore arrayValues.list (deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee)
             $entry = ['type' => $type, 'parts' => array_values($item['parts'] ?? [])];
             if (isset($item['label']) && '' !== trim((string) $item['label'])) {
                 $entry['label'] = trim((string) $item['label']);

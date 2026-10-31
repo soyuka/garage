@@ -24,19 +24,19 @@ use App\I18n\Locale;
 interface TranscriptionClient
 {
     /**
-     * @param string  $audio       the recording exactly as the browser produced it — never re-encoded
-     *                             on the way in: a lossy second pass would degrade accuracy
-     *                             invisibly, and a worse transcript looks just like a worse model
-     * @param string  $contentType the recording's own media type (`audio/webm;codecs=opus` from a
-     *                             browser MediaRecorder), passed through so the backend decodes it
-     *                             rather than sniffing
-     * @param Locale  $locale      the language being SPOKEN — not a hint: transcribed as the wrong
-     *                             language, a French sentence does not come back accented, it comes
-     *                             back as different words
-     * @param list<string> $keyterms vocabulary to bias recognition toward — the operator's own
-     *                               vehicles and the garage's terms ({@see GarageVocabulary}), since
-     *                               proper nouns are the measured error class. Empty means send no
-     *                               bias at all, which for a metered backend is also the cheaper call
+     * @param string       $audio       the recording exactly as the browser produced it — never re-encoded
+     *                                  on the way in: a lossy second pass would degrade accuracy
+     *                                  invisibly, and a worse transcript looks just like a worse model
+     * @param string       $contentType the recording's own media type (`audio/webm;codecs=opus` from a
+     *                                  browser MediaRecorder), passed through so the backend decodes it
+     *                                  rather than sniffing
+     * @param Locale       $locale      the language being SPOKEN — not a hint: transcribed as the wrong
+     *                                  language, a French sentence does not come back accented, it comes
+     *                                  back as different words
+     * @param list<string> $keyterms    vocabulary to bias recognition toward — the operator's own
+     *                                  vehicles and the garage's terms ({@see GarageVocabulary}), since
+     *                                  proper nouns are the measured error class. Empty means send no
+     *                                  bias at all, which for a metered backend is also the cheaper call
      *
      * @return string the operator's words verbatim, or `''` when the recording held no speech.
      *                Silence is a normal outcome of a push-to-talk control, never an error

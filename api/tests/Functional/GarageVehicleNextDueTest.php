@@ -21,7 +21,6 @@ final class GarageVehicleNextDueTest extends AppTestCase
     private function seed(string $make, callable $build): void
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
         $vehicle = new Vehicle($make, 'MODEL', VehicleType::Car, 'user');
         $vehicle->setOwner(self::TEST_OWNER);

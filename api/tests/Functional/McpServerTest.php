@@ -117,4 +117,3 @@ final class McpServerTest extends AppTestCase
         $this->assertNotSame('not_found', $content['status']);
     }
 }
-

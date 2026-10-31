@@ -23,13 +23,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProcessorInterface<RemovePlannedPartInput, CallToolResult>
  */
-final class RemovePlannedPartProcessor implements ProcessorInterface
+final readonly class RemovePlannedPartProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly OwnedPlannedTaskLocator $locator,
-        private readonly PlannedPartRemover $remover,
-        private readonly IriConverterInterface $iriConverter,
-        private readonly PlannedTaskView $taskView,
+        private OwnedPlannedTaskLocator $locator,
+        private PlannedPartRemover $remover,
+        private IriConverterInterface $iriConverter,
+        private PlannedTaskView $taskView,
     ) {
     }
 
@@ -39,7 +39,7 @@ final class RemovePlannedPartProcessor implements ProcessorInterface
         if (null === $task || !Ulid::isValid($data->part) || !$this->remover->remove($task, Ulid::fromString($data->part))) {
             return ToolResult::of([
                 'status' => 'not_found',
-                'reason' => sprintf('No part "%s" on the planned task %s — read both ids from list_planned_maintenance.', $data->part, $data->task),
+                'reason' => \sprintf('No part "%s" on the planned task %s — read both ids from list_planned_maintenance.', $data->part, $data->task),
             ]);
         }
 

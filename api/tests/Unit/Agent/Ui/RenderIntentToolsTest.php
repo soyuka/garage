@@ -37,7 +37,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -57,7 +57,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = [];
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published[] = json_decode($update->getData(), true);
 
             return 'id';
@@ -84,7 +84,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = [];
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published[] = json_decode($update->getData(), true);
 
             return 'id';
@@ -103,7 +103,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = [];
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published[] = json_decode($update->getData(), true);
 
             return 'id';
@@ -142,7 +142,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -167,7 +167,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -192,7 +192,9 @@ final class RenderIntentToolsTest extends TestCase
     {
         $schema = (new Factory())->buildParameters(RenderIntentTools::class, 'proposeActions');
 
-        $items = $schema['properties']['actions']['items'];
+        /** @var array<string, mixed> $actions */
+        $actions = $schema['properties']['actions'];
+        $items = $actions['items'];
         $this->assertSame('object', $items['type']);
         $this->assertSame('string', $items['properties']['label']['type']);
         // instruction/taskId are nullable, so the unused side can be passed as null.
@@ -231,7 +233,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -264,7 +266,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -306,7 +308,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -337,7 +339,9 @@ final class RenderIntentToolsTest extends TestCase
     {
         $schema = (new Factory())->buildParameters(RenderIntentTools::class, 'showFact');
 
-        $node = $schema['properties']['nodes']['items'];
+        /** @var array<string, mixed> $nodes */
+        $nodes = $schema['properties']['nodes'];
+        $node = $nodes['items'];
         $this->assertSame('object', $node['type']);
         foreach (['key', 'label', 'value'] as $field) {
             $this->assertSame('string', $node['properties'][$field]['type']);
@@ -350,7 +354,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -384,7 +388,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -407,7 +411,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -435,7 +439,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -460,7 +464,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -480,7 +484,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -499,7 +503,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -518,7 +522,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -545,7 +549,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';
@@ -582,7 +586,7 @@ final class RenderIntentToolsTest extends TestCase
     {
         $published = null;
         $hub = $this->createStub(HubInterface::class);
-        $hub->method('publish')->willReturnCallback(function (Update $update) use (&$published): string {
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
             $published = $update;
 
             return 'id';

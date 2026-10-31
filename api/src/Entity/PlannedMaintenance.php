@@ -62,6 +62,7 @@ class PlannedMaintenance
     #[ODM\Field(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $archivedAt = null;
 
+    /** @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> $parts */
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'plannedTasks')]
         private Vehicle $vehicle,
@@ -85,7 +86,7 @@ class PlannedMaintenance
         private ?UsageUnit $targetUsageUnit = null,
         #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $dueDate = null,
-        /** @var list<array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> */
+        /* @var list<array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> */
         array $parts = [],
         #[ODM\Field(type: 'date_immutable', nullable: true)]
         private ?\DateTimeImmutable $completedAt = null,

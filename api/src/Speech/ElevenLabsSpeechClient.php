@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Speech;
 
 use App\I18n\Locale;
-use InvalidArgumentException;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface as HttpClientException;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 use Symfony\Contracts\HttpClient\ResponseInterface;
@@ -45,7 +44,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
         private float $speed = 1.0,
     ) {
         if (!is_finite($this->speed) || self::MIN_SPEED > $this->speed || self::MAX_SPEED < $this->speed) {
-            throw new InvalidArgumentException(sprintf('ELEVENLABS_SPEED must be between %.1f and %.1f.', self::MIN_SPEED, self::MAX_SPEED));
+            throw new \InvalidArgumentException(\sprintf('ELEVENLABS_SPEED must be between %.1f and %.1f.', self::MIN_SPEED, self::MAX_SPEED));
         }
     }
 

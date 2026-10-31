@@ -17,7 +17,6 @@ final class PlannedTaskCreateTest extends AppTestCase
     private function seedVehicleIri(): string
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
         $vehicle = new Vehicle('MAZDA', 'MAZDA6', VehicleType::Car, 'user', year: 2007);
         $vehicle->setOwner(self::TEST_OWNER);
         $dm->persist($vehicle);
