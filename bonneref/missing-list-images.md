@@ -811,7 +811,7 @@ Exact mesh, no caption (can only be improved by a vehicle-specific mesh): 100151
 
 ## Mapped approximately
 
-These get a mesh, captioned « Forme type de la famille, pas la pièce exacte » (one car's game part, not the user's). An exact mesh would also help here.
+These get a mesh, captioned « Forme type de la famille, pas la pièce exacte » (one car's Wrench part, not the user's). An exact mesh would also help here.
 
 ### Dispositif de freinage (6)
 
@@ -1072,5 +1072,5 @@ Reading (`~` = approximate mesh):
 ## Notes
 
 - Fixed 2026-10-16: `102763 Frein à tambour > Kit de freins` and `102225 Frein de haute performance > Kit de freins` matched the `BRAKE` regex (`kit de freins`) and got the disc brake assembly. Both now show no mesh (photo): a drum kit is not a disc, and a performance kit may be drums or discs, so it is left undrawn. « Frein à disque > Kit de freins » keeps the brake render.
-- Known extraction gaps (`bonneref/ROADMAP.md` § 3D assets, « Not available as an extracted mesh »): EGR, A/C compressor and condenser, coolant expansion tank, vacuum pump, timing chain, clutch slave cylinder, catalytic converter, gearbox body. They show up above as: EGR (Carburation 100811/100815/100816/102992/103239/100812 and Moteur 100545-100551/102993/103235/100543), A/C (Climatisation 100354, 100355), expansion tank (100112, 101857 for the power steering reservoir), vacuum pump (100039, 102450), timing chain (Moteur Distribution moteur 100411-100414, 103278), clutch slave cylinder (100060, 100061), catalytic converter (100047), gearbox body (103065, 100774, 101808...).
+- Known Wrench gaps (`bonneref/ROADMAP.md` § 3D assets, « Not available in Wrench »): EGR, A/C compressor and condenser, coolant expansion tank, vacuum pump, timing chain, clutch slave cylinder, catalytic converter, gearbox body. They show up above as: EGR (Carburation 100811/100815/100816/102992/103239/100812 and Moteur 100545-100551/102993/103235/100543), A/C (Climatisation 100354, 100355), expansion tank (100112, 101857 for the power steering reservoir), vacuum pump (100039, 102450), timing chain (Moteur Distribution moteur 100411-100414, 103278), clutch slave cylinder (100060, 100061), catalytic converter (100047), gearbox body (103065, 100774, 101808...).
 - Coverage numbers are for the 5 cached trees only; any other car adds leaves under the same STR_IDs plus a few new ones.
