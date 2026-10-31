@@ -11,6 +11,7 @@ use Doctrine\DBAL\Connection;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
+use Symfony\Component\Cache\Adapter\DoctrineDbalAdapter;
 use Symfony\Component\Cache\Marshaller\DefaultMarshaller;
 use Symfony\Component\Console\Tester\CommandTester;
 
@@ -26,7 +27,11 @@ final class MigrateCacheToMongoCommandTest extends AppTestCase
         parent::setUp();
         self::bootKernel();
         $this->db = static::getContainer()->get('doctrine.dbal.default_connection');
-        // Rolled back by DAMA with the rest of the test.
+        // The retired pool no longer creates its table, so a fresh database (CI) has none. Postgres DDL is
+        // transactional: DAMA rolls the CREATE back with the rest of the test.
+        if (!$this->db->createSchemaManager()->tablesExist(['cache_items'])) {
+            (new DoctrineDbalAdapter($this->db))->createTable();
+        }
         $this->db->executeStatement('DELETE FROM cache_items');
     }
 

@@ -1,0 +1,184 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Mirrors the FrankenPHP image (api/Dockerfile, bonneref/api/Dockerfile: dunglas/frankenphp:*-php8.5).
+  PHP_VERSION: '8.5'
+  PHP_EXTENSIONS: apcu, gmp, intl, mongodb, pdo_pgsql, pdo_sqlite, zip
+  NODE_VERSION: '22'
+
+jobs:
+  changes:
+    runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      bonneref-api: ${{ steps.filter.outputs.bonneref-api }}
+      dashboard: ${{ steps.filter.outputs.dashboard }}
+      bonneref-front: ${{ steps.filter.outputs.bonneref-front }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            workflow: &workflow
+              - '.github/workflows/ci.yml'
+            api:
+              - *workflow
+              - 'api/**'
+            bonneref-api:
+              - *workflow
+              - 'bonneref/api/**'
+            dashboard:
+              - *workflow
+              - 'dashboard/**'
+            bonneref-front:
+              - *workflow
+              - 'bonneref/src/**'
+              - 'bonneref/public/**'
+              - 'bonneref/test-fixtures/**'
+              - 'bonneref/index.html'
+              - 'bonneref/package.json'
+              - 'bonneref/package-lock.json'
+              - 'bonneref/tsconfig.json'
+              - 'bonneref/vite*.config.ts'
+              - 'bonneref/.env*'
+
+  api:
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: api
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      # Messenger's failed transport is doctrine:// and MigrateCacheToMongoCommandTest reads the
+      # retired cache_items table. Credentials match DATABASE_URL in api/.env; doctrine.yaml
+      # suffixes the database name with _test.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: app_test
+          POSTGRES_USER: app
+          POSTGRES_PASSWORD: '!ChangeMe!'
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -d app_test -U app"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      APP_ENV: test
+      MONGODB_URL: mongodb://127.0.0.1:27017
+    steps:
+      - uses: actions/checkout@v4
+      # PopplerPdfTextExtractor shells out to pdftotext on document uploads.
+      - name: Install poppler-utils
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: memory_limit=1G, apc.enable_cli=1
+          coverage: none
+          tools: composer:v2
+      - uses: ramsey/composer-install@v3
+        with:
+          working-directory: api
+      - name: PHP CS Fixer
+        run: composer cs:check
+      - name: PHPStan
+        run: composer phpstan
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  bonneref-api:
+    needs: changes
+    if: needs.changes.outputs.bonneref-api == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: bonneref/api
+    # No Postgres: Messenger is in-memory:// and turns run in kernel.terminate (bonneref/api/.env).
+    services:
+      mongodb:
+        image: mongo:7
+        ports: ['27017:27017']
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.runCommand({ping:1}).ok'"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      APP_ENV: test
+      # bonneref/api/.env points at the dev override's published 27018.
+      MONGODB_URL: mongodb://127.0.0.1:27017
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: ${{ env.PHP_EXTENSIONS }}
+          ini-values: memory_limit=1G, apc.enable_cli=1
+          coverage: none
+          tools: composer:v2
+      - uses: ramsey/composer-install@v3
+        with:
+          working-directory: bonneref/api
+      - name: PHP CS Fixer
+        run: composer cs:check
+      - name: PHPStan
+        run: composer phpstan
+      - name: PHPUnit
+        run: vendor/bin/phpunit
+
+  dashboard:
+    needs: changes
+    if: needs.changes.outputs.dashboard == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  bonneref-front:
+    needs: changes
+    if: needs.changes.outputs.bonneref-front == 'true'
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: bonneref
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: bonneref/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build

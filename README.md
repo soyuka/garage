@@ -1,7 +1,6 @@
 # mon-parc-auto
 
-<!-- TODO: CI badge once .github/workflows lands, e.g.
-[![CI](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml/badge.svg)](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml) -->
+[![CI](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml/badge.svg)](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml)
 
 A garage and maintenance tracker you run by talking to an AI. Your vehicles, their service history, planned work
 and a usage-driven forecast of what is due are exposed as an MCP server, so Claude (or any MCP client) reads and
