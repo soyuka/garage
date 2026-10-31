@@ -16,7 +16,7 @@ React / react-three-fiber. Entry for the Symfony AI & MCP hackathon.
 
 MCP endpoint: **`https://garage.bonneref.fr/mcp`** (Streamable HTTP, OAuth). Atelier: **https://garage.bonneref.fr**.
 
-Demo login on `auth.bonneref.fr`: `DEMO_EMAIL` / `DEMO_PASSWORD` <!-- TODO: fill in -->. The demo garage is shared
+Demo login on `auth.bonneref.fr`: `demo` / `demo-MpiFkZmAPfu2`. The demo garage is shared
 between judges and reset nightly.
 
 Add the server:
