@@ -28,6 +28,11 @@ interface PartsCatalog
     public function cars(int $makeId, int $modelId, CarType $carType): array;
 
     /**
+     * The carmaker's name for this kType, as the catalogue names it; null when the catalogue does not know the car.
+     */
+    public function carMake(int $carId, CarType $carType): ?string;
+
+    /**
      * @return list<PartCategory>
      */
     public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array;

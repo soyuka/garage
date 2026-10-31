@@ -92,6 +92,17 @@ final class TecdocCatalog implements PartsCatalog
         return array_map(Car::fromPartsApi(...), $rows);
     }
 
+    public function carMake(int $carId, CarType $carType): ?string
+    {
+        $table = CarType::PassengerCar === $carType ? 'pc_type' : 'cv_type';
+        $make = $this->rows(
+            "SELECT mf.name FROM {$table} t JOIN vehicle_model m ON m.model_id = t.model_id JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id WHERE t.type_id = :carId",
+            ['carId' => $carId],
+        )[0]['name'] ?? null;
+
+        return \is_string($make) && '' !== $make ? $make : null;
+    }
+
     public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array
     {
         $profile = self::profile($carType);

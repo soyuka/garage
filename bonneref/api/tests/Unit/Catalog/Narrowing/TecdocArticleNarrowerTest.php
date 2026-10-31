@@ -43,6 +43,19 @@ final class TecdocArticleNarrowerTest extends TestCase
         $this->assertSame(116, array_sum(array_map(static fn ($c): int => $c->articleCount, $result->clusters)) + $result->unclassifiedCount);
     }
 
+    public function testTheCarmakerComesFromTheCatalogueWhenTheCallerGivesNone(): void
+    {
+        $catalog = new TecdocCatalog($this->dir.'/catalog.sqlite');
+
+        $withoutMake = (new ArticleNarrower($catalog))->narrow(19107, CarType::PassengerCar, 100259);
+        $withMake = (new ArticleNarrower($catalog))->narrow(19107, CarType::PassengerCar, 100259, 'MAZDA');
+        $wrongMake = (new ArticleNarrower($catalog))->narrow(19107, CarType::PassengerCar, 100259, 'PEUGEOT');
+
+        $this->assertCount(2, $withoutMake->clusters);
+        $this->assertSame($withMake->toArray(), $withoutMake->toArray());
+        $this->assertSame($withMake->toArray(), $wrongMake->toArray());
+    }
+
     public function testEachEspaceFlywheelCarriesTheQualifiersOfItsOwnLinkToThisCar(): void
     {
         TecdocFixtureDatabase::create($this->dir.'/espace.sqlite', withEspaceFlywheels: true);

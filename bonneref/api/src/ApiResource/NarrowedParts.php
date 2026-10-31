@@ -33,7 +33,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                     constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
                 ),
                 'make' => new QueryParameter(
-                    description: 'Deprecated, ignored when the server knows the car: the make is resolved from carId (vehicle index)',
+                    description: 'Deprecated, ignored when the server knows the car: the make is resolved from carId (TecDoc catalogue)',
                     schema: ['type' => 'string'],
                 ),
                 'productGroupId' => new QueryParameter(

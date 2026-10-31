@@ -11,7 +11,7 @@ final class NarrowedPartsTest extends AppTestCase
     public function testNarrowedRouteGroupsArticlesIntoPhysicalParts(): void
     {
         $client = static::createClient();
-        $response = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA');
+        $response = $client->request('GET', '/cars/19107/part-categories/100259/narrowed');
 
         $this->assertResponseIsSuccessful();
         $data = $response->toArray();

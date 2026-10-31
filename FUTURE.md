@@ -723,8 +723,17 @@ Open design points:
 
 Split done per `docs/bonneref-extraction.md` (commits 207a586, 439a101). Left behind:
 
-- `show_parts` summarises 4 clusters for kType 19107 / category 100259 while `GET /narrowed` returns 2 —
-  not investigated, may predate the split.
+- ~~`show_parts` summarises 4 clusters for kType 19107 / category 100259 while `GET /narrowed` returns 2~~ —
+  fixed 2026-10-31. The two paths share one call: `ArticleNarrower::narrow()`. The cluster count depends on the
+  carmaker, because `mergeOnCarmakerOe()` merges clusters only on the car's own make's OE numbers. On
+  `catalog-dev.sqlite` that gives MAZDA 2, FORD 3, PEUGEOT or null 4. The make came from `IndexedCarMakeResolver`
+  (Mongo `catalog_vehicles`, filled only by browsing or lookups, empty in bonneref's fresh db), else from the caller:
+  `?make=` on the route (every test passed `MAZDA`) or `FinderVehicle::make` (null when the front sends a bare carId).
+  This predates the split (`dfa0814`, 2026-10-16, partsapi era). The split surfaced it because the index is empty.
+  Fix: `PartsCatalog::carMake()` reads the make from the TecDoc catalogue (`pc_type`/`cv_type` → `vehicle_model` →
+  `manufacturer`), and the resolver seam is removed. Test:
+  `TecdocArticleNarrowerTest::testTheCarmakerComesFromTheCatalogueWhenTheCallerGivesNone`, and
+  `NarrowedPartsTest` now calls the route without `make`.
 - `PartsCatalog` (bonneref/api) still carries partsapi-era members (`upstreamCalls*`, `cached*`), and
   `fromPartsApi` / `partsApiCalls*` names survive because the journal contract and legacy rows use them.
 - mpa journal still knows the finder: `TurnSurface::Finder`, `AgentTurn` finder fields, `TurnRoute`,
@@ -740,7 +749,12 @@ Split done per `docs/bonneref-extraction.md` (commits 207a586, 439a101). Left be
 - The running mpa stack (`api-php-1`, `api-worker-1`) mounted `.claude/worktrees/agent-a7a84712b9ceecd03/api`,
   not main — recreate it from main, then remove that worktree and the two merged `../bonneref-*` worktrees.
 - Unused deps probably: `symfony/process`, `symfony/mime` in bonneref/api.
-- Prod (deployed 2026-10-30): `garage.env` carries the placeholder `S3_*` the old bonneref env had, so bill
-  uploads on bonneref.fr fail until real values are set. The garage container's Mercure hub is internal only.
+- Prod (deployed 2026-10-30): MinIO `bonneref-minio` added 2026-10-31 (pinned `RELEASE.2025-09-07T16-13-09Z`,
+  bucket `bills`, dedicated readwrite key, creds in `~/bonneref/minio.env`, internal network only; images
+  side-loaded because Docker Hub no longer serves the tag). Write/read/delete verified through
+  `maintenance.storage` and `vehicle_documents.storage`. The garage container's Mercure hub is internal only.
   Stale garage copies (vehicles, planned_maintenance) and `partsapi_responses` still sit in db `bonneref`;
   drop once the split has run a while. Rollback recipe in `docs/bonneref-extraction.md`.
+- Hackathon clone-and-run: Docker Hub no longer serves `minio/minio` / `minio/mc` (pull = access denied,
+  2026-10-31). mpa's dev compose can't start for a fresh clone; switch dev bills to Flysystem's local adapter
+  or an S3 server image that still pulls.
