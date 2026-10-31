@@ -10,7 +10,7 @@ use League\Flysystem\FilesystemOperator;
  * The seam between maintenance bills and the object store. Keys are `{recordId}/{attachmentId}`
  * (both ULIDs) under the Flysystem prefix — opaque, never derived from the user's filename, so a
  * hostile name can neither collide nor traverse. The store backend is configured per environment
- * (MinIO/S3 in dev/prod, a local adapter in tests); this class is agnostic to which.
+ * (local files by default, S3 when STORAGE_ADAPTER=s3); this class is agnostic to which.
  */
 final class MaintenanceAttachmentStorage
 {

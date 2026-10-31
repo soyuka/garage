@@ -96,7 +96,7 @@ localhost one, and rewrites the auth story. Good news: most of it already exists
 1b. **Harden the dev defaults before the tunnel opens, not after.**
    *(Obsolete for Casdoor since 2026-10-18: the local seed with `built-in/admin` password `123` is gone.)*
    Same class, lower severity: Postgres `!ChangeMe!`
-   (`compose.yaml:110`), MinIO `minioadmin` (`compose.yaml:152`), and `APP_SECRET` must be freshly
+   (`compose.yaml:110`), and `APP_SECRET` must be freshly
    generated for this — it is the HMAC key deriving the pilot topic, and `mercure { anonymous }`
    (`frankenphp/Caddyfile:25`) means that topic string *is* the access control.
 2. **Casdoor reachable at a public origin** with DCR enabled. Now the hosted `https://auth.bonneref.fr`
@@ -140,7 +140,7 @@ Provisioned and confirmed working end to end, from the public internet.
 - **`dcr_policy` was already `open`** on the `built-in` org — this Casdoor build defaults to it, so
   there is no toggle to hunt for in the UI. Settles the "docs inconsistent" note. The column is
   `organization.dcr_policy`, and Casdoor's tables live in the **`postgres`** database, not `casdoor`.
-- Postgres and MinIO credentials deliberately left at dev values — not tunnel-routed, and both apply
+- Postgres credentials deliberately left at dev values — not tunnel-routed, and it applies
   root credentials only when initialising an empty volume. See the note in `.env.stage.dist`.
 - Pre-existing: 9 stray `dcr_*` clients from old Goose experiments, all loopback redirect URIs
   (low risk — codes go to the victim's own machine). Left in place.

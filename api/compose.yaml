@@ -20,10 +20,6 @@ services:
       # (127.0.0.1) and break in-container connectivity.
       MONGODB_URL: mongodb://${MONGODB_HOST:-mongodb}:${MONGODB_PORT:-27017}
       MONGODB_DB: ${MONGODB_DB:-app}
-      # Object store for maintenance bills. Override only the host: .env's 127.0.0.1 is the host-run
-      # value, but inside the compose network the endpoint is the `minio` service name. The bucket +
-      # credentials come straight from .env (read by the app's dotenv), identical in both contexts.
-      S3_ENDPOINT: http://${MINIO_HOST:-minio}:9000
       # Run "composer require symfony/mercure-bundle" to install and configure the Mercure integration
       MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
       MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}/.well-known/mercure}
@@ -43,6 +39,9 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      # Bills and vehicle documents (STORAGE_ADAPTER=local). Named volume shared with the worker; it
+      # has to sit on the subpath because the dev override keeps /app/var anonymous.
+      - storage_data:/app/var/storage
     ports:
       - name: http
         target: 80
@@ -64,8 +63,6 @@ services:
         condition: service_healthy
       mongodb:
         condition: service_healthy
-      minio:
-        condition: service_started
 
   # Agent-turn consumer. Runs `messenger:consume` under the CLI SAPI (max_execution_time=0), so a
   # turn's full tool loop is unbounded — the 180s request limit that killed the in-request agent
@@ -77,6 +74,8 @@ services:
     restart: unless-stopped
     environment: *php_environment
     command: ["php", "bin/console", "messenger:consume", "async", "failed", "-vvv", "--time-limit=3600"]
+    volumes:
+      - storage_data:/app/var/storage
     # The php image's HEALTHCHECK probes FrankenPHP's :2019/metrics, but this container only consumes
     # the queue (no HTTP server), so it would always report unhealthy. Override with a real liveness
     # check: the consumer process must be present. pgrep is unavailable (no procps in the image), so
@@ -138,33 +137,6 @@ services:
       - mongodb_data:/data/db
 ###< doctrine/mongodb-odm-bundle ###
 
-  # MinIO — S3-compatible object store for maintenance bills (PDF/JPEG/PNG). The binaries live here;
-  # the metadata stays in Mongo on the record. php/worker reach it by the service name `minio` over
-  # the S3 async-aws client (config/services.yaml). Credentials are the dev defaults from .env —
-  # insecure, externalise for prod (or point S3_* at a managed bucket and drop this service).
-  minio:
-    restart: unless-stopped
-    image: minio/minio:latest
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
-    volumes:
-      - minio_data:/data
-
-  # One-shot: create the bills bucket on first boot (MinIO does not auto-create). Retries until the
-  # server answers, makes the bucket if absent, then exits 0 — idempotent across `up`s.
-  minio_init:
-    image: minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_started
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin} && mc ready local; do echo 'waiting for minio'; sleep 1; done;
-      mc mb --ignore-existing local/${S3_BUCKET:-maintenance};
-      exit 0"
-
   # The Atelier's local voice (docs/voice-plan.md). Reached only when TTS_BACKEND=pockettts; the
   # container is inert otherwise, so it costs nothing but disk while ElevenLabs is selected.
   #
@@ -204,4 +176,4 @@ volumes:
   mongodb_data:
 ###< doctrine/mongodb-odm-bundle ###
 
-  minio_data:
+  storage_data:

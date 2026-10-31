@@ -34,13 +34,14 @@ reads exactly like an OAuth failure.
 
 ## Surfaces
 
-Four, and a task rarely touches only one:
+Five, and a task rarely touches only one:
 
 | surface | what it is | read first |
 | --- | --- | --- |
-| `api/` | Symfony 7 / API Platform. Domain and the paid upstream responses (SIV, partsapi, Motul) in MongoDB (Doctrine ODM); Postgres backs the Messenger queue only; MinIO holds maintenance bills; Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
+| `api/` | Symfony 7 / API Platform. Garage domain and the Motul upstream responses in MongoDB (Doctrine ODM); parts catalog + plate lookup come from bonneref over HTTP (`BonnerefClient`, bearer forwarded); Postgres backs the Messenger queue only; bills and documents live on Flysystem (local volume, S3 in prod); Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
 | `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `dashboard/CHOREOGRAPHY.md`, `dashboard/PROVENANCE.md` |
 | `stage/` | The pilot harness — **current workstream**. Its own `CLAUDE.md` is the operator protocol (not repo guidance), `.mcp.json` points the session at the public MCP server, `bin/atelier` is the launcher. | `stage/CLAUDE.md`, `docs/pilot.md`, `CONFERENCE.md` |
+| `bonneref/` | The parts finder: React front + its own Symfony app in `bonneref/api` (TecDoc catalog, SIV plate lookup, finder agent, catalog MCP server). Deployed on bonneref.fr; mpa consumes it over HTTP only. | `bonneref/api/README.md`, `docs/bonneref-extraction.md` |
 | `admin/` | Vite SPA, largely dormant. | — |
 
 Further entry docs by topic: `api/` maintenance domain → `FUTURE.md` § GMAO core (the anti-rebuild

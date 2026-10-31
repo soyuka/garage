@@ -1,35 +1,48 @@
-# Maintenance bills live in an S3-like object store (MinIO in dev, any S3-compatible bucket in
-# prod) behind the async-aws adapter. The `maintenance.s3_client` service (services.yaml) carries
-# the endpoint/credentials; this just names the bucket + a key prefix so bills never collide with
-# other content in the same bucket.
+# Bills and vehicle documents sit behind a `lazy` storage that picks its backend from
+# STORAGE_ADAPTER: `local` (default, files under var/storage, nothing to run) or `s3` (any
+# S3-compatible bucket through the async-aws client `maintenance.s3_client`, services.yaml).
 flysystem:
     storages:
-        maintenance.storage:
+        maintenance.local:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/maintenance-bills'
+        maintenance.s3:
             adapter: 'asyncaws'
             options:
                 client: 'maintenance.s3_client'
                 bucket: '%env(S3_BUCKET)%'
                 prefix: 'maintenance-bills'
-        # Vehicle documentation (workshop manuals, notes, quotes): same bucket and client as the bills,
-        # separate prefix.
-        vehicle_documents.storage:
+        maintenance.storage:
+            adapter: 'lazy'
+            options:
+                source: 'maintenance.%env(STORAGE_ADAPTER)%'
+
+        vehicle_documents.local:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/vehicle-documents'
+        vehicle_documents.s3:
             adapter: 'asyncaws'
             options:
                 client: 'maintenance.s3_client'
                 bucket: '%env(S3_BUCKET)%'
                 prefix: 'vehicle-documents'
+        vehicle_documents.storage:
+            adapter: 'lazy'
+            options:
+                source: 'vehicle_documents.%env(STORAGE_ADAPTER)%'
 
-# The suite must stay hermetic — no MinIO/S3 dependency to run `php bin/phpunit` on the host. A
-# local adapter under the cache dir gives the same FilesystemOperator contract; setUp drops Mongo,
-# and the cache dir is disposable, so stored test bytes never leak between runs.
+# The suite writes under the cache dir, which is disposable, so stored test bytes never leak
+# between runs or into var/storage.
 when@test:
     flysystem:
         storages:
-            maintenance.storage:
+            maintenance.local:
                 adapter: 'local'
                 options:
                     directory: '%kernel.cache_dir%/maintenance-storage'
-            vehicle_documents.storage:
+            vehicle_documents.local:
                 adapter: 'local'
                 options:
                     directory: '%kernel.cache_dir%/vehicle-documents-storage'

@@ -192,10 +192,9 @@ services:
         arguments:
             $inner: '@.inner'
 
-    # The S3-compatible client backing the maintenance-bills Flysystem storage (config/packages/
-    # flysystem.yaml). pathStyleEndpoint is required for MinIO and other non-AWS S3 servers, which
-    # serve buckets as a path segment (host/bucket/key) rather than a vhost (bucket.host/key). In
-    # the test env the storage swaps to a local adapter, so this client is never instantiated there.
+    # The S3-compatible client behind the `s3` storages (config/packages/flysystem.yaml), only
+    # instantiated when STORAGE_ADAPTER=s3. pathStyleEndpoint is required for MinIO and other non-AWS
+    # S3 servers, which serve buckets as a path segment (host/bucket/key) rather than a vhost.
     maintenance.s3_client:
         class: AsyncAws\S3\S3Client
         arguments:

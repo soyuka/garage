@@ -2,7 +2,7 @@
 # Logical backup of the three stores that hold real state:
 #   mongodb  — the garage domain (vehicles, facts, maintenance records, planned tasks, users)
 #   database — Postgres: the `app` DB (Messenger queue)
-#   minio    — maintenance bill binaries referenced by Mongo records
+#   storage  — bill and document binaries referenced by Mongo records (local adapter, /app/var/storage)
 # Logical dumps, not a volume tar: portable across engine versions and inspectable.
 set -euo pipefail
 
@@ -14,7 +14,6 @@ DEST="$DEST_ROOT/$STAMP"
 
 MONGODB_DB="${MONGODB_DB:-app}"
 POSTGRES_USER="${POSTGRES_USER:-app}"
-S3_BUCKET="${S3_BUCKET:-maintenance}"
 
 # Plain invocation: auto-loads compose.yaml + compose.override.yaml, which is the data-service
 # config in BOTH profiles (the stage launch layers the override too). compose.yaml alone is not
@@ -22,7 +21,7 @@ S3_BUCKET="${S3_BUCKET:-maintenance}"
 compose() { docker compose "$@"; }
 
 # Only the data services — php/worker/caddy are irrelevant to a dump and slow to boot.
-SERVICES=(mongodb database minio)
+SERVICES=(mongodb database php)
 STARTED=()
 for svc in "${SERVICES[@]}"; do
   if [ -z "$(compose ps -q --status running "$svc" 2>/dev/null)" ]; then
@@ -54,22 +53,15 @@ compose exec -T mongodb mongodump --db="$MONGODB_DB" --archive --gzip --quiet > 
 echo "pg_dumpall"
 compose exec -T database pg_dumpall -U "$POSTGRES_USER" | gzip > "$DEST/postgres-all.sql.gz"
 
-echo "minio $S3_BUCKET"
-mkdir -p "$DEST/minio"
-docker run --rm --network "$(compose ps -q minio | xargs docker inspect -f '{{range $k,$v := .NetworkSettings.Networks}}{{$k}}{{end}}')" \
-  -v "$DEST/minio:/out" --entrypoint /bin/sh minio/mc:latest -c "
-    mc alias set local http://minio:9000 '${S3_ACCESS_KEY:-minioadmin}' '${S3_SECRET_KEY:-minioadmin}' >/dev/null &&
-    mc mirror --quiet --overwrite local/$S3_BUCKET /out/$S3_BUCKET" || {
-  echo "minio mirror failed" >&2; exit 1
-}
-# mc runs as root in the container; hand the objects back to the invoking user.
-docker run --rm -v "$DEST/minio:/out" alpine:3 chown -R "$(id -u):$(id -g)" /out
+echo "storage"
+compose exec -T php tar -C /app/var/storage -cf - . > "$DEST/storage.tar"
 
 echo "verifying"
 # --dryRun parses the whole archive and reports the collections it would restore: a real
 # integrity check on the gzip stream and the BSON inside it, without touching any database.
 compose exec -T mongodb mongorestore --archive --gzip --dryRun --quiet < "$DEST/mongodb-$MONGODB_DB.archive.gz"
 gzip -t "$DEST/postgres-all.sql.gz"
+tar -tf "$DEST/storage.tar" >/dev/null
 zgrep -q "PostgreSQL database cluster dump complete" "$DEST/postgres-all.sql.gz"
 
 {
@@ -78,7 +70,6 @@ zgrep -q "PostgreSQL database cluster dump complete" "$DEST/postgres-all.sql.gz"
   echo "postgres   $(compose exec -T database postgres --version)"
   echo "mongo_db   $MONGODB_DB"
   echo "pg_dbs     $(zgrep -o '^\\connect .*' "$DEST/postgres-all.sql.gz" | awk '{print $2}' | paste -sd, -)"
-  echo "s3_bucket  $S3_BUCKET"
   echo
   # Per-collection counts make a restore verifiable: compare these against the restored DB.
   echo "mongo collections"

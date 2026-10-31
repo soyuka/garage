@@ -755,6 +755,9 @@ Split done per `docs/bonneref-extraction.md` (commits 207a586, 439a101). Left be
   `maintenance.storage` and `vehicle_documents.storage`. The garage container's Mercure hub is internal only.
   Stale garage copies (vehicles, planned_maintenance) and `partsapi_responses` still sit in db `bonneref`;
   drop once the split has run a while. Rollback recipe in `docs/bonneref-extraction.md`.
-- Hackathon clone-and-run: Docker Hub no longer serves `minio/minio` / `minio/mc` (pull = access denied,
+- ~~Hackathon clone-and-run: Docker Hub no longer serves `minio/minio` / `minio/mc` (pull = access denied,
   2026-10-31). mpa's dev compose can't start for a fresh clone; switch dev bills to Flysystem's local adapter
-  or an S3 server image that still pulls.
+  or an S3 server image that still pulls.~~ Done 2026-10-31: `STORAGE_ADAPTER` (`local` default | `s3`) selects the
+  backend through flysystem `lazy` storages; dev/stage compose has no minio services, bills and documents persist
+  in the `storage_data` volume on php and worker (`/app/var/storage`); `bin/backup` tars it. Prod `bonneref-garage`
+  must set `STORAGE_ADAPTER=s3`.
