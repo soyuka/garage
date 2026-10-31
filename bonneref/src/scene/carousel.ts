@@ -1,6 +1,6 @@
 import type { MeshId } from '../meshes';
 
-// Parts drawn while a search runs: small Wrench meshes only (≤ 4 000 triangles and ≤ 18 KB each, see
+// Parts drawn while a search runs: small game meshes only (≤ 4 000 triangles and ≤ 18 KB each, see
 // public/parts/SOURCES.md), recognisable from any angle; flat rings and tiny pins are left out.
 export const SMALL_MAX_TRIANGLES = 4000;
 

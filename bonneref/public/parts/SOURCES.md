@@ -1,6 +1,6 @@
 # Part meshes — provenance
 
-Every `.glb` in this directory was extracted from the game **Wrench** (Missing Digit) and reduced to
+Every `.glb` in this directory was extracted and reduced to
 a web build (Draco, no materials) in the local asset session (`blueprint-experiment/`, never
 committed; only its final `*-web.glb` files are copied here). They are used for a private prototype
 only: never sold, never redistributed.
@@ -9,7 +9,7 @@ Before any commercial or public use, these meshes must be purchased or licensed 
 or replaced by assets we own (parametric geometry, CC-BY meshes with attribution, or our own
 Blender models). See `bonneref/ROADMAP.md` § 3D assets.
 
-Sources of the non-Wrench meshes are kept in `blueprint-experiment/owned/src` (build123d scripts) and
+Sources of the meshes not extracted from a game are kept in `blueprint-experiment/owned/src` (build123d scripts) and
 `blueprint-experiment/hunt/` (untracked), see the two sections at the end.
 
 ## Inventory (measured 2026-10-15)
@@ -23,7 +23,7 @@ Every other mesh is centred on its bounding box at load time and drawn at a fixe
 (`scene/MeshPart.tsx` `MESH_SPAN`), files untouched. Category → mesh: `bonneref/src/family.ts`
 `MESH_RULES`.
 
-| file | Wrench source | bbox mm | triangles |
+| file | extracted from | bbox mm | triangles |
 | --- | --- | --- | --- |
 | `air-filter.glb` | `AirFilter` | 138 × 172 × 139 | 2228 |
 | `alternator-tensioner.glb` | `Alternator_Tensioner` | 61 × 39 × 140 | 3226 |
@@ -119,7 +119,7 @@ Every other mesh is centred on its bounding box at load time and drawn at a fixe
 
 ## Batch 3 (2026-10-15)
 
-29 more meshes from `blueprint-experiment/parts3/web/` (Wrench, same private-prototype terms and
+29 more meshes from `blueprint-experiment/parts3/web/` (extracted from a commercial video game, same private-prototype terms and
 licence note as above). Axes +Y up, metres, Draco, no materials, all checked by decoding the files.
 `axles.glb` is the front half-shaft with its CV boot (a drive axle, not a stub axle), mapped to
 "Entraînement des roues"; `drive-shaft.glb` is the straight propeller shaft, mapped to
@@ -196,7 +196,7 @@ Modelled in-house with build123d, owned, shippable. Generic family shapes at nom
 
 Inputs from `blueprint-experiment/hunt/` (untracked; ingest scripts in `hunt/src`). Tier decides what can ship publicly: `speed-sensor` is CC BY (credit line below); every GrabCAD row is private prototype only and must be replaced before any public use (source URLs unverified where marked, author and licence unknown).
 
-Removed 2026-10-16: `itb-tb.glb` (Wrench `ITB_TB`, a racing individual throttle body; `corps papillon` now draws `throttle-body`). Not shipped: `power-steering-pump` (no TecDoc leaf of its own, only « Crémaillère de direction/pompe » → `steering-rack`); its web glb stays in `blueprint-experiment/hunt/web`.
+Removed 2026-10-16: `itb-tb.glb` (game `ITB_TB`, a racing individual throttle body; `corps papillon` now draws `throttle-body`). Not shipped: `power-steering-pump` (no TecDoc leaf of its own, only « Crémaillère de direction/pompe » → `steering-rack`); its web glb stays in `blueprint-experiment/hunt/web`.
 
 | file | source | author | licence | tier | triangles | bbox mm (x / y up / z) |
 | --- | --- | --- | --- | --- | --- | --- |
