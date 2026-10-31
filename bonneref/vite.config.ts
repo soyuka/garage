@@ -26,6 +26,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
+    // formatWhen and friends print Paris wall-clock times; pin it so CI (UTC) agrees.
+    env: { TZ: 'Europe/Paris' },
     globals: true,
     include: ['src/**/*.test.ts'],
   },

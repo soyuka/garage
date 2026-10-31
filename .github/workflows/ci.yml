@@ -16,7 +16,8 @@ env:
   # Mirrors the FrankenPHP image (api/Dockerfile, bonneref/api/Dockerfile: dunglas/frankenphp:*-php8.5).
   PHP_VERSION: '8.5'
   PHP_EXTENSIONS: apcu, gmp, intl, mongodb, pdo_pgsql, pdo_sqlite, zip
-  NODE_VERSION: '22'
+  # bonneref tests use the Web Storage globals Node ships unflagged since 25.
+  NODE_VERSION: '26'
 
 jobs:
   changes:
@@ -97,7 +98,7 @@ jobs:
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: ${{ env.PHP_EXTENSIONS }}
-          ini-values: memory_limit=1G, apc.enable_cli=1
+          ini-values: memory_limit=1G, apc.enable_cli=1, upload_max_filesize=50M, post_max_size=52M # api/frankenphp/conf.d/10-app.ini
           coverage: none
           tools: composer:v2
       - uses: ramsey/composer-install@v3
