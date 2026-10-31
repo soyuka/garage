@@ -19,20 +19,20 @@ final class IndexMappingTest extends KernelTestCase
     /**
      * @param class-string $document
      *
-     * @return list<array{keys: array<string, mixed>, options: array<string, mixed>}>
+     * @return array<array{keys: array<string, mixed>, options: array<string, mixed>}>
      */
     private static function indexesOf(string $document): array
     {
         self::bootKernel();
         $dm = static::getContainer()->get(DocumentManager::class);
-        \assert($dm instanceof DocumentManager);
 
+        // @phpstan-ignore return.type (ODM's `/* final */` comment detaches ClassMetadata's docblock, so its IndexMapping alias reads as a class)
         return $dm->getClassMetadata($document)->getIndexes();
     }
 
     /**
-     * @param list<array{keys: array<string, mixed>, options: array<string, mixed>}> $indexes
-     * @param array<string, mixed>                                                   $keys
+     * @param array<array{keys: array<string, mixed>, options: array<string, mixed>}> $indexes
+     * @param array<string, mixed>                                                    $keys
      *
      * @return array{keys: array<string, mixed>, options: array<string, mixed>}|null
      */

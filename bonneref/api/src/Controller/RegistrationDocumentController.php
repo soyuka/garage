@@ -23,15 +23,15 @@ use Symfony\Component\Routing\Attribute\Route;
  * is not requested and has no slot in {@see \App\RegistrationDocument\RegistrationDocumentExtraction}.
  * Authenticated (security.yaml) because every call spends model tokens.
  */
-final class RegistrationDocumentController
+final readonly class RegistrationDocumentController
 {
     private const int MAX_BYTES = 10 * 1024 * 1024;
 
     private const array ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 
     public function __construct(
-        private readonly RegistrationDocumentExtractor $extractor,
-        private readonly LoggerInterface $logger,
+        private RegistrationDocumentExtractor $extractor,
+        private LoggerInterface $logger,
     ) {
     }
 

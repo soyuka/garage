@@ -13,7 +13,9 @@ use App\Tests\Support\InMemoryTurnCancellations;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
+use Symfony\AI\Platform\Result\TextResult;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Mercure\Update;
 
 final class CancelTurnListenerTest extends TestCase
 {
@@ -35,11 +37,10 @@ final class CancelTurnListenerTest extends TestCase
         $this->assertSame('', $event->getResult()->getContent());
         $this->assertFalse($cancellations->isRequested('sess-abc'), 'the flag is cleared once honoured');
 
-        $toasts = static fn (): array => array_filter($hub->updates, static fn ($u): bool => str_contains($u->getData(), '"toast"'));
-        $this->assertEmpty($toasts(), 'a bound session holds its toast until the turn settles');
+        $this->assertEmpty(self::toasts($hub), 'a bound session holds its toast until the turn settles');
 
         $render->signalTurnPhase('end');
-        $this->assertNotEmpty($toasts(), 'the user is told the turn was interrupted');
+        $this->assertNotEmpty(self::toasts($hub), 'the user is told the turn was interrupted');
     }
 
     public function testDoesNothingWhenNoCancelRequested(): void
@@ -65,10 +66,20 @@ final class CancelTurnListenerTest extends TestCase
 
         // A terminal tool (end_turn) already ended the turn this round — do not double-handle.
         $event = new ToolCallsExecuted([]);
-        $event->setResult(new \Symfony\AI\Platform\Result\TextResult('done'));
+        $event->setResult(new TextResult('done'));
         (new CancelTurnListener($cancellations, $render, new LocaleContext(new RequestStack())))($event);
 
         $this->assertSame('done', $event->getResult()->getContent());
         $this->assertTrue($cancellations->isRequested('sess-abc'), 'the flag is untouched when another listener owns the result');
+    }
+
+    /**
+     * @phpstan-impure
+     *
+     * @return array<Update>
+     */
+    private static function toasts(RecordingHub $hub): array
+    {
+        return array_filter($hub->updates, static fn (Update $u): bool => str_contains($u->getData(), '"toast"'));
     }
 }

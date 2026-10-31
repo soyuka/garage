@@ -57,11 +57,14 @@ use Symfony\Component\Validator\Constraints as Assert;
 )]
 final class NarrowedParts
 {
+    #[ApiProperty(description: 'Paid catalogue calls the narrowing spent: always 0 since the catalogue is local, kept for existing clients.')]
+    public int $upstreamCalls = 0;
+
     /**
-     * @param list<array<string, mixed>>      $clusters
-     * @param list<array<string, mixed>>      $differsOn
-     * @param list<array<string, mixed>>|null $fallbackBrands
-     * @param array{id: int, name: string}|null $productGroup
+     * @param list<array<string, mixed>>                            $clusters
+     * @param list<array<string, mixed>>                            $differsOn
+     * @param list<array<string, mixed>>|null                       $fallbackBrands
+     * @param array{id: int, name: string}|null                     $productGroup
      * @param list<array{id: int, name: string, articleCount: int}> $productGroups
      */
     public function __construct(
@@ -76,7 +79,6 @@ final class NarrowedParts
         public array $differsOn,
         public bool $narrowed,
         public ?string $degradedReason,
-        public int $upstreamCalls,
         public ?array $fallbackBrands = null,
         public string $applicabilityScope = ApplicabilityScope::Article->value,
         public ?array $productGroup = null,
@@ -99,7 +101,6 @@ final class NarrowedParts
             differsOn: $data['differsOn'],
             narrowed: $data['narrowed'],
             degradedReason: $data['degradedReason'],
-            upstreamCalls: $data['upstreamCalls'],
             fallbackBrands: $data['fallbackBrands'],
             applicabilityScope: $data['applicabilityScope'],
             productGroup: $data['productGroup'],

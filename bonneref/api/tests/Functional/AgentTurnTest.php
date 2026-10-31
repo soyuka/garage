@@ -7,11 +7,11 @@ namespace App\Tests\Functional;
 use App\I18n\AgentMessages;
 use App\I18n\Locale;
 use App\Tests\Mock\RecordingHub;
+use App\Tests\Mock\ScriptedStreamPlatform;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
-use App\Tests\Mock\ScriptedStreamPlatform;
 
 final class AgentTurnTest extends AppTestCase
 {
@@ -24,7 +24,7 @@ final class AgentTurnTest extends AppTestCase
         $client = static::createClient();
         $container = static::getContainer();
 
-        $platform = new ScriptedStreamPlatform(static function ($model, $input): ToolCallResult|string {
+        $platform = new ScriptedStreamPlatform(static function ($model, $input): ToolCallResult {
             $executed = 0;
             foreach ($input instanceof MessageBag ? $input->getMessages() : [] as $message) {
                 if ($message instanceof ToolCallMessage) {

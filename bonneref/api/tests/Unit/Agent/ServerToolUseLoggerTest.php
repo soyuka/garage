@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent;
 
-use App\I18n\LocaleContext;
-use Symfony\Component\HttpFoundation\RequestStack;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\ServerToolUseLogger;
 use App\Agent\Ui\RenderIntentTools;
-use App\Tests\Mock\TestDashboardChannel;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
+use App\I18n\LocaleContext;
+use App\Tests\Mock\CountingRawResult;
+use App\Tests\Mock\TestDashboardChannel;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -23,6 +23,7 @@ use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
+use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -76,6 +77,7 @@ final class ServerToolUseLoggerTest extends TestCase
         $logger->expects($this->never())->method('notice');
 
         $budget = new WebSearchBudget(1);
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $result = $this->decorator($raw, $logger, $budget, new PlainConverter($stream), $published)
             ->invoke('claude', 'hi', ['stream' => true]);
@@ -119,37 +121,14 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0), $journal);
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack())), $journal);
     }
 
     /**
      * @param array<string, mixed> $data
      */
-    private function rawResult(array $data): RawResultInterface
+    private function rawResult(array $data): CountingRawResult
     {
-        return new class($data) implements RawResultInterface {
-            public int $reads = 0;
-
-            public function __construct(private readonly array $data)
-            {
-            }
-
-            public function getData(): array
-            {
-                ++$this->reads;
-
-                return $this->data;
-            }
-
-            public function getDataStream(): iterable
-            {
-                yield $this->data;
-            }
-
-            public function getObject(): object
-            {
-                return (object) $this->data;
-            }
-        };
+        return new CountingRawResult($data);
     }
 }

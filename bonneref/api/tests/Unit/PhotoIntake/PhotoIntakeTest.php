@@ -69,6 +69,9 @@ final class PhotoIntakeTest extends TestCase
     private function intake(array $raw): PhotoIntake
     {
         $reader = new class($raw) implements PhotoIntakeReader {
+            /**
+             * @param array<string, mixed> $raw
+             */
             public function __construct(private readonly array $raw)
             {
             }

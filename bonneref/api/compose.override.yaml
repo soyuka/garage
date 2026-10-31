@@ -13,7 +13,7 @@ services:
       # Keep var/ off the bind-mount for faster I/O; comment to inspect from the host.
       - /app/var
       # The licensed TecDoc catalogue, derived (docs/tecdoc-sqlite.md). Set TECDOC_CATALOG_HOST_PATH in .env.local.
-      - ${TECDOC_CATALOG_HOST_PATH:-~/projects/mon-parc-auto.fr/data/catalog-dev.sqlite}:/srv/tecdoc/catalog.sqlite:ro
+      - ${TECDOC_CATALOG_HOST_PATH:-../../../data/catalog-dev.sqlite}:/srv/tecdoc/catalog.sqlite:ro
     environment:
       # No `watch`: the default watcher monitored /app recursively (incl. var/cache), so Symfony's own
       # compiled-container writes triggered worker reboots. Restart manually after code changes:
@@ -38,7 +38,7 @@ services:
       - ./:/app
       - ./frankenphp/conf.d/20-app.dev.ini:/usr/local/etc/php/app.conf.d/20-app.dev.ini:ro
       - /app/var
-      - ${TECDOC_CATALOG_HOST_PATH:-~/projects/mon-parc-auto.fr/data/catalog-dev.sqlite}:/srv/tecdoc/catalog.sqlite:ro
+      - ${TECDOC_CATALOG_HOST_PATH:-../../../data/catalog-dev.sqlite}:/srv/tecdoc/catalog.sqlite:ro
     environment:
       APP_ENV: "${APP_ENV:-dev}"
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"

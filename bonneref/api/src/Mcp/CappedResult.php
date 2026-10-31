@@ -13,7 +13,7 @@ use Mcp\Schema\Result\CallToolResult;
  * than an LLM needs and enough to blow the tool-result token cap. This caps the payload at
  * the data root and surfaces totalItems + a narrowing hint so nothing is silently dropped.
  *
- * Items are passed already projected to plain arrays (no JSON-LD @id/@type envelope).
+ * Items are passed already projected to plain arrays (no JSON-LD @id/@var envelope).
  */
 final class CappedResult
 {

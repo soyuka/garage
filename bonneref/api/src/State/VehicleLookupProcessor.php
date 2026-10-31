@@ -16,9 +16,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  *
  * @implements ProcessorInterface<PlateInput, Vehicle>
  */
-final class VehicleLookupProcessor implements ProcessorInterface
+final readonly class VehicleLookupProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly VehicleLookup $vehicleLookup)
+    public function __construct(private VehicleLookup $vehicleLookup)
     {
     }
 

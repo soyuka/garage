@@ -11,7 +11,7 @@ namespace App\Agent;
  * too-narrow query). Reset per turn by {@see \App\MessageHandler\RunAgentTurnHandler}.
  *
  * Two feeders, depending on the active web-search path:
- *  - Custom-tool path (default): {@see \App\Agent\WebSearch\WebSearchTool} records one use per call and
+ *  - Custom-tool path (default): {@see WebSearch\WebSearchTool} records one use per call and
  *    refuses once exhausted — a hard ceiling on how often the orchestrator may search per turn.
  *  - Legacy native path ({@see WebSearchInputProcessor}, AGENT_WEB_SEARCH=anthropic): web_search use
  *    leaves no trace in the message bag (the ResultConverter drops the block), so the count is fed from

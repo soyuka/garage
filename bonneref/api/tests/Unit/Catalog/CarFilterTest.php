@@ -44,7 +44,7 @@ final class CarFilterTest extends TestCase
     #[DataProvider('fuels')]
     public function testFuelMapsFromEngineType(string $engineType, string $fuel, bool $expected): void
     {
-        $this->assertSame($expected ? 1 : 0, \count(CarFilter::apply([$this->car(1, $engineType, 1998, '2002-01', null)], fuel: $fuel)));
+        $this->assertCount($expected ? 1 : 0, CarFilter::apply([$this->car(1, $engineType, 1998, '2002-01', null)], fuel: $fuel));
     }
 
     /**

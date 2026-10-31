@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent\Finder;
 
-use App\ApiResource\NarrowedParts;
 use App\Agent\Ui\RenderIntentTools;
+use App\ApiResource\NarrowedParts;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
@@ -254,7 +254,7 @@ final class FinderRenderTools
         $this->frames->publishFrame([
             'type' => 'askQuestion',
             'question' => trim($question),
-            'options' => array_map(static fn (QuestionOption $o): array => ['label' => $o->label, 'value' => $o->value], array_values($options)),
+            'options' => array_map(static fn (QuestionOption $o): array => ['label' => $o->label, 'value' => $o->value], $options),
             'context' => $context,
         ]);
 

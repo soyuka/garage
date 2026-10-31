@@ -91,6 +91,9 @@ final class RegistrationDocumentExtractorTest extends TestCase
     private function extract(array $raw): RegistrationDocumentExtraction
     {
         $reader = new class($raw) implements RegistrationDocumentReader {
+            /**
+             * @param array<string, mixed> $raw
+             */
             public function __construct(private readonly array $raw)
             {
             }

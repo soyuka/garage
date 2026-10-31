@@ -20,15 +20,15 @@ use Symfony\Component\Routing\Attribute\Route;
  * handling as {@see RegistrationDocumentController}: the upload lives only in PHP's temporary file and
  * in memory for the model call, nothing about it is stored or logged.
  */
-final class PhotoIntakeController
+final readonly class PhotoIntakeController
 {
     private const int MAX_BYTES = 10 * 1024 * 1024;
 
     private const array ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
     public function __construct(
-        private readonly PhotoIntake $intake,
-        private readonly LoggerInterface $logger,
+        private PhotoIntake $intake,
+        private LoggerInterface $logger,
     ) {
     }
 

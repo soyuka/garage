@@ -12,9 +12,9 @@ use App\Catalog\PartsCatalog;
 /**
  * @implements ProviderInterface<Make>
  */
-final class MakeCollectionProvider implements ProviderInterface
+final readonly class MakeCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

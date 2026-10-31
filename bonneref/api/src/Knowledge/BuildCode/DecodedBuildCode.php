@@ -7,7 +7,7 @@ namespace App\Knowledge\BuildCode;
 final readonly class DecodedBuildCode
 {
     /**
-     * @param string       $kind  opr|dam|apv for a decoded code, date for a reversed date
+     * @param string       $kind    opr|dam|apv for a decoded code, date for a reversed date
      * @param list<string> $caveats
      * @param list<string> $sources
      */

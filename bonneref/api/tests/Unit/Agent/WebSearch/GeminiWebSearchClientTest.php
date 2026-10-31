@@ -117,6 +117,9 @@ final class GeminiWebSearchClientTest extends TestCase
     private function platform(array $data, array &$captured): PlatformInterface
     {
         $raw = new class($data) implements RawResultInterface {
+            /**
+             * @param array<string, mixed> $data
+             */
             public function __construct(private readonly array $data)
             {
             }

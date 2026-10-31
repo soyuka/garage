@@ -9,8 +9,8 @@ use ApiPlatform\State\ProcessorInterface;
 use App\Catalog\PartsCatalog;
 use App\Catalog\ServiceKind;
 use App\Dto\ServicePartsInput;
-use App\Mcp\ToolResult;
 use App\Mcp\ArticleGroup;
+use App\Mcp\ToolResult;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -21,10 +21,10 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<ServicePartsInput, CallToolResult>
  */
-final class ServicePartsProcessor implements ProcessorInterface
+final readonly class ServicePartsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private readonly PartsCatalog $catalog,
+        private PartsCatalog $catalog,
     ) {
     }
 

@@ -11,8 +11,8 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\QueryParameter;
 use App\Agent\Journal\TurnCostEstimator;
 use App\Agent\Journal\TurnRoute;
-use App\Entity\AgentTurnKind;
 use App\Entity\AgentTurn as AgentTurnEntity;
+use App\Entity\AgentTurnKind;
 use App\State\AgentTurnCollectionProvider;
 use App\State\AgentTurnProvider;
 use Symfony\Component\Uid\Ulid;
@@ -76,7 +76,7 @@ final class AgentTurn
     /** @var list<array{mimeType: string, bytes: int}> */
     #[ApiProperty(description: 'Shape of the photos the turn carried (type and size, never the bytes).')]
     public array $images = [];
-    #[ApiProperty(description: 'partsapi requests actually sent upstream during the row (cache hits are free).')]
+    #[ApiProperty(description: 'partsapi requests sent upstream during the row; null on rows recorded since the catalogue became local.')]
     public ?int $partsApiCalls = null;
     /** @var array<string, int> */
     #[ApiProperty(description: 'partsapi upstream requests by method: the test keys are capped per method and per day.')]

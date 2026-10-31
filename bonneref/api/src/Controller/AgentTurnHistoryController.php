@@ -16,12 +16,12 @@ use Symfony\Component\Uid\Ulid;
  * Curates the finder home history without touching the journal: hiding flags one row, which only
  * changes what `GET /agent/turns?history=1` returns; the journal drawer keeps every row. Under the `^/agent/turn` firewall, so always authenticated.
  */
-final class AgentTurnHistoryController
+final readonly class AgentTurnHistoryController
 {
     public function __construct(
-        private readonly OwnerContext $owner,
-        private readonly AgentTurnRepository $turns,
-        private readonly DocumentManager $dm,
+        private OwnerContext $owner,
+        private AgentTurnRepository $turns,
+        private DocumentManager $dm,
     ) {
     }
 

@@ -6,8 +6,8 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Test\ApiTestCase;
 use ApiPlatform\Test\Client as ApiClient;
-use MongoDB\Client;
 use App\Siv\SivLookupStore;
+use MongoDB\Client;
 
 abstract class AppTestCase extends ApiTestCase
 {
@@ -49,13 +49,6 @@ abstract class AppTestCase extends ApiTestCase
     }
 
     /**
-     * Authorization header for a write request against the `api` firewall (^/garage, ^/agent/turn).
-     * The token is decoded by {@see \App\Tests\Security\FakeOidcTokenHandler}; the firewall,
-     * ZitadelUserProvider and find-or-create all run for real. Merge into a request's headers.
-     *
-     * @return array{Authorization: string}
-     */
-    /**
      * Production is deny-by-default (config/packages/security.yaml), so every client is authenticated
      * as {@see self::TEST_OWNER} unless the request carries its own Authorization header, which wins
      * over this default (an owner-scoping test keeps its own token). Use {@see createAnonymousClient()}
@@ -82,6 +75,13 @@ abstract class AppTestCase extends ApiTestCase
         return parent::createClient($kernelOptions);
     }
 
+    /**
+     * Authorization header for a write request against the `api` firewall (^/garage, ^/agent/turn).
+     * The token is decoded by {@see \App\Tests\Security\FakeOidcTokenHandler}; the firewall,
+     * ZitadelUserProvider and find-or-create all run for real. Merge into a request's headers.
+     *
+     * @return array{Authorization: string}
+     */
     protected static function authHeaders(string $sub = 'test-user', string $email = self::TEST_OWNER): array
     {
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];

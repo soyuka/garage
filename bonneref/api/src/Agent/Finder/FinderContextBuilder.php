@@ -16,13 +16,13 @@ use App\Message\RunAgentTurn;
  * only memory carried across them. A known vehicle also brings its leaf categories, so the agent picks
  * by meaning; set_vehicle returns the same list when the agent identifies the car itself.
  */
-final class FinderContextBuilder
+final readonly class FinderContextBuilder
 {
     private const int MAX_SUMMARY_LENGTH = 2000;
 
     public function __construct(
-        private readonly FinderCategoryList $categories,
-        private readonly BuildCodeDecoders $decoders,
+        private FinderCategoryList $categories,
+        private BuildCodeDecoders $decoders,
     ) {
     }
 

@@ -10,7 +10,7 @@ namespace App\RegistrationDocument;
 final readonly class RegistrationDocumentExtraction
 {
     /**
-     * @param array<string, string|null> $fields keyed by carte grise field code, see {@see AnthropicRegistrationDocumentReader::FIELDS}
+     * @param array<string, string|null> $fields   keyed by carte grise field code, see {@see AnthropicRegistrationDocumentReader::FIELDS}
      * @param list<string>               $warnings
      */
     public function __construct(

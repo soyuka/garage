@@ -26,6 +26,23 @@ services:
         arguments:
             $httpClient: '@siv.client'
             $token: '%env(API_PLAQUE_TOKEN)%'
+            $quota: '@app.quota.plate_lookup'
+
+    # One instance per quota (config/packages/rate_limiter.yaml), keyed on the current owner.
+    App\Security\OwnerRateLimiter:
+        abstract: true
+
+    app.quota.agent_turn:
+        class: App\Security\OwnerRateLimiter
+        arguments: { $limiter: '@limiter.agent_turn' }
+
+    app.quota.plate_lookup:
+        class: App\Security\OwnerRateLimiter
+        arguments: { $limiter: '@limiter.plate_lookup' }
+
+    App\Controller\AgentTurnController:
+        arguments:
+            $quota: '@app.quota.agent_turn'
 
     # Paid upstream responses live in MongoDB collections, not a cache: see the Entity docblocks.
     App\Siv\SivLookupStore: '@App\Siv\MongoSivLookupStore'
@@ -152,6 +169,7 @@ when@test:
                 $httpClient: '@http_client'
                 $token: '%env(API_PLAQUE_TOKEN)%'
                 $store: '@App\Siv\SivLookupStore'
+                $quota: '@app.quota.plate_lookup'
                 $retryDelayMs: 0
 
         App\Tests\Mock\FixtureHttpClient:
@@ -192,6 +210,9 @@ when@test:
         test.app.finder.mcp_toolbox:
             alias: app.finder.mcp_toolbox
             public: true
+
+        app.test.rate_limiter_storage:
+            class: Symfony\Component\RateLimiter\Storage\InMemoryStorage
 
         # Capture Mercure publishes (no HTTP) so tests can assert streamed frames.
         App\Tests\Mock\RecordingHub:

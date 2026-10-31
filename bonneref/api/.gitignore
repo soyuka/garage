@@ -22,3 +22,8 @@
 ###> app: local claude agent scratch ###
 /.claude/agent-memory/
 ###< app ###
+
+###> friendsofphp/php-cs-fixer ###
+/.php-cs-fixer.php
+/.php-cs-fixer.cache
+###< friendsofphp/php-cs-fixer ###

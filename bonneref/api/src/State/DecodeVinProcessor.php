@@ -14,9 +14,9 @@ use Mcp\Schema\Result\CallToolResult;
 /**
  * @implements ProcessorInterface<VinInput, CallToolResult>
  */
-final class DecodeVinProcessor implements ProcessorInterface
+final readonly class DecodeVinProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly VinDecoder $decoder)
+    public function __construct(private VinDecoder $decoder)
     {
     }
 

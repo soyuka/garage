@@ -12,9 +12,9 @@ use App\Catalog\PartsCatalog;
 /**
  * @implements ProviderInterface<Article>
  */
-final class ArticleCollectionProvider implements ProviderInterface
+final readonly class ArticleCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

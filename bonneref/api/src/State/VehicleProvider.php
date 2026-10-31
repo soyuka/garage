@@ -7,19 +7,25 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Vehicle;
+use App\Exception\RateLimitExceededException;
 use App\Vehicle\VehicleLookup;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 /**
  * @implements ProviderInterface<Vehicle>
  */
-final class VehicleProvider implements ProviderInterface
+final readonly class VehicleProvider implements ProviderInterface
 {
-    public function __construct(private readonly VehicleLookup $vehicleLookup)
+    public function __construct(private VehicleLookup $vehicleLookup)
     {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?Vehicle
     {
-        return $this->vehicleLookup->byPlate((string) $uriVariables['plate']);
+        try {
+            return $this->vehicleLookup->byPlate((string) $uriVariables['plate']);
+        } catch (RateLimitExceededException $e) {
+            throw new TooManyRequestsHttpException($e->retryAfterSeconds(), 'Plate lookup limit reached, retry later.', $e);
+        }
     }
 }

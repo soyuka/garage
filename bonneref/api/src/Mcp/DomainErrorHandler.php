@@ -6,6 +6,7 @@ namespace App\Mcp;
 
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use App\Exception\MissingApiKeyException;
+use App\Exception\RateLimitExceededException;
 use App\Exception\RecordNotFoundException;
 use App\Exception\UpstreamException;
 use Mcp\Schema\Content\TextContent;
@@ -31,18 +32,21 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * the plate did not exist; and the messages name env vars, which a -32603 ships to any MCP client.
  *
  * Mapped failures therefore come back as a CallToolResult carrying `status` + `retryable`. A miss
- * keeps isError=false, matching the contract the garage tools already keep ({@see \App\Mcp\ToolResult}).
+ * keeps isError=false, matching the contract the garage tools already keep ({@see ToolResult}).
  * Anything unmapped still throws: an unexpected bug must stay loud.
  *
  * @implements RequestHandlerInterface<mixed>
  */
 #[AsDecorator('api_platform.mcp.handler')]
-final class DomainErrorHandler implements RequestHandlerInterface
+final readonly class DomainErrorHandler implements RequestHandlerInterface
 {
     private const MISS = 'not_found';
 
+    /**
+     * @param RequestHandlerInterface<mixed> $decorated
+     */
     public function __construct(
-        #[AutowireDecorated] private readonly RequestHandlerInterface $decorated,
+        #[AutowireDecorated] private RequestHandlerInterface $decorated,
     ) {
     }
 
@@ -92,6 +96,12 @@ final class DomainErrorHandler implements RequestHandlerInterface
                 'retryable' => false,
                 'source' => $e->source,
                 'hint' => sprintf('%s is not configured on this server. Tell the user this capability is unavailable; do not retry and do not guess an answer.', $e->source),
+            ],
+            $e instanceof RateLimitExceededException => [
+                'status' => 'rate_limited',
+                'retryable' => false,
+                'retryAfter' => $e->retryAfterSeconds(),
+                'hint' => sprintf('This account has used up its plate lookups for now. Tell the user to try again in about %d minutes; do not retry now and do not guess the vehicle.', (int) ceil($e->retryAfterSeconds() / 60)),
             ],
             $e instanceof RecordNotFoundException, $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
                 'status' => self::MISS,

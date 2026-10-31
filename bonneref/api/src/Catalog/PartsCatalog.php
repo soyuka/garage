@@ -38,21 +38,14 @@ interface PartsCatalog
     public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array;
 
     /**
-     * The category's name from the part-category tree only when it is already cached: never an upstream call.
+     * The category's name in the car's part-category tree; null when the tree has no such category.
      */
-    public function cachedCategoryName(int $carId, int $categoryId, CarType $carType): ?string;
+    public function categoryName(int $carId, int $categoryId, CarType $carType): ?string;
 
     /**
      * @return list<Article>
      */
     public function articles(int $carId, int $categoryId, CarType $carType): array;
-
-    /**
-     * The category's articles only when the listing is already cached: never an upstream call.
-     *
-     * @return list<Article>|null
-     */
-    public function cachedArticles(int $carId, int $categoryId, CarType $carType): ?array;
 
     /**
      * The article's attributes, then its link qualifiers merged over EVERY vehicle it fits: the shape partsapi
@@ -63,13 +56,13 @@ interface PartsCatalog
     public function articleCriteria(int $artId): array;
 
     /**
-     * The criteria of those articles already cached, in one cache round trip: never an upstream call.
+     * {@see self::articleCriteria()} for several articles in one query.
      *
      * @param list<int> $artIds
      *
-     * @return array<int, list<ArticleCriterion>> by article id, uncached ones left out
+     * @return array<int, list<ArticleCriterion>> by article id, articles without criteria left out
      */
-    public function cachedArticleCriteria(array $artIds): array;
+    public function articleCriteriaByIds(array $artIds): array;
 
     /**
      * The criteria of those articles on one vehicle's link (qualifiers of that link only, restricted to the product
@@ -86,11 +79,4 @@ interface PartsCatalog
      * @return list<ArticleCross>
      */
     public function articleCrosses(int $artId): array;
-
-    public function upstreamCalls(): int;
-
-    /**
-     * @return array<string, int> paid upstream calls spent so far, by method
-     */
-    public function upstreamCallsByMethod(): array;
 }

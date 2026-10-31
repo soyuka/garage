@@ -20,6 +20,9 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 #[AsDecorator('api_platform.mcp.state_provider')]
 final readonly class DomainMissProvider implements ProviderInterface
 {
+    /**
+     * @param ProviderInterface<object> $decorated
+     */
     public function __construct(
         #[AutowireDecorated] private ProviderInterface $decorated,
     ) {

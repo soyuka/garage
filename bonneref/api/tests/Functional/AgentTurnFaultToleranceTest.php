@@ -4,11 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Tests\Mock\ScriptedStreamPlatform;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
-use App\Tests\Mock\ScriptedStreamPlatform;
 
 /**
  * A malformed tool call (here ask_question with an option missing its `value`) must NOT kill the

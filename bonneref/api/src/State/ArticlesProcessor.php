@@ -8,8 +8,8 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Catalog\PartsCatalog;
 use App\Dto\ArticlesInput;
-use App\Mcp\ToolResult;
 use App\Mcp\ArticleGroup;
+use App\Mcp\ToolResult;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -19,9 +19,9 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<ArticlesInput, CallToolResult>
  */
-final class ArticlesProcessor implements ProcessorInterface
+final readonly class ArticlesProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

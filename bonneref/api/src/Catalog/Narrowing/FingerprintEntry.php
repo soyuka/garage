@@ -10,9 +10,9 @@ final readonly class FingerprintEntry
     private const MM_RATIO = 0.025;
 
     /**
-     * @param ?float $min   lowest value among the parts merged into this entry (the value itself for one part)
-     * @param ?float $max   highest value, likewise
-     * @param bool   $info  displayed but never used to split or tell parts apart: suppliers disagree on it
+     * @param ?float $min  lowest value among the parts merged into this entry (the value itself for one part)
+     * @param ?float $max  highest value, likewise
+     * @param bool   $info displayed but never used to split or tell parts apart: suppliers disagree on it
      */
     public function __construct(
         public string $key,

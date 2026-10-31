@@ -7,8 +7,8 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\Car;
-use App\Catalog\PartsCatalog;
 use App\Catalog\CarFilter;
+use App\Catalog\PartsCatalog;
 use App\Dto\CarsInput;
 use App\Mcp\CappedResult;
 use Mcp\Schema\Result\CallToolResult;
@@ -18,11 +18,11 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<CarsInput, CallToolResult>
  */
-final class CarsProcessor implements ProcessorInterface
+final readonly class CarsProcessor implements ProcessorInterface
 {
     private const LIMIT = 30;
 
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

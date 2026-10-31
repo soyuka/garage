@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Catalog;
 
 use App\Catalog\ArticleCriterion;
-use App\Catalog\TecdocCatalog;
 use App\Catalog\CarType;
+use App\Catalog\TecdocCatalog;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
 

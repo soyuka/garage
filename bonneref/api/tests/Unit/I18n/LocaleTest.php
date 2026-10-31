@@ -12,6 +12,7 @@ final class LocaleTest extends TestCase
 {
     public function testFrenchIsTheDefault(): void
     {
+        // @phpstan-ignore method.alreadyNarrowedType (pins the constant's value: the tautology IS the test)
         $this->assertSame(Locale::Fr, Locale::DEFAULT);
     }
 

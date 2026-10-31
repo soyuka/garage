@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Siv;
 
 use App\Exception\MissingApiKeyException;
+use App\Exception\RateLimitExceededException;
 use App\Exception\UpstreamException;
+use App\Security\OwnerRateLimiter;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -17,7 +19,7 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  * envelope, same shape as prototype_1's <PLATE>.json) and never re-paid. Failed
  * lookups are never cached.
  */
-final class SivClient
+final readonly class SivClient
 {
     private const BASE_URI = 'https://api.apiplaqueimmatriculation.com/plaque';
 
@@ -25,11 +27,12 @@ final class SivClient
     private const SOURCE = 'the French vehicle registry (SIV)';
 
     public function __construct(
-        private readonly HttpClientInterface $httpClient,
-        private readonly string $token,
-        private readonly SivLookupStore $store,
-        private readonly int $maxRetries = 2,
-        private readonly int $retryDelayMs = 1000,
+        private HttpClientInterface $httpClient,
+        private string $token,
+        private SivLookupStore $store,
+        private OwnerRateLimiter $quota,
+        private int $maxRetries = 2,
+        private int $retryDelayMs = 1000,
     ) {
     }
 
@@ -40,6 +43,10 @@ final class SivClient
 
     /**
      * @return array<string, mixed>|null the SIV `data` payload, or null when the plate is unknown
+     *
+     * @throws MissingApiKeyException
+     * @throws UpstreamException
+     * @throws RateLimitExceededException only on a store miss: a stored plate costs nothing
      */
     public function lookup(string $plate): ?array
     {
@@ -57,6 +64,8 @@ final class SivClient
         if ('' === $this->token) {
             throw MissingApiKeyException::forSiv();
         }
+
+        $this->quota->consume();
 
         $envelope = $this->fetch($plate);
 
@@ -81,9 +90,7 @@ final class SivClient
 
         $message = sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, $envelope['message'] ?? '');
 
-        throw $errorCode >= 500
-            ? UpstreamException::transient(self::SOURCE, $message)
-            : UpstreamException::definitive(self::SOURCE, $message);
+        throw $errorCode >= 500 ? UpstreamException::transient(self::SOURCE, $message) : UpstreamException::definitive(self::SOURCE, $message);
     }
 
     /**
@@ -99,7 +106,7 @@ final class SivClient
      */
     private function fetch(string $plate): array
     {
-        for ($attempt = 0; ; ++$attempt) {
+        for ($attempt = 0;; ++$attempt) {
             try {
                 $response = $this->httpClient->request('POST', self::BASE_URI, [
                     'query' => ['immatriculation' => $plate, 'token' => $this->token, 'pays' => 'FR'],
@@ -125,9 +132,7 @@ final class SivClient
 
             $message = sprintf('apiplaqueimmatriculation.com bad response (HTTP %d)', $status);
 
-            throw $status >= 500 || 429 === $status
-                ? UpstreamException::transient(self::SOURCE, $message)
-                : UpstreamException::definitive(self::SOURCE, $message);
+            throw $status >= 500 || 429 === $status ? UpstreamException::transient(self::SOURCE, $message) : UpstreamException::definitive(self::SOURCE, $message);
         }
     }
 

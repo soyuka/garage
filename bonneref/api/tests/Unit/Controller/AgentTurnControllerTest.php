@@ -7,9 +7,9 @@ namespace App\Tests\Unit\Controller;
 use App\Agent\Dispatch\TurnDispatcher;
 use App\Agent\Finder\TurnImageDecoder;
 use App\Agent\Finder\TurnImageStash;
-use App\Agent\TurnSurface;
 use App\Controller\AgentTurnController;
-use App\Message\RunAgentTurn;
+use App\Tests\Mock\RecordingTurnDispatcher;
+use App\Tests\Support\UnlimitedQuota;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Clock\ClockInterface;
@@ -39,7 +39,6 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertSame('filtre à huile', $dispatched->instruction);
         $this->assertSame('https://app.example/agent/sessions/sess-1', $dispatched->sessionTopic);
         $this->assertSame('owner-sub', $dispatched->owner);
-        $this->assertSame(TurnSurface::Finder, $dispatched->surface);
         $this->assertSame('Mazda6 à 250000 km', $dispatched->summary);
         $this->assertSame('Reco huile — quel moteur ?', $dispatched->pendingContext);
     }
@@ -55,6 +54,7 @@ final class AgentTurnControllerTest extends TestCase
         ]));
 
         $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
+        // @phpstan-ignore function.impossibleType (pins the message shape: a selectedId field must never come back)
         $this->assertFalse(property_exists($dispatcher->turns[0], 'selectedId'));
     }
 
@@ -78,17 +78,9 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertSame([], $dispatcher->turns);
     }
 
-    private function dispatcher(): TurnDispatcher
+    private function dispatcher(): RecordingTurnDispatcher
     {
-        return new class implements TurnDispatcher {
-            /** @var list<RunAgentTurn> */
-            public array $turns = [];
-
-            public function dispatch(RunAgentTurn $turn): void
-            {
-                $this->turns[] = $turn;
-            }
-        };
+        return new RecordingTurnDispatcher();
     }
 
     private function controller(TurnDispatcher $dispatcher, string $baseUri = 'https://app.example'): AgentTurnController
@@ -103,6 +95,7 @@ final class AgentTurnControllerTest extends TestCase
             $security,
             new TurnImageDecoder(),
             new TurnImageStash($this->createStub(DocumentManager::class), $this->createStub(ClockInterface::class)),
+            UnlimitedQuota::create(),
             $baseUri,
         );
     }

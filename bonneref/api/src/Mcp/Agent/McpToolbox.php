@@ -28,6 +28,7 @@ class McpToolbox implements ToolboxInterface
 {
     private const PROTOCOL_VERSION = '2025-03-26';
 
+    /** @var list<Tool>|null */
     private ?array $tools = null;
 
     /**
@@ -40,6 +41,9 @@ class McpToolbox implements ToolboxInterface
     ) {
     }
 
+    /**
+     * @phpstan-impure memoises only a non-empty catalogue, so two calls can answer differently
+     */
     public function getTools(): array
     {
         if (null !== $this->tools) {
@@ -95,10 +99,7 @@ class McpToolbox implements ToolboxInterface
                 throw ToolNotFoundException::notFoundForToolCall($toolCall);
             }
 
-            throw ToolExecutionException::executionFailed(
-                $toolCall,
-                new \RuntimeException((string) ($response['error']['message'] ?? 'tool execution failed')),
-            );
+            throw ToolExecutionException::executionFailed($toolCall, new \RuntimeException((string) ($response['error']['message'] ?? 'tool execution failed')));
         }
 
         $result = $response['result'] ?? [];

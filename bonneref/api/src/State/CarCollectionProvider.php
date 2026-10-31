@@ -13,9 +13,9 @@ use App\Catalog\PartsCatalog;
 /**
  * @implements ProviderInterface<Car>
  */
-final class CarCollectionProvider implements ProviderInterface
+final readonly class CarCollectionProvider implements ProviderInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

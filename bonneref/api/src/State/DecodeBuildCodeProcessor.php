@@ -7,18 +7,18 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\DecodeBuildCodeInput;
-use App\Mcp\ToolResult;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\InvalidBuildCode;
 use App\Knowledge\MakeName;
+use App\Mcp\ToolResult;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
  * @implements ProcessorInterface<DecodeBuildCodeInput, CallToolResult>
  */
-final class DecodeBuildCodeProcessor implements ProcessorInterface
+final readonly class DecodeBuildCodeProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly BuildCodeDecoders $decoders)
+    public function __construct(private BuildCodeDecoders $decoders)
     {
     }
 

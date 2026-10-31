@@ -10,8 +10,6 @@ use App\ApiResource\Make;
 use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
 use App\Vehicle\VehicleIndex;
-use PDO;
-use RuntimeException;
 
 /**
  * The whole catalogue from the derived read-only TecDoc extract (docs/tecdoc-sqlite.md): vehicles, the
@@ -29,7 +27,7 @@ final class TecdocCatalog implements PartsCatalog
         'CV' => ['tree' => 2, 'type' => 'cv_type', 'engines' => 'cv_type_engine', 'genarts' => 'cv_type_genart', 'links' => 'article_cv_type', 'kind' => 'cv'],
     ];
 
-    private ?PDO $pdo = null;
+    private ?\PDO $pdo = null;
 
     /** @var array<string, list<int>>|null normalised supplier name => DVD slots */
     private ?array $slotsByName = null;
@@ -141,7 +139,7 @@ final class TecdocCatalog implements PartsCatalog
         return PartCategory::fromPartsApiTree($nodes, $leafOnly, $search);
     }
 
-    public function cachedCategoryName(int $carId, int $categoryId, CarType $carType): ?string
+    public function categoryName(int $carId, int $categoryId, CarType $carType): ?string
     {
         foreach ($this->partCategories($carId, $carType, false) as $category) {
             if ($category->id === $categoryId) {
@@ -183,17 +181,12 @@ final class TecdocCatalog implements PartsCatalog
         return array_map(Article::fromPartsApi(...), $rows);
     }
 
-    public function cachedArticles(int $carId, int $categoryId, CarType $carType): ?array
-    {
-        return $this->articles($carId, $categoryId, $carType);
-    }
-
     public function articleCriteria(int $artId): array
     {
         return $this->criteria([$artId])[$artId] ?? [];
     }
 
-    public function cachedArticleCriteria(array $artIds): array
+    public function articleCriteriaByIds(array $artIds): array
     {
         return $this->criteria($artIds);
     }
@@ -286,16 +279,6 @@ final class TecdocCatalog implements PartsCatalog
         }
 
         return $crosses;
-    }
-
-    public function upstreamCalls(): int
-    {
-        return 0;
-    }
-
-    public function upstreamCallsByMethod(): array
-    {
-        return [];
     }
 
     /**
@@ -673,22 +656,22 @@ final class TecdocCatalog implements PartsCatalog
         $statement = $this->pdo()->prepare($sql);
         $statement->execute($params);
 
-        return $statement->fetchAll(PDO::FETCH_ASSOC);
+        return $statement->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    private function pdo(): PDO
+    private function pdo(): \PDO
     {
         if (null !== $this->pdo) {
             return $this->pdo;
         }
 
         if ('' === $this->path || !is_file($this->path) || !is_readable($this->path)) {
-            throw new RuntimeException(\sprintf('TECDOC_CATALOG_PATH "%s" is not a readable file.', $this->path));
+            throw new \RuntimeException(\sprintf('TECDOC_CATALOG_PATH "%s" is not a readable file.', $this->path));
         }
 
-        return $this->pdo = new PDO(
+        return $this->pdo = new \PDO(
             'sqlite:file:'.$this->path.'?mode=ro&immutable=1',
-            options: [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION],
+            options: [\PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION],
         );
     }
 }

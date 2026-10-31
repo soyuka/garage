@@ -58,7 +58,7 @@ final class AgentTurnVehicleNamesTest extends AppTestCase
     private function seedSearch(array $search): string
     {
         $dm = static::getContainer()->get(DocumentManager::class);
-        $turn = AgentTurn::search(self::TEST_OWNER, 'filtre', $search, [], 10, AgentTurnStatus::Completed);
+        $turn = AgentTurn::search(self::TEST_OWNER, 'filtre', $search, 10, AgentTurnStatus::Completed);
         $dm->persist($turn);
         $dm->flush();
 

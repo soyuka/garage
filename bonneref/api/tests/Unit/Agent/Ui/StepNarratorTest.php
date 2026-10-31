@@ -5,10 +5,10 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\Ui;
 
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\Ui\StepNarrator;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
 use App\Tests\Mock\TestDashboardChannel;
-use App\Agent\Ui\StepNarrator;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -45,6 +45,7 @@ final class StepNarratorTest extends TestCase
      */
     public function testNarratesAKnownToolWithItsSentenceAndItsToolKey(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published)->forTool('get_service_parts');
 
@@ -56,6 +57,7 @@ final class StepNarratorTest extends TestCase
 
     public function testStaysSilentForAnUnmappedTool(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published)->forTool('some_tool_with_no_sentence');
 
@@ -64,6 +66,7 @@ final class StepNarratorTest extends TestCase
 
     public function testNarratesTheWebSearchStep(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published)->forTool('web_search');
 
@@ -79,6 +82,7 @@ final class StepNarratorTest extends TestCase
      */
     public function testNarratesInEnglishWhenTheInterfaceIsEnglish(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published, Locale::En)->forTool('get_service_parts');
 
@@ -90,6 +94,7 @@ final class StepNarratorTest extends TestCase
 
     public function testAnUnmappedToolIsSilentInEveryLanguage(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $this->narrator($published, Locale::En)->forTool('some_tool_with_no_sentence');
 
@@ -99,6 +104,7 @@ final class StepNarratorTest extends TestCase
     /** announce() is forTool()'s early twin: same sentence, but the id is remembered as announced. */
     public function testAnnounceNarratesAMappedToolAndRemembersTheId(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -114,6 +120,7 @@ final class StepNarratorTest extends TestCase
     /** An unmapped tool stays silent, exactly as forTool(), but the id is still marked announced. */
     public function testAnnounceStaysSilentForAnUnmappedToolButStillRemembersTheId(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -125,6 +132,7 @@ final class StepNarratorTest extends TestCase
 
     public function testWasAnnouncedIsFalseForAnUnknownId(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -134,6 +142,7 @@ final class StepNarratorTest extends TestCase
     /** reset() clears the per-turn memory — a stale worker singleton must not leak across turns. */
     public function testResetClearsTheAnnouncedMemory(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
 
@@ -145,6 +154,7 @@ final class StepNarratorTest extends TestCase
 
     public function testResetKeepsNarratingTheSameSentencePerTool(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = $this->narrator($published);
         $narrator->forTool('show_parts');
@@ -165,6 +175,7 @@ final class StepNarratorTest extends TestCase
     public function testEveryNarratedToolHasASentenceInBothLanguages(): void
     {
         foreach ([Locale::Fr, Locale::En] as $locale) {
+            /** @var \ArrayObject<int, array<string, mixed>> $published */
             $published = new \ArrayObject();
             $narrator = $this->narrator($published, $locale);
             foreach (StepNarrator::TOOLS as $tool) {

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Support;
 
-use PDO;
-
 /**
  * A subset of catalog-dev.sqlite: the real DDL of the tables TecdocCatalog reads and the real rows of
  * kType 19107 / category 100259 (tests/Fixtures/tecdoc/*.sql, generated from the dev slice). `narrowing.sql` adds
@@ -18,8 +16,8 @@ final class TecdocFixtureDatabase
 {
     public static function create(string $path, bool $withCategoryArticles = false, bool $withEspaceFlywheels = false, bool $withSteeringJoints = false): void
     {
-        $pdo = new PDO('sqlite:'.$path);
-        $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $pdo = new \PDO('sqlite:'.$path);
+        $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         // Throwaway file: without this every INSERT of the fixtures is its own fsync (minutes on a bind mount).
         $pdo->exec('PRAGMA synchronous = OFF; PRAGMA journal_mode = MEMORY');
 

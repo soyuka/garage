@@ -12,9 +12,9 @@ use App\Vehicle\VehicleIndex;
 /**
  * @implements ProviderInterface<KnownCar>
  */
-final class KnownCarProvider implements ProviderInterface
+final readonly class KnownCarProvider implements ProviderInterface
 {
-    public function __construct(private readonly VehicleIndex $index)
+    public function __construct(private VehicleIndex $index)
     {
     }
 

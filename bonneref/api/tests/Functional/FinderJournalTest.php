@@ -71,10 +71,9 @@ final class FinderJournalTest extends AppTestCase
         self::assertCount(1, $rows);
         $row = $rows[0];
         self::assertSame(AgentTurnKind::Search, $row->getKind());
-        self::assertSame(TurnSurface::Finder, $row->getSurface());
         self::assertSame(AgentTurnStatus::Completed, $row->getStatus());
         self::assertSame('filtre à huile', $row->getInstruction());
-        self::assertSame($narrowed['upstreamCalls'], $row->getPartsApiCalls());
+        self::assertNull($row->getPartsApiCalls(), 'no partsapi call is made since the catalogue is local');
         self::assertNotNull($row->getDurationMs());
         self::assertSame([
             'rule' => 'category',
@@ -90,7 +89,7 @@ final class FinderJournalTest extends AppTestCase
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
         self::assertSame('search', $listed[0]['kind']);
-        self::assertSame($narrowed['upstreamCalls'], $listed[0]['partsApiCalls']);
+        self::assertNull($listed[0]['partsApiCalls']);
         self::assertSame('category', $listed[0]['search']['rule']);
         self::assertSame('k/19107-PC/c/100259', $listed[0]['route']);
         self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null, 'engine' => null], $listed[0]['vehicle']);
@@ -270,7 +269,6 @@ final class FinderJournalTest extends AppTestCase
         $search = $rows[0]->getSearch();
         self::assertSame(['XC302ZC', 34247, 'IVECO', 'DAILY', 100259, 'plate'], [$search['plate'], $search['carId'], $search['make'], $search['model'], $search['categoryId'], $search['rule']]);
         self::assertSame(\count($narrowed['clusters']), $search['clusterCount']);
-        self::assertGreaterThanOrEqual($narrowed['upstreamCalls'], $rows[0]->getPartsApiCalls());
     }
 
     public function testTheVehicleHeaderFillsMakeModelAndEngineWithoutAPlateLookup(): void

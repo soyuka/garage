@@ -48,6 +48,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
 
     public function testToolCallStartForAMappedToolNarratesOnceAndMarksItAnnounced(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $listener = $this->listener($published);
 
@@ -61,6 +62,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
 
     public function testToolCallStartForAnUnmappedToolNarratesNothingButStillAnnounces(): void
     {
+        /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $listener = $this->listener($published);
 

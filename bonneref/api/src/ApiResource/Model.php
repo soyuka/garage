@@ -10,9 +10,9 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
+use App\Catalog\CatalogDate;
 use App\Dto\ModelsInput;
 use App\State\ModelCollectionProvider;
-use App\Catalog\CatalogDate;
 use App\State\ModelsProcessor;
 use Symfony\Component\Validator\Constraints as Assert;
 

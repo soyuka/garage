@@ -19,9 +19,9 @@ use Mcp\Schema\Result\CallToolResult;
  *
  * @implements ProcessorInterface<PartCategoriesInput, CallToolResult>
  */
-final class PartCategoriesProcessor implements ProcessorInterface
+final readonly class PartCategoriesProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

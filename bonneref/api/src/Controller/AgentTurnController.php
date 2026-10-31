@@ -14,8 +14,10 @@ use App\Agent\Finder\TurnImage;
 use App\Agent\Finder\TurnImageDecoder;
 use App\Agent\Finder\TurnImageStash;
 use App\Agent\TurnSurface;
+use App\Exception\RateLimitExceededException;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
+use App\Security\OwnerRateLimiter;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -41,15 +43,16 @@ use Symfony\Component\Routing\Attribute\Route;
  * `Request::getSchemeAndHttpHost()` can report the internal scheme/host (e.g. http://php), which
  * would publish render intents to a topic no dashboard listens on.
  */
-final class AgentTurnController
+final readonly class AgentTurnController
 {
     public function __construct(
-        private readonly TurnDispatcher $turns,
-        private readonly Security $security,
-        private readonly TurnImageDecoder $images,
-        private readonly TurnImageStash $imageStash,
+        private TurnDispatcher $turns,
+        private Security $security,
+        private TurnImageDecoder $images,
+        private TurnImageStash $imageStash,
+        private OwnerRateLimiter $quota,
         #[Autowire('%env(DEFAULT_URI)%')]
-        private readonly string $baseUri,
+        private string $baseUri,
     ) {
     }
 
@@ -86,6 +89,17 @@ final class AgentTurnController
             $images = $this->images->decode($payload['images'] ?? null);
         } catch (InvalidTurnImage $e) {
             return new JsonResponse(['error' => $e->getMessage()], $e->status);
+        }
+
+        // After validation, so a malformed request does not spend the owner's quota.
+        try {
+            $this->quota->consume();
+        } catch (RateLimitExceededException $e) {
+            return new JsonResponse(
+                ['error' => 'turn limit reached, retry later'],
+                Response::HTTP_TOO_MANY_REQUESTS,
+                ['Retry-After' => (string) $e->retryAfterSeconds()],
+            );
         }
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the

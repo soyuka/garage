@@ -12,8 +12,6 @@ enum CarType: string
     case PassengerCar = 'PC';
     case CommercialVehicle = 'CV';
 
-    /**
-     */
     public static function fromSivGenre(string $genre): self
     {
         return str_starts_with($genre, 'VP') ? self::PassengerCar : self::CommercialVehicle;

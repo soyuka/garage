@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Mercure;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
-use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -72,8 +71,8 @@ final class HubTokenConfigTest extends TestCase
         $container->getDefinition('mercure.hub.default.jwt.provider')->setPublic(true);
         $container->compile(true);
 
+        // @phpstan-ignore symfonyContainer.privateService (a ContainerBuilder of this test's own, made public just above)
         $provider = $container->get('mercure.hub.default.jwt.provider');
-        self::assertInstanceOf(TokenProviderInterface::class, $provider);
         [$header, $payload] = array_map(
             static fn (string $part): array => json_decode(base64_decode(strtr($part, '-_', '+/')), true, flags: \JSON_THROW_ON_ERROR),
             \array_slice(explode('.', $provider->getJwt()), 0, 2),

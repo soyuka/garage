@@ -12,9 +12,9 @@ use App\Catalog\Narrowing\ArticleNarrower;
 /**
  * @implements ProviderInterface<NarrowedParts>
  */
-final class NarrowedPartsProvider implements ProviderInterface
+final readonly class NarrowedPartsProvider implements ProviderInterface
 {
-    public function __construct(private readonly ArticleNarrower $narrower)
+    public function __construct(private ArticleNarrower $narrower)
     {
     }
 

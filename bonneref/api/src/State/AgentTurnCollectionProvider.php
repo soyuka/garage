@@ -20,15 +20,15 @@ use App\Vehicle\VehicleIndex;
  *
  * @implements ProviderInterface<AgentTurn>
  */
-final class AgentTurnCollectionProvider implements ProviderInterface
+final readonly class AgentTurnCollectionProvider implements ProviderInterface
 {
     private const int LIMIT = 100;
 
     public function __construct(
-        private readonly AgentTurnRepository $turns,
-        private readonly OwnerContext $owner,
-        private readonly TurnCostEstimator $cost,
-        private readonly VehicleIndex $vehicles,
+        private AgentTurnRepository $turns,
+        private OwnerContext $owner,
+        private TurnCostEstimator $cost,
+        private VehicleIndex $vehicles,
     ) {
     }
 

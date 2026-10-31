@@ -7,11 +7,11 @@ namespace App\Vehicle;
 use App\ApiResource\Vehicle;
 use App\Siv\SivClient;
 
-final class VehicleLookup
+final readonly class VehicleLookup
 {
     public function __construct(
-        private readonly SivClient $sivClient,
-        private readonly VehicleIndex $index,
+        private SivClient $sivClient,
+        private VehicleIndex $index,
     ) {
     }
 

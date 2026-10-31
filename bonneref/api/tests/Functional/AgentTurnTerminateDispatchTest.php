@@ -17,6 +17,7 @@ use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\KernelInterface;
+use Symfony\Component\HttpKernel\TerminableInterface;
 
 final class AgentTurnTerminateDispatchTest extends AppTestCase
 {
@@ -149,7 +150,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
     }
 
     /**
-     * @return array{KernelInterface, Request}
+     * @return array{KernelInterface&TerminableInterface, Request}
      */
     private static function turnRequest(string $sessionId): array
     {
@@ -164,7 +165,10 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
             content: json_encode(['instruction' => 'Quelle viscosité ?', 'sessionId' => $sessionId, 'vehicle' => ['carId' => 19107, 'carType' => 'PC']], \JSON_THROW_ON_ERROR),
         );
 
-        return [static::$kernel, $request];
+        $kernel = static::$kernel;
+        self::assertInstanceOf(TerminableInterface::class, $kernel);
+
+        return [$kernel, $request];
     }
 
     /**

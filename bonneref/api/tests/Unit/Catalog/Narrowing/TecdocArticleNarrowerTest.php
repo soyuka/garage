@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Catalog\Narrowing;
 
+use App\Catalog\CarType;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Catalog\TecdocCatalog;
-use App\Catalog\CarType;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
 
@@ -35,7 +35,6 @@ final class TecdocArticleNarrowerTest extends TestCase
         $this->assertTrue($result->narrowed);
         $this->assertSame(116, $result->totalArticles);
         $this->assertSame(87, $result->totalBrands);
-        $this->assertSame(0, $result->upstreamCalls);
 
         // The rest are cartridge filters no screw-on OE number reaches, and articles without any OE number or criterion.
         $this->assertLessThanOrEqual(25, $result->unclassifiedCount);

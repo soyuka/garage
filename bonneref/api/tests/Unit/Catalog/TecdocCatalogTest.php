@@ -11,13 +11,11 @@ use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
 use App\Catalog\ArticleCriterion;
 use App\Catalog\ArticleCross;
-use App\Catalog\TecdocCatalog;
 use App\Catalog\CarType;
+use App\Catalog\TecdocCatalog;
 use App\Tests\Support\TecdocFixtureDatabase;
-use PDO;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 final class TecdocCatalogTest extends TestCase
 {
@@ -42,7 +40,7 @@ final class TecdocCatalogTest extends TestCase
     #[DataProvider('unreadablePaths')]
     public function testAnUnreadableCatalogPathFailsClearly(string $path): void
     {
-        $this->expectException(RuntimeException::class);
+        $this->expectException(\RuntimeException::class);
         $this->expectExceptionMessage('TECDOC_CATALOG_PATH');
 
         (new TecdocCatalog($path))->makes(CarType::PassengerCar);
@@ -137,10 +135,10 @@ final class TecdocCatalogTest extends TestCase
         $this->assertSame([], $this->catalog->partCategories(16680, CarType::PassengerCar, false));
     }
 
-    public function testCachedCategoryNameIsTheFrenchLeafOfTheCarsTree(): void
+    public function testCategoryNameIsTheFrenchLeafOfTheCarsTree(): void
     {
-        $this->assertSame('Filtre à huile', $this->catalog->cachedCategoryName(19107, 100259, CarType::PassengerCar));
-        $this->assertNull($this->catalog->cachedCategoryName(19107, 100017, CarType::PassengerCar));
+        $this->assertSame('Filtre à huile', $this->catalog->categoryName(19107, 100259, CarType::PassengerCar));
+        $this->assertNull($this->catalog->categoryName(19107, 100017, CarType::PassengerCar));
     }
 
     public function testCommercialVehicleMakesAreTheOnesWithCommercialTypes(): void
@@ -182,7 +180,7 @@ final class TecdocCatalogTest extends TestCase
             ],
             $this->catalog->partCategories(1446, CarType::CommercialVehicle, false),
         );
-        $this->assertSame('Filtre à huile', $this->catalog->cachedCategoryName(1446, 200136, CarType::CommercialVehicle));
+        $this->assertSame('Filtre à huile', $this->catalog->categoryName(1446, 200136, CarType::CommercialVehicle));
     }
 
     public function testACommercialCarIdIsOnlyLookedUpAmongCommercialTypes(): void
@@ -223,14 +221,6 @@ final class TecdocCatalogTest extends TestCase
         $this->assertSame('MANN-FILTER', $articles[0]->brand);
     }
 
-    public function testCachedArticlesAreTheSameLocalData(): void
-    {
-        $this->assertEquals(
-            $this->catalog->articles(19107, 100259, CarType::PassengerCar),
-            $this->catalog->cachedArticles(19107, 100259, CarType::PassengerCar),
-        );
-    }
-
     public function testArticleCriteriaAreTheAttributesWithTheirCriterionIdAndUnit(): void
     {
         $this->assertEquals(
@@ -267,14 +257,14 @@ final class TecdocCatalogTest extends TestCase
         $this->assertContainsEquals(new ArticleCriterion('Année à partir de', '200504', 20), $this->catalog->articleCriteria(259479));
     }
 
-    public function testCachedArticleCriteriaBatchesByArticleId(): void
+    public function testArticleCriteriaByIdsBatchesByArticleId(): void
     {
-        $criteria = $this->catalog->cachedArticleCriteria([78351, 407986]);
+        $criteria = $this->catalog->articleCriteriaByIds([78351, 407986]);
 
         $this->assertSame([78351, 407986], array_keys($criteria));
         $this->assertEquals($this->catalog->articleCriteria(78351), $criteria[78351]);
         $this->assertEquals($this->catalog->articleCriteria(407986), $criteria[407986]);
-        $this->assertSame([], $this->catalog->cachedArticleCriteria([]));
+        $this->assertSame([], $this->catalog->articleCriteriaByIds([]));
     }
 
     public function testAnUnknownArticleHasNoCriteriaNorCrosses(): void
@@ -306,7 +296,7 @@ final class TecdocCatalogTest extends TestCase
 
     public function testAnOeListedUnderTheLongManufacturerNameResolvesThroughTheSupplierShortName(): void
     {
-        $pdo = new PDO('sqlite:'.$this->dir.'/catalog.sqlite');
+        $pdo = new \PDO('sqlite:'.$this->dir.'/catalog.sqlite');
         $pdo->exec("INSERT INTO manufacturer VALUES (99990, 99990, 'MAHLE', 'MAHLE FILTER', 0, 0, 0, 0, 1, 0, 0)");
         $pdo->exec("INSERT INTO article_oe_number VALUES (78351, 9999, 99990, 'OC 1182', 0, NULL, NULL)");
         $pdo = null;
@@ -314,14 +304,5 @@ final class TecdocCatalogTest extends TestCase
         $crosses = (new TecdocCatalog($this->dir.'/catalog.sqlite'))->articleCrosses(78351);
 
         $this->assertContainsEquals(new ArticleCross('MAHLE FILTER', 'OC 1182', 3160312, 'Filtre à huile'), $crosses);
-    }
-
-    public function testNothingIsEverBoughtUpstream(): void
-    {
-        $this->catalog->articles(19107, 100259, CarType::PassengerCar);
-        $this->catalog->articleCriteria(78351);
-
-        $this->assertSame(0, $this->catalog->upstreamCalls());
-        $this->assertSame([], $this->catalog->upstreamCallsByMethod());
     }
 }

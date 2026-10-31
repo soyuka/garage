@@ -62,10 +62,7 @@ final class PsaBuildCodeDecoder implements BuildCodeDecoder
             return $this->build('apv', $m[1], $m[2], $m[3]);
         }
 
-        throw new InvalidBuildCode(\sprintf(
-            'Unrecognised PSA build code "%s". Expected an OPR (4-5 digits), a DAM (OPR + 2-char plant, 6-7 chars) or an APV/PR (DAM + 5 chars, 11-12 chars).',
-            trim($code),
-        ));
+        throw new InvalidBuildCode(\sprintf('Unrecognised PSA build code "%s". Expected an OPR (4-5 digits), a DAM (OPR + 2-char plant, 6-7 chars) or an APV/PR (DAM + 5 chars, 11-12 chars).', trim($code)));
     }
 
     public function fromDate(\DateTimeImmutable $date): DecodedBuildCode
@@ -74,11 +71,7 @@ final class PsaBuildCodeDecoder implements BuildCodeDecoder
         $days = (int) $epoch->setTime(0, 0)->diff($date->setTime(0, 0))->format('%R%a');
 
         if ($days < 1 || $days > self::MAX_OPR) {
-            throw new InvalidBuildCode(\sprintf(
-                'The date %s is outside the OPR counter (from %s, 5 digits).',
-                $date->format('Y-m-d'),
-                $epoch->modify('+1 day')->format('Y-m-d'),
-            ));
+            throw new InvalidBuildCode(\sprintf('The date %s is outside the OPR counter (from %s, 5 digits).', $date->format('Y-m-d'), $epoch->modify('+1 day')->format('Y-m-d')));
         }
 
         return new DecodedBuildCode(

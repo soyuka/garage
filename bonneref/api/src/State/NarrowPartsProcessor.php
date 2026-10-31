@@ -14,9 +14,9 @@ use Mcp\Schema\Result\CallToolResult;
 /**
  * @implements ProcessorInterface<NarrowPartsInput, CallToolResult>
  */
-final class NarrowPartsProcessor implements ProcessorInterface
+final readonly class NarrowPartsProcessor implements ProcessorInterface
 {
-    public function __construct(private readonly ArticleNarrower $narrower)
+    public function __construct(private ArticleNarrower $narrower)
     {
     }
 

@@ -53,6 +53,8 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | `TECDOC_CATALOG_PATH`, `CATALOG_LANG` | the derived TecDoc SQLite and the language id of its names (6 = French) |
 | `ANTHROPIC_API_KEY` | finder agent (Haiku 5.5), photo intake and carte grise reader (Sonnet 5.5), Anthropic web search |
 | `WEB_SEARCH_BACKEND`, `WEB_SEARCH_MODEL`, `GEMINI_API_KEY`, `GEMINI_WEB_SEARCH_MODEL` | the out-of-band `web_search` side call |
+| `AGENT_TURN_RATE_LIMIT`, `PLATE_LOOKUP_RATE_LIMIT` | per-owner quotas per sliding hour (defaults 30 and 60): finder turns, and SIV lookups that miss the store (a stored plate is free). Over the limit: 429 + `Retry-After`, or a `rate_limited` result from the MCP `lookup_plate` tool |
+| `LOCK_DSN` | lock store serialising the rate-limiter state (`flock`, one container) |
 | `AGENT_TURN_DISPATCH` | `terminate` (default: the turn runs in `kernel.terminate`, capped by `AGENT_TURN_TIME_LIMIT`) or `messenger` (worker) |
 | `MESSENGER_TRANSPORT_DSN`, `MESSENGER_FAILED_TRANSPORT_DSN` | `in-memory://` by default |
 | `SKIP_DATABASE_WAIT` | `1` (compose default): the entrypoint does not wait for Postgres |
@@ -60,7 +62,12 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | `MERCURE_*`, `CADDY_MERCURE_JWT_SECRET`, `MERCURE_JWT_ISSUER` | hub publish URL, public URL and JWT |
 | `DEFAULT_URI` | public origin; the finder session topic is `DEFAULT_URI/agent/sessions/<id>` and must equal the front's `VITE_API_BASE` |
 
-## Tests
+## Tests and static analysis
+
+```bash
+docker compose exec php composer cs:check   # php-cs-fixer dry run (composer cs to fix)
+docker compose exec php composer phpstan    # level 6, no baseline
+```
 
 ```bash
 docker compose exec php php -d memory_limit=1G vendor/bin/phpunit tests/Unit/Catalog/TecdocCatalogTest.php

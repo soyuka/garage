@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
-use App\Agent\TurnSurface;
 use App\I18n\AgentMessages;
 use App\I18n\LocaleContext;
 

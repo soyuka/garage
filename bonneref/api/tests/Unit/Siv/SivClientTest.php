@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Siv;
 use App\Exception\UpstreamException;
 use App\Siv\SivClient;
 use App\Tests\Support\InMemorySivLookupStore;
+use App\Tests\Support\UnlimitedQuota;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -22,7 +23,7 @@ final class SivClientTest extends TestCase
 
             return new MockResponse(json_encode(['code_erreur' => 200, 'data' => ['erreur' => '', 'immat' => 'AA123BB', 'marque' => 'PEUGEOT']]));
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore());
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create());
 
         $this->assertSame('PEUGEOT', $client->lookup('AA-123-BB')['marque']);
         $client->lookup('AA-123-BB');
@@ -39,7 +40,7 @@ final class SivClientTest extends TestCase
             // The upstream signals an unknown plate via data.erreur (here also a 404 error code).
             return new MockResponse(json_encode(['code_erreur' => 404, 'data' => ['erreur' => 'immatriculation inconnue']]));
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore());
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create());
 
         $this->assertNull($client->lookup('ZZ999ZZ'));
         $this->assertNull($client->lookup('ZZ999ZZ'));
@@ -55,7 +56,7 @@ final class SivClientTest extends TestCase
 
             return new MockResponse('gateway down', ['http_code' => 503]);
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore());
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create());
 
         foreach (range(1, 2) as $_) {
             try {
@@ -85,7 +86,7 @@ final class SivClientTest extends TestCase
 
             return new MockResponse(json_encode(['code_erreur' => 200, 'data' => ['erreur' => '', 'marque' => 'PEUGEOT']]));
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), retryDelayMs: 0);
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create(), retryDelayMs: 0);
 
         $this->assertSame('PEUGEOT', $client->lookup('AA-123-BB')['marque']);
         $this->assertSame(3, $calls, 'an idle timeout must be retried, not surfaced on the first miss');
@@ -99,7 +100,7 @@ final class SivClientTest extends TestCase
 
             return new MockResponse(self::idleTimeout());
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), retryDelayMs: 0);
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create(), retryDelayMs: 0);
 
         try {
             $client->lookup('AA-123-BB');
@@ -123,7 +124,7 @@ final class SivClientTest extends TestCase
 
             return new MockResponse('gateway down', ['http_code' => 503]);
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), retryDelayMs: 0);
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create(), retryDelayMs: 0);
 
         try {
             $client->lookup('AA123BB');
@@ -143,7 +144,7 @@ final class SivClientTest extends TestCase
 
             return new MockResponse(json_encode(['code_erreur' => 404, 'data' => ['erreur' => 'immatriculation inconnue']]));
         });
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), retryDelayMs: 0);
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create(), retryDelayMs: 0);
 
         $this->assertNull($client->lookup('ZZ999ZZ'));
         $this->assertSame(1, $calls);
@@ -155,7 +156,7 @@ final class SivClientTest extends TestCase
     public function testUpstreamRejectionIsDefinitive(): void
     {
         $http = new MockHttpClient(fn (): MockResponse => new MockResponse(json_encode(['code_erreur' => 400, 'message' => 'plaque invalide', 'data' => []])));
-        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), retryDelayMs: 0);
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create(), retryDelayMs: 0);
 
         try {
             $client->lookup('AA123BB');
@@ -168,7 +169,7 @@ final class SivClientTest extends TestCase
     private static function idleTimeout(): \Generator
     {
         throw new TransportException('Idle timeout reached for "https://api.apiplaqueimmatriculation.com/plaque".');
-
+        // @phpstan-ignore deadCode.unreachable (the yield makes this a generator, so MockResponse throws while streaming, not on construction)
         yield '';
     }
 }

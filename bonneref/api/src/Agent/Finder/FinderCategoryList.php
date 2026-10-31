@@ -5,17 +5,17 @@ declare(strict_types=1);
 namespace App\Agent\Finder;
 
 use App\ApiResource\PartCategory;
+use App\Catalog\CarType;
 use App\Catalog\PartsCatalog;
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
-use App\Catalog\CarType;
 
 /**
  * Every leaf category of one vehicle's tree, for the finder agent to pick by meaning instead of by
  * keyword. One line per leaf under a `[parent breadcrumb]` header: the full path repeated on each
  * line costs ~40% more tokens on the 307 tree (596 leaves).
  */
-final class FinderCategoryList
+final readonly class FinderCategoryList
 {
     /** Workshop tools, never a part of the car (307 « Outils spéciaux > … > Rotules » holds GEDORE wrenches). */
     private const string TOOLS_BRANCH = 'Outils spéciaux';
@@ -26,7 +26,7 @@ final class FinderCategoryList
         'Graphique complet des pièces de carrosserie',
     ];
 
-    public function __construct(private readonly PartsCatalog $catalog)
+    public function __construct(private PartsCatalog $catalog)
     {
     }
 

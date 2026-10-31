@@ -6,8 +6,8 @@ namespace App\Tests\Unit\Agent\Ui;
 
 use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Ui\RepeatedToolFailureGuard;
-use Mcp\Schema\Result\CallToolResult;
 use Mcp\Schema\Content\TextContent;
+use Mcp\Schema\Result\CallToolResult;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Agent\Toolbox\ToolResult;

@@ -45,11 +45,11 @@ final class CapturingTransport extends BaseTransport
     public function listen(): array
     {
         foreach ($this->frames as $frame) {
-            $this->immediate = null;
+            $this->takeImmediate();
             $this->handleMessage($frame, $this->sessionId);
 
-            if (null !== $this->immediate) {
-                $this->captured[] = $this->decode($this->immediate);
+            if (null !== $immediate = $this->takeImmediate()) {
+                $this->captured[] = $this->decode($immediate);
 
                 continue;
             }
@@ -77,5 +77,12 @@ final class CapturingTransport extends BaseTransport
     private function decode(string $json): array
     {
         return json_decode($json, true, 512, \JSON_THROW_ON_ERROR);
+    }
+
+    private function takeImmediate(): ?string
+    {
+        [$immediate, $this->immediate] = [$this->immediate, null];
+
+        return $immediate;
     }
 }

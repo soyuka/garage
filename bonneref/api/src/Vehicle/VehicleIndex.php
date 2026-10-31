@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Vehicle;
 
-use App\Entity\AgentTurn;
 use App\Catalog\CarType;
 use App\Catalog\CatalogDate;
+use App\Entity\AgentTurn;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use MongoDB\BSON\UTCDateTime;
 use MongoDB\Collection;
@@ -28,15 +28,15 @@ use Psr\Log\LoggerInterface;
  *
  * @phpstan-type IndexedVehicle array{carId: int, carType: string, make: ?string, model: ?string, engine: ?string, fullName: ?string, yearFrom: ?string, yearTo: ?string, source: string, seenAt: ?\DateTimeImmutable}
  */
-final class VehicleIndex
+final readonly class VehicleIndex
 {
     private const string COLLECTION = 'catalog_vehicles';
 
     private const array RANKS = ['catalog' => 3, 'siv' => 2, 'finder' => 1, 'journal' => 1];
 
     public function __construct(
-        private readonly DocumentManager $dm,
-        private readonly LoggerInterface $logger,
+        private DocumentManager $dm,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -150,8 +150,8 @@ final class VehicleIndex
      * The journal vehicle with the names it lacks filled from the index. A row that already names its
      * car, or whose car is unknown, comes back untouched.
      *
-     * @param array<string, mixed>|null                        $vehicle
-     * @param array<string, IndexedVehicle>|null               $known   a prefetched {@see findMany()} result
+     * @param array<string, mixed>|null          $vehicle
+     * @param array<string, IndexedVehicle>|null $known   a prefetched {@see findMany()} result
      *
      * @return array<string, mixed>|null
      */

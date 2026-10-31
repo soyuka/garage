@@ -8,11 +8,11 @@ use App\ApiResource\Article;
 use App\Catalog\ArticleCriterion;
 use App\Catalog\ArticleCross;
 use App\Catalog\BrandTier;
+use App\Catalog\CarType;
 use App\Catalog\PartsCatalog;
 use App\Catalog\VehicleLinkCriteria;
 use App\Exception\UpstreamException;
 use App\Mcp\ArticleGroup;
-use App\Catalog\CarType;
 
 /**
  * Turns "220 fitment-correct articles" into the few physically distinct parts they really are.
@@ -30,22 +30,21 @@ use App\Catalog\CarType;
  * partsapi quota is scarce (50/day/method on a test key), so any upstream failure degrades the answer
  * (`narrowed: false`) instead of failing it.
  */
-final class ArticleNarrower
+final readonly class ArticleNarrower
 {
     public const MAX_REPRESENTATIVES = 8;
 
     public const MAX_SIBLING_PROBES = 1;
 
     public function __construct(
-        private readonly PartsCatalog $catalog,
-        private readonly ArticleClusterer $clusterer = new ArticleClusterer(),
+        private PartsCatalog $catalog,
+        private ArticleClusterer $clusterer = new ArticleClusterer(),
     ) {
     }
 
     public function narrow(int $carId, CarType $carType, int $categoryId, ?string $make = null, ?int $productGroupId = null): NarrowingResult
     {
         $make = $this->catalog->carMake($carId, $carType) ?? $make;
-        $callsBefore = $this->catalog->upstreamCalls();
         $articles = $this->catalog->articles($carId, $categoryId, $carType);
         $productGroups = self::productGroups($articles);
 
@@ -58,7 +57,6 @@ final class ArticleNarrower
                 differsOn: [],
                 narrowed: false,
                 degradedReason: null,
-                upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
                 productGroups: $productGroups,
                 groupRequired: true,
             );
@@ -90,7 +88,6 @@ final class ArticleNarrower
                 differsOn: [],
                 narrowed: false,
                 degradedReason: implode('; ', $degraded),
-                upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
                 fallbackBrands: ArticleGroup::of($categoryId, $articles)['brands'],
                 productGroup: $productGroup,
                 productGroups: $productGroups,
@@ -133,7 +130,6 @@ final class ArticleNarrower
             differsOn: $this->clusterer->differsOn($clusters),
             narrowed: [] === $degraded,
             degradedReason: [] === $degraded ? null : implode('; ', $degraded),
-            upstreamCalls: $this->catalog->upstreamCalls() - $callsBefore,
             productGroup: $productGroup,
             productGroups: $productGroups,
             applicabilityScope: $scope,
@@ -141,8 +137,8 @@ final class ArticleNarrower
     }
 
     /**
-     * The members' breakpoints, then those of variants whose criteria some earlier search already cached:
-     * free, and a claimed variant may be the one article that states the breakpoint.
+     * The members' breakpoints, then those of the other variants: a claimed variant may be the one article
+     * that states the breakpoint.
      *
      * @param list<array{artId: int, brand: string, number: string, tier: int, applicability?: list<array{conditions: list<array{name: string, values: list<string>}>, pairedWith: list<string>}>}> $variants
      *
@@ -153,7 +149,7 @@ final class ArticleNarrower
         $sets = array_map(static fn (Representative $m): array => $m->applicability, $cluster->members);
         $members = array_flip(array_map(static fn (Representative $m): int => $m->artId, $cluster->members));
         $others = array_values(array_filter(array_column($variants, 'artId'), static fn (int $id): bool => !isset($members[$id])));
-        foreach ($this->catalog->cachedArticleCriteria($others) as $criteria) {
+        foreach ($this->catalog->articleCriteriaByIds($others) as $criteria) {
             $sets[] = Applicability::fromCriteria($criteria);
         }
 

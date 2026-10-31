@@ -19,9 +19,9 @@ use Symfony\Component\Routing\Attribute\Route;
  *
  * Under the same `^/agent/turn` firewall as {@see AgentTurnController}, so the caller is authenticated.
  */
-final class AgentTurnCancelController
+final readonly class AgentTurnCancelController
 {
-    public function __construct(private readonly TurnCancellations $cancellations)
+    public function __construct(private TurnCancellations $cancellations)
     {
     }
 

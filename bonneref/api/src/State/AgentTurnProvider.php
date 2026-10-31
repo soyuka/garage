@@ -20,13 +20,13 @@ use Symfony\Component\Uid\Ulid;
  *
  * @implements ProviderInterface<AgentTurn>
  */
-final class AgentTurnProvider implements ProviderInterface
+final readonly class AgentTurnProvider implements ProviderInterface
 {
     public function __construct(
-        private readonly AgentTurnRepository $turns,
-        private readonly OwnerContext $owner,
-        private readonly TurnCostEstimator $cost,
-        private readonly VehicleIndex $vehicles,
+        private AgentTurnRepository $turns,
+        private OwnerContext $owner,
+        private TurnCostEstimator $cost,
+        private VehicleIndex $vehicles,
     ) {
     }
 

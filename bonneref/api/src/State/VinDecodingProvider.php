@@ -12,9 +12,9 @@ use App\Vin\VinDecoder;
 /**
  * @implements ProviderInterface<VinDecoding>
  */
-final class VinDecodingProvider implements ProviderInterface
+final readonly class VinDecodingProvider implements ProviderInterface
 {
-    public function __construct(private readonly VinDecoder $decoder)
+    public function __construct(private VinDecoder $decoder)
     {
     }
 

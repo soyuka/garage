@@ -7,10 +7,10 @@ namespace App\Finder;
 use App\ApiResource\NarrowedParts;
 use App\ApiResource\Vehicle;
 use App\ApiResource\VinDecoding;
+use App\Catalog\CarType;
 use App\Catalog\PartsCatalog;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
-use App\Catalog\CarType;
 use App\Repository\AgentTurnRepository;
 use App\Vehicle\VehicleIndex;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -30,7 +30,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * fetches. The requests of one submit share one Search-Id and fold into one row. Only an
  * authenticated request has an owner to journal under. Best-effort: a failed write is logged.
  */
-final class FinderSearchJournalListener
+final readonly class FinderSearchJournalListener
 {
     public const string RULE_HEADER = 'Search-Rule';
 
@@ -52,17 +52,15 @@ final class FinderSearchJournalListener
 
     private const string STARTED = '_finder_search_started';
 
-    private const string CALLS = '_finder_search_calls';
-
     private const array RESOURCES = [NarrowedParts::class, Vehicle::class, VinDecoding::class];
 
     public function __construct(
-        private readonly Security $security,
-        private readonly PartsCatalog $catalog,
-        private readonly DocumentManager $documentManager,
-        private readonly AgentTurnRepository $turns,
-        private readonly VehicleIndex $index,
-        private readonly LoggerInterface $logger,
+        private Security $security,
+        private PartsCatalog $catalog,
+        private DocumentManager $documentManager,
+        private AgentTurnRepository $turns,
+        private VehicleIndex $index,
+        private LoggerInterface $logger,
     ) {
     }
 
@@ -74,7 +72,6 @@ final class FinderSearchJournalListener
             return;
         }
         $request->attributes->set(self::STARTED, hrtime(true));
-        $request->attributes->set(self::CALLS, $this->catalog->upstreamCallsByMethod());
     }
 
     #[AsEventListener(event: KernelEvents::TERMINATE)]
@@ -104,12 +101,6 @@ final class FinderSearchJournalListener
             'httpStatus' => $status,
         ];
 
-        $before = $request->attributes->get(self::CALLS, []);
-        $spent = [];
-        foreach ($this->catalog->upstreamCallsByMethod() as $method => $count) {
-            $spent[$method] = $count - ($before[$method] ?? 0);
-        }
-
         $searchId = $this->searchId($request);
         $label = $this->categoryLabel($data, $request);
         $failed = $status >= 400;
@@ -117,13 +108,12 @@ final class FinderSearchJournalListener
         try {
             $row = null === $searchId ? null : $this->turns->findOneBySearchId($owner, $searchId);
             if (null !== $row) {
-                $row->absorbSearch($search, $spent, $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed, $label);
+                $row->absorbSearch($search, $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed, $label);
             } else {
                 $this->documentManager->persist(AgentTurn::search(
                     owner: $owner,
                     input: mb_substr(self::input($request), 0, 200),
                     search: $search,
-                    partsApiCallsByMethod: $spent,
                     durationMs: (int) ((hrtime(true) - $started) / 1_000_000),
                     status: $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed,
                     categoryLabel: $label,
@@ -173,7 +163,7 @@ final class FinderSearchJournalListener
             return $data->productGroup['name'];
         }
 
-        return $this->catalog->cachedCategoryName($data->carId, $data->categoryId, CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar);
+        return $this->catalog->categoryName($data->carId, $data->categoryId, CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar);
     }
 
     /**

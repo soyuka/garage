@@ -436,12 +436,11 @@ class AgentTurn
 
     /**
      * A deterministic finder search, journaled once it answered: it has no model, no context and no
-     * session, only the rule that routed it, what it returned, and the catalogue calls it spent.
+     * session, only the rule that routed it and what it returned.
      *
      * @param array<string, mixed> $search
-     * @param array<string, int>   $partsApiCallsByMethod
      */
-    public static function search(string $owner, string $input, array $search, array $partsApiCallsByMethod, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null, ?string $searchId = null): self
+    public static function search(string $owner, string $input, array $search, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null, ?string $searchId = null): self
     {
         $turn = new self($owner, '', $input, '', '', '', false);
         $turn->kind = AgentTurnKind::Search;
@@ -449,7 +448,6 @@ class AgentTurn
         $turn->search = $search;
         $turn->categoryLabel = $categoryLabel;
         $turn->searchId = $searchId;
-        $turn->recordPartsApiCalls($partsApiCallsByMethod);
         $turn->status = $status;
         $turn->finishedAt = new \DateTimeImmutable();
         $turn->startedAt = $turn->finishedAt->modify(\sprintf('-%d milliseconds', $durationMs));
@@ -460,12 +458,11 @@ class AgentTurn
 
     /**
      * Folds a later request of the same submit into this row: its facts complete the row (the first
-     * rule is kept), catalogue calls add up, and the duration runs from the first request to this one.
+     * rule is kept), and the duration runs from the first request to this one.
      *
      * @param array<string, mixed> $search
-     * @param array<string, int>   $partsApiCallsByMethod
      */
-    public function absorbSearch(array $search, array $partsApiCallsByMethod, AgentTurnStatus $status, ?string $categoryLabel): void
+    public function absorbSearch(array $search, AgentTurnStatus $status, ?string $categoryLabel): void
     {
         $search = array_filter($search, static fn (mixed $v): bool => null !== $v);
         if (AgentTurnStatus::Failed === $this->status) {
@@ -475,11 +472,6 @@ class AgentTurn
         unset($search['rule']);
         $this->search = $search + $this->search;
         $this->categoryLabel = $categoryLabel ?? $this->categoryLabel;
-        $merged = $this->partsApiCallsByMethod;
-        foreach ($partsApiCallsByMethod as $method => $count) {
-            $merged[$method] = ($merged[$method] ?? 0) + $count;
-        }
-        $this->recordPartsApiCalls($merged);
         $this->status = $status;
         $this->finishedAt = new \DateTimeImmutable();
         $this->durationMs = max(0, (int) round(((float) $this->finishedAt->format('U.u') - (float) $this->startedAt->format('U.u')) * 1000));
@@ -528,15 +520,5 @@ class AgentTurn
     public function getPartsApiCallsByMethod(): array
     {
         return $this->partsApiCallsByMethod;
-    }
-
-    /**
-     * @param array<string, int> $byMethod
-     */
-    public function recordPartsApiCalls(array $byMethod): void
-    {
-        $byMethod = array_filter($byMethod, static fn (int $n): bool => $n > 0);
-        $this->partsApiCallsByMethod = $byMethod;
-        $this->partsApiCalls = array_sum($byMethod);
     }
 }

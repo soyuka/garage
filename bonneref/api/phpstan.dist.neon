@@ -1,0 +1,18 @@
+parameters:
+    level: 6
+    paths:
+        - bin/
+        - config/
+        - public/
+        - src/
+        - tests/
+    excludePaths:
+        - config/reference.php
+    symfony:
+        containerXmlPath: var/cache/test/App_KernelTestDebugContainer.xml
+
+services:
+    -
+        class: App\Tests\PHPStan\OdmMappedPropertiesExtension
+        tags:
+            - phpstan.properties.readWriteExtension

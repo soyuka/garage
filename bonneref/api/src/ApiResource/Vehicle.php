@@ -8,8 +8,8 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\McpTool;
-use App\Dto\PlateInput;
 use App\Catalog\CarType;
+use App\Dto\PlateInput;
 use App\State\VehicleLookupProcessor;
 use App\State\VehicleProvider;
 
