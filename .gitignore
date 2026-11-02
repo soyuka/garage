@@ -33,3 +33,10 @@ prompt.md
 # docs/transition-sound-direction.md and docs/voice.md therefore only resolve locally.
 /docs/audio-candidates-2026-09-11/
 /dashboard/public/audio/*.wav
+
+/demo/
+# Local-only working material, never published.
+/video/
+/blueprint-experiment/
+/.impeccable/
+/bonneref/src/.impeccable/
