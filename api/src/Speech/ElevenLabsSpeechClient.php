@@ -150,7 +150,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
     /** "Claire - Conversationnel" → "Claire": the use-case suffix ElevenLabs names carry is noise here. */
     private static function label(string $name): string
     {
-        return trim(preg_split('/[-–]/u', $name, 2)[0]);
+        return trim((preg_split('/[-–]/u', $name, 2) ?: [$name])[0]);
     }
 
     /** @return \Generator<int, string, mixed, string> */

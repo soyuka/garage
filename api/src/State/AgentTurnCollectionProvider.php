@@ -7,7 +7,6 @@ namespace App\State;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProviderInterface;
 use App\Agent\Journal\TurnCostEstimator;
-use App\Agent\TurnSurface;
 use App\ApiResource\AgentTurn;
 use App\Repository\AgentTurnRepository;
 use App\Security\OwnerContext;
@@ -40,14 +39,9 @@ final readonly class AgentTurnCollectionProvider implements ProviderInterface
             return [];
         }
 
-        $surface = $operation->getParameters()?->get('surface')?->getValue();
-        $surface = \is_string($surface) ? TurnSurface::tryFrom($surface) : null;
-
-        $history = filter_var($operation->getParameters()?->get('history')?->getValue(), \FILTER_VALIDATE_BOOLEAN);
-
         return array_map(
             fn ($turn): AgentTurn => AgentTurn::summaryOf($turn, $this->cost),
-            $this->turns->findForOwner($owner, self::LIMIT, $surface, $history),
+            $this->turns->findForOwner($owner, self::LIMIT),
         );
     }
 }

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
-use App\Agent\TurnSurface;
 use App\Bonneref\BonnerefToken;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
@@ -57,10 +56,6 @@ final readonly class AgentTurnController
 
         if ('' === $instruction || '' === $sessionId) {
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
-        }
-
-        if (TurnSurface::Garage->value !== (string) ($payload['surface'] ?? TurnSurface::Garage->value)) {
-            return new JsonResponse(['error' => 'surface must be garage'], Response::HTTP_BAD_REQUEST);
         }
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the

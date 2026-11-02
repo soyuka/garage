@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Repository;
 
-use App\Agent\TurnSurface;
 use App\Entity\AgentTurn;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
@@ -22,26 +21,15 @@ final class AgentTurnRepository extends ServiceDocumentRepository
 
     /**
      * The journal listing: an owner's turns, newest first. The {owner, startedAt desc} index covers
-     * both the scope and the sort, so a limited read early-cuts instead of sorting in memory. With
-     * $history, the finder home's view: rows the owner hid are left out (the journal drawer
-     * never passes it, so it stays complete).
+     * both the scope and the sort, so a limited read early-cuts instead of sorting in memory.
      *
      * @return list<AgentTurn>
      */
-    public function findForOwner(string $owner, int $limit = 50, ?TurnSurface $surface = null, bool $history = false): array
+    public function findForOwner(string $owner, int $limit = 50): array
     {
-        $qb = $this->createQueryBuilder()->field('owner')->equals($owner);
-        if (null !== $surface) {
-            $qb->field('surface')->equals($surface->value);
-        }
-
-        if ($history) {
-            // $ne (not equals(false)): rows written before the flag existed carry no such field.
-            $qb->field('hiddenFromHistory')->notEqual(true);
-        }
-
         return array_values(
-            $qb
+            $this->createQueryBuilder()
+                ->field('owner')->equals($owner)
                 ->sort('startedAt', 'desc')
                 ->limit($limit)
                 ->getQuery()
@@ -59,15 +47,6 @@ final class AgentTurnRepository extends ServiceDocumentRepository
         return $this->createQueryBuilder()
             ->field('id')->equals((string) $id)
             ->field('owner')->equals($owner)
-            ->getQuery()
-            ->getSingleResult();
-    }
-
-    public function findOneBySearchId(string $owner, string $searchId): ?AgentTurn
-    {
-        return $this->createQueryBuilder()
-            ->field('owner')->equals($owner)
-            ->field('searchId')->equals($searchId)
             ->getQuery()
             ->getSingleResult();
     }

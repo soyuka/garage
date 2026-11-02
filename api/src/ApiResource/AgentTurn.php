@@ -8,15 +8,11 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\GetCollection;
-use ApiPlatform\Metadata\QueryParameter;
 use App\Agent\Journal\TurnCostEstimator;
-use App\Agent\Journal\TurnRoute;
 use App\Entity\AgentTurn as AgentTurnEntity;
-use App\Entity\AgentTurnKind;
 use App\State\AgentTurnCollectionProvider;
 use App\State\AgentTurnProvider;
 use Symfony\Component\Uid\Ulid;
-use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * The read-model of the agent-turn debug journal ({@see AgentTurnEntity}). Read-only: a turn is
@@ -33,17 +29,6 @@ use Symfony\Component\Validator\Constraints as Assert;
         new GetCollection(
             uriTemplate: '/agent/turns',
             provider: AgentTurnCollectionProvider::class,
-            parameters: [
-                'surface' => new QueryParameter(
-                    description: 'Only the rows of one surface: finder or garage.',
-                    schema: ['type' => 'string', 'enum' => ['finder', 'garage']],
-                    constraints: [new Assert\Choice(choices: ['finder', 'garage'])],
-                ),
-                'history' => new QueryParameter(
-                    description: 'The finder home history: leaves out rows the owner hid or cleared. The journal (no flag) lists everything.',
-                    schema: ['type' => 'boolean'],
-                ),
-            ],
         ),
         new Get(uriTemplate: '/agent/turns/{id}', provider: AgentTurnProvider::class),
     ],
@@ -54,8 +39,6 @@ final class AgentTurn
     public Ulid $id;
 
     public string $instruction;
-    public string $surface;
-    public string $kind;
     public string $status;
     public ?string $error = null;
     public string $provider;
@@ -73,24 +56,6 @@ final class AgentTurn
     public ?int $cacheCreationTokens = null;
     #[ApiProperty(description: 'Estimated USD cost from the AGENT_PRICES entry of the turn model; null when that model is not priced.')]
     public ?float $estimatedCostUsd = null;
-    /** @var list<array{mimeType: string, bytes: int}> */
-    #[ApiProperty(description: 'Shape of the photos the turn carried (type and size, never the bytes).')]
-    public array $images = [];
-    #[ApiProperty(description: 'partsapi requests actually sent upstream during the row (cache hits are free).')]
-    public ?int $partsApiCalls = null;
-    /** @var array<string, int> */
-    #[ApiProperty(description: 'partsapi upstream requests by method: the test keys are capped per method and per day.')]
-    public array $partsApiCallsByMethod = [];
-    /** @var array<string, mixed>|null */
-    #[ApiProperty(description: 'For a deterministic finder search (kind search): rule, carId, categoryId, clusterCount, totalArticles, unclassifiedCount, outcome, httpStatus.')]
-    public ?array $search = null;
-    #[ApiProperty(description: 'The finder hash path (without "#/") that reopens what the row searched: p/<plate> or k/<carId>-<carType>, then /c/<categoryId> when a category is known; null when no vehicle is known.')]
-    public ?string $route = null;
-    #[ApiProperty(description: 'French TecDoc name of the category the row searched or showed (last show_parts of an agent turn; the cached part-category tree for a search); null when unknown.')]
-    public ?string $categoryLabel = null;
-    /** @var array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string}|null */
-    #[ApiProperty(description: 'The vehicle the row was about: the last set_vehicle of an agent turn, else the vehicle the page sent; for a search, what it resolved.')]
-    public ?array $vehicle = null;
 
     /** Inlined on the item read only. The exact context handed to the LLM. */
     #[ApiProperty(description: 'The server-built context handed to the LLM (item read only).')]
@@ -117,8 +82,6 @@ final class AgentTurn
         $resource = new self();
         $resource->id = $turn->getId();
         $resource->instruction = $turn->getInstruction();
-        $resource->surface = $turn->getSurface()->value;
-        $resource->kind = $turn->getKind()->value;
         $resource->status = $turn->getStatus()->value;
         $resource->error = $turn->getError();
         $resource->provider = $turn->getProvider();
@@ -132,16 +95,6 @@ final class AgentTurn
         $resource->toolCallCount = \count($turn->getToolCalls());
         $resource->webSearchCount = $turn->getWebSearchCount();
         $resource->totalTokens = $turn->getTotalTokens();
-        $resource->images = $turn->getImages();
-        $resource->partsApiCalls = $turn->getPartsApiCalls();
-        $resource->partsApiCallsByMethod = $turn->getPartsApiCallsByMethod();
-        $resource->search = [] === $turn->getSearch() ? null : $turn->getSearch();
-        $route = AgentTurnKind::Search === $turn->getKind()
-            ? TurnRoute::forSearch($turn->getSearch())
-            : TurnRoute::forAgent($turn->getVehicle(), array_map(static fn ($call): array => ['name' => $call->getName(), 'arguments' => $call->getArguments(), 'result' => $call->getResult()], $turn->getToolCalls()));
-        $resource->route = $route->route;
-        $resource->vehicle = $route->vehicle;
-        $resource->categoryLabel = $turn->getCategoryLabel();
         $resource->cacheReadTokens = $turn->getCacheReadTokens();
         $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
         $resource->estimatedCostUsd = $cost?->estimate($turn->getModel(), $turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());

@@ -55,7 +55,6 @@ final class TurnJournal implements WebSearchTracer
             summary: '' !== $message->summary ? $message->summary : null,
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
         );
-        $this->current->setSurface($message->surface);
     }
 
     public function currentTurnId(): ?string

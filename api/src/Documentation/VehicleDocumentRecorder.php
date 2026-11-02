@@ -74,6 +74,9 @@ final readonly class VehicleDocumentRecorder
         $id = $existing?->getId() ?? (string) new Ulid();
 
         $stream = fopen($path, 'r');
+        if (false === $stream) {
+            throw new \RuntimeException(\sprintf('Cannot read the uploaded file "%s".', $filename));
+        }
         try {
             $key = $this->storage->store((string) $vehicle->getId(), $id, $stream);
         } finally {

@@ -70,7 +70,7 @@ final class ModelsProcessor implements ProcessorInterface
     private function rank(string $name, string $needle): int
     {
         $lower = mb_strtolower($name);
-        $firstToken = preg_split('/[\s(]/', $lower, 2)[0];
+        $firstToken = (preg_split('/[\s(]/', $lower, 2) ?: [$lower])[0];
 
         return match (true) {
             $lower === $needle, $firstToken === $needle => 0,

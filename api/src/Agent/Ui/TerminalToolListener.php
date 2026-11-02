@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Agent\Ui;
 
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
-use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\TextResult;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 
@@ -25,7 +24,6 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  *  - `propose_actions` — also terminal: it poses a full question back to the user whose answer arrives
  *    as the NEXT turn via the CTA buttons, so there is nothing left to do this turn. The CTA was
  *    already published over Mercure by {@see RenderIntentTools::proposeActions()}.
- *  - `ask_question` — the finder's twin of propose_actions: the answer arrives as the next turn.
  *
  * The empty text is never shown (the generative-UI has no prose channel). Complements the hard cap in
  * `max_tool_calls` in config/packages/ai.yaml, which is the backstop for a model
@@ -35,7 +33,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 final class TerminalToolListener
 {
     /** A call to any of these ends the turn. */
-    private const TERMINAL_TOOLS = ['end_turn', 'propose_actions', 'ask_question'];
+    public const array TERMINAL_TOOLS = ['end_turn', 'propose_actions'];
 
     public function __invoke(ToolCallsExecuted $event): void
     {
@@ -44,17 +42,11 @@ final class TerminalToolListener
         }
 
         foreach ($event->getToolResults() as $toolResult) {
-            if (\in_array($toolResult->getToolCall()->getName(), self::TERMINAL_TOOLS, true) && !self::failed($toolResult)) {
+            if (\in_array($toolResult->getToolCall()->getName(), self::TERMINAL_TOOLS, true)) {
                 $event->setResult(new TextResult(''));
 
                 return;
             }
         }
-    }
-
-    /** A refused question (too many options…) published nothing: the turn must go on so the model can ask again. */
-    private static function failed(ToolResult $toolResult): bool
-    {
-        return 'ask_question' === $toolResult->getToolCall()->getName() && 'ok' !== $toolResult->getResult();
     }
 }

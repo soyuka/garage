@@ -11,6 +11,7 @@ use App\MessageHandler\RunAgentTurnHandler;
 use App\Repository\AgentTurnRepository;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use MongoDB\BSON\UTCDateTime;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
@@ -119,5 +120,55 @@ final class AgentTurnJournalTest extends AppTestCase
         $members = $data['member'] ?? $data['hydra:member'] ?? [];
         self::assertCount(1, $members, 'a user sees only their own turns');
         self::assertSame('ma question', $members[0]['instruction']);
+    }
+
+    public function testARowWrittenWhileTheFinderSharedTheJournalStillLists(): void
+    {
+        $client = static::createClient();
+        $dm = static::getContainer()->get(DocumentManager::class);
+
+        // The shape every garage row carried until 2026-11-02, finder-only fields included: production
+        // keeps them until the migration in FUTURE.md runs, so they must hydrate and stay unexposed.
+        $dm->getDocumentCollection(AgentTurn::class)->insertOne([
+            '_id' => '01KVMQT4GGYZ9XJJG6QJA15RA2',
+            'owner' => self::TEST_OWNER,
+            'sessionId' => 'sess-legacy',
+            'instruction' => 'vidange faite',
+            'context' => 'le contexte',
+            'provider' => 'anthropic',
+            'model' => 'claude-haiku-4-5',
+            'stream' => true,
+            'selectedId' => null,
+            'summary' => null,
+            'pendingContext' => null,
+            'status' => 'completed',
+            'error' => null,
+            'startedAt' => new UTCDateTime(),
+            'finishedAt' => new UTCDateTime(),
+            'durationMs' => 6526,
+            'toolCalls' => [],
+            'webSearchCount' => 0,
+            'webSearchQueries' => [],
+            'rawCalls' => [],
+            'surface' => 'garage',
+            'kind' => 'agent',
+            'search' => [],
+            'images' => [],
+            'partsApiCallsByMethod' => [],
+            'hiddenFromHistory' => false,
+        ]);
+
+        $response = $client->request('GET', '/agent/turns', [
+            'headers' => self::authHeaders() + ['Accept' => 'application/ld+json'],
+        ]);
+
+        self::assertResponseIsSuccessful();
+        $data = $response->toArray();
+        $members = $data['member'] ?? $data['hydra:member'] ?? [];
+        self::assertCount(1, $members);
+        self::assertSame('vidange faite', $members[0]['instruction']);
+        foreach (['surface', 'kind', 'search', 'route', 'vehicle', 'categoryLabel', 'images', 'partsApiCalls', 'partsApiCallsByMethod'] as $finderField) {
+            self::assertArrayNotHasKey($finderField, $members[0]);
+        }
     }
 }

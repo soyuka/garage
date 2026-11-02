@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Message;
 
-use App\Agent\TurnSurface;
-
 /**
  * One agent turn, queued for the async worker. Carries the user instruction plus the dashboard
  * snapshot the HTTP request held, and the *absolute* per-session Mercure topic the render intents
@@ -32,7 +30,6 @@ final readonly class RunAgentTurn
         // same reason `owner` is: the worker has no request to read it from, and everything the agent
         // says this turn — the heartbeat, the failure toasts, the answers themselves — follows it.
         public string $locale = 'fr',
-        public TurnSurface $surface = TurnSurface::Garage,
         // The caller's Casdoor access token, forwarded to bonneref by the catalogue tools this turn calls.
         // It sits in the queue (and in the failed transport) for as long as the message does: accepted,
         // since the worker has no request to read the header from and bonneref authenticates the same token.

@@ -75,7 +75,8 @@ final class PartCategory
      */
     public function label(): string
     {
-        $leaf = trim(substr(strrchr('>'.$this->path, '>'), 1));
+        $segments = explode('>', $this->path);
+        $leaf = trim(end($segments));
 
         return '' === $leaf ? $this->name : $leaf;
     }

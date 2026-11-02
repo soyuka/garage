@@ -26,11 +26,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 final class TurnActivityTracker
 {
     /** Tools that make a turn count: a write, a render intent, or a terminal stop. */
-    private const PRODUCTIVE_TOOLS = [
+    public const array PRODUCTIVE_TOOLS = [
         'log_maintenance', 'plan_maintenance', 'edit_maintenance', 'set_maintenance_schedule', 'update_vehicle', 'dismiss_maintenance', 'remove_planned_part',
         'select_vehicle', 'open_vehicle', 'toast', 'show_fact', 'focus_view', 'reveal_assembly', 'show_document',
         'propose_actions', 'end_turn',
-        'show_parts', 'show_web_part', 'ask_question',
     ];
 
     private bool $productive = false;

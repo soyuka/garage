@@ -68,7 +68,7 @@ final readonly class UiResourceLoader implements LoaderInterface
      */
     private function renderApp(string $file): string
     {
-        $html = file_get_contents($this->appDir.'/'.$file);
+        $html = self::read($this->appDir.'/'.$file);
         $tokens = $this->tokenStyle();
 
         return str_replace('</head>', $tokens.'</head>', $html);
@@ -78,9 +78,19 @@ final readonly class UiResourceLoader implements LoaderInterface
     {
         $css = '';
         foreach (self::TOKEN_FILES as $token) {
-            $css .= file_get_contents($this->tokenDir.'/'.$token)."\n";
+            $css .= self::read($this->tokenDir.'/'.$token)."\n";
         }
 
         return "<style>\n".$css."</style>\n";
+    }
+
+    private static function read(string $path): string
+    {
+        $contents = is_file($path) ? file_get_contents($path) : false;
+        if (false === $contents) {
+            throw new \RuntimeException(\sprintf('MCP UI resource file "%s" is missing or unreadable.', $path));
+        }
+
+        return $contents;
     }
 }

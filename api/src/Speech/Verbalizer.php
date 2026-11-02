@@ -347,7 +347,7 @@ final readonly class Verbalizer
     private function speakPartReferenceGroup(string $group, Locale $locale): string
     {
         if (ctype_digit($group) && \strlen($group) <= 2 && !str_starts_with($group, '0')) {
-            return (new \NumberFormatter($locale->value, \NumberFormatter::SPELLOUT))->format((int) $group);
+            return (new \NumberFormatter($locale->value, \NumberFormatter::SPELLOUT))->format((int) $group) ?: $group;
         }
 
         $letters = self::SPOKEN_LETTERS[$locale->value];
@@ -390,7 +390,7 @@ final readonly class Verbalizer
             $normalized = str_replace($decimalSeparator, '.', $m[0]);
             $number = $isInteger ? (int) $normalized : (float) $normalized;
 
-            return $formatter->format($number);
+            return $formatter->format($number) ?: $m[0];
         }, $text) ?? $text;
     }
 }

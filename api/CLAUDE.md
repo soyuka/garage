@@ -126,5 +126,5 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
 ## Docs
 
 `docs/PLAN.md` (architecture + upstream joining facts), `docs/AUTH.md` (hosted Casdoor at auth.bonneref.fr),
-`docs/PARTSAPI.md` (per-method keys, call budget), `docs/TEST.md`, `docs/AGENT_PROVIDER.md`.
+`docs/TEST.md`, `docs/AGENT_PROVIDER.md`.
 Resolved review notes live in `docs/resolved/`.

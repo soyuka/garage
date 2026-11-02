@@ -10,7 +10,7 @@ use PHPStan\Rules\Properties\ReadWritePropertiesExtension;
 
 /**
  * phpstan-doctrine only knows ORM metadata. ODM-mapped properties are written by the hydrator and read
- * by the unit of work, so a field only ever queried (e.g. AgentTurn::$searchId) is not dead.
+ * by the unit of work, so a field only ever queried or persisted is not dead.
  */
 final class OdmMappedPropertiesExtension implements ReadWritePropertiesExtension
 {

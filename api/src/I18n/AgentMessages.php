@@ -116,11 +116,6 @@ final readonly class AgentMessages
                     "Je parcours l'arbre des pièces…",
                     'Je repère la pièce au catalogue…',
                 ],
-                'show_parts' => [
-                    "J'affine les références…",
-                    'Je compare les pièces compatibles…',
-                    'Je trie les références…',
-                ],
             ],
             noOp: "Je n'ai pas pu traiter ta demande. Reformule ou précise ce que tu veux enregistrer.",
             notConverged: "Je n'ai pas pu terminer cette demande. Reformule ou précise ta question.",
@@ -203,11 +198,6 @@ final readonly class AgentMessages
                     'Finding the right category…',
                     'Walking the parts tree…',
                     'Locating the part in the catalogue…',
-                ],
-                'show_parts' => [
-                    'Narrowing the references…',
-                    'Comparing the fitting parts…',
-                    'Sorting the references…',
                 ],
             ],
             noOp: 'I could not handle that. Rephrase it, or say more precisely what you want recorded.',

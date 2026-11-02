@@ -50,7 +50,6 @@ final class StepNarrator
         'list_due_maintenance',
         'web_search',
         'list_part_categories',
-        'show_parts',
     ];
 
     /**
