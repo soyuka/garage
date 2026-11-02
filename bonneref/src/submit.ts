@@ -2,13 +2,14 @@ import { ApiError } from './api';
 import type { FinderApi } from './client';
 import { carRef } from './route';
 import { saveBody, vehicleShortName, type RegistrationBody } from './garage';
+import { MAX_TURN_IMAGES } from './limits';
 import { extractVehicleRef, type TextRoute } from './route-input';
 import type { BuildLabel, PartPhotoHints, Registration, TurnIntent, Vehicle } from './types';
 
 export type Reading =
   | { kind: 'carte_grise'; registration: Registration }
-  | { kind: 'part'; part: PartPhotoHints; images: string[] }
-  | { kind: 'build_label'; buildLabel: BuildLabel }
+  | { kind: 'part'; part: PartPhotoHints; images: string[]; intakeId: string | null }
+  | { kind: 'build_label'; buildLabel: BuildLabel; intakeId: string | null }
   | { kind: 'other' };
 
 // A turn to start once the route's vehicle is loaded.
@@ -16,8 +17,7 @@ export interface PendingAsk {
   text: string;
   intent?: TurnIntent;
   images?: string[];
-  photoHints?: PartPhotoHints;
-  buildLabel?: BuildLabel;
+  intakeId?: string;
 }
 
 export type SubmitOutcome =
@@ -88,11 +88,12 @@ function photoAsk(readings: Reading[], typed: Typed): PendingAsk | null {
   const parts = readings.filter((r): r is Extract<Reading, { kind: 'part' }> => r.kind === 'part');
   const label = readings.find((r): r is Extract<Reading, { kind: 'build_label' }> => r.kind === 'build_label');
   if (parts.length > 0) {
-    return { text: typed.query ?? PHOTO_INSTRUCTION, intent: 'photo', images: parts.flatMap((p) => p.images), photoHints: parts[0]!.part };
+    const intakeId = parts[0]!.intakeId;
+    return { text: typed.query ?? PHOTO_INSTRUCTION, intent: 'photo', images: parts.flatMap((p) => p.images).slice(0, MAX_TURN_IMAGES), ...(intakeId ? { intakeId } : {}) };
   }
   if (label) {
     const code = label.buildLabel.opr ?? label.buildLabel.printedCodes.join(' · ');
-    if (code !== '') return { text: `Code de fabrication : ${code}`, buildLabel: label.buildLabel };
+    if (code !== '') return { text: `Code de fabrication : ${code}`, ...(label.intakeId ? { intakeId: label.intakeId } : {}) };
   }
   return typed.query ? { text: typed.query, ...(typed.intent ? { intent: typed.intent } : {}) } : null;
 }

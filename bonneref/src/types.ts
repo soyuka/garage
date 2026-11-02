@@ -209,18 +209,26 @@ export interface BuildLabel {
 
 export type PhotoIntake =
   | { kind: 'carte_grise'; registration: Registration }
-  | { kind: 'part'; part: PartPhotoHints }
-  | { kind: 'build_label'; buildLabel: BuildLabel }
+  | { kind: 'part'; part: PartPhotoHints; intakeId: string | null }
+  | { kind: 'build_label'; buildLabel: BuildLabel; intakeId: string | null }
   | { kind: 'other' };
 
 export interface TurnVehicle {
   carId: number;
   carType: CarType;
-  make: string | null;
-  model: string | null;
-  engine: string | null;
   plate?: string | null;
   buildCode?: { organisationNumber: string };
+}
+
+export type ChosenBy = 'answer' | 'user' | 'agent';
+
+// The catalogue result on screen a turn continues; the server rebuilds its description from these ids.
+export interface OnScreen {
+  categoryId: number;
+  productGroupId?: number | null;
+  clusterId?: string;
+  chosenBy?: ChosenBy;
+  selectionId?: string;
 }
 
 // The variant the agent retained (show_parts clusterId), as the server stored it under `id`: the basis
@@ -273,6 +281,8 @@ export type TurnPhase = 'idle' | 'sending' | 'running' | 'done' | 'failed';
 
 export interface TurnState {
   phase: TurnPhase;
+  // The server's id for this turn, once it accepted it.
+  turnId: string | null;
   instruction: string;
   status: string | null;
   parts: AgentPart[];

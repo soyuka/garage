@@ -40,6 +40,14 @@ services:
         class: App\Security\OwnerRateLimiter
         arguments: { $limiter: '@limiter.plate_lookup' }
 
+    app.quota.intake:
+        class: App\Security\OwnerRateLimiter
+        arguments: { $limiter: '@limiter.intake' }
+
+    App\Controller\IntakeUpload:
+        arguments:
+            $quota: '@app.quota.intake'
+
     App\Controller\AgentTurnController:
         arguments:
             $quota: '@app.quota.agent_turn'
@@ -112,6 +120,7 @@ services:
         arguments:
             $platform: '@App\Agent\ServerToolUseLogger.inner'
             $model: '%env(WEB_SEARCH_MODEL)%'
+            $allowedDomains: '%env(WEB_SEARCH_ALLOWED_DOMAINS)%'
 
     # Carte grise extraction: one-shot Sonnet 5.5 vision call on the UNDECORATED Anthropic platform, so
     # the upload never reaches ServerToolUseLogger / the turn journal.

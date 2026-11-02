@@ -50,6 +50,19 @@ final class AnthropicWebSearchClientTest extends TestCase
         $this->assertSame('web_search', $captured['options']['server_tools'][0]['name'] ?? null);
     }
 
+    public function testAnAllowlistRestrictsTheDomainsSearched(): void
+    {
+        $captured = [];
+        $platform = $this->platform(['content' => [['type' => 'text', 'text' => 'ok']]], $captured);
+
+        (new AnthropicWebSearchClient($platform, 'claude-haiku-4-5', allowedDomains: 'oscaro.com, mister-auto.com,,'))->search('q');
+        $this->assertSame(['oscaro.com', 'mister-auto.com'], $captured['options']['server_tools'][0]['allowed_domains'] ?? null);
+
+        $unrestricted = $this->platform(['content' => [['type' => 'text', 'text' => 'ok']]], $captured);
+        (new AnthropicWebSearchClient($unrestricted, 'claude-haiku-4-5'))->search('q');
+        $this->assertArrayNotHasKey('allowed_domains', $captured['options']['server_tools'][0]);
+    }
+
     public function testFallsBackToResultBlockSourcesWhenNoTextCitations(): void
     {
         $captured = [];

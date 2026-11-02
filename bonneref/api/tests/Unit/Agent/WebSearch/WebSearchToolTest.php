@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Agent\WebSearch;
 
+use App\Agent\Finder\FinderVehicle;
 use App\Agent\WebSearch\Citation;
 use App\Agent\WebSearch\WebSearchClient;
+use App\Agent\WebSearch\WebSearchGate;
 use App\Agent\WebSearch\WebSearchResult;
 use App\Agent\WebSearch\WebSearchTool;
 use App\Agent\WebSearchBudget;
@@ -28,7 +30,7 @@ final class WebSearchToolTest extends TestCase
             ));
 
         $budget = new WebSearchBudget(1);
-        $out = (new WebSearchTool($client, $budget))->search('Mazda 6 2007 2.0 distribution chaine');
+        $out = (new WebSearchTool($client, $budget, self::openGate()))->search('Mazda 6 2007 2.0 distribution chaine');
 
         $this->assertStringContainsString('La distribution est par chaîne', $out);
         $this->assertStringContainsString('https://example.com/mazda6', $out);
@@ -45,7 +47,7 @@ final class WebSearchToolTest extends TestCase
         $budget = new WebSearchBudget(1);
         $budget->record(1); // already spent this turn
 
-        $out = (new WebSearchTool($client, $budget))->search('anything');
+        $out = (new WebSearchTool($client, $budget, self::openGate()))->search('anything');
 
         $this->assertStringNotContainsString('http', $out);
         $this->assertMatchesRegularExpression('/recherche|search/i', $out);
@@ -56,7 +58,7 @@ final class WebSearchToolTest extends TestCase
         $client = $this->createStub(WebSearchClient::class);
         $client->method('search')->willReturn(new WebSearchResult('Réponse sans source.'));
 
-        $out = (new WebSearchTool($client, new WebSearchBudget(1)))->search('q');
+        $out = (new WebSearchTool($client, new WebSearchBudget(1), self::openGate()))->search('Mazda filtre');
 
         $this->assertStringContainsString('Réponse sans source.', $out);
     }
@@ -67,7 +69,7 @@ final class WebSearchToolTest extends TestCase
         $client->method('search')->willReturn(new WebSearchResult('', [], unavailable: true));
 
         $budget = new WebSearchBudget(1);
-        $out = (new WebSearchTool($client, $budget))->search('Mazda 6 équivalent Bosch filtres');
+        $out = (new WebSearchTool($client, $budget, self::openGate()))->search('Mazda 6 équivalent Bosch filtres');
 
         // Distinct from the genuine "no result" message: the model must know the SERVICE failed, not that
         // the web had nothing — and be steered to the parts catalog rather than retrying blindly.
@@ -84,7 +86,7 @@ final class WebSearchToolTest extends TestCase
         $client->method('search')->willReturn(new WebSearchResult('   '));
 
         $budget = new WebSearchBudget(2);
-        $out = (new WebSearchTool($client, $budget))->search('Mazda 6 2007 programme entretien');
+        $out = (new WebSearchTool($client, $budget, self::openGate()))->search('Mazda 6 2007 programme entretien');
 
         $this->assertNotSame('', trim($out), 'an empty search must not return a blank string to the orchestrator');
         $this->assertStringContainsString(WebSearchTool::NO_RESULTS, $out);
@@ -113,9 +115,18 @@ final class WebSearchToolTest extends TestCase
     {
         $client = $this->createStub(WebSearchClient::class);
         $budget = new WebSearchBudget(0);
-        $out = (new WebSearchTool($client, $budget))->search('anything');
+        $out = (new WebSearchTool($client, $budget, self::openGate()))->search('anything');
 
         $this->assertStringContainsString(WebSearchTool::BUDGET_SPENT, $out);
         $this->assertStringNotContainsString(WebSearchTool::NO_RESULTS, $out);
+    }
+
+    private static function openGate(): WebSearchGate
+    {
+        $gate = new WebSearchGate();
+        $gate->bindVehicle(new FinderVehicle(19107, make: 'MAZDA'));
+        $gate->recordCatalogueMiss();
+
+        return $gate;
     }
 }

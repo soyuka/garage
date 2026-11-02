@@ -155,13 +155,12 @@ class AgentTurn
         #[ODM\Field(type: 'bool')]
         private bool $stream,
         #[ODM\Field(type: 'string', nullable: true)]
-        private ?string $selectedId = null,
-        #[ODM\Field(type: 'string', nullable: true)]
         private ?string $summary = null,
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $pendingContext = null,
+        ?string $id = null,
     ) {
-        $this->id = (string) new Ulid();
+        $this->id = $id ?? (string) new Ulid();
         $this->startedAt = new \DateTimeImmutable();
         $this->toolCalls = new ArrayCollection();
     }
@@ -218,11 +217,6 @@ class AgentTurn
             $this->model = $model;
             $this->stream = $stream;
         }
-    }
-
-    public function getSelectedId(): ?string
-    {
-        return $this->selectedId;
     }
 
     public function getSummary(): ?string

@@ -102,6 +102,31 @@ final class PhotoIntakeTest extends AppTestCase
         $this->assertSame(0, $this->reader()->calls);
     }
 
+    public function testRefusesAnImageOverFourMegabytes(): void
+    {
+        ini_set('memory_limit', '512M');
+        $client = static::createClient();
+        $this->post($client, self::PNG.str_repeat("\0", 4 * 1024 * 1024), 'image/png');
+
+        $this->assertResponseStatusCodeSame(413);
+        $this->assertSame(0, $this->reader()->calls);
+    }
+
+    public function testIsRateLimitedPerOwner(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $limiter = static::getContainer()->get('limiter.intake')->create(self::TEST_OWNER);
+        for ($i = 0; $i < 10_000 && $limiter->consume()->isAccepted(); ++$i) {
+        }
+
+        $this->post($client, self::PNG, 'image/png');
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertNotNull($client->getResponse()->getHeaders(false)['retry-after'][0] ?? null);
+        $this->assertSame(0, $this->reader()->calls);
+    }
+
     private function post(object $client, string $bytes, string $mime, bool $authed = true): void
     {
         $path = tempnam(sys_get_temp_dir(), 'ph');

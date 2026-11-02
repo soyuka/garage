@@ -5,7 +5,8 @@ import { ApiError } from './api';
 import { liveApi, newTrace, type FinderApi, type Trace } from './client';
 import { gateView } from './gate';
 import { partFamily } from './family';
-import { resultSummary } from './followup';
+import { onScreenOf } from './followup';
+import { instructionError } from './composer';
 import { historyEntries, historyFor, type HistoryEntry } from './history';
 import { STARTERS } from './home';
 import { listMyVehicles, pickTarget, type MyVehicle } from './my-vehicles';
@@ -18,7 +19,7 @@ import { buildQuestion } from './question';
 import { relaunchText } from './result';
 import { parseRef, type ClusterChoice, type Route } from './route';
 import type { TextRoute } from './route-input';
-import type { AgentPart, AgentSelection, AgentVehicle, BuildCode, Category, Family, Narrowing, Vehicle, VinDecode } from './types';
+import type { AgentPart, AgentSelection, AgentVehicle, BuildCode, Category, Family, Narrowing, OnScreen, Vehicle, VinDecode } from './types';
 import { isBusy } from './agent';
 import { composerPlaceholder, submitLabel } from './composer';
 import { narration } from './narration';
@@ -88,10 +89,10 @@ type Panel =
   | { kind: 'login'; why: string }
   | { kind: 'error'; message: string };
 
-// What a follow-up typed in the composer continues: the on-screen result and the open question.
+// What a follow-up typed in the composer continues, as ids: the server rebuilds the context from them.
 export interface FollowUp {
-  summary: string | null;
-  pendingContext: string | null;
+  previousTurnId: string | null;
+  onScreen: OnScreen | null;
 }
 
 const routeRef = (route: Route): string => ('ref' in route ? route.ref : '');
@@ -207,8 +208,8 @@ function Finder({ api }: { api: FinderApi }) {
       setPanel({ kind: 'none' });
       turn.ask(text, {
         ...options,
-        summary: options.summary ?? context?.summary ?? null,
-        pendingContext: options.pendingContext ?? context?.pendingContext ?? null,
+        previousTurnId: options.previousTurnId ?? context?.previousTurnId ?? null,
+        onScreen: options.onScreen ?? context?.onScreen ?? null,
         continued: options.continued ?? turn.state.parts.length > 0,
         held: route.view === 'result' && !agentOwns && v?.carId ? { carId: v.carId, carType: v.carType } : null,
       });
@@ -219,6 +220,11 @@ function Finder({ api }: { api: FinderApi }) {
   };
 
   const onText = (r: TextRoute, typed: string): void | Promise<boolean> => {
+    const tooLong = instructionError(typed);
+    if (tooLong) {
+      setPanel({ kind: 'error', message: tooLong });
+      return Promise.resolve(false);
+    }
     if (attachments.length > 0) return submitWithFiles(r);
     switch (r.kind) {
       case 'empty':
@@ -505,7 +511,7 @@ function useVerdict(api: FinderApi, choice: ClusterChoice | null, here: ResultPl
 function useFollowUp(followUp: MutableRefObject<FollowUp | null>, value: FollowUp | null) {
   useEffect(() => {
     followUp.current = value;
-  }, [followUp, value?.summary, value?.pendingContext]);
+  }, [followUp, value?.previousTurnId, value?.onScreen?.categoryId, value?.onScreen?.productGroupId, value?.onScreen?.clusterId, value?.onScreen?.chosenBy, value?.onScreen?.selectionId]);
   useEffect(
     () => () => {
       followUp.current = null;
@@ -552,7 +558,6 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
   const { verdict, pending } = useVerdict(api, choice, v && route.view === 'result' ? { carId: v.carId, categoryId: route.categoryId, productGroupId: route.productGroupId ?? n?.productGroup?.id ?? null } : null);
   const selection = selectVariant(n, choice, verdict);
   const { cluster } = selection;
-  const decided = selection.status !== 'open';
   const asking = questionOpen(selection) && !pending;
   const choose = (next: ClusterChoice) => route.view === 'result' && navigate({ ...route, cluster: next }, { replace: true });
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
@@ -562,7 +567,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
 
   useFollowUp(
     followUp,
-    showResult && category && n ? { summary: resultSummary(category.label, n, selection), pendingContext: question && !decided && asking ? `question affichée : ${question.text}` : null } : null,
+    showResult && n && route.view === 'result' ? { previousTurnId: null, onScreen: onScreenOf(route.categoryId, route.productGroupId ?? n.productGroup?.id ?? null, selection) } : null,
   );
 
   if (!v) {
@@ -639,7 +644,7 @@ function Workspace({ api, route, vehicle, categories, narrowing, navigate, slot,
       {slot &&
         createPortal(
           <Presence show={ask !== null}>
-            {ask && <AgentQuestion key={ask.question} ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { pendingContext: ask.context, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
+            {ask && <AgentQuestion key={ask.question} ask={ask} disabled={waiting} onAnswer={(value) => onAsk(value, { previousTurnId: turn?.state.turnId ?? null, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
           </Presence>,
           slot,
         )}
@@ -734,7 +739,6 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
   const { verdict, pending } = useVerdict(api, chosen, here, part?.kind === 'catalog' ? part.selection : null);
   const selection = selectVariant(n, chosen, verdict);
   const { cluster } = selection;
-  const decided = selection.status !== 'open';
   const asking = questionOpen(selection) && !pending;
   const question = useMemo(() => (n && category ? buildQuestion(n, category.label) : null), [n, category]);
   const family: Family = category && part ? partFamily(category, cluster?.dimensions ?? [], n?.productGroup?.name ?? null) : { kind: 'none' };
@@ -764,12 +768,10 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
 
   useFollowUp(
     followUp,
-    part === null
-      ? { summary: null, pendingContext: state.ask?.context ?? null }
-      : {
-          summary: part.kind === 'catalog' && category && n ? resultSummary(category.label, n, selection) : part.kind === 'web' ? `${part.label} : ${part.brand} ${part.reference} (source web, hors catalogue)` : null,
-          pendingContext: state.ask?.context ?? (question && !decided && asking ? `question affichée : ${question.text}` : null),
-        },
+    {
+      previousTurnId: state.turnId,
+      onScreen: part?.kind === 'catalog' ? onScreenOf(part.categoryId, part.narrowing.productGroup?.id ?? null, selection) : null,
+    },
   );
 
   let placeholder: ReactNode = null;
@@ -823,7 +825,7 @@ function AgentWorkspace({ api, route, navigate, vehicle, categories, turn, slot,
         createPortal(
           <>
             <Presence show={state.ask !== null}>
-              {state.ask && <AgentQuestion key={state.ask.question} ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { pendingContext: state.ask?.context ?? null, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
+              {state.ask && <AgentQuestion key={state.ask.question} ask={state.ask} disabled={busy} onAnswer={(value) => onAsk(value, { previousTurnId: state.turnId, continued: true })} onPlate={onPlate} onLabel={onLabel} />}
             </Presence>
             <Presence show={!state.ask && question !== null && asking && part !== null}>
               {!state.ask && question && asking && part && <QuestionCard question={question} answered={selection.status === 'answer' ? (cluster?.id ?? null) : null} onAnswer={(id) => openPart(part, { id, by: 'answer' })} />}

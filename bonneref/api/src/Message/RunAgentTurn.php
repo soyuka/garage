@@ -25,11 +25,10 @@ final readonly class RunAgentTurn
         // has no request and no security token: it lands under this owner via OwnerContext, never a
         // client-supplied field.
         public string $owner,
+        // The result on screen and the question it answers, rebuilt by the server from the previous
+        // turn's journal and the catalogue ({@see \App\Agent\Finder\FinderFollowUp}), never browser text.
+        // Turns stay stateless: this is the one bounded breadcrumb, not a conversation history.
         public string $summary = '',
-        // The question card the page is currently showing (headline + finding + option
-        // labels, compacted client-side). Carried so a terse reply to it ("la 2.0 16V", "oui") is
-        // interpreted against the question rather than re-routed blind — turns stay stateless, this
-        // is the one bounded breadcrumb, not a conversation history.
         public string $pendingContext = '',
         // The interface language, resolved from Accept-Language in the controller. Threaded for the
         // same reason `owner` is: the worker has no request to read it from, and everything the agent
@@ -46,6 +45,9 @@ final readonly class RunAgentTurn
         /** @var list<array{mimeType: string, bytes: int}> */
         public array $images = [],
         public ?BuildLabelHints $buildLabel = null,
+        // The journal row's id, allocated when the request is accepted so the page can name this turn
+        // as the previous one of its follow-up.
+        public ?string $turnId = null,
     ) {
     }
 }

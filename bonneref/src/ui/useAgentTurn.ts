@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
 import { apiOrigin, hubDefault } from '../api-base';
 import { isAuthenticated, login } from '../auth';
-import type { BuildCode, BuildLabel, HeldVehicle, PartPhotoHints, TurnIntent, TurnState, Vehicle } from '../types';
+import type { BuildCode, HeldVehicle, OnScreen, TurnIntent, TurnState, Vehicle } from '../types';
 
 const PENDING_KEY = 'bonneref.agent.pending';
 
@@ -31,13 +31,12 @@ function clearPending(): void {
 }
 
 export interface AskOptions {
-  pendingContext?: string | null;
   intent?: TurnIntent;
   images?: string[];
-  photoHints?: PartPhotoHints | null;
-  // The on-screen result the request continues, and whether the previous parts stay up meanwhile.
-  summary?: string | null;
-  buildLabel?: BuildLabel | null;
+  intakeId?: string | null;
+  // What the request continues, as ids the server rebuilds the context from, and whether the previous parts stay up meanwhile.
+  previousTurnId?: string | null;
+  onScreen?: OnScreen | null;
   continued?: boolean;
   held?: HeldVehicle | null;
 }
@@ -99,21 +98,24 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
         instruction: text,
         sessionId,
         vehicle: turnVehicle(vehicle, buildCode),
-        pendingContext: options.pendingContext ?? null,
+        previousTurnId: options.previousTurnId ?? null,
+        onScreen: options.onScreen ?? null,
         intent,
         images: options.images,
-        photoHints: options.photoHints ?? null,
-        summary: options.summary ?? null,
-        buildLabel: options.buildLabel ?? null,
+        intakeId: options.intakeId ?? null,
       });
-      postTurn(body).catch((e: unknown) => {
-        if (e instanceof TurnRequestError && e.kind === 'auth') {
-          dispatch({ type: 'reset' });
-          setNeedsLogin({ text, intent });
-          return;
-        }
-        dispatch({ type: 'fail', message: e instanceof Error ? e.message : SILENT });
-      });
+      postTurn(body)
+        .then((turnId) => {
+          if (turnId) dispatch({ type: 'accepted', turnId });
+        })
+        .catch((e: unknown) => {
+          if (e instanceof TurnRequestError && e.kind === 'auth') {
+            dispatch({ type: 'reset' });
+            setNeedsLogin({ text, intent });
+            return;
+          }
+          dispatch({ type: 'fail', message: e instanceof Error ? e.message : SILENT });
+        });
     },
     [vehicle, buildCode, sessionId],
   );

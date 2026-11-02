@@ -1,4 +1,4 @@
-import { hubUrl, initialTurn, parseFrame, SILENCE_MS, SILENT, silent, sessionTopic, TURN_FAILED, turnBody, turnReducer, turnVehicle } from './agent';
+import { hubUrl, initialTurn, parseFrame, postTurn, SILENCE_MS, SILENT, silent, sessionTopic, TURN_FAILED, turnBody, TurnRequestError, turnReducer, turnVehicle } from './agent';
 import narrowed from '../test-fixtures/narrowed.json';
 import type { FinderFrame, TurnState } from './types';
 
@@ -229,18 +229,15 @@ describe('transport helpers', () => {
     );
   });
 
-  it('sends the finder surface, the vehicle and the pending question context', () => {
-    expect(
-      turnBody({ instruction: 'Avant', sessionId: 'sess', vehicle: { carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: null }, pendingContext: 'essieu ?' }),
-    ).toEqual({
+  it('sends the finder surface and the vehicle ids, never the catalogue names', () => {
+    const v = { plate: 'XD-303-ZD', make: 'PEUGEOT', model: '307', modelEn: null, version: null, engineCode: 'RFN', powerHp: null, firstRegistration: null, energy: null, vin: null, carId: 16182, carType: 'PC' } as const;
+    expect(turnBody({ instruction: 'Avant', sessionId: 'sess', vehicle: turnVehicle(v) })).toEqual({
       instruction: 'Avant',
       sessionId: 'sess',
       surface: 'finder',
       intent: 'text',
-      vehicle: { carId: 19107, carType: 'PC', make: 'MAZDA', model: '6', engine: null },
-      pendingContext: 'essieu ?',
+      vehicle: { carId: 16182, carType: 'PC', plate: 'XD-303-ZD' },
     });
-    expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: { carId: 1, carType: 'CV', make: null, model: null, engine: null } })).not.toHaveProperty('pendingContext');
   });
 
   it('sends the build code known for the car with its vehicle', () => {
@@ -249,36 +246,70 @@ describe('transport helpers', () => {
     expect(turnVehicle(v, null)).not.toHaveProperty('buildCode');
   });
 
-  it('carries the on-screen result, the plate and a build label on a follow-up', () => {
-    const body = turnBody({
-      instruction: 'Code relevé sur la vignette : 10345',
-      sessionId: 's',
-      vehicle: { carId: 16182, carType: 'PC', make: 'PEUGEOT', model: '307', engine: null, plate: 'AB-123-CD' },
-      pendingContext: 'code de fabrication ?',
-      summary: 'Rotule axiale (categoryId 100198)',
-      buildLabel: { opr: '10345', printedCodes: ['DAM 10345'] },
-    });
-    expect(body).toMatchObject({
-      vehicle: { plate: 'AB-123-CD' },
-      pendingContext: 'code de fabrication ?',
-      summary: 'Rotule axiale (categoryId 100198)',
-      buildLabel: { opr: '10345', printedCodes: ['DAM 10345'] },
-    });
-    expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: null, summary: '' })).not.toHaveProperty('summary');
+  it('carries the previous turn, the on-screen result and the intake id on a follow-up', () => {
+    const onScreen = { categoryId: 100198, productGroupId: 7, clusterId: 'c1', chosenBy: 'agent' as const, selectionId: '01JA5Z3M8Q6W4XK7T2N9R0BCDE' };
+    const body = turnBody({ instruction: 'x', sessionId: 's', vehicle: { carId: 16182, carType: 'PC' }, previousTurnId: 'T1', onScreen, intakeId: 'I1' });
+    expect(body).toMatchObject({ previousTurnId: 'T1', onScreen, intakeId: 'I1' });
+    const bare = turnBody({ instruction: 'x', sessionId: 's', vehicle: null, previousTurnId: null, onScreen: null, intakeId: null });
+    for (const key of ['previousTurnId', 'onScreen', 'intakeId', 'summary', 'pendingContext', 'photoHints', 'buildLabel']) expect(bare).not.toHaveProperty(key);
   });
 
-  it('omits the vehicle when none is known and carries photos, intent and photo hints', () => {
-    const body = turnBody({
-      instruction: 'quelle pièce ?',
-      sessionId: 's',
-      vehicle: null,
-      intent: 'photo',
-      images: ['data:image/jpeg;base64,AAAA'],
-      photoHints: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73'], brandGuess: null },
-    });
+  it('omits the vehicle when none is known and carries photos and intent', () => {
+    const body = turnBody({ instruction: 'quelle pièce ?', sessionId: 's', vehicle: null, intent: 'photo', images: ['data:image/jpeg;base64,AAAA'] });
     expect(body).not.toHaveProperty('vehicle');
-    expect(body).toMatchObject({ intent: 'photo', images: ['data:image/jpeg;base64,AAAA'], photoHints: { printedReferences: ['W 712/73'] } });
+    expect(body).toMatchObject({ intent: 'photo', images: ['data:image/jpeg;base64,AAAA'] });
     expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: null })).not.toHaveProperty('images');
+  });
+});
+
+describe('postTurn', () => {
+  const body = turnBody({ instruction: 'x', sessionId: 's', vehicle: null });
+  const answer = (status: number, payload?: string) => vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(payload ?? null, { status })));
+  const failure = async () => postTurn(body).catch((e: unknown) => e as TurnRequestError);
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('returns the turn id of the 202', async () => {
+    answer(202, JSON.stringify({ turnId: '01JA5Z3M8Q6W4XK7T2N9R0BCDE' }));
+    expect(await postTurn(body)).toBe('01JA5Z3M8Q6W4XK7T2N9R0BCDE');
+  });
+
+  it('tolerates an empty or malformed body', async () => {
+    answer(202);
+    expect(await postTurn(body)).toBeNull();
+    answer(202, 'nope');
+    expect(await postTurn(body)).toBeNull();
+    answer(202, JSON.stringify({ turnId: 3 }));
+    expect(await postTurn(body)).toBeNull();
+  });
+
+  it('maps the limit, the refusal, auth and server errors to their kind', async () => {
+    answer(429);
+    expect(await failure()).toMatchObject({ kind: 'limit', message: 'Limite de recherches atteinte. Réessayez plus tard.' });
+    answer(422);
+    expect(await failure()).toMatchObject({ kind: 'invalid', message: 'Demande refusée par le serveur. Reformulez ou choisissez une catégorie.' });
+    answer(400);
+    expect(await failure()).toMatchObject({ kind: 'invalid' });
+    answer(401);
+    expect(await failure()).toMatchObject({ kind: 'auth' });
+    answer(500);
+    expect(await failure()).toMatchObject({ kind: 'server' });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+    expect(await failure()).toMatchObject({ kind: 'network' });
+  });
+});
+
+describe('turn id', () => {
+  it('starts null, is set once the server accepted the turn, and resets on a new turn', () => {
+    expect(initialTurn.turnId).toBeNull();
+    const accepted = turnReducer(turnReducer(initialTurn, { type: 'start', instruction: 'x' }), { type: 'accepted', turnId: 'T1' });
+    expect(accepted.turnId).toBe('T1');
+    expect(turnReducer(accepted, { type: 'start', instruction: 'y', continued: true }).turnId).toBeNull();
+  });
+
+  it('survives the frames of its turn and ignores an acceptance once reset', () => {
+    const accepted = turnReducer(running(), { type: 'accepted', turnId: 'T1' });
+    expect(turnReducer(accepted, frame({ type: 'turn', phase: 'end' })).turnId).toBe('T1');
+    expect(turnReducer(initialTurn, { type: 'accepted', turnId: 'T1' }).turnId).toBeNull();
   });
 });
 

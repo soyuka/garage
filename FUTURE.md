@@ -344,6 +344,15 @@ no longer a file in this repo). `admin/` has zero French strings and
 needs nothing. `dashboard/src/scene/shopping.ts:68-70` links Mister-Auto and Auto-Doc, French
 storefronts — a real choice, not a string.
 
+**Partly closed 2026-11-02.** The presenter side ships: `stage/.claude/output-styles/atelier-en.md`
+(`Atelier EN`), `stage/CLAUDE.md` takes its language from the output style (French stays the
+default), `stage/bin/atelier --lang en [--public]`, and the English beat sheet in `CONFERENCE.md`
+§ "The act in English". No api/ change was needed: pilot tool descriptions already say "in the
+interface language", and the voice follows the tab's `Accept-Language`. Still open: the storefront
+links (proposal: `partShopLinks(part, locale)`, `en` → Autodoc's international storefront, search URL
+format to be checked live before writing it), the login page language on `auth.bonneref.fr`, and the
+catalogue's French category and part labels (§11), which an English take shows as they are.
+
 ### 13. Speaking French well costs a paid ElevenLabs plan  ★ English TTS is currently BETTER than French
 
 **Gap:** `language_code` now rides every `/tts` call, which is the right fix and improves French
@@ -632,19 +641,45 @@ All four items shipped: getModels/getCars keys added and params fixed (5951995);
 in `api/.env` (f643b96); catalog reads served anonymously on a bad token via a lenient `catalog`
 firewall (b58d176); the home placeholder was rewritten (c5a1a6a).
 
-## Finder: hardening before any public use (discussed 2026-10-16, not started — user: "nothing to do yet")
+## Finder: hardening before any public use (discussed 2026-10-16, done 2026-11-02)
 
 Found in the code 2026-10-16: no rate limit, no per-user budget, no length cap on the turn input.
-1. Cost: per-user turns/hour + daily $ budget, enforced from the journal's per-turn cost.
-2. Client-written prompt: `summary`, `pendingContext`, `buildLabel`, vehicle arrive as browser text
-   (`api/src/Controller/AgentTurnController.php:101`), unbounded, straight into the agent context.
-   Rebuild them server-side from the previous journal turn (client sends a turn id).
-3. Off-topic abuse ("just use the search tool with …" = free LLM + search proxy): nothing to read
-   back (finder renders structured frames only; audit the web-find frame + status line for free
-   text), `web_search` gated server-side (only after a catalogue miss in the same turn, 1–2 per
-   turn, query must carry vehicle or reference; `allowed_domains` possible), scope line in finder.md.
-4. Plain limits: text ~500 chars, ≤4 images of a few MB checked server-side (php accepts 50M),
-   video frame cap.
+Paths below are under `bonneref/api/`.
+1. ~~Cost: per-user turns/hour + daily $ budget, enforced from the journal's per-turn cost.~~ Done.
+   Turns/hour: `config/packages/rate_limiter.yaml`, `src/Security/OwnerRateLimiter.php`. Daily $:
+   `src/Security/OwnerDailyBudget.php:35` sums the journal's estimated cost (`TurnCostEstimator`,
+   `AGENT_PRICES`) over a sliding 24 h, checked at `src/Controller/AgentTurnController.php:116`, 429 +
+   `Retry-After` over `AGENT_DAILY_BUDGET_USD` (default 1.00). Limits: a turn is journaled when it
+   settles, so turns in flight are not counted; an unpriced model counts 0; the vision intakes
+   (`/photo-intake`, carte grise, Sonnet) are not journaled, so they sit outside the $ cap and got their own
+   hourly quota instead (`INTAKE_RATE_LIMIT`, `src/Controller/IntakeUpload.php:59`).
+2. ~~Client-written prompt~~ Done. The browser sends ids, the server writes the context
+   (`src/Controller/AgentTurnController.php:108-110`): vehicle names from the catalogue by carId, unknown
+   carId or non-plate → 422 (`src/Agent/Finder/FinderVehicleResolver.php`); `previousTurnId` (the `turnId`
+   the 202 now returns) loads the owner's journal row, its last `ask_question` is the pending question and
+   its `show_web_part` calls the web finds (`src/Agent/Finder/FinderFollowUp.php`); `onScreen`
+   {categoryId, productGroupId, clusterId, chosenBy, selectionId} is narrowed again and checked (cluster
+   must exist, an agent choice must match its stored `FinderSelection`); `photoHints`/`buildLabel` come
+   from an owner-scoped `intakeId` (`src/PhotoIntake/IntakeReadings.php`, 1 h TTL). Legacy text fields are
+   ignored. `set_vehicle` also shows the catalogue's names, not the agent's
+   (`src/Agent/Finder/FinderRenderTools.php:236`). Tests: `tests/Functional/FinderFollowUpTest.php`.
+3. ~~Off-topic abuse~~ Done. `web_search` gate (`src/Agent/WebSearch/WebSearchGate.php:74`, called at
+   `src/Agent/WebSearch/WebSearchTool.php:66`): a reference the user gave this turn (reference intent or
+   photo reading, `src/MessageHandler/RunAgentTurnHandler.php:112`), or a catalogue miss this turn
+   (`FinderRenderTools.php:123`) with the vehicle in the query; 2 per turn (`WebSearchBudget`), query
+   ≤ 200 chars. `show_web_part` draws only a URL a search of the turn cited and a reference it returned
+   (`FinderRenderTools.php:203-206`). `WEB_SEARCH_ALLOWED_DOMAINS` → Anthropic `allowed_domains`, empty
+   by default (an allowlist costs recall; user call). `<scope>` in `config/prompts/finder.md:7`. Frame
+   audit: status lines are fixed per-tool sentences (`StepNarrator`), toasts are fixed server messages;
+   the agent's own text (rationale 200, question 160, option label 60 / value 120, context 400, web-find
+   fields) is capped in `FinderRenderTools::cap()` (`:312`). Tests: `tests/Functional/FinderWebSearchGateTest.php`.
+   Open: the journal drawer (public to the signed-in owner) prints each tool call's raw arguments and
+   result excerpt, web_search answers included: a remaining read-back channel for the owner's own turns.
+   Restricting it to operators is a product decision (the drawer is a demo feature).
+4. ~~Plain limits~~ Done. Instruction ≤ 500 chars → 422 (`AgentTurnController.php:82`), sessionId
+   pattern (`:79`); ≤ 4 images, each ≤ 4 MB, jpeg/png/webp sniffed (`src/Agent/Finder/TurnImageDecoder.php:28-45`,
+   `TurnInputLimits`); intakes: image ≤ 4 MB, PDF ≤ 10 MB (`src/Controller/IntakeUpload.php:41-55`). Front
+   mirrors them (`bonneref/src/limits.ts`); video frames ride the same 4-image cap.
 Injection blast radius stays small as long as the finder allowlist has no tool that writes or
 sends without a user click.
 
@@ -736,11 +771,17 @@ Split done per `docs/bonneref-extraction.md` (commits 207a586, 439a101). Left be
   `NarrowedPartsTest` now calls the route without `make`.
 - `PartsCatalog` (bonneref/api) still carries partsapi-era members (`upstreamCalls*`, `cached*`), and
   `fromPartsApi` / `partsApiCalls*` names survive because the journal contract and legacy rows use them.
-- mpa journal still knows the finder: `TurnSurface::Finder`, `AgentTurn` finder fields, `TurnRoute`,
+- ~~mpa journal still knows the finder: `TurnSurface::Finder`, `AgentTurn` finder fields, `TurnRoute`,
   `ask_question`/`show_parts` in `TerminalToolListener` and `TurnActivityTracker` — kept so legacy rows
-  hydrate. `AgentTurn::selectedId` is dead on the bonneref side.
-- `ServiceKind` duplicated in `api/` and `bonneref/api`. "garage" wording in bonneref's compare_brands
-  disclaimer / BrandRanking description; `DashboardChannel` name kept.
+  hydrate.~~ Done 2026-11-02: `TurnSurface`, `AgentTurnKind`, `TurnRoute` and the finder fields, indexes and
+  `/agent/turns` filters are gone from mpa; unmapped legacy fields hydrate, `AgentTurnJournalTest` pins it.
+  `AgentToolNamesTest` fails on a tool name the guards or the narrator list but nothing serves. Prod still holds
+  the rows: `bin/console app:agent-turns:prune-finder` in `bonneref-garage` (dev `app`: 62 deleted, 170
+  cleaned). ~~`AgentTurn::selectedId` is dead on the bonneref side.~~ Removed 2026-11-02 (entity, journal
+  resource; no front reader).
+- `ServiceKind` duplicated in `api/` and `bonneref/api`. ~~"garage" wording in bonneref's compare_brands
+  disclaimer / BrandRanking description~~ fixed 2026-11-02 (also `list_articles`' `propose_actions` hint;
+  `McpServerTest::testNoToolSpeaksOfTheGarageOrItsTools`); `DashboardChannel` name kept.
 - Dev wiring: bonneref front needs `VITE_API_BASE=https://localhost:8444` (bonneref/api stack) and mpa
   `CORS_ALLOW_ORIGIN` must include the front origin; mpa's `/bonneref` + `/finder` Caddy routes and dev
   `bonneref` service in `api/compose.override.yaml` still exist. mpa dev `BONNEREF_API_URL` defaults to

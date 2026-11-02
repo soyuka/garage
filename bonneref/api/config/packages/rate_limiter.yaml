@@ -1,6 +1,7 @@
 framework:
-    # Per-owner (Casdoor email claim) quotas on the two calls that spend money on a public demo:
-    # a finder turn (Anthropic credits) and a SIV lookup that misses the store (paid per call).
+    # Per-owner (Casdoor email claim) quotas on the calls that spend money on a public demo:
+    # a finder turn (Anthropic credits), a vision intake (photo or carte grise, one Sonnet call each)
+    # and a SIV lookup that misses the store (paid per call).
     # State lives in cache.rate_limiter (cache.app, the container filesystem); locks serialise it.
     rate_limiter:
         agent_turn:
@@ -10,6 +11,10 @@ framework:
         plate_lookup:
             policy: sliding_window
             limit: '%env(int:PLATE_LOOKUP_RATE_LIMIT)%'
+            interval: '1 hour'
+        intake:
+            policy: sliding_window
+            limit: '%env(int:INTAKE_RATE_LIMIT)%'
             interval: '1 hour'
 
 # The filesystem pool would let the suite's lookups add up across tests and 429 unrelated ones, and an
@@ -21,4 +26,6 @@ when@test:
             agent_turn:
                 storage_service: app.test.rate_limiter_storage
             plate_lookup:
+                storage_service: app.test.rate_limiter_storage
+            intake:
                 storage_service: app.test.rate_limiter_storage

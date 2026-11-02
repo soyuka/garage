@@ -40,6 +40,14 @@ final class TurnJournal implements WebSearchTracer
 
     public function begin(RunAgentTurn $message, string $context): void
     {
+        // A retried message keeps its id: the attempt continues the row the page already knows.
+        $existing = null === $message->turnId ? null : $this->documentManager->find(AgentTurn::class, $message->turnId);
+        if ($existing instanceof AgentTurn) {
+            $this->current = $existing;
+            $this->toolSeq = \count($existing->getToolCalls());
+
+            return;
+        }
         $this->toolSeq = 0;
         $this->current = new AgentTurn(
             owner: $message->owner,
@@ -53,6 +61,7 @@ final class TurnJournal implements WebSearchTracer
             stream: false,
             summary: '' !== $message->summary ? $message->summary : null,
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
+            id: $message->turnId,
         );
         $this->current->setSurface($message->surface);
         $this->current->setImages($message->images);

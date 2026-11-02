@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace App\Agent\Finder;
 
 use App\Agent\Ui\RenderIntentTools;
+use App\Agent\WebSearch\WebSearchGate;
 use App\ApiResource\NarrowedParts;
+use App\Catalog\CarType;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
@@ -38,6 +40,26 @@ final class FinderRenderTools
 
     private const int MAX_SET_ASIDE_LENGTH = 120;
 
+    // Everything the agent writes reaches the screen through these frames: bounded, so a turn cannot
+    // print an essay, whatever the request asked for.
+    private const int MAX_RATIONALE_LENGTH = 200;
+
+    private const int MAX_QUESTION_LENGTH = 160;
+
+    private const int MAX_OPTION_LABEL_LENGTH = 60;
+
+    private const int MAX_OPTION_VALUE_LENGTH = 120;
+
+    private const int MAX_CONTEXT_LENGTH = 400;
+
+    private const int MAX_LABEL_LENGTH = 80;
+
+    private const int MAX_BRAND_LENGTH = 40;
+
+    private const int MAX_REFERENCE_LENGTH = 40;
+
+    private const int MAX_SOURCE_TITLE_LENGTH = 120;
+
     private ?FinderVehicle $vehicle = null;
 
     private ?string $organisationNumber = null;
@@ -52,6 +74,8 @@ final class FinderRenderTools
         private readonly FinderCategoryList $categories,
         private readonly BuildCodeDecoders $decoders,
         private readonly FinderSelections $selections,
+        private readonly WebSearchGate $webSearch,
+        private readonly FinderVehicleResolver $vehicles,
     ) {
     }
 
@@ -61,6 +85,7 @@ final class FinderRenderTools
         $this->vehicle = $vehicle;
         $this->organisationNumber = $vehicle?->organisationNumber;
         $this->shown = [];
+        $this->webSearch->bindVehicle($vehicle);
     }
 
     /**
@@ -73,7 +98,8 @@ final class FinderRenderTools
         }
         Assert::greaterThan($categoryId, 0);
         $clusterId = null === $clusterId || '' === trim($clusterId) ? null : trim($clusterId);
-        $setAside = null === $setAside || '' === trim($setAside) ? null : mb_substr(trim($setAside), 0, self::MAX_SET_ASIDE_LENGTH);
+        $setAside = null === $setAside || '' === trim($setAside) ? null : self::cap($setAside, self::MAX_SET_ASIDE_LENGTH);
+        $rationale = self::cap($rationale, self::MAX_RATIONALE_LENGTH);
         $key = $categoryId.':'.($productGroupId ?? '');
         if (!isset($this->shown[$key]) && \count($this->shown) >= self::MAX_CATEGORIES) {
             return ['status' => 'refused', 'reason' => \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES)];
@@ -92,6 +118,9 @@ final class FinderRenderTools
                     : 'This category holds several TecDoc product groups, which are different parts: nothing was drawn. Pick the group whose name matches the part the user asked for (function and position) and call show_parts again with its productGroupId. If none matches, look elsewhere.',
                 'productGroups' => $narrowed['productGroups'],
             ];
+        }
+        if ([] === $narrowed['clusters']) {
+            $this->webSearch->recordCatalogueMiss();
         }
         if (0 === $narrowed['totalArticles'] && [] === $narrowed['clusters']) {
             return ['status' => 'empty', 'reason' => 'The catalogue lists no article in this category (or this product group) for this vehicle: nothing was drawn. Try the next most plausible sibling category once, then web_search + show_web_part.']
@@ -113,7 +142,7 @@ final class FinderRenderTools
             $categoryId,
             $narrowed['productGroup']['id'] ?? $productGroupId,
             $clusterId,
-            trim($rationale),
+            $rationale,
             $setAside,
             $this->organisationNumber,
         );
@@ -122,7 +151,7 @@ final class FinderRenderTools
             'type' => 'showParts',
             'categoryId' => $categoryId,
             'categoryLabel' => $groupName,
-            'rationale' => trim($rationale),
+            'rationale' => $rationale,
             'narrowed' => $narrowed,
         ] + (null === $selection ? [] : ['selection' => ['id' => $selection->id, 'clusterId' => $clusterId, 'basis' => $selection->basis] + (null === $setAside ? [] : ['setAside' => $setAside])]));
 
@@ -153,7 +182,7 @@ final class FinderRenderTools
     /**
      * @param array{label: string, values: list<array<string, mixed>>} $divergence
      */
-    private static function differsLine(array $divergence): string
+    public static function differsLine(array $divergence): string
     {
         $values = array_map(static function (array $v): string {
             if (!isset($v['min'], $v['max'])) {
@@ -171,15 +200,21 @@ final class FinderRenderTools
     {
         Assert::stringNotEmpty(trim($reference));
         Assert::regex($sourceUrl, '#^https?://#', 'sourceUrl must be the http(s) URL of the cited source.');
+        if (!$this->webSearch->cites($sourceUrl)) {
+            return 'refused: sourceUrl is not a source cited by a web_search of this turn: nothing was drawn.';
+        }
+        if (!$this->webSearch->mentions($reference)) {
+            return 'refused: this reference does not appear in what this turn\'s web_search returned: nothing was drawn. Copy it exactly as the cited source writes it.';
+        }
 
         $this->frames->publishFrame([
             'type' => 'showWebPart',
-            'categoryLabel' => trim($categoryLabel),
-            'reference' => trim($reference),
-            'brand' => trim($brand),
+            'categoryLabel' => self::cap($categoryLabel, self::MAX_LABEL_LENGTH),
+            'reference' => self::cap($reference, self::MAX_REFERENCE_LENGTH),
+            'brand' => self::cap($brand, self::MAX_BRAND_LENGTH),
             'sourceUrl' => $sourceUrl,
-            'sourceTitle' => trim($sourceTitle),
-            'rationale' => trim($rationale),
+            'sourceTitle' => self::cap($sourceTitle, self::MAX_SOURCE_TITLE_LENGTH),
+            'rationale' => self::cap($rationale, self::MAX_RATIONALE_LENGTH),
         ]);
 
         return 'ok';
@@ -187,12 +222,25 @@ final class FinderRenderTools
 
     public function setVehicle(int $carId, string $carType, string $make, string $model, string $engine = '', ?string $plate = null): string
     {
-        $vehicle = FinderVehicle::fromPayload(['carId' => $carId, 'carType' => $carType, 'make' => $make, 'model' => $model, 'engine' => $engine, 'plate' => $plate]);
-        Assert::notNull($vehicle, 'carId must be a positive TecDoc kType and carType PC or CV.');
+        $type = CarType::tryFrom($carType);
+        if ($carId <= 0 || null === $type) {
+            return 'refused: carId must be a positive TecDoc kType and carType PC or CV.';
+        }
+        try {
+            $plate = FinderVehicleResolver::plate($plate);
+        } catch (InvalidTurnInput) {
+            $plate = null;
+        }
+        try {
+            // The page shows the catalogue's names for this kType, never the agent's spelling of them.
+            $vehicle = $this->vehicles->forCar($carId, $type, $plate);
+        } catch (InvalidTurnInput $e) {
+            return 'refused: '.$e->getMessage().': take the carId from lookup_plate or list_cars.';
+        }
         $this->vehicle = $vehicle;
         $this->organisationNumber = null;
+        $this->webSearch->bindVehicle($vehicle);
         $this->index->record($vehicle->carId, $vehicle->carType, $vehicle->make, $vehicle->model, $vehicle->engine, 'finder');
-        $plate = null === $plate || '' === trim($plate) ? null : strtoupper(trim($plate));
 
         $this->frames->publishFrame([
             'type' => 'setVehicle',
@@ -253,11 +301,16 @@ final class FinderRenderTools
 
         $this->frames->publishFrame([
             'type' => 'askQuestion',
-            'question' => trim($question),
-            'options' => array_map(static fn (QuestionOption $o): array => ['label' => $o->label, 'value' => $o->value], $options),
-            'context' => $context,
+            'question' => self::cap($question, self::MAX_QUESTION_LENGTH),
+            'options' => array_map(static fn (QuestionOption $o): array => ['label' => self::cap($o->label, self::MAX_OPTION_LABEL_LENGTH), 'value' => self::cap($o->value, self::MAX_OPTION_VALUE_LENGTH)], $options),
+            'context' => self::cap($context, self::MAX_CONTEXT_LENGTH),
         ]);
 
         return 'ok';
+    }
+
+    private static function cap(string $text, int $max): string
+    {
+        return mb_substr(trim((string) preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $text)), 0, $max);
     }
 }

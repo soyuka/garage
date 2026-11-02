@@ -4,13 +4,23 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Finder\BuildLabelHints;
 use App\Agent\Finder\FinderVehicle;
+use App\Agent\Finder\PartPhotoHints;
 use App\Agent\TurnSurface;
+use App\Agent\WebSearch\WebSearchClient;
+use App\Entity\AgentTurn;
+use App\Entity\AgentTurnStatus;
+use App\Entity\AgentTurnToolCall;
 use App\Entity\FinderSelection;
 use App\Message\RunAgentTurn;
 use App\MessageHandler\RunAgentTurnHandler;
+use App\PhotoIntake\IntakeReadings;
+use App\PhotoIntake\PhotoIntakeResult;
+use App\PhotoIntake\PhotoKind;
 use App\Repository\AgentTurnRepository;
 use App\Tests\Mock\RecordingHub;
+use App\Tests\Mock\RecordingWebSearchClient;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -55,6 +65,8 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('decode_build_code', $seen['system']);
         self::assertStringContainsString('<product_groups>', $seen['system']);
         self::assertStringContainsString('<self_check>', $seen['system']);
+        self::assertStringContainsString('<scope>', $seen['system']);
+        self::assertStringContainsString('SEARCH_NOT_ALLOWED', $seen['system']);
         self::assertStringContainsString('Rotule de direction intérieure, barre de connexion', $seen['system']);
         self::assertStringContainsString('19107', $seen['context']);
         self::assertStringContainsString('MAZDA', $seen['context']);
@@ -86,7 +98,7 @@ final class FinderTurnTest extends AppTestCase
 
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
-        self::assertSame(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6'], $turns[0]->getVehicle());
+        self::assertSame(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)'], $turns[0]->getVehicle(), 'the names are the catalogue\'s, not the payload\'s');
         self::assertNull($turns[0]->getPartsApiCalls(), 'no partsapi call is made since the catalogue is local');
     }
 
@@ -157,7 +169,10 @@ final class FinderTurnTest extends AppTestCase
         $container = static::getContainer();
 
         $seen = [];
+        $container->set(WebSearchClient::class, RecordingWebSearchClient::citingContitech());
         $container->set('ai.platform.anthropic', self::script([
+            new ToolCall('w0', 'show_parts', ['categoryId' => 999999, 'rationale' => 'Demandé.']),
+            new ToolCall('w00', 'web_search', ['query' => 'MAZDA 6 courroie de distribution']),
             new ToolCall('w1', 'show_web_part', [
                 'categoryLabel' => 'Courroie de distribution',
                 'reference' => 'CT1088',
@@ -197,32 +212,36 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('Avant', $seen['context']);
     }
 
-    public function testAFollowUpCarriesTheScreenTheQuestionAndTheBuildCode(): void
+    public function testAFollowUpCarriesTheQuestionAndTheBuildLabelReadOffThePhoto(): void
     {
         $client = static::createClient();
         $container = static::getContainer();
 
         $seen = ['context' => ''];
         $container->set('ai.platform.anthropic', self::script([new ToolCall('b1', 'end_turn', [])], $seen));
+        $previous = new AgentTurn(self::TEST_OWNER, 'sess', 'rotule axiale', 'ctx', 'anthropic', 'claude-haiku-5-5', true);
+        $previous->addToolCall(new AgentTurnToolCall(0, 'ask_question', ['question' => 'Code de fabrication ?', 'options' => [], 'context' => 'rotule axiale : deux montages selon le n° d\'organisation'], 'ok', new \DateTimeImmutable()));
+        $previous->finish(AgentTurnStatus::Completed, null);
+        $container->get(DocumentManager::class)->persist($previous);
+        $container->get(DocumentManager::class)->flush();
+        $intakeId = $container->get(IntakeReadings::class)->keep(self::TEST_OWNER, new PhotoIntakeResult(PhotoKind::BuildLabel, buildLabel: BuildLabelHints::fromPayload(['opr' => '10512', 'printedCodes' => ['DAM 10512', "\u{0}"]])));
 
         $client->request('POST', '/agent/turn', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
             'json' => [
-                'instruction' => 'voici la vignette, OPR 10512',
+                'instruction' => 'Code de fabrication : 10512',
                 'sessionId' => 'sess-buildcode',
                 'surface' => 'finder',
-                'vehicle' => ['carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'plate' => 'XB-301-ZB'],
-                'summary' => 'Rotule axiale (100123) — 2 groupes : TRW JAR123 / TRW JAR456',
-                'pendingContext' => 'rotule axiale 307 : deux montages selon le n° d\'organisation',
-                'buildLabel' => ['opr' => '10512', 'printedCodes' => ['DAM 10512', "\u{0}"]],
+                'vehicle' => ['carId' => 19107, 'carType' => 'PC', 'plate' => 'XB-301-ZB'],
+                'previousTurnId' => (string) $previous->getId(),
+                'intakeId' => $intakeId,
             ],
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('rotule axiale 307 : deux montages selon le n° d\'organisation', $seen['context']);
+        self::assertStringContainsString('rotule axiale : deux montages selon le n° d\'organisation', $seen['context']);
         self::assertStringContainsString('OPR 10512', $seen['context']);
         self::assertStringContainsString('set_build_code', $seen['context']);
-        self::assertStringContainsString('Rotule axiale (100123) — 2 groupes', $seen['context']);
         self::assertStringContainsString('plaque XB-301-ZB', $seen['context']);
     }
 
@@ -257,7 +276,7 @@ final class FinderTurnTest extends AppTestCase
 
         $frames = self::frames('sess-setvehicle');
         $set = array_values(array_filter($frames, static fn (array $f): bool => 'setVehicle' === $f['type']));
-        self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR', 'plate' => null]], $set);
+        self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)', 'engine' => '2.0', 'plate' => null]], $set, 'the catalogue names the car, not the agent');
         self::assertCount(1, array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
     }
 
@@ -602,7 +621,7 @@ final class FinderTurnTest extends AppTestCase
                 'surface' => 'finder',
                 'vehicle' => self::VEHICLE,
                 'intent' => 'photo',
-                'photoHints' => ['familyGuess' => 'filtre à huile', 'printedReferences' => ['W 712/73'], 'brandGuess' => 'MANN-FILTER'],
+                'intakeId' => $container->get(IntakeReadings::class)->keep(self::TEST_OWNER, new PhotoIntakeResult(PhotoKind::Part, part: PartPhotoHints::fromPayload(['familyGuess' => 'filtre à huile', 'printedReferences' => ['W 712/73'], 'brandGuess' => 'MANN-FILTER']))),
                 'images' => ['data:image/png;base64,'.base64_encode(self::PNG), 'data:image/png;base64,'.base64_encode(self::PNG)],
             ],
         ]);
@@ -641,7 +660,8 @@ final class FinderTurnTest extends AppTestCase
     public static function badImages(): iterable
     {
         $png = 'data:image/png;base64,'.base64_encode(self::PNG);
-        yield 'more than three' => [[$png, $png, $png, $png], 400];
+        yield 'more than four' => [[$png, $png, $png, $png, $png], 400];
+        yield 'one image over four megabytes' => [['data:image/png;base64,'.base64_encode(self::PNG.str_repeat("\0", 4 * 1024 * 1024))], 413];
         yield 'not a data url' => [['https://example.org/a.png'], 400];
         yield 'a gif labelled png' => [['data:image/png;base64,'.base64_encode('GIF89a'.str_repeat("\0", 32))], 415];
         yield 'over ten megabytes' => [['data:image/png;base64,'.base64_encode(self::PNG.str_repeat("\0", 10 * 1024 * 1024))], 413];
@@ -667,6 +687,65 @@ final class FinderTurnTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame($status);
         self::assertSame(0, $seen['calls']);
+    }
+
+    public function testFourImagesAreAccepted(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([new ToolCall('i1', 'end_turn', [])], $seen));
+        $png = 'data:image/png;base64,'.base64_encode(self::PNG);
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'quelle pièce ?', 'sessionId' => 'sess-four', 'surface' => 'finder', 'images' => [$png, $png, $png, $png]],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+        self::assertCount(4, $seen['images']);
+    }
+
+    public function testAnInstructionOverFiveHundredCharactersIsRefusedBeforeAnyModelCall(): void
+    {
+        $client = static::createClient();
+        $seen = ['calls' => 0];
+        static::getContainer()->set('ai.platform.anthropic', self::script([], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => str_repeat('é', 501), 'sessionId' => 'sess-long', 'surface' => 'finder'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        self::assertStringContainsString('500', $client->getResponse()->getContent(false));
+        self::assertSame(0, $seen['calls']);
+    }
+
+    public function testAnInstructionOfFiveHundredCharactersIsAccepted(): void
+    {
+        $client = static::createClient();
+        $seen = [];
+        static::getContainer()->set('ai.platform.anthropic', self::script([new ToolCall('e1', 'end_turn', [])], $seen));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => str_repeat('é', 500), 'sessionId' => 'sess-500', 'surface' => 'finder'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(202);
+    }
+
+    public function testAMalformedSessionIdIsRefused(): void
+    {
+        $client = static::createClient();
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'x', 'sessionId' => 'a/b?topic='.str_repeat('x', 200), 'surface' => 'finder'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(400);
     }
 
     public function testUnknownSurfaceIsRejected(): void

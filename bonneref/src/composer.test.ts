@@ -1,5 +1,6 @@
 import { initialTurn } from './agent';
-import { composerPlaceholder, refining, submitLabel } from './composer';
+import { composerPlaceholder, instructionError, refining, submitLabel } from './composer';
+import { MAX_INSTRUCTION_LENGTH } from './limits';
 import type { Route } from './route';
 import type { TurnState } from './types';
 
@@ -25,5 +26,13 @@ describe('composer wording', () => {
     expect(submitLabel(vehicle, asking)).toBe('Envoyer');
     expect(submitLabel(vehicle, webPart)).toBe('Envoyer');
     expect(refining(entry, asking)).toBe(true);
+  });
+});
+
+describe('instructionError', () => {
+  it('accepts up to the server cap and refuses beyond, counting characters', () => {
+    expect(instructionError('a'.repeat(MAX_INSTRUCTION_LENGTH))).toBeNull();
+    expect(instructionError('é'.repeat(MAX_INSTRUCTION_LENGTH + 1))).toBe('500 caractères au plus.');
+    expect(instructionError('😀'.repeat(MAX_INSTRUCTION_LENGTH))).toBeNull();
   });
 });

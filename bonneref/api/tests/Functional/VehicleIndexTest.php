@@ -60,10 +60,10 @@ final class VehicleIndexTest extends AppTestCase
     {
         static::bootKernel();
         static::getContainer()->get(DashboardChannel::class)->bindSession('https://localhost/agent/sessions/sess-index');
-        static::getContainer()->get(FinderRenderTools::class)->setVehicle(9586, 'PC', 'PEUGEOT', '307', '1.6 HDi', 'XB-301-ZB');
+        static::getContainer()->get(FinderRenderTools::class)->setVehicle(19107, 'PC', 'Mazda', '6', '2.0 MZR', 'XB-301-ZB');
 
-        $car = $this->index()->find(9586, 'PC');
-        self::assertSame(['PEUGEOT', '307', '1.6 HDi', 'finder'], [$car['make'], $car['model'], $car['engine'], $car['source']]);
+        $car = $this->index()->find(19107, 'PC');
+        self::assertSame(['MAZDA', '6 Hatchback (GG)', '2.0', 'finder'], [$car['make'], $car['model'], $car['engine'], $car['source']], 'indexed under the catalogue names');
     }
 
     public function testThePageVehicleHeaderIndexesTheCarItDescribes(): void

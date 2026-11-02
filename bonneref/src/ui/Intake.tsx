@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type ClipboardEvent, type DragEvent, type FormEvent, type ReactNode } from 'react';
 import { HOME } from '../home';
 import { routeText, type TextRoute } from '../route-input';
+import { MAX_INSTRUCTION_LENGTH } from '../limits';
 import type { Category } from '../types';
 import { useMedia } from './hooks';
 
@@ -184,6 +185,7 @@ export function Intake({ variant, categories, loading = false, initial, context 
           aria-describedby={`${id}-hint`}
           placeholder={plateHint ? PLATE_PLACEHOLDER : loading ? 'Chargement des catégories…' : (placeholder ?? (hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder))}
           value={text}
+          maxLength={MAX_INSTRUCTION_LENGTH}
           autoComplete="off"
           autoCapitalize="off"
           spellCheck={false}

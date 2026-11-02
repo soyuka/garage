@@ -33,6 +33,13 @@ interface PartsCatalog
     public function carMake(int $carId, CarType $carType): ?string;
 
     /**
+     * The make, model and type names of this kType as the catalogue names them; null when the catalogue does not know the car.
+     *
+     * @return array{make: string, model: string, engine: string}|null
+     */
+    public function carIdentity(int $carId, CarType $carType): ?array;
+
+    /**
      * @return list<PartCategory>
      */
     public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array;

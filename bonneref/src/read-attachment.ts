@@ -16,9 +16,9 @@ export async function readAttachment(api: Pick<FinderApi, 'extractRegistration' 
     case 'carte_grise':
       return { kind: 'carte_grise', registration: intake.registration };
     case 'part':
-      return { kind: 'part', part: intake.part, images: frames.map((f) => f.dataUrl) };
+      return { kind: 'part', part: intake.part, images: frames.map((f) => f.dataUrl), intakeId: intake.intakeId };
     case 'build_label':
-      return { kind: 'build_label', buildLabel: intake.buildLabel };
+      return { kind: 'build_label', buildLabel: intake.buildLabel, intakeId: intake.intakeId };
     default:
       return { kind: 'other' };
   }

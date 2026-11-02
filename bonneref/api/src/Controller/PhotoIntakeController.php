@@ -4,63 +4,49 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Agent\Finder\TurnInputLimits;
+use App\PhotoIntake\IntakeReadings;
 use App\PhotoIntake\PhotoIntake;
 use App\RegistrationDocument\RegistrationDocumentUnreadable;
+use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
-use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
-use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
  * POST /photo-intake — sort a finder photo (carte grise, part, other) in one vision call. Same
  * handling as {@see RegistrationDocumentController}: the upload lives only in PHP's temporary file and
- * in memory for the model call, nothing about it is stored or logged.
+ * in memory for the model call, and is never stored or logged. What was read off a part or a build
+ * label is kept an hour under an id ({@see IntakeReadings}) for the turn that follows.
  */
 final readonly class PhotoIntakeController
 {
-    private const int MAX_BYTES = 10 * 1024 * 1024;
-
-    private const array ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-
     public function __construct(
         private PhotoIntake $intake,
         private LoggerInterface $logger,
+        private IntakeUpload $upload,
+        private IntakeReadings $readings,
+        private OwnerContext $owner,
     ) {
     }
 
     #[Route('/photo-intake', name: 'photo_intake', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
-        $file = $request->files->get('file');
-        if (!$file instanceof UploadedFile) {
-            throw new BadRequestHttpException('Send the photo as a multipart "file" field.');
-        }
-
-        if (\UPLOAD_ERR_INI_SIZE === $file->getError() || \UPLOAD_ERR_FORM_SIZE === $file->getError() || $file->getSize() > self::MAX_BYTES) {
-            throw new HttpException(Response::HTTP_REQUEST_ENTITY_TOO_LARGE, \sprintf('The photo is capped at %d bytes.', self::MAX_BYTES));
-        }
-
-        if (!$file->isValid()) {
-            throw new BadRequestHttpException('The upload failed.');
-        }
-
-        $mimeType = $file->getMimeType();
-        if (!\in_array($mimeType, self::ALLOWED_TYPES, true)) {
-            throw new HttpException(Response::HTTP_UNSUPPORTED_MEDIA_TYPE, 'Accepted types: image/jpeg, image/png, image/webp.');
-        }
+        $upload = $this->upload->read($request, TurnInputLimits::IMAGE_TYPES, 'photo');
 
         try {
-            $result = $this->intake->classify((string) file_get_contents($file->getPathname()), $mimeType);
+            $result = $this->intake->classify($upload['bytes'], $upload['mimeType']);
         } catch (RegistrationDocumentUnreadable $e) {
             $this->logger->warning('A finder photo could not be read: {reason}', ['reason' => $e->getMessage()]);
 
             throw new HttpException(Response::HTTP_BAD_GATEWAY, 'The photo could not be read.');
         }
 
-        return new JsonResponse($result->toArray());
+        // The page sends this id with the turn; the reading itself never travels back as prompt text.
+        return new JsonResponse($result->toArray() + ['intakeId' => $this->readings->keep($this->owner->require(), $result)]);
     }
 }

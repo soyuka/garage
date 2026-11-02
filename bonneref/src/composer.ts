@@ -1,4 +1,5 @@
 import { HOME } from './home';
+import { MAX_INSTRUCTION_LENGTH } from './limits';
 import type { Route } from './route';
 import type { TurnState } from './types';
 
@@ -13,3 +14,5 @@ export function composerPlaceholder(route: Route, turn: TurnState, hasVehicle: b
   if (refining(route, turn)) return REFINE_PLACEHOLDER;
   return hasVehicle ? 'filtre à huile, W 712/73…' : HOME.placeholder;
 }
+
+export const instructionError = (text: string): string | null => ([...text].length > MAX_INSTRUCTION_LENGTH ? `${MAX_INSTRUCTION_LENGTH} caractères au plus.` : null);

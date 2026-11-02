@@ -17,6 +17,12 @@ data: vehicles, maintenance and documents stay in mpa.
 | MCP | `/mcp`: `lookup_plate`, `decode_vin`, `list_makes`, `list_models`, `list_cars`, `list_part_categories`, `list_articles`, `narrow_parts`, `decode_build_code`, `compare_brands`, `get_service_parts` (read-only) |
 | Mercure | the hub is hosted by the same FrankenPHP (`/.well-known/mercure`); a finder turn publishes its frames to `…/agent/sessions/<id>` |
 
+A finder turn takes no prompt text besides the instruction (500 characters at most, ≤ 4 images of ≤ 4 MB):
+the vehicle names, the result on screen, the pending question and the photo reading are rebuilt server-side
+from `vehicle.carId`, `onScreen`, `previousTurnId` (the `turnId` the 202 returned) and `intakeId` (returned by
+`/photo-intake`). `web_search` only runs for a reference the user gave, or after a catalogue miss with the
+vehicle in the query, and `show_web_part` only draws a reference a cited source of that turn carries.
+
 Everything except `/agent/selections/{id}` and the OAuth metadata needs a Casdoor bearer
 (`CASDOOR_ISSUER`, issuer + signature only, no audience check). The tenant is the token's `email` claim.
 
@@ -53,12 +59,14 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | `TECDOC_CATALOG_PATH`, `CATALOG_LANG` | the derived TecDoc SQLite and the language id of its names (6 = French) |
 | `ANTHROPIC_API_KEY` | finder agent (Haiku 5.5), photo intake and carte grise reader (Sonnet 5.5), Anthropic web search |
 | `WEB_SEARCH_BACKEND`, `WEB_SEARCH_MODEL`, `GEMINI_API_KEY`, `GEMINI_WEB_SEARCH_MODEL` | the out-of-band `web_search` side call |
-| `AGENT_TURN_RATE_LIMIT`, `PLATE_LOOKUP_RATE_LIMIT` | per-owner quotas per sliding hour (defaults 30 and 60): finder turns, and SIV lookups that miss the store (a stored plate is free). Over the limit: 429 + `Retry-After`, or a `rate_limited` result from the MCP `lookup_plate` tool |
+| `WEB_SEARCH_ALLOWED_DOMAINS` | comma-separated `allowed_domains` for the Anthropic web search (empty: the whole web; Gemini ignores it) |
+| `AGENT_TURN_RATE_LIMIT`, `PLATE_LOOKUP_RATE_LIMIT`, `INTAKE_RATE_LIMIT` | per-owner quotas per sliding hour (defaults 30, 60 and 30): finder turns, SIV lookups that miss the store (a stored plate is free), and vision intakes (`/photo-intake`, `/registration-documents/extract`). Over the limit: 429 + `Retry-After`, or a `rate_limited` result from the MCP `lookup_plate` tool |
+| `AGENT_DAILY_BUDGET_USD`, `AGENT_PRICES` | per-owner finder spend cap over a sliding 24 hours (default 1.00), summed from the journal's per-turn cost estimate (`AGENT_PRICES`, USD per MTok per model). Over it: 429 + `Retry-After` |
 | `LOCK_DSN` | lock store serialising the rate-limiter state (`flock`, one container) |
 | `AGENT_TURN_DISPATCH` | `terminate` (default: the turn runs in `kernel.terminate`, capped by `AGENT_TURN_TIME_LIMIT`) or `messenger` (worker) |
 | `MESSENGER_TRANSPORT_DSN`, `MESSENGER_FAILED_TRANSPORT_DSN` | `in-memory://` by default |
 | `SKIP_DATABASE_WAIT` | `1` (compose default): the entrypoint does not wait for Postgres |
-| `MONGODB_URL`, `MONGODB_DB` | domain store: `finder_selections`, `turn_images`, `agent_turns`, `siv_lookups`, `catalog_vehicles` |
+| `MONGODB_URL`, `MONGODB_DB` | domain store: `finder_selections`, `turn_images`, `intake_readings`, `agent_turns`, `siv_lookups`, `catalog_vehicles` |
 | `MERCURE_*`, `CADDY_MERCURE_JWT_SECRET`, `MERCURE_JWT_ISSUER` | hub publish URL, public URL and JWT |
 | `DEFAULT_URI` | public origin; the finder session topic is `DEFAULT_URI/agent/sessions/<id>` and must equal the front's `VITE_API_BASE` |
 

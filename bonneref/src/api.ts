@@ -302,6 +302,7 @@ export function mapRegistration(raw: unknown): Registration {
 
 export function mapPhotoIntake(raw: unknown): PhotoIntake {
   const j = obj(raw);
+  const intakeId = typeof j.intakeId === 'string' && j.intakeId !== '' ? j.intakeId : null;
   if (j.kind === 'carte_grise' && isObject(j.registration)) return { kind: 'carte_grise', registration: mapRegistration(j.registration) };
   if (j.kind === 'part' && isObject(j.part)) {
     const p = j.part;
@@ -312,6 +313,7 @@ export function mapPhotoIntake(raw: unknown): PhotoIntake {
         printedReferences: list(p.printedReferences).filter((r): r is string => typeof r === 'string' && r.trim() !== ''),
         brandGuess: str(p.brandGuess),
       },
+      intakeId,
     };
   }
   if (j.kind === 'build_label' && isObject(j.buildLabel)) {
@@ -323,6 +325,7 @@ export function mapPhotoIntake(raw: unknown): PhotoIntake {
         opr: opr === null || opr.trim() === '' ? null : opr.trim(),
         printedCodes: list(b.printedCodes).flatMap((c) => (typeof c === 'string' && c.trim() !== '' ? [c.trim()] : [])),
       },
+      intakeId,
     };
   }
   return { kind: 'other' };

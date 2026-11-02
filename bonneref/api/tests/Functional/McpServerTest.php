@@ -22,6 +22,16 @@ final class McpServerTest extends AppTestCase
         $this->assertEqualsCanonicalizing(['lookup_plate', 'decode_vin', 'list_makes', 'list_models', 'list_cars', 'list_part_categories', 'list_articles', 'narrow_parts', 'decode_build_code', 'compare_brands', 'get_service_parts'], $tools);
     }
 
+    public function testNoToolSpeaksOfTheGarageOrItsTools(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+            $this->assertDoesNotMatchRegularExpression('/garage|propose_actions|the task/i', $tool['description'] ?? '', $tool['name']);
+        }
+    }
+
     /**
      * Server-wide invariant for Claude connector-directory submission: every tool must carry a
      * human-readable title and a readOnlyHint. Guards future tools too — adding one without

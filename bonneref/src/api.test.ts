@@ -225,16 +225,20 @@ describe('mapPhotoIntake', () => {
   });
 
   it('reads a part with its printed references', () => {
-    expect(mapPhotoIntake({ kind: 'part', registration: null, part: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73', 3], brandGuess: null } })).toEqual({
+    expect(mapPhotoIntake({ kind: 'part', registration: null, part: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73', 3], brandGuess: null }, intakeId: '01JA5Z3M8Q6W4XK7T2N9R0BCDE' })).toEqual({
       kind: 'part',
       part: { familyGuess: 'filtre à huile', printedReferences: ['W 712/73'], brandGuess: null },
+      intakeId: '01JA5Z3M8Q6W4XK7T2N9R0BCDE',
     });
+    expect(mapPhotoIntake({ kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, intakeId: null })).toMatchObject({ intakeId: null });
+    expect(mapPhotoIntake({ kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null } })).toMatchObject({ intakeId: null });
   });
 
   it('reads a build label with its printed codes verbatim', () => {
-    expect(mapPhotoIntake({ kind: 'build_label', buildLabel: { opr: ' 10345 ', printedCodes: ['DAM 10345', '', 3, 'EWP'] } })).toEqual({
+    expect(mapPhotoIntake({ kind: 'build_label', buildLabel: { opr: ' 10345 ', printedCodes: ['DAM 10345', '', 3, 'EWP'] }, intakeId: 'I2' })).toEqual({
       kind: 'build_label',
       buildLabel: { opr: '10345', printedCodes: ['DAM 10345', 'EWP'] },
+      intakeId: 'I2',
     });
     expect(mapPhotoIntake({ kind: 'build_label', buildLabel: null })).toEqual({ kind: 'other' });
   });

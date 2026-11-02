@@ -27,7 +27,7 @@ use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
  */
 #[AsTool(
     'web_search',
-    'Search the web for facts not available from the parts catalog (a part reference, an equivalent, a fitment detail, a spec). Returns a grounded answer with source URLs. Last resort, max two searches per turn — put the exact vehicle (make, model, year, engine) in the query; if the first comes back empty, refine once. When it cannot answer it returns a leading token instead of prose: NO_RESULTS (the web had nothing — refining once is allowed), SEARCH_UNAVAILABLE (the service is down — do NOT retry, use the catalog) or SEARCH_BUDGET_SPENT (no searches left this turn).',
+    'Search the web for a part the catalogue does not hold. Allowed only for a part reference the user gave this turn (typed or printed on the photo: put it in the query), or after show_parts came back empty this turn, with the vehicle (make and model as the catalogue names them) and the part in the query. Returns a grounded answer with source URLs. Max two searches per turn; if the first comes back empty, refine once. When it cannot answer it returns a leading token instead of prose: SEARCH_NOT_ALLOWED (the rule above refused the query), NO_RESULTS (the web had nothing — refining once is allowed), SEARCH_UNAVAILABLE (the service is down — do NOT retry, use the catalog) or SEARCH_BUDGET_SPENT (no searches left this turn).',
     'search',
 )]
 final readonly class WebSearchTool
@@ -47,6 +47,7 @@ final readonly class WebSearchTool
     public function __construct(
         private WebSearchClient $client,
         private WebSearchBudget $budget,
+        private WebSearchGate $gate,
     ) {
     }
 
@@ -62,9 +63,14 @@ final readonly class WebSearchTool
                 .' already have; do not search again.';
         }
 
+        if (null !== ($refusal = $this->gate->refusal($query))) {
+            return $refusal;
+        }
+
         $this->budget->record(1);
 
         $result = $this->client->search($query);
+        $this->gate->recordResult($result);
 
         // Backend failure (provider overloaded/errored), not an empty web result: the model must NOT read
         // it as "the web has nothing" and give up. Steer it to the parts catalog (which lists brand refs)

@@ -5,18 +5,21 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
-use App\Agent\Finder\BuildLabelHints;
+use App\Agent\Finder\FinderFollowUp;
 use App\Agent\Finder\FinderIntent;
-use App\Agent\Finder\FinderVehicle;
+use App\Agent\Finder\FinderVehicleResolver;
 use App\Agent\Finder\InvalidTurnImage;
-use App\Agent\Finder\PartPhotoHints;
+use App\Agent\Finder\InvalidTurnInput;
 use App\Agent\Finder\TurnImage;
 use App\Agent\Finder\TurnImageDecoder;
 use App\Agent\Finder\TurnImageStash;
+use App\Agent\Finder\TurnInputLimits;
 use App\Agent\TurnSurface;
 use App\Exception\RateLimitExceededException;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
+use App\PhotoIntake\IntakeReadings;
+use App\Security\OwnerDailyBudget;
 use App\Security\OwnerRateLimiter;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -24,6 +27,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * Hands one agent turn to the {@see TurnDispatcher} and acks. The turn itself runs in a
@@ -33,8 +37,8 @@ use Symfony\Component\Routing\Attribute\Route;
  * intents) routinely outruns the request's max_execution_time and was being killed mid-turn with a
  * MaxExecutionTimeError, leaving the work half-done.
  *
- * The HTTP contract stays a bare 202 ack: there is no chat transcript and no action list in the
- * body. The page updates progressively from the render intents the worker streams to the
+ * The HTTP contract is a 202 ack carrying only the turn's journal id (the page names it as
+ * `previousTurnId` on a follow-up): there is no chat transcript and no action list in the body. The page updates progressively from the render intents the worker streams to the
  * caller's per-session Mercure topic; domain writes fan out on public vehicle topics for free.
  *
  * The session topic is built from the configured public base URL (DEFAULT_URI), the SAME origin
@@ -51,6 +55,10 @@ final readonly class AgentTurnController
         private TurnImageDecoder $images,
         private TurnImageStash $imageStash,
         private OwnerRateLimiter $quota,
+        private OwnerDailyBudget $budget,
+        private FinderVehicleResolver $vehicles,
+        private FinderFollowUp $followUp,
+        private IntakeReadings $readings,
         #[Autowire('%env(DEFAULT_URI)%')]
         private string $baseUri,
     ) {
@@ -68,19 +76,18 @@ final readonly class AgentTurnController
         if ('' === $instruction || '' === $sessionId) {
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
         }
+        if (1 !== preg_match(TurnInputLimits::SESSION_ID_PATTERN, $sessionId)) {
+            return new JsonResponse(['error' => 'sessionId must be 1 to 64 letters, digits, "-" or "_"'], Response::HTTP_BAD_REQUEST);
+        }
+        if (mb_strlen($instruction) > TurnInputLimits::MAX_INSTRUCTION_LENGTH) {
+            return new JsonResponse(['error' => \sprintf('instruction is capped at %d characters', TurnInputLimits::MAX_INSTRUCTION_LENGTH)], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
 
         $surface = TurnSurface::tryFrom((string) ($payload['surface'] ?? TurnSurface::Finder->value));
         if (null === $surface) {
             return new JsonResponse(['error' => 'surface must be: finder'], Response::HTTP_BAD_REQUEST);
         }
 
-        $vehicle = null;
-        if (null !== ($payload['vehicle'] ?? null)) {
-            $vehicle = FinderVehicle::fromPayload(\is_array($payload['vehicle']) ? $payload['vehicle'] : []);
-            if (null === $vehicle) {
-                return new JsonResponse(['error' => 'vehicle needs a carId (and a PC/CV carType); omit it to let the agent identify the car'], Response::HTTP_BAD_REQUEST);
-            }
-        }
         $intent = FinderIntent::tryFrom((string) ($payload['intent'] ?? FinderIntent::Text->value));
         if (null === $intent) {
             return new JsonResponse(['error' => 'intent must be one of: text, reference, photo'], Response::HTTP_BAD_REQUEST);
@@ -89,6 +96,30 @@ final readonly class AgentTurnController
             $images = $this->images->decode($payload['images'] ?? null);
         } catch (InvalidTurnImage $e) {
             return new JsonResponse(['error' => $e->getMessage()], $e->status);
+        }
+
+        // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
+        // owner is always present — the turn never runs unowned.
+        $owner = $this->security->getUser()?->getUserIdentifier() ?? '';
+
+        // Everything the prompt says beyond the instruction is rebuilt here from ids the server can
+        // check (catalogue, the owner's journal and intake readings): browser text never reaches it.
+        try {
+            $vehicle = null === ($payload['vehicle'] ?? null) ? null : $this->vehicles->resolve($payload['vehicle']);
+            $followUp = $this->followUp->resolve($owner, $payload['previousTurnId'] ?? null, $payload['onScreen'] ?? null, $vehicle);
+            $reading = null === ($payload['intakeId'] ?? null) ? ['part' => null, 'buildLabel' => null] : $this->readings->find($owner, $payload['intakeId']);
+        } catch (InvalidTurnInput $e) {
+            return new JsonResponse(['error' => $e->getMessage()], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
+        try {
+            $this->budget->assertWithin();
+        } catch (RateLimitExceededException $e) {
+            return new JsonResponse(
+                ['error' => 'daily budget reached, retry later'],
+                Response::HTTP_TOO_MANY_REQUESTS,
+                ['Retry-After' => (string) $e->retryAfterSeconds()],
+            );
         }
 
         // After validation, so a malformed request does not spend the owner's quota.
@@ -102,26 +133,26 @@ final readonly class AgentTurnController
             );
         }
 
-        // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
-        // owner is always present — the turn never runs unowned.
+        $turnId = (string) new Ulid();
         $this->turns->dispatch(new RunAgentTurn(
             instruction: $instruction,
             sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
-            owner: $this->security->getUser()?->getUserIdentifier() ?? '',
-            summary: trim((string) ($payload['summary'] ?? '')),
-            pendingContext: trim((string) ($payload['pendingContext'] ?? '')),
+            owner: $owner,
+            summary: $followUp['summary'],
+            pendingContext: $followUp['pendingContext'],
             // Not a payload field: the browser already announces its language on the request, so the
             // dashboard's choice arrives for free (framework.yaml `set_locale_from_accept_language`).
             locale: Locale::resolve($request->getLocale())->value,
             surface: $surface,
             vehicle: $vehicle,
             intent: $intent,
-            photoHints: PartPhotoHints::fromPayload($payload['photoHints'] ?? null),
+            photoHints: $reading['part'],
             imageStash: [] === $images ? null : $this->imageStash->put($images),
             images: array_map(static fn (TurnImage $i): array => $i->shape(), $images),
-            buildLabel: BuildLabelHints::fromPayload($payload['buildLabel'] ?? null),
+            buildLabel: $reading['buildLabel'],
+            turnId: $turnId,
         ));
 
-        return new Response(status: Response::HTTP_ACCEPTED);
+        return new JsonResponse(['turnId' => $turnId], Response::HTTP_ACCEPTED);
     }
 }

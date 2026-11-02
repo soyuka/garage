@@ -3,7 +3,7 @@ import { apiUrl } from './api-base';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
 import { SELECTION_ID } from './route';
-import type { AgentPart, AgentSelection, BuildCode, HeldVehicle, BuildLabel, FinderFrame, PartPhotoHints, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
+import type { AgentPart, AgentSelection, BuildCode, FinderFrame, HeldVehicle, OnScreen, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
 type Json = Record<string, unknown>;
 
@@ -20,7 +20,7 @@ export const SILENCE_MS = 90_000;
 
 export const silent = (lastFrameAt: number, now: number): boolean => now - lastFrameAt > SILENCE_MS;
 
-export const initialTurn: TurnState = { phase: 'idle', instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, buildCode: null, stale: false, held: null };
+export const initialTurn: TurnState = { phase: 'idle', turnId: null, instruction: '', status: null, parts: [], ask: null, notice: null, vehicle: null, buildCode: null, stale: false, held: null };
 
 function options(raw: unknown): QuestionOption[] | null {
   if (!Array.isArray(raw)) return null;
@@ -95,6 +95,7 @@ export function parseFrame(data: string): FinderFrame | null {
 
 export type TurnAction =
   | { type: 'start'; instruction: string; continued?: boolean; held?: HeldVehicle | null }
+  | { type: 'accepted'; turnId: string }
   | { type: 'frame'; frame: FinderFrame }
   | { type: 'cancel' }
   | { type: 'fail'; message: string }
@@ -176,6 +177,8 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
       const base = { ...initialTurn, phase: 'sending' as const, instruction: action.instruction, held: action.held ?? null };
       return action.continued && state.parts.length > 0 ? { ...base, parts: state.parts, vehicle: state.vehicle, stale: true } : base;
     }
+    case 'accepted':
+      return state.phase === 'idle' ? state : { ...state, turnId: action.turnId };
     case 'frame':
       return state.phase === 'sending' || state.phase === 'running' ? applyFrame(state, action.frame) : state;
     case 'cancel':
@@ -200,9 +203,7 @@ export function hubUrl(hub: string, origin: string, topic: string): string {
 }
 
 export const turnVehicle = (v: Vehicle | null, buildCode: BuildCode | null = null): TurnVehicle | null =>
-  v?.carId
-    ? { carId: v.carId, carType: v.carType, make: v.make, model: v.model, engine: v.engineCode, plate: v.plate, ...(buildCode ? { buildCode: { organisationNumber: buildCode.organisationNumber } } : {}) }
-    : null;
+  v?.carId ? { carId: v.carId, carType: v.carType, plate: v.plate, ...(buildCode ? { buildCode: { organisationNumber: buildCode.organisationNumber } } : {}) } : null;
 
 export interface TurnBody {
   instruction: string;
@@ -210,23 +211,21 @@ export interface TurnBody {
   surface: 'finder';
   intent: TurnIntent;
   vehicle?: TurnVehicle;
-  pendingContext?: string;
+  previousTurnId?: string;
+  onScreen?: OnScreen;
   images?: string[];
-  photoHints?: PartPhotoHints;
-  summary?: string;
-  buildLabel?: BuildLabel;
+  intakeId?: string;
 }
 
 export interface TurnRequest {
   instruction: string;
   sessionId: string;
   vehicle: TurnVehicle | null;
-  pendingContext?: string | null;
+  previousTurnId?: string | null;
+  onScreen?: OnScreen | null;
   intent?: TurnIntent;
   images?: string[];
-  photoHints?: PartPhotoHints | null;
-  summary?: string | null;
-  buildLabel?: BuildLabel | null;
+  intakeId?: string | null;
 }
 
 export function turnBody(r: TurnRequest): TurnBody {
@@ -236,27 +235,28 @@ export function turnBody(r: TurnRequest): TurnBody {
     surface: 'finder',
     intent: r.intent ?? 'text',
     ...(r.vehicle ? { vehicle: r.vehicle } : {}),
-    ...(r.pendingContext ? { pendingContext: r.pendingContext } : {}),
+    ...(r.previousTurnId ? { previousTurnId: r.previousTurnId } : {}),
+    ...(r.onScreen ? { onScreen: r.onScreen } : {}),
     ...(r.images && r.images.length > 0 ? { images: r.images } : {}),
-    ...(r.photoHints ? { photoHints: r.photoHints } : {}),
-    ...(r.summary ? { summary: r.summary } : {}),
-    ...(r.buildLabel ? { buildLabel: r.buildLabel } : {}),
+    ...(r.intakeId ? { intakeId: r.intakeId } : {}),
   };
 }
 
+const REQUEST_ERRORS = {
+  auth: 'Connexion requise pour cette recherche.',
+  network: 'Serveur injoignable. Vérifiez la connexion et réessayez.',
+  limit: 'Limite de recherches atteinte. Réessayez plus tard.',
+  invalid: 'Demande refusée par le serveur. Reformulez ou choisissez une catégorie.',
+  server: 'Recherche non lancée (erreur serveur). Réessayez ou choisissez une catégorie.',
+} as const;
+
 export class TurnRequestError extends Error {
-  constructor(public readonly kind: 'auth' | 'network' | 'server') {
-    super(
-      kind === 'auth'
-        ? 'Connexion requise pour cette recherche.'
-        : kind === 'network'
-          ? 'Serveur injoignable. Vérifiez la connexion et réessayez.'
-          : 'Recherche non lancée (erreur serveur). Réessayez ou choisissez une catégorie.',
-    );
+  constructor(public readonly kind: keyof typeof REQUEST_ERRORS) {
+    super(REQUEST_ERRORS[kind]);
   }
 }
 
-export async function postTurn(body: TurnBody): Promise<void> {
+export async function postTurn(body: TurnBody): Promise<string | null> {
   let res: Response;
   try {
     res = await authFetch(apiUrl('/agent/turn'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -264,7 +264,11 @@ export async function postTurn(body: TurnBody): Promise<void> {
     throw new TurnRequestError('network');
   }
   if (res.status === 401 || res.status === 403) throw new TurnRequestError('auth');
+  if (res.status === 429) throw new TurnRequestError('limit');
+  if (res.status === 400 || res.status === 422) throw new TurnRequestError('invalid');
   if (!res.ok) throw new TurnRequestError('server');
+  const accepted: unknown = await res.json().catch(() => null);
+  return isObject(accepted) && filled(accepted.turnId) ? accepted.turnId : null;
 }
 
 export async function postCancel(sessionId: string): Promise<void> {

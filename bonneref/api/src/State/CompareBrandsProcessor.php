@@ -12,7 +12,7 @@ use App\Mcp\ToolResult;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
- * MCP `compare_brands`: rank spare-part brands against the garage's own curated list.
+ * MCP `compare_brands`: rank spare-part brands against bonneref's own curated list.
  *
  * It exists because "japanparts ou ashika, tu conseilles quoi ?" was answered from the model's weights,
  * with a justification (availability for Mazda) backed by no data we hold — while BrandTier already
@@ -36,7 +36,7 @@ final readonly class CompareBrandsProcessor implements ProcessorInterface
         return ToolResult::of([
             'status' => 'ok',
             'source' => 'curated',
-            'disclaimer' => "This ranking is the garage's own curated list, not vendor or review data. Tier 1 = OE/OEM-grade, tier 2 = quality aftermarket, tier 3 = NOT ON THE LIST — unknown to us, which is not a verdict on the brand. Say which it is when you answer.",
+            'disclaimer' => "This ranking is bonneref's own curated list, not vendor or review data. Tier 1 = OE/OEM-grade, tier 2 = quality aftermarket, tier 3 = NOT ON THE LIST — unknown to us, which is not a verdict on the brand. Say which it is when you answer.",
             'ranking' => $ranking,
             'best' => $known[0]['brand'] ?? null,
         ]);

@@ -1,6 +1,7 @@
 import type { Mock } from 'vitest';
 import { ApiError } from './api';
 import { turnBody, turnVehicle } from './agent';
+import { MAX_TURN_IMAGES } from './limits';
 import { type FinderApi } from './client';
 import { parseRoute, routeToHash } from './route';
 import { routeText } from './route-input';
@@ -102,16 +103,33 @@ describe('single-submit pipeline', () => {
 
   it('reads one intake per attachment and hands a part photo to the agent', async () => {
     const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
-    const { read, deps } = setup({}, { kind: 'part', part: { familyGuess: 'filtre', printedReferences: ['W 712/73'], brandGuess: null }, images: ['data:a'] });
+    const { read, deps } = setup({}, { kind: 'part', part: { familyGuess: 'filtre', printedReferences: ['W 712/73'], brandGuess: null }, images: ['data:a'], intakeId: 'I1' });
     const out = await runSubmission({ route: { kind: 'empty' }, files: [photo, photo] }, deps);
     expect(read).toHaveBeenCalledTimes(2);
-    expect(out).toMatchObject({ kind: 'ask', ask: { intent: 'photo', images: ['data:a', 'data:a'] } });
+    expect(out).toMatchObject({ kind: 'ask', ask: { intent: 'photo', images: ['data:a', 'data:a'], intakeId: 'I1' } });
+    expect(out).not.toMatchObject({ ask: { photoHints: expect.anything() } });
+  });
+
+  it('caps the images of a turn at the server limit', async () => {
+    const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
+    const frames = Array.from({ length: MAX_TURN_IMAGES }, (_, i) => `data:${i}`);
+    const { deps } = setup({}, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: frames, intakeId: 'I1' });
+    const out = await runSubmission({ route: { kind: 'empty' }, files: [photo, photo] }, deps);
+    expect(out.kind === 'ask' && out.ask.images).toEqual([...frames, ...frames].slice(0, MAX_TURN_IMAGES));
+  });
+
+  it('hands a build label to the agent by its intake id', async () => {
+    const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
+    const { deps } = setup({}, { kind: 'build_label', buildLabel: { opr: '10345', printedCodes: [] }, intakeId: 'I2' });
+    const out = await runSubmission({ route: { kind: 'empty' }, files: [photo] }, deps);
+    expect(out).toMatchObject({ kind: 'ask', ask: { text: 'Code de fabrication : 10345', intakeId: 'I2' } });
+    expect(out.kind === 'ask' && out.ask).not.toHaveProperty('buildLabel');
   });
 
   it('takes the plate typed beside a part photo and sends the photo with the rest as the query', async () => {
     const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
     const other: Vehicle = { ...vehicle, plate: 'AB-123-CD', carId: 5, make: 'PEUGEOT', model: '307', modelEn: null };
-    const { api, deps } = setup({ vehicle: vi.fn().mockResolvedValue(other) }, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: ['data:a'] });
+    const { api, deps } = setup({ vehicle: vi.fn().mockResolvedValue(other) }, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: ['data:a'], intakeId: 'I1' });
     const out = await runSubmission({ route: routeText('AB-123-CD plaquettes'), files: [photo] }, deps);
 
     expect(api.vehicle).toHaveBeenCalledWith('AB-123-CD');
@@ -130,7 +148,7 @@ describe('single-submit pipeline', () => {
 
   it('runs a part photo alone on the context vehicle', async () => {
     const photo = new File(['x'], 'p.jpg', { type: 'image/jpeg' });
-    const { api, deps } = setup({}, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: ['data:a'] });
+    const { api, deps } = setup({}, { kind: 'part', part: { familyGuess: null, printedReferences: [], brandGuess: null }, images: ['data:a'], intakeId: 'I1' });
     const out = await runSubmission({ route: { kind: 'empty' }, files: [photo] }, deps);
 
     expect(api.vehicle).not.toHaveBeenCalled();

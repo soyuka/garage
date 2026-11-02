@@ -6,6 +6,7 @@ namespace App\MessageHandler;
 
 use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Finder\FinderContextBuilder;
+use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderRenderTools;
 use App\Agent\Finder\TurnImage;
 use App\Agent\Finder\TurnImageStash;
@@ -16,6 +17,7 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\RepeatedToolFailureGuard;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
+use App\Agent\WebSearch\WebSearchGate;
 use App\Agent\WebSearchBudget;
 use App\Entity\AgentTurnStatus;
 use App\I18n\AgentMessages;
@@ -62,6 +64,7 @@ final readonly class RunAgentTurnHandler
         private TurnImageStash $imageStash,
         private RenderIntentTools $renderTools,
         private WebSearchBudget $webSearchBudget,
+        private WebSearchGate $webSearchGate,
         private RepeatedToolFailureGuard $repeatedToolFailureGuard,
         private TurnActivityTracker $activityTracker,
         private StepNarrator $stepNarrator,
@@ -105,6 +108,11 @@ final readonly class RunAgentTurnHandler
         // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
         // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
         $this->stepNarrator->reset();
+        // The references the user gave this turn are the only queries web_search runs before a catalogue miss.
+        $this->webSearchGate->reset(array_values(array_filter([
+            FinderIntent::Reference === $message->intent ? $message->instruction : null,
+            ...($message->photoHints->printedReferences ?? []),
+        ], is_string(...))));
         $this->finderTools->bindVehicle($message->vehicle);
         $images = null === $message->imageStash ? [] : $this->imageStash->get($message->imageStash);
         $context = $this->finderContext->build($message);

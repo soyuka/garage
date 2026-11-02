@@ -62,7 +62,6 @@ final class AgentTurn
     public string $model;
     public bool $stream;
     public string $sessionId;
-    public ?string $selectedId = null;
     public string $startedAt;
     public ?string $finishedAt = null;
     public ?int $durationMs = null;
@@ -125,7 +124,6 @@ final class AgentTurn
         $resource->model = $turn->getModel();
         $resource->stream = $turn->isStream();
         $resource->sessionId = $turn->getSessionId();
-        $resource->selectedId = $turn->getSelectedId();
         $resource->startedAt = $turn->getStartedAt()->format(\DateTimeInterface::ATOM);
         $resource->finishedAt = $turn->getFinishedAt()?->format(\DateTimeInterface::ATOM);
         $resource->durationMs = $turn->getDurationMs();

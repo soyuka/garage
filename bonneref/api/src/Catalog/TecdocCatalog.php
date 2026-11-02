@@ -101,6 +101,27 @@ final class TecdocCatalog implements PartsCatalog
         return \is_string($make) && '' !== $make ? $make : null;
     }
 
+    public function carIdentity(int $carId, CarType $carType): ?array
+    {
+        $engine = CarType::PassengerCar === $carType
+            ? 'coalesce(tt.description, t.description) AS engine FROM pc_type t LEFT JOIN pc_type_text tt ON tt.type_id = t.type_id AND tt.language_id = :lang'
+            : 't.description AS engine FROM cv_type t';
+        $row = $this->rows(
+            "SELECT mf.name AS make, coalesce(mt.name, m.name) AS model, {$engine}
+                JOIN vehicle_model m ON m.model_id = t.model_id
+                JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
+                LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
+                WHERE t.type_id = :carId",
+            ['carId' => $carId, 'lang' => $this->lang],
+        )[0] ?? null;
+
+        if (null === $row || !\is_string($row['make']) || '' === $row['make']) {
+            return null;
+        }
+
+        return ['make' => $row['make'], 'model' => trim((string) $row['model']), 'engine' => trim((string) $row['engine'])];
+    }
+
     public function partCategories(int $carId, CarType $carType, bool $leafOnly = true, ?string $search = null): array
     {
         $profile = self::profile($carType);

@@ -32,6 +32,8 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
         // max_uses bounds searches WITHIN this single call (the orchestrator's per-turn count is capped
         // separately by WebSearchTool via WebSearchBudget).
         private int $maxUses = 3,
+        // WEB_SEARCH_ALLOWED_DOMAINS, comma-separated; empty searches the whole web.
+        private string $allowedDomains = '',
     ) {
     }
 
@@ -42,10 +44,15 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
 
     public function search(string $query): WebSearchResult
     {
+        $tool = ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => $this->maxUses];
+        $domains = array_values(array_filter(array_map(trim(...), explode(',', $this->allowedDomains))));
+        if ([] !== $domains) {
+            $tool['allowed_domains'] = $domains;
+        }
         $result = $this->platform->invoke(
             $this->model,
             new MessageBag(Message::forSystem($this->systemPrompt()), Message::ofUser($query)),
-            ['server_tools' => [['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => $this->maxUses]]],
+            ['server_tools' => [$tool]],
         );
 
         /** @var array<string, mixed> $data */

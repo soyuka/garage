@@ -8,6 +8,7 @@ use App\Agent\TurnSurface;
 use App\Entity\AgentTurn;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
+use MongoDB\BSON\UTCDateTime;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -69,5 +70,34 @@ final class AgentTurnRepository extends ServiceDocumentRepository
             ->field('searchId')->equals($searchId)
             ->getQuery()
             ->getSingleResult();
+    }
+
+    /**
+     * The cost-bearing fields of an owner's turns since a date, oldest first, read raw (no hydration of
+     * the tool calls and raw payloads a journal row carries).
+     *
+     * @return list<array{startedAt: \DateTimeImmutable, model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int}>
+     */
+    public function usageSince(string $owner, \DateTimeImmutable $since): array
+    {
+        $rows = $this->createQueryBuilder()
+            ->hydrate(false)
+            ->select('startedAt', 'model', 'promptTokens', 'completionTokens', 'cacheReadTokens', 'cacheCreationTokens')
+            ->field('owner')->equals($owner)
+            ->field('startedAt')->gte($since)
+            ->sort('startedAt', 'asc')
+            ->getQuery()
+            ->toArray();
+
+        $int = static fn (mixed $v): ?int => \is_int($v) ? $v : null;
+
+        return array_values(array_map(static fn (array $row): array => [
+            'startedAt' => $row['startedAt'] instanceof UTCDateTime ? \DateTimeImmutable::createFromInterface($row['startedAt']->toDateTime()) : $since,
+            'model' => \is_string($row['model'] ?? null) ? $row['model'] : '',
+            'promptTokens' => $int($row['promptTokens'] ?? null),
+            'completionTokens' => $int($row['completionTokens'] ?? null),
+            'cacheReadTokens' => $int($row['cacheReadTokens'] ?? null),
+            'cacheCreationTokens' => $int($row['cacheCreationTokens'] ?? null),
+        ], $rows));
     }
 }
