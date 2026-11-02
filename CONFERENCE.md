@@ -39,6 +39,55 @@ motion layer is for. So:
 
 If a beat only works because something was slowed down, the beat is wrong and gets cut.
 
+## The act in English — the 90 s hackathon video (added 2026-11-02)
+
+Same three beats, same rule, for an international jury and against the **public deployment**, not
+the laptop: MCP `https://garage.bonneref.fr/mcp`, Atelier `https://garage.bonneref.fr/?lang=en`, the
+`demo` account (`docs/deploy-garage.md` § Demo account). Launch: `stage/bin/atelier --public --lang en`
+(Claude Code, `Atelier EN` output style). Recording checklist: `docs/showcase.md` § 5.
+
+Kept here rather than in a `CONFERENCE.en.md`: this file is a plan, not a translation, and "the one
+rule" above must have exactly one copy. A second file would carry either a stale duplicate of it or
+a name promising a translation of 300 lines of French-talk workstreams it does not contain.
+
+**Ground truth the prompts rest on** — read on 2026-11-02 from the owner's garage, which the demo
+garage was copied from on 2026-10-31. Re-read it on the demo account before a take (checklist):
+
+| | Mazda6 2007 (GG, petrol), 252 524 km |
+| --- | --- |
+| open planned task | **one**: `fuel_filter`, target 258 896 km — 6 372 km left, forecast lands it 2027-04-30 |
+| forecast, soonest by date | `inspection` 2027-03-21 (no planned task), then the fuel filter, then oil change + oil filter at 270 347 km / 2027-07-06 |
+| catalogue, fuel filter (kType 19107) | every tier-1 line is a **placeholder** (`Life-Time Filter`, `LIFETIME FUEL`, `LFT`). The last one fitted is logged as `BOLK fuel filter`, no part number |
+| catalogue, oil filter | real refs: MANN-FILTER W 712/73, MAHLE OC 1182, PURFLUX LS357, BOSCH 0 451 103 363 |
+
+The other four (Espace IV: clutch task with LuK refs; 307: inner tie rod; 206: nothing open; Wheel
+Horse 246-H: front tyres) are not in the video — the 3D mesh is the Mazda6.
+
+| t | the presenter says | what the screen does | tool chain |
+| --- | --- | --- | --- |
+| 0–8 s | *(title, one line of voice-over: "My garage is an MCP server. Claude drives the workshop.")* | Atelier at rest, orb in veille | — |
+| 8–30 s | **"What's due on the Mazda?"** | the Mazda drives in, the rail unrolls, the fuel filter row is pinned on the bay, voice: "Fuel filter in 6,372 km" | `narrate_step` → `open_vehicle('mazda')` → `focus_view('tasks', ['fuel_filter'])` → `settle_dashboard` |
+| 30–58 s | **"Which part do I order?"** | the shell ghosts, the bay assembly rises, the part is called out; the card carries brand + reference (+ price when the catalogue has one); the button is clicked and the refs land on the task | `narrate_step` → `get_service_parts` / `list_articles` → burst `reveal_assembly('bay', ['fuel_filter'])` + `propose_actions` (`taskId` + `parts`) → `settle_dashboard` |
+| 58–80 s | **"I've just replaced it. Log it."** | health ring recomputes, the task strikes and leaves the rail, the forecast moves to 292 524 km | `narrate_step` → `log_maintenance` (one visit, `items[{type:'fuel_filter', parts}]`, today, 252 524 km) → `settle_dashboard` |
+| 80–90 s | *(voice-over: "Three tools, one API. The UI is just another client.")* | the answer stays on screen | — |
+
+**Beat 2 is not safe as written** — the catalogue's own answer for this car's fuel filter is "lifetime,
+no service part", and the protocol now forbids putting a placeholder on a button. Two honest ways out,
+the owner picks:
+
+- **A. Keep the fuel filter.** Check live, as `demo`, that `list_articles` on the fuel filter category
+  (`categoryId` 100261) returns a real, fitting reference past the placeholders. If it does, the act
+  stands as above. If it does not, A is dead: do not invent a ref for the camera.
+- **B. Re-seed the demo with an oil-filter task.** `plan_maintenance` on the Mazda, `oil_filter`,
+  target 270 347 km, as `demo`; then `~/bonneref/bin/demo-reset.sh --snapshot` so nightly resets keep
+  it. Beat 2 becomes "Which oil filter do I order?" (real MANN / MAHLE / PURFLUX refs, region
+  `hood`), beat 3 "I've done the oil change, log it" (`items[{oil_change}, {oil_filter, parts}]`,
+  which closes that task). Beat 1 then spotlights both tasks. Cost: the seed is no longer a pure copy
+  of the owner's garage.
+
+Cuts between beats are editing, not theatre: dead air while Claude reasons can be cut **between**
+beats. Inside a beat, nothing is sped up or slowed down (§ the one rule).
+
 ---
 
 ## Workstream A — the transport (highest risk, therefore first)

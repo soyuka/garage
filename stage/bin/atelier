@@ -2,8 +2,39 @@
 # Launches Claude Code on the Atelier stage, bringing up everything the pilot session needs:
 # the docker stack and the cloudflared tunnel that publishes garage.soyuka.me. The MCP server's
 # OAuth is Claude Code's own: on first connect it follows the protected-resource metadata to
-# auth.bonneref.fr (DCR + browser login). Usage: ./bin/atelier [claude args...]
+# auth.bonneref.fr (DCR + browser login).
+#
+# Usage: ./bin/atelier [--lang fr|en] [--public] [claude args...]
+#   --lang en   English presenter: the `Atelier EN` output style (stage/CLAUDE.md § Language). The
+#               Atelier tab must be on the same language (?lang=en) — the launcher prints the URL.
+#               Default fr. Env: ATELIER_LANG.
+#   --public    Drive the public deployment (garage.bonneref.fr, docs/deploy-garage.md) instead of
+#               this laptop: no docker, no tunnel, MCP from stage/mcp.public.json. Env:
+#               ATELIER_TARGET=public.
 set -euo pipefail
+
+LANG_CHOICE="${ATELIER_LANG:-fr}"
+TARGET="${ATELIER_TARGET:-local}"
+CLAUDE_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --lang) LANG_CHOICE="${2:-}"; shift 2 ;;
+    --lang=*) LANG_CHOICE="${1#--lang=}"; shift ;;
+    --public) TARGET=public; shift ;;
+    *) CLAUDE_ARGS+=("$1"); shift ;;
+  esac
+done
+
+case "$LANG_CHOICE" in
+  fr) ;;
+  # Flag settings outrank stage/.claude/settings.json, whose `outputStyle` stays the French default.
+  en) CLAUDE_ARGS=(--settings '{"outputStyle":"Atelier EN"}' "${CLAUDE_ARGS[@]}") ;;
+  *) echo "atelier: --lang must be fr or en, got '$LANG_CHOICE'" >&2; exit 2 ;;
+esac
+case "$TARGET" in
+  local|public) ;;
+  *) echo "atelier: ATELIER_TARGET must be local or public, got '$TARGET'" >&2; exit 2 ;;
+esac
 
 STAGE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 API_DIR="$(cd "$STAGE_DIR/../api" && pwd)"
@@ -20,6 +51,16 @@ compose() {
 }
 
 say() { printf '\033[2matelier:\033[0m %s\n' "$1" >&2; }
+
+if [ "$TARGET" = public ]; then
+  # --strict-mcp-config drops stage/.mcp.json (the laptop tunnel). Same server name, so the
+  # `mcp__mon-parc-auto` permission and the protocol's wording hold unchanged.
+  code="$(curl -s -o /dev/null -m 5 -w '%{http_code}' https://garage.bonneref.fr/mcp || echo 000)"
+  [ "$code" = 401 ] || { echo "atelier: garage.bonneref.fr/mcp answered $code, expected 401" >&2; exit 1; }
+  say "public MCP up — Atelier: https://garage.bonneref.fr/?lang=$LANG_CHOICE (log in as the same account as Claude)"
+  cd "$STAGE_DIR"
+  exec claude --mcp-config "$STAGE_DIR/mcp.public.json" --strict-mcp-config ${CLAUDE_ARGS[@]+"${CLAUDE_ARGS[@]}"}
+fi
 
 # --- 1. the stack ------------------------------------------------------------------------------
 # minio_init is a one-shot that exits after seeding the bucket, so it can never appear in the
@@ -94,5 +135,6 @@ else
 fi
 
 # Not `exec` — the shell has to survive Claude so the trap can close the tunnel behind us.
+say "Atelier: https://localhost/?lang=$LANG_CHOICE"
 cd "$STAGE_DIR"
-claude "$@"
+claude ${CLAUDE_ARGS[@]+"${CLAUDE_ARGS[@]}"}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mon-parc-auto": {
+      "type": "http",
+      "url": "https://garage.bonneref.fr/mcp"
+    }
+  }
+}
