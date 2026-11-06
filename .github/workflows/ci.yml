@@ -184,3 +184,5 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      # bonneref.fr serves dist/ at the root, a /bonneref/ base answers every asset with index.html
+      - run: "! grep -q '/bonneref/' dist/index.html"

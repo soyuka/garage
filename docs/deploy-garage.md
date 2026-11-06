@@ -48,6 +48,12 @@ docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v $D/dashboard:/app -w /app \
   -e VITE_CASDOOR_ISSUER=https://auth.bonneref.fr -e VITE_CASDOOR_CLIENT_ID=671b8c86d75444f3f4c4 \
   node:22-alpine sh -c 'npm ci && npm run build'
 rsync -a --delete $D/dashboard/dist/ ~/sites/garage.bonneref.fr/
+# bonneref front: `vite build` defaults to base `/` (only the dev server uses /bonneref/), no env to set
+F=~/bonneref/front-build-$(date +%Y%m%d); mkdir -p $F && git archive HEAD bonneref | tar -x -C $F
+docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v $F/bonneref:/app -w /app \
+  node:22-alpine sh -c 'npm ci && npm run build'
+grep -o 'src="[^"]*"' $F/bonneref/dist/index.html   # must start with /assets/
+rsync -a --delete $F/bonneref/dist/ ~/sites/bonneref.fr/
 ```
 
 ## Demo account
