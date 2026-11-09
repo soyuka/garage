@@ -134,14 +134,17 @@ describe('palettes', () => {
 });
 
 describe('agentAnswered', () => {
-  const start = { narration: 'Je regarde.', notices: 1, steps: ['acknowledge'], proposal: false, scans: 3 };
+  const start = { narration: 'Je regarde.', notices: 1, proposal: false, scans: 3 };
 
   it('does not count the click-time acknowledgement as the agent speaking', () => {
     expect(agentAnswered(start, start)).toBe(false);
   });
 
-  it('counts a narrated step, a toast line, a new notice or a proposal', () => {
-    expect(agentAnswered(start, { ...start, steps: ['acknowledge', 'lookup'] })).toBe(true);
+  it('keeps waiting through silent tool steps: a step chip is not the agent speaking', () => {
+    expect(agentAnswered(start, { ...start, steps: ['acknowledge', 'get_service_parts'] } as typeof start)).toBe(false);
+  });
+
+  it('counts a narrated line, a new notice or a proposal', () => {
     expect(agentAnswered(start, { ...start, narration: 'Vidange dans 2 000 km.' })).toBe(true);
     expect(agentAnswered(start, { ...start, notices: 2 })).toBe(true);
     expect(agentAnswered(start, { ...start, proposal: true })).toBe(true);

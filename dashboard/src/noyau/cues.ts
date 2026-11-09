@@ -83,20 +83,19 @@ export function cueRepeats(lastAt: number | undefined, at: number, repeatMs: num
   return lastAt === undefined || repeatMs === undefined || at - lastAt >= repeatMs;
 }
 
-/** What the operator has heard from a turn so far: the ticker line, the retained notices, the step chips, the tray, the documentation scans. */
+/** What the operator has heard from a turn so far: the ticker line, the retained notices, the tray, the documentation scans. */
 export interface TurnHeard {
   narration: string | null;
   notices: number;
-  steps: string[];
   proposal: boolean;
   /** documentation scans played so far (the view's `scanSeq`); absent where nothing scans */
   scans?: number;
 }
 
 /**
- * Whether the agent has said anything of its own since the turn began. The click-time acknowledgement
- * (`acknowledge.ts`) is the app talking, not the agent, so it does not end the wait.
+ * Whether the agent has said anything of its own since the turn began. Tool steps are silent (no sentence
+ * rides them since 2026-11-09), so a step chip alone does not end the wait.
  */
 export function agentAnswered(start: TurnHeard, now: TurnHeard): boolean {
-  return now.steps.some((s) => s !== 'acknowledge') || now.narration !== start.narration || now.notices > start.notices || (now.proposal && !start.proposal) || (now.scans ?? 0) > (start.scans ?? 0);
+  return now.narration !== start.narration || now.notices > start.notices || (now.proposal && !start.proposal) || (now.scans ?? 0) > (start.scans ?? 0);
 }

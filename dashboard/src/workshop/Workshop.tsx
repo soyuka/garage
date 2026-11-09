@@ -56,7 +56,7 @@ export function Workshop() {
   );
   const speakingId = useVoice(state.notices, state.narration, state.narrationOnce, card, !listening && voiceOn && capabilities.voice, voice);
   const working = busy(state);
-  const heard: TurnHeard = { narration: state.narration, notices: state.notices.length, steps: state.steps.map((s) => s.tool), proposal: view.proposal !== null, scans: view.scanSeq };
+  const heard: TurnHeard = { narration: state.narration, notices: state.notices.length, proposal: view.proposal !== null, scans: view.scanSeq };
   const turnHeard = useRef<TurnHeard | null>(null);
   if (!working) turnHeard.current = null;
   else turnHeard.current ??= heard;
