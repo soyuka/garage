@@ -53,8 +53,7 @@ final class VerbalizerTest extends TestCase
         /*
          * The trailing « … » reaches the voice VERBATIM, and that is the decision — see the long note in
          * {@see \App\Speech\Verbalizer::rewriteSeparators()}. It is a prosody cue the model obeys with
-         * ~0.3–0.5 s of trail-off, which is the bridge into the next line now that the seam is gapless
-         * (CHOREOGRAPHY § "The seam between two lines is gapless"). It was briefly rewritten to a full
+         * ~0.3–0.5 s of trail-off, which is the bridge into the next line now that the seam is gapless. It was briefly rewritten to a full
          * stop on 2026-09-11, while the seam was still a hole; this golden pins the restoration, so that
          * a future reader finding the measurement in docs/voice.md does not "fix" it back without also
          * reading why it came back.

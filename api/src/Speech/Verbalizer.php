@@ -279,7 +279,7 @@ final readonly class Verbalizer
         // It was briefly rewritten to a full stop on 2026-09-11, when that tail was followed by a HOLE:
         // the next line only began once the previous had finished playing, so the operator heard the
         // sustain, then ~190 ms of nothing, then a cold start — « un euh entre les phrases ». The seam is
-        // gapless since the same day (CHOREOGRAPHY § "The seam between two lines is gapless"), so the
+        // gapless since the same day, so the
         // sustain now runs straight into the following line, which is what a hesitation is for. Restored.
         //
         // What it still costs, stated plainly: a line carrying « … » that turns out to be LAST — a turn

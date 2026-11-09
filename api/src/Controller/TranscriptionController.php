@@ -28,8 +28,7 @@ use Symfony\Component\Routing\Attribute\Route;
  * must not be one: the pronunciation layer exists because the EAR needs symbols and digit groups
  * rewritten, whereas the agent reads a dictated sentence exactly as it reads a typed one. Nothing
  * here rephrases, cleans up, or guesses at what was meant — the operator reads the transcript in the
- * composer and corrects it themselves before it becomes a turn (dashboard/CHOREOGRAPHY.md
- * § "La dictée", binding rule *nothing is submitted unheard*).
+ * composer and corrects it themselves before it becomes a turn.
  */
 final readonly class TranscriptionController
 {

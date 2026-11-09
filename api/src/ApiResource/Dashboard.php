@@ -65,7 +65,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'toast' => new McpTool(
             title: 'Toast',
-            description: 'Show a transient one-line acknowledgement on the dashboard, in the interface language — what you just did or found ("Vidange enregistrée" / "Oil change recorded"). tone ∈ info|ok|warn|alarm; "alarm" also docks a decision item in the à-décider inbox. This is how the user hears you: an MCP transcript they are not reading is not an answer.',
+            description: 'Show a transient one-line acknowledgement on the dashboard, in the interface language — what you just did or found ("Vidange enregistrée" / "Oil change recorded"). tone ∈ info|ok|warn|alarm. This is how the user hears you: an MCP transcript they are not reading is not an answer.',
             input: ToastInput::class,
             structuredContent: false,
             processor: ToastProcessor::class,

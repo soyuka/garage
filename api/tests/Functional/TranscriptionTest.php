@@ -17,8 +17,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
  *
  * Authenticated wholesale by the `api` firewall, and for a sharper reason than the voice's: an open
  * transcription proxy is this machine's CPU being spent by strangers. What comes back is the
- * operator's words VERBATIM — the agent reads a dictated sentence exactly as it reads a typed one
- * (dashboard/CHOREOGRAPHY.md § "La dictée", binding rule *the transcript is the operator's words*).
+ * operator's words VERBATIM — the agent reads a dictated sentence exactly as it reads a typed one.
  *
  * The sidecar transport is {@see RecordingTranscriptionHttpClient}; no test starts a whisper model.
  */
@@ -117,8 +116,7 @@ final class TranscriptionTest extends AppTestCase
     /**
      * Silence is the commonest failure of a push-to-talk control — a mis-press, a thumb, a room too
      * loud — and it must cost one gesture and nothing else. `{text:''}` is a 200: the endpoint worked,
-     * there were simply no words. The dashboard leaves the composer untouched (CHOREOGRAPHY § "La
-     * dictée", the empty-transcript row) rather than printing a card to dismiss.
+     * there were simply no words. The dashboard leaves the composer untouched rather than printing a card to dismiss.
      */
     public function testSilenceIsAnEmptyTranscriptNotAnError(): void
     {

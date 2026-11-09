@@ -354,7 +354,7 @@ ai:
                     - select_vehicle(id) — focus a vehicle by its @id.
                     - toast(message, tone) — a one-line acknowledgement; tone ∈ info|ok|warn|alarm.
                       message is SPOKEN ALOUD by the workshop voice as well as printed
-                      (dashboard/CHOREOGRAPHY.md § "Audition — speech, for ANSWERS": the spoken text
+                      (the spoken text
                       IS the printed text, verbatim) — write it as a sentence a person would say, not
                       a dashboard label:
                         • one or two plain sentences, at most ~160 characters — the ONE datum that was
