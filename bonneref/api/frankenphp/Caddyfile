@@ -34,6 +34,26 @@
 
 	# Disable Topics tracking if not enabled explicitly: https://github.com/jkarlin/topics
 	header ?Permissions-Policy "browsing-topics=()"
+	header ?X-Content-Type-Options nosniff
+	header ?Referrer-Policy strict-origin-when-cross-origin
+
+	# Request bodies are capped at the edge, 1 MiB by default. Only the routes that take a file get
+	# more, each sized to the app's own cap plus the envelope, so an oversized body is cut before PHP
+	# buffers it: a finder turn carries up to TurnInputLimits::MAX_IMAGES (4) photos of MAX_IMAGE_BYTES
+	# (4 MiB) as base64 data URLs in JSON (~21.4 MiB); photo intake and the registration document are
+	# multipart, at most MAX_DOCUMENT_BYTES (10 MiB). conf.d/10-app.ini mirrors these.
+	@turnWithPhotos path /agent/turn
+	request_body @turnWithPhotos {
+		max_size 24MiB
+	}
+	@intakeUpload path /photo-intake /registration-documents/extract
+	request_body @intakeUpload {
+		max_size 11MiB
+	}
+	@ordinaryBody not path /agent/turn /photo-intake /registration-documents/extract
+	request_body @ordinaryBody {
+		max_size 1MiB
+	}
 
 	# route {} enforces strict first-match-wins in file order (Caddy's default directive order runs
 	# rewrite before reverse_proxy).
@@ -100,8 +120,8 @@ http://php:80 {
 			resource_identifier {$MERCURE_PUBLIC_URL:https://localhost:8444/.well-known/mercure}
 			# Allow anonymous subscribers (double-check that it's what you want)
 			anonymous
-			# Enable the subscription API (double-check that it's what you want)
-			subscriptions
+			# No `subscriptions`: nothing reads the subscription API, and it would announce every
+			# subscriber's topic, pilot digests included.
 			# Extra directives
 			{$MERCURE_EXTRA_DIRECTIVES}
 		}

@@ -25,7 +25,11 @@ services:
       # three must therefore be injected as container environment to actually win.
       CASDOOR_ISSUER: ${CASDOOR_ISSUER}
       APP_SECRET: ${APP_SECRET}
-      SYMFONY_TRUSTED_PROXIES: ${SYMFONY_TRUSTED_PROXIES:-private_ranges}
+      # The published ports are loopback-only (compose.override.yaml), so the direct peer is always the
+      # docker gateway relaying the host: cloudflared, or a local client. Trust that peer and only the two
+      # headers cloudflared sets; it keeps Host, so X-Forwarded-Host/Port/Prefix are never honoured.
+      SYMFONY_TRUSTED_PROXIES: ${SYMFONY_TRUSTED_PROXIES:-REMOTE_ADDR}
+      SYMFONY_TRUSTED_HEADERS: x-forwarded-for,x-forwarded-proto
       # Without the public host here, the MCP DNS-rebinding guard 403s every AUTHENTICATED request
       # with "Invalid Host header." while unauthenticated ones still 401 correctly — it reads
       # exactly like an OAuth failure. Must be container env: /app/.env's localhost-only default
