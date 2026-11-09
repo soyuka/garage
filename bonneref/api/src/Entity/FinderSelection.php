@@ -42,9 +42,10 @@ class FinderSelection
         public private(set) ?string $setAside,
         #[ODM\Field(type: 'string', nullable: true)]
         public private(set) ?string $organisationNumber,
+        \DateTimeImmutable $createdAt,
     ) {
         $this->id = (string) new Ulid();
-        $this->createdAt = new \DateTimeImmutable();
+        $this->createdAt = $createdAt;
     }
 
     /**

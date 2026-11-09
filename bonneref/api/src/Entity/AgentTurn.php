@@ -10,6 +10,7 @@ use App\Repository\AgentTurnRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ODM\MongoDB\Mapping\Attribute as ODM;
+use Symfony\Component\Clock\Clock;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -177,9 +178,10 @@ class AgentTurn
         #[ODM\Field(type: 'string', nullable: true)]
         private ?string $pendingContext = null,
         ?string $id = null,
+        ?\DateTimeImmutable $startedAt = null,
     ) {
         $this->id = $id ?? (string) new Ulid();
-        $this->startedAt = new \DateTimeImmutable();
+        $this->startedAt = $startedAt ?? Clock::get()->now();
         $this->toolCalls = new ArrayCollection();
     }
 
@@ -457,12 +459,12 @@ class AgentTurn
         $this->finalText = $finalText;
     }
 
-    public function finish(AgentTurnStatus $status, ?string $error, ?string $errorId = null): void
+    public function finish(AgentTurnStatus $status, ?string $error, ?string $errorId = null, ?\DateTimeImmutable $at = null): void
     {
         $this->status = $status;
         $this->error = $error;
         $this->errorId = $errorId;
-        $this->finishedAt = new \DateTimeImmutable();
+        $this->finishedAt = $at ?? Clock::get()->now();
         $this->durationMs = (int) (($this->finishedAt->format('U.u') - $this->startedAt->format('U.u')) * 1000);
     }
 
@@ -503,7 +505,7 @@ class AgentTurn
      *
      * @param array<string, mixed> $search
      */
-    public static function search(string $owner, string $input, array $search, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null, ?string $searchId = null): self
+    public static function search(string $owner, string $input, array $search, int $durationMs, AgentTurnStatus $status, ?string $categoryLabel = null, ?string $searchId = null, ?\DateTimeImmutable $at = null): self
     {
         $turn = new self($owner, '', $input, '', '', '', false);
         $turn->kind = AgentTurnKind::Search;
@@ -512,7 +514,7 @@ class AgentTurn
         $turn->categoryLabel = $categoryLabel;
         $turn->searchId = $searchId;
         $turn->status = $status;
-        $turn->finishedAt = new \DateTimeImmutable();
+        $turn->finishedAt = $at ?? Clock::get()->now();
         $turn->startedAt = $turn->finishedAt->modify(\sprintf('-%d milliseconds', $durationMs));
         $turn->durationMs = $durationMs;
 
@@ -525,7 +527,7 @@ class AgentTurn
      *
      * @param array<string, mixed> $search
      */
-    public function absorbSearch(array $search, AgentTurnStatus $status, ?string $categoryLabel): void
+    public function absorbSearch(array $search, AgentTurnStatus $status, ?string $categoryLabel, ?\DateTimeImmutable $at = null): void
     {
         $search = array_filter($search, static fn (mixed $v): bool => null !== $v);
         if (AgentTurnStatus::Failed === $this->status) {
@@ -536,7 +538,7 @@ class AgentTurn
         $this->search = $search + $this->search;
         $this->categoryLabel = $categoryLabel ?? $this->categoryLabel;
         $this->status = $status;
-        $this->finishedAt = new \DateTimeImmutable();
+        $this->finishedAt = $at ?? Clock::get()->now();
         $this->durationMs = max(0, (int) round(((float) $this->finishedAt->format('U.u') - (float) $this->startedAt->format('U.u')) * 1000));
     }
 

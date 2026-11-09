@@ -16,6 +16,7 @@ use Psr\Log\NullLogger;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
+use Symfony\Component\Clock\MockClock;
 
 final class TurnJournalUsageTest extends TestCase
 {
@@ -67,6 +68,28 @@ final class TurnJournalUsageTest extends TestCase
             'gemini-2.5-flash' => ['promptTokens' => 50, 'completionTokens' => 10, 'cacheReadTokens' => 0, 'cacheCreationTokens' => 0],
         ], $persisted->getSideCallUsage());
         self::assertSame(4, $persisted->getWebSearchRequests());
+    }
+
+    public function testTheJournalReadsTimeFromItsClock(): void
+    {
+        $persisted = null;
+        $dm = $this->createStub(DocumentManager::class);
+        $dm->method('persist')->willReturnCallback(static function (object $turn) use (&$persisted): void {
+            $persisted = $turn;
+        });
+        $clock = new MockClock('2026-03-01 10:00:00');
+
+        $journal = new TurnJournal($dm, new NullLogger(), $clock);
+        $journal->begin(new RunAgentTurn('filtre', 'https://localhost/agent/sessions/s1', 'owner'), 'ctx');
+        $clock->sleep(5);
+        $journal->recordToolCall('show_parts', [], 'ok');
+        $clock->sleep(5);
+        $journal->finish(AgentTurnStatus::Completed, null);
+
+        self::assertInstanceOf(AgentTurn::class, $persisted);
+        self::assertSame('2026-03-01 10:00:00', $persisted->getStartedAt()->format('Y-m-d H:i:s'));
+        self::assertSame('2026-03-01 10:00:05', $persisted->getToolCalls()[0]->getAt()->format('Y-m-d H:i:s'));
+        self::assertSame('2026-03-01 10:00:10', $persisted->getFinishedAt()?->format('Y-m-d H:i:s'));
     }
 
     private function deltaOf(TokenUsage $usage): DeltaEvent

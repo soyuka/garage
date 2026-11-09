@@ -14,6 +14,7 @@ use App\Entity\AgentTurnStatus;
 use App\Repository\AgentTurnRepository;
 use App\Vehicle\VehicleIndex;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
@@ -61,6 +62,7 @@ final readonly class FinderSearchJournalListener
         private AgentTurnRepository $turns,
         private VehicleIndex $index,
         private LoggerInterface $logger,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -108,7 +110,7 @@ final readonly class FinderSearchJournalListener
         try {
             $row = null === $searchId ? null : $this->turns->findOneBySearchId($owner, $searchId);
             if (null !== $row) {
-                $row->absorbSearch($search, $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed, $label);
+                $row->absorbSearch($search, $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed, $label, $this->clock->now());
             } else {
                 $this->documentManager->persist(AgentTurn::search(
                     owner: $owner,
@@ -118,6 +120,7 @@ final readonly class FinderSearchJournalListener
                     status: $failed ? AgentTurnStatus::Failed : AgentTurnStatus::Completed,
                     categoryLabel: $label,
                     searchId: $searchId,
+                    at: $this->clock->now(),
                 ));
             }
             $this->documentManager->flush();

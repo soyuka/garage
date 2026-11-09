@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Exception;
 
+use Symfony\Component\Clock\Clock;
+
 /**
  * Deliberately not an HTTP exception, like {@see RecordNotFoundException}: api-platform/mcp would turn
  * a TooManyRequestsHttpException into a JSON-RPC -32603 before {@see \App\Mcp\DomainErrorHandler}
@@ -18,6 +20,6 @@ final class RateLimitExceededException extends \RuntimeException
 
     public function retryAfterSeconds(): int
     {
-        return max(1, $this->retryAfter->getTimestamp() - time());
+        return max(1, $this->retryAfter->getTimestamp() - Clock::get()->now()->getTimestamp());
     }
 }

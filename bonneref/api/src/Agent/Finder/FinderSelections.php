@@ -8,6 +8,7 @@ use App\Agent\Journal\TurnJournal;
 use App\Entity\FinderSelection;
 use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Psr\Clock\ClockInterface;
 
 final readonly class FinderSelections
 {
@@ -15,6 +16,7 @@ final readonly class FinderSelections
         private DocumentManager $documentManager,
         private OwnerContext $owner,
         private TurnJournal $journal,
+        private ClockInterface $clock,
     ) {
     }
 
@@ -31,6 +33,7 @@ final readonly class FinderSelections
             basis: $basis,
             setAside: $setAside,
             organisationNumber: $organisationNumber,
+            createdAt: $this->clock->now(),
         );
         $this->documentManager->persist($selection);
         $this->documentManager->flush();

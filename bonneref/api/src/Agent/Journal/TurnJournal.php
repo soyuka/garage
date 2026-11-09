@@ -10,7 +10,9 @@ use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
 use App\Message\RunAgentTurn;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Psr\Clock\ClockInterface;
 use Psr\Log\LoggerInterface;
+use Symfony\Component\Clock\Clock;
 
 /**
  * Accumulates the debug journal of the turn in flight and persists it on settle. A turn-scoped
@@ -35,6 +37,7 @@ final class TurnJournal implements WebSearchTracer
     public function __construct(
         private readonly DocumentManager $documentManager,
         private readonly LoggerInterface $logger,
+        private readonly ClockInterface $clock = new Clock(),
     ) {
     }
 
@@ -62,6 +65,7 @@ final class TurnJournal implements WebSearchTracer
             summary: '' !== $message->summary ? $message->summary : null,
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
             id: $message->turnId,
+            startedAt: $this->clock->now(),
         );
         $this->current->setSurface($message->surface);
         $this->current->setImages($message->images);
@@ -96,7 +100,7 @@ final class TurnJournal implements WebSearchTracer
             name: $name,
             arguments: $arguments,
             result: $this->stringify($result),
-            at: new \DateTimeImmutable(),
+            at: $this->clock->now(),
             serverSide: $serverSide,
         ));
     }
@@ -159,7 +163,7 @@ final class TurnJournal implements WebSearchTracer
             return;
         }
 
-        $turn->finish($status, $error, $errorId);
+        $turn->finish($status, $error, $errorId, $this->clock->now());
 
         try {
             $this->documentManager->persist($turn);
