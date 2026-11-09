@@ -68,10 +68,10 @@ final class VehicleResourceTest extends AppTestCase
     {
         // Seed a plate that has NO fixture: any upstream call would 404 it.
         $envelope = json_decode((string) file_get_contents(\dirname(__DIR__).'/Fixtures/siv/XC302ZC.json'), true);
-        self::sivStore()->save('CACHED99', $envelope);
+        self::sivStore()->save('CA999CH', $envelope);
 
         $client = static::createClient();
-        $client->request('GET', '/vehicles/CACHED99');
+        $client->request('GET', '/vehicles/CA999CH');
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains(['make' => 'IVECO']);

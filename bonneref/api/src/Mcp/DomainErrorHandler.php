@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp;
 
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
+use App\Exception\InvalidPlateException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\RateLimitExceededException;
 use App\Exception\RecordNotFoundException;
@@ -82,6 +83,7 @@ final readonly class DomainErrorHandler implements RequestHandlerInterface
             $e instanceof UpstreamException => $e->transient
                 ? new ToolError('upstream_unavailable', sprintf('%s did not answer in time. This is temporary and says NOTHING about whether the thing you looked up exists — retry, and never report it to the user as "not found".', $e->source))
                 : new ToolError('upstream_rejected', sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source)),
+            $e instanceof InvalidPlateException => new ToolError('invalid_input', $e->getMessage().' Ask the user for the plate as printed; do not guess one.'),
             $e instanceof MissingApiKeyException => new ToolError(
                 'not_configured',
                 sprintf('%s is not configured on this server. Tell the user this capability is unavailable; do not retry and do not guess an answer.', $e->source),

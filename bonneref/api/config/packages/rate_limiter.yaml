@@ -16,6 +16,15 @@ framework:
             policy: sliding_window
             limit: '%env(int:INTAKE_RATE_LIMIT)%'
             interval: '1 hour'
+        # Across all owners: a burst of fresh accounts each under its own quota still cannot run up the bill.
+        agent_turn_global:
+            policy: sliding_window
+            limit: '%env(int:GLOBAL_AGENT_TURN_RATE_LIMIT)%'
+            interval: '1 hour'
+        plate_lookup_global:
+            policy: sliding_window
+            limit: '%env(int:GLOBAL_PLATE_LOOKUP_RATE_LIMIT)%'
+            interval: '1 hour'
 
 # The filesystem pool would let the suite's lookups add up across tests and 429 unrelated ones, and an
 # array pool is wiped by the kernel's services_resetter between two requests of one test. A plain
@@ -28,4 +37,8 @@ when@test:
             plate_lookup:
                 storage_service: app.test.rate_limiter_storage
             intake:
+                storage_service: app.test.rate_limiter_storage
+            agent_turn_global:
+                storage_service: app.test.rate_limiter_storage
+            plate_lookup_global:
                 storage_service: app.test.rate_limiter_storage

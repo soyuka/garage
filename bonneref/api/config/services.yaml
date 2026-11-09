@@ -34,11 +34,11 @@ services:
 
     app.quota.agent_turn:
         class: App\Security\OwnerRateLimiter
-        arguments: { $limiter: '@limiter.agent_turn' }
+        arguments: { $limiter: '@limiter.agent_turn', $global: '@limiter.agent_turn_global' }
 
     app.quota.plate_lookup:
         class: App\Security\OwnerRateLimiter
-        arguments: { $limiter: '@limiter.plate_lookup' }
+        arguments: { $limiter: '@limiter.plate_lookup', $global: '@limiter.plate_lookup_global' }
 
     app.quota.intake:
         class: App\Security\OwnerRateLimiter

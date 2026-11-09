@@ -14,10 +14,6 @@ use App\Siv\SivClient;
  */
 final readonly class FinderVehicleResolver
 {
-    private const string SIV = '/^([A-Z]{2})(\d{3})([A-Z]{2})$/';
-
-    private const string FNI = '/^\d{1,4}[A-Z]{1,3}(\d{2}|2A|2B|97\d)$/';
-
     public function __construct(private PartsCatalog $catalog)
     {
     }
@@ -66,10 +62,10 @@ final readonly class FinderVehicleResolver
             return null;
         }
         $plate = \is_string($raw) && mb_strlen($raw) <= 20 ? SivClient::normalizePlate($raw) : '';
-        if (1 === preg_match(self::SIV, $plate, $m)) {
+        if (1 === preg_match(SivClient::SIV_PLATE, $plate, $m)) {
             return $m[1].'-'.$m[2].'-'.$m[3];
         }
-        if (1 === preg_match(self::FNI, $plate)) {
+        if (1 === preg_match(SivClient::FNI_PLATE, $plate)) {
             return $plate;
         }
 

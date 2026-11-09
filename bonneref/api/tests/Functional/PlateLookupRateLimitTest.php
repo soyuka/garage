@@ -68,9 +68,58 @@ final class PlateLookupRateLimitTest extends AppTestCase
         $this->assertMatchesRegularExpression('/try again in about [1-9]\d* minutes; do not retry now/', $result['message']);
     }
 
-    private static function exhaust(string $owner): void
+    public function testTheGlobalLimitRefusesEveryOwner(): void
     {
-        $factory = static::getContainer()->get('limiter.plate_lookup');
+        $client = static::createClient();
+        $client->disableReboot();
+        self::exhaust('global', 'limiter.plate_lookup_global');
+
+        $client->request('GET', '/vehicles/XC302ZC', [
+            'headers' => self::authHeaders('someone-else', 'someone-else@example.com'),
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertNull(self::sivStore()->find('XC302ZC'), 'the paid upstream was never called');
+    }
+
+    public function testANonFrenchPlateIsRefusedBeforeTheQuotaAndTheUpstream(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        self::exhaust(self::TEST_OWNER);
+
+        $client->request('GET', '/vehicles/ABCDEFGH');
+
+        $this->assertResponseStatusCodeSame(422, 'a malformed plate is a client error, not a spent lookup');
+        $this->assertNull(self::sivStore()->find('ABCDEFGH'));
+    }
+
+    public function testThePlateRouteOnlyMatchesPlateCharacters(): void
+    {
+        static::createClient()->request('GET', '/vehicles/'.str_repeat('A', 17));
+
+        $this->assertResponseStatusCodeSame(404);
+        $this->assertNull(self::sivStore()->find(str_repeat('A', 17)));
+    }
+
+    public function testTheMcpToolRefusesANonFrenchPlateAsInvalidInput(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $sessionId = $this->initialize($client);
+        self::exhaust(self::TEST_OWNER);
+
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'lookup_plate',
+            'arguments' => ['plate' => 'ABCDEFGH'],
+        ], 2));
+
+        $this->assertSame('invalid_input', $result['error']);
+    }
+
+    private static function exhaust(string $owner, string $limiter = 'limiter.plate_lookup'): void
+    {
+        $factory = static::getContainer()->get($limiter);
         $limiter = $factory->create($owner);
         for ($i = 0; $i < 10_000 && $limiter->consume()->isAccepted(); ++$i) {
         }

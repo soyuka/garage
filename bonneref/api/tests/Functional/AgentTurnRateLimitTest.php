@@ -53,6 +53,23 @@ final class AgentTurnRateLimitTest extends AppTestCase
         $this->assertResponseStatusCodeSame(202);
     }
 
+    public function testTheGlobalLimitRefusesEveryOwner(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $container = static::getContainer();
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static fn (): string => 'done'));
+
+        self::exhaust($container->get('limiter.agent_turn_global'), 'global');
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders('someone-else', 'someone-else@example.com') + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'filtre à huile', 'sessionId' => 'sess-global'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(429);
+    }
+
     private static function exhaust(RateLimiterFactoryInterface $factory, string $owner): void
     {
         $limiter = $factory->create($owner);

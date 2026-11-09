@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Siv;
 
+use App\Exception\InvalidPlateException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use App\Siv\SivClient;
 use App\Tests\Support\InMemorySivLookupStore;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\UnlimitedQuota;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpClient\MockHttpClient;
@@ -181,6 +183,47 @@ final class SivClientTest extends TestCase
         } catch (UpstreamException $e) {
             $this->assertFalse($e->transient, 'an upstream rejection is definitive — retrying cannot help');
         }
+    }
+
+    #[DataProvider('notFrenchPlates')]
+    public function testANonFrenchPlateNeverReachesTheUpstream(string $plate): void
+    {
+        $http = new MockHttpClient(function (): MockResponse {
+            $this->fail('a malformed plate must not be billed');
+        });
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create());
+
+        $this->expectException(InvalidPlateException::class);
+        $client->lookup($plate);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function notFrenchPlates(): iterable
+    {
+        yield 'empty' => [''];
+        yield 'letters only' => ['ABCDEFGH'];
+        yield 'SIV with an O' => ['AO-123-BC'];
+        yield 'too many digits' => ['AB-1234-CD'];
+        yield 'FNI without département' => ['1234AB'];
+    }
+
+    #[DataProvider('frenchPlates')]
+    public function testSivAndFniPlatesAreFrench(string $plate): void
+    {
+        $this->assertTrue(SivClient::isFrenchPlate(SivClient::normalizePlate($plate)));
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function frenchPlates(): iterable
+    {
+        yield 'SIV' => ['AB-123-CD'];
+        yield 'FNI' => ['1234 AB 56'];
+        yield 'FNI Corsica' => ['123 ABC 2A'];
+        yield 'FNI overseas' => ['12 AB 974'];
     }
 
     public function testATransportFailureNeverCarriesTheToken(): void

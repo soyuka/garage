@@ -19,7 +19,7 @@ use App\State\VehicleProvider;
  */
 #[ApiResource(
     operations: [
-        new Get(uriTemplate: '/vehicles/{plate}', provider: VehicleProvider::class),
+        new Get(uriTemplate: '/vehicles/{plate}', requirements: ['plate' => '[A-Za-z0-9 .-]{1,16}'], provider: VehicleProvider::class),
     ],
     mcp: [
         'lookup_plate' => new McpTool(

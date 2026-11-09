@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Siv;
 
+use App\Exception\InvalidPlateException;
 use App\Exception\MissingApiKeyException;
 use App\Exception\RateLimitExceededException;
 use App\Exception\UpstreamException;
@@ -28,6 +29,12 @@ final readonly class SivClient
     /** Model-facing name of the service — never the vendor host or the env var. */
     private const SOURCE = 'the French vehicle registry (SIV)';
 
+    /** SIV (2009+): no I, O or U, which the registry never issues. */
+    public const string SIV_PLATE = '/^([A-HJ-NP-TV-Z]{2})(\d{3})([A-HJ-NP-TV-Z]{2})$/';
+
+    /** FNI (before 2009): number, letters, département (2A/2B for Corsica, 97x overseas). */
+    public const string FNI_PLATE = '/^\d{1,4}[A-Z]{1,3}(\d{2}|2A|2B|97\d)$/';
+
     public function __construct(
         private HttpClientInterface $httpClient,
         #[\SensitiveParameter] private string $token,
@@ -44,19 +51,26 @@ final readonly class SivClient
         return strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $raw));
     }
 
+    public static function isFrenchPlate(string $normalized): bool
+    {
+        return 1 === preg_match(self::SIV_PLATE, $normalized) || 1 === preg_match(self::FNI_PLATE, $normalized);
+    }
+
     /**
      * @return array<string, mixed>|null the SIV `data` payload, or null when the plate is unknown
      *
+     * @throws InvalidPlateException      before the store, the quota and the paid call
      * @throws MissingApiKeyException
      * @throws UpstreamException
      * @throws RateLimitExceededException only on a store miss: a stored plate costs nothing
      */
     public function lookup(string $plate): ?array
     {
-        $plate = self::normalizePlate($plate);
-        if ('' === $plate) {
-            return null;
+        $normalized = self::normalizePlate($plate);
+        if (!self::isFrenchPlate($normalized)) {
+            throw InvalidPlateException::for($plate);
         }
+        $plate = $normalized;
 
         $cached = $this->store->find($plate);
         if (null !== $cached) {
