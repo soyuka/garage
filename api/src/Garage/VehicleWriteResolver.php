@@ -122,11 +122,10 @@ final readonly class VehicleWriteResolver
         ?UsageUnit $usageUnit = null,
     ): VehicleResolution {
         if (null !== $vehicleId) {
-            $vehicle = $this->vehicles->find($vehicleId);
-
-            // find() is by id, not owner-scoped: a @id pointing at another tenant's row resolves to
-            // notFound rather than letting a write land on a vehicle the caller does not own.
-            if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current()) {
+            // Owner- and deleted-scoped: a @id pointing at another tenant's row, or at a deleted one,
+            // resolves to notFound rather than letting a write land on it.
+            $vehicle = $this->vehicles->findOwned($vehicleId);
+            if (null === $vehicle) {
                 return VehicleResolution::notFound($vehicleId);
             }
 
