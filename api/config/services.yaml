@@ -197,8 +197,8 @@ services:
         arguments:
             $filesystem: '@vehicle_documents.storage'
 
-    # Validates Casdoor JWTs for the /mcp firewall (dev/prod). Audience is intentionally
-    # unpinned — see the class docblock. JWKS discovered from CASDOOR_ISSUER, cached in cache.app.
+    # Signature, issuer, expiry, token type of a Casdoor JWT. JWKS discovered from CASDOOR_ISSUER, cached in
+    # cache.app. The audience is the per-firewall AudienceTokenHandler's job, below.
     App\Security\CasdoorTokenHandler:
         arguments:
             $discoveryCache: '@cache.app'
@@ -206,6 +206,30 @@ services:
             $issuers: ['%env(CASDOOR_ISSUER)%']
             $claim: '%app.owner_claim%'
 
+    App\Security\McpResource:
+        arguments:
+            $publicOrigin: '%env(DEFAULT_URI)%'
+            $aliases: '%env(csv:MCP_RESOURCE_ALIASES)%'
+            $path: '%app.mcp_path%'
+
+    # The verifier the audience checks wrap; FakeOidcTokenHandler under when@test.
+    app.access_token.verifier: '@App\Security\CasdoorTokenHandler'
+
+    # /mcp: only tokens bound to this server's resource URI (RFC 8707), never a client_id audience.
+    app.access_token.mcp:
+        class: App\Security\AudienceTokenHandler
+        arguments:
+            $verifier: '@app.access_token.verifier'
+            $audiences: []
+            $resource: '@App\Security\McpResource'
+
+    # REST: the client ids of our own browser front ends (their PKCE tokens carry aud = client_id).
+    app.access_token.api:
+        class: App\Security\AudienceTokenHandler
+        arguments:
+            $verifier: '@app.access_token.verifier'
+            $audiences: ['%env(csv:OAUTH_CLIENT_AUDIENCES)%']
+            $resource: ~
 
 when@test:
     services:
@@ -229,6 +253,8 @@ when@test:
         App\Tests\Security\FakeOidcTokenHandler:
             arguments:
                 $claim: '%app.owner_claim%'
+
+        app.access_token.verifier: '@App\Tests\Security\FakeOidcTokenHandler'
 
         # The vendor TTS transport. Its own double rather than FixtureHttpClient because the speech
         # tests assert on the OUTGOING request (key header, voice in the path, model in the body).

@@ -18,6 +18,8 @@
              Dotenv never overwrites one of those — so .env.test cannot win and McpAllowedHostsTest
              would assert against whatever hosts the running stack happens to allow. -->
         <server name="MCP_ALLOWED_HOSTS" value="localhost,127.0.0.1,[::1],mcp.example.test" force="true" />
+        <!-- force="true" for the same reason: the stage profile promotes it. FakeOidcToken::MCP_RESOURCE. -->
+        <server name="MCP_RESOURCE_ALIASES" value="https://mcp.example.test/mcp" force="true" />
         <server name="SHELL_VERBOSITY" value="-1" />
     </php>
 

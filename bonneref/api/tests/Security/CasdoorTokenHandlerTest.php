@@ -11,6 +11,7 @@ use Jose\Component\KeyManagement\JWKFactory;
 use Jose\Component\Signature\Algorithm\RS256;
 use Jose\Component\Signature\JWSBuilder;
 use Jose\Component\Signature\Serializer\CompactSerializer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Cache\Adapter\ArrayAdapter;
 use Symfony\Component\Clock\MockClock;
@@ -30,14 +31,12 @@ final class CasdoorTokenHandlerTest extends TestCase
         $this->signingKey = JWKFactory::createRSAKey(2048, ['alg' => 'RS256', 'use' => 'sig', 'kid' => 'cert-built-in']);
     }
 
-    public function testValidTokenWithArbitraryAudienceIsAccepted(): void
+    public function testValidAccessTokenIsAccepted(): void
     {
-        // The whole point: Casdoor sets aud = dynamic DCR client_id. The handler must NOT
-        // pin the audience, so a token with an unknown client_id as aud still authenticates.
         $token = $this->mintToken([
             'sub' => 'built-in/alice',
             'iss' => self::ISSUER,
-            'aud' => ['some-dynamic-dcr-client-id'],
+            'aud' => ['https://mcp.example.test/mcp'],
             'iat' => 1000,
             'exp' => 2000,
             'email' => 'alice@example.com',
@@ -47,6 +46,33 @@ final class CasdoorTokenHandlerTest extends TestCase
 
         self::assertSame('built-in/alice', $badge->getUserIdentifier());
         self::assertSame('alice@example.com', $badge->getAttributes()['email']);
+        self::assertSame(['https://mcp.example.test/mcp'], $badge->getAttributes()['aud']);
+    }
+
+    #[DataProvider('notAnAccessToken')]
+    public function testOnlyAnAccessTokenIsAccepted(?string $tokenType): void
+    {
+        $token = $this->mintToken([
+            'sub' => 'built-in/alice',
+            'iss' => self::ISSUER,
+            'aud' => ['x'],
+            'iat' => 1000,
+            'exp' => 2000,
+            'tokenType' => $tokenType,
+        ]);
+
+        $this->expectException(BadCredentialsException::class);
+        $this->handler()->getUserBadgeFrom($token);
+    }
+
+    /**
+     * @return iterable<string, array{?string}>
+     */
+    public static function notAnAccessToken(): iterable
+    {
+        yield 'refresh token' => ['refresh-token'];
+        yield 'id token' => ['id-token'];
+        yield 'untyped' => [null];
     }
 
     public function testExpiredTokenIsRejected(): void
@@ -111,6 +137,7 @@ final class CasdoorTokenHandlerTest extends TestCase
     private function mintToken(array $claims, ?JWK $key = null): string
     {
         $key ??= $this->signingKey;
+        $claims += ['tokenType' => 'access-token'];
         $builder = new JWSBuilder(new AlgorithmManager([new RS256()]));
         $jws = $builder->create()
             ->withPayload(json_encode($claims, \JSON_THROW_ON_ERROR))

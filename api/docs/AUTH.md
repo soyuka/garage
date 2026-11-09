@@ -2,7 +2,8 @@
 
 Auth is the **hosted Casdoor at <https://auth.bonneref.fr>**, outside this compose stack (dev and stage
 alike; there is no local `casdoor` container). Two firewalls are OAuth2-protected against it; Symfony
-validates bearer tokens locally against its JWKS (issuer + signature, **no audience**):
+validates bearer tokens locally against its JWKS (issuer + signature + token type) and checks the
+**audience** per firewall (§ Audience):
 
 - **`/mcp`** — the MCP endpoint (MCP authorization spec, building on RFC 9728). Clients self-register
   via anonymous DCR.
@@ -28,7 +29,9 @@ advertises neither DCR nor URL-based client IDs, so stock Goose cannot register 
 | Piece | File |
 | --- | --- |
 | Firewall + custom token handler | `config/packages/security.yaml`, `config/services.yaml` |
-| Token handler (JWKS + signature + issuer, **no audience** — see below) | `src/Security/CasdoorTokenHandler.php` |
+| Verifier (JWKS + signature + issuer + `tokenType: access-token`) | `src/Security/CasdoorTokenHandler.php` |
+| Audience check, one instance per firewall (`app.access_token.mcp`, `app.access_token.api`) | `src/Security/AudienceTokenHandler.php`, `config/services.yaml` |
+| This server's MCP resource URIs (metadata + `/mcp` audience) | `src/Security/McpResource.php` |
 | User provisioned from claims (find-or-create; the tenant key is the `email` claim, `config/services.yaml:4`) | `src/Security/ZitadelUserProvider.php`, `src/Entity/User.php` |
 | RFC 9728 metadata endpoint | `src/Controller/Mcp/ProtectedResourceMetadataController.php` |
 | `WWW-Authenticate` challenge on 401 | `src/EventListener/McpProtectedResourceChallengeListener.php` |
@@ -36,18 +39,44 @@ advertises neither DCR nor URL-based client IDs, so stock Goose cannot register 
 | Issuer | `CASDOOR_ISSUER=https://auth.bonneref.fr` (`.env`, `.env.stage`; injected as container env by `compose.stage.yaml`) |
 | Dashboard OAuth client (PKCE) + `authFetch` | `dashboard/src/auth.ts`, `dashboard/src/AuthGate.tsx` |
 
-## Why a custom token handler (no audience check)
+## Audience (since 2026-11-09)
 
-Casdoor sets the access-token `aud` claim to the **OAuth client_id**. Under DCR that client_id
-is minted fresh per MCP client, and Casdoor ignores the RFC 8707 `resource` parameter that
-would otherwise let the resource server pin a stable audience. So Symfony's stock `oidc`
-handler — which requires and checks a fixed `audience` — cannot validate these tokens.
+MCP 2026-07-28: "MCP servers MUST validate that access tokens were issued specifically for them as the intended
+audience, according to RFC 8707 Section 2." Each firewall wraps the verifier in an `AudienceTokenHandler` that
+401s (`error="invalid_token"`, plus `resource_metadata` on `/mcp`) unless `aud` names something it serves:
 
-`CasdoorTokenHandler` mirrors the OIDC handler (JWKS discovery, RS/ES signature verification,
-`iat`/`nbf`/`exp` and `iss` checks) but **drops the audience check**. The authorization
-boundary is therefore the issuer + signature (any token this Casdoor instance signs is
-accepted) plus the `ZitadelUserProvider` find-or-create on `sub`. If `/mcp` must be limited to
-a subset of users, add a scope/role check inside the handler.
+| firewall | accepted `aud` | why |
+| --- | --- | --- |
+| `mcp` (`^/mcp`) | this server's resource URIs: `DEFAULT_URI` + `/mcp`, plus `MCP_RESOURCE_ALIASES` | MCP clients send the RFC 8707 `resource` (the one our RFC 9728 metadata advertises) and Casdoor binds `aud` to it |
+| `api` (everything else) | `OAUTH_CLIENT_AUDIENCES`: the Atelier `671b8c86d75444f3f4c4`, the bonneref front `89646c002d2272351ca2` | browser PKCE clients send no `resource`, so Casdoor sets `aud` = their client_id; the bonneref front reaches `/garage/*` cross-origin |
+
+An MCP token is not accepted on REST and a front-end token is not accepted on `/mcp`. The metadata's `resource`
+is the configured URI on the origin the client reached (`McpResource::for()`), falling back to `DEFAULT_URI`:
+clients refuse a `resource` on another origin.
+
+**What Casdoor puts in `aud`** (source: casdoor/casdoor `object/token_jwt.go`, `generateJwtTokenWithOptions`):
+`[client_id]`; `[client_id + "-org-" + owner]` for a *shared* application; replaced by `[resource]` when the
+authorize request carried an RFC 8707 `resource` (`controllers/auth.go` reads it, the code stores it, the token
+request must repeat the same value, `object/token_oauth.go` `GetAuthorizationCodeToken`; a refresh keeps it,
+`RefreshToken` in `object/token_oauth_util.go`). RFC 8707 support landed upstream 2026-02-15 (`cf1af97b`); the
+hosted instance is newer (its discovery lists `private_key_jwt`, added 2026-10-07, and lacks
+`client_id_metadata_document_supported`, added 2026-10-19). Verified on a real token: a Claude Code DCR token for
+`http://localhost/mcp` carried `aud: ["http://localhost/mcp"]`, `azp` = its DCR client_id. The earlier claim in
+this file that Casdoor ignores `resource` was wrong for any build since February 2026.
+
+Casdoor signs refresh and ID tokens with the same key and the same `aud`, so the verifier also requires
+`tokenType: "access-token"`.
+
+**Per deployment:** dev `DEFAULT_URI=https://localhost`, `.env.dev` adds `http://localhost/mcp` (plain-HTTP
+clients); stage adds `https://garage.soyuka.me/mcp` (`.env.stage`, promoted by `compose.stage.yaml`); prod
+`DEFAULT_URI=https://garage.bonneref.fr` and nothing else. Never put an alias in `.env`: it is baked into the prod
+image (`composer dump-env prod`), and a localhost alias there would let prod accept tokens minted for anyone's
+local server.
+
+**bonneref** applies the same split (`bonneref/api`), plus one documented exception: mpa forwards its caller's
+bearer to the bonneref catalogue, so the GET routes mpa calls also accept `CATALOGUE_PASSTHROUGH_AUDIENCES` (mpa's
+Atelier client and MCP resource URIs). Never on bonneref's `/mcp`. This is token passthrough, which the MCP spec
+forbids: debt, with the options for removing it, in `FUTURE.md` § "Token passthrough mpa → bonneref".
 
 ## Bootstrap flow (what an MCP client does)
 
@@ -58,7 +87,8 @@ a subset of users, add a scope/role check inside the handler.
 3. Client self-registers via `POST $CASDOOR_ISSUER/api/oauth/register` (anonymous DCR), runs
    the OAuth code flow against Casdoor, gets an access token, retries `/mcp` with
    `Authorization: Bearer <token>`.
-4. `CasdoorTokenHandler` validates the JWT, `ZitadelUserProvider` resolves/creates the `User`,
+4. `CasdoorTokenHandler` validates the JWT, `AudienceTokenHandler` checks `aud` is this server's resource,
+   `ZitadelUserProvider` resolves/creates the `User`,
    the tool runs.
 
 ## The hosted Casdoor
@@ -118,8 +148,9 @@ for login. There is no static bearer or token-minting script. See `MCP_CLAUDE.md
 | Var | Purpose | Default |
 | --- | --- | --- |
 | `CASDOOR_ISSUER` | Issuer URL (`iss`); discovery at `$ISSUER/.well-known/openid-configuration`, JWKS at the `jwks_uri` it points to | `https://auth.bonneref.fr` |
-
-There is intentionally **no audience variable** — see "Why a custom token handler" above.
+| `DEFAULT_URI` | public origin; `DEFAULT_URI/mcp` is the primary MCP resource URI | `https://localhost` |
+| `MCP_RESOURCE_ALIASES` | extra MCP resource URIs (comma-separated, absolute) the same deployment answers on | empty (`.env.dev`: `http://localhost/mcp`) |
+| `OAUTH_CLIENT_AUDIENCES` | client_ids accepted as `aud` on the REST firewall | `671b8c86d75444f3f4c4,89646c002d2272351ca2` |
 
 ## Tests
 
@@ -127,6 +158,10 @@ A real Casdoor-signed JWT cannot be minted offline, so the test firewall swaps
 `CasdoorTokenHandler` for `tests/Security/FakeOidcTokenHandler`, which decodes the opaque
 tokens produced by `tests/Functional/FakeOidcToken`. The firewall, `ZitadelUserProvider`,
 find-or-create and role mapping all run for real — only signature verification is stubbed.
-`CasdoorTokenHandler` itself is unit-tested (signature, issuer, expiry, arbitrary-audience
-acceptance) in `tests/Security/CasdoorTokenHandlerTest.php`. See also
-`tests/Functional/McpOAuthTest.php`.
+The audience check is NOT stubbed: `AudienceTokenHandler` wraps the fake verifier exactly as it wraps the real
+one (`app.access_token.verifier` is the only service swapped under `when@test`). `FakeOidcToken::for()` carries
+both test audiences by default (`MCP_RESOURCE`, forced as `MCP_RESOURCE_ALIASES` in `phpunit.dist.xml`, and
+`ATELIER_CLIENT`, `OAUTH_CLIENT_AUDIENCES` in `.env.test`). `tests/Functional/TokenAudienceTest.php` pins right /
+foreign / missing audiences on both firewalls; `CasdoorTokenHandler` is unit-tested (signature, issuer, expiry,
+token type) in `tests/Security/CasdoorTokenHandlerTest.php`, `McpResource` in `tests/Security/McpResourceTest.php`.
+See also `tests/Functional/McpOAuthTest.php`.

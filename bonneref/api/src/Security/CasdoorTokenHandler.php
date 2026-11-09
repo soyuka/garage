@@ -30,16 +30,10 @@ use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Validates Casdoor-issued JWT access tokens for the /mcp firewall.
- *
- * Casdoor sets the `aud` claim to the OAuth client_id, which under Dynamic Client
- * Registration (RFC 7591) is minted fresh per MCP client — so it cannot be pinned, and
- * Casdoor ignores the RFC 8707 `resource` parameter that would otherwise let us scope a
- * stable audience. This handler therefore mirrors Symfony's OidcTokenHandler (JWKS
- * discovery + RS/ES signature verification + iat/nbf/exp/iss checks) but DROPS the audience
- * check. The authorization boundary is consequently the issuer + signature (any token this
- * Casdoor instance signs is accepted) and the {@see ZitadelUserProvider} find-or-create on
- * `sub`; tighten with a scope/role check here if /mcp must be limited to a subset of users.
+ * Verifies a Casdoor-issued JWT: JWKS signature, iat/nbf/exp, issuer, and that it is an access token
+ * (Casdoor signs refresh and ID tokens with the same key, `tokenType` tells them apart). The audience is
+ * NOT checked here but by {@see AudienceTokenHandler}, which wraps this verifier once per firewall with
+ * that firewall's accepted audiences (api/docs/AUTH.md at the repo root).
  */
 final class CasdoorTokenHandler implements AccessTokenHandlerInterface
 {
@@ -131,12 +125,15 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
      */
     private function verifyClaims(array $claims): void
     {
-        // Deliberately no AudienceChecker — see the class docblock.
         (new ClaimCheckerManager([
             new Checker\IssuedAtChecker(clock: $this->clock, allowedTimeDrift: 0),
             new Checker\NotBeforeChecker(clock: $this->clock, allowedTimeDrift: 0),
             new Checker\ExpirationTimeChecker(clock: $this->clock, allowedTimeDrift: 0),
             new Checker\IssuerChecker($this->issuers),
         ]))->check($claims, ['iat', 'exp', 'iss']);
+
+        if ('access-token' !== ($claims['tokenType'] ?? null)) {
+            throw new BadCredentialsException('Not an access token.');
+        }
     }
 }

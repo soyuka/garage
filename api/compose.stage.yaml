@@ -23,6 +23,9 @@ services:
       # exactly like an OAuth failure. Must be container env: /app/.env's localhost-only default
       # would otherwise win, since Dotenv never overwrites an already-set variable.
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS}
+      # /mcp accepts only tokens whose `aud` is one of its resource URIs; the tunnel host is an alias of
+      # DEFAULT_URI (https://localhost). Same container-env reasoning as above.
+      MCP_RESOURCE_ALIASES: ${MCP_RESOURCE_ALIASES}
 
   worker:
     environment:

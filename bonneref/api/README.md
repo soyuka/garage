@@ -53,6 +53,9 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | variable | role |
 | --- | --- |
 | `CASDOOR_ISSUER` | OIDC issuer the bearer is checked against (`https://auth.bonneref.fr`) |
+| `MCP_RESOURCE_ALIASES` | MCP resource URIs accepted in `aud` on `/mcp` besides `DEFAULT_URI/mcp` (comma-separated) |
+| `OAUTH_CLIENT_AUDIENCES` | client_ids accepted in `aud` on the REST routes (the bonneref front) |
+| `CATALOGUE_PASSTHROUGH_AUDIENCES` | mpa's audiences, accepted only on the GET catalogue routes mpa calls (debt, see below) |
 | `MCP_ALLOWED_HOSTS` | hosts `/mcp` answers on (the SDK's DNS-rebinding guard 403s any other with "Invalid Host header") |
 | `CORS_ALLOW_ORIGIN` | regex of the front origins |
 | `API_PLAQUE_TOKEN` | apiplaqueimmatriculation.com, the paid SIV plate lookup |
@@ -91,8 +94,11 @@ After changing code, clear the cache **inside** the container (`/app/var` is an 
 ## How mpa consumes it
 
 mpa calls these routes through a `BonnerefClient` (Symfony HttpClient, base URI from env) and forwards the
-caller's Casdoor bearer. That works because `CasdoorTokenHandler` drops the `aud` check, so a token minted for
-any client of the issuer validates here too. mpa's MCP tools (`list_makes`, `list_part_categories`,
+caller's Casdoor bearer. Since 2026-11-09 tokens are audience-checked (`/mcp`: this server's resource URIs;
+the rest: `OAUTH_CLIENT_AUDIENCES`, the bonneref front), so mpa's forwarded tokens are accepted only by the
+`catalogue_passthrough` firewall: GET on exactly the routes below, with `CATALOGUE_PASSTHROUGH_AUDIENCES` (mpa's
+Atelier client and MCP resource URIs). Token passthrough is debt: `../../api/docs/AUTH.md` § Audience,
+`../../FUTURE.md` § "Token passthrough mpa → bonneref". mpa's MCP tools (`list_makes`, `list_part_categories`,
 `list_articles`, `narrow_parts`, `lookup_plate`, `decode_vin`, `get_service_parts`) map one-to-one onto the
 endpoints above; the table is in `../../docs/bonneref-extraction.md`.
 

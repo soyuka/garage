@@ -172,8 +172,8 @@ services:
                 gemini: '@App\Agent\WebSearch\GeminiWebSearchClient'
             $backend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
 
-    # Validates Casdoor JWTs for the /mcp and api firewalls (dev/prod). Audience is intentionally
-    # unpinned — see the class docblock. JWKS discovered from CASDOOR_ISSUER, cached in cache.app.
+    # Signature, issuer, expiry, token type of a Casdoor JWT. JWKS discovered from CASDOOR_ISSUER, cached in
+    # cache.app. The audience is the per-firewall AudienceTokenHandler's job, below.
     App\Security\CasdoorTokenHandler:
         arguments:
             $discoveryCache: '@cache.app'
@@ -181,6 +181,39 @@ services:
             $issuers: ['%env(CASDOOR_ISSUER)%']
             $claim: '%app.owner_claim%'
 
+    App\Security\McpResource:
+        arguments:
+            $publicOrigin: '%env(DEFAULT_URI)%'
+            $aliases: '%env(csv:MCP_RESOURCE_ALIASES)%'
+            $path: '%app.mcp_path%'
+
+    # The verifier the audience checks wrap; FakeOidcTokenHandler under when@test.
+    app.access_token.verifier: '@App\Security\CasdoorTokenHandler'
+
+    # /mcp: only tokens bound to this server's resource URI (RFC 8707), never a client_id audience.
+    app.access_token.mcp:
+        class: App\Security\AudienceTokenHandler
+        arguments:
+            $verifier: '@app.access_token.verifier'
+            $audiences: []
+            $resource: '@App\Security\McpResource'
+
+    # REST: the client ids of our own browser front ends (their PKCE tokens carry aud = client_id).
+    app.access_token.api:
+        class: App\Security\AudienceTokenHandler
+        arguments:
+            $verifier: '@app.access_token.verifier'
+            $audiences: ['%env(csv:OAUTH_CLIENT_AUDIENCES)%']
+            $resource: ~
+
+    # The catalogue routes mpa calls with its caller's bearer: also mpa's audiences. Documented debt
+    # (api/docs/AUTH.md, FUTURE.md): token passthrough the MCP spec forbids, kept off /mcp.
+    app.access_token.catalogue_passthrough:
+        class: App\Security\AudienceTokenHandler
+        arguments:
+            $verifier: '@app.access_token.verifier'
+            $audiences: ['%env(csv:OAUTH_CLIENT_AUDIENCES)%', '%env(csv:CATALOGUE_PASSTHROUGH_AUDIENCES)%']
+            $resource: ~
 
 when@test:
     services:
@@ -204,6 +237,8 @@ when@test:
         App\Tests\Security\FakeOidcTokenHandler:
             arguments:
                 $claim: '%app.owner_claim%'
+
+        app.access_token.verifier: '@App\Tests\Security\FakeOidcTokenHandler'
 
         # The model call is never made in tests: the endpoint talks to a scripted reader.
         App\Tests\Mock\FakeRegistrationDocumentReader:

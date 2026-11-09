@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controller\Mcp;
 
+use App\Security\McpResource;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -22,6 +23,7 @@ final readonly class ProtectedResourceMetadataController
     public function __construct(
         #[Autowire(env: 'CASDOOR_ISSUER')]
         private string $issuer,
+        private McpResource $resource,
     ) {
     }
 
@@ -29,7 +31,7 @@ final readonly class ProtectedResourceMetadataController
     public function __invoke(Request $request): JsonResponse
     {
         return new JsonResponse([
-            'resource' => $request->getSchemeAndHttpHost().'/mcp',
+            'resource' => $this->resource->for($request),
             'authorization_servers' => [rtrim($this->issuer, '/')],
             'scopes_supported' => ['openid', 'profile', 'email'],
             'bearer_methods_supported' => ['header'],

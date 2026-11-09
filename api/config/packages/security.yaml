@@ -15,13 +15,14 @@ security:
             pattern: ^/\.well-known/oauth-protected-resource$
             security: false
 
-        # The MCP endpoint is OAuth-protected. The access_token handler is added per
-        # environment below so the test env can swap the cryptographic handler for a stub
-        # (declaring it here too would trip the "multiple token handlers" config check).
+        # The MCP endpoint is OAuth-protected: a token must carry this server's resource URI in `aud`
+        # (App\Security\AudienceTokenHandler). The test env swaps only the signature verifier behind it.
         mcp:
             pattern: ^/mcp
             stateless: true
             provider: zitadel
+            access_token:
+                token_handler: app.access_token.mcp
 
         # Everything else is deny-by-default: the REST garage, the agent, the speech and upload
         # endpoints, and every catalogue read (plate lookup, /cars, narrowing), which proxy to bonneref
@@ -34,6 +35,8 @@ security:
             stateless: true
             provider: zitadel
             entry_point: App\Security\BearerEntryPoint
+            access_token:
+                token_handler: app.access_token.api
 
     access_control:
         # Force a 401 (entry point) for unauthenticated /mcp calls; without this the missing
@@ -45,31 +48,3 @@ security:
         # (the Mercure hub takes anonymous subscribers), /tts and /stt spend vendor credits or CPU, and
         # the garage is owner-scoped: all of them rely on this rule rather than on a per-route entry.
         - { path: ^/, roles: IS_AUTHENTICATED_FULLY }
-
-# Tokens are validated locally against Casdoor's JWKS. CasdoorTokenHandler mirrors the OIDC
-# handler but drops the audience check, because Casdoor sets `aud` to the (per-DCR dynamic)
-# client_id and ignores RFC 8707 — so a stable audience cannot be pinned. See the class docblock.
-when@dev: &casdoor_firewall
-    security:
-        firewalls:
-            mcp:
-                access_token:
-                    token_handler: App\Security\CasdoorTokenHandler
-            api:
-                access_token:
-                    token_handler: App\Security\CasdoorTokenHandler
-
-when@prod: *casdoor_firewall
-
-when@test:
-    security:
-        firewalls:
-            mcp:
-                access_token:
-                    # A real Casdoor-signed JWT cannot be minted offline, so tests decode
-                    # opaque test tokens instead. The firewall and ZitadelUserProvider still
-                    # run for real.
-                    token_handler: App\Tests\Security\FakeOidcTokenHandler
-            api:
-                access_token:
-                    token_handler: App\Tests\Security\FakeOidcTokenHandler
