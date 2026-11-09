@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Security;
 
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Carries the current tenant — the authenticated owner claim (`app.owner_claim`, the Casdoor email) —
@@ -17,7 +18,7 @@ use Symfony\Bundle\SecurityBundle\Security;
  * owner from the turn message; it is read only when no token is present. Same pattern as Symfony's own
  * TokenStorage — tenancy follows the principal, never a client-supplied field.
  */
-final class OwnerContext
+final class OwnerContext implements ResetInterface
 {
     private ?string $override = null;
 
@@ -36,6 +37,12 @@ final class OwnerContext
     public function set(?string $owner): void
     {
         $this->override = $owner;
+    }
+
+    /** kernel.reset: a FrankenPHP worker keeps this instance across requests, so a binding must not either. */
+    public function reset(): void
+    {
+        $this->override = null;
     }
 
     /** The current owner (the email claim), or null when neither a token, an explicit binding nor a fallback is present. */

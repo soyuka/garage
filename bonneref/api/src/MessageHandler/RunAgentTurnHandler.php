@@ -174,6 +174,7 @@ final readonly class RunAgentTurnHandler
             // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike,
             // even if Messenger is about to retry — or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);
+            $this->owner->set(null);
         }
     }
 }
