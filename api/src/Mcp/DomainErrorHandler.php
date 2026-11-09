@@ -88,6 +88,12 @@ final readonly class DomainErrorHandler implements RequestHandlerInterface
                 'not_found',
                 $e->getMessage().' This is a definitive miss, not a failure: the upstream answered and has no such record. Do not retry with the same arguments.',
             ),
+            // Webmozart\Assert, Ulid::fromString, a constraint violation: the arguments are wrong, and
+            // the model can fix them. Without this the SDK answers a generic -32603.
+            $e instanceof \InvalidArgumentException => new ToolError(
+                'invalid_input',
+                rtrim($e->getMessage(), '.').'. Fix these arguments and call again.',
+            ),
             default => null,
         };
     }
