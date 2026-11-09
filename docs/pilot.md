@@ -66,8 +66,7 @@ container** (FrankenPHP worker mode holds the compiled container in memory) and 
 ## The motion of a piloted session
 
 A pilot run is human-paced, and the dashboard is built for that shape rather than for a turn's
-(`dashboard/CHOREOGRAPHY.md` § "The pilot driver" is the binding map; `dashboard/src/pilot.ts` is the
-pure core). What you will see, and the datum each thing encodes:
+(`dashboard/src/pilot.ts` is the pure core). What you will see, and the datum each thing encodes:
 
 - **No `turn:start` is needed.** The first `narrate_step` lifts the orb; the reducer treats a `status`
   arriving at rest as the start of a run.

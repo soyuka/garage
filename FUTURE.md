@@ -47,12 +47,11 @@ but **no Symfony Scheduler and no Notifier/Mailer** (verified 2026-06-21 — non
 - Symfony Scheduler → periodic sweep message (daily) → per-vehicle `DueMaintenanceCalculator`
   → emit alert when a service crosses due/overdue (and de-dupe so one alert per (vehicle, type)
   transition, not every sweep).
-- Surface: the landing zone already exists — Le Noyau's "à-décider" ambient inbox
-  (`dashboard/src/noyau/state.ts` `DecisionItem` kind `'notify'` + `AmbientInbox.tsx`) queues
-  concerns behind the ember badge with a `planifier` affordance keyed by `serviceType`/`vehicleIri`.
-  Today it's fed only by a live, in-session Mercure health-crossing (the existing §9 "overdue
-  crossing" `concern` event) — still reactive, not a push, and gone once the tab closes. The sweep's
-  job is to feed this same queue for real: cross-session, from the scheduler, not from a live write.
+- Surface: the "à-décider" inbox was removed (2026-11-09); a concern now lands as a retained notice
+  card (`toast`) plus a narration line (the §9 "overdue crossing" `concern` event). Today it is fed only
+  by a live, in-session Mercure health-crossing — still reactive, not a push, and gone once the tab
+  closes. The sweep's job is to feed that same surface for real: cross-session, from the scheduler,
+  not from a live write.
   Email / web-push later.
 - Respect owner tenancy (`owner` seam) so alerts route to the right user once multi-tenancy
   lands — single shared garage for now.
@@ -126,7 +125,7 @@ source, so it trails.
 ## Render vocabulary — surfaces the agent cannot reach
 
 Found 2026-08-15 by auditing ~28 real garage prompts against the 29 live MCP tools and the render
-surfaces in `dashboard/`. Full analysis + the design brief: `docs/design-inspiration.md`.
+surfaces in `dashboard/`.
 
 **The shape:** the dashboard grew surfaces the wire vocabulary cannot address, so the agent reads
 real data and has nowhere to put it — falling back to a prose `toast`, which `stage/CLAUDE.md`
@@ -156,7 +155,7 @@ The plan side does not mirror the log side. A `MaintenanceRecord` is a **visit**
 the rail lists services one per row, so *vidange* + *filtre à huile* falling on the same date read as
 two jobs instead of one trip to the lift. Four further defects (parts catalogue inside the ambient
 layer, seven rows saying "OK", two competing time formats, a 2030 entry treated as a task) are
-worked through in `docs/design-inspiration.md` § 5.
+noted in the same audit.
 
 ### 7. Smaller gaps found in the same audit
 
@@ -177,8 +176,7 @@ worked through in `docs/design-inspiration.md` § 5.
   the region lookup needs. Decide whether the axle survives as a distinct region key before folding.
 - **The composer input carries no visible lock affordance while `busy()` is true** (`Composer.tsx` never
   disables it; the lock is `send()`'s no-op, `Atelier.tsx:519`) — under either driver an operator can type
-  into an input that swallows Enter. Noticed 2026-09-04 while designing the pilot handle (CHOREOGRAPHY
-  § The pilot driver).
+  into an input that swallows Enter. Noticed 2026-09-04 while designing the pilot handle.
 
 ---
 
@@ -212,8 +210,7 @@ gain `0.14` needs. Denoising a generated clip down to a clean two-pulse tone may
 rendering the tone physically or sourcing a CC0 sample. Try one clean-source route before assuming
 generation is the path. The *design* target found in the same session still holds and is the useful
 output: **no strike transient, physically-credible machine resonance** (coil, tuning fork) — a bell,
-a chime or a kitchen timer reads domestic, and a sci-fi UI blip is forbidden outright by
-`docs/prompt-pilot-motion.md:124` § Taste.
+a chime or a kitchen timer reads domestic, and a sci-fi UI blip is forbidden outright.
 
 **Licensing gate, unresolved:** free-tier ElevenLabs output may be attribution-bound or
 non-commercial. The icon would be *committed into the product*, so this must be checked against the
@@ -221,8 +218,7 @@ live terms — not from memory — before any generated asset lands in git.
 
 **Re-read 2026-09-11, and the re-read failed.** The noise that disqualifies generation for the *icon*
 looked like the specification for a *room bed*, and one was built on that reading — then removed the
-same day as annoying (`docs/voice.md` § The room bed, `CHOREOGRAPHY.md` § "The bed that was built and
-removed"). Everything above still stands for the échéance icon, which remains unbuilt. The generated
+same day as annoying (`docs/voice.md` § The room bed). Everything above still stands for the échéance icon, which remains unbuilt. The generated
 asset is no longer in the tree, but the gate is **live again and for real**: `dashboard/public/audio/`
 now carries two generated cues (`select.wav`, `card.wav`) plus three files downloaded from the
 ElevenLabs library. Provenance per file, the redistribution clause and the unread plan tier are written
@@ -291,7 +287,7 @@ part deliberately left French, with the traps found while doing the rest.
 
 `dashboard/src/i18n/` (`locale.ts` pure core + `LocaleProvider.tsx` + `fr.ts`/`en.ts` catalogs typed
 `Messages = typeof fr`) · `format.ts` and `labels.ts` take a **required** `locale` · the switch beside
-the audition toggle (`AmbientInbox.tsx`) · `Accept-Language` on `authFetch` and `/tts` ·
+the audition toggle · `Accept-Language` on `authFetch` and `/tts` ·
 `framework.yaml` `default_locale`/`enabled_locales`/`set_locale_from_accept_language` ·
 `App\I18n\Locale`, `LocaleContext`, `AgentMessages` · `SpeechClient::synthesize($text, Locale)`
 sending `language_code` · `status {tool}` on the wire so the step chips no longer keyword-match
@@ -424,10 +420,6 @@ Rules live in `voice.ts` with the rest, per that file's stated design (the hook 
 4. Operator workaround, unchanged and still per-machine: `about:config` -> `media.autoplay.default = 0`,
    or the `permissions.sqlite` row. Worth a line in `stage/CLAUDE.md` § launch checklist either way.
 
-`dashboard/CHOREOGRAPHY.md` § Audition still claims the handler "cannot discriminate on the error and
-treats every failed `play()` the same way" — that sentence is now wrong in both directions and needs
-rewriting to match `mediaOutcome`.
-
 ### 15. `EntretienRail` duplicate due rows — CLOSED (shipped 2026-08-17)
 
 **It was not a forecasting fault.** The data question the entry demanded be answered first: two due
@@ -470,11 +462,11 @@ provenance stamp — its age plus a `· voir Données` / `· see Data` mark (`no
 therefore allowed to disagree, and the stamp is what makes the disagreement legible rather than messy.
 The alternatives — making the card carry no values, or auto-closing one surface when the other rises —
 were rejected: the first needs the agent to stop putting numbers in toasts, the second takes away a panel
-the operator deliberately opened. The rule has its row in `dashboard/CHOREOGRAPHY.md` § Audition.
+the operator deliberately opened.
 
 The age caption is relative (`il y a 3 min`), not an hour, because `Notice.at` is a `performance.now()`
-stamp and there is no wall clock to print. `whenLabel()` moved out of `AmbientInbox.tsx` into
-`dashboard/src/noyau/age.ts` (clock-injected, tested) so the inbox and the notice stack cannot drift.
+stamp and there is no wall clock to print. `whenLabel()` lives in
+`dashboard/src/noyau/age.ts` (clock-injected, tested).
 
 **Still open:** nothing forces the agent to keep a card's numbers consistent with the panel — the stamp
 makes staleness readable, it does not prevent it.
@@ -487,7 +479,7 @@ makes staleness readable, it does not prevent it.
 
 - History ring (2026-09-05): the car does not yet rescale to make room for the ring + the right-docked
   Carnet — both share the left ~60% of the viewport as-is, untested against a very long car (utilitaire).
-- tasks/visits focus has no body yet (CHOREOGRAPHY § Stations under both drivers).
+- tasks/visits focus has no body yet.
 
 ## MCP error mapping — CLOSED (2026-09-14), with one loose end
 

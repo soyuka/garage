@@ -180,8 +180,7 @@ worker containers and restart both, or the worker keeps serving the old containe
 ## Phase 3 — `dashboard/` playback (pure logic first) ✅ BUILT 2026-08-16
 
 `dashboard/src/noyau/voice.ts` (pure, 8 unit tests in `voice.test.ts`) + `useVoice.ts` (the impure
-edge). Built as specified; the three questions the plan left open were ruled on and written into
-CHOREOGRAPHY § "Audition — speech, for ANSWERS":
+edge). Built as specified; the three questions the plan left open were ruled on:
 
 - **`vu` cancels its own utterance.** The card list, not an event stream, is the queue's input, so a
   dismissed card takes its voice with it. Audio outliving its card would be audio-only.
@@ -206,7 +205,7 @@ Original plan:
 - `src/noyau/useVoice.ts` — the impure edge: `POST /tts`, object URL, `<audio>`, `onended` → `next`.
   Prefetch on notice arrival so the audio is ready before the operator finishes reading the card.
   A 204 or any failure is **silent** — never a toast about a toast.
-- **Autoplay unlock** (CHOREOGRAPHY § "The AudioContext trap"): a piloted session produces **no
+- **Autoplay unlock**: a piloted session produces **no
   gesture** in the browser, so playback must be unlocked from the operator's first real interaction
   and then asserted, not assumed. `<audio>.play()` is under the same policy as WebAudio.
 - Tests: `voice.test.ts` covers cap, stale drop, dedup, ordering. The hook stays untested (no jsdom in
@@ -215,26 +214,21 @@ Original plan:
 ## Phase 4 — the toggle ✅ BUILT 2026-08-16
 
 `useAudition()` in `useVoice.ts` (persisted `mpa.audition`, default off) + the speaker control in the
-à-décider inbox head (`AmbientInbox.tsx`, `ambientInbox.css`), threaded through `SceneView.tsx` from
-`Atelier.tsx`. Glyph carries state by SHAPE (waves vs cross), never colour alone.
+audition control, threaded through `SceneView.tsx` from
+`Atelier.tsx` (it first lived in the à-décider inbox head; that inbox was removed 2026-11-09). Glyph carries state by SHAPE (waves vs cross), never colour alone.
 
 Not done: the `stage/bin/…` preflight assertion that the stage profile ships muted.
 
 Original plan:
 
-- Ships **muted**. One persisted preference, `localStorage['mpa.audition']` — the key CHOREOGRAPHY
-  already reserved beside `mpa.recency` (verified: nothing reads it yet).
-- Lives in the **à-décider inbox** header, where the doc already said the audio affordance belongs.
+- Ships **muted**. One persisted preference, `localStorage['mpa.audition']` — the key already
+  reserved beside `mpa.recency` (verified: nothing reads it yet).
+- Lived in the (since removed) **à-décider inbox** header.
   Manual reset + it is the volume control (MIL-STD-1472F §7.2.9.11 via the audition section).
 - `stage/bin/…` preflight asserts muted for the stage profile, like the earcon rule.
 
 ## Phase 5 — docs (same commit as the code)
 
-- `dashboard/CHOREOGRAPHY.md` § Audition: the speech row read "rejected" long after speech shipped.
-  It is a **built** row for *answers* and keeps the rejection for the *alert signal* — two different
-  claims. This was originally appended rather than rewritten because the file was
-  FROZEN-but-extensible; that freeze is **lifted (2026-09-04)** precisely because the workaround left
-  two opposed statements in one document. Correct the row in place and date it.
 - `dashboard/CONTRACT.md`: unchanged — no new frame. Worth one sentence saying so explicitly.
 - `docs/voice.md`: mark route A superseded by the hosted decision, keep Piper documented as the
   offline fallback (it is the only option that survives a dead conference wifi).
@@ -275,7 +269,7 @@ LINEAR16/OGG_OPUS, header vs OAuth).
 
 Not speech, and **not a palette**. One asset, replacing one existing sound.
 
-CHOREOGRAPHY § Audition rejected recorded auditory icons on a single constraint — *"no external CDN
+The earlier audition design rejected recorded auditory icons on a single constraint — *"no external CDN
 assets, the page stays self-contained"* — while conceding the evidence favours them (McNeer et al.
 2018; Edworthy et al. 2014, 2017), and admits the current `échéance` is "honestly an abstract earcon"
 only *because* synthesised oscillators cannot make a credible icon. An asset generated **once at build
@@ -293,20 +287,20 @@ is why phase 7 should ship first and can ship alone.**
 
 Two rules in the repo constrain it harder than they first look, and they point the same way:
 
-1. **`docs/prompt-pilot-motion.md:124` § Taste** — *"The reference is a well-instrumented machine, not
+1. **Taste** — *"The reference is a well-instrumented machine, not
    a sci-fi movie UI: an aircraft PFD, a mixing desk, a hospital monitor."* A futuristic interface
    blip is the failure mode this names, and it also **forfeits the entire justification for the
    phase**: swapping an abstract earcon for a prettier abstract earcon gains nothing the evidence
    predicts. The gain comes from the sound being *of a thing*.
 2. **Room-proof (HFDS §7.2.3.4)** — it must not resemble a sound the room already makes. This
-   disqualifies CHOREOGRAPHY's own worked example: a garage is full of ratchets, clicks and impacts,
+   disqualifies the obvious worked example: a garage is full of ratchets, clicks and impacts,
    so *"a real ratchet"* is exactly wrong, and every transient-led icon with it.
 
 The intersection is narrow and it is the same brief Villeneuve gave Territory Studio for Blade Runner
-2049 — **"organic, abstract, optical and physical"** (`docs/design-inspiration.md:77`): a sustained,
+2049 — **"organic, abstract, optical and physical"**: a sustained,
 resonant, physically-credible machine tone with **no strike transient**. Not a bell, not a timer, not
 a chime — those read domestic. A coil, a servo settling, a bowed metal body. « Restraint reads as
-real » is the same section's other lesson and it applies to the ear unchanged.
+real » is the other lesson drawn from it and it applies to the ear unchanged.
 
 Everything else in the existing spec is inherited unchanged and is not up for renegotiation: two
 pulses ~1.2 s apart, fires at most once per sweep, 500–3000 Hz, ≥15 ms attack, `setTargetAtTime`
@@ -339,7 +333,7 @@ question about a file that ships.
 
 The `échéance` signal is a physical machine tone with no strike transient, ships muted, sounds
 identical offline, adds under ~30 KB, and degrades to the current oscillator if decoding fails. The
-`docs/prompt-pilot-motion.md` § Taste rule is satisfiable by someone else listening blind: asked what
+taste rule above is satisfiable by someone else listening blind: asked what
 the sound *is*, they name a machine, not a user interface.
 
 ## Risks

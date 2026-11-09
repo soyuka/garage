@@ -1,12 +1,12 @@
 # Voice — can the Atelier answer out loud? (research, 2026-08-16)
 
-`dashboard/CHOREOGRAPHY.md` § Audition rejected speech in one table row, for four reasons. This
+The earlier audition design rejected speech in one table row, for four reasons. This
 document re-opens exactly that row, because the rejection was written about a **signal** (an earcon
 replacing "échéance dépassée") and the question now is a different one: the agent's **answers** —
 « j'ai pris la Mazda, tu en as deux », « pas de filtre à air au catalogue pour ce moteur » — currently
 land as more text on a screen that already has a lot of text.
 
-The retained notice stack (CHOREOGRAPHY § "The notice stack") is the visual half of that fix. Voice
+The retained notice stack is the visual half of that fix. Voice
 would be the audible half of the **same** `toast` frame — which is what keeps the binding rule intact:
 *nothing is audio-only*, because every spoken line is a card on screen with a dismiss control.
 
@@ -153,8 +153,8 @@ placeholder WAV header pocket-tts uses, see § Edge silence below and `docs/voic
 | medium, cold (8.5 s of audio) | **0.208 s** | 5.93 s |
 
 First sound moves from "when the line is done" to ~0.2–0.5 s after the request — about the time a
-reader takes to glance at the card — so no holding of the text was needed and CHOREOGRAPHY hard rule 1
-(*motion may overlap an arrival, never gate one*) is untouched. The client primes 160 ms of audio
+reader takes to glance at the card — so no holding of the text was needed and the rule that
+*motion may overlap an arrival, never gate one* is untouched. The client primes 160 ms of audio
 (`tokens/audition.ts` `SPEECH.primeSeconds`) before the first sample so one late piece is absorbed.
 
 Caddy needs nothing: its reverse proxy flushes immediately for a response without `Content-Length`,
@@ -192,7 +192,7 @@ rather than one. `SpeechController::__invoke()` now runs the outgoing text throu
 `App\Speech\Verbalizer` right before handing it to the backend — a deterministic pronunciation
 dictionary, not a rephraser: it rewrites symbols, units, digit grouping and separators for the ear
 and adds no content. The card on screen is untouched; only what reaches the vendor changes
-(`dashboard/CHOREOGRAPHY.md` § "Audition — speech, for ANSWERS", corrected the same day: "the same
+(corrected the same day: "the same
 string" → "the same WORDS, pronounced").
 
 Before/after, first golden (`tests/Unit/Speech/VerbalizerTest.php`):
@@ -404,12 +404,11 @@ is above, but no one has listened to a seam yet — that needs a browser and a r
 
 ## The room bed (2026-09-11) — built, auditioned, REMOVED
 
-**The bed is not in the product.** It was built, heard, found annoying and reverted the same day
-(`CHOREOGRAPHY.md` § "The bed that was built and removed"). What follows is kept as the **generated-SFX
+**The bed is not in the product.** It was built, heard, found annoying and reverted the same day. What follows is kept as the **generated-SFX
 recipe**, which is reusable and was paid for: prompt wording, the cost model, the measurements worth
 taking and the mastering steps. Read it as method, not as a description of anything that ships.
 
-It reversed `CHOREOGRAPHY.md` § "a continuous ambient bed". Generated, not sourced —
+It reversed the earlier rejection of a continuous ambient bed. Generated, not sourced —
 `POST /v1/sound-generation`, **200 credits per generation, flat**, against a pool where TTS costs
 1 credit per character. That price is why generation is a **build-time** step with a committed asset
 and never a runtime call: one bed generated per session of an app would outspend the entire voice.

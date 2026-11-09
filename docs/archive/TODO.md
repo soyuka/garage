@@ -2,7 +2,7 @@
 
 Single source of truth for outstanding work. Backend detail that used to live in
 `api/docs/TODO.md` is folded in here; that file is gone. Design docs that are still
-active are referenced inline (`docs/next_plan.md`, `agent-findings.md`, `docs/ui.md`,
+active are referenced inline (`docs/next_plan.md`, `agent-findings.md`,
 `api/docs/PLAN.md`, `api/docs/AUTH.md`, `api/docs/PARTSAPI.md`).
 
 ---

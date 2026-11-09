@@ -85,7 +85,7 @@ docker compose up -d        # php (FrankenPHP + Mercure), worker, MongoDB, Postg
 | bonneref: second MCP server (read-only catalogue: plate, VIN, makes/models, categories, articles, narrowing, brand comparison) | [`bonneref/api/src/ApiResource/`](bonneref/api/src/ApiResource/), [`bonneref/api/config/packages/mcp.yaml`](bonneref/api/config/packages/mcp.yaml) |
 | bonneref finder: a second agent that asks questions and renders parts | [`bonneref/api/src/Agent/Finder/`](bonneref/api/src/Agent/Finder/) |
 | mpa talks to bonneref over HTTP, forwarding the caller's bearer | [`BonnerefClient.php`](api/src/Bonneref/BonnerefClient.php) |
-| The Atelier (React + react-three-fiber) | [`dashboard/`](dashboard/), [`dashboard/CONTRACT.md`](dashboard/CONTRACT.md), [`dashboard/CHOREOGRAPHY.md`](dashboard/CHOREOGRAPHY.md) |
+| The Atelier (React + react-three-fiber) | [`dashboard/`](dashboard/), [`dashboard/CONTRACT.md`](dashboard/CONTRACT.md) |
 
 ## What we found broken upstream
 

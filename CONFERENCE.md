@@ -24,7 +24,7 @@ That is the talk.
 
 ## The one rule that governs all of it
 
-`docs/prompt-pilot-motion.md` § "Hard rules" 1 says **no theatre**: a staged 320/950/1900 ms beat
+The rule is **no theatre**: a staged 320/950/1900 ms beat
 sheet was deleted on 2026-08-14 (`0b7fdb5`) because it narrated at the user.
 
 That rule is not repealed here. Read it precisely: **it bans padded *time*, not spatial drama.** A
@@ -34,8 +34,6 @@ motion layer is for. So:
 - Motion may **overlap** an arrival. It may never **gate** one. If the panel can open now, it opens
   now and animates while open.
 - No `sleep` anywhere in the render path, no artificial step pacing, no "thinking…" that isn't.
-- Every new motion gets a row in `dashboard/CHOREOGRAPHY.md` before it is written, in the existing
-  vocabulary. That file is the authority and it is **revisable** — correct a stale row and date it.
 
 If a beat only works because something was slowed down, the beat is wrong and gets cut.
 
@@ -243,7 +241,7 @@ the thing that is broken.
 | command | does |
 | --- | --- |
 | `mpa stage up` | compose up, wait healthy, `rm -rf var/cache`, **restart `php` AND `worker`** (FrankenPHP worker mode holds the compiled container *and* the tool schemas — `rm -rf` alone is not enough), open the tunnel, print the connector URL + a QR for the phone, open the dashboard kiosk-mode on the projector display |
-| `mpa stage check` | the preflight. Green/red, no prose. Asserts: Mercure stream open · pilot topic **matches on both sides** (A.4) · `tools/list` returns the expected count · a real `toast` round-trip observed on the SSE stream · cert accepted by the browser profile · GPU frame budget sane · **audio muted** and, if ever unmuted, `AudioContext.state === 'running'` (`CHOREOGRAPHY.md` § Audition — Chrome gates the unlock on a per-profile Media Engagement Index, so it can work on the dev laptop and fail on the stage laptop with identical code) |
+| `mpa stage check` | the preflight. Green/red, no prose. Asserts: Mercure stream open · pilot topic **matches on both sides** (A.4) · `tools/list` returns the expected count · a real `toast` round-trip observed on the SSE stream · cert accepted by the browser profile · GPU frame budget sane · **audio muted** and, if ever unmuted, `AudioContext.state === 'running'` (Chrome gates the unlock on a per-profile Media Engagement Index, so it can work on the dev laptop and fail on the stage laptop with identical code) |
 | `mpa stage rehearse` | replays the three beats deterministically from a recorded frame script, **no LLM, no network**. This is both the rehearsal loop and the live fallback if voice or wifi dies. |
 | `mpa stage reset` | restore the demo database to a known snapshot — between rehearsals, and once before walking on stage |
 
@@ -290,7 +288,7 @@ never would. Blueprint edges, existing signal colours, cyan stays rationed to Le
 
 Server side this is one `McpTool` entry on `src/ApiResource/Dashboard.php`, one Input DTO, one Processor
 reusing `RenderIntentTools` — the same seven-tool pattern already there. Client side: a `CONTRACT.md`
-frame shape, a `CHOREOGRAPHY.md` row, a reducer case, the scene wiring.
+frame shape, a reducer case, the scene wiring.
 
 **This is the slide.** Adding a whole new capability to a voice-driven 3D interface is a resource, a DTO
 and a processor. That is the API Platform argument, made in code the room can read in one screen.
@@ -332,7 +330,7 @@ is caused-by-data motion, so it is inside the rule.
 | when | what | why then |
 | --- | --- | --- |
 | weeks 1–2 | A (transport) + B `up`/`check` | the only parts that can fail in a way no amount of polish rescues. Nothing else is worth building until voice reaches the UI at least once. |
-| weeks 2–4 | C1–C4 (the reveal) | the actual new capability; TDD + CHOREOGRAPHY rows first, per repo convention |
+| weeks 2–4 | C1–C4 (the reveal) | the actual new capability; TDD first, per repo convention |
 | weeks 4–5 | C5 projector pass + D | both are tuning passes that need C landed to be worth doing |
 | weeks 5–6 | B `rehearse`/`reset` + E | rehearsal is the last thing and must not be compressed |
 

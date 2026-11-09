@@ -11,17 +11,15 @@ and the stream that landed afterwards stayed open with nothing holding it. Stric
 the press started the microphone from inside a `setState` updater, which React double-invokes, so each
 press asked for two streams and leaked the loser. The control now **latches** (press to start, press
 again to stop), the machine has an explicit `arming` phase for the gap, and the transitions are applied
-off a ref instead of an updater (`dictation.ts`, `useDictation.ts`; CHOREOGRAPHY § "La dictée",
-corrected the same day). **Still not verified against a real microphone end to end** — that is the rest
+off a ref instead of an updater (`dictation.ts`, `useDictation.ts`; corrected the same day). **Still not verified against a real microphone end to end** — that is the rest
 of phase 4, and nothing here claims a transcript has ever come back.
 
 The counterpart to `docs/voice-plan.md`. That document made the Atelier answer out loud; this one lets
 the operator instruct it out loud, hands in an engine bay, because typing a plate and a five-digit
 odometer reading on a laptop balanced on a wing is the gesture the whole product is supposed to remove.
 
-The motion rows and the binding rules are in `dashboard/CHOREOGRAPHY.md` § "La dictée — the mic, for
-INSTRUCTIONS"; the wire row is in `dashboard/CONTRACT.md`. Read those first — they are the authority,
-this file is the build order. Nothing in either of them names a provider, which is the point: the
+The wire row is in `dashboard/CONTRACT.md`. Read it first — it is the authority,
+this file is the build order. Nothing in it names a provider, which is the point: the
 decision below is swappable and the rules are not.
 
 ## Decisions locked (2026-09-11)
@@ -30,7 +28,7 @@ decision below is swappable and the rules are not.
 |---|---|
 | Provider | **ElevenLabs Scribe** — the same vendor and the same server-side key the voice already uses |
 | What is dictated | the existing **`instruction`** string — `POST /agent/turn` is untouched. **No new wire verb**, no frame, no `UIAction` |
-| Submit rule | ~~the transcript fills the composer; the turn starts on Enter~~ → **the transcript sends itself** (reversed 2026-09-11 on the operator's use of the Enter version; the argument traded away is in CHOREOGRAPHY § "La dictée"). It still fills the composer instead whenever it cannot be sent — a turn already running, an inert composer |
+| Submit rule | ~~the transcript fills the composer; the turn starts on Enter~~ → **the transcript sends itself** (reversed 2026-09-11 on the operator's use of the Enter version). It still fills the composer instead whenever it cannot be sent — a turn already running, an inert composer |
 | Recording mode | **push-to-talk**. No wake word, no always-listening, no VAD |
 | Where the key lives | `api/` only. The browser never sees it and only ever posts to same-origin `/stt` |
 
@@ -255,8 +253,7 @@ wiring left honest about being untestable.
 | `dashboard/src/Atelier.tsx` + `scene/SceneView.tsx` | BUILT — an open mic HOLDS the audition by passing `audition && !listening` into `useVoice`, which reuses the proven mute path (current line stops, queue empties), and lights Le Noyau's existing `listening` phase |
 
 The mic needs a **secure context and a user gesture** — `https://localhost` qualifies even with the
-self-signed cert, and the press is the gesture, the same one that unlocks the `AudioContext`
-(CHOREOGRAPHY § "The AudioContext trap"). Firefox deserves an explicit check: it refused the *output*
+self-signed cert, and the press is the gesture, the same one that unlocks the `AudioContext`. Firefox deserves an explicit check: it refused the *output*
 path on this origin for autoplay reasons (`FUTURE.md` § 14), and mic permission is a separate grant.
 
 ## Phase 4 — live, and what must be measured before it ships

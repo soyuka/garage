@@ -39,13 +39,13 @@ Five, and a task rarely touches only one:
 | surface | what it is | read first |
 | --- | --- | --- |
 | `api/` | Symfony 7 / API Platform. Garage domain and the Motul upstream responses in MongoDB (Doctrine ODM); parts catalog + plate lookup come from bonneref over HTTP (`BonnerefClient`, bearer forwarded); Postgres backs the Messenger queue only; bills and documents live on Flysystem (local volume, S3 in prod); Mercure pushes render frames. Also hosts the MCP server. | `docs/mcp.md`, `api/docs/PLAN.md`, `FUTURE.md` |
-| `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `dashboard/CHOREOGRAPHY.md`, `dashboard/PROVENANCE.md` |
+| `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `PRODUCT.md` |
 | `stage/` | The pilot harness — **current workstream**. Its own `CLAUDE.md` is the operator protocol (not repo guidance), `.mcp.json` points the session at the public MCP server, `bin/atelier` is the launcher. | `stage/CLAUDE.md`, `docs/pilot.md`, `CONFERENCE.md` |
 | `bonneref/` | The parts finder: React front + its own Symfony app in `bonneref/api` (TecDoc catalog, SIV plate lookup, finder agent, catalog MCP server). Deployed on bonneref.fr; mpa consumes it over HTTP only. | `bonneref/api/README.md`, `docs/bonneref-extraction.md` |
 | `admin/` | Vite SPA, largely dormant. | — |
 
 Further entry docs by topic: `api/` maintenance domain → `FUTURE.md` § GMAO core (the anti-rebuild
-section: it lists what already ships); `dashboard/` motion → `docs/prompt-pilot-motion.md`;
+section: it lists what already ships);
 conference → `CONFERENCE.md` § "the one rule".
 
 ### Splitting a multi-surface ask
@@ -130,12 +130,6 @@ frame) is *one* task owned by whoever holds `dashboard/src/types.ts` — not two
 ## Conventions specific to this repo
 
 - Test-first, always: failing test shown before production code.
-- A new motion gets its row in `dashboard/CHOREOGRAPHY.md` **before** it is written. That file is the
-  authority and it is **revisable** (unfrozen 2026-09-04): correct a stale row rather than appending a
-  contradiction, date the correction, and never silently erase a decision — if a rule is being
-  reversed, say what it was and why.
-- No theatre in the render path: no `sleep`, no padded pacing, no staged beat sheet. Motion may
-  overlap an arrival, never gate one (`docs/prompt-pilot-motion.md` § Hard rules 1).
 - Dashboard tests on the host need a real `dashboard/node_modules` — the host directory is a
   root-owned empty docker anonymous volume until you `rmdir` it and `npm install`.
 - Bloom multisampling in the scene MUST stay `0`.

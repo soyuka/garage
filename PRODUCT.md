@@ -4,37 +4,35 @@
 
 product
 
+## What this is
+
+A personal side project, never sold. Also the entry for the Symfony AI & MCP hackathon (submission 2026-11-22),
+so the demo matters: a jury clones it, connects an MCP client, and watches the garage react.
+
 ## Users
 
-Individual owners and small-fleet managers ("parc auto") in France maintaining cars, motos, utilitaires and groundscare machines. They are in a task: logging a maintenance visit, checking what's due, asking the agent to find a part. Mechanic-literate — they read part references and mileages verbatim. **French by default, English available** (since 2026-08-16): the interface ships `fr` and switches to `en` from the à-décider inbox, persisted in `mpa.locale`. The domain does not translate — a Contrôle Technique and a carte grise stay what they are.
+Individual owners and small-fleet managers ("parc auto") in France maintaining cars, motos, utilitaires and groundscare machines. They are in a task: logging a maintenance visit, checking what's due, asking the agent to find a part. Mechanic-literate — they read part references and mileages verbatim. French by default, English available. The domain does not translate — a Contrôle Technique and a carte grise stay what they are.
 
 ## Product Purpose
 
-AI-native vehicle-maintenance tracker (GMAO-leaning, not a DMS): forecast what's due from logged visits and usage, surface overdue work live, and let an embodied agent (Le Noyau) do the catalog/paperwork legwork. Success = the owner knows the health of the whole parc in one glance and never misses a service.
+AI-native vehicle-maintenance tracker (GMAO-leaning, not a DMS): forecast what's due from logged visits and usage, surface overdue work live, and let an agent do the catalog/paperwork legwork. Success = the owner knows the health of the whole parc at a glance and never misses a service.
 
-## Brand Personality
+## The agent drives the screen
 
-A lit garage at night. Warm, calm, alive. The interface is a *place* (floor, turntable, workbench, a presence that moves), not a dashboard. Cinematic but honest — every glow encodes a real value.
+The interface is not only clicked, it is driven. An MCP client (Claude Code, Claude Desktop, Goose…) talks to
+the garage's MCP server; its render tools push frames over Mercure and the app reacts live. The same frames
+come from the in-app agent. What the agent can ask the screen to do (`dashboard/src/types.ts`, transport in
+`dashboard/CONTRACT.md`): list and select vehicles, show facts/specs, focus a panel, propose actions (CTA),
+show parts for a planned task, show history, focus a body region of the car, reveal a part assembly, open a
+document (bill PDF, page + highlight), toast, report status, mark a turn start/end. How each one looks and
+moves is open.
 
-The shipped stage reads this as a lit **workbench**, not a void: a cutting-mat floor under warm light, the turntable and glow unchanged, the car itself kept as a blueprint — a faint tinted night-glass shell under glowing HDR edges (`scene/CuttingMat.tsx`).
+## Assets to integrate
 
-## Anti-references
-
-- Neon arcade / candy-saturated configurators (CARBO): staging yes, saturation no.
-- All-cyan "command center" floods: cyan is rationed to the agent's intelligence only.
-- Flat SCADA/HMI panel grids (the deprecated "Control Panel" system): no return to tonal-only flatness.
-- Chat-transcript UIs: no message bubbles, ever.
-
-## Design Principles
-
-- **Light is meaning.** Emission always encodes status (vert/ambre/rouge, cyan = the agent thinking). Decor never borrows a signal color; no accent as a large fill.
-- **Telemetry reads off the machine.** Health lives on the car and the ring it stands on; the glass panel beside it carries the exact numbers.
-- **No false precision.** Health rounds to 5, forecasts say `dans environ 2 mois` — except overdue, which is exact.
-- **Honesty survives degradation.** Every value must exist outside its glow; the flat "plan" list is always reachable.
-- **Mono is data.** Plates, km, dates, refs render in JetBrains Mono, formatted for the interface language — French thin-space `142 000 km`, English `142,000 km`. `src/format.ts` is the single source, and its `locale` argument is required so no call site can quietly stay French.
-- **Desktop-only.** The garage is a workbench view, not a pocket one: the layout targets a desktop/laptop
-  viewport and makes no sub-900px accommodation — no responsive collapse, no mobile nav.
+Real 3D vehicle models ship in `dashboard/public/*.glb` (web + thumb variants: Renault Espace IV, Peugeot 206,
+Mazda 6, plus generic cv/moto/groundscare defaults) and generic part meshes in `dashboard/public/parts`. The
+redesign uses them; their rendering treatment is open.
 
 ## Accessibility & Inclusion
 
-Color-blind safe: every signal pairs with a mono label; hotspot glyphs differ by shape. `prefers-reduced-motion` collapses breathing/pulses/descents to static states. WCAG contrast maintained for mono telemetry on glass. Flat list fallback for weak GPUs.
+Color-blind safe: no state carried by color alone. `prefers-reduced-motion` honored. WCAG contrast on data.
