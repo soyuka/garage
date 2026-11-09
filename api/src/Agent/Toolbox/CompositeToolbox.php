@@ -114,10 +114,17 @@ final class CompositeToolbox implements ToolboxInterface
     private function ownsMcp(string $name): bool
     {
         if (null === $this->mcpNames) {
-            $this->mcpNames = [];
+            $names = [];
             foreach ($this->mcpToolbox->getTools() as $tool) {
-                $this->mcpNames[$tool->getName()] = true;
+                $names[$tool->getName()] = true;
             }
+            // An empty listing is a transient failure (the in-process server could not list), not a
+            // server with no tools: caching it would route every garage tool to the render toolbox
+            // for the life of the worker.
+            if ([] === $names) {
+                return false;
+            }
+            $this->mcpNames = $names;
         }
 
         return isset($this->mcpNames[$name]);

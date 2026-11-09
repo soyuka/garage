@@ -60,6 +60,22 @@ final class CompositeToolboxTest extends TestCase
         return $mcp;
     }
 
+    public function testAnEmptyMcpListingIsNotMemoised(): void
+    {
+        $mcp = $this->createStub(McpToolbox::class);
+        $mcp->method('getTools')->willReturnOnConsecutiveCalls(
+            [],
+            [new Tool(new ExecutionReference(McpToolbox::class, 'execute'), 'get_service_parts', '')],
+        );
+        $mcp->method('execute')->willReturnCallback(
+            static fn (ToolCall $c): ToolResult => new ToolResult($c, 'mcp-ok'),
+        );
+        $toolbox = $this->toolbox(new \ArrayObject(), $mcp);
+
+        $this->assertSame('render-ok', $toolbox->execute(new ToolCall('id-1', 'get_service_parts', []))->getResult());
+        $this->assertSame('mcp-ok', $toolbox->execute(new ToolCall('id-2', 'get_service_parts', []))->getResult());
+    }
+
     public function testNarratesBeforeRunningAGarageTool(): void
     {
         /** @var \ArrayObject<int, array<string, mixed>> $published */
