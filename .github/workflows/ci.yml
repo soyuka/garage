@@ -31,8 +31,10 @@ jobs:
       dashboard: ${{ steps.filter.outputs.dashboard }}
       bonneref-front: ${{ steps.filter.outputs.bonneref-front }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dorny/paths-filter@v3
+      # Credentials kept on this one checkout: on a push, paths-filter `git fetch`es the pushed range
+      # from this private repo. The job token is read-only and nothing else runs here.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
         id: filter
         with:
           filters: |
@@ -90,18 +92,20 @@ jobs:
       APP_ENV: test
       MONGODB_URL: mongodb://127.0.0.1:27017
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
       # PopplerPdfTextExtractor shells out to pdftotext on document uploads.
       - name: Install poppler-utils
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends poppler-utils
-      - uses: shivammathur/setup-php@v2
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: ${{ env.PHP_EXTENSIONS }}
           ini-values: memory_limit=1G, apc.enable_cli=1, upload_max_filesize=50M, post_max_size=52M # api/frankenphp/conf.d/10-app.ini
           coverage: none
           tools: composer:v2
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@a8d0d959dab41457692a5e2041bd9b757a119e3f # 3.2.1
         with:
           working-directory: api
       - name: PHP CS Fixer
@@ -131,15 +135,17 @@ jobs:
       # bonneref/api/.env points at the dev override's published 27018.
       MONGODB_URL: mongodb://127.0.0.1:27017
     steps:
-      - uses: actions/checkout@v4
-      - uses: shivammathur/setup-php@v2
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@eb7c497e18156a6bbabfef1d3a82760b9eda3962 # 2.40.0
         with:
           php-version: ${{ env.PHP_VERSION }}
           extensions: ${{ env.PHP_EXTENSIONS }}
           ini-values: memory_limit=1G, apc.enable_cli=1, upload_max_filesize=10M, post_max_size=24M # bonneref/api/frankenphp/conf.d/10-app.ini
           coverage: none
           tools: composer:v2
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@a8d0d959dab41457692a5e2041bd9b757a119e3f # 3.2.1
         with:
           working-directory: bonneref/api
       - name: PHP CS Fixer
@@ -157,8 +163,10 @@ jobs:
       run:
         working-directory: dashboard
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
@@ -175,8 +183,10 @@ jobs:
       run:
         working-directory: bonneref
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
