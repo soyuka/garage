@@ -8,6 +8,7 @@ use App\Agent\Ui\ActionButton;
 use App\Agent\Ui\ActionPart;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\SpecNode;
+use App\Agent\Ui\SpokenSummary;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\TestDashboardChannel;
 use App\Tests\Mock\TestRenderTargets;
@@ -166,6 +167,24 @@ final class RenderIntentToolsTest extends TestCase
             ['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…'],
             json_decode($published->getData(), true),
         );
+    }
+
+    public function testNarrateCapsTheLineWhoeverCallsIt(): void
+    {
+        $published = null;
+        $hub = $this->createStub(HubInterface::class);
+        $hub->method('publish')->willReturnCallback(static function (Update $update) use (&$published): string {
+            $published = $update;
+
+            return 'id';
+        });
+
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new TestRenderTargets([self::VEHICLE], [self::TASK]));
+        $tools->narrate(str_repeat('Je relis le carnet entier ', 40));
+
+        $this->assertNotNull($published);
+        $message = json_decode($published->getData(), true)['message'];
+        $this->assertLessThanOrEqual(SpokenSummary::NARRATION_MAX, mb_strlen($message));
     }
 
     public function testNarrateStepPublishesAStatusFrameWithoutAToolKey(): void

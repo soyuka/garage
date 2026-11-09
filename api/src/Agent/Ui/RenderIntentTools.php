@@ -104,10 +104,12 @@ final class RenderIntentTools implements ResetInterface
      * Streams a line the MODEL chose to say to the dashboard's heartbeat (`narrate_step`, or a pilot's
      * own narration). A distinct `status` frame (not a `toast`) so it feeds only the ticker, never a
      * toast popup. It carries no `tool`: a line the model wrote has no fixed identity for the step chip.
+     * Capped here, since every caller (the in-app tool, the streamed early narration, the MCP pilot)
+     * hands it the model's text and the line may be spoken.
      */
     public function narrate(string $message): void
     {
-        $this->publish(['type' => 'status', 'message' => $message]);
+        $this->publish(['type' => 'status', 'message' => SpokenSummary::fit($message, SpokenSummary::NARRATION_MAX)]);
     }
 
     /**
@@ -123,7 +125,7 @@ final class RenderIntentTools implements ResetInterface
     /** `narrate_step`: the model's own line for the step it is about to take. */
     public function narrateStep(#[Schema(maxLength: SpokenSummary::NARRATION_MAX)] string $message): string
     {
-        $this->narrate(SpokenSummary::fit($message, SpokenSummary::NARRATION_MAX));
+        $this->narrate($message);
 
         return 'ok';
     }
