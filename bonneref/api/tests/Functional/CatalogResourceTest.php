@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use PHPUnit\Framework\Attributes\DataProvider;
+
 final class CatalogResourceTest extends AppTestCase
 {
     public function testListMakes(): void
@@ -95,5 +97,30 @@ final class CatalogResourceTest extends AppTestCase
         $ids = array_column($response->toArray()['hydra:member'], 'id');
         sort($ids);
         $this->assertSame([16683, 16844, 18827], $ids);
+    }
+
+    #[DataProvider('pagedCollections')]
+    public function testACatalogueCollectionIsPaged(string $path): void
+    {
+        $client = static::createClient();
+        $whole = $client->request('GET', $path)->toArray();
+        $this->assertGreaterThan(1, $whole['hydra:totalItems'], 'the fixture must hold more than one row to page');
+        $this->assertCount($whole['hydra:totalItems'], $whole['hydra:member'], 'the default page still holds the whole collection');
+
+        $first = $client->request('GET', $path.(str_contains($path, '?') ? '&' : '?').'itemsPerPage=1')->toArray();
+
+        $this->assertCount(1, $first['hydra:member']);
+        $this->assertSame($whole['hydra:totalItems'], $first['hydra:totalItems']);
+        $this->assertArrayHasKey('hydra:next', $first['hydra:view']);
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function pagedCollections(): iterable
+    {
+        yield 'makes' => ['/makes'];
+        yield 'part categories' => ['/cars/19107/part-categories?carType=PC'];
+        yield 'articles' => ['/cars/19107/part-categories/100259/articles?carType=PC'];
     }
 }

@@ -20,6 +20,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     operations: [
         new GetCollection(
+            // One default page still holds the largest collection the catalogue has (measured 2026-11-09: 509 makes,
+            // 704 categories of a car, 1685 articles of one category), so a caller reading only the first page is whole.
+            paginationItemsPerPage: 600,
+            paginationMaximumItemsPerPage: 600,
+            paginationClientItemsPerPage: true,
             uriTemplate: '/makes',
             provider: MakeCollectionProvider::class,
             parameters: [

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\State;
 
 use ApiPlatform\Metadata\Operation;
+use ApiPlatform\State\Pagination\ArrayPaginator;
+use ApiPlatform\State\Pagination\Pagination;
 use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\Article;
 use App\Catalog\PartsCatalog;
@@ -14,21 +16,26 @@ use App\Catalog\PartsCatalog;
  */
 final readonly class ArticleCollectionProvider implements ProviderInterface
 {
-    public function __construct(private PartsCatalog $catalog)
-    {
+    public function __construct(
+        private PartsCatalog $catalog,
+        private Pagination $pagination,
+    ) {
     }
 
     /**
-     * @return list<Article>
+     * @return ArrayPaginator<Article>
      */
-    public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
+    public function provide(Operation $operation, array $uriVariables = [], array $context = []): ArrayPaginator
     {
         $carType = $operation->getParameters()?->get('carType')?->getValue();
 
-        return $this->catalog->articles(
+        $rows = $this->catalog->articles(
             (int) $uriVariables['carId'],
             (int) $uriVariables['categoryId'],
             CarTypeResolver::fromString(\is_string($carType) ? $carType : null),
         );
+        [, $offset, $limit] = $this->pagination->getPagination($operation, $context);
+
+        return new ArrayPaginator($rows, $offset, $limit);
     }
 }
