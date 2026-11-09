@@ -25,6 +25,25 @@ services:
       MERCURE_EXTRA_DIRECTIVES: playground
       XDEBUG_MODE: "${XDEBUG_MODE:-develop}"
       APP_ENV: "${APP_ENV:-dev}"
+    # Loopback only: the dev/stage stack runs the dev image (and, without the stage overlay, the dev
+    # kernel). The cloudflared tunnel dials localhost:80, so it is unaffected; the LAN is not. !override
+    # replaces compose.yaml's list instead of appending to it; prod keeps compose.yaml's binding.
+    ports: !override
+      - name: http
+        host_ip: 127.0.0.1
+        target: 80
+        published: ${HTTP_PORT:-8081}
+        protocol: tcp
+      - name: https
+        host_ip: 127.0.0.1
+        target: 443
+        published: ${HTTPS_PORT:-8444}
+        protocol: tcp
+      - name: http3
+        host_ip: 127.0.0.1
+        target: 443
+        published: ${HTTP3_PORT:-8444}
+        protocol: udp
     extra_hosts:
       - host.docker.internal:host-gateway
     tty: true
@@ -44,9 +63,11 @@ services:
       XDEBUG_MODE: "${XDEBUG_MODE:-off}"
 
   database:
+    # Loopback only, and no auth (Mongo) or the default password (Postgres): never on the LAN.
     ports:
-      - "${POSTGRES_PORT:-5433}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
 
   mongodb:
+    # Loopback only, and no auth (Mongo) or the default password (Postgres): never on the LAN.
     ports:
-      - "${MONGODB_PORT:-27018}:27017"
+      - "127.0.0.1:${MONGODB_PORT:-27018}:27017"

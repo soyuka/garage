@@ -872,3 +872,15 @@ To adopt: upgrade the Casdoor container to ≥ v4.25.0 and enable CIMD for the `
 org from the authorize request). Nothing changes server-side in mpa or bonneref: the RFC 9728 metadata only
 names the authorization server, and the audience check is the same (`aud` = resource URI) whichever way the
 client registered.
+
+## MongoDB authentication on the dev/stage stacks (noted 2026-11-09, later)
+
+Both Mongo containers (`api/compose.yaml` `mongodb`, `bonneref/api/compose.yaml` `mongodb`) run without
+authentication. Since 2026-11-09 their published ports bind to `127.0.0.1` only (`compose.override.yaml` of
+each app), so only the host and the compose network reach them. Not done: `MONGO_INITDB_ROOT_USERNAME` /
+`_PASSWORD` apply only when the entrypoint initialises an empty `/data/db`, so adding them against the existing
+`mongodb_data` volumes does nothing on the server and breaks every client that starts sending credentials. The
+honest path is: `mongosh` `db.createUser(...)` on the live instance (root + an app user scoped to `app` /
+`bonneref`), restart `mongod` with `--auth`, then put the credentials in `MONGODB_URL` (compose builds it from
+components: add `MONGODB_USER`/`MONGODB_PASSWORD` there and to `.env.test`/CI). The prod deployment
+(`docs/deploy-garage.md`) needs the same check independently.
