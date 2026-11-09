@@ -19,9 +19,9 @@ final class HideJournalNoiseCommandTest extends AppTestCase
 
         $tester = $this->execute([]);
 
-        self::assertSame(0, $tester->getStatusCode());
-        self::assertStringContainsString('3', $tester->getDisplay());
-        self::assertSame([], $this->hidden());
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('3', $tester->getDisplay());
+        $this->assertSame([], $this->hidden());
     }
 
     public function testApplyHidesOnlyPathLikeAndNumericFinderRows(): void
@@ -30,7 +30,7 @@ final class HideJournalNoiseCommandTest extends AppTestCase
 
         $this->execute(['--apply' => true]);
 
-        self::assertEqualsCanonicalizing(['100259', '/vehicles/XB301ZB', '/cars/16182/part-categories/100259/narrowed'], $this->hidden());
+        $this->assertEqualsCanonicalizing(['100259', '/vehicles/XB301ZB', '/cars/16182/part-categories/100259/narrowed'], $this->hidden());
     }
 
     private function seedRows(): void

@@ -19,9 +19,9 @@ final class AgentMaxToolCallsTest extends AppTestCase
         if ($agent instanceof TraceableAgent) {
             $agent = (new \ReflectionProperty(TraceableAgent::class, 'agent'))->getValue($agent);
         }
-        self::assertInstanceOf(Agent::class, $agent);
+        $this->assertInstanceOf(Agent::class, $agent);
         $runner = (new \ReflectionProperty(Agent::class, 'runner'))->getValue($agent);
-        self::assertSame(25, (new \ReflectionProperty($runner, 'maxToolCalls'))->getValue($runner));
+        $this->assertSame(25, (new \ReflectionProperty($runner, 'maxToolCalls'))->getValue($runner));
     }
 
     /** @return iterable<string, array{string}> */

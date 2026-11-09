@@ -198,6 +198,8 @@ final class FingerprintBuilderTest extends TestCase
     {
         $rows = json_decode((string) file_get_contents(__DIR__.'/../../../Fixtures/catalog-rows/'.$file), true, flags: \JSON_THROW_ON_ERROR);
 
-        return array_map(ArticleCriterion::fromCatalogRow(...), $rows);
+        self::assertIsArray($rows);
+
+        return array_values(array_map(ArticleCriterion::fromCatalogRow(...), $rows));
     }
 }

@@ -28,7 +28,7 @@ final class AnthropicPhotoIntakeReaderTest extends TestCase
         $this->assertStringContainsString('OPR', $system);
 
         $schema = $request['output_config']['format']['schema'];
-        $this->assertSame([], array_values(array_filter(array_keys($schema['properties']), static fn (string $k): bool => str_starts_with($k, 'C'))));
+        $this->assertSame([], array_values(array_filter(array_keys($schema['properties']), static fn (int|string $k): bool => str_starts_with((string) $k, 'C'))));
         $this->assertSame(['carte_grise', 'part', 'build_label', 'other'], $schema['properties']['kind']['enum']);
         $this->assertSame(['opr', 'printedCodes'], array_keys($schema['properties']['buildLabel']['properties']));
         $this->assertSame(['opr', 'printedCodes'], $schema['properties']['buildLabel']['required']);
@@ -58,6 +58,7 @@ final class AnthropicPhotoIntakeReaderTest extends TestCase
 
         try {
             $reader->read('x', 'image/png');
+            // @mago-expect lint:no-empty-catch-clause the read is expected to refuse; the test inspects the recorded spend
         } catch (RegistrationDocumentUnreadable) {
         }
 

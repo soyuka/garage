@@ -26,6 +26,7 @@ use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\AI\Platform\Message\Content\Image;
+use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\Template;
 use Symfony\AI\Platform\Message\ToolCallMessage;
@@ -59,48 +60,49 @@ final class FinderTurnTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(202);
 
-        self::assertStringContainsString('finder', $seen['system']);
-        self::assertStringNotContainsString('Assistant Atelier', $seen['system']);
-        self::assertStringContainsString('<follow_up>', $seen['system']);
-        self::assertStringContainsString('<build_code>', $seen['system']);
-        self::assertStringContainsString('decode_build_code', $seen['system']);
-        self::assertStringContainsString('<product_groups>', $seen['system']);
-        self::assertStringContainsString('<self_check>', $seen['system']);
-        self::assertStringContainsString('<scope>', $seen['system']);
-        self::assertStringContainsString('SEARCH_NOT_ALLOWED', $seen['system']);
-        self::assertStringContainsString('Rotule de direction intérieure, barre de connexion', $seen['system']);
-        self::assertStringContainsString('19107', $seen['context']);
-        self::assertStringContainsString('MAZDA', $seen['context']);
-        self::assertStringContainsString('filtre à huile', $seen['context']);
+        $this->assertStringContainsString('finder', $seen['system']);
+        $this->assertStringNotContainsString('Assistant Atelier', $seen['system']);
+        $this->assertStringContainsString('<follow_up>', $seen['system']);
+        $this->assertStringContainsString('<build_code>', $seen['system']);
+        $this->assertStringContainsString('decode_build_code', $seen['system']);
+        $this->assertStringContainsString('<product_groups>', $seen['system']);
+        $this->assertStringContainsString('<self_check>', $seen['system']);
+        $this->assertStringContainsString('<scope>', $seen['system']);
+        $this->assertStringContainsString('SEARCH_NOT_ALLOWED', $seen['system']);
+        $this->assertStringContainsString('Rotule de direction intérieure, barre de connexion', $seen['system']);
+        $this->assertStringContainsString('19107', $seen['context']);
+        $this->assertStringContainsString('MAZDA', $seen['context']);
+        $this->assertStringContainsString('filtre à huile', $seen['context']);
 
         foreach (['show_parts', 'show_web_part', 'ask_question', 'end_turn', 'web_search', 'lookup_plate', 'decode_vin', 'get_service_parts', 'decode_build_code'] as $tool) {
-            self::assertContains($tool, $seen['tools'], "the finder agent must see $tool");
+            $this->assertContains($tool, $seen['tools'], "the finder agent must see $tool");
         }
         foreach (['log_maintenance', 'plan_maintenance', 'set_vehicle_facts', 'list_vehicles', 'toast', 'select_vehicle', 'propose_actions', 'narrate_step', 'narrow_parts', 'list_articles'] as $tool) {
-            self::assertNotContains($tool, $seen['tools'], "the finder agent must not see $tool");
+            $this->assertNotContains($tool, $seen['tools'], "the finder agent must not see $tool");
         }
 
         $frames = self::frames('sess-finder');
-        self::assertSame(['type' => 'turn', 'phase' => 'start'], $frames[0]);
-        self::assertSame(['type' => 'turn', 'phase' => 'end'], $frames[array_key_last($frames)]);
-        self::assertSame([], array_values(array_filter($frames, static fn (array $f): bool => 'toast' === $f['type'])), 'a productive finder turn raises no failure toast');
+        $this->assertSame(['type' => 'turn', 'phase' => 'start'], $frames[0]);
+        $this->assertSame(['type' => 'turn', 'phase' => 'end'], $frames[array_key_last($frames)]);
+        $this->assertSame([], array_values(array_filter($frames, static fn (array $f): bool => 'toast' === $f['type'])), 'a productive finder turn raises no failure toast');
 
         $shown = array_values(array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
-        self::assertCount(1, $shown);
-        self::assertSame(100259, $shown[0]['categoryId']);
-        self::assertSame('Filtre à huile', $shown[0]['categoryLabel'], 'the title is the product group name, not the agent\'s categoryLabel');
-        self::assertSame('Le filtre à huile se change à chaque vidange.', $shown[0]['rationale']);
+        $this->assertCount(1, $shown);
+        $this->assertSame(100259, $shown[0]['categoryId'] ?? null);
+        $this->assertSame('Filtre à huile', $shown[0]['categoryLabel'] ?? null, 'the title is the product group name, not the agent\'s categoryLabel');
+        $this->assertSame('Le filtre à huile se change à chaque vidange.', $shown[0]['rationale'] ?? null);
 
         $route = $client->request('GET', '/cars/19107/part-categories/100259/narrowed?make=MAZDA')->toArray();
-        $narrowed = $shown[0]['narrowed'];
+        $narrowed = $shown[0]['narrowed'] ?? null;
+        $this->assertIsArray($narrowed);
         foreach (['carId', 'categoryId', 'clusters', 'totalArticles', 'totalBrands', 'unclassifiedCount', 'differsOn', 'narrowed', 'degradedReason', 'fallbackBrands', 'applicabilityScope', 'productGroup', 'productGroups', 'groupRequired'] as $key) {
-            self::assertSame($route[$key] ?? null, $narrowed[$key] ?? null, "showParts.narrowed.$key must match GET /narrowed");
+            $this->assertSame($route[$key] ?? null, $narrowed[$key] ?? null, "showParts.narrowed.$key must match GET /narrowed");
         }
 
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns);
-        self::assertSame(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)'], $turns[0]->getVehicle(), 'the names are the catalogue\'s, not the payload\'s');
-        self::assertNull($turns[0]->getPartsApiCalls(), 'no partsapi call is made since the catalogue is local');
+        $this->assertCount(1, $turns);
+        $this->assertSame(['carId' => 19107, 'carType' => 'PC', 'plate' => null, 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)'], $turns[0]->getVehicle(), 'the names are the catalogue\'s, not the payload\'s');
+        $this->assertNull($turns[0]->getPartsApiCalls(), 'no partsapi call is made since the catalogue is local');
     }
 
     public function testAskQuestionPublishesTheQuestionAndEndsTheTurn(): void
@@ -120,9 +122,9 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('mes freins grincent', 'sess-ask');
 
-        self::assertSame(1, $seen['calls'], 'ask_question is terminal: no second model call');
+        $this->assertSame(1, $seen['calls'], 'ask_question is terminal: no second model call');
         $asked = array_values(array_filter(self::frames('sess-ask'), static fn (array $f): bool => 'askQuestion' === $f['type']));
-        self::assertSame([[
+        $this->assertSame([[
             'type' => 'askQuestion',
             'question' => 'Les freins avant ou arrière ?',
             'options' => [['label' => 'Avant', 'value' => 'avant'], ['label' => 'Arrière', 'value' => 'arriere']],
@@ -145,10 +147,10 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('filtre à huile mazda 6 2.0 2005', 'sess-six', vehicle: null);
 
-        self::assertSame(6, $seen['schemas']['ask_question']['properties']['options']['maxItems'] ?? null, 'the advertised schema caps options at 6');
+        $this->assertSame(6, $seen['schemas']['ask_question']['properties']['options']['maxItems'] ?? null, 'the advertised schema caps options at 6');
         $asked = array_values(array_filter(self::frames('sess-six'), static fn (array $f): bool => 'askQuestion' === $f['type']));
-        self::assertCount(1, $asked, 'seven options are refused, six are published');
-        self::assertCount(6, $asked[0]['options']);
+        $this->assertCount(1, $asked, 'seven options are refused, six are published');
+        $this->assertCount(6, $asked[0]['options']);
     }
 
     public function testTheCandidateCarIdsOfAQuestionContextReachTheNextTurn(): void
@@ -161,7 +163,7 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('Essence', 'sess-candidates', vehicle: null, pendingContext: 'mazda 6 2.0 2005 : carburant ? candidats carIds 19107,19108,19109,19110,19111,19112,19113,19114,19115');
 
-        self::assertStringContainsString('candidats carIds 19107,19108,19109,19110,19111,19112,19113,19114,19115', $seen['context']);
+        $this->assertStringContainsString('candidats carIds 19107,19108,19109,19110,19111,19112,19113,19114,19115', $seen['context']);
     }
 
     public function testShowWebPartPublishesAWebSourcedFind(): void
@@ -188,7 +190,7 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('courroie de distribution', 'sess-web');
 
         $web = array_values(array_filter(self::frames('sess-web'), static fn (array $f): bool => 'showWebPart' === $f['type']));
-        self::assertSame([[
+        $this->assertSame([[
             'type' => 'showWebPart',
             'categoryLabel' => 'Courroie de distribution',
             'reference' => 'CT1088',
@@ -209,8 +211,8 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('Avant', 'sess-pending', pendingContext: 'freins qui grincent : essieu ?');
 
-        self::assertStringContainsString('freins qui grincent : essieu ?', $seen['context']);
-        self::assertStringContainsString('Avant', $seen['context']);
+        $this->assertStringContainsString('freins qui grincent : essieu ?', $seen['context']);
+        $this->assertStringContainsString('Avant', $seen['context']);
     }
 
     public function testAFollowUpCarriesTheQuestionAndTheBuildLabelReadOffThePhoto(): void
@@ -240,10 +242,10 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('rotule axiale : deux montages selon le n° d\'organisation', $seen['context']);
-        self::assertStringContainsString('OPR 10512', $seen['context']);
-        self::assertStringContainsString('set_build_code', $seen['context']);
-        self::assertStringContainsString('plaque XB-301-ZB', $seen['context']);
+        $this->assertStringContainsString('rotule axiale : deux montages selon le n° d\'organisation', $seen['context']);
+        $this->assertStringContainsString('OPR 10512', $seen['context']);
+        $this->assertStringContainsString('set_build_code', $seen['context']);
+        $this->assertStringContainsString('plaque XB-301-ZB', $seen['context']);
     }
 
     public function testAnotherOwnersIntakeIdIs422AndNeverReachesTheModel(): void
@@ -260,7 +262,7 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(422);
-        self::assertSame([], $seen, 'the turn never started');
+        $this->assertSame([], $seen, 'the turn never started');
     }
 
     public function testAProseOnlyFinderTurnTellsTheUserInFinderTerms(): void
@@ -274,8 +276,8 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('filtre à huile', 'sess-noop');
 
         $toasts = array_values(array_filter(self::frames('sess-noop'), static fn (array $f): bool => 'toast' === $f['type']));
-        self::assertCount(1, $toasts);
-        self::assertSame('Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.', $toasts[0]['message']);
+        $this->assertCount(1, $toasts);
+        $this->assertSame('Aucune pièce trouvée. Reformulez la demande ou choisissez une catégorie.', $toasts[0]['message']);
     }
 
     public function testSetVehicleHandsTheCarToThePageAndUnlocksShowParts(): void
@@ -294,8 +296,8 @@ final class FinderTurnTest extends AppTestCase
 
         $frames = self::frames('sess-setvehicle');
         $set = array_values(array_filter($frames, static fn (array $f): bool => 'setVehicle' === $f['type']));
-        self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)', 'engine' => '2.0', 'plate' => null]], $set, 'the catalogue names the car, not the agent');
-        self::assertCount(1, array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
+        $this->assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)', 'engine' => '2.0', 'plate' => null]], $set, 'the catalogue names the car, not the agent');
+        $this->assertCount(1, array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']));
     }
 
     public function testShowPartsSummaryCarriesPerArticleApplicabilityWhenClustersDiffer(): void
@@ -312,12 +314,12 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('filtre à huile', 'sess-applicability', vehicle: ['carId' => 19107, 'carType' => 'PC']);
 
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertIsArray($summary);
-        self::assertGreaterThan(1, \count($summary['clusters']));
-        self::assertStringContainsString('per variant', $summary['applicabilityCaveat']);
-        $applicability = implode("\n", array_column($summary['clusters'], 'applicability'));
-        self::assertStringContainsString('Nº de châssis à partir de : 176451', $applicability);
-        self::assertStringContainsString('Code moteur : LF', $applicability);
+        $this->assertIsArray($summary);
+        $this->assertGreaterThan(1, \count($summary['clusters']));
+        $this->assertStringContainsString('per variant', $summary['applicabilityCaveat']);
+        $applicability = implode("\n", array_map(static fn (array $cluster): string => (string) $cluster['applicability'], $summary['clusters']));
+        $this->assertStringContainsString('Nº de châssis à partir de : 176451', $applicability);
+        $this->assertStringContainsString('Code moteur : LF', $applicability);
     }
 
     public function testShowPartsSummaryOmitsApplicabilityForASingleCluster(): void
@@ -334,9 +336,9 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('filtre à huile', 'sess-single');
 
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertCount(1, $summary['clusters']);
-        self::assertArrayNotHasKey('applicabilityCaveat', $summary);
-        self::assertArrayNotHasKey('applicability', $summary['clusters'][0]);
+        $this->assertCount(1, $summary['clusters']);
+        $this->assertArrayNotHasKey('applicabilityCaveat', $summary);
+        $this->assertArrayNotHasKey('applicability', $summary['clusters'][0]);
     }
 
     public function testShowPartsOnAMixedCategoryReturnsItsProductGroupsAndDrawsNothing(): void
@@ -353,11 +355,11 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('rotule axiale', 'sess-groups', vehicle: self::VEHICLE);
 
         $result = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('choose_group', $result['status'] ?? null);
-        self::assertSame(['Rotule de direction intérieure, barre de connexion', 'Rotule de barre de connexion', 'Rotule de direction'], array_column($result['productGroups'], 'name'));
-        self::assertSame([51, 914, 2066], array_column($result['productGroups'], 'id'));
-        self::assertSame([2, 1, 1], array_column($result['productGroups'], 'articleCount'));
-        self::assertSame([], array_values(array_filter(self::frames('sess-groups'), static fn (array $f): bool => 'showParts' === $f['type'])));
+        $this->assertSame('choose_group', $result['status'] ?? null);
+        $this->assertSame(['Rotule de direction intérieure, barre de connexion', 'Rotule de barre de connexion', 'Rotule de direction'], array_column($result['productGroups'], 'name'));
+        $this->assertSame([51, 914, 2066], array_column($result['productGroups'], 'id'));
+        $this->assertSame([2, 1, 1], array_column($result['productGroups'], 'articleCount'));
+        $this->assertSame([], array_values(array_filter(self::frames('sess-groups'), static fn (array $f): bool => 'showParts' === $f['type'])));
     }
 
     public function testTheShownLabelIsTheProductGroupNameNeverTheAgentsText(): void
@@ -374,16 +376,16 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('rotule axiale', 'sess-label', vehicle: self::VEHICLE);
 
         $shown = array_values(array_filter(self::frames('sess-label'), static fn (array $f): bool => 'showParts' === $f['type']));
-        self::assertCount(1, $shown);
-        self::assertSame('Rotule de direction intérieure, barre de connexion', $shown[0]['categoryLabel']);
-        self::assertSame(51, $shown[0]['narrowed']['productGroup']['id']);
+        $this->assertCount(1, $shown);
+        $this->assertSame('Rotule de direction intérieure, barre de connexion', $shown[0]['categoryLabel']);
+        $this->assertSame(51, $shown[0]['narrowed']['productGroup']['id']);
 
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('shown', $summary['status']);
-        self::assertSame(['id' => 51, 'name' => 'Rotule de direction intérieure, barre de connexion'], $summary['productGroup']);
+        $this->assertSame('shown', $summary['status']);
+        $this->assertSame(['id' => 51, 'name' => 'Rotule de direction intérieure, barre de connexion'], $summary['productGroup']);
 
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertSame('Rotule de direction intérieure, barre de connexion', $turns[0]->getCategoryLabel());
+        $this->assertSame('Rotule de direction intérieure, barre de connexion', $turns[0]->getCategoryLabel());
     }
 
     public function testEachShownClusterNamesItsProductGroup(): void
@@ -400,7 +402,7 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('filtre à huile', 'sess-cluster-group');
 
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('Filtre à huile', $summary['clusters'][0]['productGroup']);
+        $this->assertSame('Filtre à huile', $summary['clusters'][0]['productGroup']);
     }
 
     public function testShowPartsSelectsOneClusterAndTheFrameCarriesItsBasis(): void
@@ -417,15 +419,15 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-select', vehicle: self::VEHICLE);
 
         $shown = array_values(array_filter(self::frames('sess-select'), static fn (array $f): bool => 'showParts' === $f['type']));
-        self::assertCount(1, $shown);
-        self::assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $shown[0]['selection']['id'] ?? '');
-        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)'], array_diff_key($shown[0]['selection'], ['id' => true]));
+        $this->assertCount(1, $shown);
+        $this->assertMatchesRegularExpression('/^[0-9A-HJKMNP-TV-Z]{26}$/', $shown[0]['selection']['id'] ?? '');
+        $this->assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)'], array_diff_key($shown[0]['selection'], ['id' => true]));
 
         $summary = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('shown', $summary['status']);
-        self::assertSame('c1', $summary['selected']);
-        self::assertSame($shown[0]['selection']['id'], $summary['selectionId']);
-        self::assertArrayHasKey('clusterId', $seen['schemas']['show_parts']['properties'] ?? []);
+        $this->assertSame('shown', $summary['status']);
+        $this->assertSame('c1', $summary['selected']);
+        $this->assertSame($shown[0]['selection']['id'], $summary['selectionId']);
+        $this->assertArrayHasKey('clusterId', $seen['schemas']['show_parts']['properties'] ?? []);
     }
 
     public function testASelectionIsStoredAndReadBackByItsIdWithoutOwnerData(): void
@@ -445,15 +447,15 @@ final class FinderTurnTest extends AppTestCase
         $id = $shown[0]['selection']['id'];
 
         $stored = $container->get(DocumentManager::class)->find(FinderSelection::class, $id);
-        self::assertNotNull($stored);
-        self::assertSame(self::TEST_OWNER, $stored->owner);
-        self::assertSame('09824', $stored->organisationNumber);
+        $this->assertNotNull($stored);
+        $this->assertSame(self::TEST_OWNER, $stored->owner);
+        $this->assertSame('09824', $stored->organisationNumber);
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 1);
-        self::assertSame((string) $turns[0]->getId(), $stored->turnId);
+        $this->assertSame((string) $turns[0]->getId(), $stored->turnId);
 
         $read = $client->request('GET', '/agent/selections/'.$id, ['headers' => ['Accept' => 'application/json']]);
         self::assertResponseIsSuccessful();
-        self::assertSame([
+        $this->assertSame([
             'id' => $id,
             'carId' => 19107,
             'carType' => 'PC',
@@ -490,9 +492,9 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-setaside', vehicle: self::VEHICLE);
 
         $shown = array_values(array_filter(self::frames('sess-setaside'), static fn (array $f): bool => 'showParts' === $f['type']));
-        self::assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => 'OPR ≥ 10311'], array_diff_key($shown[0]['selection'], ['id' => true]));
-        self::assertArrayNotHasKey('selection', $shown[1]);
-        self::assertArrayHasKey('setAside', $seen['schemas']['show_parts']['properties'] ?? []);
+        $this->assertSame(['clusterId' => 'c1', 'basis' => 'code de fabrication (OPR 09824 ≤ 10310)', 'setAside' => 'OPR ≥ 10311'], array_diff_key($shown[0]['selection'], ['id' => true]));
+        $this->assertArrayNotHasKey('selection', $shown[1]);
+        $this->assertArrayHasKey('setAside', $seen['schemas']['show_parts']['properties'] ?? []);
     }
 
     public function testSetBuildCodePinsTheDecodedCodeOnThePage(): void
@@ -509,9 +511,9 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-buildcode', vehicle: self::PEUGEOT);
 
         $set = array_values(array_filter(self::frames('sess-buildcode'), static fn (array $f): bool => 'setBuildCode' === $f['type']));
-        self::assertSame([['type' => 'setBuildCode', 'organisationNumber' => '09824', 'date' => '2003-10-02', 'codeKind' => 'dam']], $set);
+        $this->assertSame([['type' => 'setBuildCode', 'organisationNumber' => '09824', 'date' => '2003-10-02', 'codeKind' => 'dam']], $set);
         $result = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame(['decoded', 'PEUGEOT', '09824'], [$result['status'], $result['make'], $result['organisationNumber']]);
+        $this->assertSame(['decoded', 'PEUGEOT', '09824'], [$result['status'], $result['make'], $result['organisationNumber']]);
     }
 
     public function testSetBuildCodeForAnUnsupportedMakePublishesNothing(): void
@@ -527,8 +529,8 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('Code de fabrication : 982488', 'sess-buildcode-mazda', vehicle: self::VEHICLE);
 
-        self::assertSame([], array_values(array_filter(self::frames('sess-buildcode-mazda'), static fn (array $f): bool => 'setBuildCode' === $f['type'])));
-        self::assertSame('unsupported_make', json_decode($seen['toolResults'][0] ?? '', true)['status']);
+        $this->assertSame([], array_values(array_filter(self::frames('sess-buildcode-mazda'), static fn (array $f): bool => 'setBuildCode' === $f['type'])));
+        $this->assertSame('unsupported_make', json_decode($seen['toolResults'][0] ?? '', true)['status']);
     }
 
     public function testAnUnknownClusterIdIsRefusedAndNothingIsDrawn(): void
@@ -545,11 +547,11 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-unknown-cluster', vehicle: self::VEHICLE);
 
         $result = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertTrue($result['isError'] ?? null);
+        $this->assertTrue($result['isError'] ?? null);
         [$reason, $details] = explode("\n", $result['content'][0]['text'], 2);
-        self::assertStringStartsWith('refused: clusterId c9', $reason);
-        self::assertSame(['clusterIds' => ['c1', 'c2']], json_decode($details, true));
-        self::assertSame([], array_values(array_filter(self::frames('sess-unknown-cluster'), static fn (array $f): bool => 'showParts' === $f['type'])));
+        $this->assertStringStartsWith('refused: clusterId c9', $reason);
+        $this->assertSame(['clusterIds' => ['c1', 'c2']], json_decode($details, true));
+        $this->assertSame([], array_values(array_filter(self::frames('sess-unknown-cluster'), static fn (array $f): bool => 'showParts' === $f['type'])));
     }
 
     public function testAClusterIdWithoutItsProductGroupTellsTheAgentToReuseTheOnScreenGroup(): void
@@ -566,8 +568,8 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-select-nogroup', vehicle: self::VEHICLE);
 
         $result = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('choose_group', $result['status'] ?? null);
-        self::assertStringContainsString('productGroupId of the result on screen', $result['reason'] ?? '');
+        $this->assertSame('choose_group', $result['status'] ?? null);
+        $this->assertStringContainsString('productGroupId of the result on screen', $result['reason'] ?? '');
     }
 
     public function testRedrawingTheSameCategoryDoesNotSpendTheCategoryCap(): void
@@ -584,7 +586,7 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('rotule axiale', 'sess-redraw', vehicle: self::VEHICLE);
 
-        self::assertSame(['shown'], array_values(array_unique(array_map(static fn (string $r): string => json_decode($r, true)['status'] ?? '', \array_slice($seen['toolResults'], 0, 5)))));
+        $this->assertSame(['shown'], array_values(array_unique(array_map(static fn (string $r): string => json_decode($r, true)['status'] ?? '', \array_slice($seen['toolResults'], 0, 5)))));
     }
 
     public function testShowPartsWithoutAVehicleTellsTheAgentToSetOneFirst(): void
@@ -600,8 +602,8 @@ final class FinderTurnTest extends AppTestCase
 
         self::runFinderTurn('filtre à huile', 'sess-noset', vehicle: null);
 
-        self::assertSame([], array_values(array_filter(self::frames('sess-noset'), static fn (array $f): bool => 'showParts' === $f['type'])));
-        self::assertStringContainsString('set_vehicle', $results['toolResults'][0] ?? '');
+        $this->assertSame([], array_values(array_filter(self::frames('sess-noset'), static fn (array $f): bool => 'showParts' === $f['type'])));
+        $this->assertStringContainsString('set_vehicle', $results['toolResults'][0] ?? '');
     }
 
     public function testAnEmptyCategoryIsNeverDrawnAndTellsTheAgentToTryASibling(): void
@@ -619,10 +621,10 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('filtre à huile', 'sess-empty');
 
         $empty = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('empty', $empty['status'] ?? null);
-        self::assertStringContainsString('sibling', $empty['reason'] ?? '');
+        $this->assertSame('empty', $empty['status'] ?? null);
+        $this->assertStringContainsString('sibling', $empty['reason'] ?? '');
         $shown = array_values(array_filter(self::frames('sess-empty'), static fn (array $f): bool => 'showParts' === $f['type']));
-        self::assertSame([100259], array_column($shown, 'categoryId'));
+        $this->assertSame([100259], array_column($shown, 'categoryId'));
     }
 
     public function testImagesReachTheModelAndOnlyTheirShapeIsJournaled(): void
@@ -647,13 +649,13 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertSame(['image/png', 'image/png'], $seen['images']);
-        self::assertStringContainsString('W 712/73', $seen['context']);
-        self::assertStringContainsString('MANN-FILTER', $seen['context']);
+        $this->assertSame(['image/png', 'image/png'], $seen['images']);
+        $this->assertStringContainsString('W 712/73', $seen['context']);
+        $this->assertStringContainsString('MANN-FILTER', $seen['context']);
 
         $turn = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 1)[0];
-        self::assertSame([['mimeType' => 'image/png', 'bytes' => \strlen(self::PNG)], ['mimeType' => 'image/png', 'bytes' => \strlen(self::PNG)]], $turn->getImages());
-        self::assertStringNotContainsString(base64_encode(self::PNG), serialize([$turn->getContext(), $turn->getRawCalls(), $turn->getInstruction()]));
+        $this->assertSame([['mimeType' => 'image/png', 'bytes' => \strlen(self::PNG)], ['mimeType' => 'image/png', 'bytes' => \strlen(self::PNG)]], $turn->getImages());
+        $this->assertStringNotContainsString(base64_encode(self::PNG), serialize([$turn->getContext(), $turn->getRawCalls(), $turn->getInstruction()]));
     }
 
     public function testAReferenceIntentIsSpelledOutForTheAgent(): void
@@ -670,8 +672,8 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('référence', $seen['context']);
-        self::assertStringContainsString('W 712/73', $seen['context']);
+        $this->assertStringContainsString('référence', $seen['context']);
+        $this->assertStringContainsString('W 712/73', $seen['context']);
     }
 
     /**
@@ -693,6 +695,7 @@ final class FinderTurnTest extends AppTestCase
     #[DataProvider('badImages')]
     public function testImagesAreValidatedBeforeAnyModelCall(array $images, int $status): void
     {
+        // @mago-expect lint:no-ini-set test fixture: the oversized data URL needs headroom
         ini_set('memory_limit', '1G');
         $client = static::createClient();
         $container = static::getContainer();
@@ -706,7 +709,7 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame($status);
-        self::assertSame(0, $seen['calls']);
+        $this->assertSame(0, $seen['calls']);
     }
 
     public function testFourImagesAreAccepted(): void
@@ -723,7 +726,7 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertCount(4, $seen['images']);
+        $this->assertCount(4, $seen['images']);
     }
 
     public function testAnInstructionOverFiveHundredCharactersIsRefusedBeforeAnyModelCall(): void
@@ -738,8 +741,8 @@ final class FinderTurnTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(422);
-        self::assertStringContainsString('500', $client->getResponse()->getContent(false));
-        self::assertSame(0, $seen['calls']);
+        $this->assertStringContainsString('500', $client->getResponse()->getContent(false));
+        $this->assertSame(0, $seen['calls']);
     }
 
     public function testAnInstructionOfFiveHundredCharactersIsAccepted(): void
@@ -803,9 +806,11 @@ final class FinderTurnTest extends AppTestCase
     {
         return new ScriptedStreamPlatform(static function ($model, $input, array $options) use ($steps, &$seen): ToolCallResult|string {
             $seen['calls'] = ($seen['calls'] ?? 0) + 1;
-            $seen['tools'] = array_map(static fn (Tool $t): string => $t->getName(), array_filter($options['tools'] ?? [], static fn ($t): bool => $t instanceof Tool));
+            $offered = $options['tools'] ?? [];
+            self::assertIsArray($offered);
+            $seen['tools'] = array_map(static fn (Tool $t): string => $t->getName(), array_filter($offered, static fn ($t): bool => $t instanceof Tool));
             $seen['schemas'] = [];
-            foreach ($options['tools'] ?? [] as $tool) {
+            foreach ($offered as $tool) {
                 if ($tool instanceof Tool) {
                     $seen['schemas'][$tool->getName()] = $tool->getParameters();
                 }
@@ -824,7 +829,7 @@ final class FinderTurnTest extends AppTestCase
                 $system = $input->getSystemMessage()?->getContent();
                 $seen['system'] = $system instanceof Template ? $system->getTemplate() : (string) $system;
                 $user = $input->getUserMessage();
-                $seen['context'] = null === $user ? '' : implode("\n", array_map(static fn ($c): string => method_exists($c, 'getText') ? $c->getText() : '', $user->getContent()));
+                $seen['context'] = null === $user ? '' : implode("\n", array_map(static fn ($c): string => $c instanceof Text ? $c->getText() : '', $user->getContent()));
                 $seen['images'] = null === $user ? [] : array_values(array_map(static fn (Image $i): string => $i->getFormat(), array_filter($user->getContent(), static fn ($c): bool => $c instanceof Image)));
             }
 
@@ -833,7 +838,7 @@ final class FinderTurnTest extends AppTestCase
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<array-key, mixed>>
      */
     private static function frames(string $session): array
     {
@@ -844,6 +849,11 @@ final class FinderTurnTest extends AppTestCase
             static fn ($u): bool => \in_array(substr($u->getTopics()[0] ?? '', (int) strrpos($u->getTopics()[0] ?? '', '/') + 1), [$session, $key], true),
         );
 
-        return array_values(array_map(static fn ($u): array => json_decode($u->getData(), true), $updates));
+        return array_values(array_map(static function ($u): array {
+            $frame = json_decode($u->getData(), true);
+            self::assertIsArray($frame);
+
+            return $frame;
+        }, $updates));
     }
 }

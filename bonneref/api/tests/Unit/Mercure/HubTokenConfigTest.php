@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Mercure;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\MercureBundle\DependencyInjection\MercureExtension;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\Mercure\Jwt\TokenProviderInterface;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -24,6 +25,7 @@ final class HubTokenConfigTest extends TestCase
     private const array ENV = [
         'MERCURE_URL' => self::URL,
         'MERCURE_PUBLIC_URL' => self::PUBLIC_URL,
+        // @mago-expect lint:no-literal-password test fixture secret
         'MERCURE_JWT_SECRET' => 'kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk',
         'MERCURE_JWT_ISSUER' => self::ISSUER,
     ];
@@ -35,7 +37,8 @@ final class HubTokenConfigTest extends TestCase
     {
         foreach (self::ENV as $name => $value) {
             $this->saved[$name] = ['env' => $_ENV[$name] ?? null, 'server' => $_SERVER[$name] ?? null, 'getenv' => getenv($name)];
-            $_ENV[$name] = $_SERVER[$name] = $value;
+            $_ENV[$name] = $value;
+            $_SERVER[$name] = $value;
             putenv($name.'='.$value);
         }
     }
@@ -67,22 +70,26 @@ final class HubTokenConfigTest extends TestCase
         $container->setParameter('env(MERCURE_JWT_ISSUER)', self::ISSUER);
 
         $config = Yaml::parseFile(\dirname(__DIR__, 3).'/config/packages/mercure.yaml');
-        (new MercureExtension())->load([$config['mercure']], $container);
+        $this->assertIsArray($config);
+        $mercure = $config['mercure'];
+        $this->assertIsArray($mercure);
+        (new MercureExtension())->load([$mercure], $container);
         $container->getDefinition('mercure.hub.default.jwt.provider')->setPublic(true);
         $container->compile(true);
 
-        // @phpstan-ignore symfonyContainer.privateService (a ContainerBuilder of this test's own, made public just above)
         $provider = $container->get('mercure.hub.default.jwt.provider');
+        $this->assertInstanceOf(TokenProviderInterface::class, $provider);
         [$header, $payload] = array_map(
-            static fn (string $part): array => json_decode(base64_decode(strtr($part, '-_', '+/')), true, flags: \JSON_THROW_ON_ERROR),
+            static fn (string $part): array => json_decode((string) base64_decode(strtr($part, '-_', '+/'), true), true, flags: \JSON_THROW_ON_ERROR),
             \array_slice(explode('.', $provider->getJwt()), 0, 2),
         );
 
-        self::assertSame('at+jwt', $header['typ']);
-        self::assertSame(self::ISSUER, $payload['iss']);
-        self::assertSame('bonneref', $payload['sub']);
-        self::assertEqualsCanonicalizing([self::URL, self::PUBLIC_URL], (array) $payload['aud']);
-        self::assertSame(['publish'], $payload['authorization_details'][0]['actions']);
-        self::assertSame([['match' => '*']], $payload['authorization_details'][0]['topics']);
+        $this->assertSame('at+jwt', $header['typ']);
+        $this->assertSame(self::ISSUER, $payload['iss']);
+        $this->assertSame('bonneref', $payload['sub']);
+        $this->assertIsArray($payload['aud']);
+        $this->assertEqualsCanonicalizing([self::URL, self::PUBLIC_URL], $payload['aud']);
+        $this->assertSame(['publish'], $payload['authorization_details'][0]['actions']);
+        $this->assertSame([['match' => '*']], $payload['authorization_details'][0]['topics']);
     }
 }

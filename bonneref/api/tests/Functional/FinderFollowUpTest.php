@@ -13,6 +13,7 @@ use App\Tests\Mock\CapturedTurn;
 use App\Tests\Mock\FakePhotoIntakeReader;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Symfony\AI\Platform\Message\Content\Text;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
@@ -38,8 +39,8 @@ final class FinderFollowUpTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(202);
         $turnId = $response->toArray(false)['turnId'] ?? null;
-        self::assertIsString($turnId);
-        self::assertNotNull(static::getContainer()->get(AgentTurnRepository::class)->findOneForOwner(Ulid::fromString($turnId), self::TEST_OWNER));
+        $this->assertIsString($turnId);
+        $this->assertNotNull(static::getContainer()->get(AgentTurnRepository::class)->findOneForOwner(Ulid::fromString($turnId), self::TEST_OWNER));
     }
 
     public function testAMissingInstructionOrSessionIsRefused(): void
@@ -51,7 +52,7 @@ final class FinderFollowUpTest extends AppTestCase
             $client->request('POST', '/agent/turn', ['headers' => self::authHeaders() + ['Content-Type' => 'application/json'], 'json' => $payload]);
             $this->assertResponseStatusCodeSame(400);
         }
-        self::assertSame(0, $seen->calls);
+        $this->assertSame(0, $seen->calls);
     }
 
     public function testFreeTextContextFromTheBrowserNeverReachesTheModel(): void
@@ -74,9 +75,9 @@ final class FinderFollowUpTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(202);
         foreach (['SUMMARY-', 'PENDING-TEXT', 'HINT-', 'LABEL-CODE', '10512'] as $planted) {
-            self::assertStringNotContainsString($planted, $seen->context);
+            $this->assertStringNotContainsString($planted, $seen->context);
         }
-        self::assertStringContainsString('MAZDA 6 Hatchback (GG) 2.0', $seen->context, 'the vehicle names come from the catalogue');
+        $this->assertStringContainsString('MAZDA 6 Hatchback (GG) 2.0', $seen->context, 'the vehicle names come from the catalogue');
     }
 
     public function testAVehicleTheCatalogueDoesNotKnowIsRefused(): void
@@ -90,7 +91,7 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(422);
-        self::assertSame(0, $seen->calls);
+        $this->assertSame(0, $seen->calls);
     }
 
     public function testAPlateThatIsNotAPlateIsRefused(): void
@@ -117,7 +118,7 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('plaque XD-303-ZD', $seen->context);
+        $this->assertStringContainsString('plaque XD-303-ZD', $seen->context);
     }
 
     public function testTheQuestionOfThePreviousTurnIsReadBackFromTheJournal(): void
@@ -134,8 +135,8 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('Quel essieu ?', $seen->context);
-        self::assertStringContainsString('freins qui grincent : essieu ?', $seen->context);
+        $this->assertStringContainsString('Quel essieu ?', $seen->context);
+        $this->assertStringContainsString('freins qui grincent : essieu ?', $seen->context);
     }
 
     public function testAQuestionAnsweredInALaterTurnIsNotPendingAnymore(): void
@@ -153,7 +154,7 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringNotContainsString('freins : essieu ?', $seen->context);
+        $this->assertStringNotContainsString('freins : essieu ?', $seen->context);
     }
 
     public function testAnotherOwnersTurnIsNotAPreviousTurn(): void
@@ -169,7 +170,7 @@ final class FinderFollowUpTest extends AppTestCase
             ]);
             $this->assertResponseStatusCodeSame(422);
         }
-        self::assertSame(0, $seen->calls);
+        $this->assertSame(0, $seen->calls);
     }
 
     public function testTheOnScreenCatalogueResultIsRebuiltServerSide(): void
@@ -183,8 +184,8 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertMatchesRegularExpression("/Résultat affiché à l'écran[^\\n]*Filtre à huile \\(categoryId 100259[^\\n]*\\[c1\\]/u", $seen->context);
-        self::assertStringContainsString("choisie par l'utilisateur", $seen->context);
+        $this->assertMatchesRegularExpression("/Résultat affiché à l'écran[^\\n]*Filtre à huile \\(categoryId 100259[^\\n]*\\[c1\\]/u", $seen->context);
+        $this->assertStringContainsString("choisie par l'utilisateur", $seen->context);
     }
 
     public function testAnOnScreenResultThatIsNotThisCarsIsRefused(): void
@@ -209,7 +210,7 @@ final class FinderFollowUpTest extends AppTestCase
             'json' => ['instruction' => 'moins cher', 'sessionId' => 'sess-bad-screen', 'onScreen' => ['categoryId' => 100259]],
         ]);
         $this->assertResponseStatusCodeSame(422);
-        self::assertSame(0, $seen->calls);
+        $this->assertSame(0, $seen->calls);
     }
 
     public function testTheWebFindOfThePreviousTurnIsTheOnScreenResult(): void
@@ -226,7 +227,7 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('Courroie de distribution : CONTITECH CT1088 (source web, hors catalogue)', $seen->context);
+        $this->assertStringContainsString('Courroie de distribution : CONTITECH CT1088 (source web, hors catalogue)', $seen->context);
     }
 
     public function testWhatThePhotoIntakeReadReachesTheTurnByItsId(): void
@@ -246,7 +247,7 @@ final class FinderFollowUpTest extends AppTestCase
             'headers' => self::authHeaders() + ['content-type' => 'multipart/form-data'],
             'extra' => ['files' => ['file' => new UploadedFile($path, 'photo', 'image/png', null, true)]],
         ])->toArray();
-        self::assertIsString($intake['intakeId'] ?? null);
+        $this->assertIsString($intake['intakeId'] ?? null);
 
         $client->request('POST', '/agent/turn', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
@@ -254,8 +255,8 @@ final class FinderFollowUpTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        self::assertStringContainsString('W 712/73', $seen->context);
-        self::assertStringContainsString('MANN-FILTER', $seen->context);
+        $this->assertStringContainsString('W 712/73', $seen->context);
+        $this->assertStringContainsString('MANN-FILTER', $seen->context);
 
         $client->request('POST', '/agent/turn', [
             'headers' => self::authHeaders('someone-else', 'someone-else@example.com') + ['Content-Type' => 'application/json'],
@@ -294,7 +295,7 @@ final class FinderFollowUpTest extends AppTestCase
             $user = $input->getUserMessage();
             if (null !== $user && !$seen->read) {
                 $seen->read = true;
-                $seen->context = implode("\n", array_map(static fn ($c): string => method_exists($c, 'getText') ? $c->getText() : '', $user->getContent()));
+                $seen->context = implode("\n", array_map(static fn ($c): string => $c instanceof Text ? $c->getText() : '', $user->getContent()));
             }
             foreach ($input->getMessages() as $message) {
                 if ($message instanceof ToolCallMessage) {

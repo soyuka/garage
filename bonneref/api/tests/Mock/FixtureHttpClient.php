@@ -27,7 +27,7 @@ final class FixtureHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
@@ -40,7 +40,7 @@ final class FixtureHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function withOptions(array $options): static
     {
@@ -50,11 +50,14 @@ final class FixtureHttpClient implements HttpClientInterface
     private function respond(string $method, string $url): MockResponse
     {
         $parts = parse_url($url);
+        $query = [];
         parse_str($parts['query'] ?? '', $query);
         $host = $parts['host'] ?? '';
 
         if (str_contains($host, 'apiplaqueimmatriculation.com')) {
-            return $this->sivResponse((string) ($query['immatriculation'] ?? ''));
+            $plate = $query['immatriculation'] ?? '';
+
+            return $this->sivResponse(\is_string($plate) ? $plate : '');
         }
 
         return new MockResponse('unexpected upstream call: '.$url, ['http_code' => 502]);
@@ -81,10 +84,13 @@ final class FixtureHttpClient implements HttpClientInterface
         ], \JSON_THROW_ON_ERROR));
     }
 
+    /**
+     * @return \Generator<int, string>
+     */
     private static function idleTimeout(): \Generator
     {
         throw new TransportException('Idle timeout reached for "https://api.apiplaqueimmatriculation.com/plaque".');
-        // @phpstan-ignore deadCode.unreachable (the yield makes this a generator, so MockResponse throws while streaming, not on construction)
+        // @mago-expect analysis:unevaluated-code the yield makes this a generator, so MockResponse throws while streaming, not on construction
         yield '';
     }
 

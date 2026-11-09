@@ -60,18 +60,18 @@ final class AgentTurnJournalTest extends AppTestCase
         ));
 
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns, 'the turn must persist exactly one journal entry');
+        $this->assertCount(1, $turns, 'the turn must persist exactly one journal entry');
 
         $turn = $turns[0];
-        self::assertSame('Quelle viscosité pour la Mazda 6 ?', $turn->getInstruction());
-        self::assertSame(self::TEST_OWNER, $turn->getOwner());
-        self::assertSame(AgentTurnStatus::Completed, $turn->getStatus());
-        self::assertStringContainsString('Quelle viscosité', $turn->getContext(), 'the built LLM context is captured');
+        $this->assertSame('Quelle viscosité pour la Mazda 6 ?', $turn->getInstruction());
+        $this->assertSame(self::TEST_OWNER, $turn->getOwner());
+        $this->assertSame(AgentTurnStatus::Completed, $turn->getStatus());
+        $this->assertStringContainsString('Quelle viscosité', $turn->getContext(), 'the built LLM context is captured');
 
         $toolCalls = $turn->getToolCalls();
-        self::assertCount(1, $toolCalls, 'the show_parts tool call must be journalled');
-        self::assertSame('show_parts', $toolCalls[0]->getName());
-        self::assertSame(100259, $toolCalls[0]->getArguments()['categoryId']);
+        $this->assertCount(1, $toolCalls, 'the show_parts tool call must be journalled');
+        $this->assertSame('show_parts', $toolCalls[0]->getName());
+        $this->assertSame(100259, $toolCalls[0]->getArguments()['categoryId']);
     }
 
     public function testAFailedToolCallJournalsItsPublicErrorTextNeverTheRawCause(): void
@@ -106,13 +106,13 @@ final class AgentTurnJournalTest extends AppTestCase
         foreach ($container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10)[0]->getToolCalls() as $call) {
             $results[$call->getName()] = $call->getResult();
         }
-        self::assertStringStartsWith('upstream_unavailable', (string) json_decode($results['lookup_plate'], true)['content'][0]['text']);
-        self::assertStringStartsWith('Invalid value for parameter "categoryId"', $results['show_parts']);
-        self::assertStringNotContainsString('s3cr3t', $results['show_parts']);
+        $this->assertStringStartsWith('upstream_unavailable', (string) json_decode($results['lookup_plate'], true)['content'][0]['text']);
+        $this->assertStringStartsWith('Invalid value for parameter "categoryId"', $results['show_parts']);
+        $this->assertStringNotContainsString('s3cr3t', $results['show_parts']);
 
         $body = $client->request('GET', '/agent/turns', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->getContent();
         foreach (['Idle timeout', '/plaque', 'must be of type'] as $secret) {
-            self::assertStringNotContainsString($secret, $body);
+            $this->assertStringNotContainsString($secret, $body);
         }
     }
 
@@ -134,6 +134,7 @@ final class AgentTurnJournalTest extends AppTestCase
                 sessionTopic: 'https://localhost/.well-known/mercure?topic='.rawurlencode('/agent/sessions/sess-fail'),
                 owner: self::TEST_OWNER,
             ));
+            // @mago-expect lint:no-empty-catch-clause the handler rethrows by design; the journal row is asserted below
         } catch (\Throwable) {
             // The handler rethrows so Messenger can retry; the journal records it first (finally block).
         }
@@ -141,17 +142,17 @@ final class AgentTurnJournalTest extends AppTestCase
         $response = $client->request('GET', '/agent/turns', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
         $body = $response->getContent();
         foreach (['/app/var', 'DATABASE_URL', 's3cr3t', 'secret.key'] as $secret) {
-            self::assertStringNotContainsString($secret, $body);
+            $this->assertStringNotContainsString($secret, $body);
         }
         $data = $response->toArray();
         $turn = ($data['member'] ?? $data['hydra:member'])[0];
-        self::assertSame('failed', $turn['status']);
-        self::assertSame('The turn failed.', $turn['error']);
-        self::assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $turn['errorId']);
+        $this->assertSame('failed', $turn['status']);
+        $this->assertSame('The turn failed.', $turn['error']);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $turn['errorId']);
 
         $logged = array_values(array_filter($logger->records, static fn (array $r): bool => 'error' === $r['level'] && ($r['context']['errorId'] ?? null) === $turn['errorId']));
-        self::assertCount(1, $logged);
-        self::assertSame($leak, $logged[0]['context']['exception']->getMessage());
+        $this->assertCount(1, $logged);
+        $this->assertSame($leak, $logged[0]['context']['exception']->getMessage());
     }
 
     public function testJournalIsReadableOverHttpAndOwnerScoped(): void
@@ -176,7 +177,7 @@ final class AgentTurnJournalTest extends AppTestCase
         self::assertResponseIsSuccessful();
         $data = $response->toArray();
         $members = $data['member'] ?? $data['hydra:member'] ?? [];
-        self::assertCount(1, $members, 'a user sees only their own turns');
-        self::assertSame('ma question', $members[0]['instruction']);
+        $this->assertCount(1, $members, 'a user sees only their own turns');
+        $this->assertSame('ma question', $members[0]['instruction']);
     }
 }

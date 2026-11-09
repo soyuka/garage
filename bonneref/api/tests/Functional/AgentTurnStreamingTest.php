@@ -61,13 +61,13 @@ final class AgentTurnStreamingTest extends AppTestCase
             owner: self::TEST_OWNER,
         ));
 
-        self::assertTrue($receivedOptions['stream'] ?? false, 'the worker must invoke the agent in streaming mode');
+        $this->assertTrue($receivedOptions['stream'] ?? false, 'the worker must invoke the agent in streaming mode');
 
         // Draining the stream ran the tool loop, which executed ask_question and published its frame.
         $hub = $container->get(RecordingHub::class);
         $payloads = array_map(static fn ($u) => json_decode($u->getData(), true), $hub->updates);
         $questions = array_values(array_filter($payloads, static fn ($p) => 'askQuestion' === ($p['type'] ?? null)));
-        self::assertNotEmpty($questions, 'draining the stream must run the tool loop and emit the askQuestion frame');
-        self::assertSame('Les freins avant ou arrière ?', $questions[0]['question']);
+        $this->assertNotEmpty($questions, 'draining the stream must run the tool loop and emit the askQuestion frame');
+        $this->assertSame('Les freins avant ou arrière ?', $questions[0]['question']);
     }
 }

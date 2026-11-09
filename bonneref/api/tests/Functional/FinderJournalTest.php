@@ -21,14 +21,14 @@ final class FinderJournalTest extends AppTestCase
         $this->seed('filtre à huile', TurnSurface::Finder);
 
         $finder = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame(['filtre à huile'], array_column($finder, 'instruction'));
-        self::assertSame('finder', $finder[0]['surface']);
-        self::assertSame('agent', $finder[0]['kind']);
-        self::assertNull($finder[0]['route'] ?? null, 'JSON-LD skips null values: no vehicle, no route key');
-        self::assertNull($finder[0]['vehicle'] ?? null);
+        $this->assertSame(['filtre à huile'], array_column($finder, 'instruction'));
+        $this->assertSame('finder', $finder[0]['surface']);
+        $this->assertSame('agent', $finder[0]['kind']);
+        $this->assertNull($finder[0]['route'] ?? null, 'JSON-LD skips null values: no vehicle, no route key');
+        $this->assertNull($finder[0]['vehicle'] ?? null);
 
         $all = $this->members($client->request('GET', '/agent/turns', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertCount(1, $all);
+        $this->assertCount(1, $all);
     }
 
     public function testTheTurnExposesCacheTokens(): void
@@ -37,16 +37,16 @@ final class FinderJournalTest extends AppTestCase
         $turn = $this->seed('filtre à huile', TurnSurface::Finder, static fn (AgentTurn $t) => $t->addUsage(8, 250, 12000, 3000));
 
         $summary = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray())[0];
-        self::assertSame(15258, $summary['totalTokens']);
-        self::assertSame(12000, $summary['cacheReadTokens']);
-        self::assertSame(3000, $summary['cacheCreationTokens']);
+        $this->assertSame(15258, $summary['totalTokens']);
+        $this->assertSame(12000, $summary['cacheReadTokens']);
+        $this->assertSame(3000, $summary['cacheCreationTokens']);
 
-        $item = $client->request('GET', '/agent/turns/'.$turn->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
-        self::assertSame(8, $item['promptTokens']);
-        self::assertSame(250, $item['completionTokens']);
-        self::assertSame(12000, $item['cacheReadTokens']);
-        self::assertSame(3000, $item['cacheCreationTokens']);
-        self::assertEqualsWithDelta(0.012416, $item['estimatedCostUsd'], 1e-9, 'prices pinned in .env.test');
+        $item = $client->request('GET', '/agent/turns/'.(string) $turn->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertSame(8, $item['promptTokens']);
+        $this->assertSame(250, $item['completionTokens']);
+        $this->assertSame(12000, $item['cacheReadTokens']);
+        $this->assertSame(3000, $item['cacheCreationTokens']);
+        $this->assertEqualsWithDelta(0.012416, $item['estimatedCostUsd'], 1e-9, 'prices pinned in .env.test');
     }
 
     public function testATurnOnAnUnpricedModelHasNoCost(): void
@@ -54,9 +54,9 @@ final class FinderJournalTest extends AppTestCase
         $client = static::createClient();
         $turn = $this->seed('filtre à huile', TurnSurface::Finder, static fn (AgentTurn $t) => $t->addUsage(8, 250, 12000, 3000), model: 'claude-haiku-4-5');
 
-        $item = $client->request('GET', '/agent/turns/'.$turn->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
-        self::assertSame('claude-haiku-4-5', $item['model']);
-        self::assertNull($item['estimatedCostUsd'] ?? null);
+        $item = $client->request('GET', '/agent/turns/'.(string) $turn->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
+        $this->assertSame('claude-haiku-4-5', $item['model']);
+        $this->assertNull($item['estimatedCostUsd'] ?? null);
     }
 
     public function testAnAuthenticatedFinderSearchIsJournaled(): void
@@ -69,14 +69,14 @@ final class FinderJournalTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $rows = $this->rows();
-        self::assertCount(1, $rows);
+        $this->assertCount(1, $rows);
         $row = $rows[0];
-        self::assertSame(AgentTurnKind::Search, $row->getKind());
-        self::assertSame(AgentTurnStatus::Completed, $row->getStatus());
-        self::assertSame('filtre à huile', $row->getInstruction());
-        self::assertNull($row->getPartsApiCalls(), 'no partsapi call is made since the catalogue is local');
-        self::assertNotNull($row->getDurationMs());
-        self::assertSame([
+        $this->assertSame(AgentTurnKind::Search, $row->getKind());
+        $this->assertSame(AgentTurnStatus::Completed, $row->getStatus());
+        $this->assertSame('filtre à huile', $row->getInstruction());
+        $this->assertNull($row->getPartsApiCalls(), 'no partsapi call is made since the catalogue is local');
+        $this->assertNotNull($row->getDurationMs());
+        $this->assertSame([
             'rule' => 'category',
             'carId' => 19107,
             'carType' => 'PC',
@@ -89,11 +89,11 @@ final class FinderJournalTest extends AppTestCase
         ], $row->getSearch());
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame('search', $listed[0]['kind']);
-        self::assertNull($listed[0]['partsApiCalls']);
-        self::assertSame('category', $listed[0]['search']['rule']);
-        self::assertSame('k/19107-PC/c/100259', $listed[0]['route']);
-        self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null, 'engine' => null], $listed[0]['vehicle']);
+        $this->assertSame('search', $listed[0]['kind']);
+        $this->assertNull($listed[0]['partsApiCalls']);
+        $this->assertSame('category', $listed[0]['search']['rule']);
+        $this->assertSame('k/19107-PC/c/100259', $listed[0]['route']);
+        $this->assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => null, 'model' => null, 'engine' => null], $listed[0]['vehicle']);
     }
 
     public function testANarrowedSearchCarriesTheCategoryLabelFromTheCachedTree(): void
@@ -107,11 +107,11 @@ final class FinderJournalTest extends AppTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        self::assertSame('Filtre à huile', $this->rows()[0]->getCategoryLabel());
+        $this->assertSame('Filtre à huile', $this->rows()[0]->getCategoryLabel());
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame('Filtre à huile', $listed[0]['categoryLabel']);
+        $this->assertSame('Filtre à huile', $listed[0]['categoryLabel']);
         $item = $client->request('GET', $listed[0]['@id'], ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
-        self::assertSame('Filtre à huile', $item['categoryLabel']);
+        $this->assertSame('Filtre à huile', $item['categoryLabel']);
     }
 
     public function testAnAgentTurnCarriesTheLastShownCategoryLabel(): void
@@ -124,7 +124,7 @@ final class FinderJournalTest extends AppTestCase
         });
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame('Rotule', $listed[0]['categoryLabel']);
+        $this->assertSame('Rotule', $listed[0]['categoryLabel']);
     }
 
     public function testALegacyDocumentWithoutTheFieldStillHydrates(): void
@@ -137,8 +137,8 @@ final class FinderJournalTest extends AppTestCase
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
         self::assertResponseIsSuccessful();
-        self::assertSame('filtre', $listed[0]['instruction']);
-        self::assertArrayNotHasKey('categoryLabel', $listed[0]);
+        $this->assertSame('filtre', $listed[0]['instruction']);
+        $this->assertArrayNotHasKey('categoryLabel', $listed[0]);
     }
 
     public function testANarrowedSearchInAProductGroupRoutesToItAndTakesItsName(): void
@@ -150,10 +150,10 @@ final class FinderJournalTest extends AppTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        self::assertSame(51, $this->rows()[0]->getSearch()['productGroupId']);
-        self::assertSame('Rotule de direction intérieure, barre de connexion', $this->rows()[0]->getCategoryLabel());
+        $this->assertSame(51, $this->rows()[0]->getSearch()['productGroupId']);
+        $this->assertSame('Rotule de direction intérieure, barre de connexion', $this->rows()[0]->getCategoryLabel());
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame('p/XD-303-ZD/c/100198/g/51', $listed[0]['route']);
+        $this->assertSame('p/XD-303-ZD/c/100198/g/51', $listed[0]['route']);
     }
 
     public function testAMixedCategoryWithoutAGroupIsJournaledAsSuch(): void
@@ -165,8 +165,8 @@ final class FinderJournalTest extends AppTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        self::assertSame('group_required', $this->rows()[0]->getSearch()['outcome']);
-        self::assertArrayNotHasKey('productGroupId', $this->rows()[0]->getSearch());
+        $this->assertSame('group_required', $this->rows()[0]->getSearch()['outcome']);
+        $this->assertArrayNotHasKey('productGroupId', $this->rows()[0]->getSearch());
     }
 
     public function testANarrowedSearchCarryingThePagePlateRoutesToThePlate(): void
@@ -178,10 +178,10 @@ final class FinderJournalTest extends AppTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        self::assertSame('XB-301-ZB', $this->rows()[0]->getSearch()['plate']);
+        $this->assertSame('XB-301-ZB', $this->rows()[0]->getSearch()['plate']);
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame('p/XB-301-ZB/c/100259', $listed[0]['route']);
-        self::assertSame('XB-301-ZB', $listed[0]['vehicle']['plate']);
+        $this->assertSame('p/XB-301-ZB/c/100259', $listed[0]['route']);
+        $this->assertSame('XB-301-ZB', $listed[0]['vehicle']['plate']);
     }
 
     public function testAnOverlongPlateHeaderIsDropped(): void
@@ -192,7 +192,7 @@ final class FinderJournalTest extends AppTestCase
             'headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'category', 'Search-Input' => 'filtre', 'Search-Plate' => str_repeat('A', 21)],
         ]);
 
-        self::assertArrayNotHasKey('plate', $this->rows()[0]->getSearch());
+        $this->assertArrayNotHasKey('plate', $this->rows()[0]->getSearch());
     }
 
     public function testAPlateLookupRowRoutesToThePlate(): void
@@ -203,11 +203,11 @@ final class FinderJournalTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $search = $this->rows()[0]->getSearch();
-        self::assertSame(['XC302ZC', 34247, 'CV', 'IVECO', 'DAILY'], [$search['plate'], $search['carId'], $search['carType'], $search['make'], $search['model']]);
+        $this->assertSame(['XC302ZC', 34247, 'CV', 'IVECO', 'DAILY'], [$search['plate'], $search['carId'], $search['carType'], $search['make'], $search['model']]);
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame('p/XC302ZC', $listed[0]['route']);
-        self::assertSame(['plate' => 'XC302ZC', 'carId' => 34247, 'carType' => 'CV', 'make' => 'IVECO', 'model' => 'DAILY', 'engine' => 'CLASSE C · F1AE0481B'], $listed[0]['vehicle']);
+        $this->assertSame('p/XC302ZC', $listed[0]['route']);
+        $this->assertSame(['plate' => 'XC302ZC', 'carId' => 34247, 'carType' => 'CV', 'make' => 'IVECO', 'model' => 'DAILY', 'engine' => 'CLASSE C · F1AE0481B'], $listed[0]['vehicle']);
     }
 
     public function testAnAgentRowRoutesToTheVehicleAndCategoryItShowed(): void
@@ -222,9 +222,9 @@ final class FinderJournalTest extends AppTestCase
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
         $byInstruction = array_column($listed, null, 'instruction');
-        self::assertSame('p/XB-301-ZB/c/100259', $byInstruction['rotule axiale 307 XB-301-ZB']['route']);
-        self::assertSame(['plate' => 'XB-301-ZB', 'carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'engine' => '1.6 HDi'], $byInstruction['rotule axiale 307 XB-301-ZB']['vehicle']);
-        self::assertSame('k/19107-PC', $byInstruction['filtre à huile']['route']);
+        $this->assertSame('p/XB-301-ZB/c/100259', $byInstruction['rotule axiale 307 XB-301-ZB']['route']);
+        $this->assertSame(['plate' => 'XB-301-ZB', 'carId' => 9586, 'carType' => 'PC', 'make' => 'PEUGEOT', 'model' => '307', 'engine' => '1.6 HDi'], $byInstruction['rotule axiale 307 XB-301-ZB']['vehicle']);
+        $this->assertSame('k/19107-PC', $byInstruction['filtre à huile']['route']);
     }
 
     public function testAPlateLookupIsJournaledWithItsOutcome(): void
@@ -234,11 +234,11 @@ final class FinderJournalTest extends AppTestCase
         $client->request('GET', '/vehicles/ZZ999ZZ', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'plate', 'Search-Input' => 'zz 999 zz']]);
 
         $rows = $this->rows();
-        self::assertCount(1, $rows);
-        self::assertSame(AgentTurnStatus::Failed, $rows[0]->getStatus());
-        self::assertSame('plate', $rows[0]->getSearch()['rule']);
-        self::assertSame('not_found', $rows[0]->getSearch()['outcome']);
-        self::assertSame(404, $rows[0]->getSearch()['httpStatus']);
+        $this->assertCount(1, $rows);
+        $this->assertSame(AgentTurnStatus::Failed, $rows[0]->getStatus());
+        $this->assertSame('plate', $rows[0]->getSearch()['rule']);
+        $this->assertSame('not_found', $rows[0]->getSearch()['outcome']);
+        $this->assertSame(404, $rows[0]->getSearch()['httpStatus']);
     }
 
     public function testARequestWithoutTheTypedInputIsNotJournaled(): void
@@ -252,7 +252,7 @@ final class FinderJournalTest extends AppTestCase
         $client->request('GET', '/vehicles/XC302ZC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json', 'Search-Rule' => 'url']]);
         self::assertResponseIsSuccessful();
 
-        self::assertSame([], $this->rows());
+        $this->assertSame([], $this->rows());
     }
 
     public function testTheRequestsOfOneSearchShareOneRow(): void
@@ -266,11 +266,11 @@ final class FinderJournalTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $rows = $this->rows();
-        self::assertCount(1, $rows);
-        self::assertSame('XC-302-ZC', $rows[0]->getInstruction());
+        $this->assertCount(1, $rows);
+        $this->assertSame('XC-302-ZC', $rows[0]->getInstruction());
         $search = $rows[0]->getSearch();
-        self::assertSame(['XC302ZC', 34247, 'IVECO', 'DAILY', 100259, 'plate'], [$search['plate'], $search['carId'], $search['make'], $search['model'], $search['categoryId'], $search['rule']]);
-        self::assertSame(\count($narrowed['clusters']), $search['clusterCount']);
+        $this->assertSame(['XC302ZC', 34247, 'IVECO', 'DAILY', 100259, 'plate'], [$search['plate'], $search['carId'], $search['make'], $search['model'], $search['categoryId'], $search['rule']]);
+        $this->assertSame(\count($narrowed['clusters']), $search['clusterCount']);
     }
 
     public function testTheVehicleHeaderFillsMakeModelAndEngineWithoutAPlateLookup(): void
@@ -284,7 +284,7 @@ final class FinderJournalTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());
-        self::assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR · LF'], $listed[0]['vehicle']);
+        $this->assertSame(['plate' => null, 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6', 'engine' => '2.0 MZR · LF'], $listed[0]['vehicle']);
     }
 
     public function testAMalformedVehicleHeaderIsIgnored(): void
@@ -296,8 +296,8 @@ final class FinderJournalTest extends AppTestCase
         ]);
         self::assertResponseIsSuccessful();
 
-        self::assertCount(1, $this->rows());
-        self::assertArrayNotHasKey('make', $this->rows()[0]->getSearch());
+        $this->assertCount(1, $this->rows());
+        $this->assertArrayNotHasKey('make', $this->rows()[0]->getSearch());
     }
 
     public function testAnonymousSearchesAreRefusedAndNotJournaled(): void
@@ -309,7 +309,7 @@ final class FinderJournalTest extends AppTestCase
         ]);
         self::assertResponseStatusCodeSame(401);
 
-        self::assertSame([], $this->rows());
+        $this->assertSame([], $this->rows());
     }
 
     public function testSearchesFromOtherClientsAreNotJournaled(): void
@@ -319,7 +319,7 @@ final class FinderJournalTest extends AppTestCase
         $client->request('GET', '/cars/19107/part-categories/100259/narrowed?carType=PC&make=MAZDA', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
         self::assertResponseIsSuccessful();
 
-        self::assertSame([], $this->rows());
+        $this->assertSame([], $this->rows());
     }
 
     /**
@@ -351,7 +351,7 @@ final class FinderJournalTest extends AppTestCase
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      *
      * @return list<array<string, mixed>>
      */

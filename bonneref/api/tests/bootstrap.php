@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 use App\Tests\Support\TecdocFixtureDatabase;
 use Symfony\Component\Dotenv\Dotenv;
 
@@ -17,21 +19,25 @@ if ('test' === ($_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? null)) {
     if (!str_ends_with($db, '_test')) {
         $db .= '_test';
     }
-    $_ENV['MONGODB_DB'] = $_SERVER['MONGODB_DB'] = $db;
+    $_ENV['MONGODB_DB'] = $db;
+    $_SERVER['MONGODB_DB'] = $db;
 }
 
 // The catalogue the functional suite reads: the TecDoc fixture subset (tests/Fixtures/tecdoc), rebuilt
 // per run so it can never drift from the SQL it is generated from.
 if ('test' === ($_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? null)) {
     $catalog = dirname(__DIR__).'/var/test-tecdoc.sqlite';
-    @mkdir(dirname($catalog), 0777, true);
+    if (!is_dir(dirname($catalog))) {
+        mkdir(dirname($catalog), 0777, true);
+    }
     if (is_file($catalog)) {
         unlink($catalog);
     }
     TecdocFixtureDatabase::create($catalog, withCategoryArticles: true, withEspaceFlywheels: true, withSteeringJoints: true);
     // The compose containers export TECDOC_CATALOG_PATH (the bind-mounted dev slice) as a real env var, which
     // .env.test cannot override: without this the functional suite would read the licensed catalogue, not the fixture.
-    $_ENV['TECDOC_CATALOG_PATH'] = $_SERVER['TECDOC_CATALOG_PATH'] = $catalog;
+    $_ENV['TECDOC_CATALOG_PATH'] = $catalog;
+    $_SERVER['TECDOC_CATALOG_PATH'] = $catalog;
 }
 
 if ($_SERVER['APP_DEBUG']) {

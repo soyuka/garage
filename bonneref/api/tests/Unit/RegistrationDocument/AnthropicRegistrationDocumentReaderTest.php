@@ -64,6 +64,7 @@ final class AnthropicRegistrationDocumentReaderTest extends TestCase
 
         try {
             $reader->read('x', 'image/png');
+            // @mago-expect lint:no-empty-catch-clause the read is expected to refuse; the test inspects the recorded spend
         } catch (RegistrationDocumentUnreadable) {
         }
 

@@ -8,7 +8,7 @@ use App\Siv\SivLookupStore;
 
 final class InMemorySivLookupStore implements SivLookupStore
 {
-    /** @var array<string, array<string, mixed>> */
+    /** @var array<string, array<array-key, mixed>> */
     public private(set) array $envelopes = [];
 
     public function find(string $plate): ?array

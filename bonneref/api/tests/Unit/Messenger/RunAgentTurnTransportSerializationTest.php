@@ -24,8 +24,8 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
     {
         $encoded = $this->serializer()->encode(new Envelope($this->fullTurn()));
 
-        self::assertJson($encoded['body']);
-        self::assertStringNotContainsString('O:', $encoded['body']);
+        $this->assertJson($encoded['body']);
+        $this->assertStringNotContainsString('O:', $encoded['body']);
     }
 
     public function testFullTurnRoundTrips(): void
@@ -33,7 +33,7 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
         $serializer = $this->serializer();
         $turn = $this->fullTurn();
 
-        self::assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
+        $this->assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
     }
 
     public function testBareTurnRoundTrips(): void
@@ -41,7 +41,7 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
         $serializer = $this->serializer();
         $turn = new RunAgentTurn(instruction: 'filtre à huile', sessionTopic: 'https://localhost/agent/sessions/abc', owner: 'owner@example.com');
 
-        self::assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
+        $this->assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
     }
 
     public function testFailedTurnKeepsItsStamps(): void
@@ -55,15 +55,18 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
 
         $decoded = $serializer->decode($serializer->encode($envelope));
 
-        self::assertEquals($this->fullTurn(), $decoded->getMessage());
-        self::assertSame(2, $decoded->last(RedeliveryStamp::class)?->getRetryCount());
-        self::assertSame('async', $decoded->last(SentToFailureTransportStamp::class)?->getOriginalReceiverName());
-        self::assertSame('upstream timed out', $decoded->last(ErrorDetailsStamp::class)?->getExceptionMessage());
+        $this->assertEquals($this->fullTurn(), $decoded->getMessage());
+        $this->assertSame(2, $decoded->last(RedeliveryStamp::class)?->getRetryCount());
+        $this->assertSame('async', $decoded->last(SentToFailureTransportStamp::class)?->getOriginalReceiverName());
+        $this->assertSame('upstream timed out', $decoded->last(ErrorDetailsStamp::class)?->getExceptionMessage());
     }
 
     private function serializer(): SerializerInterface
     {
-        return static::getContainer()->get('messenger.default_serializer');
+        $serializer = static::getContainer()->get('messenger.default_serializer');
+        $this->assertInstanceOf(SerializerInterface::class, $serializer);
+
+        return $serializer;
     }
 
     private function fullTurn(): RunAgentTurn

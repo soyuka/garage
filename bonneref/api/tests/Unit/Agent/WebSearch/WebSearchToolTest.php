@@ -103,11 +103,8 @@ final class WebSearchToolTest extends TestCase
      */
     public function testTheControlFlowTokensAreStableAndDistinct(): void
     {
-        // @phpstan-ignore method.alreadyNarrowedType (pins the constant's value: the tautology IS the test)
         $this->assertSame('NO_RESULTS', WebSearchTool::NO_RESULTS);
-        // @phpstan-ignore method.alreadyNarrowedType
         $this->assertSame('SEARCH_UNAVAILABLE', WebSearchTool::UNAVAILABLE);
-        // @phpstan-ignore method.alreadyNarrowedType
         $this->assertSame('SEARCH_BUDGET_SPENT', WebSearchTool::BUDGET_SPENT);
     }
 

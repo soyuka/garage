@@ -111,7 +111,7 @@ final class TokenAudienceTest extends AppTestCase
         ]);
     }
 
-    private function initialize(string $token): ResponseInterface
+    private function initialize(#[\SensitiveParameter] string $token): ResponseInterface
     {
         return static::createAnonymousClient()->request('POST', 'https://mcp.example.test/mcp', [
             'headers' => [

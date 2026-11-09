@@ -111,6 +111,7 @@ final class McpCatalogTest extends AppTestCase
         ], 3));
 
         $this->assertLessThanOrEqual($all['totalItems'], $filtered['totalItems']);
+        $this->assertIsArray($filtered['items']);
         foreach ($filtered['items'] as $make) {
             $this->assertStringContainsStringIgnoringCase($needle, $make['name']);
         }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Mcp\Agent\McpToolbox;
 use Symfony\AI\Platform\Tool\Tool;
 
 final class McpDecodeBuildCodeTest extends AppTestCase
@@ -93,6 +94,7 @@ final class McpDecodeBuildCodeTest extends AppTestCase
 
         $list = $this->call($client, $sessionId, 'tools/list', [], 2);
         $tool = null;
+        $this->assertIsArray($list['result']['tools']);
         foreach ($list['result']['tools'] as $candidate) {
             if ('decode_build_code' === $candidate['name']) {
                 $tool = $candidate;
@@ -110,6 +112,7 @@ final class McpDecodeBuildCodeTest extends AppTestCase
     {
         static::createClient();
         $toolbox = static::getContainer()->get('test.app.finder.mcp_toolbox');
+        $this->assertInstanceOf(McpToolbox::class, $toolbox);
 
         $names = array_map(static fn (Tool $t) => $t->getName(), $toolbox->getTools());
 

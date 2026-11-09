@@ -81,6 +81,7 @@ final class SivClientTest extends TestCase
             try {
                 $client->lookup('AA123BB');
                 $this->fail('expected UpstreamException');
+                // @mago-expect lint:no-empty-catch-clause each lookup is expected to fail; the test counts upstream calls
             } catch (UpstreamException) {
             }
         }
@@ -228,6 +229,7 @@ final class SivClientTest extends TestCase
 
     public function testATransportFailureNeverCarriesTheToken(): void
     {
+        // @mago-expect lint:no-literal-password test fixture token
         $token = 'Sup3rS3cretT0ken';
         $http = new MockHttpClient(static function (string $method, string $url): MockResponse {
             throw new TransportException(\sprintf('Could not resolve host for "%s".', $url));
@@ -250,10 +252,13 @@ final class SivClientTest extends TestCase
         $this->assertStringNotContainsString(rawurlencode($token), $logger->dump());
     }
 
+    /**
+     * @return \Generator<int, string>
+     */
     private static function idleTimeout(): \Generator
     {
         throw new TransportException('Idle timeout reached for "https://api.apiplaqueimmatriculation.com/plaque".');
-        // @phpstan-ignore deadCode.unreachable (the yield makes this a generator, so MockResponse throws while streaming, not on construction)
+        // @mago-expect analysis:unevaluated-code the yield makes this a generator, so MockResponse throws while streaming, not on construction
         yield '';
     }
 }

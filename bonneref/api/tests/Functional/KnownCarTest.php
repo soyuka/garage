@@ -16,7 +16,7 @@ final class KnownCarTest extends AppTestCase
         $car = $client->request('GET', '/cars/16182/identity?carType=PC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
 
         self::assertResponseIsSuccessful();
-        self::assertSame(['PEUGEOT', '307 (3A/C)', '1.4'], [$car['make'], $car['model'], $car['engine']]);
+        $this->assertSame(['PEUGEOT', '307 (3A/C)', '1.4'], [$car['make'], $car['model'], $car['engine']]);
     }
 
     public function testACarTheIndexNeverSawIsNotFound(): void

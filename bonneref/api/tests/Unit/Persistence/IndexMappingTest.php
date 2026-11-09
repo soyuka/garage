@@ -26,7 +26,6 @@ final class IndexMappingTest extends KernelTestCase
         self::bootKernel();
         $dm = static::getContainer()->get(DocumentManager::class);
 
-        // @phpstan-ignore return.type (ODM's `/* final */` comment detaches ClassMetadata's docblock, so its IndexMapping alias reads as a class)
         return $dm->getClassMetadata($document)->getIndexes();
     }
 

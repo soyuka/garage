@@ -68,7 +68,10 @@ final class FinderContextBuilderTest extends TestCase
         $context = $this->builder()->build($this->turn(summary: 'Rotule axiale (100123) — groupe A : TRW JAR123 '.str_repeat('x', 3000)));
 
         $this->assertStringContainsString("Résultat affiché à l'écran (la demande le poursuit) : Rotule axiale (100123) — groupe A : TRW JAR123", $context);
-        $line = explode("\n", $context)[array_search(true, array_map(static fn (string $l): bool => str_starts_with($l, 'Résultat affiché'), explode("\n", $context)), true)];
+        $lines = explode("\n", $context);
+        $index = array_search(true, array_map(static fn (string $l): bool => str_starts_with($l, 'Résultat affiché'), $lines), true);
+        $this->assertIsInt($index);
+        $line = $lines[$index];
         $this->assertLessThanOrEqual(2100, mb_strlen($line));
     }
 

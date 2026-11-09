@@ -83,7 +83,10 @@ final class CapabilityGatedToolsTest extends AppTestCase
      */
     private function listed(Client $client, string $sessionId): array
     {
-        return array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $this->assertIsArray($tools);
+
+        return array_values(array_map(static fn (array $tool): string => (string) $tool['name'], $tools));
     }
 
     /**
@@ -94,7 +97,7 @@ final class CapabilityGatedToolsTest extends AppTestCase
         /** @var ToolboxInterface $toolbox */
         $toolbox = static::getContainer()->get('ai.toolbox.finder');
 
-        return array_map(static fn (Tool $tool): string => $tool->getName(), $toolbox->getTools());
+        return array_values(array_map(static fn (Tool $tool): string => $tool->getName(), $toolbox->getTools()));
     }
 
     private function blankToken(): void

@@ -19,6 +19,7 @@ final class PartsResourceTest extends AppTestCase
         $this->assertContains('Filtre > Filtre à huile', $paths);
         $this->assertContains('Direction > Rotules', $paths);
 
+        $this->assertIsArray($data['hydra:member']);
         foreach ($data['hydra:member'] as $node) {
             $this->assertTrue($node['leaf']);
         }

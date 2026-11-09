@@ -66,7 +66,7 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
     {
         $links = $this->catalog->vehicleLinkCriteria(self::ESPACE_TURBO, CarType::PassengerCar, [self::LUK], self::FLYWHEEL);
 
-        $this->assertEquals([[new ArticleCriterion('Année à partir de', '200603', 20)]], $links[self::LUK]->qualifierSets ?? null);
+        $this->assertEquals([[new ArticleCriterion('Année à partir de', '200603', 20)]], $links[self::LUK]->qualifierSets);
     }
 
     public function testTheUnionWithoutACarStillMergesEveryVehicle(): void
@@ -100,6 +100,6 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
 
     public function testACommercialVehicleReadsTheCvLinks(): void
     {
-        $this->assertSame([], $this->catalog->vehicleLinkCriteria(self::ESPACE, CarType::CommercialVehicle, [self::LUK], self::FLYWHEEL)[self::LUK]->qualifierSets ?? null);
+        $this->assertSame([], $this->catalog->vehicleLinkCriteria(self::ESPACE, CarType::CommercialVehicle, [self::LUK], self::FLYWHEEL)[self::LUK]->qualifierSets);
     }
 }

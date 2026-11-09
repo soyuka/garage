@@ -68,6 +68,9 @@ final class ScriptedStreamPlatform implements PlatformInterface
             return;
         }
 
-        yield new TextDelta($result instanceof TextResult ? $result->getContent() : (string) $result);
+        $text = $result instanceof TextResult ? $result->getContent() : $result;
+        \assert(\is_string($text), 'a scripted result is a tool call or text');
+
+        yield new TextDelta($text);
     }
 }

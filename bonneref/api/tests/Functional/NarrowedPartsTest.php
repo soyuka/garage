@@ -20,6 +20,7 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertNull($data['degradedReason']);
         $this->assertSame(116, $data['totalArticles']);
         $this->assertSame(87, $data['totalBrands']);
+        $this->assertIsArray($data['clusters']);
         $this->assertCount(2, $data['clusters']);
         $this->assertSame(['hauteur'], array_column($data['differsOn'], 'key'));
 
@@ -30,7 +31,11 @@ final class NarrowedPartsTest extends AppTestCase
         $this->assertSame('93.5', $part['fingerprint']['hauteur']['value']);
         $this->assertSame(85, $part['fingerprint']['hauteur']['min']);
         $this->assertContains(['brand' => 'AMC', 'number' => 'MO-534'], $part['oeNumbers']);
-        $this->assertSame(116, array_sum(array_column($data['clusters'], 'articleCount')) + $data['unclassifiedCount']);
+        $articleCount = 0;
+        foreach ($data['clusters'] as $cluster) {
+            $articleCount += $cluster['articleCount'];
+        }
+        $this->assertSame(116, $articleCount + $data['unclassifiedCount']);
         $this->assertLessThan(110, $data['unclassifiedCount']);
         $this->assertSame('vehicle', $data['applicabilityScope']);
 

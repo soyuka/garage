@@ -25,7 +25,10 @@ final class AgentMcpToolboxTest extends AppTestCase
 
     private static function toolbox(): McpToolbox
     {
-        return static::getContainer()->get('test.app.finder.mcp_toolbox');
+        $toolbox = static::getContainer()->get('test.app.finder.mcp_toolbox');
+        self::assertInstanceOf(McpToolbox::class, $toolbox);
+
+        return $toolbox;
     }
 
     public function testGetToolsExposesExactlyTheAllowlistedServerTools(): void

@@ -27,7 +27,9 @@ final class ArticleGroupTest extends TestCase
             flags: \JSON_THROW_ON_ERROR,
         );
 
-        return array_map(Article::fromCatalogRow(...), $rows);
+        $this->assertIsArray($rows);
+
+        return array_values(array_map(Article::fromCatalogRow(...), $rows));
     }
 
     public function testKeepsFullTotalsRegardlessOfTruncation(): void
@@ -43,6 +45,7 @@ final class ArticleGroupTest extends TestCase
     public function testSurfacesPremiumBrandsThatAlphabeticalSliceBuried(): void
     {
         $group = ArticleGroup::of(100259, $this->oilFilterArticles());
+        $this->assertIsArray($group['brands']);
         $brands = array_column($group['brands'], 'brand');
 
         $this->assertContains('MANN-FILTER', $brands);
@@ -55,6 +58,7 @@ final class ArticleGroupTest extends TestCase
         $group = ArticleGroup::of(100259, $this->oilFilterArticles());
 
         // every surfaced brand is tier 1 (the category has far more than MAX_BRANDS tier-1 brands)
+        $this->assertIsArray($group['brands']);
         foreach ($group['brands'] as $b) {
             $this->assertSame(1, $b['tier']);
         }
@@ -65,6 +69,7 @@ final class ArticleGroupTest extends TestCase
     {
         $group = ArticleGroup::of(100259, $this->oilFilterArticles());
         $byBrand = [];
+        $this->assertIsArray($group['brands']);
         foreach ($group['brands'] as $b) {
             $byBrand[$b['brand']] = array_column($b['articles'], 'number');
         }
@@ -123,7 +128,8 @@ final class ArticleGroupTest extends TestCase
         // and silence here is what let the agent invent a comparison for brands it never saw.
         $group = ArticleGroup::of(100259, $this->oilFilterArticles(), brands: ['JAPANPARTS', 'BRAND-THAT-DOES-NOT-FIT']);
 
-        $this->assertSame(['BRAND-THAT-DOES-NOT-FIT'], $group['missing']);
+        $this->assertSame(['BRAND-THAT-DOES-NOT-FIT'], $group['missing'] ?? null);
+        $this->assertIsArray($group['brands']);
         $this->assertSame(['JAPANPARTS'], array_column($group['brands'], 'brand'));
     }
 

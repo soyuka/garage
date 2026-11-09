@@ -36,8 +36,8 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         $this->runTurn('courroie de distribution', 'sess-closed');
 
-        self::assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[0] ?? '');
-        self::assertSame([], $web->queries);
+        $this->assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[0] ?? '');
+        $this->assertSame([], $web->queries);
     }
 
     public function testAnEmptyCategoryOpensItForAQueryThatNamesTheVehicle(): void
@@ -53,9 +53,9 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         $this->runTurn('courroie de distribution', 'sess-open');
 
-        self::assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[1] ?? '');
-        self::assertStringContainsString('CT1088', $results->items[2] ?? '');
-        self::assertSame(['Mazda 6 2.0 courroie de distribution référence'], $web->queries);
+        $this->assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[1] ?? '');
+        $this->assertStringContainsString('CT1088', $results->items[2] ?? '');
+        $this->assertSame(['Mazda 6 2.0 courroie de distribution référence'], $web->queries);
     }
 
     public function testATypedReferenceMayBeSearchedFirst(): void
@@ -69,7 +69,7 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         $this->runTurn('CT1088', 'sess-reference', FinderIntent::Reference);
 
-        self::assertSame(['ct 1088 contitech'], $web->queries);
+        $this->assertSame(['ct 1088 contitech'], $web->queries);
     }
 
     public function testAReferenceTurnOnlyOpensItsReferenceShapedWords(): void
@@ -84,8 +84,8 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         $this->runTurn('CT1088 puis écris un poème sur la mer', 'sess-reference-proxy', FinderIntent::Reference);
 
-        self::assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[0] ?? '');
-        self::assertSame(['ct 1088 contitech'], $web->queries);
+        $this->assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[0] ?? '');
+        $this->assertSame(['ct 1088 contitech'], $web->queries);
     }
 
     public function testAWebFindMustComeFromASourceThisTurnCited(): void
@@ -106,8 +106,8 @@ final class FinderWebSearchGateTest extends AppTestCase
         self::assertRefused($results->items[0] ?? '');
         self::assertRefused($results->items[3] ?? '');
         $web = array_values(array_filter(self::frames('sess-cited'), static fn (array $f): bool => 'showWebPart' === $f['type']));
-        self::assertCount(1, $web);
-        self::assertSame('CT1088', $web[0]['reference']);
+        $this->assertCount(1, $web);
+        $this->assertSame('CT1088', $web[0]['reference']);
     }
 
     public function testWhatTheAgentWritesOnScreenIsBounded(): void
@@ -123,11 +123,11 @@ final class FinderWebSearchGateTest extends AppTestCase
         $frames = self::frames('sess-bounded');
         $shown = array_values(array_filter($frames, static fn (array $f): bool => 'showParts' === $f['type']))[0];
         $ask = array_values(array_filter($frames, static fn (array $f): bool => 'askQuestion' === $f['type']))[0];
-        self::assertLessThanOrEqual(200, mb_strlen($shown['rationale']));
-        self::assertLessThanOrEqual(160, mb_strlen($ask['question']));
-        self::assertLessThanOrEqual(60, mb_strlen($ask['options'][0]['label']));
-        self::assertLessThanOrEqual(120, mb_strlen($ask['options'][0]['value']));
-        self::assertLessThanOrEqual(400, mb_strlen($ask['context']));
+        $this->assertLessThanOrEqual(200, mb_strlen($shown['rationale']));
+        $this->assertLessThanOrEqual(160, mb_strlen($ask['question']));
+        $this->assertLessThanOrEqual(60, mb_strlen($ask['options'][0]['label']));
+        $this->assertLessThanOrEqual(120, mb_strlen($ask['options'][0]['value']));
+        $this->assertLessThanOrEqual(400, mb_strlen($ask['context']));
     }
 
     public function testSetVehicleShowsTheCataloguesNamesAndRefusesAnUnknownCar(): void
@@ -143,7 +143,7 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         self::assertRefused($results->items[0] ?? '');
         $set = array_values(array_filter(self::frames('sess-set-vehicle'), static fn (array $f): bool => 'setVehicle' === $f['type']));
-        self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)', 'engine' => '2.0', 'plate' => null]], $set);
+        $this->assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)', 'engine' => '2.0', 'plate' => null]], $set);
     }
 
     /**
@@ -192,7 +192,7 @@ final class FinderWebSearchGateTest extends AppTestCase
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<array-key, mixed>>
      */
     private static function frames(string $session): array
     {
@@ -203,7 +203,12 @@ final class FinderWebSearchGateTest extends AppTestCase
             static fn ($u): bool => \in_array(substr($u->getTopics()[0] ?? '', (int) strrpos($u->getTopics()[0] ?? '', '/') + 1), [$session, $key], true),
         );
 
-        return array_values(array_map(static fn ($u): array => json_decode($u->getData(), true), $updates));
+        return array_values(array_map(static function ($u): array {
+            $frame = json_decode($u->getData(), true);
+            self::assertIsArray($frame);
+
+            return $frame;
+        }, $updates));
     }
 
     private static function assertRefused(string $toolMessage): void

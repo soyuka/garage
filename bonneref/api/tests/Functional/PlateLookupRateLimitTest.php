@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+
 final class PlateLookupRateLimitTest extends AppTestCase
 {
     use McpClientTrait;
@@ -120,8 +122,12 @@ final class PlateLookupRateLimitTest extends AppTestCase
     private static function exhaust(string $owner, string $limiter = 'limiter.plate_lookup'): void
     {
         $factory = static::getContainer()->get($limiter);
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $factory);
         $limiter = $factory->create($owner);
-        for ($i = 0; $i < 10_000 && $limiter->consume()->isAccepted(); ++$i) {
+        for ($i = 0; $i < 10_000; ++$i) {
+            if (!$limiter->consume()->isAccepted()) {
+                break;
+            }
         }
     }
 }

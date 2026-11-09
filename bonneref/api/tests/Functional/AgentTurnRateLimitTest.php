@@ -70,10 +70,14 @@ final class AgentTurnRateLimitTest extends AppTestCase
         $this->assertResponseStatusCodeSame(429);
     }
 
-    private static function exhaust(RateLimiterFactoryInterface $factory, string $owner): void
+    private static function exhaust(?object $factory, string $owner): void
     {
+        self::assertInstanceOf(RateLimiterFactoryInterface::class, $factory);
         $limiter = $factory->create($owner);
-        for ($i = 0; $i < 10_000 && $limiter->consume()->isAccepted(); ++$i) {
+        for ($i = 0; $i < 10_000; ++$i) {
+            if (!$limiter->consume()->isAccepted()) {
+                break;
+            }
         }
     }
 }

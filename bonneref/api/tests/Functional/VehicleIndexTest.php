@@ -18,11 +18,11 @@ final class VehicleIndexTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $car = $this->index()->find(16681, 'PC');
-        self::assertNotNull($car);
-        self::assertSame(['MAZDA', '6 Hatchback (GG)', '2.0 (LF17/LF18)', 'MAZDA 6 Hatchback (GG) 2.0 (LF17/LF18)', 'catalog'], [$car['make'], $car['model'], $car['engine'], $car['fullName'], $car['source']]);
-        self::assertSame('2002-08', $car['yearFrom']);
-        self::assertNotNull($this->index()->find(19107, 'PC'));
-        self::assertNull($this->index()->find(16681, 'CV'));
+        $this->assertNotNull($car);
+        $this->assertSame(['MAZDA', '6 Hatchback (GG)', '2.0 (LF17/LF18)', 'MAZDA 6 Hatchback (GG) 2.0 (LF17/LF18)', 'catalog'], [$car['make'], $car['model'], $car['engine'], $car['fullName'], $car['source']]);
+        $this->assertSame('2002-08', $car['yearFrom']);
+        $this->assertNotNull($this->index()->find(19107, 'PC'));
+        $this->assertNull($this->index()->find(16681, 'CV'));
     }
 
     public function testACachedCarsReadIndexesToo(): void
@@ -30,11 +30,11 @@ final class VehicleIndexTest extends AppTestCase
         $client = static::createClient();
         $client->request('GET', '/makes/72/models/4887/cars?carType=PC');
         $this->index()->forget(16681, 'PC');
-        self::assertNull($this->index()->find(16681, 'PC'));
+        $this->assertNull($this->index()->find(16681, 'PC'));
 
         $client->request('GET', '/makes/72/models/4887/cars?carType=PC');
 
-        self::assertNotNull($this->index()->find(16681, 'PC'));
+        $this->assertNotNull($this->index()->find(16681, 'PC'));
     }
 
     public function testAPlateLookupIndexesItsTecdocCar(): void
@@ -43,7 +43,7 @@ final class VehicleIndexTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $car = $this->index()->find(34247, 'CV');
-        self::assertSame(['IVECO', 'DAILY', 'CLASSE C · F1AE0481B', 'siv'], [$car['make'], $car['model'], $car['engine'], $car['source']]);
+        $this->assertSame(['IVECO', 'DAILY', 'CLASSE C · F1AE0481B', 'siv'], [$car['make'], $car['model'], $car['engine'], $car['source']]);
     }
 
     public function testALowerPrioritySourceNeverOverwritesTheCatalogueName(): void
@@ -53,7 +53,7 @@ final class VehicleIndexTest extends AppTestCase
 
         $this->index()->record(16681, 'PC', 'MAZDA', 'MAZDA6', 'whatever', 'siv');
 
-        self::assertSame('6 Hatchback (GG)', $this->index()->find(16681, 'PC')['model']);
+        $this->assertSame('6 Hatchback (GG)', $this->index()->find(16681, 'PC')['model']);
     }
 
     public function testSetVehicleIndexesTheCarTheAgentIdentified(): void
@@ -63,7 +63,7 @@ final class VehicleIndexTest extends AppTestCase
         static::getContainer()->get(FinderRenderTools::class)->setVehicle(19107, 'PC', 'Mazda', '6', '2.0 MZR', 'XB-301-ZB');
 
         $car = $this->index()->find(19107, 'PC');
-        self::assertSame(['MAZDA', '6 Hatchback (GG)', '2.0', 'finder'], [$car['make'], $car['model'], $car['engine'], $car['source']], 'indexed under the catalogue names');
+        $this->assertSame(['MAZDA', '6 Hatchback (GG)', '2.0', 'finder'], [$car['make'], $car['model'], $car['engine'], $car['source']], 'indexed under the catalogue names');
     }
 
     public function testThePageVehicleHeaderIndexesTheCarItDescribes(): void
@@ -76,7 +76,7 @@ final class VehicleIndexTest extends AppTestCase
         self::assertResponseIsSuccessful();
 
         $car = $this->index()->find(19107, 'PC');
-        self::assertSame(['MAZDA', '6', '2.0 · LF'], [$car['make'], $car['model'], $car['engine']]);
+        $this->assertSame(['MAZDA', '6', '2.0 · LF'], [$car['make'], $car['model'], $car['engine']]);
     }
 
     private function index(): VehicleIndex

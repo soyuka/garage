@@ -83,7 +83,9 @@ final class ServerToolUseLoggerTest extends TestCase
             ->invoke('claude', 'hi', ['stream' => true]);
 
         // The worker drains the stream; that is when the listener fires.
-        foreach ($result->getResult()->getContent() as $delta) {
+        $deltas = $result->getResult()->getContent();
+        $this->assertIsIterable($deltas);
+        foreach ($deltas as $delta) {
             unset($delta);
         }
 

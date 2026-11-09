@@ -31,25 +31,25 @@ final class DockerContextTest extends TestCase
     #[DataProvider('configuredFiles')]
     public function testFileReadByConfigReachesTheImage(string $path): void
     {
-        self::assertFileExists(self::ROOT.'/'.$path);
-        self::assertFalse(self::ignored($path), \sprintf('api/.dockerignore drops "%s", which the config reads at runtime.', $path));
+        $this->assertFileExists(self::ROOT.'/'.$path);
+        $this->assertFalse(self::ignored($path), \sprintf('api/.dockerignore drops "%s", which the config reads at runtime.', $path));
     }
 
     public function testSecretsAndLocalStateStayOutOfTheBuildContext(): void
     {
-        self::assertTrue(self::ignored('.env.stage'), '.env.stage');
-        self::assertTrue(self::ignored('.env.dev'), '.env.dev');
-        self::assertTrue(self::ignored('.env.local'), '.env.local');
-        self::assertTrue(self::ignored('config/foo.local'), 'config/foo.local');
-        self::assertTrue(self::ignored('var/storage/x.jpg'), 'var/storage/x.jpg');
+        $this->assertTrue(self::ignored('.env.stage'), '.env.stage');
+        $this->assertTrue(self::ignored('.env.dev'), '.env.dev');
+        $this->assertTrue(self::ignored('.env.local'), '.env.local');
+        $this->assertTrue(self::ignored('config/foo.local'), 'config/foo.local');
+        $this->assertTrue(self::ignored('var/storage/x.jpg'), 'var/storage/x.jpg');
     }
 
     public function testMatcherFollowsDockerSemantics(): void
     {
-        self::assertTrue(self::ignored('README.md'));
-        self::assertTrue(self::ignored('src/Foo/notes.md'));
-        self::assertTrue(self::ignored('var/cache/x.php'));
-        self::assertFalse(self::ignored('src/Kernel.php'));
+        $this->assertTrue(self::ignored('README.md'));
+        $this->assertTrue(self::ignored('src/Foo/notes.md'));
+        $this->assertTrue(self::ignored('var/cache/x.php'));
+        $this->assertFalse(self::ignored('src/Kernel.php'));
     }
 
     /**

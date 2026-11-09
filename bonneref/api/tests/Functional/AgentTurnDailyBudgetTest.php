@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Agent\Journal\ModelUsage;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
@@ -100,7 +101,7 @@ final class AgentTurnDailyBudgetTest extends AppTestCase
         $this->assertResponseStatusCodeSame(429, 'an intake over the daily budget never reaches the vision model');
     }
 
-    private function postTurn(object $client, string $session): void
+    private function postTurn(Client $client, string $session): void
     {
         $client->request('POST', '/agent/turn', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],

@@ -44,9 +44,9 @@ final class CasdoorTokenHandlerTest extends TestCase
 
         $badge = $this->handler()->getUserBadgeFrom($token);
 
-        self::assertSame('built-in/alice', $badge->getUserIdentifier());
-        self::assertSame('alice@example.com', $badge->getAttributes()['email']);
-        self::assertSame(['https://mcp.example.test/mcp'], $badge->getAttributes()['aud']);
+        $this->assertSame('built-in/alice', $badge->getUserIdentifier());
+        $this->assertSame('alice@example.com', $badge->getAttributes()['email']);
+        $this->assertSame(['https://mcp.example.test/mcp'], $badge->getAttributes()['aud']);
     }
 
     #[DataProvider('notAnAccessToken')]
@@ -135,7 +135,7 @@ final class CasdoorTokenHandlerTest extends TestCase
     {
         $badge = $this->handler(claim: 'email')->getUserBadgeFrom($this->emailToken(['email_verified' => true]));
 
-        self::assertSame('alice@example.com', $badge->getUserIdentifier());
+        $this->assertSame('alice@example.com', $badge->getUserIdentifier());
     }
 
     /**
@@ -163,14 +163,14 @@ final class CasdoorTokenHandlerTest extends TestCase
         $badge = $this->handler(claim: 'email', requireVerifiedEmail: false)
             ->getUserBadgeFrom($this->emailToken(['email_verified' => false]));
 
-        self::assertSame('alice@example.com', $badge->getUserIdentifier());
+        $this->assertSame('alice@example.com', $badge->getUserIdentifier());
     }
 
     public function testSubOwnerClaimIgnoresEmailVerification(): void
     {
         $badge = $this->handler()->getUserBadgeFrom($this->emailToken(['email_verified' => false]));
 
-        self::assertSame('built-in/alice', $badge->getUserIdentifier());
+        $this->assertSame('built-in/alice', $badge->getUserIdentifier());
     }
 
     /**

@@ -22,12 +22,12 @@ final class AgentTurnVehicleNamesTest extends AppTestCase
 
         $rows = array_column($this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()), null, 'id');
 
-        self::assertSame(['MAZDA', '6 Hatchback (GG)', '2.0 (GGES)'], [$rows[$agent]['vehicle']['make'], $rows[$agent]['vehicle']['model'], $rows[$agent]['vehicle']['engine']]);
-        self::assertSame(['AB123CD', 'MAZDA'], [$rows[$search]['vehicle']['plate'], $rows[$search]['vehicle']['make']]);
-        self::assertSame('PEUGEOT', $rows[$named]['vehicle']['make']);
+        $this->assertSame(['MAZDA', '6 Hatchback (GG)', '2.0 (GGES)'], [$rows[$agent]['vehicle']['make'], $rows[$agent]['vehicle']['model'], $rows[$agent]['vehicle']['engine']]);
+        $this->assertSame(['AB123CD', 'MAZDA'], [$rows[$search]['vehicle']['plate'], $rows[$search]['vehicle']['make']]);
+        $this->assertSame('PEUGEOT', $rows[$named]['vehicle']['make']);
 
         static::getContainer()->get(DocumentManager::class)->clear();
-        self::assertNull($this->stored($agent)->getVehicle()['make']);
+        $this->assertNull($this->stored($agent)->getVehicle()['make']);
     }
 
     public function testTheItemReadFillsToo(): void
@@ -38,7 +38,7 @@ final class AgentTurnVehicleNamesTest extends AppTestCase
 
         $item = $client->request('GET', '/agent/turns/'.$id, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
 
-        self::assertSame('MAZDA', $item['vehicle']['make']);
+        $this->assertSame('MAZDA', $item['vehicle']['make']);
     }
 
     public function testAnUnknownCarIdStaysUnresolved(): void
@@ -48,8 +48,8 @@ final class AgentTurnVehicleNamesTest extends AppTestCase
 
         $row = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray())[0];
 
-        self::assertNull($row['vehicle']['make'] ?? null);
-        self::assertSame(16182, $row['vehicle']['carId']);
+        $this->assertNull($row['vehicle']['make'] ?? null);
+        $this->assertSame(16182, $row['vehicle']['carId']);
     }
 
     /**
@@ -79,7 +79,7 @@ final class AgentTurnVehicleNamesTest extends AppTestCase
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      *
      * @return list<array<string, mixed>>
      */
@@ -90,6 +90,9 @@ final class AgentTurnVehicleNamesTest extends AppTestCase
 
     private function stored(string $id): AgentTurn
     {
-        return static::getContainer()->get(DocumentManager::class)->find(AgentTurn::class, $id);
+        $turn = static::getContainer()->get(DocumentManager::class)->find(AgentTurn::class, $id);
+        $this->assertInstanceOf(AgentTurn::class, $turn);
+
+        return $turn;
     }
 }

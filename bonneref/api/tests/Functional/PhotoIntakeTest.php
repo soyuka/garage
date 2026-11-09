@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Tests\Mock\FakePhotoIntakeReader;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final class PhotoIntakeTest extends AppTestCase
 {
@@ -104,6 +106,7 @@ final class PhotoIntakeTest extends AppTestCase
 
     public function testRefusesAnImageOverFourMegabytes(): void
     {
+        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
         ini_set('memory_limit', '512M');
         $client = static::createClient();
         $this->post($client, self::PNG.str_repeat("\0", 4 * 1024 * 1024), 'image/png');
@@ -116,8 +119,13 @@ final class PhotoIntakeTest extends AppTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        $limiter = static::getContainer()->get('limiter.intake')->create(self::TEST_OWNER);
-        for ($i = 0; $i < 10_000 && $limiter->consume()->isAccepted(); ++$i) {
+        $factory = static::getContainer()->get('limiter.intake');
+        $this->assertInstanceOf(RateLimiterFactoryInterface::class, $factory);
+        $limiter = $factory->create(self::TEST_OWNER);
+        for ($i = 0; $i < 10_000; ++$i) {
+            if (!$limiter->consume()->isAccepted()) {
+                break;
+            }
         }
 
         $this->post($client, self::PNG, 'image/png');
@@ -127,7 +135,7 @@ final class PhotoIntakeTest extends AppTestCase
         $this->assertSame(0, $this->reader()->calls);
     }
 
-    private function post(object $client, string $bytes, string $mime, bool $authed = true): void
+    private function post(Client $client, string $bytes, string $mime, bool $authed = true): void
     {
         $path = tempnam(sys_get_temp_dir(), 'ph');
         file_put_contents($path, $bytes);

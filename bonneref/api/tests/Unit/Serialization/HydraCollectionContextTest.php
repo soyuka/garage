@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Tests\Unit\Serialization;
 
 use ApiPlatform\Hydra\Serializer\CollectionNormalizer;
@@ -41,6 +43,7 @@ final class HydraCollectionContextTest extends TestCase
             'operation' => new GetCollection(),
             'jsonld_has_context' => true,
         ]);
+        $this->assertIsArray($document);
         $context = $builder->getBaseContext();
         $expand = static function (string $term) use ($context): string {
             if (str_contains($term, ':')) {
@@ -52,9 +55,14 @@ final class HydraCollectionContextTest extends TestCase
             return $context[$term] ?? $context['@vocab'].$term;
         };
 
-        self::assertSame('http://www.w3.org/ns/hydra/core#Collection', $expand($document['@type']));
-        $expandedProperties = array_map($expand, array_values(array_filter(array_keys($document), static fn (string $key): bool => !str_starts_with($key, '@'))));
-        self::assertContains('http://www.w3.org/ns/hydra/core#member', $expandedProperties);
-        self::assertContains('http://www.w3.org/ns/hydra/core#totalItems', $expandedProperties);
+        $this->assertSame('http://www.w3.org/ns/hydra/core#Collection', $expand($document['@type']));
+        $expandedProperties = [];
+        foreach (array_keys($document) as $key) {
+            if (!str_starts_with((string) $key, '@')) {
+                $expandedProperties[] = $expand((string) $key);
+            }
+        }
+        $this->assertContains('http://www.w3.org/ns/hydra/core#member', $expandedProperties);
+        $this->assertContains('http://www.w3.org/ns/hydra/core#totalItems', $expandedProperties);
     }
 }

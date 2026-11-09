@@ -37,12 +37,12 @@ final class TurnJournalUsageTest extends TestCase
 
         $journal->finish(AgentTurnStatus::Completed, null);
 
-        self::assertInstanceOf(AgentTurn::class, $persisted);
-        self::assertSame(8, $persisted->getPromptTokens());
-        self::assertSame(12000, $persisted->getCacheReadTokens());
-        self::assertSame(3000, $persisted->getCacheCreationTokens());
-        self::assertSame(250, $persisted->getCompletionTokens());
-        self::assertSame(15258, $persisted->getTotalTokens(), 'the total counts cached input too');
+        $this->assertInstanceOf(AgentTurn::class, $persisted);
+        $this->assertSame(8, $persisted->getPromptTokens());
+        $this->assertSame(12000, $persisted->getCacheReadTokens());
+        $this->assertSame(3000, $persisted->getCacheCreationTokens());
+        $this->assertSame(250, $persisted->getCompletionTokens());
+        $this->assertSame(15258, $persisted->getTotalTokens(), 'the total counts cached input too');
     }
 
     public function testAWebSearchSideCallIsRecordedApartFromTheTurnsOwnTokens(): void
@@ -61,13 +61,13 @@ final class TurnJournalUsageTest extends TestCase
         $journal->recordWebSearchResponse('gemini', 'q3', ['usageMetadata' => ['promptTokenCount' => 50, 'candidatesTokenCount' => 7, 'thoughtsTokenCount' => 3]], 'gemini-2.5-flash');
         $journal->finish(AgentTurnStatus::Completed, null);
 
-        self::assertInstanceOf(AgentTurn::class, $persisted);
-        self::assertNull($persisted->getPromptTokens(), 'the side call is not the orchestrator\'s usage');
-        self::assertSame([
+        $this->assertInstanceOf(AgentTurn::class, $persisted);
+        $this->assertNull($persisted->getPromptTokens(), 'the side call is not the orchestrator\'s usage');
+        $this->assertSame([
             'claude-haiku-4-5' => ['promptTokens' => 18000, 'completionTokens' => 800, 'cacheReadTokens' => 200, 'cacheCreationTokens' => 0],
             'gemini-2.5-flash' => ['promptTokens' => 50, 'completionTokens' => 10, 'cacheReadTokens' => 0, 'cacheCreationTokens' => 0],
         ], $persisted->getSideCallUsage());
-        self::assertSame(4, $persisted->getWebSearchRequests());
+        $this->assertSame(4, $persisted->getWebSearchRequests());
     }
 
     public function testTheJournalReadsTimeFromItsClock(): void
@@ -86,10 +86,10 @@ final class TurnJournalUsageTest extends TestCase
         $clock->sleep(5);
         $journal->finish(AgentTurnStatus::Completed, null);
 
-        self::assertInstanceOf(AgentTurn::class, $persisted);
-        self::assertSame('2026-03-01 10:00:00', $persisted->getStartedAt()->format('Y-m-d H:i:s'));
-        self::assertSame('2026-03-01 10:00:05', $persisted->getToolCalls()[0]->getAt()->format('Y-m-d H:i:s'));
-        self::assertSame('2026-03-01 10:00:10', $persisted->getFinishedAt()?->format('Y-m-d H:i:s'));
+        $this->assertInstanceOf(AgentTurn::class, $persisted);
+        $this->assertSame('2026-03-01 10:00:00', $persisted->getStartedAt()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-03-01 10:00:05', $persisted->getToolCalls()[0]->getAt()->format('Y-m-d H:i:s'));
+        $this->assertSame('2026-03-01 10:00:10', $persisted->getFinishedAt()?->format('Y-m-d H:i:s'));
     }
 
     private function deltaOf(TokenUsage $usage): DeltaEvent

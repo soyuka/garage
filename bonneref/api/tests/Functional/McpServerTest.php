@@ -30,7 +30,9 @@ final class McpServerTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        $listed = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $this->assertIsArray($listed);
+        foreach ($listed as $tool) {
             $this->assertDoesNotMatchRegularExpression('/garage|propose_actions|the task/i', $tool['description'] ?? '', $tool['name']);
         }
     }
@@ -46,7 +48,9 @@ final class McpServerTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        $listed = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $this->assertIsArray($listed);
+        foreach ($listed as $tool) {
             $tools[$tool['name']] = $tool;
         }
 
@@ -89,7 +93,8 @@ final class McpServerTest extends AppTestCase
     public function testMissingApiKeyAnswers501OverHttp(): void
     {
         $previous = $_SERVER['API_PLAQUE_TOKEN'] ?? '';
-        $_SERVER['API_PLAQUE_TOKEN'] = $_ENV['API_PLAQUE_TOKEN'] = '';
+        $_SERVER['API_PLAQUE_TOKEN'] = '';
+        $_ENV['API_PLAQUE_TOKEN'] = '';
 
         try {
             $client = static::createClient();
@@ -98,7 +103,8 @@ final class McpServerTest extends AppTestCase
             $this->assertResponseStatusCodeSame(501);
             $this->assertStringNotContainsString('API_PLAQUE_TOKEN', $response->getContent(false));
         } finally {
-            $_SERVER['API_PLAQUE_TOKEN'] = $_ENV['API_PLAQUE_TOKEN'] = $previous;
+            $_SERVER['API_PLAQUE_TOKEN'] = $previous;
+            $_ENV['API_PLAQUE_TOKEN'] = $previous;
         }
     }
 
@@ -112,7 +118,9 @@ final class McpServerTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $schemas = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        $listed = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $this->assertIsArray($listed);
+        foreach ($listed as $tool) {
             if (isset($tool['outputSchema'])) {
                 $schemas[$tool['name']] = $tool['outputSchema'];
             }

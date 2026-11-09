@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Tests\Mock\FakeRegistrationDocumentReader;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final class RegistrationDocumentExtractTest extends AppTestCase
 {
@@ -46,7 +48,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
         $this->assertResponseStatusCodeSame(200);
         $raw = $client->getResponse()->getContent();
         $body = json_decode($raw, true);
-        $this->assertSame([], array_filter(array_keys($body), static fn (string $k) => str_starts_with($k, 'C')));
+        $this->assertSame([], array_filter(array_keys($body), static fn (int|string $k): bool => str_starts_with((string) $k, 'C')));
         $this->assertStringNotContainsString('DUPONT', $raw);
         $this->assertStringNotContainsString('LILAS', $raw);
     }
@@ -81,6 +83,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
     public function testRefusesAFileOverTenMegabytes(): void
     {
         // The test client's error rendering copies the request body several times over.
+        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
         ini_set('memory_limit', '512M');
         $client = static::createClient();
         $this->post($client, self::PNG.str_repeat("\0", 10 * 1024 * 1024), 'image/png');
@@ -91,6 +94,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
 
     public function testRefusesAnImageOverFourMegabytes(): void
     {
+        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
         ini_set('memory_limit', '512M');
         $client = static::createClient();
         $this->post($client, self::PNG.str_repeat("\0", 4 * 1024 * 1024), 'image/png');
@@ -101,6 +105,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
 
     public function testAPdfMayExceedTheImageCap(): void
     {
+        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
         ini_set('memory_limit', '512M');
         $client = static::createClient();
         $this->post($client, "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n".str_repeat(' ', 5 * 1024 * 1024)."trailer<</Root 1 0 R>>\n%%EOF", 'application/pdf');
@@ -112,8 +117,13 @@ final class RegistrationDocumentExtractTest extends AppTestCase
     {
         $client = static::createClient();
         $client->disableReboot();
-        $limiter = static::getContainer()->get('limiter.intake')->create(self::TEST_OWNER);
-        for ($i = 0; $i < 10_000 && $limiter->consume()->isAccepted(); ++$i) {
+        $factory = static::getContainer()->get('limiter.intake');
+        $this->assertInstanceOf(RateLimiterFactoryInterface::class, $factory);
+        $limiter = $factory->create(self::TEST_OWNER);
+        for ($i = 0; $i < 10_000; ++$i) {
+            if (!$limiter->consume()->isAccepted()) {
+                break;
+            }
         }
 
         $this->post($client, self::PNG, 'image/png');
@@ -123,7 +133,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
         $this->assertSame(0, $this->reader()->calls);
     }
 
-    private function post(object $client, string $bytes, string $mime, bool $authed = true): void
+    private function post(Client $client, string $bytes, string $mime, bool $authed = true): void
     {
         $path = tempnam(sys_get_temp_dir(), 'cg');
         file_put_contents($path, $bytes);

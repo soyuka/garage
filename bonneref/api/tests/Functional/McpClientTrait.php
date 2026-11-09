@@ -9,6 +9,8 @@ use ApiPlatform\Test\Client;
 /**
  * JSON-RPC over Streamable HTTP plumbing for the /mcp endpoint, shared by the
  * MCP functional tests (initialize handshake, tools/list, tools/call).
+ *
+ * @require-extends AppTestCase
  */
 trait McpClientTrait
 {
@@ -124,8 +126,12 @@ trait McpClientTrait
             return $result['structuredContent'] ?? [];
         }
 
-        [$status, $text] = explode(': ', implode("\n", array_column($result['content'], 'text')), 2);
-        [$message, $details] = explode("\n", $text, 2) + [1 => '{}'];
+        /** @var list<array{text: string}> $content */
+        $content = $result['content'];
+        [$status, $text] = explode(': ', implode("\n", array_column($content, 'text')), 2);
+        $parts = explode("\n", $text, 2);
+        $message = $parts[0];
+        $details = $parts[1] ?? '{}';
 
         return ['error' => $status, 'message' => $message] + json_decode($details, true, 512, \JSON_THROW_ON_ERROR);
     }

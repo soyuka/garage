@@ -18,7 +18,7 @@ final class AnonymousCatalogTokenTest extends AppTestCase
         ]);
 
         self::assertResponseStatusCodeSame(401);
-        self::assertSame([], $this->journal());
+        $this->assertSame([], $this->journal());
     }
 
     public function testAValidTokenOnACatalogReadIsJournaled(): void
@@ -28,7 +28,7 @@ final class AnonymousCatalogTokenTest extends AppTestCase
         ]);
 
         self::assertResponseStatusCodeSame(200);
-        self::assertCount(1, $this->journal());
+        $this->assertCount(1, $this->journal());
     }
 
     public function testAnInvalidTokenOnAnOwnerScopedRouteStillGets401(): void
