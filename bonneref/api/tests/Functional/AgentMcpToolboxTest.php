@@ -6,10 +6,12 @@ namespace App\Tests\Functional;
 
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\FixtureHttpClient;
+use Mcp\Event\RequestEvent;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\Tool;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Proves the in-process MCP bridge ({@see McpToolbox}) is a faithful, HTTP-free re-use of the
@@ -40,6 +42,20 @@ final class AgentMcpToolboxTest extends AppTestCase
             $this->assertContains($withheld, $served);
             $this->assertNotContains($withheld, $names);
         }
+    }
+
+    public function testEveryRequestTravelsOnTheStatelessRevision(): void
+    {
+        static::createClient();
+        $seen = [];
+        static::getContainer()->get(EventDispatcherInterface::class)->addListener(RequestEvent::class, static function (RequestEvent $event) use (&$seen): void {
+            $seen[] = [$event->getMethod(), $event->getSession()->get('protocol_version')];
+        });
+
+        self::toolbox()->getTools();
+        self::toolbox()->execute(new ToolCall('1', 'list_makes', []));
+
+        $this->assertSame([['tools/list', '2026-07-28'], ['tools/call', '2026-07-28']], $seen);
     }
 
     public function testExecuteMatchesTheHttpMcpPayloadVerbatim(): void

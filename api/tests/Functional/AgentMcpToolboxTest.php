@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Mcp\Agent\McpToolbox;
+use Mcp\Event\RequestEvent;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\Tool;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 
 /**
  * Proves the in-process MCP bridge ({@see McpToolbox}) is a faithful, HTTP-free re-use of the
@@ -49,6 +51,22 @@ final class AgentMcpToolboxTest extends AppTestCase
         // The brand/reference routing in the prompt sends the agent here once the dataset has no answer.
         $this->assertContains('list_part_categories', $names);
         $this->assertContains('list_articles', $names);
+    }
+
+    public function testEveryRequestTravelsOnTheStatelessRevision(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $seen = [];
+        $container->get(EventDispatcherInterface::class)->addListener(RequestEvent::class, static function (RequestEvent $event) use (&$seen): void {
+            $seen[] = [$event->getMethod(), $event->getSession()->get('protocol_version')];
+        });
+        $toolbox = $container->get(McpToolbox::class);
+
+        $toolbox->getTools();
+        $toolbox->execute(new ToolCall('1', 'list_vehicles', []));
+
+        $this->assertSame([['tools/list', '2026-07-28'], ['tools/call', '2026-07-28']], $seen);
     }
 
     public function testExecuteMatchesTheHttpMcpPayloadVerbatim(): void

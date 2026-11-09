@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Mcp\Agent;
 
+use Mcp\Schema\Enum\ProtocolVersion;
 use Mcp\Schema\JsonRpc\Error;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server;
+use Mcp\Server\Stateless\RequestMeta;
 use Symfony\AI\Agent\Toolbox\Exception\ToolExecutionException;
 use Symfony\AI\Agent\Toolbox\Exception\ToolNotFoundException;
 use Symfony\AI\Agent\Toolbox\ToolboxInterface;
@@ -22,14 +24,12 @@ use Symfony\AI\Platform\Tool\Tool;
  * a trusted in-process caller, so the Casdoor gate on /mcp (a real trust boundary for external
  * hosts) does not apply here.
  *
- * Each call completes a fresh `initialize` handshake then issues the request through a
- * {@see CapturingTransport}; the garage tools never use sampling/elicitation/progress, so a single
- * synchronous round-trip per call is enough (no SDK Client, no Fibers).
+ * It speaks the stateless 2026-07-28 revision, the path modern clients take: no `initialize`, every
+ * request carries its protocol version and client capabilities in `_meta`, one round-trip through an
+ * {@see InProcessTransport}.
  */
 class McpToolbox implements ToolboxInterface
 {
-    private const PROTOCOL_VERSION = '2025-03-26';
-
     /**
      * Tools withheld from the agent. The filter is a DENYLIST on purpose: every garage MCP tool is
      * meant for the agent, so it fails OPEN — a newly added tool surfaces to the agent automatically
@@ -76,7 +76,7 @@ class McpToolbox implements ToolboxInterface
             return $this->tools;
         }
 
-        $response = $this->drive(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => new \stdClass()]);
+        $response = $this->drive(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => []]);
 
         $tools = [];
         foreach ($response['result']['tools'] ?? [] as $definition) {
@@ -147,8 +147,7 @@ class McpToolbox implements ToolboxInterface
     }
 
     /**
-     * Run the DI MCP server in-process for one request, completing the initialize handshake first
-     * so the request carries a valid session.
+     * Run the DI MCP server in-process for one request, stamped with the modern-era `_meta` envelope.
      *
      * @param array<string, mixed> $request
      *
@@ -156,20 +155,12 @@ class McpToolbox implements ToolboxInterface
      */
     protected function drive(array $request): array
     {
-        $initialize = ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'initialize', 'params' => [
-            'protocolVersion' => self::PROTOCOL_VERSION,
-            'capabilities' => new \stdClass(),
-            'clientInfo' => ['name' => 'in-process-agent', 'version' => '0.0.0'],
-        ]];
+        $request['params']['_meta'] = [
+            RequestMeta::PROTOCOL_VERSION => ProtocolVersion::V2026_07_28->value,
+            RequestMeta::CLIENT_CAPABILITIES => new \stdClass(),
+            RequestMeta::CLIENT_INFO => ['name' => 'in-process-agent', 'version' => '0.0.0'],
+        ];
 
-        $frames = array_map(
-            static fn (array $message): string => json_encode($message, \JSON_THROW_ON_ERROR),
-            [$initialize, $request],
-        );
-
-        $responses = $this->server->run(new CapturingTransport($frames));
-
-        // Frames come back in order: [initialize result, …, our request's response].
-        return [] === $responses ? [] : $responses[array_key_last($responses)];
+        return $this->server->run(new InProcessTransport($request));
     }
 }
