@@ -1,5 +1,5 @@
 import { API, authFetch } from './auth';
-import { hydraMembers, normalizeIri } from './garage';
+import { apiUrl, hydraMembers, normalizeIri } from './garage';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — the agent debug journal (Tier-1 transport re-authored
@@ -63,7 +63,7 @@ export async function getTurns(): Promise<TurnSummary[]> {
 
 /** GET one turn's full detail by its IRI. */
 export async function getTurn(iri: string): Promise<TurnDetail> {
-  const res = await authFetch(`${API}${iri}`, { headers: { Accept: LD } });
+  const res = await authFetch(apiUrl(iri), { headers: { Accept: LD } });
   if (!res.ok) throw new Error(`turn fetch failed: ${res.status}`);
   return normalizeIri((await res.json()) as TurnDetail & { '@id'?: string });
 }

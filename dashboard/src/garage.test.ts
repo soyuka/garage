@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { hydraMembers, normalizeIri } from './garage';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { apiUrl, hydraMembers, mergeTaskParts, normalizeIri } from './garage';
 
 // Pure-core tests for the garage REST client. The authFetch verbs are thin glue; these pin the two
 // shape-bugs that bite: the hydra member key (member vs hydra:member) and the @id→id normalization
@@ -38,5 +38,39 @@ describe('normalizeIri', () => {
     const out = normalizeIri({ '@id': '/x/1', id: '1' }) as Record<string, unknown>;
     expect(out['@id']).toBeUndefined();
     expect(out.id).toBe('/x/1');
+  });
+});
+
+describe('apiUrl', () => {
+  it('prefixes a well-formed API path with the API base', () => {
+    expect(apiUrl('/garage/planned-tasks/01J', 'https://localhost')).toBe('https://localhost/garage/planned-tasks/01J');
+    expect(apiUrl('/garage/vehicles/01V/documents/01D/file', '')).toBe('/garage/vehicles/01V/documents/01D/file');
+  });
+
+  it.each([
+    ['a host-suffix that rewrites the origin', '.evil.tld/x'],
+    ['a scheme-relative URL', '//evil.tld/x'],
+    ['an absolute URL', 'https://evil.tld/x'],
+    ['an embedded double slash', '/garage//evil'],
+    ['a parent traversal', '/garage/../admin'],
+    ['a current-dir segment', '/garage/./x'],
+    ['a credentials marker', '/@evil.tld'],
+    ['a query string', '/garage/vehicles?x=1'],
+    ['a backslash', '/\\evil.tld'],
+    ['an empty path', ''],
+    ['a bare ULID', '01J'],
+  ])('throws on %s', (_label, iri) => {
+    expect(() => apiUrl(iri, 'https://localhost')).toThrow(/not an API path/);
+  });
+});
+
+describe('mergeTaskParts', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('refuses a model-supplied task id that is not an API path, before any request', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    await expect(mergeTaskParts('.evil.tld/x', [])).rejects.toThrow(/not an API path/);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

@@ -65,10 +65,7 @@ export type CallbackCheck = { ok: true; code: string; verifier: string } | { ok:
  * Validate the OAuth redirect against the single-use values stashed before the redirect. The state
  * equality is the CSRF guard; a missing verifier means no login was in flight (a stray /callback hit).
  */
-export function validateCallback(
-  query: { code: string | null; state: string | null },
-  stored: { verifier: string | null; expectedState: string | null },
-): CallbackCheck {
+export function validateCallback(query: { code: string | null; state: string | null }, stored: { verifier: string | null; expectedState: string | null }): CallbackCheck {
   if (!query.code) return { ok: false, reason: 'missing code' };
   if (!stored.verifier) return { ok: false, reason: 'no login in flight' };
   if (!query.state || query.state !== stored.expectedState) return { ok: false, reason: 'state mismatch' };
@@ -87,6 +84,24 @@ export function decodeJwtClaims(jwt: string): Record<string, unknown> {
     return JSON.parse(new TextDecoder().decode(bytes)) as Record<string, unknown>;
   } catch {
     return {};
+  }
+}
+
+/** The origin the Bearer belongs to: the configured API base's, or the page's when the base is empty/relative. */
+export function apiOrigin(base: string, pageOrigin: string): string {
+  return new URL(base || pageOrigin, pageOrigin).origin;
+}
+
+/**
+ * Only a request resolving to the API origin may carry the Bearer. Call sites build URLs by
+ * concatenating an IRI onto the base, so a hostile IRI (`.evil.tld/x`, `//evil.tld/x`) would otherwise
+ * ship the token to another host.
+ */
+export function bearerAllowed(input: string, pageOrigin: string, allowedOrigin: string): boolean {
+  try {
+    return new URL(input, pageOrigin).origin === allowedOrigin;
+  } catch {
+    return false;
   }
 }
 
@@ -196,10 +211,7 @@ async function exchangeCallback(): Promise<boolean> {
   // The code/state are single-use — strip them from history immediately.
   window.history.replaceState(null, '', '/');
 
-  const check = validateCallback(
-    { code: url.searchParams.get('code'), state: url.searchParams.get('state') },
-    { verifier, expectedState },
-  );
+  const check = validateCallback({ code: url.searchParams.get('code'), state: url.searchParams.get('state') }, { verifier, expectedState });
   if (!check.ok) throw new Error(`invalid OAuth callback: ${check.reason}`);
 
   const body = new URLSearchParams({
@@ -230,12 +242,13 @@ export function logout(): void {
 }
 
 /**
- * fetch() with the Bearer attached when a fresh token is held. A 401 against a gated endpoint (a
+ * fetch() with the Bearer attached when a fresh token is held and the URL is on the API origin. A 401 against a gated endpoint (a
  * write or /agent/turn) means the token is gone/expired — wipe it and bounce to login rather than
  * silently fail. Public GET reads work with or without a token.
  */
 export async function authFetch(input: string, init: RequestInit = {}): Promise<Response> {
-  const token = getToken();
+  const toApi = bearerAllowed(input, window.location.origin, apiOrigin(API, window.location.origin));
+  const token = toApi ? getToken() : null;
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
   // The interface language, announced the standard way. The API reads it via Symfony's
@@ -245,7 +258,7 @@ export async function authFetch(input: string, init: RequestInit = {}): Promise<
   headers.set('Accept-Language', currentLocale());
 
   const res = await fetch(input, { ...init, headers });
-  if (res.status === 401) {
+  if (toApi && res.status === 401) {
     localStorage.removeItem(TOKEN_KEY);
     await login();
   }

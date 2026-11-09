@@ -49,6 +49,17 @@ export function normalizeIri<T extends { id?: string }>(raw: T & { '@id'?: strin
   return { ...(rest as T), id: iri ?? raw.id };
 }
 
+// Every IRI this client dereferences reaches it from the server or from a model-authored frame (a CTA
+// `patchTask.id`, a `showDocument.url`). Concatenated onto the base unchecked, `.evil.tld/x` turns
+// `https://localhost` into `https://localhost.evil.tld/x`. Only a plain absolute path passes.
+const API_PATH = /^\/[A-Za-z0-9/_.-]+$/;
+
+/** `${base}${iri}` for an IRI that is a plain API path; throws on anything else (no query, no `//`, no dot segments). */
+export function apiUrl(iri: string, base: string = API): string {
+  if (!API_PATH.test(iri) || iri.includes('//') || iri.split('/').some((seg) => seg === '.' || seg === '..')) throw new Error(`not an API path: ${JSON.stringify(iri)}`);
+  return `${base}${iri}`;
+}
+
 // ── Response guards ────────────────────────────────────────────────────────────
 // One error-message format (`<label> failed: <status>`) for every verb. `res.ok` is already the
 // 200–299 range (204 included), so a "no content" write needs no special-casing here.
@@ -72,7 +83,7 @@ export async function getVehicles(): Promise<VehicleSummary[]> {
 
 /** GET one vehicle by its IRI — the item read inlines `facts`, `health`, `plannedTasks`. */
 export async function getVehicle(iri: string): Promise<VehicleSummary> {
-  const res = await authFetch(`${API}${iri}`, { headers: { Accept: LD } });
+  const res = await authFetch(apiUrl(iri), { headers: { Accept: LD } });
   const v = await okJson<VehicleSummary & { plannedTasks?: Array<PlannedTask & { '@id'?: string }> }>(res, 'vehicle fetch');
   // The vehicle handle stays `@id`; only its inlined planned tasks need the id normalization.
   if (v.plannedTasks) v.plannedTasks = v.plannedTasks.map((t) => normalizeIri(t));
@@ -81,14 +92,14 @@ export async function getVehicle(iri: string): Promise<VehicleSummary> {
 
 /** GET a vehicle's forecast (due[] soonest-first + coverage gaps). Value objects — no @id normalization. */
 export async function getForecast(iri: string): Promise<VehicleForecast> {
-  const res = await authFetch(`${API}${iri}/forecast`, { headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(iri)}/forecast`, { headers: { Accept: LD } });
   const data = await okJson<VehicleForecast>(res, 'forecast fetch');
   return { vehicle: data.vehicle ?? iri, due: data.due ?? [], gaps: data.gaps ?? [] };
 }
 
 /** GET a vehicle's past maintenance (newest first). Each record serves its IRI as `@id` → normalize to `id`. */
 export async function getMaintenanceRecords(iri: string): Promise<MaintenanceRecord[]> {
-  const res = await authFetch(`${API}${iri}/maintenance-records`, { headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(iri)}/maintenance-records`, { headers: { Accept: LD } });
   return hydraMembers<MaintenanceRecord & { '@id'?: string }>(await okJson(res, 'records fetch')).map((r) => normalizeIri(r));
 }
 
@@ -99,7 +110,7 @@ export async function getMaintenanceRecords(iri: string): Promise<MaintenanceRec
  */
 export async function getVehicleTasks(iri: string, includeDismissed = false): Promise<PlannedTask[]> {
   const query = includeDismissed ? '?includeDismissed=true' : '';
-  const res = await authFetch(`${API}${iri}/planned-tasks${query}`, { headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(iri)}/planned-tasks${query}`, { headers: { Accept: LD } });
   return hydraMembers<PlannedTask & { '@id'?: string }>(await okJson(res, 'tasks fetch')).map((t) => normalizeIri(t));
 }
 
@@ -140,7 +151,7 @@ export async function getSivVehicle(plate: string): Promise<SivVehicle> {
  * turn. The taskIri MUST be the `@id` (normalized), not a bare ULID (a ULID builds a broken URL).
  */
 export async function mergeTaskParts(taskIri: string, parts: PlannedPart[]): Promise<void> {
-  const res = await authFetch(`${API}${taskIri}`, {
+  const res = await authFetch(apiUrl(taskIri), {
     method: 'PATCH',
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify({ parts }),
@@ -167,7 +178,7 @@ export interface VehiclePatch {
 
 /** Edit a vehicle's card fields (merge-patch). Returns the fresh read-model. */
 export async function patchVehicle(iri: string, patch: VehiclePatch): Promise<VehicleSummary> {
-  const res = await authFetch(`${API}${iri}`, {
+  const res = await authFetch(apiUrl(iri), {
     method: 'PATCH',
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(patch),
@@ -187,13 +198,13 @@ export async function createVehicle(): Promise<VehicleSummary> {
 
 /** Soft-delete a vehicle: it drops off the parc, its history survives. */
 export async function deleteVehicle(iri: string): Promise<void> {
-  const res = await authFetch(`${API}${iri}`, { method: 'DELETE', headers: { Accept: LD } });
+  const res = await authFetch(apiUrl(iri), { method: 'DELETE', headers: { Accept: LD } });
   okVoid(res, 'vehicle delete');
 }
 
 /** Record a manual spec (POST one {key,value,unit?} fact). Lands as source "user" (unverified). */
 export async function postVehicleFact(iri: string, fact: { key: string; value: string; unit?: string | null }): Promise<VehicleSummary> {
-  const res = await authFetch(`${API}${iri}/facts`, {
+  const res = await authFetch(`${apiUrl(iri)}/facts`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(fact),
@@ -203,7 +214,7 @@ export async function postVehicleFact(iri: string, fact: { key: string; value: s
 
 /** Remove a fact by key (soft-delete; re-POST the key to bring it back). */
 export async function deleteVehicleFact(iri: string, key: string): Promise<void> {
-  const res = await authFetch(`${API}${iri}/facts/${encodeURIComponent(key)}`, { method: 'DELETE', headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(iri)}/facts/${encodeURIComponent(key)}`, { method: 'DELETE', headers: { Accept: LD } });
   okVoid(res, 'fact delete');
 }
 
@@ -219,7 +230,7 @@ export interface PlannedTaskInput {
 
 /** Add a checklist task by hand (POST planned-tasks). Normalizes the returned IRI to `id`. */
 export async function createTask(vehicleIri: string, input: PlannedTaskInput): Promise<PlannedTask> {
-  const res = await authFetch(`${API}${vehicleIri}/planned-tasks`, {
+  const res = await authFetch(`${apiUrl(vehicleIri)}/planned-tasks`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(input),
@@ -229,7 +240,7 @@ export async function createTask(vehicleIri: string, input: PlannedTaskInput): P
 
 /** Tick / dismiss a task: PATCH its status. */
 export async function patchTaskStatus(taskIri: string, status: 'open' | 'done' | 'dismissed'): Promise<void> {
-  const res = await authFetch(`${API}${taskIri}`, {
+  const res = await authFetch(apiUrl(taskIri), {
     method: 'PATCH',
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify({ status }),
@@ -246,7 +257,7 @@ export interface TaskEdit {
 }
 
 export async function updateTask(taskIri: string, fields: TaskEdit): Promise<void> {
-  const res = await authFetch(`${API}${taskIri}`, {
+  const res = await authFetch(apiUrl(taskIri), {
     method: 'PATCH',
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(fields),
@@ -256,7 +267,7 @@ export async function updateTask(taskIri: string, fields: TaskEdit): Promise<voi
 
 /** File every done task into the past-maintenance log. Idempotent → {archived:n}. */
 export async function archiveTasks(vehicleIri: string): Promise<{ archived: number }> {
-  const res = await authFetch(`${API}${vehicleIri}/planned-tasks/archive`, {
+  const res = await authFetch(`${apiUrl(vehicleIri)}/planned-tasks/archive`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: '{}',
@@ -277,7 +288,7 @@ export interface TaskPartInput {
 
 /** Append a part line (POST the parts subresource; upserts by ref server-side). */
 export async function addTaskPart(taskIri: string, part: TaskPartInput): Promise<void> {
-  const res = await authFetch(`${API}${taskIri}/parts`, {
+  const res = await authFetch(`${apiUrl(taskIri)}/parts`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(part),
@@ -287,7 +298,7 @@ export async function addTaskPart(taskIri: string, part: TaskPartInput): Promise
 
 /** Merge-edit one part line by its ULID (PATCH the parts subresource). */
 export async function updateTaskPart(taskIri: string, partId: string, fields: TaskPartInput): Promise<void> {
-  const res = await authFetch(`${API}${taskIri}/parts/${partId}`, {
+  const res = await authFetch(`${apiUrl(taskIri)}/parts/${encodeURIComponent(partId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(fields),
@@ -297,7 +308,7 @@ export async function updateTaskPart(taskIri: string, partId: string, fields: Ta
 
 /** Remove one part line by its ULID (DELETE the parts subresource). */
 export async function removeTaskPart(taskIri: string, partId: string): Promise<void> {
-  const res = await authFetch(`${API}${taskIri}/parts/${partId}`, { method: 'DELETE', headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(taskIri)}/parts/${encodeURIComponent(partId)}`, { method: 'DELETE', headers: { Accept: LD } });
   okVoid(res, 'part remove');
 }
 
@@ -307,7 +318,7 @@ type RawRule = ServiceRule & { '@id'?: string };
 
 /** GET the recurring schedule (the rule's `id` is already the bare ULID we DELETE by — no @id norm). */
 export async function getServiceSchedule(iri: string): Promise<ServiceRule[]> {
-  const res = await authFetch(`${API}${iri}/service-schedule`, { headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(iri)}/service-schedule`, { headers: { Accept: LD } });
   return hydraMembers<RawRule>(await okJson(res, 'schedule fetch'));
 }
 
@@ -327,7 +338,7 @@ export interface ServiceRuleInput {
  * 422 when no cadence is given — surface its RFC 7807 `detail` so the form can explain.
  */
 export async function saveServiceRule(iri: string, input: ServiceRuleInput): Promise<ServiceRule> {
-  const res = await authFetch(`${API}${iri}/service-schedule`, {
+  const res = await authFetch(`${apiUrl(iri)}/service-schedule`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(input),
@@ -344,7 +355,7 @@ export async function saveServiceRule(iri: string, input: ServiceRuleInput): Pro
 
 /** Remove a recurring rule by its ULID (soft-delete → drops off). */
 export async function deleteServiceRule(iri: string, ruleId: string): Promise<void> {
-  const res = await authFetch(`${API}${iri}/service-schedule/${encodeURIComponent(ruleId)}`, { method: 'DELETE', headers: { Accept: LD } });
+  const res = await authFetch(`${apiUrl(iri)}/service-schedule/${encodeURIComponent(ruleId)}`, { method: 'DELETE', headers: { Accept: LD } });
   okVoid(res, 'schedule delete');
 }
 
@@ -386,7 +397,7 @@ export interface MaintenanceRecordInput {
 
 /** Log a past service by hand (POST maintenance-records). Returns the stored visit, its IRI normalized to `id` (bills attach to it). */
 export async function createMaintenanceRecord(vehicleIri: string, input: MaintenanceRecordInput): Promise<MaintenanceRecord> {
-  const res = await authFetch(`${API}${vehicleIri}/maintenance-records`, {
+  const res = await authFetch(`${apiUrl(vehicleIri)}/maintenance-records`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(input),
@@ -396,7 +407,7 @@ export async function createMaintenanceRecord(vehicleIri: string, input: Mainten
 
 /** Edit a logged visit (PATCH /garage/maintenance-records/{id} — the body replaces the whole visit). */
 export async function updateMaintenanceRecord(recordIri: string, input: MaintenanceRecordInput): Promise<void> {
-  const res = await authFetch(`${API}${recordIri}`, {
+  const res = await authFetch(apiUrl(recordIri), {
     method: 'PATCH',
     headers: { 'Content-Type': MERGE, Accept: LD },
     body: JSON.stringify(input),
@@ -406,7 +417,7 @@ export async function updateMaintenanceRecord(recordIri: string, input: Maintena
 
 /** Remove a logged visit. */
 export async function deleteMaintenanceRecord(recordIri: string): Promise<void> {
-  const res = await authFetch(`${API}${recordIri}`, { method: 'DELETE', headers: { Accept: LD } });
+  const res = await authFetch(apiUrl(recordIri), { method: 'DELETE', headers: { Accept: LD } });
   okVoid(res, 'record delete');
 }
 
@@ -417,13 +428,13 @@ export async function deleteMaintenanceRecord(recordIri: string): Promise<void> 
 export async function uploadMaintenanceAttachment(recordIri: string, file: File): Promise<MaintenanceAttachment> {
   const body = new FormData();
   body.append('file', file);
-  const res = await authFetch(`${API}${recordIri}/attachments`, { method: 'POST', body });
+  const res = await authFetch(`${apiUrl(recordIri)}/attachments`, { method: 'POST', body });
   return okJson<MaintenanceAttachment>(res, 'attachment upload');
 }
 
 /** Remove one bill (DELETE the attachment IRI). */
 export async function deleteMaintenanceAttachment(attachmentUrl: string): Promise<void> {
-  const res = await authFetch(`${API}${attachmentUrl}`, { method: 'DELETE', headers: { Accept: LD } });
+  const res = await authFetch(apiUrl(attachmentUrl), { method: 'DELETE', headers: { Accept: LD } });
   okVoid(res, 'attachment delete');
 }
 
@@ -432,14 +443,14 @@ export async function deleteMaintenanceAttachment(attachmentUrl: string): Promis
  * <a href>/<img src> would 404. The document viewer reads them; nothing is handed to the browser as a URL.
  */
 export async function fetchDocumentBlob(fileUrl: string, signal?: AbortSignal): Promise<Blob> {
-  const res = await authFetch(`${API}${fileUrl}`, { signal });
+  const res = await authFetch(apiUrl(fileUrl), { signal });
   okVoid(res, 'document fetch');
   return res.blob();
 }
 
 /** The manual's own page labels (« 23A-19 ») beside each physical page number — no page text. */
 export async function fetchDocumentPages(pagesUrl: string, signal?: AbortSignal): Promise<PageLabel[]> {
-  const res = await authFetch(`${API}${pagesUrl}`, { headers: { Accept: 'application/json' }, signal });
+  const res = await authFetch(apiUrl(pagesUrl), { headers: { Accept: 'application/json' }, signal });
   return okJson<PageLabel[]>(res, 'document pages fetch');
 }
 
@@ -447,7 +458,7 @@ export async function fetchDocumentPages(pagesUrl: string, signal?: AbortSignal)
 
 /** GET a vehicle's documents, newest first. A plain JSON array (not hydra); ids are bare ULIDs. */
 export async function listVehicleDocuments(vehicleIri: string): Promise<VehicleDocument[]> {
-  const res = await authFetch(`${API}${vehicleIri}/documents`, { headers: { Accept: 'application/json' } });
+  const res = await authFetch(`${apiUrl(vehicleIri)}/documents`, { headers: { Accept: 'application/json' } });
   return okJson<VehicleDocument[]>(res, 'documents fetch');
 }
 
@@ -474,7 +485,7 @@ export function documentUploadBody(input: VehicleDocumentUpload): FormData {
 
 /** File one document on a vehicle (multipart POST — never set Content-Type, the browser sets the boundary). */
 export async function uploadVehicleDocument(vehicleIri: string, input: VehicleDocumentUpload): Promise<VehicleDocument> {
-  const res = await authFetch(`${API}${vehicleIri}/documents`, { method: 'POST', body: documentUploadBody(input) });
+  const res = await authFetch(`${apiUrl(vehicleIri)}/documents`, { method: 'POST', body: documentUploadBody(input) });
   if (!res.ok) {
     const detail = await res
       .json()
@@ -487,6 +498,6 @@ export async function uploadVehicleDocument(vehicleIri: string, input: VehicleDo
 
 /** Remove one document by its bare ULID. */
 export async function deleteVehicleDocument(vehicleIri: string, documentId: string): Promise<void> {
-  const res = await authFetch(`${API}${vehicleIri}/documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
+  const res = await authFetch(`${apiUrl(vehicleIri)}/documents/${encodeURIComponent(documentId)}`, { method: 'DELETE' });
   okVoid(res, 'document delete');
 }

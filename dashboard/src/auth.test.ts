@@ -1,13 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import {
-  TOKEN_ENDPOINT,
-  base64urlEncode,
-  decodeJwtClaims,
-  isTokenFresh,
-  pkceChallenge,
-  tokenExpiryMs,
-  validateCallback,
-} from './auth';
+import { TOKEN_ENDPOINT, apiOrigin, base64urlEncode, bearerAllowed, decodeJwtClaims, isTokenFresh, pkceChallenge, tokenExpiryMs, validateCallback } from './auth';
 
 // Pure-core tests for the OAuth/PKCE transport. The thin window/storage/fetch glue is left untested
 // (trivial wiring) — this pins the security-bearing logic: PKCE math, token-freshness skew, the
@@ -153,12 +145,7 @@ describe('completeLoginIfCallback under a double invocation (StrictMode)', () =>
     vi.stubGlobal('localStorage', local);
     vi.stubGlobal('sessionStorage', session);
 
-    fetchMock = vi.fn(
-      async () =>
-        new Promise((resolve) =>
-          setTimeout(() => resolve({ ok: true, status: 200, json: async () => ({ access_token: 'tok-1', expires_in: 3600 }) } as Response), 0),
-        ),
-    );
+    fetchMock = vi.fn(async () => new Promise((resolve) => setTimeout(() => resolve({ ok: true, status: 200, json: async () => ({ access_token: 'tok-1', expires_in: 3600 }) } as Response), 0)));
     vi.stubGlobal('fetch', fetchMock);
     vi.resetModules();
   });
@@ -182,5 +169,79 @@ describe('completeLoginIfCallback under a double invocation (StrictMode)', () =>
 
     await expect(completeLoginIfCallback()).resolves.toBe(false);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('apiOrigin', () => {
+  it('reads the origin of an absolute API base', () => {
+    expect(apiOrigin('https://localhost', 'https://garage.example')).toBe('https://localhost');
+    expect(apiOrigin('https://api.example:8443/base/', 'https://garage.example')).toBe('https://api.example:8443');
+  });
+
+  it('falls back to the page origin when the base is empty or relative', () => {
+    expect(apiOrigin('', 'https://localhost')).toBe('https://localhost');
+    expect(apiOrigin('/api', 'https://localhost')).toBe('https://localhost');
+  });
+});
+
+describe('bearerAllowed', () => {
+  const page = 'https://localhost';
+  const api = 'https://localhost';
+
+  it('allows a same-origin API path and an absolute URL on the API origin', () => {
+    expect(bearerAllowed('/garage/vehicles', page, api)).toBe(true);
+    expect(bearerAllowed('https://localhost/garage/vehicles/01V', page, api)).toBe(true);
+  });
+
+  it('refuses a model-supplied suffix that turns the base into another host', () => {
+    expect(bearerAllowed('https://localhost.evil.tld/x', page, api)).toBe(false);
+    expect(bearerAllowed('https://localhost@evil.tld/x', page, api)).toBe(false);
+  });
+
+  it('refuses a scheme-relative URL', () => {
+    expect(bearerAllowed('//evil.tld/x', page, api)).toBe(false);
+  });
+
+  it('refuses any other absolute origin, scheme or port', () => {
+    expect(bearerAllowed('https://evil.tld/garage/vehicles', page, api)).toBe(false);
+    expect(bearerAllowed('http://localhost/garage/vehicles', page, api)).toBe(false);
+    expect(bearerAllowed('https://localhost:8443/garage/vehicles', page, api)).toBe(false);
+    expect(bearerAllowed('javascript:alert(1)', page, api)).toBe(false);
+  });
+
+  it('refuses an unparseable URL', () => {
+    expect(bearerAllowed('http://[::1', page, api)).toBe(false);
+  });
+});
+
+describe('authFetch', () => {
+  beforeEach(() => {
+    vi.stubGlobal('window', { location: { origin: 'https://localhost', pathname: '/', hash: '' } });
+    vi.resetModules();
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('never sends the Bearer to a foreign origin', async () => {
+    const seen: Array<{ url: string; auth: string | null }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        seen.push({ url, auth: new Headers(init.headers).get('Authorization') });
+        return { ok: true, status: 200 } as Response;
+      }),
+    );
+    const local = new Map([['mpa.auth.token', JSON.stringify({ accessToken: 'secret', expiresAt: Date.now() + 3_600_000 })]]);
+    vi.stubGlobal('localStorage', { getItem: (k: string) => local.get(k) ?? null, removeItem: (k: string) => local.delete(k) });
+    const { authFetch } = await import('./auth');
+
+    await authFetch('https://localhost/garage/vehicles');
+    await authFetch('https://localhost.evil.tld/x');
+    await authFetch('//evil.tld/x');
+
+    expect(seen).toEqual([
+      { url: 'https://localhost/garage/vehicles', auth: 'Bearer secret' },
+      { url: 'https://localhost.evil.tld/x', auth: null },
+      { url: '//evil.tld/x', auth: null },
+    ]);
   });
 });
