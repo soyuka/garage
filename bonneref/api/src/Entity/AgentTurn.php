@@ -39,6 +39,10 @@ class AgentTurn
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $error = null;
 
+    /** Correlates a failed turn with the logged cause; {@see $error} only carries a public message. */
+    #[ODM\Field(type: 'string', nullable: true)]
+    private ?string $errorId = null;
+
     // Class-level default: journals written before the finder existed hydrate as garage turns.
     #[ODM\Field(type: 'string', enumType: TurnSurface::class)]
     private TurnSurface $surface = TurnSurface::Finder;
@@ -239,6 +243,11 @@ class AgentTurn
         return $this->error;
     }
 
+    public function getErrorId(): ?string
+    {
+        return $this->errorId;
+    }
+
     public function getStartedAt(): \DateTimeImmutable
     {
         return $this->startedAt;
@@ -389,10 +398,11 @@ class AgentTurn
         $this->finalText = $finalText;
     }
 
-    public function finish(AgentTurnStatus $status, ?string $error): void
+    public function finish(AgentTurnStatus $status, ?string $error, ?string $errorId = null): void
     {
         $this->status = $status;
         $this->error = $error;
+        $this->errorId = $errorId;
         $this->finishedAt = new \DateTimeImmutable();
         $this->durationMs = (int) (($this->finishedAt->format('U.u') - $this->startedAt->format('U.u')) * 1000);
     }

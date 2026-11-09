@@ -128,7 +128,7 @@ final class TurnJournal implements WebSearchTracer
         }
     }
 
-    public function finish(AgentTurnStatus $status, ?string $error): void
+    public function finish(AgentTurnStatus $status, ?string $error, ?string $errorId = null): void
     {
         $turn = $this->current;
         $this->current = null;
@@ -136,7 +136,7 @@ final class TurnJournal implements WebSearchTracer
             return;
         }
 
-        $turn->finish($status, $error);
+        $turn->finish($status, $error, $errorId);
 
         try {
             $this->documentManager->persist($turn);

@@ -35,7 +35,7 @@ final readonly class TurnSettlementMiddleware implements MiddlewareInterface
             return $stack->next()->handle($envelope, $stack);
         } catch (\Throwable $e) {
             $cause = $e instanceof HandlerFailedException ? ($e->getPrevious() ?? $e) : $e;
-            $this->settlement->fail($turn, $cause->getMessage());
+            $this->settlement->fail($turn, $cause);
 
             throw $e;
         } finally {

@@ -164,7 +164,7 @@ final readonly class RunAgentTurnHandler
             // Any other failure inside the loop: record it on the journal, then let it propagate so
             // Messenger applies its retry policy unchanged.
             $status = AgentTurnStatus::Failed;
-            $error = $e->getMessage();
+            $error = $e;
 
             throw $e;
         } finally {

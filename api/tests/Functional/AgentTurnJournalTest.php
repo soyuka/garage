@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Journal\TurnJournal;
+use App\Agent\TurnSettlement;
+use App\Agent\Ui\RenderIntentTools;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\MessageHandler\RunAgentTurnHandler;
 use App\Repository\AgentTurnRepository;
+use App\Tests\Mock\RecordingLogger;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use MongoDB\BSON\UTCDateTime;
@@ -68,20 +72,20 @@ final class AgentTurnJournalTest extends AppTestCase
         self::assertSame('Viscosité 5W-30.', $toolCalls[0]->getArguments()['message']);
     }
 
-    public function testFailedTurnIsJournalledAsFailedWithItsError(): void
+    public function testAFailedTurnJournalsAPublicMessageAndLogsTheCauseUnderItsId(): void
     {
-        static::createClient();
+        $client = static::createClient();
         $container = static::getContainer();
+        $logger = new RecordingLogger();
+        $container->set(TurnSettlement::class, new TurnSettlement($container->get(TurnJournal::class), $container->get(RenderIntentTools::class), $logger));
 
-        // The agent loop throws: the journal must still record the turn, flagged Failed with the error.
-        $platform = new ScriptedStreamPlatform(static function (): string {
-            throw new \RuntimeException('boom');
-        });
-        $container->set('ai.platform.anthropic', $platform);
+        $leak = 'cannot open /app/var/secret.key using %env(DATABASE_URL)% APP_SECRET=s3cr3t';
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static function () use ($leak): string {
+            throw new \RuntimeException($leak);
+        }));
 
-        $handler = $container->get(RunAgentTurnHandler::class);
         try {
-            $handler(new RunAgentTurn(
+            $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
                 instruction: 'plante',
                 sessionTopic: 'https://localhost/.well-known/mercure?topic='.rawurlencode('/agent/sessions/sess-fail'),
                 owner: self::TEST_OWNER,
@@ -90,10 +94,20 @@ final class AgentTurnJournalTest extends AppTestCase
             // The handler rethrows so Messenger can retry; the journal records it first (finally block).
         }
 
-        $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns);
-        self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertStringContainsString('boom', (string) $turns[0]->getError());
+        $response = $client->request('GET', '/agent/turns', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $body = $response->getContent();
+        foreach (['/app/var', 'DATABASE_URL', 's3cr3t', 'secret.key'] as $secret) {
+            self::assertStringNotContainsString($secret, $body);
+        }
+        $data = $response->toArray();
+        $turn = ($data['member'] ?? $data['hydra:member'])[0];
+        self::assertSame('failed', $turn['status']);
+        self::assertSame('The turn failed.', $turn['error']);
+        self::assertMatchesRegularExpression('/^[0-9a-f]{16}$/', $turn['errorId']);
+
+        $logged = array_values(array_filter($logger->records, static fn (array $r): bool => 'error' === $r['level'] && ($r['context']['errorId'] ?? null) === $turn['errorId']));
+        self::assertCount(1, $logged);
+        self::assertSame($leak, $logged[0]['context']['exception']->getMessage());
     }
 
     public function testJournalIsReadableOverHttpAndOwnerScoped(): void

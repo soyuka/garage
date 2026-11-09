@@ -114,7 +114,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertStringContainsString('boom', (string) $turns[0]->getError());
+        self::assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
+        self::assertNotNull($turns[0]->getErrorId());
     }
 
     public function testTurnFailingBeforeItsLoopStillEndsFailed(): void
@@ -147,7 +148,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertStringContainsString('garage.md', (string) $turns[0]->getError());
+        self::assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
+        self::assertNotNull($turns[0]->getErrorId());
     }
 
     public function testTurnKilledByAFatalIsEndedFailedAtShutdown(): void
@@ -168,7 +170,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
         self::assertCount(1, $turns);
         self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertStringContainsString('Maximum execution time', (string) $turns[0]->getError());
+        self::assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
+        self::assertNotNull($turns[0]->getErrorId());
 
         $settlement->onShutdown(null);
         self::assertCount(1, self::frames('sess-fatal'), 'a settled turn is not ended twice');

@@ -41,6 +41,8 @@ final class AgentTurn
     public string $instruction;
     public string $status;
     public ?string $error = null;
+    #[ApiProperty(description: 'Opaque reference to the logged cause of a failed turn.')]
+    public ?string $errorId = null;
     public string $provider;
     public string $model;
     public bool $stream;
@@ -84,6 +86,7 @@ final class AgentTurn
         $resource->instruction = $turn->getInstruction();
         $resource->status = $turn->getStatus()->value;
         $resource->error = $turn->getError();
+        $resource->errorId = $turn->getErrorId();
         $resource->provider = $turn->getProvider();
         $resource->model = $turn->getModel();
         $resource->stream = $turn->isStream();

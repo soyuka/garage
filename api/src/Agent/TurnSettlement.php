@@ -8,15 +8,22 @@ use App\Agent\Journal\TurnJournal;
 use App\Agent\Ui\RenderIntentTools;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
+use Psr\Log\LoggerInterface;
 
 /**
  * Ends every handled turn exactly once, on the journal and with a `turn end` frame, whatever killed
  * it: the handler settles its own loop; {@see Dispatch\TurnSettlementMiddleware} fails a turn that
  * threw before or outside that loop (the handler could not even be built); the shutdown hook fails one
  * a fatal error cut short (`set_time_limit` expiry in terminate mode, OOM in the worker).
+ *
+ * The journal is served over HTTP, so a crash is recorded as {@see self::PUBLIC_ERROR} plus an opaque
+ * id; the cause (an exception message can carry a path, a DSN, an upstream's error text) only reaches
+ * the log, under that id.
  */
 final class TurnSettlement
 {
+    public const string PUBLIC_ERROR = 'The turn failed.';
+
     private ?RunAgentTurn $open = null;
     private bool $settled = true;
     private bool $hooked = false;
@@ -24,6 +31,7 @@ final class TurnSettlement
     public function __construct(
         private readonly TurnJournal $journal,
         private readonly RenderIntentTools $renderTools,
+        private readonly LoggerInterface $logger,
     ) {
     }
 
@@ -37,14 +45,25 @@ final class TurnSettlement
         }
     }
 
-    public function settle(AgentTurnStatus $status, ?string $error): void
+    /**
+     * @param string|\Throwable|null $outcome a string is our own wording and is journalled as is; a
+     *                                        throwable is a crash and is masked
+     */
+    public function settle(AgentTurnStatus $status, string|\Throwable|null $outcome): void
     {
         $this->settled = true;
-        $this->journal->finish($status, $error);
+        if ($outcome instanceof \Throwable) {
+            $this->journal->finish($status, self::PUBLIC_ERROR, $this->report($outcome));
+        } else {
+            $this->journal->finish($status, $outcome);
+        }
         $this->renderTools->signalTurnPhase('end', AgentTurnStatus::Failed === $status);
     }
 
-    public function fail(RunAgentTurn $turn, string $error): void
+    /**
+     * @param \Throwable|string $cause always masked: whatever reaches here was not ours to word
+     */
+    public function fail(RunAgentTurn $turn, \Throwable|string $cause): void
     {
         if ($this->open !== $turn || $this->settled) {
             return;
@@ -57,7 +76,18 @@ final class TurnSettlement
         if (null === $this->journal->currentTurnId()) {
             $this->journal->begin($turn, '');
         }
-        $this->journal->finish(AgentTurnStatus::Failed, $error);
+        $this->journal->finish(AgentTurnStatus::Failed, self::PUBLIC_ERROR, $this->report($cause));
+    }
+
+    private function report(\Throwable|string $cause): string
+    {
+        $id = bin2hex(random_bytes(8));
+        $this->logger->error('Agent turn failed [{errorId}]: {error}', [
+            'errorId' => $id,
+            'error' => $cause instanceof \Throwable ? $cause->getMessage() : $cause,
+        ] + ($cause instanceof \Throwable ? ['exception' => $cause] : []));
+
+        return $id;
     }
 
     public function close(): void
