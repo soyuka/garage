@@ -20,14 +20,20 @@ upstream — see `../api/frankenphp/Caddyfile` + `../api/compose.override.yaml`)
 ## Auth — Casdoor OAuth2 Authorization Code + PKCE (public client, no secret)
 
 - **Login** = full-page redirect to `${ISSUER}/login/oauth/authorize` with `code_challenge` (S256),
-  `state`, `redirect_uri = ${origin}/callback`. Verifier + state in `sessionStorage` (single-use);
-  the resulting access token (a Casdoor-signed **JWT**) in `localStorage`.
+  `state`, `redirect_uri = ${origin}/callback`, scope `openid profile email offline_access` (no
+  `resource`: the API checks `aud` = the client id). Verifier + state + the hash route to return to
+  (`#/…` only) in `sessionStorage` (single-use); one redirect per page however many callers ask.
+  The tokens (access **JWT**, refresh, id) live in memory mirrored to `sessionStorage` — this tab,
+  surviving a reload, not a browser restart.
 - **Token exchange** is a `fetch()` POST straight to **`${ISSUER}/api/login/oauth/access_token`**
   (`https://auth.bonneref.fr`; no same-origin proxy any more). The token's `iss` is that issuer, which
   must equal the API's `CASDOOR_ISSUER`.
-- **`authFetch`** attaches `Authorization: Bearer <jwt>` when a non-expired token exists. **Public
-  `GET` reads need no Bearer**; `/agent/turn` + **all writes are gated**. A **401 wipes the token and
-  bounces to login** (re-auth, never silent-fail). ISSUER `https://auth.bonneref.fr`, CLIENT_ID
+- **`authFetch`** attaches `Authorization: Bearer <jwt>` only to URLs on the API origin, and
+  `garage.ts` refuses any IRI that is not a plain path (`apiUrl`). **Public `GET` reads need no
+  Bearer**; `/agent/turn` + **all writes are gated**. The access token is refreshed a minute before
+  expiry; a **401 gets one refresh + retry, then wipes the token and bounces to login** (re-auth,
+  never silent-fail). **Logout** clears the tab's `sessionStorage` and goes to the issuer's
+  `end_session_endpoint` (`/api/logout`, `id_token_hint`, `post_logout_redirect_uri = ${origin}/`). ISSUER `https://auth.bonneref.fr`, CLIENT_ID
   `671b8c86d75444f3f4c4` (default in `src/auth.ts`; the public PKCE app must exist on the hosted
   Casdoor), redirect URI `https://localhost/callback`.
 - ⚠️ Reads working without a Bearer gives false confidence — gate-verify with a real **write** 2xx.

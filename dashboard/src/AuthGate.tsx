@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import './auth.css';
-import { completeLoginIfCallback, isAuthenticated, login } from './auth';
+import { completeLoginIfCallback, isAuthenticated, login, resumeSession } from './auth';
 
 // The React glue over the pure auth core. AuthBoot resolves the OAuth callback before the app paints
 // (so a held token is ready for the first read); RequireAuth bounces a signed-out visitor to Casdoor.
@@ -10,14 +10,16 @@ import { completeLoginIfCallback, isAuthenticated, login } from './auth';
 type BootPhase = 'checking' | 'ready';
 
 /**
- * Completes the `/callback` token exchange (a no-op on any other path) before rendering children. A
- * failed exchange is swallowed — the visitor simply lands signed-out. Shows a terse splash meanwhile.
+ * Completes the `/callback` token exchange (a no-op on any other path) and renews a stale token from
+ * the refresh token before rendering children. A failed exchange is swallowed — the visitor simply
+ * lands signed-out. Shows a terse splash meanwhile.
  */
 export function AuthBoot({ children }: { children: ReactNode }) {
   const [phase, setPhase] = useState<BootPhase>('checking');
   useEffect(() => {
     completeLoginIfCallback()
       .catch(() => undefined)
+      .then(() => resumeSession())
       .finally(() => setPhase('ready'));
   }, []);
   if (phase === 'checking')
