@@ -117,7 +117,8 @@ servers for the Atelier and bonneref.
 A fresh clone runs with an empty `api/.env.local`: every value in `api/.env` has a working default for the
 compose stack. Paid keys are optional, and a missing key turns its feature off instead of breaking it:
 
-- `ANTHROPIC_API_KEY`: the in-app agent. MCP clients bring their own model and need no key.
+- `ANTHROPIC_API_KEY`: the in-app agent (or the key of whichever platform `api/config/packages/ai.yaml` gives
+  it). MCP clients bring their own model and need no key.
 - `GEMINI_API_KEY`: the agent's `web_search` tool. Gemini is the web-search backend on purpose.
 - `ELEVENLABS_API_KEY`: voice and dictation. ElevenLabs is the only voice backend.
 

@@ -112,7 +112,7 @@ final class AgentTurnControllerTest extends TestCase
             }
         };
 
-        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $baseUri, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
+        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $baseUri, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
     }
 
     private function dispatched(RunAgentTurn $turn): void

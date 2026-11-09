@@ -68,7 +68,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        $response = (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini)))(self::request());
+        $response = (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key')))(self::request());
 
         $this->assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $response->getStatusCode());
     }
@@ -103,7 +103,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        return (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini)))(self::request());
+        return (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key')))(self::request());
     }
 
     private static function request(): Request

@@ -43,7 +43,7 @@ final class CompositeToolboxTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new CompositeToolbox($render, $mcp, new StepNarrator($tools), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
+        return new CompositeToolbox($render, $mcp, new StepNarrator($tools), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
     }
 
     private function mcpToolboxExposing(string $name): McpToolbox
@@ -92,7 +92,7 @@ final class CompositeToolboxTest extends TestCase
         /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
         $narrator = new StepNarrator($this->renderTools($published));
-        $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
+        $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
         // Simulate what EarlyStepNarrationListener would already have done from the stream.
         $narrator->announce('id-3', 'get_service_parts');
         $published->exchangeArray([]);
@@ -134,7 +134,7 @@ final class CompositeToolboxTest extends TestCase
         $narrator = new StepNarrator($this->renderTools($published));
         $narrator->announceStep('id-5', 'Je compare les marques…');
         $published->exchangeArray([]);
-        $toolbox = new CompositeToolbox($render, $this->mcpToolboxExposing('get_service_parts'), $narrator, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
+        $toolbox = new CompositeToolbox($render, $this->mcpToolboxExposing('get_service_parts'), $narrator, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
 
         $result = $toolbox->execute(new ToolCall('id-5', 'narrate_step', ['message' => 'Je compare les marques…']));
 

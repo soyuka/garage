@@ -11,7 +11,7 @@ namespace App\Capability;
  */
 enum Capability: string
 {
-    /** The in-app garage agent (Anthropic). */
+    /** The in-app garage agent, on whichever platform ai.yaml gives it ({@see AgentApiKeyPass}). */
     case Agent = 'agent';
     /** The Atelier's spoken notices (ElevenLabs TTS). */
     case Voice = 'voice';

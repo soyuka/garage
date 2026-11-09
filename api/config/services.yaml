@@ -111,6 +111,7 @@ services:
             $elevenLabsApiKey: '%env(ELEVENLABS_API_KEY)%'
             $geminiApiKey: '%env(GEMINI_API_KEY)%'
             $webSearchBackend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
+            $agentApiKey: '%app.agent.api_key%'
 
     # Below the cached factory (-10), i.e. outside it: the cache keeps every tool and the env filters
     # per call.

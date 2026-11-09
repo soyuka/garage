@@ -19,7 +19,7 @@ final class CapabilityGatedResourceMetadataCollectionFactoryTest extends TestCas
     public function testAToolWhoseCapabilityIsMissingIsDropped(): void
     {
         $inner = $this->inner();
-        $factory = new CapabilityGatedResourceMetadataCollectionFactory($inner, new Capabilities('anthropic', '', '', WebSearchBackend::Gemini));
+        $factory = new CapabilityGatedResourceMetadataCollectionFactory($inner, new Capabilities('anthropic', '', '', WebSearchBackend::Gemini, 'test-agent-key'));
 
         $this->assertSame(['open_tool'], array_keys($factory->create(\stdClass::class)[0]->getMcp() ?? []));
         $this->assertCount(2, $inner->create(\stdClass::class)[0]->getMcp() ?? [], 'the decorated (cached) collection must not be mutated');
@@ -27,7 +27,7 @@ final class CapabilityGatedResourceMetadataCollectionFactoryTest extends TestCas
 
     public function testAToolWhoseCapabilityIsConfiguredStays(): void
     {
-        $factory = new CapabilityGatedResourceMetadataCollectionFactory($this->inner(), new Capabilities('anthropic', 'xi-key', '', WebSearchBackend::Gemini));
+        $factory = new CapabilityGatedResourceMetadataCollectionFactory($this->inner(), new Capabilities('anthropic', 'xi-key', '', WebSearchBackend::Gemini, 'test-agent-key'));
 
         $this->assertSame(['open_tool', 'spoken_tool'], array_keys($factory->create(\stdClass::class)[0]->getMcp() ?? []));
     }
@@ -40,7 +40,7 @@ final class CapabilityGatedResourceMetadataCollectionFactoryTest extends TestCas
         ]));
 
         $this->expectException(\LogicException::class);
-        (new CapabilityGatedResourceMetadataCollectionFactory($inner, new Capabilities('', '', '', WebSearchBackend::Gemini)))->create(\stdClass::class);
+        (new CapabilityGatedResourceMetadataCollectionFactory($inner, new Capabilities('', '', '', WebSearchBackend::Gemini, 'test-agent-key')))->create(\stdClass::class);
     }
 
     private function inner(): ResourceMetadataCollectionFactoryInterface

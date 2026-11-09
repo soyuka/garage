@@ -18,13 +18,15 @@ final readonly class Capabilities
         #[\SensitiveParameter] private string $elevenLabsApiKey,
         #[\SensitiveParameter] private string $geminiApiKey,
         private WebSearchBackend $webSearchBackend,
+        /** The agent's platform key ({@see AgentApiKeyPass}); null when that platform takes none. */
+        #[\SensitiveParameter] private ?string $agentApiKey,
     ) {
     }
 
     public function has(Capability $capability): bool
     {
         return match ($capability) {
-            Capability::Agent => self::set($this->anthropicApiKey),
+            Capability::Agent => null === $this->agentApiKey || self::set($this->agentApiKey),
             Capability::Voice, Capability::Dictation => self::set($this->elevenLabsApiKey),
             Capability::WebSearch => self::set(match ($this->webSearchBackend) {
                 WebSearchBackend::Anthropic => $this->anthropicApiKey,
