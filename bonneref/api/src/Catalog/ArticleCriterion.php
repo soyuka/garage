@@ -16,7 +16,7 @@ final readonly class ArticleCriterion
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    public static function fromCatalogRow(array $row): self
     {
         return new self(
             name: trim((string) ($row['CRITERIA_NAME'] ?? '')),

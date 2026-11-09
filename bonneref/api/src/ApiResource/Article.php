@@ -67,7 +67,7 @@ final class Article
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    public static function fromCatalogRow(array $row): self
     {
         return new self(
             id: (int) ($row['ART_ID'] ?? 0),

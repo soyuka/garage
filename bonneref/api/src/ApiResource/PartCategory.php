@@ -86,7 +86,7 @@ final class PartCategory
      *
      * @return list<self>
      */
-    public static function fromPartsApiTree(array $nodes, bool $leafOnly, ?string $search = null): array
+    public static function fromCatalogTree(array $nodes, bool $leafOnly, ?string $search = null): array
     {
         // parent map MUST be built from the full set so leaf detection stays correct
         // regardless of the search/leafOnly filtering applied below

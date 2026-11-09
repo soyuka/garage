@@ -93,7 +93,7 @@ final class Car
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    public static function fromCatalogRow(array $row): self
     {
         $capacity = (string) ($row['CAPACITY'] ?? '');
 

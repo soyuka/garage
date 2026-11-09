@@ -60,7 +60,7 @@ final class Make
     /**
      * @param array{makeId: int|string, makeName: string} $row verified live 2026-06-12
      */
-    public static function fromPartsApi(array $row): self
+    public static function fromCatalogRow(array $row): self
     {
         return new self((int) $row['makeId'], (string) $row['makeName']);
     }

@@ -17,7 +17,7 @@ final readonly class ArticleCross
     /**
      * @param array<string, mixed> $row
      */
-    public static function fromPartsApi(array $row): self
+    public static function fromCatalogRow(array $row): self
     {
         return new self(
             brand: trim((string) ($row['ART_BRAND'] ?? '')),

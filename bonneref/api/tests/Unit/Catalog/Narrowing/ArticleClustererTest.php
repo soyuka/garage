@@ -213,7 +213,7 @@ final class ArticleClustererTest extends TestCase
     {
         $rows = json_decode((string) file_get_contents(__DIR__.'/../../../Fixtures/catalog-rows/'.$file), true, flags: \JSON_THROW_ON_ERROR);
 
-        return self::representative($artId, $brand, $number, $rank, array_map(ArticleCriterion::fromPartsApi(...), $rows));
+        return self::representative($artId, $brand, $number, $rank, array_map(ArticleCriterion::fromCatalogRow(...), $rows));
     }
 
     /**

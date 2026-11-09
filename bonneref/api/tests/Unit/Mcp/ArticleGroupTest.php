@@ -27,7 +27,7 @@ final class ArticleGroupTest extends TestCase
             flags: \JSON_THROW_ON_ERROR,
         );
 
-        return array_map(Article::fromPartsApi(...), $rows);
+        return array_map(Article::fromCatalogRow(...), $rows);
     }
 
     public function testKeepsFullTotalsRegardlessOfTruncation(): void
@@ -80,7 +80,7 @@ final class ArticleGroupTest extends TestCase
             ['ART_ID' => 1, 'ART_ARTICLE_NR' => 'X1', 'ART_SUP_BRAND' => 'OSSCA', 'PRODUCT GROUP' => 'Oil Filter', 'PT_ID' => 1, 'SUP_ID' => 1],
             ['ART_ID' => 2, 'ART_ARTICLE_NR' => 'Y1', 'ART_SUP_BRAND' => 'WILMINK GROUP', 'PRODUCT GROUP' => 'Oil Filter', 'PT_ID' => 1, 'SUP_ID' => 2],
         ];
-        $group = ArticleGroup::of(100259, array_map(Article::fromPartsApi(...), $rows));
+        $group = ArticleGroup::of(100259, array_map(Article::fromCatalogRow(...), $rows));
 
         $this->assertSame(2, $group['totalBrands']);
         $this->assertFalse($group['truncated']);

@@ -46,7 +46,7 @@ final class TecdocCatalog implements PartsCatalog
     {
         $column = CarType::PassengerCar === $carType ? 'has_passenger_car' : 'has_commercial_vehicle';
         $makes = array_map(
-            Make::fromPartsApi(...),
+            Make::fromCatalogRow(...),
             $this->rows(\sprintf('SELECT manufacturer_id AS makeId, name AS makeName FROM manufacturer WHERE %s = 1 ORDER BY name', $column)),
         );
 
@@ -73,7 +73,7 @@ final class TecdocCatalog implements PartsCatalog
         );
 
         return array_map(
-            static fn (array $row): Model => Model::fromPartsApi($row + [
+            static fn (array $row): Model => Model::fromCatalogRow($row + [
                 'yearsFrom' => self::rfc1123($row['year_from'], $row['month_from']),
                 'yearsTo' => self::rfc1123($row['year_to'], $row['month_to']),
             ]),
@@ -90,7 +90,7 @@ final class TecdocCatalog implements PartsCatalog
         $rows = array_map(static fn (array $row): array => self::carRow($row, $engines[$row['CAR_ID']] ?? []), $rows);
         $this->vehicles?->recordCatalogRows($rows, $carType);
 
-        return array_map(Car::fromPartsApi(...), $rows);
+        return array_map(Car::fromCatalogRow(...), $rows);
     }
 
     public function carMake(int $carId, CarType $carType): ?string
@@ -160,7 +160,7 @@ final class TecdocCatalog implements PartsCatalog
             ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'carId' => $carId],
         );
 
-        return PartCategory::fromPartsApiTree($nodes, $leafOnly, $search);
+        return PartCategory::fromCatalogTree($nodes, $leafOnly, $search);
     }
 
     public function categoryName(int $carId, int $categoryId, CarType $carType): ?string
@@ -202,7 +202,7 @@ final class TecdocCatalog implements PartsCatalog
             ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'carId' => $carId, 'strId' => $categoryId],
         );
 
-        return array_map(Article::fromPartsApi(...), $rows);
+        return array_map(Article::fromCatalogRow(...), $rows);
     }
 
     public function articleCriteria(int $artId): array
@@ -280,7 +280,7 @@ final class TecdocCatalog implements PartsCatalog
         $names = $this->productNames(array_values(array_unique([...$resolved, ...array_column($citing, 'artId')])));
 
         $crosses = array_map(
-            static fn (array $row, int $i): ArticleCross => ArticleCross::fromPartsApi([
+            static fn (array $row, int $i): ArticleCross => ArticleCross::fromCatalogRow([
                 'ART_BRAND' => $row['brand'],
                 'ART_DISPLAY_NR' => $row['number'],
                 'ART_ID' => $resolved[$i] ?? null,
@@ -293,7 +293,7 @@ final class TecdocCatalog implements PartsCatalog
         $known = array_flip($resolved);
         foreach ($citing as $article) {
             if (!isset($known[$article['artId']])) {
-                $crosses[] = ArticleCross::fromPartsApi([
+                $crosses[] = ArticleCross::fromCatalogRow([
                     'ART_BRAND' => $article['brand'],
                     'ART_DISPLAY_NR' => $article['number'],
                     'ART_ID' => $article['artId'],
