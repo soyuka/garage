@@ -8,6 +8,7 @@ use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Events;
+use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
@@ -114,7 +115,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
     {
         $recordIri = $this->seedRecordIri();
         $browser = static::getClient();
-        self::assertNotNull($browser);
+        self::assertInstanceOf(KernelBrowser::class, $browser);
         $browser->disableReboot();
         $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $auth);
