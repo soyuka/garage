@@ -83,8 +83,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
     public function testRefusesAFileOverTenMegabytes(): void
     {
         // The test client's error rendering copies the request body several times over.
-        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
-        ini_set('memory_limit', '512M');
+        $this->raiseMemoryLimit('512M');
         $client = static::createClient();
         $this->post($client, self::PNG.str_repeat("\0", 10 * 1024 * 1024), 'image/png');
 
@@ -94,8 +93,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
 
     public function testRefusesAnImageOverFourMegabytes(): void
     {
-        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
-        ini_set('memory_limit', '512M');
+        $this->raiseMemoryLimit('512M');
         $client = static::createClient();
         $this->post($client, self::PNG.str_repeat("\0", 4 * 1024 * 1024), 'image/png');
 
@@ -105,8 +103,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
 
     public function testAPdfMayExceedTheImageCap(): void
     {
-        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
-        ini_set('memory_limit', '512M');
+        $this->raiseMemoryLimit('512M');
         $client = static::createClient();
         $this->post($client, "%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n".str_repeat(' ', 5 * 1024 * 1024)."trailer<</Root 1 0 R>>\n%%EOF", 'application/pdf');
 

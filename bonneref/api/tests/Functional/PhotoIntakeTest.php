@@ -106,8 +106,7 @@ final class PhotoIntakeTest extends AppTestCase
 
     public function testRefusesAnImageOverFourMegabytes(): void
     {
-        // @mago-expect lint:no-ini-set test fixture: the client's error rendering copies the oversized body
-        ini_set('memory_limit', '512M');
+        $this->raiseMemoryLimit('512M');
         $client = static::createClient();
         $this->post($client, self::PNG.str_repeat("\0", 4 * 1024 * 1024), 'image/png');
 

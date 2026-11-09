@@ -695,8 +695,7 @@ final class FinderTurnTest extends AppTestCase
     #[DataProvider('badImages')]
     public function testImagesAreValidatedBeforeAnyModelCall(array $images, int $status): void
     {
-        // @mago-expect lint:no-ini-set test fixture: the oversized data URL needs headroom
-        ini_set('memory_limit', '1G');
+        $this->raiseMemoryLimit('1G');
         $client = static::createClient();
         $container = static::getContainer();
 
