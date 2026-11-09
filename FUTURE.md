@@ -884,3 +884,21 @@ honest path is: `mongosh` `db.createUser(...)` on the live instance (root + an a
 `bonneref`), restart `mongod` with `--auth`, then put the credentials in `MONGODB_URL` (compose builds it from
 components: add `MONGODB_USER`/`MONGODB_PASSWORD` there and to `.env.test`/CI). The prod deployment
 (`docs/deploy-garage.md`) needs the same check independently.
+
+## Review follow-ups left for later (noted 2026-11-10)
+
+From the api/ hardening review (items 1-17 shipped 2026-11-10, see `git log`):
+
+- **Typed enums instead of schema enum overrides.** ~42 `#[ApiProperty(schema: [... 'enum' => [...]])]`
+  overrides on the `api/src/Dto` inputs hand-copy a vocabulary that already exists as a PHP enum or constant
+  list (`MaintenanceType`, `UsageUnit`, `VehicleType`, tones, panels). Typing the property as the enum lets
+  API Platform's `SchemaFactory` derive the list and removes the drift risk; each switch changes the
+  denormalised type the processor receives, so it is one tool at a time with its test.
+- **`DocumentationSearcher` scaling.** It loads every page of every document of the vehicle into PHP and scores
+  in memory (`api/src/Documentation/DocumentationSearcher.php`). Fine for a few manuals, linear in pages for a
+  full Dialogys set. A Mongo text index (or Atlas Search) on `VehicleDocumentPage` is the long-term answer.
+- **Rate limiter store.** Every limiter (`agent_turn`, `agent_turn_global`, `speech`, `transcription`,
+  `upload`) sits on `cache.rate_limiter` → `cache.app`, a filesystem pool local to each container. Several php
+  replicas would each count their own window. A shared store (Redis, or a Mongo-backed PSR-6 pool) before
+  scaling out.
+- Token passthrough mpa → bonneref: see "Token passthrough mpa → bonneref — DEBT" above.
