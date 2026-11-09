@@ -118,6 +118,7 @@
 .at-journal-pre--sm { font-size: 10px; }
 .at-journal-muted { color: var(--at-text-dim); }
 .at-journal-mono { font-family: var(--at-font-mono); font-size: 11px; }
+.at-journal-ref { user-select: all; }
 .at-journal-err-text { color: var(--at-red-hi); }
 
 .at-journal-facts {

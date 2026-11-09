@@ -464,6 +464,8 @@ export const en: Messages = {
     model: 'Model',
     vehicle: 'Vehicle',
     error: 'Error',
+    logRef: 'Log ref.',
+    failedRef: (id: string) => `Failed · ref. ${id}`,
     none: 'None',
     llmContext: 'LLM context',
     noCalls: 'No request captured (stream).',

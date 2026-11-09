@@ -26,6 +26,8 @@ export interface TurnSummary {
   instruction: string;
   status: 'completed' | 'capped' | 'failed';
   error?: string | null;
+  /** A failed turn's log reference: the server logs the real cause under it, the journal keeps only a public line. */
+  errorId?: string | null;
   provider: string;
   model: string;
   stream: boolean;
@@ -53,6 +55,11 @@ export interface TurnDetail extends TurnSummary {
 }
 
 const LD = 'application/ld+json';
+
+/** The id an operator greps the server log for, shown only on a failed turn that carries one. */
+export function failureRef(turn: Pick<TurnSummary, 'status' | 'errorId'>): string | null {
+  return turn.status === 'failed' && typeof turn.errorId === 'string' && turn.errorId !== '' ? turn.errorId : null;
+}
 
 /** GET the journal listing — the owner's turns, newest first. Normalizes each IRI to `id`. */
 export async function getTurns(): Promise<TurnSummary[]> {

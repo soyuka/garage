@@ -502,6 +502,8 @@ export const fr = {
     model: 'Modèle',
     vehicle: 'Véhicule',
     error: 'Erreur',
+    logRef: 'Réf. journal',
+    failedRef: (id: string) => `Échec · réf. ${id}`,
     none: 'Aucun',
     llmContext: 'Contexte LLM',
     noCalls: 'Aucune requête capturée (stream).',

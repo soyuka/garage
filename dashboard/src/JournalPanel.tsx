@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { useT } from './i18n/LocaleProvider';
 import './journal.css';
-import { getTurn, getTurns, type TurnDetail, type TurnSummary } from './journal';
+import { failureRef, getTurn, getTurns, type TurnDetail, type TurnSummary } from './journal';
 
 // The agent debug journal (ported from the old dashboard — the user's favourite debug surface, rebuilt
 // in the Atelier idiom): a right-side glass drawer listing the owner's turns (newest first), each
@@ -64,33 +64,37 @@ export function JournalPanel({ open, onClose }: { open: boolean; onClose: () => 
         <header className="at-journal-head">
           <h2>{t.journal.title}</h2>
           <div className="at-journal-head-actions">
-            <button type="button" className="at-journal-btn" onClick={load} title={t.journal.refresh} aria-label={t.journal.refresh}>↻</button>
-            <button type="button" className="at-journal-btn" onClick={onClose} aria-label={t.journal.close}>✕</button>
+            <button type="button" className="at-journal-btn" onClick={load} title={t.journal.refresh} aria-label={t.journal.refresh}>
+              ↻
+            </button>
+            <button type="button" className="at-journal-btn" onClick={onClose} aria-label={t.journal.close}>
+              ✕
+            </button>
           </div>
         </header>
 
-        {error && <div className="at-journal-error">{t.journal.loadFailed} {error}</div>}
+        {error && (
+          <div className="at-journal-error">
+            {t.journal.loadFailed} {error}
+          </div>
+        )}
 
         <ol className="at-journal-list">
           {loading && turns.length === 0 && <li className="at-journal-empty">{t.journal.loading}</li>}
           {!loading && turns.length === 0 && !error && <li className="at-journal-empty">{t.journal.empty}</li>}
-          {turns.map((t) => (
-            <li key={t.id}>
-              <button
-                type="button"
-                className={`at-journal-row${selectedId === t.id ? ' at-journal-row--on' : ''}`}
-                onClick={() => toggle(t.id)}
-                aria-expanded={selectedId === t.id}
-              >
-                <span className={`at-journal-status at-journal-status--${STATUS_TONE[t.status]}`}>{t.status}</span>
-                <span className="at-journal-instruction">{t.instruction || '(vide)'}</span>
+          {turns.map((turn) => (
+            <li key={turn.id}>
+              <button type="button" className={`at-journal-row${selectedId === turn.id ? ' at-journal-row--on' : ''}`} onClick={() => toggle(turn.id)} aria-expanded={selectedId === turn.id}>
+                <span className={`at-journal-status at-journal-status--${STATUS_TONE[turn.status]}`}>{turn.status}</span>
+                <span className="at-journal-instruction">{turn.instruction || '(vide)'}</span>
                 <span className="at-journal-meta">
-                  {fmtTime(t.startedAt)} · {t.toolCallCount} outil{t.toolCallCount > 1 ? 's' : ''}
-                  {t.webSearchCount > 0 ? ` · 🌐${t.webSearchCount}` : ''}
-                  {t.durationMs != null ? ` · ${fmtDuration(t.durationMs)}` : ''}
+                  {fmtTime(turn.startedAt)} · {turn.toolCallCount} outil{turn.toolCallCount > 1 ? 's' : ''}
+                  {turn.webSearchCount > 0 ? ` · 🌐${turn.webSearchCount}` : ''}
+                  {turn.durationMs != null ? ` · ${fmtDuration(turn.durationMs)}` : ''}
                 </span>
+                {failureRef(turn) !== null && <span className="at-journal-meta at-journal-ref">{t.journal.failedRef(failureRef(turn) ?? '')}</span>}
               </button>
-              {selectedId === t.id && <TurnDetailView detail={detail} />}
+              {selectedId === turn.id && <TurnDetailView detail={detail} />}
             </li>
           ))}
         </ol>
@@ -114,11 +118,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
           {detail.provider || '?'} / {detail.model || '?'} {detail.stream ? '(stream)' : ''}
         </dd>
         <dt>Tokens</dt>
-        <dd>
-          {detail.totalTokens != null
-            ? `${detail.totalTokens} (in ${detail.promptTokens ?? '?'} / out ${detail.completionTokens ?? '?'})`
-            : 'inconnu'}
-        </dd>
+        <dd>{detail.totalTokens != null ? `${detail.totalTokens} (in ${detail.promptTokens ?? '?'} / out ${detail.completionTokens ?? '?'})` : 'inconnu'}</dd>
         {detail.selectedId && (
           <>
             <dt>{t.journal.vehicle}</dt>
@@ -129,6 +129,12 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
           <>
             <dt>{t.journal.error}</dt>
             <dd className="at-journal-mono at-journal-err-text">{detail.error}</dd>
+          </>
+        )}
+        {failureRef(detail) !== null && (
+          <>
+            <dt>{t.journal.logRef}</dt>
+            <dd className="at-journal-mono at-journal-muted at-journal-ref">{failureRef(detail)}</dd>
           </>
         )}
       </dl>
