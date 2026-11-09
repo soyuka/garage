@@ -2,6 +2,11 @@ framework:
     messenger:
         failure_transport: failed
 
+        # JSON on the wire, never PHP serialize(): decoding a queue row then cannot instantiate an
+        # arbitrary class, whoever wrote to Postgres. tests/Unit/Messenger round-trips RunAgentTurn.
+        serializer:
+            default_serializer: messenger.transport.symfony_serializer
+
         buses:
             messenger.bus.default:
                 middleware:
