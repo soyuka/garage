@@ -30,7 +30,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 ),
                 'search' => new QueryParameter(
                     description: 'Case-insensitive substring filter on the manufacturer name, e.g. "peugeot".',
-                    schema: ['type' => 'string'],
+                    schema: ['type' => 'string', 'maxLength' => 64],
                 ),
             ],
         ),
@@ -40,6 +40,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             title: 'List Manufacturers',
             description: 'List vehicle manufacturers (brands) known to the TecDoc catalog. Entry point for browsing by brand/model instead of by plate. TecDoc lists ~536 manufacturers: results are capped, so pass search=<brand name> to find one.',
             input: MakesInput::class,
+            validate: true,
             // returns a capped {totalItems, items, …} CallToolResult, not a Hydra collection.
             structuredContent: false,
             processor: MakesProcessor::class,

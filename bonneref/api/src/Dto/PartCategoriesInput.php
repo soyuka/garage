@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class PartCategoriesInput
 {
@@ -18,8 +19,10 @@ final class PartCategoriesInput
     public bool $leafOnly = true;
 
     #[ApiProperty(description: 'Case-insensitive substring filter on the category path, e.g. "filter", "oil", "brake". Strongly recommended — the full tree is large.')]
+    #[Assert\Length(max: 64)]
     public ?string $search = null;
 
     #[ApiProperty(description: 'Item offset for paging through capped results. Use the nextOffset returned by a previous call.')]
+    #[Assert\PositiveOrZero]
     public int $offset = 0;
 }

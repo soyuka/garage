@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class ArticlesInput
 {
@@ -16,8 +17,9 @@ final class ArticlesInput
      */
     #[ApiProperty(
         description: 'One or more part category ids (strId) from list_part_categories. Pass several at once (e.g. oil/air/fuel/cabin filters) to get them all in a single call.',
-        schema: ['type' => 'array', 'items' => ['type' => 'integer'], 'minItems' => 1],
+        schema: ['type' => 'array', 'items' => ['type' => 'integer'], 'minItems' => 1, 'maxItems' => 8],
     )]
+    #[Assert\Count(min: 1, max: 8)]
     public array $categoryIds = [];
 
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC', 'description' => 'TecDoc vehicle type matching the carId: PC (passenger car) or CV (commercial vehicle)'])]
@@ -28,7 +30,9 @@ final class ArticlesInput
      */
     #[ApiProperty(
         description: 'Restrict the answer to these brands, e.g. ["JAPANPARTS","ASHIKA"] — USE THIS whenever the user names a brand. Unfiltered, only the 6 best-ranked of a category\'s brands come back (a popular filter has 126), so a named brand is usually absent and answering from memory would be a guess. Filtered, the cap does not apply and any asked brand with no fitting article is listed under `missing` — say so plainly instead of comparing brands the catalogue does not carry for this part.',
-        schema: ['type' => 'array', 'items' => ['type' => 'string']],
+        schema: ['type' => 'array', 'items' => ['type' => 'string', 'maxLength' => 40], 'maxItems' => 10],
     )]
+    #[Assert\Count(max: 10)]
+    #[Assert\All([new Assert\Length(max: 40)])]
     public array $brands = [];
 }

@@ -21,6 +21,7 @@ use App\State\VinDecodingProvider;
             title: 'Decode VIN',
             description: 'Decode the structure of a 17-character VIN (ISO 3779) offline: WMI (manufacturer + country code), VDS, VIS, manufacturer name, region and country, a model year, and the check digit. Returns valid=false with an error for a malformed VIN instead of failing. CAVEATS: a VIN does NOT give a TecDoc kType — the registration plate (lookup_plate) remains the way to a kType, carId and the parts/fluids tools. The model year (position 10) is only trusted for North American VINs, where it is mandated, and is null otherwise. Outside North America position 10 is unreliable (a 2004 Peugeot 307 reads as 2008), so modelYearCodeCandidates is a hint at most; the carte grise B field or the plate lookup (lookup_plate) give the real first-registration date. checksumValid is only meaningful for North American VINs (mandatory check digit); it is null for the rest of the world. Read-only, offline.',
             input: VinInput::class,
+            validate: true,
             structuredContent: false,
             processor: DecodeVinProcessor::class,
             annotations: ['readOnlyHint' => true],

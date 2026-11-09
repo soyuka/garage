@@ -52,7 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 ),
                 'search' => new QueryParameter(
                     description: 'Case-insensitive substring on the version name or full model name',
-                    schema: ['type' => 'string'],
+                    schema: ['type' => 'string', 'maxLength' => 64],
                 ),
             ],
         ),
@@ -62,6 +62,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             title: 'List Vehicle Variants',
             description: 'List the modifications (engine/body variants) of a model; each result carries the carId (kType) needed by the parts tools. Returns at most 30 rows plus total and truncated: when truncated is true the list is INCOMPLETE and cannot be paged, so narrow it with the server-side filters year, capacityLitres, fuel or search (always pass the ones the user gave) and never treat it as complete.',
             input: CarsInput::class,
+            validate: true,
             // returns a capped {totalItems, items, …} CallToolResult, not a Hydra collection.
             structuredContent: false,
             processor: CarsProcessor::class,

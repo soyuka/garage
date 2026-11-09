@@ -37,7 +37,7 @@ use Symfony\Component\Validator\Constraints as Assert;
                 ),
                 'search' => new QueryParameter(
                     description: 'Case-insensitive substring filter on the category path, e.g. "filter", "oil", "brake".',
-                    schema: ['type' => 'string'],
+                    schema: ['type' => 'string', 'maxLength' => 64],
                 ),
             ],
         ),
@@ -47,6 +47,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             title: 'List Part Categories',
             description: 'List the part categories (TecDoc product group tree) applicable to a vehicle. Use the carId (kType) and carType from lookup_plate or list_cars. By default only leaf categories are returned — pass their id to list_articles. The tree is large (~500 nodes): results are capped, so pass search=<term> (e.g. "filter", "oil") to find what you need.',
             input: PartCategoriesInput::class,
+            validate: true,
             // returns a capped {totalItems, items, …} CallToolResult, not a Hydra collection —
             // suppress the auto JSON-LD output schema.
             structuredContent: false,
