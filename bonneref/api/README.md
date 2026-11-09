@@ -77,7 +77,7 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 
 ```bash
 docker compose exec php composer cs:check   # php-cs-fixer dry run (composer cs to fix)
-docker compose exec php composer phpstan    # level 6, no baseline
+docker compose exec php composer mago       # Mago analyzer + linter (mago.toml), no baseline
 ```
 
 ```bash

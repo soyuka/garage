@@ -150,8 +150,11 @@ jobs:
           working-directory: bonneref/api
       - name: PHP CS Fixer
         run: composer cs:check
-      - name: PHPStan
-        run: composer phpstan
+      # vendor/bin/mago downloads its release binary from GitHub on first run; the token avoids the anonymous rate limit.
+      - name: Mago
+        run: composer mago
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: PHPUnit
         run: vendor/bin/phpunit
 
