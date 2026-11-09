@@ -161,18 +161,19 @@ final readonly class RunAgentTurnHandler
 
             throw new UnrecoverableMessageHandlingException('Finder turn did not converge.', previous: $e);
         } catch (\Throwable $e) {
-            // Any other failure inside the loop: record it on the journal, then let it propagate so
-            // Messenger applies its retry policy unchanged.
+            // Any other failure: journal it and dead-letter without a retry, like the terminate mode
+            // (DeferredTurnDispatcher). A retry would replay an expensive LLM turn without the photos,
+            // which the finally below has already dropped from the stash.
             $status = AgentTurnStatus::Failed;
             $error = $e;
 
-            throw $e;
+            throw new UnrecoverableMessageHandlingException('Finder turn failed.', previous: $e);
         } finally {
             if (null !== $message->imageStash) {
                 $this->imageStash->forget($message->imageStash);
             }
-            // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike,
-            // even if Messenger is about to retry — or the UI would stay stuck in the busy state.
+            // Journal the turn and settle the dashboard's heartbeat, completed, capped or failed alike
+            // — or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);
             $this->owner->set(null);
         }

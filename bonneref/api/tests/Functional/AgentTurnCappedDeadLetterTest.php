@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Message\RunAgentTurn;
 use App\MessageHandler\RunAgentTurnHandler;
+use App\Security\OwnerContext;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
@@ -32,5 +33,40 @@ final class AgentTurnCappedDeadLetterTest extends AppTestCase
             sessionTopic: 'https://localhost/agent/sessions/sess-capped',
             owner: self::TEST_OWNER,
         ));
+    }
+
+    public function testAFailedTurnIsNotRetriedSinceItsPhotosAreGone(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static function (): never {
+            throw new \RuntimeException('provider exploded');
+        }));
+
+        try {
+            $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+                instruction: 'filtre à huile',
+                sessionTopic: 'https://localhost/agent/sessions/sess-failed',
+                owner: self::TEST_OWNER,
+            ));
+            $this->fail('a failed turn must throw');
+        } catch (UnrecoverableMessageHandlingException $e) {
+            $this->assertSame('provider exploded', $e->getPrevious()?->getMessage());
+        }
+    }
+
+    public function testTheTurnOwnerDoesNotOutliveTheTurn(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static fn (): ToolCallResult => new ToolCallResult([new ToolCall('e1', 'end_turn', [])])));
+
+        $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+            instruction: 'filtre à huile',
+            sessionTopic: 'https://localhost/agent/sessions/sess-owner',
+            owner: 'someone-else@example.com',
+        ));
+
+        $this->assertNotSame('someone-else@example.com', $container->get(OwnerContext::class)->current());
     }
 }
