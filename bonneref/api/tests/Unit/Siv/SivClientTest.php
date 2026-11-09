@@ -183,6 +183,30 @@ final class SivClientTest extends TestCase
         }
     }
 
+    public function testATransportFailureNeverCarriesTheToken(): void
+    {
+        $token = 'Sup3rS3cretT0ken';
+        $http = new MockHttpClient(static function (string $method, string $url): MockResponse {
+            throw new TransportException(\sprintf('Could not resolve host for "%s".', $url));
+        });
+        $logger = new RecordingLogger();
+        $client = new SivClient($http, $token, new InMemorySivLookupStore(), UnlimitedQuota::create(), maxRetries: 0, retryDelayMs: 0, logger: $logger);
+
+        try {
+            $client->lookup('AA-123-BB');
+            $this->fail('expected UpstreamException');
+        } catch (UpstreamException $e) {
+            $this->assertTrue($e->transient);
+            for ($link = $e; null !== $link; $link = $link->getPrevious()) {
+                $this->assertStringNotContainsString($token, $link->getMessage());
+                $this->assertStringNotContainsString(rawurlencode($token), $link->getMessage());
+            }
+            $this->assertStringContainsString('Could not resolve host', $e->getMessage(), 'the cause stays readable');
+        }
+
+        $this->assertStringNotContainsString(rawurlencode($token), $logger->dump());
+    }
+
     private static function idleTimeout(): \Generator
     {
         throw new TransportException('Idle timeout reached for "https://api.apiplaqueimmatriculation.com/plaque".');

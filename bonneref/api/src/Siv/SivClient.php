@@ -30,7 +30,7 @@ final readonly class SivClient
 
     public function __construct(
         private HttpClientInterface $httpClient,
-        private string $token,
+        #[\SensitiveParameter] private string $token,
         private SivLookupStore $store,
         private OwnerRateLimiter $quota,
         private int $maxRetries = 2,
@@ -93,7 +93,7 @@ final readonly class SivClient
             return null;
         }
 
-        $message = sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, $envelope['message'] ?? '');
+        $message = $this->redact(sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, $envelope['message'] ?? ''));
 
         throw $errorCode >= 500 ? UpstreamException::transient(self::SOURCE, $message) : UpstreamException::definitive(self::SOURCE, $message);
     }
@@ -122,7 +122,9 @@ final readonly class SivClient
                 $body = $response->getContent(false);
             } catch (ExceptionInterface $e) {
                 if (!$e instanceof TransportExceptionInterface || $attempt >= $this->maxRetries) {
-                    throw UpstreamException::transient(self::SOURCE, 'apiplaqueimmatriculation.com: '.$e->getMessage(), $e);
+                    // Not chained: the vendor only takes the token in the query string, which every transport
+                    // message quotes with the URL, and an error listener logs the whole chain.
+                    throw UpstreamException::transient(self::SOURCE, 'apiplaqueimmatriculation.com: '.$this->redact($e->getMessage()));
                 }
 
                 $this->pause($attempt);
@@ -139,6 +141,13 @@ final readonly class SivClient
 
             throw $status >= 500 || 429 === $status ? UpstreamException::transient(self::SOURCE, $message) : UpstreamException::definitive(self::SOURCE, $message);
         }
+    }
+
+    private function redact(string $message): string
+    {
+        $message = (string) preg_replace('/([?&]token=)[^&"\'\s]*/i', '$1***', $message);
+
+        return '' === $this->token ? $message : str_replace([$this->token, rawurlencode($this->token)], '***', $message);
     }
 
     private function pause(int $attempt): void
