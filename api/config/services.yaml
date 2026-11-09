@@ -206,6 +206,7 @@ services:
             $oidcConfigurationCacheKey: 'casdoor_oidc_config'
             $issuers: ['%env(CASDOOR_ISSUER)%']
             $claim: '%app.owner_claim%'
+            $requireVerifiedEmail: '%env(bool:OWNER_REQUIRE_VERIFIED_EMAIL)%'
 
     App\Security\McpResource:
         arguments:

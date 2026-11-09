@@ -48,6 +48,7 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
         private readonly string $oidcConfigurationCacheKey,
         private readonly array $issuers,
         private readonly string $claim = 'sub',
+        private readonly bool $requireVerifiedEmail = true,
         private readonly ?LoggerInterface $logger = null,
         private readonly ClockInterface $clock = new Clock(),
     ) {
@@ -67,6 +68,11 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
 
             if (empty($claims[$this->claim]) || !\is_string($claims[$this->claim])) {
                 throw new MissingClaimException(\sprintf('"%s" claim not found.', $this->claim));
+            }
+
+            // An unverified email is a tenancy key anyone can claim by signing up with someone else's address.
+            if ('email' === $this->claim && $this->requireVerifiedEmail && true !== ($claims['email_verified'] ?? null)) {
+                throw new BadCredentialsException('The email owner claim is not verified.');
             }
 
             return new UserBadge($claims[$this->claim], null, $claims);

@@ -131,6 +131,63 @@ final class CasdoorTokenHandlerTest extends TestCase
         $this->handler()->getUserBadgeFrom($token);
     }
 
+    public function testEmailOwnerClaimRequiresAVerifiedEmail(): void
+    {
+        $badge = $this->handler(claim: 'email')->getUserBadgeFrom($this->emailToken(['email_verified' => true]));
+
+        self::assertSame('alice@example.com', $badge->getUserIdentifier());
+    }
+
+    /**
+     * @param array<string, mixed> $verification
+     */
+    #[DataProvider('unverifiedEmail')]
+    public function testUnverifiedEmailIsRejectedAsOwnerKey(array $verification): void
+    {
+        $this->expectException(BadCredentialsException::class);
+        $this->handler(claim: 'email')->getUserBadgeFrom($this->emailToken($verification));
+    }
+
+    /**
+     * @return iterable<string, array{array<string, mixed>}>
+     */
+    public static function unverifiedEmail(): iterable
+    {
+        yield 'false' => [['email_verified' => false]];
+        yield 'absent' => [[]];
+        yield 'truthy string' => [['email_verified' => 'true']];
+    }
+
+    public function testVerificationRequirementCanBeTurnedOff(): void
+    {
+        $badge = $this->handler(claim: 'email', requireVerifiedEmail: false)
+            ->getUserBadgeFrom($this->emailToken(['email_verified' => false]));
+
+        self::assertSame('alice@example.com', $badge->getUserIdentifier());
+    }
+
+    public function testSubOwnerClaimIgnoresEmailVerification(): void
+    {
+        $badge = $this->handler()->getUserBadgeFrom($this->emailToken(['email_verified' => false]));
+
+        self::assertSame('built-in/alice', $badge->getUserIdentifier());
+    }
+
+    /**
+     * @param array<string, mixed> $claims
+     */
+    private function emailToken(array $claims): string
+    {
+        return $this->mintToken($claims + [
+            'sub' => 'built-in/alice',
+            'iss' => self::ISSUER,
+            'aud' => ['x'],
+            'iat' => 1000,
+            'exp' => 2000,
+            'email' => 'alice@example.com',
+        ]);
+    }
+
     /**
      * @param array<string, mixed> $claims
      */
@@ -147,7 +204,7 @@ final class CasdoorTokenHandlerTest extends TestCase
         return (new CompactSerializer())->serialize($jws, 0);
     }
 
-    private function handler(int $now = 1500): CasdoorTokenHandler
+    private function handler(int $now = 1500, string $claim = 'sub', bool $requireVerifiedEmail = true): CasdoorTokenHandler
     {
         $client = new MockHttpClient(function (string $method, string $url): JsonMockResponse {
             if (str_contains($url, '.well-known/openid-configuration')) {
@@ -162,6 +219,8 @@ final class CasdoorTokenHandlerTest extends TestCase
             discoveryCache: new ArrayAdapter(),
             oidcConfigurationCacheKey: 'casdoor_oidc_config',
             issuers: [self::ISSUER],
+            claim: $claim,
+            requireVerifiedEmail: $requireVerifiedEmail,
             clock: new MockClock((new \DateTimeImmutable())->setTimestamp($now)),
         );
     }
