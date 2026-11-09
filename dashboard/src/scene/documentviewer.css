@@ -1,7 +1,7 @@
 /* The document viewer — rides the shopping list's centred shell (shopping.css: scrim, glass etch-in,
    head, close, reduced-motion). It stacks ABOVE the documentation panel / Le Dossier (z60/61) and stays
    under the dock (z70), stopping above it like the documentation panel does (documentation.css). No
-   transition or animation here: pages appear when rendered, jumps are instant (CHOREOGRAPHY 2026-10-05). */
+   transition or animation here: pages appear when rendered, jumps are instant. */
 
 .at-dv-overlay {
   z-index: 64;
@@ -175,6 +175,8 @@
   transform-origin: 0 0;
   caret-color: CanvasText;
   z-index: 1;
+  /* --scale-factor is set inline on this element, so the product has to be taken here, not on the sheet. */
+  --total-scale-factor: calc(var(--scale-factor, 1) * var(--user-unit, 1));
   --min-font-size: 1;
   --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
   --min-font-size-inv: calc(1 / var(--min-font-size));

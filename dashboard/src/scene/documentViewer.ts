@@ -217,3 +217,13 @@ export function viewerKind(contentType: string): ViewerKind {
   if (type.startsWith('image/')) return 'image';
   return 'other';
 }
+
+/**
+ * The image's scale in the viewer. `contain` shows it whole; `legible` fits whichever side gives the larger
+ * picture (the page column then scrolls along the other), never enlarging past the image's own pixels.
+ */
+export function imageFitScale(natural: PageSize, box: PageSize, gutter: number, mode: 'contain' | 'legible'): number {
+  const w = (box.width - gutter) / natural.width;
+  const h = (box.height - gutter) / natural.height;
+  return mode === 'contain' ? Math.min(w, h) : Math.min(1, Math.max(w, h));
+}

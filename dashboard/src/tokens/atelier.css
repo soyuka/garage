@@ -1,6 +1,5 @@
 /* ─────────────────────────────────────────────────────────────────────────
-   Atelier `--at-*` token layer — FROZEN in Stage B.0. Re-derived field-by-field from
-   DESIGN-VISION §3 (material/light) + §4 (color/mood) + §5 (type). This is the canonical token
+   Atelier `--at-*` token layer. This is the canonical token
    source for every Atelier component. NO Stage-B fan-out agent may add or rename a token here.
    (The Stage-A `--nx-*` set in noyau/ is local to Le Noyau and will migrate onto these later.)
    Exception (user-approved, legibility fix): the `--at-vib-*` spatial-hierarchy tier tokens below
@@ -31,7 +30,7 @@
   --at-red: #9b1c1c;
   --at-red-hi: #fca5a5;
   /* cyan = l'intelligence — RATIONED to Le Noyau (filament, narration, glass edge). Never a PAINTED fill;
-     the hologram's cast light on the stage is light, not fill (CHOREOGRAPHY § The hologram is the light). */
+     the hologram's cast light on the stage is light, not fill. */
   --at-cyan: #22d3ee;
   --at-cyan-hi: #67e8f9;
   /* orange = Les-Tilleuls brand — RATIONED to the OPERATOR's focus + the primary action only (added in
@@ -67,7 +66,7 @@
   --at-space-5: 24px;
   --at-space-6: 32px;
 
-  /* ── layout: the right-docked legend width (CHOREOGRAPHY § The stage under a legend) — sizes both
+  /* ── layout: the right-docked legend width — sizes both
      legend cards AND the console dock / nameplate header's right padding while a legend is open. ── */
   --at-legend-w: min(460px, 40vw);
 
@@ -87,12 +86,12 @@
   --at-dur-filament: 600ms; /* the done filament cross-fades to its result colour */
   --at-dur-cascade: 800ms; /* the domain data cascade — health bars, cardinals, hotspots */
   --at-cascade: var(--at-dur-cascade); /* pre-scale name, kept: components still read it */
-  --at-breathe: 4s; /* PROTECTED: Le Noyau's sleeping-Mac breathe period (hard rule 4) */
+  --at-breathe: 4s; /* breathe period */
 
   /* ── spatial-hierarchy vibrancy tiers (visionOS-style HUD hierarchy: opacity, not size) — apply as
      `opacity` on ink/mono text (--at-text / --at-text-mono / --at-label) to express primary/secondary/
      tertiary within ONE surface without another font-size jump. Never used on signal color (--at-sig*),
-     which already carries its own hierarchy via glow. See CHOREOGRAPHY.md "Vibrancy tiers". ── */
+     which already carries its own hierarchy via glow. ── */
   --at-vib-1: 1; /* primary — the one fact the surface exists to show */
   --at-vib-2: 0.72; /* secondary — supporting context */
   --at-vib-3: 0.5; /* tertiary — captions, uppercase labels, meta */

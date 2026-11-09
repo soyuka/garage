@@ -1,7 +1,7 @@
 import type { MaintenanceRecord } from '../types';
 import { HOME, toSpherical } from './cameraRig';
 
-// The visit ring (CHOREOGRAPHY § "Stations — data given a body", "History — the visit ring").
+// The visit ring.
 
 export interface VisitSlab {
   id: string;

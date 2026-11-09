@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { tickDwell, type DwellClock } from './noticeDwell';
 import type { Notice } from './state';
 
-// The auto-close decision (CHOREOGRAPHY § "The notice stack — an answer that lands, then clears",
-// "Reversed 2026-09-04"). Pure and clock-injected, mirroring voice.ts: the impure edge (a polling
+// The auto-close decision. Pure and clock-injected, mirroring voice.ts: the impure edge (a polling
 // effect in Atelier.tsx) owns nothing but the timer and the dispatch.
 
 const notice = (id: string, at: number): Notice => ({ id, tone: 'info', text: id, at });

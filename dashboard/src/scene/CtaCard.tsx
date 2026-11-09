@@ -1,7 +1,7 @@
 import { useT } from '../i18n/LocaleProvider';
 import type { CtaAction, Iri, PlannedPart } from '../types';
 
-// The CTA layer (§6 choreography): a `proposeActions` frame raises THIS card from Le Noyau's cradle —
+// The CTA layer : a `proposeActions` frame raises THIS card from Le Noyau's cradle —
 // it rises from BEHIND the composer, never over it; declining sinks it back. Each action is dual-shape
 // (exactly one payload): `instruction` re-runs the agent (a fresh turn) · `patchTask` is a deterministic
 // PATCH merging parts onto a task with NO agent turn (wiring this path is mandatory — skipping it is

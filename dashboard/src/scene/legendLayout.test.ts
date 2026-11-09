@@ -4,7 +4,7 @@ import historylog from './historylog.css?raw';
 import factsdrawer from './factsdrawer.css?raw';
 import atelier from '../tokens/atelier.css?raw';
 
-// CHOREOGRAPHY § The stage under a legend (corrected 2026-09-05, at first light) — one token sizes
+// One token sizes
 // both legends AND the right padding of the console dock and the nameplate header, keyed on the
 // legend card's own DOM presence via :has(), no JS state.
 

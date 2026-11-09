@@ -3,7 +3,7 @@ import type { Driver } from './pilot';
 import type { DomainEvent, MercureFrame, VehicleSummary } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Atelier — the Mercure subscription (see PROVENANCE: Tier-1 transport re-authored
+// Atelier — the Mercure subscription (Tier-1 transport re-authored
 // fresh from the EventSource topic-subscribe contract, no import path back).
 //
 // Subscribe to EXACTLY two absolute-IRI topics: the collection topic

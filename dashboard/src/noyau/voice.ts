@@ -1,6 +1,6 @@
 import type { Notice } from './state';
 
-// The ear's half of the notice stack (CHOREOGRAPHY § "Audition — speech, for answers"). Pure and
+// The ear's half of the notice stack. Pure and
 // clock-injected: every rule that matters — order, cap, staleness, dedup, cancellation — is decided
 // here, so the impure edge in useVoice.ts is left with nothing but fetch and an AudioContext (speaker.ts).
 //
@@ -59,8 +59,7 @@ export interface VoiceState {
    * The lines PLACED on the audio clock, in the order they will be heard — at most two.
    *
    * `onAir[0]` is what the operator is hearing; `onAir[1]` is committed flush behind it, scheduled
-   * while the first was still playing so the two are one continuous signal (CHOREOGRAPHY § "The seam
-   * between two lines is gapless"). The distinction is the whole point of the array: this used to be a
+   * while the first was still playing so the two are one continuous signal. The distinction is the whole point of the array: this used to be a
    * single `speaking`, which meant "placed" and "audible" at once, and a seam needs them apart — a
    * notice card's read-dwell may only start when its own line is off the LIPS ({@see heard}), not when
    * the next one is merely scheduled.
@@ -192,8 +191,7 @@ export function follow(state: VoiceState, cards: Notice[], now: number): VoiceSt
  * else the headline. Journal evidence (turn 21:58:34) caught the old headline-then-finding rule reading
  * the same sentence twice — the agent's headline routinely restates the finding in fewer words ("Aucun
  * entretien dans le carnet" atop "Aucun entretien n'a encore été enregistré…"), so speaking both was an
- * answer said twice, not a reading of two distinct lines (CHOREOGRAPHY § "Audition — speech, for
- * ANSWERS", corrected 2026-09-06). Both strings still print on the card — this only changes what the
+ * answer said twice, not a reading of two distinct lines. Both strings still print on the card — this only changes what the
  * VOICE reads.
  */
 export function cardLine(headline: string, finding: string | null | undefined): string {
@@ -204,7 +202,7 @@ export function cardLine(headline: string, finding: string | null | undefined): 
 /**
  * The orb's live line. ONE slot, latest wins: a `status` burst replaces its own pending sentence rather
  * than queueing three of them to be read after the run is over. A line already being spoken is left to
- * finish — a replacement is the next heartbeat, not a dismissal (CHOREOGRAPHY § Binding rules).
+ * finish — a replacement is the next heartbeat, not a dismissal.
  */
 export function narrate(state: VoiceState, text: string, now: number, once = false): VoiceState {
   const line = text.trim();
@@ -217,7 +215,7 @@ export function narrate(state: VoiceState, text: string, now: number, once = fal
 /**
  * Promote the next fresh line onto the clock. Stale heads are discarded, not spoken late.
  *
- * `canChain` is the gapless seam (CHOREOGRAPHY § "The seam between two lines is gapless"): the impure
+ * `canChain` is the gapless seam: the impure
  * edge sets it once the audible line's body is **fully placed** on the audio clock, which is ~0.3 s
  * into a 3.2 s line because the body arrives ~12× faster than realtime. Promoting then — while the
  * first line is still being heard — is what lets its successor be scheduled flush against its last
@@ -267,8 +265,8 @@ export function next(state: VoiceState, now: number, unlocked: boolean, canChain
 /**
  * Every line waiting behind the one being spoken, fresh enough to be worth fetching ahead of the
  * handover — read-only, so `useVoice.ts` can start fetching each one's audio in PARALLEL with the
- * line now playing (CHOREOGRAPHY § "The voice starts before the browser asks": "one synthesis in
- * flight per waiting line, not one at a time"). Unlike `next()` this never mutates `spoken`: any of
+ * line now playing (one synthesis in
+ * flight per waiting line, not one at a time). Unlike `next()` this never mutates `spoken`: any of
  * these can still be superseded, cap-evicted or go stale before its turn actually comes, and none of
  * that may be decided here — only the real promotion in `next()` may consume a line.
  *
@@ -330,9 +328,8 @@ export function finish(state: VoiceState): VoiceState {
 /**
  * A `proposeActions` card just arrived (or changed to a different headline) — it IS the answer, so
  * every notice-toast line still WAITING behind it is dropped unspoken; a toast that said the same
- * thing the card now says is not read twice (CHOREOGRAPHY § "Audition — speech, for ANSWERS",
- * 2026-09-06). `keepId` is the card's own queued utterance (if any) and survives the sweep. The line
- * already ON THE LIPS is untouched — never cut mid-word for a supersession (binding rule) — and so is
+ * thing the card now says is not read twice. `keepId` is the card's own queued utterance (if any) and survives the sweep. The line
+ * already ON THE LIPS is untouched — never cut mid-word for a supersession — and so is
  * the ticker slot, which has no card behind it to be superseded by.
  */
 export function supersedeQueued(state: VoiceState, keepId: string): VoiceState {
@@ -344,7 +341,7 @@ export function supersedeQueued(state: VoiceState, keepId: string): VoiceState {
 
 /**
  * The operator dismissed a card ("vu"). Its voice goes with it: audio that outlives its own card is
- * audio-only, which the audition binding rule forbids outright.
+ * audio-only, which is forbidden.
  */
 export function cancel(state: VoiceState, id: string): VoiceState {
   // A line COMMITTED to the clock is still cancellable: a scheduled source can be stopped before it

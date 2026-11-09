@@ -2,7 +2,7 @@ import { API, authFetch } from './auth';
 import { hydraMembers, normalizeIri } from './garage';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Atelier — the agent debug journal (see PROVENANCE: Tier-1 transport re-authored
+// Atelier — the agent debug journal (Tier-1 transport re-authored
 // fresh from the /agent/turns contract; reuses garage's tested hydra/@id helpers).
 //
 // The agent is a black box once a turn runs; this is where you see what it actually

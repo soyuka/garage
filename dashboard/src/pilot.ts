@@ -24,7 +24,7 @@ import type { Iri, UIAction } from './types';
 //     operator is shown where the pilot's attention landed, not the route it took there.
 //
 // Both apply to the in-app agent too: it has the same race, only with tool-call latency hiding it
-// more often. One grammar, one code path (CHOREOGRAPHY.md, pilot rows).
+// more often. One grammar, one code path.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Who is at the controls. `null` = nobody (at rest). */
@@ -58,7 +58,7 @@ export interface StageOut {
   /** the intents to apply NOW, in order */
   emit: UIAction[];
   /** intents thrown away because the car they were about will never be on screen (never silent —
-   *  the caller narrates it; see CHOREOGRAPHY.md "Truth before spectacle") */
+   *  the caller narrates it) */
   dropped?: number;
 }
 
@@ -74,7 +74,7 @@ export const ABANDON_MS = 6000;
  * Does this intent PLACE a per-vehicle surface — the kind navigation wipes (Atelier's selection
  * effect clears the CTA, the focus and the camera hold)? Only those need staging. The heartbeat
  * frames (`status`, `toast`, `turn`) must never wait: the pilot narrating while the car drives in is
- * the one thing telling the operator why the stage is moving (hard rule 1 — never gate an arrival).
+ * the one thing telling the operator why the stage is moving (never gate an arrival).
  */
 function placesSurface(action: UIAction): boolean {
   switch (action.type) {

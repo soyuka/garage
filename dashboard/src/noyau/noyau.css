@@ -2,8 +2,8 @@
    that reads the car. State is driven entirely by data-phase / data-result on .noyau-stage; the
    APERTURE (pupil radius) differs per state, so the four states are legible by SHAPE, not color alone.
 
-   STAGE-A-LOCAL TOKENS: provisional values re-derived from DESIGN-VISION §4, scoped to this file.
-   Superseded by the canonical --at-* layer frozen in Stage B.0 — not the token source. */
+   STAGE-A-LOCAL TOKENS: provisional values scoped to this file.
+   Superseded by the canonical --at-* layer — not the token source. */
 
 /* Registered color drivers so they TWEEN between phases (a plain custom prop can't transition). This
    is what makes the pupil *ignite* cyan→amber and the done color *cool in* rather than snap. */
@@ -13,7 +13,7 @@
 @property --nx-seam { syntax: '<color>'; inherits: true; initial-value: rgba(180, 196, 210, 0.35); }
 
 .noyau-stage {
-  /* the console socket no longer scales the stage (CHOREOGRAPHY corrected 2026-09-05: geometry is
+  /* the console socket no longer scales the stage (geometry is
      unconditional, scale(1) always) — no swap step to protect this filament list from. */
   --nx-fil-transitions: --nx-fil-core 600ms ease, --nx-fil-edge 600ms ease, --nx-emissive 600ms ease, --nx-seam 500ms ease;
   transition: var(--nx-fil-transitions);
@@ -69,8 +69,7 @@
   --nx-emissive: var(--nx-red-hi);
 }
 
-/* the orb + ember share a positioned wrap (the ember is a sibling button, not an orb descendant) sized
-   to the orb so the ember keeps its old orb-relative corner placement while the orb transforms freely. */
+/* the orb sits in a fixed-size wrap so the layout slot stays put while the orb transforms freely. */
 .noyau-orb-wrap { position: relative; width: 138px; height: 138px; }
 
 /* ── the instrument body ────────────────────────────────────────────────── */
@@ -204,42 +203,6 @@
   animation: nx-pulse 720ms ease-out forwards;
 }
 
-/* ── ember (alarm notifications dock here) ──────────────────────────────── */
-.noyau-ember {
-  position: absolute;
-  right: 14px;
-  bottom: 16px;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 5px;
-  border: none;
-  appearance: none;
-  border-radius: 10px;
-  background: var(--nx-red);
-  color: var(--nx-red-hi);
-  font-family: inherit;
-  font-size: 11px;
-  line-height: 20px;
-  text-align: center;
-  box-shadow: 0 0 10px rgba(155, 28, 28, 0.8);
-  animation: nx-ember-in 300ms ease-out;
-  cursor: pointer;
-}
-/* acknowledged (the inbox was opened, decisions remain): a quiet re-entry chip, no alarm glow — the
-   badge no longer clamours, it just stays reachable until the queue drains. */
-.noyau-ember[data-muted='true'] {
-  background: var(--nx-chrome);
-  color: var(--nx-chrome-hi);
-  border: 1px solid var(--nx-seam);
-  box-shadow: none;
-  animation: none;
-}
-.noyau-ember:focus-visible { outline: 2px solid var(--nx-cyan-hi); outline-offset: 2px; }
-@keyframes nx-ember-in {
-  from { transform: scale(0); }
-  to { transform: scale(1); }
-}
-
 /* ── cradle ─────────────────────────────────────────────────────────────── */
 .noyau-cradle { margin-top: -6px; width: 120px; height: 26px; }
 
@@ -315,7 +278,7 @@
 /* ── reduced motion — animations collapse to instant; aperture stays a static SHAPE cue ── */
 @media (prefers-reduced-motion: reduce) {
   .noyau-orb, .noyau-pupil, .noyau-iris, .noyau-scan, .noyau-glint, .noyau-rim, .noyau-fault,
-  .noyau-narration span, .noyau-ember { animation: none !important; }
+  .noyau-narration span { animation: none !important; }
   .noyau-pupil, .noyau-iris { transition: none; }
   .noyau-stage[data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }
   .noyau-stage[data-phase='listening'] .noyau-scan,
@@ -329,8 +292,7 @@
 .noyau-stage[data-reduced='true'] .noyau-glint,
 .noyau-stage[data-reduced='true'] .noyau-rim,
 .noyau-stage[data-reduced='true'] .noyau-fault,
-.noyau-stage[data-reduced='true'] .noyau-narration span,
-.noyau-stage[data-reduced='true'] .noyau-ember { animation: none !important; }
+.noyau-stage[data-reduced='true'] .noyau-narration span { animation: none !important; }
 .noyau-stage[data-reduced='true'] .noyau-pupil,
 .noyau-stage[data-reduced='true'] .noyau-iris { transition: none; }
 .noyau-stage[data-reduced='true'][data-phase='working'] .noyau-orb { transform: translateY(-12px); transition: none; }

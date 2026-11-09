@@ -1,6 +1,6 @@
 import type { Messages } from '../i18n/messages';
 
-// The opening ticker (CHOREOGRAPHY § "The opening — the workshop speaks first"). Pure decision,
+// The opening ticker. Pure decision,
 // clock-free: given the settled selection before and after, it says whether a greeting line is due
 // and for what, then draws the line itself from the catalog's pools. The impure edge (Atelier.tsx)
 // only tracks `previous`, keeps the draw bookkeeping and dispatches the result.

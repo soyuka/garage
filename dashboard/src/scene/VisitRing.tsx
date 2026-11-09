@@ -8,7 +8,7 @@ import { MOTION } from '../tokens/motion';
 import { usePickHandlers } from './picking';
 import type { VisitSlab } from './visitRing';
 
-// The visit ring's slabs (CHOREOGRAPHY § "History — the visit ring").
+// The visit ring's slabs.
 
 // Twins of the existing surface-arrives / data-cascade intents (`motion.test.ts` pins the pair) rather
 // than a third pair of durations invented for this one station.

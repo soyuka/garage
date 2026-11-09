@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { ThreeEvent } from '@react-three/fiber';
 
-// Picking — the body points back (CHOREOGRAPHY § "Picking — the body points back"). Shared by the three
+// Picking — the body points back. Shared by the three
 // station components (VisitRing, FactConstellation, FluidVolumes): hovering a body marks it AND tells the
 // legend which row to highlight; a click scrolls that row into view. "Nothing is selected, nothing opens:
 // a pick is a look, not an action" — so this file owns only the LOOK state (legendFocus) + the cursor

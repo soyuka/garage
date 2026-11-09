@@ -5,7 +5,7 @@ import type { GhostControl, ScanControl } from './blueprintBuild';
 import { FILL_OPACITY } from './CarProxy';
 import { BLUEPRINT_EDGE, OPERATOR_HEX } from './signalColors';
 
-// The fill is a hologram, not a tinted box (CHOREOGRAPHY § "The hologram is the light", point 2): a
+// The fill is a hologram, not a tinted box: a
 // ShaderMaterial with no lighting input that shares the scan and ghost uniforms with the edge patch, so
 // one driver write moves both surfaces.
 

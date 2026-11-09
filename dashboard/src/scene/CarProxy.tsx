@@ -5,7 +5,7 @@ import { BLUEPRINT_EDGE } from './signalColors';
 // paint-tinted night-glass volume — a futuristic technical-drawing / hologram look. Edges hide the
 // low-poly crudeness, so a simple primitive mesh reads as intentional (the real hyperreal .glb is
 // Stage D). Edge color is an electric blue, NOT the agent's rationed cyan. Hotspot anchors are per
-// body-class, not per mesh (BUILD-NOTE 2).
+// body-class, not per mesh.
 
 export type BodyClass = 'hatchback' | 'berline' | 'suv' | 'utilitaire' | 'moto';
 

@@ -1,7 +1,7 @@
 /* ── the retained notice stack ────────────────────────────────────────────────
    Sits inside the dock, above the CTA/rail slot: the agent's findings come out of Le Noyau, so they
    rise from where Le Noyau is. Newest is LAST in the DOM → closest to the console, which is where the
-   eye already is. Scrim law: >= .86 dark ground, same material as the visit cards and the inbox leaf. */
+   eye already is. Scrim law: >= .86 dark ground, same material as the visit cards. */
 .at-notices {
   pointer-events: auto;
   display: flex;
@@ -57,7 +57,7 @@
 }
 
 /* The provenance stamp — its own row under the sentence, so the tone chip and the text keep their
-   baseline. Matches `.at-inbox-when`: the age caption reads the same wherever a card carries one. */
+   baseline. */
 .at-notice-stamp {
   flex: 0 0 100%;
   font-size: 9.5px;

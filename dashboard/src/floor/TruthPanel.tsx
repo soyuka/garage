@@ -10,7 +10,7 @@ import { InlineEdit } from './InlineEdit';
 import { UsageEdit } from './UsageEdit';
 import './floor.css';
 
-// The glass truth-panel — the AUTHORITATIVE surface (DESIGN-VISION §8). Identity, mileage, overall
+// The glass truth-panel — the AUTHORITATIVE surface. Identity, mileage, overall
 // health, per-system échéances and the vehicle facts at FULL PRECISION, always visible. The 3D conveys
 // urgency; this carries the truth. Hide the WebGL canvas and not one value is lost — it all lives here.
 // Every glow pairs with a mono label; every signal pairs with a TEXT tag (legible in grayscale).

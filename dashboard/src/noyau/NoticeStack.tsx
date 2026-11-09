@@ -4,12 +4,11 @@ import type { Notice } from './state';
 import type { Signal, Tone } from '../types';
 import './notices.css';
 
-// The retained toast cards (CHOREOGRAPHY § "The notice stack — an answer that stays"). They rise above
+// The retained toast cards. They rise above
 // the console, newest closest to the orb, and stay until the operator says "vu" — no timer, no fade.
 //
-// NOT a live region: a non-alarm toast is already announced once on Le Noyau's narration line and an
-// alarm is already a row in the à-décider inbox, so announcing the card too would be the second
-// announcement the tool-step-chip rule forbids. A screen reader still reaches the cards by browsing.
+// NOT a live region: a toast is already announced once on Le Noyau's narration line, so announcing the
+// card too would be the second announcement the tool-step-chip rule forbids. A screen reader still reaches the cards by browsing.
 
 // Severity reads off the SAME data-signal resolution every other surface uses, plus a mono label —
 // never colour alone. `info` has no severity, so it takes the neutral 'unknown' ramp rather than
@@ -28,7 +27,7 @@ export function NoticeStack({ notices, reduced, onDismiss }: { notices: Notice[]
             <span className="at-notice-tone">{t.notice.tone[n.tone]}</span>
             <p className="at-notice-text">{n.text}</p>
             {/* The Data panel is authoritative; this card is what was said at `n.at`. The stamp is what
-                lets the two be on screen together and disagree LEGIBLY (CHOREOGRAPHY § Audition). */}
+                lets the two be on screen together and disagree LEGIBLY. */}
             <span className="at-notice-stamp">{t.notice.stamp(whenLabel(n.at, t))}</span>
           </div>
           <button type="button" className="at-notice-vu" onClick={() => onDismiss(n.id)} aria-label={t.notice.dismiss(n.text)}>

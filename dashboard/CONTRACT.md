@@ -61,8 +61,7 @@ Collections are hydra — read members from **`member` ?? `hydra:member`**. The 
 
 **The opening line is deliberately NOT on this table.** It had a row here for a few hours on
 2026-09-11 (`GET /agent/greeting?name=`, a model-written welcome); the endpoint was deleted the same day
-and the line is drawn from the i18n catalogs in the browser (`noyau/greeting.ts`, CHOREOGRAPHY § "The
-opening"). Nothing is fetched, so there is nothing to contract.
+and the line is drawn from the i18n catalogs in the browser (`noyau/greeting.ts`). Nothing is fetched, so there is nothing to contract.
 
 Money is integer **minor units** (`costCents`, `priceCents`); the manual-form `price`/`cost` are
 major-unit euros the client converts.
@@ -98,10 +97,9 @@ major-unit euros the client converts.
     Optional: a pilot's `narrate_step` has no tool to name, and a server predating the field still
     renders — the client then keyword-matches the French sentence, which is a FALLBACK, not the
     contract (it was the contract until 2026-08-16, and it made the chips hostage to the wording)
-  - `{type:'toast', tone, message}` → retained notice card (every tone) + narration (non-alarm) / ember (alarm)
+  - `{type:'toast', tone, message}` → retained notice card (every tone) + narration (non-alarm)
     + **spoken aloud when the audition is on** — no new frame, no new field: the voice reads the card's
-    own `message` verbatim, so the wire contract is UNCHANGED by the audition (CHOREOGRAPHY
-    § "Audition — speech, for ANSWERS")
+    own `message` verbatim, so the wire contract is UNCHANGED by the audition
 
 ## The REAL `UIAction` union (verified — the only members the agent tool surface emits)
 
@@ -170,7 +168,7 @@ body seam (`fluidVolumes.ts`), not a display value: litres straight, `null` for 
 node. **2026-10-21:** its only producer (`fluids.ts`, the fill-volumes fetch) was removed; the field is kept for
 wire-supplied `nodes`.
 
-⚠️ **`renderSuggestions` and `patchPanel` DO NOT EXIST** (a `docs/ui.md` sketch artifact). Never build
+⚠️ **`renderSuggestions` and `patchPanel` DO NOT EXIST** (an early-sketch artifact). Never build
 against them.
 
 **Client-synthesized, not on the wire:** `showParts` `{service, taskId, parts?}` and `showHistory`
@@ -202,17 +200,17 @@ project the ladder, the server enum is the only thing in the way.
 
 - **Narration line** is fed by `status` frames **AND non-alarm `toast` frames** — it is a HEARTBEAT: the
   next `status` overwrites it and `settle` clears it. **Every** toast, alarm or not, additionally raises a
-  **retained notice card** that stays until the operator dismisses it (CHOREOGRAPHY § "The notice stack"),
+  **retained notice card** that stays until the operator dismisses it,
   and an **`alarm`**-tone toast additionally docks a `notify` item on the à-décider queue.
 - **Pulse granularity:** `status` frames fire only for a **whitelisted subset of tools** (a step
   narrator) — **not one per tool-call**. Le Noyau pulses **per narrated step, sparsely**. Mock
-  streams must fire `status` sparsely to match. ⚠️ This **supersedes DESIGN-VISION §1** ("Every
+  streams must fire `status` sparsely to match. ⚠️ This **supersedes the early vision text** ("Every
   tool-call fires one discrete pulse" / "visibly pulses four times") — the live contract narrates per
   step, not per tool-call. Build against the contract; the vision text on this point is stale.
 
-## Choreography map (real vocabulary → Atelier motion) — see CHOREOGRAPHY.md, which is revisable
+## Choreography map (real vocabulary → Atelier motion)
 
 `selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in (stored facts OR projected
 `nodes`) · `focusView {panel:'carnet'}` → carnet projection · `proposeActions` → CTA rises
-from cradle (incl. `patchTask` deterministic path) · `toast` → retained notice card (+ ember on alarm) · `status` →
+from cradle (incl. `patchTask` deterministic path) · `toast` → retained notice card · `status` →
 Noyau pulse · `turn` → busy state.

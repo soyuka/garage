@@ -1,7 +1,7 @@
 import { DEFAULT_LOCALE, type Locale } from '../i18n/locale';
 import { messages, type Messages } from '../i18n/messages';
 import type { Driver } from '../pilot';
-import type { CtaAction, Signal, Tone } from '../types';
+import type { Signal, Tone } from '../types';
 
 // The frame→state machine for Le Noyau. It speaks the REAL session-frame shapes (turn/status/toast)
 // plus two local UI events (typing, settle) that have no wire frame — so Stage C is a transport swap,
@@ -29,25 +29,7 @@ export interface ToolStep {
   state: ToolStepState;
 }
 
-// The "à décider" ambient inbox (C2). The ember stops being a bare alarm count and becomes the badge on
-// a QUEUE of decision items — the LangChain ambient-agent triad, human ON the loop:
-//   notify   — a concern surfaced hands-off (the §9 overdue crossing, an alarm toast); acknowledge/plan
-//   question — the agent needs an answer to proceed (NO live wire source yet — supported, unfed)
-//   review   — a proposal that arrived while the operator was elsewhere or was superseded; re-decide it
-export type DecisionKind = 'notify' | 'question' | 'review';
-
-export interface DecisionItem {
-  id: string; // dedup handle: source/content-derived so the same concern re-arriving is one item
-  kind: DecisionKind;
-  text: string; // the tier-1 mono line the row shows
-  at: number; // the injected clock stamp when it docked (drives the "when" caption)
-  serviceType?: string; // notify only: the raw service type → unlocks the "planifier ○" affordance
-  vehicleIri?: string; // notify only: which vehicle the concern is about (planifier targets it directly)
-  finding?: string; // review only: the proposal's secondary line
-  actions?: CtaAction[]; // review only: the deferred proposal's CTA actions (reuse CtaCard wiring)
-}
-
-// A retained toast card (CHOREOGRAPHY § "The notice stack"). The narration line is a HEARTBEAT — the
+// A retained toast card. The narration line is a HEARTBEAT — the
 // next status overwrites it and `settle` clears it — so a finding pushed as a toast used to scroll
 // past at the speed of the next tool call. A notice is the same message with a surface that stays.
 export interface Notice {
@@ -72,9 +54,6 @@ export interface NoyauState {
   notices: Notice[]; // the retained toast cards — outlive the turn; only "vu" removes one
   pulseCount: number; // pulses fired this turn (one per narrated status step)
   result: Signal | null; // set on 'done'
-  queue: DecisionItem[]; // the à-décider inbox — pending decisions outlive turns; resolve removes
-  ember: number; // the badge: pending-decision count (0 while muted; see emberSeen)
-  emberSeen: boolean; // true after the inbox was opened → the badge is muted until the next decision
   worstTone: Tone | null; // highest-severity toast this turn → drives the done color
   journal: JournalEntry[];
   steps: ToolStep[]; // the CURRENT turn's tool-step chips; reset on turn/start, cleared on settle
@@ -104,7 +83,7 @@ export type NoyauEvent =
   // `driver` says who produced the frame (the subscription it arrived on — Atelier tags it). Absent
   // → the in-app turn, so every existing dispatch keeps its meaning unchanged.
   // `resultText` (end only): the closing sentence a deterministic wayfinder supplies for what it just
-  // did (CHOREOGRAPHY § "What a finished action says") — used INSTEAD of whatever was last narrated.
+  // did — used INSTEAD of whatever was last narrated.
   // A real agent turn omits it: its own `toast` already sits on `narration`, and that is the answer —
   // "nothing generic" is achieved by simply not overwriting it (see the 'end' branch below).
   | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean; driver?: Driver; resultText?: string }
@@ -112,15 +91,12 @@ export type NoyauEvent =
   | { type: 'toast'; tone: Tone; message: string; driver?: Driver }
   // local: the pilot run has been silent past PILOT_QUIET_MS — stop claiming it is working
   | { type: 'quiet' }
-  | { type: 'concern'; message: string; serviceType?: string; vehicleIri?: string } // §9 overdue DOMAIN push (no turn): dock a notify + murmur, hands-off
+  | { type: 'concern'; message: string } // §9 overdue DOMAIN push (no turn): murmur, hands-off
   | { type: 'listening'; active: boolean } // local: the MICROPHONE is open — outranks a finished turn's lamp, never a running one
-  | { type: 'greet'; message: string } // local: the opening ticker line — a murmur with no turn, no notice card, no decision
-  | { type: 'defer'; id: string; text: string; finding?: string; actions: CtaAction[] } // a proposal seen elsewhere/superseded → a REVIEW item in the inbox
-  | { type: 'resolve'; id: string } // the operator decided a queue item (acted / dismissed) → remove it
+  | { type: 'greet'; message: string } // local: the opening ticker line — a murmur with no turn, no notice card
   | { type: 'dismissNotice'; id: string } // local: "vu" on a retained toast card → drop that card only
   | { type: 'typing'; active: boolean } // local UI cue, not a Mercure frame
-  | { type: 'settle' } // local: the done animation finished → back to idle
-  | { type: 'clearEmber' }; // local: the inbox was opened → mute the badge (does NOT drain the queue)
+  | { type: 'settle' }; // local: the done animation finished → back to idle
 
 export const initialNoyau: NoyauState = {
   phase: 'idle',
@@ -129,9 +105,6 @@ export const initialNoyau: NoyauState = {
   notices: [],
   pulseCount: 0,
   result: null,
-  queue: [],
-  ember: 0,
-  emberSeen: false,
   worstTone: null,
   journal: [],
   steps: [],
@@ -153,17 +126,7 @@ export function busy(state: NoyauState): boolean {
   return state.phase === 'working' && !(state.driver === 'pilot' && state.quiet);
 }
 
-// The badge shows the pending-decision count — muted to 0 while `emberSeen` (the inbox was opened) so a
-// new decision has to un-mute it. Enqueue dedups by id (same concern re-arriving is one item) and
-// re-lights the badge; opening the inbox mutes it WITHOUT draining the queue (decisions outlive it).
-function emberOf(queue: DecisionItem[], seen: boolean): number {
-  return seen ? 0 : queue.length;
-}
-function pushDecision(queue: DecisionItem[], item: DecisionItem): DecisionItem[] {
-  return queue.some((q) => q.id === item.id) ? queue : [...queue, item];
-}
-
-// Same dedup rule as the queue, plus a cap: the stack is a working set the operator reads at a glance,
+// Dedup by id, plus a cap: the stack is a working set the operator reads at a glance,
 // not a log. Returns the SAME array when the card is already up, so a repeating pilot costs no render.
 function pushNotice(notices: Notice[], item: Notice): Notice[] {
   if (notices.some((n) => n.id === item.id)) return notices;
@@ -252,7 +215,7 @@ function resultFromTone(tone: Tone | null): Signal {
   return 'green';
 }
 
-// LAST-RESORT fallback only (CHOREOGRAPHY § "What a finished action says", 2026-09-04 removal): a
+// LAST-RESORT fallback only: a
 // tone-keyed sentence used to announce every turn end regardless of what happened, which both claimed
 // an unchecked finding ("tout est à jour" from a turn that read nothing) and read as nonsense once
 // spoken aloud. Real closing sentences now come from the turn itself — a deterministic wayfinder's own
@@ -317,7 +280,7 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       {
         const signal = resultFromTone(state.worstTone);
         // The wayfinder's own closing sentence, else whatever is already narrated (a real agent
-        // turn's `toast` — CHOREOGRAPHY "a real agent turn: nothing generic"), else NOTHING. There is
+        // turn's `toast`), else NOTHING. There is
         // deliberately no generic fallback: `resultFromTone(null)` is 'green', so one would have a
         // turn that did nothing announce « Tout est à jour. » — a verdict on the vehicle invented by
         // an action that never looked at it. The signal still reaches text via the orb's aria-label
@@ -378,17 +341,12 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       // heartbeat that carried it. The tone-specific routing below is unchanged on top of that.
       const notices = pushNotice(state.notices, { id: `${ev.tone}:${ev.message}`, tone: ev.tone, text: ev.message, at });
       if (ev.tone === 'alarm') {
-        // Real popup + a NOTIFY item in the à-décider inbox; never hijacks the heartbeat narration line.
-        const queue = pushDecision(state.queue, { id: `alarm:${ev.message}`, kind: 'notify', text: ev.message, at });
-        const emberSeen = queue === state.queue ? state.emberSeen : false; // a new decision un-mutes the badge
+        // Real popup; never hijacks the heartbeat narration line.
         return {
           ...state,
           ...live,
           worstTone,
           notices,
-          queue,
-          emberSeen,
-          ember: emberOf(queue, emberSeen),
           journal: append(state, { kind: 'alarm', message: ev.message }, at),
           entrySeq: state.entrySeq + 1,
         };
@@ -407,26 +365,13 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
     }
 
     case 'concern': {
-      // A Mercure domain frame (the §9 overdue crossing) — NOT an agent turn. It docks a NOTIFY item in
-      // the à-décider inbox and murmurs one concern line on the aria-live narration, but must NOT enter
-      // 'working' (no orb lift, no scan-lock, no pulse). phase is preserved (idle stays idle; an in-flight
-      // turn keeps working). The item carries its service type + vehicle so the row can offer "planifier".
-      const queue = pushDecision(state.queue, {
-        id: `concern:${ev.vehicleIri ?? ''}:${ev.serviceType ?? ev.message}`,
-        kind: 'notify',
-        text: ev.message,
-        at,
-        serviceType: ev.serviceType,
-        vehicleIri: ev.vehicleIri,
-      });
-      const emberSeen = queue === state.queue ? state.emberSeen : false;
+      // A Mercure domain frame (the §9 overdue crossing) — NOT an agent turn. It murmurs one concern line
+      // on the aria-live narration, but must NOT enter 'working' (no orb lift, no scan-lock, no pulse).
+      // phase is preserved (idle stays idle; an in-flight turn keeps working).
       return {
         ...state,
         narration: ev.message,
         narrationOnce: false,
-        queue,
-        emberSeen,
-        ember: emberOf(queue, emberSeen),
         worstTone: worse(state.worstTone, 'alarm'),
         journal: append(state, { kind: 'alarm', message: ev.message }, at),
         entrySeq: state.entrySeq + 1,
@@ -434,10 +379,10 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
     }
 
     case 'greet':
-      // The opening line (CHOREOGRAPHY § "The opening — the workshop speaks first"): a murmur on the
+      // The opening line: a murmur on the
       // ticker only. Unlike `status` it must NOT enter 'working' (there is no turn to end, so nothing
       // would ever settle it back down) and unlike `toast` it mints no notice card — "Bonjour" is not
-      // an answer to keep. phase, queue and worstTone are all untouched.
+      // an answer to keep. phase and worstTone are untouched.
       return {
         ...state,
         narration: ev.message,
@@ -446,28 +391,10 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
         entrySeq: state.entrySeq + 1,
       };
 
-    case 'defer': {
-      // A proposeActions that arrived while the operator was elsewhere (on the parc, no hero to raise the
-      // card) or was superseded by a newer proposal → parked as a REVIEW item to re-decide later. No
-      // narration, no journal (the inbox IS its surface) — it just docks and lights the badge.
-      const queue = pushDecision(state.queue, { id: ev.id, kind: 'review', text: ev.text, at, finding: ev.finding, actions: ev.actions });
-      const emberSeen = queue === state.queue ? state.emberSeen : false;
-      return { ...state, queue, emberSeen, ember: emberOf(queue, emberSeen) };
-    }
-
     case 'dismissNotice': {
-      // "vu" on a card. It never touches the queue: the card says READ THIS NOW, a notify item says
-      // DECIDE THIS LATER, and dismissing a reminder is not deciding the thing it reminds you of.
+      // "vu" on a card: drop that card only.
       const notices = state.notices.filter((n) => n.id !== ev.id);
       return notices.length === state.notices.length ? state : { ...state, notices };
-    }
-
-    case 'resolve': {
-      // The operator decided this item (acted on it or dismissed it) → drop it from the queue. The badge
-      // recomputes off the shorter queue (still muted if the inbox was open).
-      const queue = state.queue.filter((q) => q.id !== ev.id);
-      if (queue.length === state.queue.length) return state; // unknown id — nothing to remove
-      return { ...state, queue, ember: emberOf(queue, state.emberSeen) };
     }
 
     case 'quiet':
@@ -481,10 +408,5 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       // Clear worstTone too: a between-turn alarm push (the §9 overdue crossing — a Mercure domain
       // frame with no turn) must not carry its tone into the next idle period.
       return { ...state, phase: 'idle', result: null, narration: null, worstTone: null, steps: [], turnStartedAt: null, driver: null, lastFrameAt: null, quiet: false };
-
-    case 'clearEmber':
-      // Opening the inbox MUTES the badge (acknowledges the pending decisions) but keeps the queue —
-      // clearing the badge is not deleting the decisions; only `resolve` removes an item.
-      return state.emberSeen && state.ember === 0 ? state : { ...state, emberSeen: true, ember: 0 };
   }
 }

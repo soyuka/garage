@@ -16,7 +16,7 @@ import {
 } from './agentLight';
 import { HOLO_CYAN, NEON_RED } from './signalColors';
 
-// The hologram is the light (CHOREOGRAPHY § "The hologram is the light"): Le Noyau reaches the Canvas as
+// The hologram is the light: Le Noyau reaches the Canvas as
 // ONE primitive, the agent light carries phase as intensity and result as colour, and its reach is pinned
 // so the pool stays inside the rim — the rim is the car's surface, the pool is the agent's.
 
@@ -58,7 +58,7 @@ describe('lightTarget', () => {
 // Seen 2026-09-04 against the dark room (review-rest.jpeg): at metalness 0.6 the disc gave the agent light
 // only a specular lobe, and an overhead light's lobe points away from the HOME camera — the pool read as
 // black. The pool is a DIFFUSE term: a matte dark disc, and levels that put its centre at a visible
-// ≈ 0.05 linear (CHOREOGRAPHY § The hologram is the light, "Also in this change", corrected 2026-09-04).
+// ≈ 0.05 linear.
 describe('the pool is diffuse', () => {
   it('pins the matte disc', () => {
     expect(DISC).toEqual({ color: '#232a33', metalness: 0.2, roughness: 0.7 });

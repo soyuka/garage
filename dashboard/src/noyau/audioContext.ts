@@ -1,7 +1,7 @@
 // ONE `AudioContext` for the tab's life, shared by everything that makes a sound.
 //
 // It used to be a ref inside `useVoice`, which was right while speech was the only sound. The room bed
-// (CHOREOGRAPHY § "Audition — the room bed") made it wrong twice over: a second context is a second
+// made it wrong twice over: a second context is a second
 // hardware stream to burn a core on, and the bed's duck is scheduled against the SAME clock as the line
 // it ducks under — two contexts have two `currentTime`s and no way to place one against the other.
 //

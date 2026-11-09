@@ -8,7 +8,7 @@ import { MOTION } from '../tokens/motion';
 import { usePickHandlers } from './picking';
 import type { FluidCylinder } from './fluidVolumes';
 
-// The fluid volumes' cylinders (CHOREOGRAPHY § "Fluids — the volumes"). Mirrors VisitRing.tsx
+// The fluid volumes' cylinders. Mirrors VisitRing.tsx
 // file-for-file: one phase clock, a rise/stagger curve, keep-mounted-while-sinking.
 
 // No existing pair covers rise+fan (VisitRing twins rise+cascade, FactConstellation twins

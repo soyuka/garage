@@ -1,4 +1,4 @@
-// How the Atelier renders telemetry (DESIGN-VISION §5 + the honesty non-negotiables) — the single
+// How the Atelier renders telemetry — the single
 // source, in both languages. Thin-space (U+202F) groups thousands in French, a comma in English; a
 // no-break space (U+00A0) binds a value to its unit in BOTH, because that rule is about not wrapping,
 // not about French. No false precision: forecasts round to months/weeks and health rounds to the

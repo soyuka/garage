@@ -51,7 +51,7 @@ export function CarnetProjection({
           </button>
         )}
       </div>
-      {/* The ring rises alongside this projection (CHOREOGRAPHY § "Stations under both drivers") and
+      {/* The ring rises alongside this projection and
          nothing on screen said what its bars meant until the operator asked. Read, not decorative:
          aria-hidden stays false. */}
       <p className="at-carnet-key" aria-hidden="false">

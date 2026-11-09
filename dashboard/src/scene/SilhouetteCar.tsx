@@ -5,7 +5,7 @@ import { useT } from '../i18n/LocaleProvider';
 // The lowest VISUAL rung before the flat list (rung d): no WebGL, still recognizably the vehicle.
 // NOTE (B.2 deferral): the on-body hotspot/health overlay for this rung is NOT yet built — the 3D
 // hotspots/glow/rim ride rungs a/b only. On rung c the telemetry lives in the truth-panel + cardinals.
-// A 2D anchors-projected signal grid here is a tracked follow-up (see src/scene/REVIEW.md).
+// A 2D anchors-projected signal grid here is a tracked follow-up.
 
 const PROFILE: Record<BodyClass, string> = {
   // side profiles, viewBox 0 0 400 180, baseline y≈150

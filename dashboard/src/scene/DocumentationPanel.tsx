@@ -8,7 +8,7 @@ import type { DocumentSpec, VehicleDocumentKind } from '../types';
 import type { DocRow, Documentation } from './documentation';
 
 // « Documentation » — the vehicle's paper (`focusView {panel:'docs'}`). A CENTRED surface on the shopping
-// list's shell (same overlay, glass, head, unfurling groups — CHOREOGRAPHY row `focusView {panel:'docs'}`):
+// list's shell (same overlay, glass, head, unfurling groups):
 // every row is acted on (open, delete) and the surface ends in an upload form, which a ~270px column
 // cannot carry. Closes on scrim click, ✕, or Escape (SceneView owns Escape for any focus).
 

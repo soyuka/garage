@@ -1,4 +1,4 @@
-// The pure half of dictation (CHOREOGRAPHY § "La dictée"). Every rule that matters — when the mic
+// The pure half of dictation. Every rule that matters — when the mic
 // may open, when it closes itself, what a refused permission costs, what a transcript does to the
 // composer — is decided here, so the impure edge (recorder.ts, useDictation.ts) is left with nothing
 // but getUserMedia, MediaRecorder and one fetch. Same split as pcm.ts / speaker.ts, same reason: a
@@ -123,10 +123,10 @@ export function merge(existing: string, transcript: string): string {
 /**
  * The line a landed transcript submits — or null to leave the words in the composer and send nothing.
  *
- * **A transcript sends itself (2026-09-11).** This reverses the binding rule the mic shipped with,
+ * **A transcript sends itself (2026-09-11).** This reverses the rule the mic shipped with,
  * *nothing is submitted unheard*, at the operator's request after using the Enter version: dictation
  * exists for hands that are in an engine bay, and a gesture that still ends at the keyboard gives back
- * most of what the mic was for. CHOREOGRAPHY § "La dictée" carries the argument that was traded away —
+ * most of what the mic was for. The argument that was traded away:
  * a turn writes to the garage and has no undo, so a misheard plate or odometer reading now reaches a
  * real record with no beat in between. The cancel control on a running turn is what is left of that
  * beat.

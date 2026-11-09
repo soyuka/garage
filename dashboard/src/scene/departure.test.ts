@@ -22,7 +22,7 @@ describe('departureTransform — the ghost drives to the named podium target', (
     expect(t.translateY).toBeCloseTo(800 * PODIUM_TARGET.y - 110);
   });
 
-  it('defaults to the ~1.6x growth documented in CHOREOGRAPHY', () => {
+  it('defaults to the ~1.6x growth', () => {
     const t = departureTransform(rect({}), { width: 800, height: 600 });
     expect(t.scale).toBe(DEPARTURE_SCALE);
     expect(DEPARTURE_SCALE).toBeCloseTo(1.6);

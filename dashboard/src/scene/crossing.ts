@@ -1,10 +1,10 @@
 import type { ScenarioBundle } from '../fixtures/vehicles';
 import type { ForecastDue, MaintenanceHealth } from '../types';
 
-// DESIGN-VISION §9 — "service passant en rouge". On fixtures, simulate the live Mercure domain event
+// "Service passant en rouge". On fixtures, simulate the live Mercure domain event
 // that tips the soonest-due service past due: the scene re-renders the returned (red) bundle so every
 // leaf reacts (hood glow ignites, rim arc burns red, hotspot + panel flip to EN RETARD) and the scene
-// docks an ember on Le Noyau. Pure + immutable — FIXTURES is a shared singleton; never mutate it.
+// murmurs it on Le Noyau. Pure + immutable — FIXTURES is a shared singleton; never mutate it.
 
 /** Index of the soonest non-overdue due (a usage-axis one preferred — a realistic "drive a bit → late"). */
 export function firstCrossable(due: ForecastDue[]): number {
@@ -16,7 +16,7 @@ export function firstCrossable(due: ForecastDue[]): number {
 /**
  * The first service `type` that crossed into overdue between two forecasts (a prior not-overdue — or
  * absent — row now overdue). Drives the LIVE §9 wow: a Mercure domain refetch that tips a service past
- * due docks an ember + murmurs on Le Noyau, hands-off. Null when nothing newly crossed.
+ * due murmurs on Le Noyau, hands-off. Null when nothing newly crossed.
  */
 export function firstNewlyOverdue(prev: ForecastDue[], next: ForecastDue[]): string | null {
   const wasOverdue = new Map(prev.map((d) => [d.type, d.overdue]));

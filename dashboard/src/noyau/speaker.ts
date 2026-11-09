@@ -20,7 +20,7 @@ export interface Speaking {
    * placed, which is long before it has been heard (the body arrives ~12× faster than realtime, so a
    * 3.2 s line is fully scheduled ~0.3 s in). Feed it to the next line's `startAt` and the two are one
    * continuous signal; it is also the "this line is fully placed" signal that lets the queue promote
-   * its successor early (CHOREOGRAPHY § "The seam between two lines is gapless").
+   * its successor early.
    *
    * Settles with the context's current time when nothing could be placed at all, so a line that failed
    * never makes the one behind it wait.
@@ -31,8 +31,7 @@ export interface Speaking {
 }
 
 /**
- * A context created outside a gesture is suspended and stays so (CHOREOGRAPHY § "The AudioContext
- * trap"); Firefox with autoplay off for the origin additionally leaves `resume()` PENDING rather than
+ * A context created outside a gesture is suspended and stays so; Firefox with autoplay off for the origin additionally leaves `resume()` PENDING rather than
  * rejecting it, so the wait has to be bounded and the answer read back from `state`, never awaited.
  */
 async function running(ctx: AudioContext): Promise<boolean> {

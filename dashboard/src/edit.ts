@@ -31,7 +31,7 @@ export function defaultUsageUnit(vehicleType: string | null | undefined): 'km' |
 /**
  * The vehicle-edit usage units. CRITICAL: the Vehicle resource binds App\Garage\UsageUnit, whose
  * hours case is spelled `h` — the maintenance-side DTOs spell it `hours`. The vehicle merge-PATCH
- * MUST send the garage spelling (`h`) or the write is rejected. See PROVENANCE (two-enum divergence).
+ * MUST send the garage spelling (`h`) or the write is rejected.
  */
 export const VEHICLE_USAGE_UNITS = ['km', 'mi', 'h'] as const;
 export type VehicleUsageUnit = (typeof VEHICLE_USAGE_UNITS)[number];

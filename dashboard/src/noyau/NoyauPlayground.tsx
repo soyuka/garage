@@ -58,15 +58,12 @@ export function NoyauPlayground() {
           pulses <b style={{ color: '#67e8f9' }}>{state.pulseCount}</b>
         </span>
         <span>
-          ember <b style={{ color: state.ember ? '#fca5a5' : '#67e8f9' }}>{state.ember}</b>
-        </span>
-        <span>
           result <b>{state.result ?? '—'}</b>
         </span>
       </div>
 
       <div style={dock}>
-        <Noyau state={state} reduced={reduced} onClearEmber={() => dispatch({ type: 'clearEmber' })} />
+        <Noyau state={state} reduced={reduced} />
         <NoyauVoice state={state} reduced={reduced} />
         <div style={composer}>
           <input

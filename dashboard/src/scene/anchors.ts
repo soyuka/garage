@@ -6,7 +6,7 @@ import type { MercureFrame } from '../types';
 // ─────────────────────────────────────────────────────────────────────────────
 // The shared geometry seam for every 3D Plateau leaf (Hotspots, BodyGlow, RimGauge).
 //
-// DESIGN-VISION §2 / BUILD-NOTE 2: "Hotspot anchors are defined per body-class, not per exact mesh,
+// "Hotspot anchors are defined per body-class, not per exact mesh,
 // so they map onto the proxy." This module is that single source: it maps a backend service `type`
 // to the body region you read it off, and gives each region a 3D anchor derived from the SAME
 // CarProxy DIMS the blueprint renders from — so pin / glow / arc never drift from the car.

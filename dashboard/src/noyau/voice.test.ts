@@ -92,7 +92,7 @@ describe('voice queue', () => {
   });
 
   it('cancels the utterance whose card was dismissed', () => {
-    // "vu" removes the card. Audio outliving its card would be audio-only, which the binding rule forbids.
+    // "vu" removes the card. Audio outliving its card would be audio-only, which is forbidden.
     let s = next(enqueue(empty, notice('vidange', 0), 0), 1, true);
     expect(heard(s)).not.toBeNull();
 
@@ -336,7 +336,7 @@ describe('the answer card', () => {
   });
 });
 
-// The prefetch targets (CHOREOGRAPHY § "The voice starts before the browser asks"): every line
+// The prefetch targets: every line
 // waiting behind the one being spoken, read without promoting any of them, so `useVoice.ts` can fetch
 // each one's audio in parallel instead of waiting for it to reach the lips.
 describe('waiting — the prefetch targets', () => {
@@ -572,7 +572,7 @@ describe('a one-shot line is never spoken twice in a session', () => {
 });
 
 /**
- * The gapless seam (CHOREOGRAPHY § "The seam between two lines is gapless", 2026-09-11). The next line
+ * The gapless seam. The next line
  * is promoted while the current one is still AUDIBLE — as soon as its body is fully placed on the audio
  * clock, which happens ~0.3 s into a 3.2 s line because the body arrives ~12× faster than realtime. The
  * impure edge passes that as `canChain`; everything the pure layer has to decide is here.

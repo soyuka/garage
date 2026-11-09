@@ -1,7 +1,7 @@
 import type { Focus } from '../focus';
 
-// Which station's BODY belongs on the disc, given the two legend drawers + the current focus
-// (CHOREOGRAPHY § "Stations under both drivers"). A station now "belongs to the dataset, not to the
+// Which station's BODY belongs on the disc, given the two legend drawers + the current focus.
+// A station now "belongs to the dataset, not to the
 // surface that opened it" — the agent's `focusView`/`showHistory`/`showFact` raise the same bodies a
 // deterministic chip does. Precedence, in order: a docked LEGEND (the full Carnet / Fiche drawer) wins
 // outright; among focus-driven stations, `nodes` (a fetched, already-formatted surface — fluid

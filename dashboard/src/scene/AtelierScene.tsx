@@ -166,7 +166,7 @@ export function AtelierScene() {
       }
     : undefined;
 
-  // The crossing is a Mercure DOMAIN push (no agent turn): it docks an ember on Le Noyau + murmurs one
+  // The crossing is a Mercure DOMAIN push (no agent turn): it murmurs one
   // concern line, then settles back to veille. The scene's red state (glow/rim/panel) carries the rest.
   const triggerCrossing = () => {
     if (!bundle) return;
@@ -184,7 +184,6 @@ export function AtelierScene() {
   const resetCrossing = () => {
     if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
     setCrossed(false);
-    dispatch({ type: 'clearEmber' });
     dispatch({ type: 'settle' });
   };
 
@@ -252,8 +251,6 @@ export function AtelierScene() {
           { label: 'Données', onClick: () => { setHistoryOpen(false); setFactsDrawerOpen(true); } },
           { label: 'Historique', zone: 'centre', onClick: () => { setFactsDrawerOpen(false); setHistoryOpen(true); } },
         ]}
-        onClearEmber={() => dispatch({ type: 'clearEmber' })}
-        onResolveDecision={(id) => dispatch({ type: 'resolve', id })}
         onDismissNotice={(id) => dispatch({ type: 'dismissNotice', id })}
         onComposerFocus={(active) => dispatch({ type: 'typing', active })}
         composerExtras={

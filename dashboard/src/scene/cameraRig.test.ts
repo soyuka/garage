@@ -131,7 +131,7 @@ describe('derivePreset — a closer framing centred on the region anchor', () =>
   });
 });
 
-// C2 — the angle IS the region (CHOREOGRAPHY § "The region pose"). A preset that kept the home azimuth
+// C2 — the angle IS the region. A preset that kept the home azimuth
 // AND the home polar for every region produced one shot with five targets: the framing carried no datum.
 
 describe('REGION_VIEWS — one view per region, all reachable', () => {

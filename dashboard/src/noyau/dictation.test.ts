@@ -89,7 +89,7 @@ describe('dictate — the press-to-start, press-to-stop state machine', () => {
   });
 
   // Silence, a 503, a dead sidecar: all of them end with the operator typing, none of them with a
-  // card to dismiss (CHOREOGRAPHY § "La dictée").
+  // card to dismiss.
   it('returns to rest on a failure, without latching anything closed', () => {
     const state = dictate(dictate(recording(), { type: 'press', at: 1, busy: false }), { type: 'failed' });
 
@@ -145,8 +145,8 @@ describe('merge — what the transcript does to the composer', () => {
 
 /**
  * What a landed transcript DOES — reversed 2026-09-11 at the operator's request, having used the
- * Enter version: the line now sends itself. The rule it replaces (*nothing is submitted unheard*) is
- * quoted in CHOREOGRAPHY § "La dictée" with the argument that retired it.
+ * Enter version: the line now sends itself. The rule it replaces (*nothing is submitted unheard*) was
+ * retired.
  */
 describe('submission — a transcript sends itself', () => {
   it('sends the dictated line', () => {

@@ -166,8 +166,7 @@ function paintFor(v: VehicleSummary): string {
 }
 
 function SceneLights() {
-  // The room is dark; the hologram lights the disc and the mat ring (CHOREOGRAPHY § The hologram is the
-  // light). No key: the car is a projection, and a lit floor under it was a desk lamp left on.
+  // The room is dark; the hologram lights the disc and the mat ring. No key: the car is a projection, and a lit floor under it was a desk lamp left on.
   return <ambientLight intensity={ROOM_AMBIENT} color={ROOM_AMBIENT_COLOR} />;
 }
 
@@ -184,7 +183,7 @@ const RING_SEGMENTS = 96;
 const CALM = { base: 1.4, amp: 0.9 };
 const URGENT = { base: 2.6, amp: 2.0 }; // red: much brighter floor + a bigger heartbeat swing
 
-// The rim + podium's additive glow — seen against the dark room and kept (CHOREOGRAPHY § Stage look, 2026-09-04).
+// The rim + podium's additive glow — seen against the dark room and kept.
 const PODIUM_INTENSITY = 0.55;
 
 function RingSegment({
@@ -439,7 +438,7 @@ function PlateauImpl({
   due: ForecastDue[];
   reduced?: boolean;
   scanning?: boolean;
-  /** Le Noyau's state on the stage lights (CHOREOGRAPHY § The hologram is the light). A primitive, so the
+  /** Le Noyau's state on the stage lights. A primitive, so the
    * memo below stays effective. Absent → rest (playground). */
   agent?: AgentLight;
   pulseRegion?: PulseRegion | null;

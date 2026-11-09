@@ -6,7 +6,7 @@ import './noyau.css';
 /**
  * The elapsed-silence read of a quiet pilot run — the datum the veille pilotée state exists to show.
  * A leaf with its own interval so the once-a-second tick re-renders THIS and nothing else: the scene
- * and the memoized Plateau never see it (CHOREOGRAPHY hard rule 6 — cheap idle). `aria-hidden` at the
+ * and the memoized Plateau never see it. `aria-hidden` at the
  * call site: the transition into waiting is announced once on the live line, the stopwatch is not.
  */
 function PilotSilence({ since }: { since: number }) {

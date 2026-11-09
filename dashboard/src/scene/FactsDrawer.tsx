@@ -52,7 +52,7 @@ export function FactsDrawer({
 
   if (!open) return null;
 
-  // Grouped by region, in anchor order (CHOREOGRAPHY § "The legend is grouped like the body") — arrival
+  // Grouped by region, in anchor order — arrival
   // order is kept inside each group, so within a group this is still backend order.
   const groups = groupFactsByRegion(facts);
 

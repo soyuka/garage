@@ -75,7 +75,7 @@ export function VehicleBody({
 }) {
   const spec = resolveMesh(vehicle);
   const proxy = <CarProxy bodyClass={bodyClass} paint={paint} />;
-  // The projector-boot clock (CHOREOGRAPHY § "One stage", row 2): owned HERE, not by VehicleMesh, so it
+  // The projector-boot clock: owned HERE, not by VehicleMesh, so it
   // survives the proxy→thumb→full swap below (this component is keyed on the vehicle id by its parent,
   // Plateau — a mesh swap re-renders ThumbThenFull's children but never remounts VehicleBody itself).
   const riseAge = useRef(0);

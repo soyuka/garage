@@ -87,7 +87,7 @@ function ScanRunner({ scan, active, reduced }: { scan: ScanControl; active: bool
 // Drives the GHOST (C1): eases the shell toward `depth` so the reveal's diagram is not read through a
 // painted body. Unlike the scan and the pulse, this is STATE, not attention — under reduced motion it
 // CUTS to the target instead of going inert, because a wireframe shell with an assembly under it IS the
-// information and the dissolve was only ever the transition into it (CHOREOGRAPHY, reveal table).
+// information and the dissolve was only ever the transition into it.
 function GhostRunner({ ghost, depth, reduced }: { ghost: GhostControl; depth: number; reduced: boolean }) {
   const current = useRef(0);
   useFrame((_, delta) => {
@@ -105,7 +105,7 @@ function GhostRunner({ ghost, depth, reduced }: { ghost: GhostControl; depth: nu
 // and, when `riseAge` is supplied, the projector-boot RISE (uRise 0→1 over RISE_IN_SECONDS). Flicker age
 // runs on wall time in every mode so the window expires under reduced motion too — a later motion-on
 // toggle cannot replay it. Under reduced motion uTime is frozen (static scanlines), the flicker never
-// fires, and the rise (if driven) cuts straight to 1 (attention, not state — CHOREOGRAPHY row 2).
+// fires, and the rise (if driven) cuts straight to 1 (attention, not state).
 //
 // `riseAge` is an OPTIONAL ref owned by the caller: VehicleBody creates one and keeps it across the
 // proxy→thumb→full swap (it is keyed on the vehicle id, not the mesh), so the rise survives a swap that

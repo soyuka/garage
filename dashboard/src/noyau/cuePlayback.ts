@@ -26,6 +26,7 @@ export class CuePlayback {
   #loading: Promise<void> | null = null;
   #mode: CueMode = 'clear';
   #generation = 0;
+  #loopScale = 1;
   #destroyed = false;
 
   constructor(backend: CueBackend) {
@@ -86,6 +87,11 @@ export class CuePlayback {
     this.#active.delete(active);
   }
 
+  setLoopScale(scale: number): void {
+    this.#loopScale = scale;
+    for (const active of this.#active) if (active.cue === 'working') active.playing.setGain(this.#gain(active.cue));
+  }
+
   stop(cue: Cue): void {
     for (const active of this.#active) {
       if (active.cue !== cue) continue;
@@ -109,7 +115,7 @@ export class CuePlayback {
   }
 
   #gain(cue: Cue): number {
-    const gain = cue === 'working' ? CUES.loopGain : CUES.gain[cue];
+    const gain = cue === 'working' ? CUES.loopGain * this.#loopScale : CUES.gain[cue];
 
     return this.#mode === 'speech' ? gain * CUES.speechDuck : gain;
   }

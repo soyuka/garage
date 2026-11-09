@@ -41,6 +41,16 @@ export function resolveLocale(search: string, stored: string | null, languages: 
   return DEFAULT_LOCALE;
 }
 
+/**
+ * The query string `?lang=` is read from. Hash routes put it after the hash (`#/dev/workshop?lang=fr`),
+ * where `location.search` never sees it; the real query string wins when it names a `lang` itself.
+ */
+export function localeSearch(search: string, hash: string): string {
+  if (new URLSearchParams(search).has('lang')) return search;
+  const i = hash.indexOf('?');
+  return i < 0 ? search : hash.slice(i);
+}
+
 export function readStoredLocale(win: Window = window): string | null {
   try {
     return win.localStorage.getItem(LOCALE_KEY);
@@ -81,7 +91,7 @@ export function setCurrentLocale(locale: Locale): void {
 
 /** Read every source and settle on one. Safe before first paint. */
 export function bootLocale(win: Window = window): Locale {
-  const locale = resolveLocale(win.location.search, readStoredLocale(win), win.navigator.languages ?? []);
+  const locale = resolveLocale(localeSearch(win.location.search, win.location.hash), readStoredLocale(win), win.navigator.languages ?? []);
   applyLocale(locale, win);
   setCurrentLocale(locale);
 

@@ -1,6 +1,6 @@
 // The engine-hours usage unit is spelled differently on the two axes: the garage vehicle PATCH uses
 // the short `h`, while the maintenance record/schedule axis uses `hours`. Both crossings of that
-// divergence live here so the mapping is declared once (see PROVENANCE — a known cross-stack hazard).
+// divergence live here so the mapping is declared once (a known cross-stack hazard).
 
 /**
  * The maintenance-side usage units. CRITICAL: records + the service-schedule bind the MAINTENANCE

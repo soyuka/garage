@@ -21,7 +21,7 @@ import { MOTION } from '../tokens/motion';
 export type AssemblyShape =
   | 'canister' // a cylinder: filters, the things you unscrew and replace
   | 'housing' // a box: the block, an airbox, a battery, a caliper
-  | 'disc' // stands on the axle, axis along z (corrected 2026-09-05: it was drawn flat since C3, CHOREOGRAPHY § The reveal)
+  | 'disc' // stands on the axle, axis along z
   | 'line' // a thin run: a circuit, a hose, a pipe
   | 'node'; // a small marker: a plug, a sensor, a bleed point
 
@@ -37,7 +37,7 @@ export interface PartMeshSpec {
   /** yaw so the source's axis matches car-local space (+x = front, z = the axle). */
   rotationY?: number;
   /** pitch so the source's long axis stands vertical (the spark plug lies along z on disk; a plug
-   * stands in its socket, so it stands here too — CHOREOGRAPHY § The reveal). */
+   * stands in its socket, so it stands here too) */
   rotationX?: number;
 }
 
@@ -100,7 +100,7 @@ const DIAGRAMS: Record<BodyRegion, PartSpec[]> = {
 };
 
 // The one table (exported; keys are DIAGRAMS keys) mapping a part's KIND to a generic mesh that stands in
-// for its primitive (CHOREOGRAPHY § The reveal, 2026-09-04 — corrected 2026-09-05, the fit rule).
+// for its primitive.
 export const PART_MESHES: Readonly<Partial<Record<string, PartMeshSpec>>> = {
   oil_filter: { file: 'oil-filter' },
   spark_plug: { file: 'spark-plug', rotationX: Math.PI / 2 }, // source lies along z; stood up to sit in its socket
@@ -159,8 +159,7 @@ export function partMeshUrl(part: Pick<AssemblyPart, 'mesh'>): string | undefine
 
 export type Extent = readonly [number, number, number];
 
-/** The primitive's bounding box [x, y, z] — what a stand-in mesh is fitted to (CHOREOGRAPHY § The reveal,
- * correction 2026-09-05). Mirrors PartGeometry in Assembly.tsx; the disc is the UPRIGHT disc (DISC_UPRIGHT). */
+/** The primitive's bounding box [x, y, z] — what a stand-in mesh is fitted to. Mirrors PartGeometry in Assembly.tsx; the disc is the UPRIGHT disc (DISC_UPRIGHT). */
 export function schematicBox(shape: AssemblyShape, size: number): Extent {
   switch (shape) {
     case 'canister':

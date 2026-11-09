@@ -5,7 +5,7 @@ import { serviceLabel } from '../labels';
 import type { VehicleForecast } from '../types';
 import './floor.css';
 
-// The flat "plan" fallback list (DESIGN-VISION §8 / BUILD-NOTE 5) — an honest mono list of next-due
+// The flat "plan" fallback list — an honest mono list of next-due
 // per service. FIRST-CLASS and permanently reachable, NOT a Plateau sub-feature: this is the view
 // that survives when the GPU is weak, and the floor every visual layer is allowed to flourish on top
 // of. Every value here is full precision; signal is always paired with a TEXT tag, never color alone.

@@ -2,7 +2,7 @@ import { API, authFetch } from './auth';
 import type { Subscription } from './useMercure';
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Atelier — the agent turn (see PROVENANCE: Tier-1 transport re-authored fresh from
+// Atelier — the agent turn (Tier-1 transport re-authored fresh from
 // the /agent/turn request contract, no import path back).
 //
 // A turn is async: POST acks 202 and the reply arrives as session frames over the

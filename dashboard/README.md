@@ -4,8 +4,7 @@ The clean-room rebuild of the `mon-parc-auto.fr` front-end — a lit 3D garage *
 agent (Le Noyau) walks around your car and the bodywork tells you what hurts. Standalone client over
 the existing Symfony / API-Platform backend; **imports nothing from `dashboard/`**.
 
-- **Vision:** `../theming/DESIGN-VISION.md` (the system). **Build plan:** `../theming/IMPLEMENTATION-PROMPT.md`.
-- **Contract:** `CONTRACT.md` (build against this + `src/types.ts`). **Provenance:** `PROVENANCE.md`.
+- **Contract:** `CONTRACT.md` (build against this + `src/types.ts`).
 
 ## Run
 
@@ -41,6 +40,6 @@ src/
 ## Stage status
 
 - **Stage 0 — rails: done.** Scaffold, isolated tsconfig, same-origin serving, Vitest, frozen
-  contract types, `CONTRACT.md` + `PROVENANCE.md`.
+  contract types, `CONTRACT.md`.
 - Next: **Stage A** — Le Noyau standalone playground at `#/noyau`, driven by a scripted mock frame
   stream (TDD the frame→state machine against the real `status`/`turn`/`toast` shapes).

@@ -1,0 +1,48 @@
+:root,
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --w-ground: #101113;
+  --w-module: #1c1e22;
+  --w-plate: #24272c;
+  --w-rule: #2c2f35;
+  --w-ink: #e8e6e1;
+  --w-ink-2: #a1a5ad;
+  --w-blue: #5b8fd6;
+  --w-blue-ink: #0d1622;
+  --w-ok: #3fa66b;
+  --w-due: #e09a2b;
+  --w-over: #e5484d;
+  --w-plate-lit: #3a3e45;
+  --w-scroll: #3a3e45;
+  --w-chart-rest: #6c6f75;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --w-ground: #eceef1;
+  --w-module: #ffffff;
+  --w-plate: #e2e5ea;
+  --w-rule: #d0d5dc;
+  --w-ink: #14171b;
+  --w-ink-2: #4c525c;
+  --w-blue: #1f5fbf;
+  --w-blue-ink: #ffffff;
+  --w-ok: #1e7f4a;
+  --w-due: #a85f00;
+  --w-over: #c62f2f;
+  --w-plate-lit: #f7f8fa;
+  --w-scroll: #b9bfc8;
+  --w-chart-rest: #82868d;
+}
+
+:root {
+  --w-font-ui: 'Zen Kaku Gothic New', system-ui, sans-serif;
+  --w-font-data: 'JetBrains Mono', ui-monospace, monospace;
+  --w-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --w-plane-ms: 320ms;
+  --w-top: 48px;
+  --w-dock: 68px;
+  --w-dock-space: var(--w-dock);
+  --w-track: 64px;
+  --w-tab-h: 18px;
+}

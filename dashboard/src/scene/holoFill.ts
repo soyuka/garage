@@ -4,7 +4,7 @@ import { FILL_OPACITY } from './CarProxy';
 import { BLUEPRINT_EDGE } from './signalColors';
 import { DEPTH_FADE, FLICKER_DEPTH, FLICKER_HZ, FRESNEL_GAIN, FRESNEL_POWER, HOLO_SCAN_PERIOD, HOLO_SCAN_SPACING, SCAN_FLICKER } from './holo';
 
-// The hologram fill (CHOREOGRAPHY § "The hologram is the light", point 2): a ShaderMaterial with NO
+// The hologram fill: a ShaderMaterial with NO
 // lighting input — a view-dependent fresnel in the blueprint blue, horizontal scanlines drifting upward
 // (a loop period), a slight depth fade, and a per-scanline noise flicker gated by uFlicker (the arrival,
 // driven by HoloRunner) and by the scan band while the sweep is on. The scan and ghost uniforms are the

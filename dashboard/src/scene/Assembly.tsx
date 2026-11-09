@@ -28,19 +28,19 @@ import { buildBlueprint } from './blueprintBuild';
 // C3 — the schematic assembly. Draws the region's authored diagram (assembly.ts) in the region's anchor
 // space, under the ghosted shell. Same material language as the car so the two read as one drawing:
 // a faint tinted fill under a glowing edge line — literally true for a part with a generic mesh, which
-// goes through the SAME buildBlueprint pass as the shell (CHOREOGRAPHY § The reveal, 2026-09-04 row). The
+// goes through the SAME buildBlueprint pass as the shell. The
 // callout hue is the OPERATOR orange, never cyan — cyan is rationed to "the agent is acting", and these
 // parts are standing state, not an action.
 //
 // ONE diagram clock (`clock`, owned by Assembly and read by every part) rather than a per-part elapsed
 // counter: a glb that resolves mid-rise (Suspense swapping the primitive out) must join the rise at the
-// CURRENT instant instead of replaying it from 0 (CHOREOGRAPHY, "never a second rise"). Children's
+// CURRENT instant instead of replaying it from 0. Children's
 // useFrame subscribe before the parent's, so a part reads the previous frame's clock value — one frame of
 // lag, never a skipped write; do not reorder Assembly's clock advance relative to its children.
 
-// Decimated Sketchfab parts (300–8000 tris): 30° (the car's) scribbles the 6000-tri plug. Unchanged after live check 2026-09-05, see PROVENANCE.
+// Decimated Sketchfab parts (300–8000 tris): 30° (the car's) scribbles the 6000-tri plug. Unchanged after live check 2026-09-05.
 const PART_EDGE_ANGLE = 40;
-// The shell's boost (1.7) unless the bloomed orange stops reading as the primitive's orange (CHOREOGRAPHY row, "Glow is not hue"). Unchanged after live check 2026-09-05.
+// The shell's boost (1.7) unless the bloomed orange stops reading as the primitive's orange. Unchanged after live check 2026-09-05.
 const PART_EDGE_BOOST = 1.7;
 
 interface PartProps {
@@ -94,7 +94,7 @@ function PartGeometry({ part }: { part: AssemblyPart }) {
     case 'canister':
       return <cylinderGeometry args={[part.size, part.size, part.size * 2.4, 16]} />;
     case 'disc':
-      // upright — DISC_UPRIGHT on the mesh (CHOREOGRAPHY § The reveal, 2026-09-05)
+      // upright — DISC_UPRIGHT on the mesh
       return <cylinderGeometry args={[part.size, part.size, part.size * 0.16, 28]} />;
     case 'housing':
       return <boxGeometry args={[part.size, part.size * 0.62, part.size * 0.78]} />;
@@ -186,7 +186,7 @@ function PartSlot(props: PartProps) {
  * so there is no lingering hidden geometry and no second state to keep in sync with the ghost.
  *
  * `onPartsLanded` reports how many parts have finished rising. That number is the ghost's denominator:
- * the shell dissolves as the diagram arrives (CHOREOGRAPHY, reveal table), so the dissolve is paced by
+ * the shell dissolves as the diagram arrives, so the dissolve is paced by
  * the diagram and never by a clock.
  */
 export function Assembly({

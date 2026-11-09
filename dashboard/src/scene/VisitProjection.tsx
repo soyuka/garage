@@ -7,7 +7,7 @@ import type { BodyRegion } from './anchors';
 // The visit ladder — what « Plus tard · n » opens, in the shared projection column at the car's RIGHT.
 //
 // It is the magnification the compressed rail owes the operator: a bucket collapsed to a count is only
-// honest if there is a way to look closer (CHOREOGRAPHY.md § "Why a count and not a scroll"). Read-only,
+// honest if there is a way to look closer. Read-only,
 // like the worklist — every one of these services is editable in the rail once its visit comes due.
 //
 // The rungs are spaced by `ladder()`: the gap before a rung is the share of the widest calendar hop, so

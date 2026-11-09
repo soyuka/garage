@@ -5,8 +5,8 @@
 // frames it publishes over Mercure. They are contract-level type shapes: a faithful
 // client of the same contract converges on the same fields by necessity. They were
 // re-derived field-by-field from the live backend (see CONTRACT.md), then
-// re-authored here in Atelier's own structure (see PROVENANCE.md). Nothing here is a
-// display/view model — those are rebuilt fresh from fixtures in Stage B.
+// re-authored here in Atelier's own structure. Nothing here is a
+// display/view model — those are rebuilt fresh from fixtures.
 //
 // The vehicle handle EVERYWHERE is the dereferenceable `@id` IRI (e.g.
 // "/garage/vehicles/01J…"), never a bare ULID.
@@ -292,8 +292,8 @@ export interface CtaAction {
  * The REAL, verified agent→UI action union — the only members that exist on the wire. The agent never
  * returns chat; it emits these and the reducer maps them to state.
  *
- * NOTE: `renderSuggestions` and `patchPanel` from the docs/ui.md sketch DO NOT EXIST — never build
- * against them. The choreography map (Stage B.0) binds each real member to an Atelier motion.
+ * NOTE: `renderSuggestions` and `patchPanel` from an early sketch DO NOT EXIST — never build
+ * against them.
  */
 /** The single swappable slot's content: the spec panel, the maintenance to-do list, the carnet
  *  (past-visits + spend) projection, or the visit ladder.

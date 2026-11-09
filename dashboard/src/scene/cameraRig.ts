@@ -150,7 +150,7 @@ export function fromSpherical(radius: number, polar: number, azimuth: number): V
  * A framing centred on `anchor`, seen through `view`: re-target onto the region, swing `view.azimuth`
  * off the home viewing angle, tilt to `view.polar`, and pull in to `view.factor` of the home radius.
  * Retargeting is what makes the move read as "going to the region"; the angle is what makes it read as
- * going to THAT region (CHOREOGRAPHY § "The region pose"). The tilt is clamped into `band` so a preset
+ * going to THAT region. The tilt is clamped into `band` so a preset
  * can never land somewhere OrbitControls will immediately snap back out of.
  */
 export function derivePreset(anchor: Vec3, view: RegionView, home: CameraPose = HOME, band: { min: number; max: number } = POLAR): CameraPose {

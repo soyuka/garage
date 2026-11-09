@@ -19,15 +19,9 @@ const C = VIEW / 2;
 export function Noyau({
   state,
   reduced = false,
-  onClearEmber,
-  onEmberActivate,
 }: {
   state: NoyauState;
   reduced?: boolean;
-  onClearEmber?: () => void;
-  /** C2: clicking the ember OPENS the à-décider inbox (which also mutes the badge). When absent (the
-   *  Stage-A playground has no inbox) the click falls back to a bare badge acknowledge. */
-  onEmberActivate?: () => void;
 }) {
   const t = useT();
   const ticks = useMemo(() => tickMarks(60, C, C, 53, 59, 5), []);
@@ -54,8 +48,6 @@ export function Noyau({
       data-quiet={state.quiet ? 'true' : undefined}
       data-reduced={reduced ? 'true' : undefined}
     >
-      {/* orb + ember are SIBLINGS in a positioned wrap: the ember is a real <button> (keyboard-reachable,
-          opens the à-décider inbox) and must NOT nest inside the orb (a non-interactive status graphic). */}
       <div className="noyau-orb-wrap">
       <div
         className="noyau-orb"
@@ -127,26 +119,6 @@ export function Noyau({
           {state.phase === 'done' && <span className="noyau-exhale" />}
         </div>
       </div>
-
-        {/* The re-entry affordance is gated on the QUEUE, not the ember badge: once the inbox is opened the
-            badge mutes (ember → 0, emberSeen) but the decisions remain, so closing it (Escape/blur) without
-            resolving everything must NOT strand the queue. A muted variant reads as acknowledged (no alarm
-            glow); a new decision un-mutes it (emberSeen → false). It unmounts only when the queue drains. */}
-        {state.queue.length > 0 && (
-          <button
-            type="button"
-            className="noyau-ember"
-            data-muted={state.emberSeen ? 'true' : undefined}
-            aria-label={t.noyau.pendingDecisions(state.queue.length)}
-            aria-live="polite"
-            onClick={(e) => {
-              e.stopPropagation();
-              (onEmberActivate ?? onClearEmber)?.();
-            }}
-          >
-            {state.queue.length}
-          </button>
-        )}
       </div>
 
       <svg className="noyau-cradle" viewBox="0 0 120 26" aria-hidden="true">

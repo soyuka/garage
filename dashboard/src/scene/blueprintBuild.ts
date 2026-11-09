@@ -108,7 +108,7 @@ function patchHolo(mat: THREE.Material, s: ScanControl['uniforms'], p: PulseCont
 }
 
 // HDR line boost fed to the composer's bloom pass — the shell's default; a reveal part may lower it so
-// its bloomed hue matches the primitive's flat hue (CHOREOGRAPHY § The reveal, "Glow is not hue").
+// its bloomed hue matches the primitive's flat hue.
 export const EDGE_BOOST = 1.7;
 
 export function buildBlueprint(
@@ -140,7 +140,7 @@ export function buildBlueprint(
   // what feeds the bloom pass — the neon-tube core. Parc thumbs have no composer and just clamp to a
   // slightly brighter line, which is fine.
   // `edge` — the line/fresnel/scanline hue; the shell never passes it (blueprint blue); a highlighted
-  // reveal part passes OPERATOR_HEX (CHOREOGRAPHY § The reveal, 2026-09-04 row). `edgeBoost` — the HDR
+  // reveal part passes OPERATOR_HEX. `edgeBoost` — the HDR
   // line boost, default EDGE_BOOST; a part may lower it so its bloomed hue matches the primitive's flat
   // hue (row, "Glow is not hue").
   const edgeHue = edge ?? EDGE;

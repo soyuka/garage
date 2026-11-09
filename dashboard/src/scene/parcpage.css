@@ -28,7 +28,7 @@
   margin: 16px 12px 4px;
 }
 
-/* The agent console (CHOREOGRAPHY § "The agent is on the home screen too"): the greeting REPLACES the
+/* The agent console: the greeting REPLACES the
    static title (never sits beside it — two headings competing), the composer + orb sit beneath it in
    normal flow, not the hero's fixed-to-viewport dock (`.at-scene-dock`) — the parc still scrolls to
    the lot below. */

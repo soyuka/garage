@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — the garage REST client (API Platform, application/ld+json).
 //
-// Tier-1 transport (see PROVENANCE: a faithful client of the same REST routes,
+// Tier-1 transport (a faithful client of the same REST routes,
 // re-authored fresh from the old dashboard reference, no import path back). Reads
 // are split into two pure shape-helpers (unit-tested) — hydra member extraction and
 // the @id→id normalization — under thin authFetch verbs.
@@ -353,7 +353,7 @@ export async function deleteServiceRule(iri: string, ruleId: string): Promise<vo
  * A part line of a logged visit. CRITICAL: the maintenance-record WRITE shape takes `price` in MAJOR
  * units (euros) — the backend converts to the stored `priceCents` (verified against the API's own
  * functional tests: writes send `price: 12.5`, reads return `priceCents: 1250`). This is NOT the
- * planned-task parts subresource (which stores priceCents directly — see TaskPartInput). See PROVENANCE.
+ * planned-task parts subresource (which stores priceCents directly — see TaskPartInput).
  */
 export interface MaintenanceRecordPart {
   ref?: string;
@@ -383,14 +383,14 @@ export interface MaintenanceRecordInput {
   performedBy?: string | null;
 }
 
-/** Log a past service by hand (POST maintenance-records). */
-export async function createMaintenanceRecord(vehicleIri: string, input: MaintenanceRecordInput): Promise<void> {
+/** Log a past service by hand (POST maintenance-records). Returns the stored visit, its IRI normalized to `id` (bills attach to it). */
+export async function createMaintenanceRecord(vehicleIri: string, input: MaintenanceRecordInput): Promise<MaintenanceRecord> {
   const res = await authFetch(`${API}${vehicleIri}/maintenance-records`, {
     method: 'POST',
     headers: { 'Content-Type': LD, Accept: LD },
     body: JSON.stringify(input),
   });
-  okVoid(res, 'record create');
+  return normalizeIri(await okJson<MaintenanceRecord & { '@id'?: string }>(res, 'record create'));
 }
 
 /** Edit a logged visit (PATCH /garage/maintenance-records/{id} — the body replaces the whole visit). */

@@ -26,7 +26,7 @@ import { MAX_RECORDING_MS, dictate, emptyDictation, type DictationEvent, type Di
 async function fetchStt(blob: Blob): Promise<string | null> {
   const token = getToken();
   try {
-    // Every failure below is SILENT by design (no card, no toast — CHOREOGRAPHY § "La dictée"), which
+    // Every failure below is SILENT by design (no card, no toast), which
     // makes a broken vendor indistinguishable from a working one that heard nothing. The console is the
     // one place that can tell them apart without breaking that rule, so each outcome says which it was.
     console.debug('[dictée] posting %d bytes (%s)', blob.size, blob.type || 'no type');

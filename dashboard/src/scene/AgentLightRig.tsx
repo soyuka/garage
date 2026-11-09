@@ -18,7 +18,7 @@ import {
 import { breathe01 } from './holo';
 import { HOLO_CYAN } from './signalColors';
 
-// The hologram lights the stage (CHOREOGRAPHY § "The hologram is the light", points 1 and 3). Two point
+// The hologram lights the stage. Two point
 // lights on Le Noyau's breath: the agent light at the car (short reach, dies at the rim — phase as
 // intensity, result as colour) and the spill above it (wide reach, always cyan, a fixed ratio). Four
 // emitter housings on the disc root the projection; their lenses wear the agent light's colour. ONE

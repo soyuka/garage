@@ -14,9 +14,9 @@
    2. A VISIT IS A CARD, in the SAME material as the projection surfaces on the right (.at-worklist /
       .at-carnet / .at-ladder): .86 dark ground, hairline, 13px radius, blur, a hair leader stubbing at the
       car. Two columns of the same instrument bracketing the stage — the only asymmetry is which way the
-      leaders point, and that asymmetry is the ambient/summoned split (docs/design-inspiration.md § 2).
+      leaders point, and that asymmetry is the ambient/summoned split.
    3. THE CARD CARRIES ITS OWN SEVERITY, as a spine down its gutter. That is what makes « Maintenant » read
-      louder than « Prochaine visite » without a second font size (CHOREOGRAPHY § Vibrancy tiers). */
+      louder than « Prochaine visite » without a second font size. */
 
 .at-rail {
   position: absolute;
@@ -24,7 +24,7 @@
   left: 0;
   /* NOT bottom:0 — the column ends where its content ends. Bottom clearance clears the freed-orb console
      (socket 158 + gap 8 + composer 48, against a 66px row) + air; past that it scrolls inside itself.
-     Unconditional (CHOREOGRAPHY corrected 2026-09-05): the orb is freed under both drivers now, so this
+     Unconditional: the orb is freed under both drivers now, so this
      literal is no longer keyed on the dock. */
   max-height: calc(100% - 352px);
   width: 320px;
@@ -238,7 +238,7 @@
   border-top: 1px dashed var(--at-hairline); /* a ruled line, not a rigid table row */
   transition: background var(--at-dur-tint) var(--at-ease-sine);
 }
-/* rows unfurl staggered INSIDE their card (CHOREOGRAPHY § "a visit card enters the rail") — documented
+/* rows unfurl staggered INSIDE their card — documented
    since the regroup, only ever animated on the card until now. A delay is not a duration: the row's own
    motion is the scale step, this only spaces the paint. */
 .at-rail-visit .at-rail-row {
@@ -252,7 +252,7 @@
 .at-rail-row[data-activatable] {
   cursor: pointer;
 }
-/* SPOTLIT — the agent named this service (`focusView {panel:'tasks', keys}`, CHOREOGRAPHY.md). An
+/* SPOTLIT — the agent named this service (`focusView {panel:'tasks', keys}`). An
    orange left edge bleeding into the rail's gutter: the operator-cue colour, so the row the worklist
    projects on the RIGHT and the row the operator edits on the LEFT read as one row. Rationed to an
    edge + a lift, never a fill — the row's own signal tag must stay the loudest thing in it. */
@@ -401,8 +401,7 @@
 }
 
 /* ── visit cards (2026-08-15) — the rail groups by TRIP TO THE LIFT, not by service. A card is one
-   booking: its caption is the date, or the teardown for undated work. See CHOREOGRAPHY.md
-   § "The rail is grouped by VISIT, not by service". Materially the SAME object as the projection
+   booking: its caption is the date, or the teardown for undated work. Materially the SAME object as the projection
    surfaces on the right — that shared material is the integration. */
 
 .at-rail-visit {

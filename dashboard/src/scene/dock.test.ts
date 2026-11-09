@@ -3,7 +3,7 @@ import scene from './scene.css?raw';
 import rail from './rail.css?raw';
 import noyau from '../noyau/noyau.css?raw';
 
-// CHOREOGRAPHY § The pilot driver — corrected 2026-09-05: the freed-orb GEOMETRY (socket 138×158,
+// The freed-orb GEOMETRY (socket 138×158,
 // scale(1), console as a column, rail clearance grown) is unconditional under both drivers. Only what
 // sits UNDER the orb still keys on data-driver: the composer's collapse-to-handle / veille-pilotée
 // inflate, and the PILOTE nameplate. Vitest runs in `node` (no DOM renderer), so the geometry is pinned
@@ -44,7 +44,7 @@ describe('scene.css: the freed orb is unconditional geometry, only the handle ke
   it('inflates in veille pilotée via data-quiet beside data-driver', () => {
     expect(scene).toContain("[data-driver='pilot'][data-quiet='true']");
   });
-  it('scopes the focus inflate to the composer, never the console (ember/inbox live in the socket)', () => {
+  it('scopes the focus inflate to the composer, never the console', () => {
     expect(scene).toMatch(/\.at-scene-composer:not\(:focus-within\)/);
     expect(scene).not.toMatch(/\.at-scene-console:(not\()?:?focus-within/);
     expect(scene).not.toMatch(/\.at-scene-composer:hover/);

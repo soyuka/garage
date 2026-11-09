@@ -211,7 +211,7 @@
   letter-spacing: 0.02em;
 }
 
-/* ── departure: the grid fades under the ghost (CHOREOGRAPHY § "One stage", row 1) ───────────
+/* ── departure: the grid fades under the ghost ───────────
    CSS only, no movement — the ghost itself carries the motion. */
 .at-parc-grid[data-receding='true'] > li {
   opacity: 0;

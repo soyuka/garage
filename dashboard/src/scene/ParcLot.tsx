@@ -55,7 +55,7 @@ function usePageVisible(): boolean {
   return visible;
 }
 
-/** The clicked card's own rect + vehicle — the departure ghost (CHOREOGRAPHY § "One stage") is fixed
+/** The clicked card's own rect + vehicle — the departure ghost is fixed
  *  at `rect` and needs the vehicle's fields to look like the card it grew out of. */
 export interface DepartureOrigin {
   rect: DOMRect;
@@ -163,7 +163,7 @@ function ParcCard({
   const paint = paintFor(v.make);
   const sub = [v.year, v.engineVariant].filter(Boolean).join(' · ');
   const horizon = v.nextDue ? horizonFor(v.nextDue, locale) : null;
-  // The departure ghost (CHOREOGRAPHY § "One stage") needs the clicked card's OWN rect, not the stage's
+  // The departure ghost needs the clicked card's OWN rect, not the stage's
   // — it grows from where the whole glass card sits, not just its thumb.
   const activate = onSelect
     ? (e: React.MouseEvent<HTMLButtonElement>) => onSelect(v['@id'], { rect: e.currentTarget.getBoundingClientRect(), vehicle: v })

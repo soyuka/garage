@@ -1,4 +1,4 @@
-// Pure geometry for the departure ghost (CHOREOGRAPHY § "One stage — the lot and the podium", row 1).
+// Pure geometry for the departure ghost.
 // A lot card is clicked: its silhouette drives forward to the hero podium while growing. This
 // is the ONLY math in that motion — everything else (mount timing, the CSS transition) lives in
 // Departure.tsx.
@@ -15,7 +15,7 @@ export interface DepartureTransform {
   scale: number;
 }
 
-/** The default growth at the hero podium (CHOREOGRAPHY: "grows (~1.6×)"). */
+/** The default growth at the hero podium (~1.6×). */
 export const DEPARTURE_SCALE = 1.6;
 
 /** The hero's podium sits in the lower centre of its full-bleed stage. */

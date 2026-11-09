@@ -61,7 +61,6 @@ import { useCues } from './noyau/useCues';
 import { useVoice, useVoicePreference } from './noyau/useVoice';
 import { useNoticeAutoClose } from './noyau/useNoticeAutoClose';
 import { busy } from './noyau/state';
-import type { DecisionItem } from './noyau/state';
 import { drawGreeting, greetingForSelection, nothingDrawn, type Drawn } from './noyau/greeting';
 import { dataClosingLine } from './noyau/closingLine';
 import { ABANDON_MS, STAGE_INIT, stageReduce, type Driver, type StageState } from './pilot';
@@ -92,9 +91,8 @@ export function Atelier() {
   const { state, dispatch } = useNoyau();
   const reduced = useReducedMotion();
   // The audition, always on. What it reads is what is PRINTED — the notice cards, the answer card and
-  // the orb's ticker line — so it can never say anything that is not also on screen (CHOREOGRAPHY
-  // § Audition — speech, for answers). Only the mic (`listening`, below) still mutes it.
-  // The persisted voice preference (CHOREOGRAPHY § "the voice-select control", 2026-09-06).
+  // the orb's ticker line — so it can never say anything that is not also on screen. Only the mic (`listening`, below) still mutes it.
+  // The persisted voice preference.
   const [voice, setVoice] = useVoicePreference();
   // One session per TAB — scopes the agent's render-intent topic (slice 5 posts turns onto it). Kept in
   // sessionStorage so a reload mid-turn rejoins its own topic instead of orphaning the reply (agent.ts).
@@ -107,19 +105,14 @@ export function Atelier() {
   // centre slot + which keys are spotlit on the car/panel). Driven by `focusView`/`showFact` intents and
   // by car-pin clicks. Cleared on a new turn (its context is captured in pendingContext first) and on nav.
   const [cta, setCta] = useState<Cta | null>(null);
-  // The live cta seen inside the memoized Mercure callback (its closure would otherwise capture a stale
-  // value) — used to defer a still-pending proposal to the à-décider inbox when a newer one supersedes it.
-  const ctaRef = useRef<Cta | null>(cta);
-  ctaRef.current = cta;
   // Reads the three printed surfaces: the notice stack, the orb's ticker line, and the answer card.
-  // `narration` is now one string, printed and spoken alike (CHOREOGRAPHY § "What a finished action
-  // says", 2026-09-04 — the "posé · X" visual label and its spoken twin collapsed into one sentence).
-  // The mic being open HOLDS the audition (CHOREOGRAPHY § "La dictée"): a microphone that hears the
+  // `narration` is now one string, printed and spoken alike.
+  // The mic being open HOLDS the audition: a microphone that hears the
   // Atelier's own voice is a feedback loop, not a conversation. Passing it through `enabled` reuses the
   // proven mute path — the current line stops at once and the queue empties, exactly as a mute does.
   const [listening, setListening] = useState(false);
   const speakingId = useVoice(state.notices, state.narration, state.narrationOnce, cta, !listening, voice);
-  // The interface's own sounds (CHOREOGRAPHY § "Audition — transition cues"), always on. `busy(state)`
+  // The interface's own sounds, always on. `busy(state)`
   // is the working loop's datum — it already excludes a QUIET pilot run, so a pilot that has gone
   // silent for minutes does not sit there humming. Requested from `applyRender`, never from frame arrival.
   const cues = useCues(true, { busy: busy(state), speaking: null !== speakingId, listening });
@@ -131,7 +124,7 @@ export function Atelier() {
     dispatch({ type: 'listening', active });
   }, []);
   // Auto-close a retained notice card after its read dwell — never while its own line is still being
-  // spoken (CHOREOGRAPHY § "an answer that lands, then clears", auto-close 2026-09-04).
+  // spoken.
   useNoticeAutoClose(state.notices, speakingId, DWELL.noticeRead, (id) => dispatch({ type: 'dismissNotice', id }));
   const [focus, setFocus] = useState<Focus | null>(null);
   const focusRef = useRef<Focus | null>(focus);
@@ -154,8 +147,8 @@ export function Atelier() {
   const revealRef = useRef<RevealState | null>(reveal);
   revealRef.current = reveal;
   const cameraKey = useRef(0);
-  // The departure ghost (CHOREOGRAPHY § "One stage — the lot and the podium"): set by ParcLot's onSelect
-  // in the SAME handler that changes the hash (hard rule 1 — the hash never waits on the motion). Kept
+  // The departure ghost: set by ParcLot's onSelect
+  // in the SAME handler that changes the hash (the hash never waits on the motion). Kept
   // non-null for the duration of the ghost's flight; while it is set the parc landing keeps rendering
   // (with its grid receding) even though `seg` already points at the hero, so the ghost has a page to
   // fly over and the lot fades rather than hard-cutting away under it.
@@ -163,7 +156,7 @@ export function Atelier() {
   const [journalOpen, setJournalOpen] = useState(false); // the agent debug journal drawer
   const [dossierOpen, setDossierOpen] = useState(false); // #11 records + schedule drawer (per-vehicle)
   // The document viewer stacks above whatever opened it; one at a time — a new document REPLACES it
-  // (keyed remount), and focus returns to the control that opened the FIRST one (CHOREOGRAPHY 2026-10-05).
+  // (keyed remount), and focus returns to the control that opened the FIRST one.
   const [viewer, setViewer] = useState<{ doc: DocumentSpec; key: number } | null>(null);
   const viewerOpener = useRef<HTMLElement | null>(null);
   const viewerKey = useRef(0);
@@ -285,7 +278,7 @@ export function Atelier() {
   busyRef.current = busy(state);
   const crossTimer = useRef<number | null>(null);
 
-  // The opening — the workshop speaks first (CHOREOGRAPHY, added 2026-09-04). `seg === null` settles
+  // The opening — the workshop speaks first. `seg === null` settles
   // to "no vehicle" immediately (no vehicle is ever intended); `heroBundle` settles to "vehicle
   // selected" once its data actually lands. A hash naming a vehicle whose bundle hasn't arrived yet is
   // neither — `undefined` withholds the greeting so the "no vehicle" line never flashes ahead of the
@@ -305,7 +298,7 @@ export function Atelier() {
     greetedRef.current = next;
     if (!greeting) return;
     // Drawn from the catalog, on the spot: the line is up the instant the data settles, which is what
-    // the model call could never do (CHOREOGRAPHY § "The opening", reversed 2026-09-11).
+    // the model call could never do.
     const drawing = drawGreeting(greeting, t.greeting, {
       drawn: drawnRef.current,
       operator: getIdentity().name,
@@ -402,8 +395,7 @@ export function Atelier() {
   }, []);
 
   // The OPERATOR aiming a rail visit card at its region: the same D1 dolly, WITHOUT the cyan flare. Cyan
-  // says "Le Noyau is acting" and it did not — the operator moved their own camera (CHOREOGRAPHY.md
-  // § "the operator clicks a visit card's head"). Not coalesced either: one click is already one gesture.
+  // says "Le Noyau is acting" and it did not — the operator moved their own camera. Not coalesced either: one click is already one gesture.
   const holdRegion = useCallback((region: BodyRegion) => {
     cameraKey.current += 1;
     setCameraFocus({ region, key: cameraKey.current });
@@ -426,13 +418,13 @@ export function Atelier() {
 
   // Region targets inside one burst are ONE gesture — the camera dollies once, to where the burst
   // ended (useRegionBurst / pilot.ts). Only the dolly waits for the window; the panels those same
-  // frames open land immediately (hard rule 1: motion may overlap an arrival, never gate one).
+  // frames open land immediately (motion may overlap an arrival, never gate one).
   const requestFlare = useRegionBurst(flareRegion);
 
   // ── The render-intent staging gate (pilot.ts) ───────────────────────────────
   // A `select_vehicle` + `show_fact` pair fired 300ms apart used to lose the answer: the surfaces are
   // per-vehicle, so they were placed against the car still on screen (and a proposal fired before the
-  // hero resolved was parked in the à-décider inbox instead of rising as a card). The gate holds every
+  // hero resolved never rose as a card). The gate holds every
   // surface-placing intent until the car it is about is on screen, then replays it in order.
   const stage = useRef<StageState>(STAGE_INIT);
   const expireTimer = useRef<number | null>(null);
@@ -442,7 +434,7 @@ export function Atelier() {
   const openHistory = useCallback(() => { setFactsDrawerOpen(false); setHistoryOpen(true); cues.play('panel'); }, [cues.play]);
 
   /**
-   * Apply ONE render intent to the workshop — the choreography map made code (CHOREOGRAPHY.md). Same
+   * Apply ONE render intent to the workshop — the choreography map made code. Same
    * function whichever driver produced it: the two share a vocabulary, so they share this code path.
    * Called either straight off the wire or replayed by the staging gate once the car has arrived.
    */
@@ -491,12 +483,9 @@ export function Atelier() {
         requestFlare(frame.region);
       } else if (frame.type === 'proposeActions') {
         const next: Cta = { headline: frame.headline, finding: frame.finding, actions: frame.actions };
-        const defer = (c: Cta) => dispatch({ type: 'defer', id: `review:${c.headline}`, text: c.headline, finding: c.finding, actions: c.actions });
-        // a still-pending prior proposal is SUPERSEDED by this one → park it in the à-décider inbox.
-        if (ctaRef.current) defer(ctaRef.current);
-        // no hero open (the operator is on the parc — no cradle to raise the card) → straight to the inbox.
-        if (!selectedIriRef.current) defer(next);
-        else {
+        // no hero open (the operator is on the parc — no cradle to raise the card) → nothing to show it on.
+        // A still-pending prior proposal is simply replaced by this one.
+        if (selectedIriRef.current) {
           setCta(next);
           cues.play('card');
         }
@@ -551,13 +540,12 @@ export function Atelier() {
           getVehicleBundle(iri)
             .then((b) => {
               if (selectedIriRef.current !== iri) return; // navigated away — drop the stale refetch
-              // §9 hands-off wow: a service that just crossed into overdue docks an ember + murmurs on
+              // §9 hands-off wow: a service that just crossed into overdue murmurs on
               // Le Noyau (NOT an agent turn). The red bodywork (rim/hotspot/panel) rides the new bundle.
               const crossed = firstNewlyOverdue(prevDue, b.forecast.due);
               setBundle(b);
               if (crossed) {
-                // carry the raw type + vehicle so the à-décider notify row can offer "planifier ○"
-                dispatch({ type: 'concern', message: t.atelier.overdueConcern(serviceLabel(crossed, locale)), serviceType: crossed, vehicleIri: iri });
+                dispatch({ type: 'concern', message: t.atelier.overdueConcern(serviceLabel(crossed, locale)) });
                 if (crossTimer.current != null) window.clearTimeout(crossTimer.current);
                 crossTimer.current = window.setTimeout(() => {
                   if (phaseRef.current !== 'working') dispatch({ type: 'settle' }); // don't cut a live turn
@@ -644,7 +632,7 @@ export function Atelier() {
     });
   };
 
-  // ── Deterministic wayfinders (CHOREOGRAPHY "Deterministic-first"). A quick-action chip resolves
+  // ── Deterministic wayfinders. A quick-action chip resolves
   // client-side or via a plain GET — NO postTurn, NO tokens — and replays the Noyau choreography the agent
   // would (turn:start → the two status steps → answer + turn:end), then applies the same focus/cta. It runs
   // at DATA speed: the steps narrate immediately and the answer lands the moment `resolve` settles (instant
@@ -656,7 +644,7 @@ export function Atelier() {
       steps: [string, string];
       failMessage: string;
       resolve: () => Promise<{ focus?: Focus | null; cta?: Cta | null; effect?: () => void }>;
-      // The turn-end closing sentence (CHOREOGRAPHY § "What a finished action says") — printed AND
+      // The turn-end closing sentence — printed AND
       // spoken, replacing whatever the last step narrated. Omitted on failure: the warn toast already
       // narrated honestly, and `turn:end` there must not paper over it with a success sentence.
       spokenResult?: string;
@@ -806,7 +794,7 @@ export function Atelier() {
           }),
       });
     }
-    // The judgement chip (CHOREOGRAPHY § "Asking the agent from the UI"): unlike every chip above,
+    // The judgement chip: unlike every chip above,
     // this posts a REAL turn (the exact `send` path a typed question uses) — the answer is language/
     // judgement a panel cannot produce. Same records prerequisite as the carnet/history chips, so the
     // two families never disagree about whether there is anything to summarise.
@@ -824,7 +812,7 @@ export function Atelier() {
 
   // CTA action paths. `instruction` re-runs the agent (a fresh turn, supersedes the card). `patchTask`
   // is a DETERMINISTIC parts merge — no agent turn — then re-reads the open bundle so the établi/
-  // échéances reflect the merge (the domain frame omits plannedTasks; see PROVENANCE).
+  // échéances reflect the merge (the domain frame omits plannedTasks).
   // The reveal is DERIVED from the hold, never stored in parallel with it: one rule (revealSurvives)
   // decides whether the diagram is still standing, so there is no path where the shell stays ghosted
   // after the camera has moved on, and no dismiss handler to keep in step with the release handler.
@@ -848,23 +836,6 @@ export function Atelier() {
         cues.play('complete');
       })
       .catch((e) => alarm(t.atelier.addFailed((e as Error).message)));
-  };
-
-  // ── C2 à-décider inbox handlers. `resolve` drops a decided item from the queue (a "vu" dismiss or the
-  // tail of any action). `schedule` promotes a notify item (a due service) to a planned task on ITS OWN
-  // vehicle — createTask targets the item's vehicleIri directly, so it is correct even if the operator has
-  // since navigated to another car (the concern persists across nav). Only refresh the open bundle if it
-  // matches. Review actions reuse the CTA paths (onCtaInstruction / onCtaPatch) unchanged.
-  const onResolveDecision = (id: string) => dispatch({ type: 'resolve', id });
-  const onScheduleDecision = (item: DecisionItem) => {
-    if (!item.serviceType || !item.vehicleIri) return;
-    const vIri = item.vehicleIri;
-    createTask(vIri, { type: item.serviceType })
-      .then(() => {
-        if (selectedIriRef.current === vIri) afterTaskWrite(vIri);
-        cues.play('complete');
-      })
-      .catch((e) => alarm(t.atelier.planFailed((e as Error).message)));
   };
 
   // ── #9 Vehicle CRUD + facts (the manual surfaces; the agent does the same via NL). Every write also
@@ -966,7 +937,7 @@ export function Atelier() {
   };
 
   // ── #10 Task checklist. Task writes hit the /planned-tasks subresource; the domain frame OMITS
-  // plannedTasks (see PROVENANCE), so each write re-reads the bundle explicitly (guarded post-await),
+  // plannedTasks, so each write re-reads the bundle explicitly (guarded post-await),
   // plus the includeDismissed list when the "voir les retirées" view is open.
   const showDismissedRef = useRef(showDismissed);
   showDismissedRef.current = showDismissed;
@@ -1042,7 +1013,7 @@ export function Atelier() {
   }
 
   // ── Hero route (#/v/<seg>) ──────────────────────────────────────────────────
-  // NEVER gated on `departure` (hard rule 1 — motion overlaps an arrival, never gates one): the hero
+  // NEVER gated on `departure` (motion overlaps an arrival, never gates one): the hero
   // mounts, fetches its bundle and begins its own arrival the instant the hash changes. While the ghost
   // is still in flight the lot it grew out of is echoed as a fixed overlay ABOVE this tree (see
   // `DepartureEcho` below + the unified return at the bottom of this component) so the swap never
@@ -1098,9 +1069,6 @@ export function Atelier() {
             reveal={liveReveal}
             onCameraRelease={dismissCamera}
             onHoldRegion={holdRegion}
-            onClearEmber={() => dispatch({ type: 'clearEmber' })}
-            onResolveDecision={onResolveDecision}
-            onScheduleDecision={onScheduleDecision}
             onDismissNotice={(id) => {
               dispatch({ type: 'dismissNotice', id });
               cues.play('dismiss');
@@ -1168,7 +1136,7 @@ export function Atelier() {
     );
   } else {
     // ── Parc landing (#/) ─────────────────────────────────────────────────────
-    // Carries its own agent console (CHOREOGRAPHY § "The agent is on the home screen too"): the opening
+    // Carries its own agent console: the opening
     // greeting is dispatched into `state.narration` regardless of route (the effect above fires on
     // `seg === null`) and useVoice already speaks it — this route just PRINTS it, which is the fix for
     // the audio-only violation. The heading IS the live narration line (greeting → turn steps → the
@@ -1197,7 +1165,7 @@ export function Atelier() {
           </h1>
           <div className="at-scene-console">
             <div className="at-scene-socket">
-              <Noyau state={state} reduced={reduced} onClearEmber={() => dispatch({ type: 'clearEmber' })} />
+              <Noyau state={state} reduced={reduced} />
             </div>
             <Composer
               onComposerFocus={(active) => dispatch({ type: 'typing', active })}
@@ -1229,7 +1197,7 @@ export function Atelier() {
             reduced={reduced}
             receding={departure !== null}
             onSelect={(iri, origin) => {
-              // Both in the SAME handler, before any await or timeout (hard rule 1): the hash never
+              // Both in the SAME handler, before any await or timeout: the hash never
               // waits on the ghost. Reduced motion skips the ghost outright — no ghost, no recede, just
               // the cut.
               cues.play('select');
@@ -1260,9 +1228,9 @@ export function Atelier() {
   );
 }
 
-/** The lot's grid, echoed as a fixed overlay above the hero while the departure ghost is mid-flight
- *  (CHOREOGRAPHY § "One stage — the lot and the podium"). The hero mounts the instant the hash changes
- *  (hard rule 1) — this is what keeps the grid the ghost grew out of on screen, receding underneath it,
+/** The lot's grid, echoed as a fixed overlay above the hero while the departure ghost is mid-flight.
+ *  The hero mounts the instant the hash changes
+ *  — this is what keeps the grid the ghost grew out of on screen, receding underneath it,
  *  instead of the hero hard-cutting in the moment the real parc route unmounts. Mounts at full opacity
  *  (matching the last frame the real parc route painted) then flips ParcLot's own `receding` fade one
  *  frame later — mounting straight into `data-receding` would pop the grid in already transparent, since
@@ -1300,8 +1268,7 @@ function Identity({
   const id = getIdentity();
   const [locale] = useLocale();
   // The picker's own list — fetched unconditionally on mount and again on a locale change, since
-  // `GET /tts/voices` answers for the request's `Accept-Language` (CHOREOGRAPHY § "the voice-select
-  // control", 2026-09-06). An empty result hides the control below, never a picker with nothing in it.
+  // `GET /tts/voices` answers for the request's `Accept-Language`. An empty result hides the control below, never a picker with nothing in it.
   const [voices, setVoices] = useState<SpeechVoice[]>([]);
   useEffect(() => {
     let cancelled = false;

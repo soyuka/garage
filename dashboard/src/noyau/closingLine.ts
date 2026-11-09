@@ -1,4 +1,4 @@
-// The Données chip's closing sentence (CHOREOGRAPHY § "What a finished action says", 2026-09-04):
+// The Données chip's closing sentence:
 // names the vehicle when it can. `name` follows the repo convention
 // `[make, model].filter(Boolean).join(' ')` (ParcLot.tsx, greeting.ts) — the caller builds it, this
 // only picks which template fits it.

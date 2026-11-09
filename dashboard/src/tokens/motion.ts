@@ -7,7 +7,7 @@
 // that bracket them — a `useFrame` loop cannot read a CSS custom property per frame.
 //
 // A step is an intent, not a number: pick by what the motion MEANS, never by taste. A duration that
-// does not fit an intent here is a sign the motion has no data behind it (CHOREOGRAPHY.md "Taste").
+// does not fit an intent here is a sign the motion has no data behind it.
 // Loop PERIODS are a different quantity (a frequency, not a duration) and only `breathe` is one —
 // it is protected: Le Noyau's ~4s sine breathe is the sleeping-Mac signature, not a placeholder.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -26,14 +26,14 @@ export const MOTION = {
   fan: 480,
   /** the done filament cross-fades to its result colour */
   filament: 600,
-  /** the domain data cascade — health bars, cardinals, hotspots (CHOREOGRAPHY "data cascade"); also the
+  /** the domain data cascade — health bars, cardinals, hotspots; also the
    *  visit ring's stagger window (twin of visitRing's CASCADE_SECONDS) */
   cascade: 800,
   /** the earned-camera dolly to a body region (twin of cameraRig.DOLLY_SECONDS) */
   dolly: 900,
   /** one region pulse — about the length of a short tool call (twin of holo.PULSE_DURATION) */
   pulse: 1400,
-  /** Le Noyau's idle breathe PERIOD — the protected signature (CHOREOGRAPHY hard rule 4) */
+  /** Le Noyau's idle breathe PERIOD — the protected signature */
   breathe: 4000,
 } as const;
 
@@ -51,8 +51,7 @@ export const DWELL = {
   /** a rejected deterministic answer's warning paints before the orb settles with no surface */
   warn: 600,
   /** a notice card's read time before it auto-closes (NoticeStack) — never counted while its own line
-   *  is still being spoken; the dwell starts fresh when that sentence ends (CHOREOGRAPHY § "an answer
-   *  that lands, then clears", auto-close 2026-09-04) */
+   *  is still being spoken; the dwell starts fresh when that sentence ends */
   noticeRead: 8000,
   /** the in-app turn's liveness watchdog: the worker runs async, so a dead one must not hang the orb
    *  forever. NOT applied to a pilot run — see PILOT_QUIET_MS. */
@@ -68,7 +67,7 @@ export const DWELL = {
  * where the burst ended — the operator is shown the conclusion, not the path. Below the ~200ms bound
  * at which a delay stops reading as caused by the frame that triggered it, so coalescing the camera
  * never makes the move feel disconnected. It delays the DOLLY only: panels open the instant they can
- * (hard rule 1 — motion may overlap an arrival, never gate one).
+ * (motion may overlap an arrival, never gate one).
  */
 export const BURST_MS = 120;
 

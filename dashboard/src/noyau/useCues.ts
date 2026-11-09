@@ -1,43 +1,33 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { CUES } from '../tokens/audition';
 import { audioContext, holdAudio, releaseAudio } from './audioContext';
-import { CUE_BURST_INIT, cueBurstReduce, loopSounds, type Cue, type CueBurst, type Work } from './cues';
+import { CUE_BURST_INIT, cueBurstReduce, cueRepeats, loopScale, loopSounds, type Cue, type CueBurst, type Work } from './cues';
+import { SPATIAL_PALETTE, type CuePalette } from './palettes';
 import { CuePlayback, type CueBackend, type PlayingCue } from './cuePlayback';
 
-const CUE_URL: Record<Cue, string> = {
-  select: '/audio/spatial-2026-09-11/select.wav',
-  panel: '/audio/spatial-2026-09-11/panel.wav',
-  reveal: '/audio/spatial-2026-09-11/reveal.wav',
-  card: '/audio/spatial-2026-09-11/card.wav',
-  dismiss: '/audio/spatial-2026-09-11/dismiss.wav',
-  complete: '/audio/spatial-2026-09-11/complete.wav',
-  blocked: '/audio/spatial-2026-09-11/blocked.wav',
-  mic: '/audio/spatial-2026-09-11/mic.wav',
-  working: '/audio/spatial-2026-09-11/working.wav',
-  opening: '/audio/spatial-2026-09-11/opening.wav',
-};
+const buffers = new Map<string, Promise<AudioBuffer | null>>();
 
-const buffers = new Map<Cue, Promise<AudioBuffer | null>>();
-
-function browserBackend(): CueBackend {
+function browserBackend(palette: CuePalette): CueBackend {
   return {
     async load(cue) {
+      const url = palette.url[cue];
+      if (!url) return false;
       const ctx = audioContext();
-      let pending = buffers.get(cue);
+      let pending = buffers.get(url);
       if (!pending) {
-        pending = fetch(CUE_URL[cue])
+        pending = fetch(url)
           .then((res) => (res.ok ? res.arrayBuffer() : null))
           .then((bytes) => (bytes ? ctx.decodeAudioData(bytes) : null))
           .catch(() => null);
-        buffers.set(cue, pending);
+        buffers.set(url, pending);
       }
 
       return null !== (await pending);
     },
     start(cue, initialGain, loop): PlayingCue | null {
       const ctx = audioContext();
-      if (ctx.state !== 'running') return null;
-      const pending = buffers.get(cue);
+      const url = palette.url[cue];
+      if (ctx.state !== 'running' || !url) return null;
+      const pending = buffers.get(url);
       if (!pending) return null;
       let source: AudioBufferSourceNode | null = null;
       let gain: GainNode | null = null;
@@ -64,7 +54,7 @@ function browserBackend(): CueBackend {
           finish();
         };
         source.start();
-        if (loop) gain.gain.setTargetAtTime(targetGain, ctx.currentTime, CUES.loopFadeSeconds / 3);
+        if (loop) gain.gain.setTargetAtTime(targetGain, ctx.currentTime, palette.loop.fadeInMs / 3000);
       });
 
       return {
@@ -80,14 +70,15 @@ function browserBackend(): CueBackend {
             finish();
             return;
           }
-          gain.gain.setTargetAtTime(0, ctx.currentTime, 0.015);
+          const fadeMs = loop ? palette.loop.fadeOutMs : 60;
+          gain.gain.setTargetAtTime(0, ctx.currentTime, fadeMs / 4000);
           window.setTimeout(() => {
             try {
               source?.stop();
             } catch {
               finish();
             }
-          }, 60);
+          }, fadeMs);
         },
       };
     },
@@ -106,10 +97,11 @@ export interface CueControls {
   armMic(): ArmedMicCue;
 }
 
-export function useCues(enabled: boolean, work: Omit<Work, 'sinceMs'> & { listening: boolean }): CueControls {
-  const player = useMemo(() => new CuePlayback(browserBackend()), []);
+export function useCues(enabled: boolean, work: Omit<Work, 'sinceMs'> & { listening: boolean }, palette: CuePalette = SPATIAL_PALETTE): CueControls {
+  const player = useMemo(() => new CuePlayback(browserBackend(palette)), [palette]);
   const burst = useRef<CueBurst>(CUE_BURST_INIT);
-  const loopTimer = useRef<number | null>(null);
+  const lastPlayed = useRef(new Map<Cue, number>());
+  const answered = work.answered ?? false;
   const openingArmed = useRef(false);
   const openingController = useRef<AbortController | null>(null);
 
@@ -125,11 +117,16 @@ export function useCues(enabled: boolean, work: Omit<Work, 'sinceMs'> & { listen
   }, [enabled, player, work.listening, work.speaking]);
 
   useEffect(() => {
+    // Every gesture may be the first one the browser lets the context start in; a palette without an
+    // opening cue still needs the context running for its first cue.
     const unlock = () => {
-      if (!openingArmed.current) return;
+      const ctx = audioContext();
+      if (!openingArmed.current) {
+        if (ctx.state !== 'running') void ctx.resume().catch(() => undefined);
+        return;
+      }
       openingArmed.current = false;
       const controller = openingController.current;
-      const ctx = audioContext();
       void ctx.resume().then(() => player.playWhenReady('opening', 650, controller?.signal)).catch(() => undefined);
     };
     window.addEventListener('pointerdown', unlock, { passive: true });
@@ -150,32 +147,40 @@ export function useCues(enabled: boolean, work: Omit<Work, 'sinceMs'> & { listen
   }, [work.busy, work.listening]);
 
   useEffect(() => {
-    if (!enabled || !work.busy || work.listening) {
-      if (loopTimer.current !== null) window.clearTimeout(loopTimer.current);
-      loopTimer.current = null;
+    const { afterMs, thinAfterMs, thinGain } = palette.loop;
+    const timers: number[] = [];
+    const stop = () => {
+      timers.forEach((id) => window.clearTimeout(id));
       player.stop('working');
+      player.setLoopScale(1);
+    };
+    if (!enabled || !work.busy || work.listening || answered) {
+      stop();
       return;
     }
     const startedAt = performance.now();
-    loopTimer.current = window.setTimeout(() => {
-      loopTimer.current = null;
-      if (loopSounds({ busy: work.busy, speaking: work.speaking, sinceMs: performance.now() - startedAt })) player.play('working');
-    }, CUES.loopAfterMs);
+    timers.push(
+      window.setTimeout(() => {
+        if (loopSounds({ busy: work.busy, speaking: work.speaking, answered, sinceMs: performance.now() - startedAt }, afterMs)) player.play('working');
+      }, afterMs),
+    );
+    if (Number.isFinite(thinAfterMs)) timers.push(window.setTimeout(() => player.setLoopScale(loopScale(performance.now() - startedAt, thinAfterMs, thinGain)), thinAfterMs));
 
-    return () => {
-      if (loopTimer.current !== null) window.clearTimeout(loopTimer.current);
-      loopTimer.current = null;
-    };
-  }, [enabled, player, work.busy, work.listening]);
+    return () => timers.forEach((id) => window.clearTimeout(id));
+  }, [enabled, palette, player, work.busy, work.listening, answered]);
 
   const play = useCallback(
     (cue: Exclude<Cue, 'working' | 'mic' | 'opening'>) => {
       if (!enabled || work.listening) return;
-      const out = cueBurstReduce(burst.current, { type: 'want', cue, at: performance.now() });
+      const at = performance.now();
+      if (!cueRepeats(lastPlayed.current.get(cue), at, palette.repeatMs?.[cue])) return;
+      const out = cueBurstReduce(burst.current, { type: 'want', cue, at });
       burst.current = out.state;
-      if (out.fire) player.play(out.fire);
+      if (!out.fire) return;
+      lastPlayed.current.set(out.fire, at);
+      player.play(out.fire);
     },
-    [enabled, player, work.listening],
+    [enabled, palette, player, work.listening],
   );
 
   const opening = useCallback(() => {

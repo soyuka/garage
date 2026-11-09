@@ -89,7 +89,7 @@ describe('pulseEnvelope', () => {
   });
 });
 
-// The projector boot (CHOREOGRAPHY § "One stage — the lot and the podium", row 2): uRise ramps 0→1
+// The projector boot: uRise ramps 0→1
 // over RISE_IN_SECONDS from the vehicle's arrival, keyed on the vehicle's identity, not the mesh.
 describe('riseEnvelope — the projector boots the car', () => {
   it('is 0 at the start and 1 once the window has fully elapsed', () => {

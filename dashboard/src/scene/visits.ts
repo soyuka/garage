@@ -119,7 +119,7 @@ export interface VisitClock {
 /**
  * The clock the CARD HEAD carries. A dated cluster owns it once for the whole booking — « 6 juil. 2027 ·
  * dans environ 11 mois » on the head instead of on each of its rows, which is the two-clocks-per-row
- * defect (docs/design-inspiration.md § 5.4) charged twice over. A region visit has no head clock: its
+ * defect charged twice over. A region visit has no head clock: its
  * rows are late, and each one's own overshoot is the thing worth reading.
  */
 export function visitClock(visit: Visit): VisitClock {

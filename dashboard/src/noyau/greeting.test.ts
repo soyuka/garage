@@ -44,7 +44,7 @@ describe('greetingForSelection', () => {
 
 /**
  * The lines are DATA (the i18n catalogs), drawn here — no model call. Reversed 2026-09-11, hours after
- * `GET /agent/greeting` shipped: see CHOREOGRAPHY § "The opening".
+ * `GET /agent/greeting` shipped.
  */
 describe('drawGreeting', () => {
   const first = () => 0;

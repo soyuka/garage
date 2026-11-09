@@ -1,8 +1,7 @@
 import type { SpecNode } from '../types';
 import { HOME, toSpherical } from './cameraRig';
 
-// The fluid volumes' body seam (CHOREOGRAPHY § "Stations — data given a body", "Fluids — the
-// volumes"). Mirrors visitRing.ts / factConstellation.ts file-for-file: pure layout core, no r3f here.
+// The fluid volumes' body seam. Mirrors visitRing.ts / factConstellation.ts file-for-file: pure layout core, no r3f here.
 
 export interface FluidCylinder {
   key: string;

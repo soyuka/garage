@@ -14,8 +14,7 @@ const LOCALE_TITLE: Record<Locale, string> = {
 };
 
 /**
- * The four-ish ElevenLabs voices, chosen from the UI (CHOREOGRAPHY § "the voice-select control",
- * 2026-09-06). A native `<select>`, not a menu of chips — the list is server-driven and its length is
+ * The four-ish ElevenLabs voices, chosen from the UI. A native `<select>`, not a menu of chips — the list is server-driven and its length is
  * not this component's business. Rendered only while audition is on and only when the fetched list is
  * non-empty; both calls are the caller's (`Identity`, Atelier.tsx), since only it knows both things.
  */

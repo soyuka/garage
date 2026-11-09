@@ -96,8 +96,8 @@ function discard(response: Prefetched): void {
  * body. Voice is garnish; a toast about a toast would be worse than saying nothing.
  *
  * Reads the AUDIBLE line's id back out (`voice.ts` `heard`), so `useNoticeAutoClose` (state.ts) knows
- * whether a card's own line is still on the lips — its dwell must not start until it isn't
- * (CHOREOGRAPHY § "an answer that lands, then clears"). Deliberately the head of the pipeline and not
+ * whether a card's own line is still on the lips — its dwell must not start until it isn't.
+ * Deliberately the head of the pipeline and not
  * merely "scheduled": since the gapless seam (2026-09-11) a second line is placed on the clock while
  * the first is still being heard, and a card whose dwell started then would clear while it was still
  * being read aloud. Everything else about the audition stays this hook's own business.
@@ -105,8 +105,7 @@ function discard(response: Prefetched): void {
  * `voice` is read, never reacted to: it is deliberately absent from every effect's dependency array
  * below, so a change lands only in the closure a later render captures — the next `fetchTts` call, for
  * a line QUEUED or PROMOTED after the change. It is never a reason on its own to re-run an effect,
- * which is what keeps it from cutting the utterance currently on the lips (CHOREOGRAPHY § "the
- * voice-select control", 2026-09-06).
+ * which is what keeps it from cutting the utterance currently on the lips.
  */
 /** A line's hold on the audio clock, owned by the hook (not by the pure queue). */
 interface Live {
@@ -131,11 +130,9 @@ export function useVoice(
   const [state, setState] = useState<VoiceState>(emptyVoice);
   // ONE context for the tab's life, now shared with the room bed (`audioContext.ts`) — the bed's duck is
   // placed against the same clock as the line it ducks under. It is created — and resumed — inside the
-  // first real gesture, which is the only place a browser lets it start (CHOREOGRAPHY § "The AudioContext
-  // trap"); a piloted session produces no gesture of its own, so this is asserted on every line, never
+  // first real gesture, which is the only place a browser lets it start; a piloted session produces no gesture of its own, so this is asserted on every line, never
   // assumed.
-  // Responses fetched AHEAD of the handover (CHOREOGRAPHY § "The voice starts before the browser
-  // asks"). Each entry is either consumed by the "speak" effect below (which then owns the body) or
+  // Responses fetched AHEAD of the handover. Each entry is either consumed by the "speak" effect below (which then owns the body) or
   // found no longer live by the pruning pass and cancelled — one of the two, never both, so no
   // connection is left hanging.
   //
@@ -189,8 +186,7 @@ export function useVoice(
         ? notices
         : [
             ...notices,
-            // Keyed exactly like the inbox's deferred copy (`review:<headline>`, Atelier.tsx), so a
-            // proposal that gets superseded and parked is ONE line to the ear, not two.
+            // Keyed on the headline, so a re-rendered proposal is ONE line to the ear, not two.
             { id: `review:${cta.headline}`, tone: 'info' as const, text: cardLine(cta.headline, cta.finding), at: 0 },
           ],
     [notices, cta],
@@ -203,8 +199,8 @@ export function useVoice(
   }, [cards, enabled]);
 
   // A `proposeActions` card arriving (or changing to a different headline) IS the answer — every
-  // notice-toast line still waiting behind it is dropped unspoken (voice.ts `supersedeQueued`,
-  // CHOREOGRAPHY § "Audition — speech, for ANSWERS", 2026-09-06). Keyed on the headline ALONE so an
+  // notice-toast line still waiting behind it is dropped unspoken (voice.ts `supersedeQueued`).
+  // Keyed on the headline ALONE so an
   // unrelated re-render (a finding edit under the same headline, a hover) never re-fires this — only
   // the card's arrival or a genuinely different headline does.
   useEffect(() => {
@@ -342,8 +338,7 @@ export function useVoice(
   );
 
   // Promote onto the clock. `canChain` is the seam: the audible line's body is fully placed, so its
-  // successor can be scheduled flush against it while it is still being heard (CHOREOGRAPHY § "The seam
-  // between two lines is gapless"). While the page is still locked this runs anyway, to let a stale
+  // successor can be scheduled flush against it while it is still being heard. While the page is still locked this runs anyway, to let a stale
   // line expire — it just never consumes a fresh one. EVERY source of a pending line is a dependency:
   // the ticker slot was missing here once, and a slot nothing watches is a line nobody speaks (measured
   // against the live pilot channel, 2026-08-17).
@@ -355,7 +350,7 @@ export function useVoice(
 
   // Fetch every line waiting behind the ones on the clock, each in PARALLEL with them (and with each
   // other), so each is already streaming at its own handover instead of only asking once it reaches the
-  // lips (CHOREOGRAPHY § "The voice starts before the browser asks"). `waiting()` (voice.ts) says which
+  // lips. `waiting()` (voice.ts) says which
   // lines those are; this effect only fetches them — the promotion itself still happens, and is still
   // gated on `unlocked`, in `next()`.
   useEffect(() => {

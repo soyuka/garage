@@ -30,7 +30,7 @@ describe('cue playback lifecycle', () => {
     await player.preload();
     expect(player.play('panel')).toBe(true);
     await player.preload();
-    expect(backend.load).toHaveBeenCalledTimes(10);
+    expect(backend.load).toHaveBeenCalledTimes(CUES.names.length);
   });
 
   it('ducks active and new one-shots during speech', async () => {
@@ -43,6 +43,18 @@ describe('cue playback lifecycle', () => {
     expect(active[1].setGain).toHaveBeenLastCalledWith(CUES.gain.panel * CUES.speechDuck);
     player.play('opening');
     expect(active[2].setGain).toHaveBeenLastCalledWith(CUES.gain.opening * CUES.speechDuck);
+  });
+
+  it('thins the waiting loop without touching the one-shots', async () => {
+    const { active, player } = harness();
+    await player.preload();
+    player.play('working');
+    player.play('select');
+    player.setLoopScale(0.5);
+    expect(active[0].setGain).toHaveBeenLastCalledWith(CUES.loopGain * 0.5);
+    expect(active[1].setGain).toHaveBeenLastCalledWith(CUES.gain.select);
+    player.setMode('speech');
+    expect(active[0].setGain).toHaveBeenLastCalledWith(CUES.loopGain * 0.5 * CUES.speechDuck);
   });
 
   it('cancels active cues for the microphone and rejects normal cues while it is armed', async () => {

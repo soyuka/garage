@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { agentChipState } from './agentChip';
 
-// CHOREOGRAPHY § "Asking the agent from the UI — the judgement chip": an agent chip is HIDDEN when
+// An agent chip is HIDDEN when
 // its data prerequisite is absent (never a dead control) and DISABLED (not queued) while anything is
 // already working — the one-driver-at-a-time rule the composer and deterministic chips share.
 

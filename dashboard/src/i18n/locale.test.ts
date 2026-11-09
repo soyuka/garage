@@ -4,6 +4,7 @@ import {
   DEFAULT_LOCALE,
   isLocale,
   LOCALES,
+  localeSearch,
   resolveLocale,
   setCurrentLocale,
 } from './locale';
@@ -80,5 +81,24 @@ describe('the current locale, for non-React callers', () => {
     expect(currentLocale()).toBe('en');
     setCurrentLocale('fr');
     expect(currentLocale()).toBe('fr');
+  });
+});
+
+describe('localeSearch — the query may sit after the hash on hash routes', () => {
+  it('prefers the real query string', () => {
+    expect(localeSearch('?lang=en', '#/dev/workshop?lang=fr')).toBe('?lang=en');
+  });
+
+  it('reads the query that follows the hash route', () => {
+    expect(localeSearch('', '#/dev/workshop?lang=fr')).toBe('?lang=fr');
+    expect(resolveLocale(localeSearch('', '#/dev/workshop?lang=en'), null, [])).toBe('en');
+  });
+
+  it('falls through to the hash when the real query carries no lang', () => {
+    expect(localeSearch('?capture=1', '#/dev/workshop?lang=fr')).toBe('?lang=fr');
+  });
+
+  it('is empty when neither carries one', () => {
+    expect(localeSearch('', '#/dev/workshop')).toBe('');
   });
 });

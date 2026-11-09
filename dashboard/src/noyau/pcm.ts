@@ -1,4 +1,4 @@
-// Pure PCM plumbing for the streamed voice (CHOREOGRAPHY § "The voice starts before the browser asks").
+// Pure PCM plumbing for the streamed voice.
 // `/tts` relays pocket-tts as it is produced: a 44-byte WAV header whose sizes are a 2 GB placeholder,
 // then 24 kHz mono 16-bit pieces of 80 ms. Nothing here touches an AudioContext — the impure edge is
 // `speaker.ts` — so every rule (header walk, half-frame carry, clock placement) is a unit test.
@@ -98,8 +98,8 @@ function join(a: Uint8Array, b: Uint8Array): Uint8Array {
 
 /**
  * Where on the audio clock the next piece starts. Pieces are placed flush against one another so the
- * joins are sample-accurate and silent; the JS timer is never consulted (CHOREOGRAPHY § Binding
- * rules: "Schedule against the audio clock, never setTimeout"). If the clock has already passed the
+ * joins are sample-accurate and silent; the JS timer is never consulted (schedule
+ * against the audio clock, never setTimeout). If the clock has already passed the
  * planned start — synthesis fell behind playback — the piece plays now and `gap` says a hole was
  * heard, so the caller can reason about it instead of scheduling into the past.
  */
@@ -108,8 +108,7 @@ export class ChunkClock {
 
   /**
    * @param startAt the audio-clock time the FIRST piece should land on — the previous line's last
-   *                sample, for a gapless seam (CHOREOGRAPHY § "The seam between two lines is
-   *                gapless"). Null starts the line `leadIn` after whatever `place()` is first told
+   *                sample, for a gapless seam. Null starts the line `leadIn` after whatever `place()` is first told
    *                the clock is. A `startAt` already in the past degrades to exactly that, because
    *                `place()` never schedules behind the clock.
    */

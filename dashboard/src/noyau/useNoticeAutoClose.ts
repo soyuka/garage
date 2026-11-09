@@ -2,8 +2,7 @@ import { useEffect, useRef } from 'react';
 import { emptyDwellClock, tickDwell, type DwellClock } from './noticeDwell';
 import type { Notice } from './state';
 
-// The impure edge of auto-close (CHOREOGRAPHY § "an answer that lands, then clears", auto-close
-// 2026-09-04). Every RULE lives in noticeDwell.ts; a poll here just re-evaluates the clock and fires
+// The impure edge of auto-close. Every RULE lives in noticeDwell.ts; a poll here just re-evaluates the clock and fires
 // `onClose` for whatever it names — the same split as voice.ts / useVoice.ts.
 
 /** Fine enough against an 8s dwell without a bespoke timer per card. */

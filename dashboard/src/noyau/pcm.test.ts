@@ -105,7 +105,7 @@ describe('PcmDecoder', () => {
 });
 
 describe('ChunkClock', () => {
-  // The audio clock is the only clock (CHOREOGRAPHY § Binding rules: never setTimeout). Each piece
+  // The audio clock is the only clock (never setTimeout). Each piece
   // is placed exactly where the previous one ends, so the joins are sample-accurate and silent.
   it('places the first piece a lead-in ahead of now and each next one flush against the last', () => {
     const c = new ChunkClock(0.03);

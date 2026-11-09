@@ -59,7 +59,7 @@ export function regionAxisFraction(region: BodyRegion): number {
 }
 
 // ── HOLOGRAM: scanlines, fresnel and the arrival flicker ─────────────────────
-// The fill is a projection, not a tinted box (CHOREOGRAPHY § "The hologram is the light", point 2). The
+// The fill is a projection, not a tinted box. The
 // scanline drift is a LOOP period — a frequency, exempt from the duration steps like the breathe. The
 // flicker is a one-shot and takes the etch step: the hologram writes itself in line by line.
 
@@ -90,7 +90,7 @@ export function flickerEnvelope(t: number, duration: number = FLICKER_SECONDS): 
 }
 
 // ── RISE: the projector boots the car ────────────────────────────────────────
-// CHOREOGRAPHY § "One stage — the lot and the podium": when the hero car's meshes first mount for a
+// When the hero car's meshes first mount for a
 // vehicle, uRise ramps 0→1 (alpha, fresnel included) over the cascade step, alongside the existing
 // arrival flicker. It is keyed on the vehicle's IDENTITY, not the mesh — a fallback swap inside the
 // cascade (proxy→thumb→full) must not restart it (VehicleBody owns the clock across that swap).
@@ -121,7 +121,7 @@ export const GHOST_RAMP = 3.2;
 
 /**
  * The ghost depth the shell should be AT, given how much of the assembly has arrived. This is the
- * whole of hard rule 1 for the reveal: the dissolve is paced by the fetch, not by a clock, so a slow
+ * whole of the rule for the reveal: the dissolve is paced by the fetch, not by a clock, so a slow
  * catalogue lookup dissolves slowly and a fast one dissolves fast. Nothing waits on anything.
  */
 export function ghostTarget(landed: number, expected: number): number {

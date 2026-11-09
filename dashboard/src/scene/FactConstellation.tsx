@@ -8,7 +8,7 @@ import { MOTION } from '../tokens/motion';
 import { usePickHandlers } from './picking';
 import { FIRST_OFFSET, type FactNode, type FactRegion } from './factConstellation';
 
-// The fact constellation's nodes (CHOREOGRAPHY § "Data — the fact constellation"). Mirrors
+// The fact constellation's nodes. Mirrors
 // VisitRing.tsx file-for-file: one phase clock, a rise/etch curve, keep-mounted-while-sinking.
 
 // Twins of the existing etch / fan intents (`motion.test.ts` pins the pair).

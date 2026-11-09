@@ -4,12 +4,11 @@ import { merge, submission } from '../noyau/dictation';
 import { useDictation } from '../noyau/useDictation';
 import type { ArmedMicCue } from '../noyau/useCues';
 
-// The single composer input, extracted out of SceneView (CHOREOGRAPHY § "The agent is on the home
-// screen too" — "the composer moves, it is not copied"). Both the hero (via SceneView) and the parc
+// The single composer input, extracted out of SceneView. Both the hero (via SceneView) and the parc
 // landing (Atelier.tsx directly) mount THIS, so there is exactly one input to keep in sync and one
 // place the busy/lock rule (`onSubmit` no-ops while busy — see Atelier.tsx `send`) is enforced.
 //
-// The mic lives HERE for the same reason (CHOREOGRAPHY § "La dictée"): a second mic in a second
+// The mic lives HERE for the same reason: a second mic in a second
 // composer would be the copy that rule forbids.
 
 export interface ComposerProps {
@@ -20,7 +19,7 @@ export interface ComposerProps {
   /** Driver-injected controls rendered before the input (the playground's ▶/⚠ sims, the hero's ✕ cancel). */
   composerExtras?: ReactNode;
   /**
-   * The mic is open. The caller holds the audition while it is (CHOREOGRAPHY § "La dictée": the
+   * The mic is open. The caller holds the audition while it is (the
    * microphone must never transcribe our own voice), which is why this reports upward at all.
    */
   onListening?: (active: boolean) => void;
@@ -104,8 +103,7 @@ export function Composer({ onComposerFocus, onSubmit, composerExtras, onListenin
           aria-label={open ? t.scene.dictating : t.scene.dictate}
           aria-pressed={open}
           disabled={busy || 'transcribing' === state.phase}
-          // ONE gesture, latched: press to start, press again to stop (CHOREOGRAPHY § "La dictée",
-          // corrected 2026-09-11 — a held control cannot outlive the permission prompt). `onClick`
+          // ONE gesture, latched: press to start, press again to stop. `onClick`
           // rather than pointer events on purpose: it is the one handler a browser fires for the mouse
           // AND for Space/Enter on a focused button, so the keyboard needs no rule of its own.
           onClick={toggle}

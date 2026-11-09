@@ -7,6 +7,8 @@ import { ParcPlayground } from './scene/ParcPlayground';
 import { AuthPlayground } from './AuthPlayground';
 import { RequireAuth } from './AuthGate';
 import { Atelier } from './Atelier';
+import { Workshop } from './workshop/Workshop';
+import { WorkshopFixture } from './workshop/WorkshopFixture';
 
 // The router. The LIVE garage owns the root (#/, the parc) and the vehicle route (#/v/<seg>, the hero),
 // both behind RequireAuth. Everything else is a PUBLIC fixture-driven dev playground (no auth) reachable
@@ -27,6 +29,7 @@ const ROUTES: DevRouteEntryWithStage[] = [
   { path: '/scene', title: "L'atelier (Le Plateau + Le Noyau)", stage: 'Stage B.2', render: () => <AtelierScene /> },
   { path: '/parc', title: 'Le Parc (vue du parc)', stage: 'Stage B.2', render: () => <ParcPlayground /> },
   { path: '/auth', title: 'Auth (PKCE + gate-verify)', stage: 'Stage C.1', render: () => <AuthPlayground /> },
+  { path: '/dev/workshop', title: 'Workshop (fixtures + frame injector)', stage: 'Redesign slice 1', render: () => <WorkshopFixture /> },
 ];
 
 function DevIndex(): ReactNode {
@@ -68,14 +71,23 @@ function NotFound({ path }: { path: string }): ReactNode {
 
 export default function App(): ReactNode {
   const path = useHashPath();
-  // The live garage owns the root + the vehicle route, gated by RequireAuth.
+  // The live garage owns the root + the vehicle route, gated by RequireAuth. The legacy Atelier stays
+  // reachable at #/legacy until the Workshop reaches parity.
   if (path === '/' || vehicleSegFromHash(path) !== null) {
+    return (
+      <RequireAuth>
+        <Workshop />
+      </RequireAuth>
+    );
+  }
+  if (path === '/legacy') {
     return (
       <RequireAuth>
         <Atelier />
       </RequireAuth>
     );
   }
+  if (path.startsWith('/dev/workshop')) return <WorkshopFixture />;
   const route = matchRoute(`#${path}`, ROUTES) as DevRouteEntry | undefined;
   return route ? route.render() : <NotFound path={path} />;
 }

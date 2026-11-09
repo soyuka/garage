@@ -2,7 +2,7 @@ import type { NoyauPhase } from '../noyau/state';
 import type { Signal } from '../types';
 import { HOLO_CYAN, NEON_RED, SIGNAL_HEX } from './signalColors';
 
-// The hologram is the light (CHOREOGRAPHY § "The hologram is the light"). The room is dark; two point
+// The hologram is the light. The room is dark; two point
 // lights carry Le Noyau's state onto the disc and the mat ring: phase as intensity, result as colour.
 // Everything a test can hold lives here; AgentLightRig only drives THREE objects from these numbers.
 // three r169 has physically-correct lights only: intensity is candela, attenuation
@@ -18,7 +18,7 @@ export function agentLightOf(s: { phase: NoyauPhase; result: Signal | null; quie
 }
 
 // ── the room ──
-/** Cool, dim: the mat base reads as black mass, its grid faintly (CHOREOGRAPHY § Stage look). */
+/** Cool, dim: the mat base reads as black mass, its grid faintly. */
 export const ROOM_AMBIENT = 0.5;
 export const ROOM_AMBIENT_COLOR = '#c8d4e0';
 export const ROOM_BACKGROUND = '#07080a';

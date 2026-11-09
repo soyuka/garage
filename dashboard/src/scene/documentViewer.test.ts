@@ -15,6 +15,7 @@ import {
   segmentsByItem,
   viewerKind,
   zoomStep,
+  imageFitScale,
 } from './documentViewer';
 
 describe('fold', () => {
@@ -200,5 +201,16 @@ describe('page labels', () => {
   it('still resolves numbers when no labels are loaded', () => {
     expect(resolvePageInput('2', [], 3)).toBe(2);
     expect(resolvePageInput('23A-19', [], 3)).toBeNull();
+  });
+});
+
+describe('imageFitScale', () => {
+  it('contains the image whole in the classic mode', () => {
+    expect(imageFitScale({ width: 2000, height: 3000 }, { width: 1032, height: 532 }, 32, 'contain')).toBeCloseTo(500 / 3000);
+  });
+
+  it('fits whichever side gives the larger legible size in the legible mode, never past natural size', () => {
+    expect(imageFitScale({ width: 2000, height: 3000 }, { width: 1032, height: 532 }, 32, 'legible')).toBeCloseTo(1000 / 2000);
+    expect(imageFitScale({ width: 400, height: 300 }, { width: 1032, height: 532 }, 32, 'legible')).toBe(1);
   });
 });

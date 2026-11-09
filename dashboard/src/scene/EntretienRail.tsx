@@ -16,8 +16,7 @@ import './checklist.css';
 import './rail.css';
 
 // "Entretien" — the PERSISTENT LEFT RAIL, screen-locked on the hero's left edge. Grouped by VISIT —
-// the trip to the lift — because that is the unit a garage books (CHOREOGRAPHY.md § "The rail is
-// grouped by VISIT"). Three horizons:
+// the trip to the lift — because that is the unit a garage books. Three horizons:
 //  · "Maintenant" — late work + decided-but-undated tasks, one card per BODY REGION (what shares a
 //    teardown). Every late row keeps its red/amber text tag.
 //  · "Prochaine visite" — the soonest dated cluster, one card.
@@ -30,7 +29,7 @@ import './rail.css';
 // Parts are a COUNT here, never a catalogue: three brands at three prices is a decision, and the rail is
 // a status surface. The count opens the row's own editor, where the lines are editable.
 //
-// The rail is the AMBIENT layer (docs/design-inspiration.md § 2) and it is built out of the same material
+// The rail is the AMBIENT layer and it is built out of the same material
 // as the summoned surfaces in the right column — card ground, hairline, radius, a hair leader toward the
 // car — so the two columns bracket the stage as one instrument instead of a sidebar beside a canvas. What
 // only this layer has: a severity spine per card, and a head that can aim the earned camera at the part
@@ -93,7 +92,7 @@ export function EntretienRail({
   /** dims (not hides) the rail when an on-demand surface projects — same cue as the stage. */
   dimmed?: boolean;
   /** The body region the earned camera currently holds — the cards that read off it light their tie to
-   *  the car (CHOREOGRAPHY.md § "the camera is held on a region"). */
+   *  the car. */
   heldRegion?: BodyRegion | null;
   /** Aim the earned camera at a visit's region. Absent → the card head is a plain caption, never a dead
    *  control. The TOGGLE (re-aim vs release) is resolved by the caller, which owns `cameraFocus`. */
@@ -102,8 +101,8 @@ export function EntretienRail({
    *  read it only through a CSS media query, so `[data-reduced]` rules above it never matched. */
   reduced?: boolean;
   /** service types the agent spotlighted (`focusView {panel:'tasks', keys}`) — those rows carry the
-   *  operator cue so the projected answer and the persistent rail name the SAME rows. Documented in
-   *  CHOREOGRAPHY.md since Stage B; the rows never actually lit until 2026-08-15. */
+   *  operator cue so the projected answer and the persistent rail name the SAME rows. The rows never
+   *  actually lit until 2026-08-15. */
   spotlit?: string[];
 }) {
   const lit = spotlit && spotlit.length > 0 ? new Set(spotlit) : null;
@@ -221,7 +220,7 @@ export function EntretienRail({
         ) : (
           <>
             {/* The three horizons are NOT three equal headings. Emphasis is vibrancy + the card spine, never
-                another font size (CHOREOGRAPHY § Vibrancy tiers): tier 1 here, tier 2 for the next visit,
+                another font size: tier 1 here, tier 2 for the next visit,
                 tier 3 for the tail. The red is spent only when something is ACTUALLY late — "Maintenant"
                 also holds decided-but-undated work, and colouring it red then is a false alarm. */}
             {plan.now.length > 0 && (
@@ -249,7 +248,7 @@ export function EntretienRail({
                 {/* A count, not a list — and a CONTROL, because compression is only honest if there is a
                     way to look closer. It projects the ladder into the right column. It also sits FAR from
                     the next visit: distance is how the tail reads as far away rather than merely hidden
-                    (Gibson's rule, docs/design-inspiration.md § 4), the same language the ladder speaks. */}
+                    (Gibson's rule), the same language the ladder speaks. */}
                 {onShowLaterVisits ? (
                   <button type="button" className="at-rail-later" onClick={onShowLaterVisits}>
                     <span className="at-rail-later-label">{t.rail.later}</span>

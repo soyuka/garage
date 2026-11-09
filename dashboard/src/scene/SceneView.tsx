@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { TruthPanel, type TruthPanelEdit } from '../floor/TruthPanel';
 import { FlatPlanList } from '../floor/FlatPlanList';
 import { Noyau } from '../noyau/Noyau';
 import { NoyauVoice } from '../noyau/NoyauVoice';
-import { AmbientInbox } from '../noyau/AmbientInbox';
 import { NoticeStack } from '../noyau/NoticeStack';
-import type { DecisionItem, NoyauState } from '../noyau/state';
+import type { NoyauState } from '../noyau/state';
 import { Plateau, type Rung } from './Plateau';
 import { agentLightOf } from './agentLight';
 import type { RevealState } from './reveal';
@@ -62,8 +61,7 @@ export interface QuickAction {
    * ONLY after checking the real render target (never copy a neighbor's value); omit when the
    * destination is ambiguous or rung-dependent — a missing zone renders no map, a wrong one lies. */
   zone?: 'rail' | 'centre' | 'colonne';
-  /** Set when the chip posts a real agent turn instead of resolving client-side (CHOREOGRAPHY §
-   * "Asking the agent from the UI"). Rendered with the cyan agent mark — cyan is rationed to Le
+  /** Set when the chip posts a real agent turn instead of resolving client-side. Rendered with the cyan agent mark — cyan is rationed to Le
    * Noyau, so this is the one thing that tells the two chip families apart before either is clicked. */
   agent?: boolean;
 }
@@ -85,14 +83,8 @@ interface SceneViewProps {
   /** Clears cameraFocus — the "vue libre" reset, Escape, or a user drag breaking the hold (via Plateau). */
   onCameraRelease?: () => void;
   /** D1 from the AMBIENT layer: the operator aimed a rail visit card at its body region. Dolly only — no
-   * cyan pulse, because Le Noyau did not do this (CHOREOGRAPHY § "the operator clicks a visit card's
-   * head"). Absent → the card heads render as plain captions, never dead controls. */
+   * cyan pulse, because Le Noyau did not do this. Absent → the card heads render as plain captions, never dead controls. */
   onHoldRegion?: (region: BodyRegion) => void;
-  onClearEmber: () => void;
-  /** C2 à-décider inbox: remove a decided queue item (backs "vu" + follows every action). */
-  onResolveDecision?: (id: string) => void;
-  /** C2: promote a notify item (a due service) to a planned task on its own vehicle. */
-  onScheduleDecision?: (item: DecisionItem) => void;
   /** "vu" on a retained notice card. Required — a card the operator cannot dismiss is a dead control. */
   onDismissNotice: (id: string) => void;
   /** Audition: is the Atelier speaking its answers? Ships false. Absent → the affordance is hidden. */
@@ -163,9 +155,6 @@ export function SceneView({
   reveal = null,
   onCameraRelease,
   onHoldRegion,
-  onClearEmber,
-  onResolveDecision,
-  onScheduleDecision,
   onDismissNotice,
   onComposerFocus,
   onSubmit,
@@ -194,33 +183,8 @@ export function SceneView({
   onCloseHistory,
   documentation,
 }: SceneViewProps) {
-  // C2: the à-décider inbox opens from the ember. Auto-closes once the queue drains (last item resolved).
-  const [inboxOpen, setInboxOpen] = useState(false);
-  const queueLen = noyau.queue.length;
-  useEffect(() => {
-    if (queueLen === 0) setInboxOpen(false);
-  }, [queueLen]);
-  // Focus management for the inbox dialog (WCAG 2.4.3): the leaf focuses itself on open and unmounts on
-  // close, so without restoration a keyboard/AT user is dumped onto <body>. Save the opener at open time,
-  // and on close return focus to it if still connected, else to a stable Le Noyau anchor (the muted ember
-  // re-entry chip if the queue survives, otherwise the orb) — never nothing.
   const [locale] = useLocale();
   const t = useT();
-  const consoleRef = useRef<HTMLDivElement>(null);
-  const inboxOpenerRef = useRef<HTMLElement | null>(null);
-  const inboxWasOpen = useRef(false);
-  useEffect(() => {
-    if (inboxWasOpen.current && !inboxOpen) {
-      const opener = inboxOpenerRef.current;
-      if (opener && opener.isConnected) opener.focus();
-      // The orb is now `role="img"` with no `tabIndex` (Le Noyau split) — `.focus()` on it is a silent
-      // no-op. Fall back to the composer input, always present and focusable: return the operator to
-      // the thing they type into rather than stranding focus on <body> (WCAG 2.4.3, never nothing).
-      else consoleRef.current?.querySelector<HTMLElement>('.noyau-ember, .at-scene-input')?.focus();
-      inboxOpenerRef.current = null;
-    }
-    inboxWasOpen.current = inboxOpen;
-  }, [inboxOpen]);
 
   // ONE Escape = ONE step back, innermost first: a projected surface (fiche technique / carnet / specs)
   // closes before a camera hold releases. (The Données/Carnet drawers own Escape themselves while open —
@@ -240,7 +204,7 @@ export function SceneView({
   }, [drawerOwnsEscape, focusOpen, onDismissFocus, cameraFocus, onCameraRelease]);
 
   const focusKeys = focus?.keys;
-  // Which station's BODY belongs on the disc (CHOREOGRAPHY § "Stations under both drivers"): a docked
+  // Which station's BODY belongs on the disc: a docked
   // legend (the full Carnet/Fiche drawer) wins outright; otherwise the focus decides (fluids checked
   // before carnet/specs, since a specs focus carrying `nodes` is a fetched surface, never stored facts).
   const station = stationFor({ historyOpen, factsDrawerOpen, focus });
@@ -658,29 +622,9 @@ export function SceneView({
           )}
 
           {/* 2. the console capsule — orb socket + input, one object */}
-          <div className="at-scene-console" ref={consoleRef}>
+          <div className="at-scene-console">
             <div className="at-scene-socket">
-              <Noyau
-                state={noyau}
-                reduced={reduced}
-                onClearEmber={onClearEmber}
-                onEmberActivate={() => {
-                  // Capture the opener BEFORE the state mutation so focus can return here on close.
-                  inboxOpenerRef.current = document.activeElement as HTMLElement | null;
-                  setInboxOpen(true);
-                  onClearEmber(); // opening the inbox mutes the badge (but keeps the queue)
-                }}
-              />
-              <AmbientInbox
-                open={inboxOpen}
-                queue={noyau.queue}
-                reduced={reduced}
-                onClose={() => setInboxOpen(false)}
-                onResolve={(id) => onResolveDecision?.(id)}
-                onReviewInstruction={onCtaInstruction}
-                onReviewPatch={onCtaPatch}
-                onSchedule={onScheduleDecision}
-              />
+              <Noyau state={noyau} reduced={reduced} />
             </div>
             <Composer
               onComposerFocus={onComposerFocus}

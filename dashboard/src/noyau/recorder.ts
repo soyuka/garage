@@ -3,7 +3,7 @@
 // tested in dictation.ts; what is left here is the getUserMedia / MediaRecorder wiring a repo with no
 // browser cannot test. Same split, and the same honesty about it, as pcm.ts / speaker.ts.
 //
-// Push-to-talk only (CHOREOGRAPHY § "La dictée"): there is no VAD here, no wake word and no way to
+// Push-to-talk only: there is no VAD here, no wake word and no way to
 // start recording without a press. The track is stopped the moment the recording ends, so the
 // browser's own recording indicator goes out with it — the operator can see the mic is shut.
 
@@ -33,7 +33,7 @@ function pickType(): string | undefined {
 /**
  * Open the microphone and start recording. Must be called inside the press gesture: a browser only
  * grants capture from a user activation, and the press is also the gesture that unlocks the
- * AudioContext for the voice (CHOREOGRAPHY § "The AudioContext trap").
+ * AudioContext for the voice.
  *
  * @throws MicrophoneRefused when the operator declined, or the page cannot ask at all (no secure
  *                           context, no device, no MediaRecorder). All of them mean the same thing to

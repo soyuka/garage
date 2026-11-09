@@ -9,7 +9,7 @@ const due = (over: Partial<ForecastDue>): ForecastDue => ({
 });
 
 // The §9 "service passant en rouge" crossing, on fixtures: a domain event tips the soonest due past
-// due. Pure transform (the scene drives the Noyau ember separately). MUST stay immutable — FIXTURES is
+// due. Pure transform (the scene drives the Noyau separately). MUST stay immutable — FIXTURES is
 // a shared module singleton, so a mutation would corrupt every other scenario + the parc.
 
 describe('firstCrossable — soonest non-overdue due, usage-axis preferred', () => {

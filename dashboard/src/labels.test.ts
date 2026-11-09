@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canonicalService, FACT_LABEL, factLabel, HEALTH_LABEL, SERVICE_LABEL, SERVICE_TYPES, serviceLabel } from './labels';
+import { canonicalService, FACT_LABEL, factLabel, fluidLabel, HEALTH_LABEL, SERVICE_LABEL, SERVICE_TYPES, serviceLabel } from './labels';
 
 // factLabel (#9 facts section): labels for known fact keys, with an honest humanizing fallback so an
 // unmapped key still reads (never a raw snake_case key on screen).
@@ -20,6 +20,27 @@ describe('factLabel', () => {
     // The fallback is language-neutral by nature: it is the operator's OWN key, echoed back.
     expect(factLabel('custom_thing', 'fr')).toBe('Custom thing');
     expect(factLabel('custom_thing', 'en')).toBe('Custom thing');
+  });
+});
+
+describe('factLabel — key families from the catalog', () => {
+  it('labels capacities, types and codes by suffix, in both languages', () => {
+    expect(factLabel('gearbox_oil_capacity', 'fr')).toBe('Capacité d’huile de boîte');
+    expect(factLabel('gearbox_oil_capacity', 'en')).toBe('Gearbox oil capacity');
+    expect(factLabel('power_steering_oil_type', 'fr')).toBe('Type d’huile de direction assistée');
+    expect(factLabel('ac_refrigerant_capacity', 'fr')).toBe('Capacité de réfrigérant de climatisation');
+    expect(factLabel('ac_refrigerant_capacity', 'en')).toBe('A/C refrigerant capacity');
+    expect(factLabel('engine_code', 'fr')).toBe('Code moteur');
+    expect(factLabel('gearbox_code', 'fr')).toBe('Code boîte de vitesses');
+    expect(factLabel('auto_gearbox_oil_capacity', 'fr')).toBe('Capacité d’huile de boîte automatique');
+    expect(factLabel('coolant_capacity', 'fr')).toBe('Capacité de liquide de refroidissement');
+    expect(factLabel('brake_fluid_type', 'fr')).toBe('Type de liquide de frein');
+    expect(factLabel('fuel_tank_capacity', 'fr')).toBe('Capacité du réservoir');
+    expect(factLabel('ac_oil_type', 'fr')).toBe('Type d’huile de climatisation');
+  });
+
+  it('keeps the humanizing fallback for a noun it does not know', () => {
+    expect(factLabel('widget_capacity', 'fr')).toBe('Widget capacity');
   });
 });
 
@@ -90,5 +111,31 @@ describe('the two catalogs cover the same keys', () => {
       expect(SERVICE_LABEL.fr[canonicalService(type)]).toBeDefined();
       expect(SERVICE_LABEL.en[canonicalService(type)]).toBeDefined();
     }
+  });
+});
+
+describe('fluidLabel', () => {
+  it('names a fluid by itself, capitalised, in the reader language', () => {
+    expect(fluidLabel('gearbox_oil', 'fr')).toBe('Huile de boîte');
+    expect(fluidLabel('coolant', 'en')).toBe('Coolant');
+    expect(fluidLabel('mystery', 'fr')).toBeNull();
+  });
+});
+
+describe('factLabel — datasheet keys', () => {
+  it('labels the carte-grise and tyre keys in French rather than humanised English', () => {
+    expect(factLabel('engine_power', 'fr')).toBe('Puissance');
+    expect(factLabel('tires_front_dimensions', 'fr')).toBe('Pneus avant');
+    expect(factLabel('gross_vehicle_weight', 'fr')).toBe('PTAC');
+    expect(factLabel('clutch_kit_ref', 'fr')).toBe('Référence kit d’embrayage');
+    expect(factLabel('tires_front_dimensions', 'en')).toBe('Front tyres');
+  });
+});
+
+describe('factLabel — build plate keys', () => {
+  it('labels the PSA build plate identifiers', () => {
+    expect(factLabel('build_apv_tail', 'fr')).toBe('Numéro APV');
+    expect(factLabel('build_organisation_number', 'fr')).toBe('Numéro d’organisation (OPR)');
+    expect(factLabel('build_apv_tail', 'en')).toBe('APV number');
   });
 });

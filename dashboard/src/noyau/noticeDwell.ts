@@ -1,7 +1,6 @@
 import type { Notice } from './state';
 
-// The auto-close decision (CHOREOGRAPHY § "The notice stack — an answer that lands, then clears",
-// "Reversed 2026-09-04 — the cards now auto-close"). Pure and clock-injected, same shape as voice.ts:
+// The auto-close decision. Pure and clock-injected, same shape as voice.ts:
 // the impure edge (a polling effect in Atelier.tsx) owns nothing but a timer and the `dismissNotice`
 // dispatch it fires for whatever `toClose` names.
 //

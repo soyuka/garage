@@ -146,7 +146,6 @@ describe('rollupCarnet — keys cut the register to one service', () => {
 
 // Extracted so the carnet-focus RING BODY (SceneView) can apply the exact same cut as the legend
 // (CarnetProjection) — "the legend shows exactly those, the ring shows exactly those: truth first"
-// (CHOREOGRAPHY § "Stations under both drivers").
 describe('filterCarnetRecords — the shared keys cut', () => {
   const item = (type: string) => ({ type, parts: [] });
   const records = [

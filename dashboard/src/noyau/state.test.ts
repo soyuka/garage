@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { busy, classifyStep, initialNoyau, NOTICE_CAP, reduceNoyau, type DecisionItem } from './state';
+import { busy, classifyStep, initialNoyau, NOTICE_CAP, reduceNoyau } from './state';
 
 const R = reduceNoyau;
 
@@ -7,7 +7,6 @@ describe('Le Noyau frame→state machine', () => {
   it('starts idle (veille)', () => {
     expect(initialNoyau.phase).toBe('idle');
     expect(initialNoyau.pulseCount).toBe(0);
-    expect(initialNoyau.ember).toBe(0);
   });
 
   it('typing in idle → listening; stop typing → idle', () => {
@@ -94,15 +93,14 @@ describe('Le Noyau frame→state machine', () => {
     expect(s.narration).toBe('Vidange enregistrée');
   });
 
-  it('alarm toast docks an ember and does NOT overwrite the narration line', () => {
+  it('alarm toast does NOT overwrite the narration line', () => {
     let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
     s = R(s, { type: 'status', message: 'narr' }, 100);
     s = R(s, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 200);
-    expect(s.ember).toBe(1);
     expect(s.narration).toBe('narr');
   });
 
-  // CHOREOGRAPHY § "What a finished action says" (2026-09-04): the old tone-keyed "posé · X" label is
+  // The old tone-keyed "posé · X" label is
   // gone. `narration` at turn-end is now either a real closing sentence already narrated during the
   // turn (a real agent turn's own `toast`) or an explicit `resultText` (a deterministic wayfinder's
   // closing line) — the fallback below only fires when a turn narrated nothing at all.
@@ -151,7 +149,7 @@ describe('Le Noyau frame→state machine', () => {
     expect(s.result).toBe('red');
   });
 
-  it('settle returns to idle, clears result + worstTone, but keeps the ember', () => {
+  it('settle returns to idle and clears result + worstTone', () => {
     let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
     s = R(s, { type: 'toast', tone: 'alarm', message: 'e' }, 50);
     s = R(s, { type: 'turn', phase: 'end' }, 100);
@@ -159,7 +157,6 @@ describe('Le Noyau frame→state machine', () => {
     expect(s.phase).toBe('idle');
     expect(s.result).toBeNull();
     expect(s.worstTone).toBeNull(); // a between-turn alarm (the §9 overdue push) must not linger
-    expect(s.ember).toBe(1);
   });
 
   it('typing is ignored while working (no moment disables the busy orb)', () => {
@@ -168,24 +165,16 @@ describe('Le Noyau frame→state machine', () => {
     expect(s.phase).toBe('working');
   });
 
-  it('clearEmber acknowledges docked notifications', () => {
-    let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'e' }, 0);
-    expect(s.ember).toBe(1);
-    s = R(s, { type: 'clearEmber' }, 1);
-    expect(s.ember).toBe(0);
-  });
-
   it('a status without an explicit turn-start still implies working (robust to stream gaps)', () => {
     const s = R(initialNoyau, { type: 'status', message: 'x' }, 0);
     expect(s.phase).toBe('working');
     expect(s.pulseCount).toBe(1);
   });
 
-  it('concern (the §9 overdue DOMAIN push) docks an ember + murmurs the line — but is HANDS-OFF (no turn)', () => {
+  it('concern (the §9 overdue DOMAIN push) murmurs the line — but is HANDS-OFF (no turn)', () => {
     const s = R(initialNoyau, { type: 'concern', message: 'Vidange en retard · 142 000 km' }, 0);
-    expect(s.phase).toBe('idle'); // NOT working — a domain frame is not an agent turn (CHOREOGRAPHY)
+    expect(s.phase).toBe('idle'); // NOT working — a domain frame is not an agent turn
     expect(s.pulseCount).toBe(0); // no working pulse
-    expect(s.ember).toBe(1); // the notification docks
     expect(s.narration).toBe('Vidange en retard · 142 000 km'); // the concern murmurs on the aria-live line
     expect(s.journal[s.journal.length - 1]?.kind).toBe('alarm');
   });
@@ -193,17 +182,15 @@ describe('Le Noyau frame→state machine', () => {
   it('concern never interrupts an active turn into a fake idle', () => {
     let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
     s = R(s, { type: 'concern', message: 'm' }, 50);
-    expect(s.phase).toBe('working'); // a turn in flight stays working; the ember still docks
-    expect(s.ember).toBe(1);
+    expect(s.phase).toBe('working'); // a turn in flight stays working
   });
 
-  it('greet (the opening ticker line) murmurs the line and is HANDS-OFF (no turn, no notice, no ember)', () => {
+  it('greet (the opening ticker line) murmurs the line and is HANDS-OFF (no turn, no notice)', () => {
     const s = R(initialNoyau, { type: 'greet', message: 'Bonjour, on s’occupe de quel véhicule ?' }, 0);
     expect(s.phase).toBe('idle'); // NOT working — nothing would ever settle it back down
     expect(busy(s)).toBe(false);
     expect(s.narration).toBe('Bonjour, on s’occupe de quel véhicule ?');
     expect(s.notices).toEqual([]); // unlike toast, mints no retained card
-    expect(s.ember).toBe(0); // unlike concern, docks no decision
     expect(s.journal[s.journal.length - 1]?.kind).toBe('narration');
   });
 });
@@ -371,104 +358,6 @@ describe('Le Noyau — current-turn tool-step chips', () => {
   });
 });
 
-// C2 — the ember becomes an "à décider" ambient inbox: a QUEUE of decision items (notify/question/
-// review, the LangChain ambient-agent triad, human ON the loop). The ember badge counts the pending
-// queue; the sources are the §9 concern push + alarm toasts (notify) and a deferred/superseded CTA
-// (review). "question" is supported in the model but has no live wire source yet.
-describe('Le Noyau — the à-décider ambient inbox queue', () => {
-  it('starts with an empty queue', () => {
-    expect(initialNoyau.queue).toEqual([]);
-    expect(initialNoyau.ember).toBe(0);
-  });
-
-  it('an alarm toast enqueues a NOTIFY decision item; the ember tracks the queue length', () => {
-    const s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 0);
-    expect(s.queue).toHaveLength(1);
-    expect(s.queue[0]).toMatchObject({ kind: 'notify', text: 'Vidange en retard', at: 0 });
-    expect(s.ember).toBe(1);
-  });
-
-  it('a §9 concern enqueues a notify item carrying its service type + vehicle (→ planifier)', () => {
-    const s = R(
-      initialNoyau,
-      { type: 'concern', message: 'Vidange en retard · 142 000 km', serviceType: 'oil_change', vehicleIri: '/garage/vehicles/1' },
-      0,
-    );
-    expect(s.queue).toHaveLength(1);
-    expect(s.queue[0]).toMatchObject({ kind: 'notify', serviceType: 'oil_change', vehicleIri: '/garage/vehicles/1' });
-    expect(s.ember).toBe(1);
-  });
-
-  it('a deferred/superseded proposal enqueues a REVIEW item carrying the CTA actions', () => {
-    const actions = [{ label: 'Ajouter', patchTask: { id: '/garage/planned-tasks/1', parts: [] } }];
-    const s = R(initialNoyau, { type: 'defer', id: 'review:x', text: 'Filtre à air à prévoir', finding: 'détecté', actions }, 5);
-    expect(s.queue).toHaveLength(1);
-    expect(s.queue[0]).toMatchObject({ id: 'review:x', kind: 'review', text: 'Filtre à air à prévoir', finding: 'détecté', actions });
-    expect(s.ember).toBe(1);
-  });
-
-  it('dedups by id — the same concern (same service type) arriving twice queues once', () => {
-    let s = R(initialNoyau, { type: 'concern', message: 'Vidange en retard · 100 000', serviceType: 'oil_change', vehicleIri: '/v/1' }, 0);
-    s = R(s, { type: 'concern', message: 'Vidange en retard · 142 000', serviceType: 'oil_change', vehicleIri: '/v/1' }, 10);
-    expect(s.queue).toHaveLength(1);
-    expect(s.ember).toBe(1);
-  });
-
-  it('resolve removes the item by id and the badge shrinks with the queue', () => {
-    let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'a' }, 0);
-    s = R(s, { type: 'concern', message: 'b', serviceType: 't', vehicleIri: '/v/1' }, 1);
-    expect(s.queue).toHaveLength(2);
-    expect(s.ember).toBe(2);
-    const firstId = s.queue[0].id;
-    s = R(s, { type: 'resolve', id: firstId }, 2);
-    expect(s.queue.map((q) => q.id)).not.toContain(firstId);
-    expect(s.queue).toHaveLength(1);
-    expect(s.ember).toBe(1);
-  });
-
-  it('resolve on an unknown id is a no-op (referentially stable)', () => {
-    const s0 = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'a' }, 0);
-    const s1 = R(s0, { type: 'resolve', id: 'nope' }, 1);
-    expect(s1).toBe(s0);
-  });
-
-  it('opening the inbox (clearEmber) clears the BADGE but keeps the pending queue', () => {
-    let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'a' }, 0);
-    s = R(s, { type: 'clearEmber' }, 1);
-    expect(s.ember).toBe(0); // the badge is muted (acknowledged)
-    expect(s.queue).toHaveLength(1); // the decision is still pending — clearing ≠ deleting
-  });
-
-  it('a new decision arriving after the badge was cleared re-lights the ember', () => {
-    let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'a' }, 0);
-    s = R(s, { type: 'clearEmber' }, 1);
-    expect(s.ember).toBe(0);
-    s = R(s, { type: 'concern', message: 'b', serviceType: 't', vehicleIri: '/v/1' }, 2);
-    expect(s.queue).toHaveLength(2);
-    expect(s.ember).toBe(2); // both pending decisions still await the operator
-  });
-
-  it('the pending queue outlives a turn (settle clears turn state but not decisions)', () => {
-    let s = R(initialNoyau, { type: 'concern', message: 'b', serviceType: 't', vehicleIri: '/v/1' }, 0);
-    s = R(s, { type: 'turn', phase: 'start' }, 1);
-    s = R(s, { type: 'turn', phase: 'end' }, 2);
-    s = R(s, { type: 'settle' }, 2000);
-    expect(s.queue).toHaveLength(1);
-  });
-
-  it('resolving the last item leaves an empty queue and a dark ember', () => {
-    let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'a' }, 0);
-    s = R(s, { type: 'resolve', id: s.queue[0].id }, 1);
-    expect(s.queue).toHaveLength(0);
-    expect(s.ember).toBe(0);
-  });
-
-  it("supports a 'question' kind in the model (no live wire source feeds it yet)", () => {
-    const item: DecisionItem = { id: 'q1', kind: 'question', text: 'Quel kilométrage ?', at: 0 };
-    expect(item.kind).toBe('question');
-  });
-});
-
 // ── The pilot driver (docs/pilot.md): a run with no declared start and no bounded length ──────────
 describe('who is at the controls', () => {
   it('a status frame at rest lifts the orb and records the driver — a pilot run declares no start', () => {
@@ -535,7 +424,7 @@ describe('who is at the controls', () => {
   });
 });
 
-// The retained notice stack (CHOREOGRAPHY § "The notice stack — an answer that stays"). The narration
+// The retained notice stack. The narration
 // line is a heartbeat — overwritten by the next status, cleared on settle — so a `toast` finding used
 // to scroll past and vanish. Every toast now also raises a card that stays until the operator says "vu".
 describe('Le Noyau — the retained notice stack', () => {
@@ -552,7 +441,6 @@ describe('Le Noyau — the retained notice stack', () => {
 
     s = R(s, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 200);
     expect(s.notices.map((n) => n.tone)).toEqual(['ok', 'alarm']);
-    expect(s.queue).toHaveLength(1); // the alarm still docks its own decision item
   });
 
   it('the same tone+message re-arriving is ONE card (a pilot repeating itself builds no wall)', () => {
@@ -572,12 +460,11 @@ describe('Le Noyau — the retained notice stack', () => {
     expect(s.journal.filter((e) => e.kind === 'narration')).toHaveLength(4);
   });
 
-  it('"vu" removes exactly that card and leaves the à-décider queue alone', () => {
+  it('"vu" removes exactly that card and leaves the others up', () => {
     let s = R(initialNoyau, { type: 'toast', tone: 'alarm', message: 'Vidange en retard' }, 0);
     s = R(s, { type: 'toast', tone: 'ok', message: 'Référence trouvée' }, 10);
     s = R(s, { type: 'dismissNotice', id: s.notices[0].id }, 20);
     expect(s.notices.map((n) => n.text)).toEqual(['Référence trouvée']);
-    expect(s.queue).toHaveLength(1); // dismissing the reminder is not deciding the thing
   });
 
   it('an unknown dismiss id is identity (no render, no crash)', () => {

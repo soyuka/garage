@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — Casdoor OAuth2 Authorization Code + PKCE (public client, no secret).
 //
-// Tier-1 transport (see PROVENANCE: a faithful client of the OAuth contract,
+// Tier-1 transport (a faithful client of the OAuth contract,
 // re-authored fresh from the old dashboard reference, no import path back). The
 // security-bearing logic — PKCE S256, token freshness, the callback state guard,
 // JWT claim decode — is split into

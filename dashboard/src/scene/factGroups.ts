@@ -1,7 +1,7 @@
 import { factRegion, type FactRegion } from './factConstellation';
 import type { VehicleFact } from '../types';
 
-// The legend groups like the body (CHOREOGRAPHY § "The legend is grouped like the body"): the fiche
+// The legend groups like the body: the fiche
 // lists facts by region, in anchor order, each group keeping the facts' arrival order — the same
 // order the constellation stacks them, lowest first. Pure grouping, no r3f here (mirrors
 // factConstellation.ts's own split of layout math from rendering).

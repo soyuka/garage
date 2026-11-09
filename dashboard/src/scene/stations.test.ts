@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { stationFor } from './stations';
 import type { Focus } from '../focus';
 
-// Precedence lives in ONE tested place (CHOREOGRAPHY § "Stations under both drivers", "Precedence"):
+// Precedence lives in ONE tested place:
 // legends (the full Carnet/Fiche drawers) win over any focus-driven projection, and a focus carrying
 // `nodes` (fluids) is checked before the stored-facts/carnet cases.
 

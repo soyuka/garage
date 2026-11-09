@@ -2,8 +2,7 @@ import { DIMS, type BodyClass } from './CarProxy';
 import { regionAnchors, regionForType, type BodyRegion } from './anchors';
 import type { VehicleFact } from '../types';
 
-// The fact constellation (CHOREOGRAPHY § "Stations — data given a body", "Data — the fact
-// constellation"). Mirrors visitRing.ts file-for-file: pure layout core, no r3f here.
+// The fact constellation. Mirrors visitRing.ts file-for-file: pure layout core, no r3f here.
 
 export type FactRegion = BodyRegion | 'unplaced';
 
@@ -16,7 +15,7 @@ export const COLUMN_MAX = 8;
 /** Lateral gap (metres, along the car's z axis) between a region's columns. */
 export const COLUMN_GAP = 0.3;
 
-// The curated prefix table (CHOREOGRAPHY § "Data — the fact constellation", "placement"). `rear_` is
+// The curated prefix table. `rear_` is
 // checked FIRST: `rear_brake_pads` starts with `rear_`, not `brake_`, so the rear override never
 // competes with the front-axle prefixes below it.
 const PREFIX_REGION: ReadonlyArray<readonly [string, BodyRegion]> = [

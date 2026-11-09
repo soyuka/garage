@@ -11,7 +11,7 @@ import type { BodyRegion } from './anchors';
  * region asks for the earned camera. Four in 300ms used to mean four dollies, each re-easing from
  * wherever the last had reached — a camera whipping between regions and arriving nowhere. Coalescing
  * shows the operator where the attention landed instead of the route it took. Only the camera waits:
- * the panels those same frames open are not on this path (hard rule 1 — never gate an arrival).
+ * the panels those same frames open are not on this path (never gate an arrival).
  *
  * The window is a trailing debounce, so a burst extends itself while frames keep coming. The reducer
  * re-checks the window on flush, so a timer left over from a superseded burst fires nothing.

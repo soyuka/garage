@@ -1,4 +1,4 @@
-/* The Atelier scene shell. Z-order (DESIGN-VISION §3): WebGL canvas (back) → glass panels (mid) →
+/* The Atelier scene shell. Z-order: WebGL canvas (back) → glass panels (mid) →
    composer tray (front) → Le Noyau (highest). The glass sits BESIDE the Plateau, never over the car. */
 
 /* kill the default 8px <body> margin — it was letting the light html canvas show as a thin frame around
@@ -289,8 +289,7 @@ body {
   pointer-events: none; /* let the empty area pass clicks through to the canvas (orbit the car) */
   transition: transform var(--at-dur-rise) var(--at-ease-sine);
 }
-/* console capsule — Le Noyau's freed orb sits full native size above the composer (CHOREOGRAPHY § The
-   pilot driver; corrected 2026-09-05: this geometry is now UNCONDITIONAL under both drivers — only what
+/* console capsule — Le Noyau's freed orb sits full native size above the composer (this geometry is now UNCONDITIONAL under both drivers — only what
    sits UNDER the orb keys on data-driver, below). */
 .at-scene-console {
   pointer-events: auto;
@@ -308,7 +307,7 @@ body {
   height: 158px; /* orb-wrap 138 + cradle 26 − 6 cradle margin-top (noyau.css) */
 }
 /* the orb keeps its full native SVG geometry (138px), absolute-centred in the socket box at scale(1) —
-   so the à-décider inbox, the ember (orb-relative corner) and the cradle all keep anchoring correctly. */
+   so the cradle keeps anchoring correctly. */
 .at-scene-socket .noyau-stage {
   position: absolute;
   left: 50%;
@@ -337,7 +336,7 @@ body {
   transition: opacity var(--at-dur-tint) var(--at-ease-sine);
 }
 
-/* ── the pilot locks the composer (CHOREOGRAPHY § The pilot driver) ──
+/* ── the pilot locks the composer ──
    Under driver='pilot', while a run is under load (quiet absent), the composer is not the operator's to
    use — someone else is driving — so it collapses to a 10px hairline handle: grayscale by construction,
    hover does nothing (a locked control is not an invitation), keyboard focus on the composer itself
@@ -356,7 +355,7 @@ body {
 .at-scene-dock[data-driver='pilot'][data-quiet='true'] .at-scene-console .at-scene-composer {
   height: 48px;
 }
-/* reduced motion: the handle's collapse/inflate is attention, not state (CHOREOGRAPHY row prefers-reduced-motion) */
+/* reduced motion: the handle's collapse/inflate is attention, not state */
 .at-scene-dock[data-reduced='true'] .at-scene-composer,
 .at-scene-dock[data-reduced='true'] .at-scene-input {
   transition: none;
@@ -368,7 +367,7 @@ body {
   }
 }
 
-/* CHOREOGRAPHY § The stage under a legend (corrected 2026-09-05, at first light) — while a legend is
+/* While a legend is
    docked right, everything that centres on the stage centres on the stage that is left. Keyed on the
    legend card's own presence in the DOM (.at-hlog / .at-facts, the two legends' root classes) — no JS
    state. Sizes the console dock's and the nameplate header's (.at-scene-cockpit) right padding so both
@@ -464,7 +463,7 @@ body {
 .at-scene-chip:focus-visible { outline: 2px solid var(--at-orange); outline-offset: 2px; }
 .at-scene-chip:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* the agent chip (CHOREOGRAPHY § "Asking the agent from the UI") — cyan border + tick, echoing the
+/* the agent chip — cyan border + tick, echoing the
    `.at-proj-tick` attribution mark: cyan is rationed to Le Noyau, so this is the one visual cue that
    the chip spends a model call instead of resolving instantly like its neutral siblings. */
 .at-scene-chip--agent { border-color: var(--at-cyan); }
@@ -513,7 +512,7 @@ body {
 .at-scene-cross:disabled { opacity: 0.4; cursor: not-allowed; }
 .at-scene-cross--on { color: var(--at-red-hi); border-color: rgba(252, 165, 165, 0.5); text-shadow: var(--at-glow-red); }
 
-/* ── la dictée: the push-to-talk mic (CHOREOGRAPHY § "La dictée") ──
+/* ── la dictée: the push-to-talk mic ──
    Sized and shaped like .at-scene-sim so the composer keeps one control language. It is HELD, not
    latched, and the held state has to be unmistakable on a still screen: the ring is the mic being
    open, and it is a border + color change, never colour alone. Gone entirely from the DOM once the
