@@ -61,7 +61,7 @@ final class AgentTurnCappedTest extends AppTestCase
     public function testTheTurnTransportNeverRetries(): void
     {
         static::bootKernel();
-        $strategy = static::getContainer()->get('messenger.retry_strategy_locator')->get('async');
+        $strategy = static::getContainer()->get('messenger.retry.multiplier_retry_strategy.async');
         $envelope = new Envelope(new RunAgentTurn('x', 'https://localhost/agent/sessions/s', self::TEST_OWNER));
 
         $this->assertFalse($strategy->isRetryable($envelope, new \RuntimeException('transient')));

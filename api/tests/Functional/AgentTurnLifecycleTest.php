@@ -53,7 +53,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
                 'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-boom'],
             ]);
         } catch (\Throwable) {
-            // The worker rethrows so Messenger can retry; we only care that `end` was published first.
+            // The worker rethrows (dead-lettered, never retried); we only care that `end` was published first.
         }
 
         $phases = $this->turnPhases($container->get(RecordingHub::class), 'sess-boom');
