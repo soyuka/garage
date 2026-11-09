@@ -9,11 +9,13 @@ use App\Documentation\OwnedVehicleLocator;
 use App\Documentation\VehicleDocumentKind;
 use App\Documentation\VehicleDocumentRecorder;
 use App\Documentation\VehicleDocumentView;
+use App\Security\OwnerRateLimit;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -26,6 +28,8 @@ final readonly class UploadVehicleDocumentController
         private OwnedVehicleLocator $locator,
         private VehicleDocumentRecorder $recorder,
         private VehicleDocumentView $view,
+        private OwnerRateLimit $rateLimit,
+        private RateLimiterFactoryInterface $uploadLimiter,
     ) {
     }
 
@@ -44,6 +48,8 @@ final readonly class UploadVehicleDocumentController
 
         $kind = VehicleDocumentKind::tryFrom((string) $request->request->get('kind'))
             ?? throw new UnprocessableEntityHttpException(\sprintf('"kind" must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value'))));
+
+        $this->rateLimit->consume($this->uploadLimiter, 'Upload');
 
         try {
             $document = $this->recorder->record(

@@ -6,11 +6,34 @@ framework:
             policy: sliding_window
             limit: '%env(int:AGENT_TURN_RATE_LIMIT)%'
             interval: '1 hour'
-            cache_pool: cache.agent_turn_limiter
+            cache_pool: cache.rate_limiter
+        # Same endpoint, one key for everyone: the spend ceiling however many accounts sign up.
+        agent_turn_global:
+            policy: sliding_window
+            limit: '%env(int:AGENT_TURN_GLOBAL_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
+        # The rest are keyed on the owner too (OwnerRateLimit).
+        speech:
+            policy: sliding_window
+            limit: '%env(int:SPEECH_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
+        transcription:
+            policy: sliding_window
+            limit: '%env(int:TRANSCRIPTION_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
+        # Vehicle documents and maintenance bills share one budget: both write to the object store.
+        upload:
+            policy: sliding_window
+            limit: '%env(int:UPLOAD_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
 
     cache:
         pools:
-            cache.agent_turn_limiter:
+            cache.rate_limiter:
                 adapter: cache.app
 
 when@test:
@@ -18,6 +41,6 @@ when@test:
         cache:
             pools:
                 # cache.app is a filesystem pool that outlives the kernel, so every functional test
-                # posting a turn as TEST_OWNER would share one budget across the whole run.
-                cache.agent_turn_limiter:
+                # posting as TEST_OWNER would share one budget across the whole run.
+                cache.rate_limiter:
                     adapter: cache.adapter.array

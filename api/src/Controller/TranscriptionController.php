@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Capability\Capabilities;
 use App\Capability\Capability;
 use App\I18n\Locale;
+use App\Security\OwnerRateLimit;
 use App\Transcription\GarageVocabulary;
 use App\Transcription\TranscriptionClient;
 use App\Transcription\TranscriptionUnavailable;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -45,6 +47,8 @@ final readonly class TranscriptionController
         private GarageVocabulary $vocabulary,
         private LoggerInterface $logger,
         private Capabilities $capabilities,
+        private OwnerRateLimit $rateLimit,
+        private RateLimiterFactoryInterface $transcriptionLimiter,
     ) {
     }
 
@@ -72,6 +76,8 @@ final readonly class TranscriptionController
         if (!str_starts_with($contentType, 'audio/')) {
             throw new BadRequestHttpException('A recording must be posted as audio/*.');
         }
+
+        $this->rateLimit->consume($this->transcriptionLimiter, 'Transcription');
 
         try {
             // The browser announces its language on every request (framework.yaml

@@ -7,6 +7,7 @@ namespace App\Controller;
 use App\Capability\Capabilities;
 use App\Capability\Capability;
 use App\I18n\Locale;
+use App\Security\OwnerRateLimit;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
@@ -17,6 +18,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 /**
@@ -25,8 +27,8 @@ use Symfony\Component\Routing\Attribute\Route;
  * Authenticated wholesale by the `api` firewall (security.yaml `^/tts`), which is the point: an open
  * TTS proxy is somebody else's credits being spent, and the key it would spend them with lives here.
  * Unlike a bill download there is nothing owner-SCOPED to check — no stored resource is read — so the
- * gate is authentication, not ownership. Per-owner budget accounting arrives with the cache layer
- * (docs/voice-plan.md § Phase 2).
+ * gate is authentication, not ownership. Each owner gets SPEECH_RATE_LIMIT lines per sliding hour
+ * (`limiter.speech`); a cached line still spends a slot.
  *
  * STREAMED, chunk for chunk, since 2026-09-05: the browser plays each piece as it lands (dashboard
  * `noyau/speaker.ts`). Buffering the body here made the first byte wait for the last one — 3.2 s for a
@@ -49,6 +51,8 @@ final readonly class SpeechController
         private SpeechClient $speech,
         private Verbalizer $verbalizer,
         private Capabilities $capabilities,
+        private OwnerRateLimit $rateLimit,
+        private RateLimiterFactoryInterface $speechLimiter,
     ) {
     }
 
@@ -70,6 +74,8 @@ final readonly class SpeechController
         if (mb_strlen($text) > self::MAX_CHARS) {
             throw new BadRequestHttpException(\sprintf('A spoken line is capped at %d characters.', self::MAX_CHARS));
         }
+
+        $this->rateLimit->consume($this->speechLimiter, 'Speech');
 
         try {
             // The browser announces its language on every request (framework.yaml

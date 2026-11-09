@@ -109,8 +109,11 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
 - **`POST /agent/turn` is rate-limited per owner** (`limiter.agent_turn`, sliding window,
   `AGENT_TURN_RATE_LIMIT` per hour, default 30): in-app turns spend our Anthropic credits on a public
   demo. Over the limit: 429 + `Retry-After`, nothing enqueued. MCP calls are not limited (the caller's
-  model reasons). The test env swaps its pool to an array adapter, or every functional test posting as
-  `TEST_OWNER` would share one budget across the run.
+  model reasons). A global limiter (`limiter.agent_turn_global`, `AGENT_TURN_GLOBAL_RATE_LIMIT`) caps
+  all owners together. `/tts`, `/stt` and the document/bill uploads have per-owner limiters too
+  (`SPEECH_`/`TRANSCRIPTION_`/`UPLOAD_RATE_LIMIT`, via `App\Security\OwnerRateLimit`). All share the
+  `cache.rate_limiter` pool, which the test env swaps to an array adapter, or every functional test
+  posting as `TEST_OWNER` would share one budget across the run.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
   `TypeInfoDescriber`.
 - **One unnamed Mercure hub per *configuration*.** Mercure 1.0 refuses a second one anywhere, and

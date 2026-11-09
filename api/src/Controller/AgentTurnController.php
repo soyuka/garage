@@ -42,6 +42,7 @@ final readonly class AgentTurnController
         private TurnDispatcher $turns,
         private Security $security,
         private RateLimiterFactoryInterface $agentTurnLimiter,
+        private RateLimiterFactoryInterface $agentTurnGlobalLimiter,
         private DashboardChannel $channel,
         private Capabilities $capabilities,
     ) {
@@ -72,13 +73,16 @@ final readonly class AgentTurnController
         // owner is always present — the turn never runs unowned.
         $owner = $this->security->getUser()?->getUserIdentifier() ?? '';
 
-        $limit = $this->agentTurnLimiter->create($owner)->consume();
-        if (!$limit->isAccepted()) {
-            return new JsonResponse(
-                ['error' => 'agent turn limit reached'],
-                Response::HTTP_TOO_MANY_REQUESTS,
-                ['Retry-After' => (string) max(1, $limit->getRetryAfter()->getTimestamp() - time())],
-            );
+        // The owner's budget first, so one account cannot drain the global one past its own share.
+        foreach ([$this->agentTurnLimiter->create($owner), $this->agentTurnGlobalLimiter->create('global')] as $limiter) {
+            $limit = $limiter->consume();
+            if (!$limit->isAccepted()) {
+                return new JsonResponse(
+                    ['error' => 'agent turn limit reached'],
+                    Response::HTTP_TOO_MANY_REQUESTS,
+                    ['Retry-After' => (string) max(1, $limit->getRetryAfter()->getTimestamp() - time())],
+                );
+            }
         }
 
         $this->turns->dispatch(new RunAgentTurn(

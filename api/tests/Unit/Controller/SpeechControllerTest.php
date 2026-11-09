@@ -8,14 +8,21 @@ use App\Agent\WebSearch\WebSearchBackend;
 use App\Capability\Capabilities;
 use App\Controller\SpeechController;
 use App\I18n\Locale;
+use App\Security\OwnerContext;
+use App\Security\OwnerRateLimit;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
 use App\Speech\Verbalizer;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 /**
  * The controller used to buffer the whole line and stamp `audio/mpeg` on it. Both were ElevenLabs-
@@ -68,7 +75,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        $response = (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key')))(self::request());
+        $response = (self::controller($speech))(self::request());
 
         $this->assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $response->getStatusCode());
     }
@@ -103,7 +110,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        return (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key')))(self::request());
+        return (self::controller($speech))(self::request());
     }
 
     private static function request(): Request
@@ -132,5 +139,13 @@ final class SpeechControllerTest extends TestCase
         ob_end_clean();
 
         return $flushes;
+    }
+
+    private static function controller(SpeechClient $speech): SpeechController
+    {
+        $owner = new OwnerContext(new Security(new ServiceLocator(['security.token_storage' => static fn (): TokenStorage => new TokenStorage()])), 'owner@example.com');
+        $limiter = new RateLimiterFactory(['id' => 'speech', 'policy' => 'sliding_window', 'limit' => 100, 'interval' => '1 hour'], new InMemoryStorage());
+
+        return new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'), new OwnerRateLimit($owner), $limiter);
     }
 }

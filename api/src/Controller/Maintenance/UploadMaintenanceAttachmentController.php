@@ -8,6 +8,7 @@ use App\ApiResource\GarageMaintenanceRecord;
 use App\Entity\MaintenanceAttachment;
 use App\Maintenance\OwnedRecordLocator;
 use App\Mercure\DomainPublisher;
+use App\Security\OwnerRateLimit;
 use App\Storage\MaintenanceAttachmentStorage;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -15,6 +16,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Uid\Ulid;
 
@@ -39,6 +41,8 @@ final readonly class UploadMaintenanceAttachmentController
         private MaintenanceAttachmentStorage $storage,
         private DocumentManager $em,
         private DomainPublisher $publisher,
+        private OwnerRateLimit $rateLimit,
+        private RateLimiterFactoryInterface $uploadLimiter,
     ) {
     }
 
@@ -64,6 +68,8 @@ final readonly class UploadMaintenanceAttachmentController
         if (!\in_array($mime, self::ALLOWED_TYPES, true)) {
             throw new UnprocessableEntityHttpException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
         }
+
+        $this->rateLimit->consume($this->uploadLimiter, 'Upload');
 
         $recordId = (string) $record->getId();
         $attachmentId = (string) new Ulid();
