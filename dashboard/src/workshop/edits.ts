@@ -50,6 +50,7 @@ export interface WorkshopEdits {
   dismissTask(vehicleIri: Iri, taskIri: Iri): Promise<void>;
   saveVehicle(vehicleIri: Iri, patch: VehiclePatch): Promise<void>;
   deleteVehicle(vehicleIri: Iri): Promise<void>;
+  archiveVehicle(vehicleIri: Iri, archived: boolean): Promise<VehicleSummary>;
   createVehicle(patch: VehiclePatch): Promise<void>;
 }
 
@@ -58,6 +59,7 @@ export interface LiveHooks {
   refresh: (vehicleIri: Iri) => void;
   created: (vehicle: VehicleSummary) => void;
   deleted: (vehicleIri: Iri) => void;
+  updated: (vehicle: VehicleSummary) => void;
   /** A write that cannot be reported inline any more (its form is gone): surface it as a notice. */
   failed: (message: string) => void;
 }
@@ -69,8 +71,7 @@ async function applyParts(taskIri: Iri, ops: TaskPartOps): Promise<void> {
 }
 
 export function liveEdits(hooks: LiveHooks): WorkshopEdits {
-  const after = <T>(vehicleIri: Iri, op: Promise<T>): Promise<T> =>
-    op.finally(() => hooks.refresh(vehicleIri));
+  const after = <T>(vehicleIri: Iri, op: Promise<T>): Promise<T> => op.finally(() => hooks.refresh(vehicleIri));
   return {
     saveVisit: (vehicleIri, recordIri, input, bills) =>
       after(
@@ -111,8 +112,20 @@ export function liveEdits(hooks: LiveHooks): WorkshopEdits {
         })(),
       ),
     dismissTask: (vehicleIri, taskIri) => after(vehicleIri, patchTaskStatus(taskIri, 'dismissed')),
-    saveVehicle: (vehicleIri, patch) => after(vehicleIri, patchVehicle(vehicleIri, patch).then(() => undefined)),
+    saveVehicle: (vehicleIri, patch) =>
+      after(
+        vehicleIri,
+        patchVehicle(vehicleIri, patch).then(() => undefined),
+      ),
     deleteVehicle: (vehicleIri) => deleteVehicle(vehicleIri).then(() => hooks.deleted(vehicleIri)),
+    archiveVehicle: (vehicleIri, archived) =>
+      after(
+        vehicleIri,
+        patchVehicle(vehicleIri, { archived }).then((vehicle) => {
+          hooks.updated(vehicle);
+          return vehicle;
+        }),
+      ),
     createVehicle: async (patch) => {
       const blank = await createVehicle();
       try {
@@ -139,6 +152,7 @@ export function offlineEdits(message: string): WorkshopEdits {
     dismissTask: no,
     saveVehicle: no,
     deleteVehicle: no,
+    archiveVehicle: no,
     createVehicle: no,
   };
 }

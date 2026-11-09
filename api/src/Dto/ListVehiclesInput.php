@@ -23,5 +23,8 @@ final class ListVehiclesInput
     #[ApiProperty(schema: ['type' => 'integer', 'minimum' => 0, 'description' => 'Number of vehicles to skip — for paging beyond the first page. Defaults to 0.'])]
     public int $offset = 0;
 
+    #[ApiProperty(description: 'Also list archived vehicles (sold, scrapped or no longer in use). Defaults to false: archived vehicles are left out, and each row of an archived one carries archivedAt.')]
+    public bool $includeArchived = false;
+
     public const int MAX_LIMIT = 50;
 }

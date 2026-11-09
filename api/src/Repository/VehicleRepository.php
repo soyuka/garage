@@ -100,14 +100,15 @@ final class VehicleRepository extends ServiceDocumentRepository
      * List the current owner's garage, MOST-RECENTLY-TOUCHED first (updatedAt desc, addedAt as the
      * tiebreak — legacy docs with no updatedAt fall back to creation order), narrowed by an optional
      * case-insensitive make and/or model and/or vehicleType. This is the set the dashboard sidebar
-     * and the MCP list_vehicles tool show. Pass $limit to page the result (with $offset); $limit null
+     * and the MCP list_vehicles tool show. Archived vehicles are left out unless $includeArchived — the
+     * active parc is the default view and what every parc-wide sweep walks. Pass $limit to page the result (with $offset); $limit null
      * returns the whole parc (the dashboard, which reorders client-side).
      *
      * @return list<Vehicle>
      */
-    public function findShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null, ?int $limit = null, int $offset = 0): array
+    public function findShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null, ?int $limit = null, int $offset = 0, bool $includeArchived = false): array
     {
-        $qb = $this->sharedQuery($make, $model, $vehicleType)
+        $qb = $this->sharedQuery($make, $model, $vehicleType, $includeArchived)
             ->sort(['updatedAt' => 'desc', 'addedAt' => 'desc']);
 
         if (null !== $limit) {
@@ -121,9 +122,9 @@ final class VehicleRepository extends ServiceDocumentRepository
      * Total size of the current owner's garage for the same filters as {@see findShared()} — lets the
      * paginated list_vehicles report how many vehicles exist beyond the returned page.
      */
-    public function countShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null): int
+    public function countShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null, bool $includeArchived = false): int
     {
-        return $this->sharedQuery($make, $model, $vehicleType)
+        return $this->sharedQuery($make, $model, $vehicleType, $includeArchived)
             ->count()
             ->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])
             ->execute();
@@ -161,9 +162,13 @@ final class VehicleRepository extends ServiceDocumentRepository
             ->getQuery()->getIterator()->toArray());
     }
 
-    private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType): Builder
+    private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType, bool $includeArchived): Builder
     {
         $qb = $this->baseQuery();
+
+        if (!$includeArchived) {
+            $qb->field('archivedAt')->equals(null);
+        }
 
         if (null !== $make) {
             $qb->field('make')->equals($make);

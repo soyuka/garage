@@ -257,6 +257,7 @@ export interface VehicleSummary {
   /** item GET only. The API serves each task IRI as `@id`; normalize it to `id` for our model. */
   plannedTasks?: Array<PlannedTask & { '@id'?: Iri }>;
   addedAt: string;
+  archivedAt?: string | null;
 }
 
 // ── Display composition (Tier-2) ──────────────────────────────────────────────

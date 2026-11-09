@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { useT } from '../i18n/LocaleProvider';
 import type { Iri, VehicleSummary } from '../types';
 import { ChevronDown, Grid, Moon, Sun } from './Icons';
+import { isArchived } from './archive';
 import { displayName } from './genericBody';
 import { nextJobOf } from './modules';
 import { StateShape } from './StateMark';
@@ -58,7 +59,7 @@ function VehicleSwitcher({ vehicles, selected, onSelect }: { vehicles: VehicleSu
     e.stopPropagation();
   };
 
-  const selectedJob = selected ? nextJobOf(selected) : null;
+  const selectedJob = selected && !isArchived(selected) ? nextJobOf(selected) : null;
   return (
     <div className="w-switcher" ref={root}>
       <button
@@ -204,7 +205,7 @@ export function TopBar({
         <Grid />
         <span className="w-parc-text">{t.workshop.parc}</span>
       </a>
-      <VehicleSwitcher vehicles={vehicles} selected={selected} onSelect={onSelect} />
+      <VehicleSwitcher vehicles={vehicles.filter((v) => !isArchived(v))} selected={selected} onSelect={onSelect} />
       {section && <SectionTabs section={section} onSection={onSection} idPrefix={idPrefix} />}
       <div className="w-top-tools">
         <JournalButton />

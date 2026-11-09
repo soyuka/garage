@@ -19,6 +19,7 @@ const BASE = '/dev/workshop';
 const NOW = new Date('2026-06-30T10:00:00Z');
 
 function enrich(b: VehicleBundle): VehicleBundle {
+  if (b.vehicle['@id'] === '/garage/vehicles/01NOASSETMOTO') return { ...b, vehicle: { ...b.vehicle, archivedAt: '2026-05-12T09:00:00+00:00' } };
   if (b.vehicle['@id'] !== '/garage/vehicles/01OVERDUEESPACE') return b;
   const iri = b.vehicle['@id'];
   return {

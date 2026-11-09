@@ -1,4 +1,5 @@
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { isArchived } from './archive';
 import { createPortal } from 'react-dom';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -122,7 +123,7 @@ export function PiecesPlane({ slot, bundle, modules, view, active, reduced, acti
               <ShelfTile
                 key={item.key}
                 item={item}
-                tone={shelf.kind === 'toOrder' && shelf.job.state === 'over' ? 'over' : undefined}
+                tone={shelf.kind === 'toOrder' && shelf.job.state === 'over' && !isArchived(bundle.vehicle) ? 'over' : undefined}
                 selected={item.key === selected}
                 tabbable={item.key === roving}
                 register={(el) => (el ? tiles.current.set(item.key, el) : tiles.current.delete(item.key))}

@@ -365,6 +365,10 @@ export function Workshop() {
           });
           window.location.hash = '#/';
         },
+        updated: (vehicle) => {
+          setVehicles((prev) => upsertVehicle(prev, vehicle));
+          setBundles((prev) => (prev[vehicle['@id']] ? { ...prev, [vehicle['@id']]: { ...prev[vehicle['@id']], vehicle: { ...prev[vehicle['@id']].vehicle, ...vehicle, archivedAt: vehicle.archivedAt ?? null } } } : prev));
+        },
         failed: (message) => {
           dispatch({ type: 'toast', tone: 'alarm', message: t.workshop.edit.createFailed(message) });
           cues.play('blocked');

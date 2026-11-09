@@ -84,6 +84,13 @@ class Vehicle
     #[ODM\Field(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $deletedAt = null;
 
+    // Archive stamp: the car is sold, scrapped or no longer driven. Unlike the {@see $deletedAt}
+    // tombstone it stays fully readable and editable (history, bills, a late visit) and is
+    // restorable; it only leaves the active parc and parc-wide sweeps. null = active. Declared (not
+    // promoted) for the same legacy-doc hydration reason as $engineCode above.
+    #[ODM\Field(type: 'date_immutable', nullable: true)]
+    private ?\DateTimeImmutable $archivedAt = null;
+
     // Last write to this vehicle (a maintenance log/plan, or an update_vehicle patch). Surfaced so the
     // parc listing and list_vehicles can order most-recently-touched first — the server-side echo of
     // the dashboard's client-side recency rail. Declared (not promoted) with a null default for the
@@ -284,6 +291,27 @@ class Vehicle
     public function delete(\DateTimeImmutable $at = new \DateTimeImmutable()): void
     {
         $this->deletedAt = $at;
+    }
+
+    public function getArchivedAt(): ?\DateTimeImmutable
+    {
+        return $this->archivedAt;
+    }
+
+    public function isArchived(): bool
+    {
+        return null !== $this->archivedAt;
+    }
+
+    /** Take the vehicle out of the active parc; a repeat keeps the original date. */
+    public function archive(\DateTimeImmutable $at): void
+    {
+        $this->archivedAt ??= $at;
+    }
+
+    public function unarchive(): void
+    {
+        $this->archivedAt = null;
     }
 
     public function getUsageValue(): ?int

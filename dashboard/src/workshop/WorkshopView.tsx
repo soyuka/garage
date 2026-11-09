@@ -22,6 +22,7 @@ import { NARRATION_ID } from '../noyau/voice';
 import { Notices, Ticker } from './Notices';
 import { dockScope, scopeInstruction } from './dock';
 import { kmTrack, type Tick } from './kmTrack';
+import { isArchived } from './archive';
 import { deriveModules, type DocRow, type JobItem } from './modules';
 import { ParcMosaic } from './ParcMosaic';
 import { CaracteristiquesPlane, EntretienPlane } from './Planes';
@@ -226,7 +227,7 @@ export function WorkshopView(props: WorkshopViewProps) {
       />
     );
     body = (
-      <main className="w-car-page">
+      <main className={`w-car-page${isArchived(bundle.vehicle) ? ' is-archived' : ''}`}>
         <div className={`w-stage w-stage--${view.section}`}>
           {SECTIONS.map((s) => {
             const front = s === view.section;

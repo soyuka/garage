@@ -63,6 +63,7 @@ class GarageResolver
         ?int $usageValue,
         ?UsageUnit $usageUnit,
         ?string $engineVariant,
+        ?bool $archived = null,
     ): UpdateVehicleOutcome {
         $resolution = $this->writeResolver->resolveForWrite(
             $vehicleId, $make, $model, $year, $vehicleType, $carId, $plate, $vin, $confirmNew, 'user',
@@ -92,6 +93,11 @@ class GarageResolver
         }
         if (null !== $engineVariant) {
             $vehicle->setEngineVariant($engineVariant);
+        }
+        if (true === $archived) {
+            $vehicle->archive(new \DateTimeImmutable());
+        } elseif (false === $archived) {
+            $vehicle->unarchive();
         }
 
         $this->entityManager->flush();

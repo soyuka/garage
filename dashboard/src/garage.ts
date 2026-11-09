@@ -162,6 +162,7 @@ export interface VehiclePatch {
   plate?: string | null;
   usageValue?: number;
   usageUnit?: string;
+  archived?: boolean;
 }
 
 /** Edit a vehicle's card fields (merge-patch). Returns the fresh read-model. */

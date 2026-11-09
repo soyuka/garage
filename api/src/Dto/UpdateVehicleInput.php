@@ -41,6 +41,9 @@ final class UpdateVehicleInput
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['km', 'mi', 'h'], 'description' => 'Unit of usageValue: "km", "mi" or engine "h". Must be sent together with usageValue.'])]
     public ?string $usageUnit = null;
 
+    #[ApiProperty(description: 'true archives the vehicle (sold, scrapped or no longer in use: it leaves the active parc and list_vehicles but keeps its history and stays editable); false restores it. Omit to leave it unchanged. NEVER use a delete for this.')]
+    public ?bool $archived = null;
+
     #[ApiProperty(description: 'Engine/trim variant label, e.g. "2.0 16V Coupé", "1.9 TDI", "35S14" — the motorisation that pins the oil-grade variant. NEVER a fluid/oil grade.')]
     public ?string $engineVariant = null;
 }

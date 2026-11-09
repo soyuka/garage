@@ -7,6 +7,7 @@ import { taskTitle } from '../tasks';
 import type { DocumentSpec, Iri, MaintenanceRecord, PlannedTask, ServiceAction, ServiceRule, VehicleBundle, VehicleSummary } from '../types';
 import { cadenceUnit, maintUnitFor } from '../units';
 import { defaultUsageUnit } from '../edit';
+import { isArchived } from './archive';
 import { sentenceCase } from './describe';
 import {
   acceptsBill,
@@ -90,7 +91,21 @@ function ErrorLines({ errors }: { errors: string[] }) {
 }
 
 /** Two steps, no dialog: the button becomes the confirmation and its way out. */
-export function ConfirmButton({ label, confirmLabel, busyLabel, busy, disabled, onConfirm }: { label: string; confirmLabel: string; busyLabel: string; busy: boolean; disabled?: boolean; onConfirm: () => void }) {
+export function ConfirmButton({
+  label,
+  confirmLabel,
+  busyLabel,
+  busy,
+  disabled,
+  onConfirm,
+}: {
+  label: string;
+  confirmLabel: string;
+  busyLabel: string;
+  busy: boolean;
+  disabled?: boolean;
+  onConfirm: () => void;
+}) {
   const t = useT();
   const [armed, setArmed] = useState(false);
   const confirm = useRef<HTMLButtonElement>(null);
@@ -326,7 +341,12 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
             <ul className="w-rows">
               {bills.map((a) => (
                 <li key={a.id} className="w-row">
-                  <button type="button" className="w-row-main w-edit-link" aria-label={e.openBill(a.filename)} onClick={() => onOpenBill({ url: a.url, title: a.filename, contentType: a.contentType, filename: a.filename })}>
+                  <button
+                    type="button"
+                    className="w-row-main w-edit-link"
+                    aria-label={e.openBill(a.filename)}
+                    onClick={() => onOpenBill({ url: a.url, title: a.filename, contentType: a.contentType, filename: a.filename })}
+                  >
                     {a.filename}
                   </button>
                   <button type="button" className="w-icon-button" aria-label={e.removeBill(a.filename)} title={e.removeBill(a.filename)} onClick={() => setRemoved((r) => [...r, a.url])}>
@@ -392,7 +412,7 @@ export function RuleEditor({ host, bundle, seed }: { host: EditHost; bundle: Veh
   }, [host.edits, vehicleIri, e]);
 
   const shown = rules ? (seed ? rulesForType(rules, seed.type) : rules) : [];
-  const current = selected ?? (shown[0]?.id ?? 'new');
+  const current = selected ?? shown[0]?.id ?? 'new';
   const rule = current === 'new' ? null : (shown.find((r) => r.id === current) ?? null);
   const title = seed ? e.rules(sentenceCase(serviceLabel(seed.type, locale))) : e.schedule;
 
@@ -605,7 +625,7 @@ export function VehicleEditor({ vehicle, onDone }: { vehicle: VehicleSummary; on
   const e = t.workshop.edit;
   const [draft, setDraft] = useState<VehicleDraft>(() => vehicleDraft(vehicle));
   const [errors, setErrors] = useState<string[]>([]);
-  const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
+  const [busy, setBusy] = useState<'save' | 'delete' | 'archive' | null>(null);
   const set = (patch: Partial<VehicleDraft>) => setDraft((d) => ({ ...d, ...patch }));
   if (!host) return null;
   const unit = cadenceUnit(maintUnitFor(vehicle.usageUnit ?? defaultUsageUnit(draft.vehicleType)));
@@ -630,10 +650,20 @@ export function VehicleEditor({ vehicle, onDone }: { vehicle: VehicleSummary; on
   };
   const remove = () => {
     setBusy('delete');
+    host.edits.deleteVehicle(vehicle['@id']).catch((err) => {
+      setErrors([e.deleteFailed(messageOf(err))]);
+      setBusy(null);
+    });
+  };
+  const archived = isArchived(vehicle);
+  const toggleArchive = () => {
+    setErrors([]);
+    setBusy('archive');
     host.edits
-      .deleteVehicle(vehicle['@id'])
+      .archiveVehicle(vehicle['@id'], !archived)
+      .then(onDone)
       .catch((err) => {
-        setErrors([e.deleteFailed(messageOf(err))]);
+        setErrors([(archived ? e.restoreFailed : e.archiveFailed)(messageOf(err))]);
         setBusy(null);
       });
   };
@@ -681,6 +711,9 @@ export function VehicleEditor({ vehicle, onDone }: { vehicle: VehicleSummary; on
       </div>
       <ErrorLines errors={errors} />
       <SaveRow busy={busy === 'save'} onCancel={onDone}>
+        <button type="button" className="w-button" disabled={busy !== null} onClick={toggleArchive}>
+          {busy === 'archive' ? (archived ? e.restoring : e.archiving) : archived ? e.restore : e.archive}
+        </button>
         <ConfirmButton label={e.deleteVehicle} confirmLabel={e.confirmDelete} busyLabel={e.deleting} busy={busy === 'delete'} disabled={busy !== null} onConfirm={remove} />
       </SaveRow>
     </form>

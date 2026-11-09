@@ -3706,3 +3706,52 @@ body {
     margin-left: 0;
   }
 }
+
+.w-archived {
+  margin-top: 16px;
+}
+.w-archived-toggle {
+  padding: 6px 0;
+  border: 0;
+  background: none;
+  color: var(--w-ink-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.w-archived-toggle:hover {
+  color: var(--w-ink);
+}
+.w-archived-toggle:focus-visible {
+  outline: 2px solid var(--w-blue);
+  outline-offset: 2px;
+}
+.w-archived-toggle::before {
+  content: '▸';
+  display: inline-block;
+  width: 1.2em;
+}
+.w-archived-toggle[aria-expanded='true']::before {
+  content: '▾';
+}
+.w-archived > .w-vrows {
+  margin-top: 6px;
+}
+.w-vrow.is-archived {
+  color: var(--w-ink-2);
+}
+.w-vrow.is-archived .w-vrow-title {
+  font-weight: 500;
+}
+.w-vrow.is-archived .w-vrow-thumb {
+  opacity: 0.55;
+}
+.w-archived-mark {
+  color: var(--w-ink-2);
+  font-size: 12px;
+}
+.w-car-page.is-archived {
+  --w-ok: var(--w-ink-2);
+  --w-due: var(--w-ink-2);
+  --w-over: var(--w-ink-2);
+}

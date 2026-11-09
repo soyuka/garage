@@ -40,8 +40,8 @@ final readonly class ListVehiclesProcessor implements ProcessorInterface
         $limit = max(1, min(ListVehiclesInput::MAX_LIMIT, $data->limit));
         $offset = max(0, $data->offset);
 
-        $total = $this->vehicles->countShared($data->make, $data->model, $type);
-        $page = $this->vehicles->findShared($data->make, $data->model, $type, $limit, $offset);
+        $total = $this->vehicles->countShared($data->make, $data->model, $type, $data->includeArchived);
+        $page = $this->vehicles->findShared($data->make, $data->model, $type, $limit, $offset, $data->includeArchived);
 
         // Selected-first, but only on the first page and only when the listing is not narrowed by a
         // filter — a deliberate filtered search should not be reshuffled by the dashboard's focus.

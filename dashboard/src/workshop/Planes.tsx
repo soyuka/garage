@@ -11,6 +11,7 @@ import { Pause, Play } from './Icons';
 import { TURNTABLE_KEY } from './prefs';
 import { AddBar, EditVisitButton, JobEditActions, VehicleEditor } from './Editors';
 import { useEditHost } from './edits';
+import { isArchived } from './archive';
 import { jobTitle, jobWhen, reading, sentenceCase } from './describe';
 import { normalizeUnit } from './kmTrack';
 import { factGroups, isIdentifier, packColumns, splitVarying } from './datasheet';
@@ -36,7 +37,21 @@ const TIERS = [1, 2, 3] as const;
 // Past this a value reads as a sentence: set in the text face, not as a mono figure.
 const PROSE = 48;
 
-function CarPlate({ bundle, view, active, reduced, hoverRegion, onPoint }: { bundle: VehicleBundle; view: ViewState; active: boolean; reduced: boolean; hoverRegion?: BodyRegion | null; onPoint?: () => void }) {
+function CarPlate({
+  bundle,
+  view,
+  active,
+  reduced,
+  hoverRegion,
+  onPoint,
+}: {
+  bundle: VehicleBundle;
+  view: ViewState;
+  active: boolean;
+  reduced: boolean;
+  hoverRegion?: BodyRegion | null;
+  onPoint?: () => void;
+}) {
   const t = useT();
   const [locale] = useLocale();
   const [turntable, setTurntable] = useFlag(TURNTABLE_KEY, false);
@@ -44,9 +59,12 @@ function CarPlate({ bundle, view, active, reduced, hoverRegion, onPoint }: { bun
   const ringLabel = !hoverRegion && view.focusRegion && view.focusTopic ? `${serviceLabel(view.focusTopic, locale)} · ${t.region[view.focusRegion]}` : null;
   return (
     <section className="w-plate" aria-label={t.workshop.mod.car}>
-      {active && <CarStage vehicle={bundle.vehicle} focusRegion={region} ringLabel={ringLabel} reduced={reduced} pointSeq={hoverRegion ? undefined : view.focusSeq} onPoint={onPoint} turntable={turntable} />}
+      {active && (
+        <CarStage vehicle={bundle.vehicle} focusRegion={region} ringLabel={ringLabel} reduced={reduced} pointSeq={hoverRegion ? undefined : view.focusSeq} onPoint={onPoint} turntable={turntable} />
+      )}
       <p className="w-plate-caption">
         <span>{vehicleName(bundle.vehicle)}</span>
+        {isArchived(bundle.vehicle) && <span className="w-archived-mark">{t.workshop.home.archivedMark}</span>}
         {bundle.vehicle.engineVariant && <span className="w-data">{bundle.vehicle.engineVariant}</span>}
         {bundle.vehicle.usageValue != null && <span className="w-data w-plate-reading">{reading(bundle.vehicle.usageValue, normalizeUnit(bundle.vehicle.usageUnit), locale)}</span>}
         <button
@@ -70,9 +88,7 @@ function JobListModule({ title, list, bundle, onView, labelledBy }: { title: str
   const [locale] = useLocale();
   const unit = normalizeUnit(bundle.vehicle.usageUnit);
   const detail = (j: JobItem) =>
-    [j.dueReading !== null ? t.workshop.atReading(reading(j.dueReading, j.remaining?.unit ?? unit, locale)) : null, j.dueDate ? formatDate(j.dueDate, locale) : null]
-      .filter(Boolean)
-      .join(' · ');
+    [j.dueReading !== null ? t.workshop.atReading(reading(j.dueReading, j.remaining?.unit ?? unit, locale)) : null, j.dueDate ? formatDate(j.dueDate, locale) : null].filter(Boolean).join(' · ');
   return (
     <Module title={title} labelledBy={labelledBy}>
       <ul className="w-rows">
@@ -219,42 +235,43 @@ export function CaracteristiquesPlane({ bundle, view }: PlaneProps) {
         items={groups.map((g) => ({
           key: g.system,
           node: (
-                <section key={g.system} className="w-sheet-box" aria-labelledby={`w-sheet-${g.system}`}>
-                  <div className="w-sheet-box-head">
-                    <h2 id={`w-sheet-${g.system}`} className="w-mod-title">
-                      {t.workshop.datasheet.systems[g.system]}
-                    </h2>
-                    {g.system === 'identity' && host && !editing && (
-                      <button ref={editButton} type="button" className="w-act" aria-label={t.workshop.edit.editVehicle} onClick={() => setEditing(true)}>
-                        {t.workshop.edit.edit}
-                      </button>
-                    )}
-                  </div>
-                  {g.system === 'identity' && editing && <VehicleEditor vehicle={v} onDone={stopEditing} />}
-                  {!(g.system === 'identity' && editing) && TIERS.map((tier) => {
-                    const row = g.entries.filter((e) => e.tier === tier);
-                    if (row.length === 0) return null;
-                    return (
-                      <div key={tier} className={`w-sheet-tags w-sheet-tags--${tier}`}>
-                        {row.map((e) => (
-                          <div key={e.key} className={`w-tag w-tag--${e.tier}${e.facts.some((f) => lit.has(f.key)) ? ' is-lit' : ''}`}>
-                            <span className="w-tag-label">{label(e.key)}</span>
-                            <span className="w-tag-values">
-                              {split(e.facts).fixed.flatMap((f) => tags(values(f), f.key))}
-                              {split(e.facts).varying.length > 0 && (
-                                <details className="w-tag-varies">
-                                  <summary>{t.workshop.datasheet.varies}</summary>
-                                  <span className="w-tag-values w-tag-variants">{split(e.facts).varying.flatMap((f) => tags(values(f), f.key))}</span>
-                                </details>
-                              )}
-                            </span>
-                            {e.facts.every((f) => f.verified) && split(e.facts).varying.length === 0 && <span className="w-verified">{t.workshop.facts.verified}</span>}
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </section>
+            <section key={g.system} className="w-sheet-box" aria-labelledby={`w-sheet-${g.system}`}>
+              <div className="w-sheet-box-head">
+                <h2 id={`w-sheet-${g.system}`} className="w-mod-title">
+                  {t.workshop.datasheet.systems[g.system]}
+                </h2>
+                {g.system === 'identity' && host && !editing && (
+                  <button ref={editButton} type="button" className="w-act" aria-label={t.workshop.edit.editVehicle} onClick={() => setEditing(true)}>
+                    {t.workshop.edit.edit}
+                  </button>
+                )}
+              </div>
+              {g.system === 'identity' && editing && <VehicleEditor vehicle={v} onDone={stopEditing} />}
+              {!(g.system === 'identity' && editing) &&
+                TIERS.map((tier) => {
+                  const row = g.entries.filter((e) => e.tier === tier);
+                  if (row.length === 0) return null;
+                  return (
+                    <div key={tier} className={`w-sheet-tags w-sheet-tags--${tier}`}>
+                      {row.map((e) => (
+                        <div key={e.key} className={`w-tag w-tag--${e.tier}${e.facts.some((f) => lit.has(f.key)) ? ' is-lit' : ''}`}>
+                          <span className="w-tag-label">{label(e.key)}</span>
+                          <span className="w-tag-values">
+                            {split(e.facts).fixed.flatMap((f) => tags(values(f), f.key))}
+                            {split(e.facts).varying.length > 0 && (
+                              <details className="w-tag-varies">
+                                <summary>{t.workshop.datasheet.varies}</summary>
+                                <span className="w-tag-values w-tag-variants">{split(e.facts).varying.flatMap((f) => tags(values(f), f.key))}</span>
+                              </details>
+                            )}
+                          </span>
+                          {e.facts.every((f) => f.verified) && split(e.facts).varying.length === 0 && <span className="w-verified">{t.workshop.facts.verified}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+            </section>
           ),
         }))}
       />

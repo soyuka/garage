@@ -148,6 +148,10 @@ final class GarageVehicle
     // count; there is no openTasks scalar on the vehicle.
     #[ApiProperty(writable: false)]
     public string $addedAt;
+    #[ApiProperty(writable: false, description: 'ISO-8601 instant the vehicle was archived (sold, scrapped, no longer driven), or null while it is in the active parc.')]
+    public ?string $archivedAt = null;
+    #[ApiProperty(description: 'Write-only switch for PATCH: true archives the vehicle (keeps the original date on a repeat), false restores it. Reads mirror archivedAt.')]
+    public bool $archived = false;
 
     public static function fromEntity(Vehicle $vehicle): self
     {
@@ -166,6 +170,8 @@ final class GarageVehicle
         $resource->usageValue = $vehicle->getUsageValue();
         $resource->usageUnit = $vehicle->getUsageUnit()?->value;
         $resource->addedAt = $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM);
+        $resource->archivedAt = $vehicle->getArchivedAt()?->format(\DateTimeInterface::ATOM);
+        $resource->archived = $vehicle->isArchived();
 
         return $resource;
     }

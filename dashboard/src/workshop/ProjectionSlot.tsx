@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { isArchived } from './archive';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { rollupCarnet } from '../carnet';
 import { formatDate, formatEuros, formatReading } from '../format';
@@ -205,7 +206,7 @@ function UrgentJob({ job, bundle, onPlan, disabled, onView }: { job: JobItem; bu
       {job.parts.length > 0 ? (
         <>
           <h3 className="w-group-title">{t.workshop.urgent.parts}</h3>
-          <PartRows parts={job.parts.slice(0, URGENT_PARTS)} itemType={job.type} thumbs tone={job.state === 'over' ? 'over' : undefined} />
+          <PartRows parts={job.parts.slice(0, URGENT_PARTS)} itemType={job.type} thumbs tone={job.state === 'over' && !isArchived(bundle.vehicle) ? 'over' : undefined} />
           {job.parts.length > URGENT_PARTS && (
             <button type="button" className="w-more" onClick={() => onView({ type: 'section', section: 'pieces' })}>
               {t.workshop.more.parts(job.parts.length - URGENT_PARTS)}

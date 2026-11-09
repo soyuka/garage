@@ -11,6 +11,7 @@ import { NewVehicleForm } from './Editors';
 import { useEditHost } from './edits';
 import { jobTitle, jobWhen, reading, sentenceCase } from './describe';
 import { staggerDelay } from './edgeDraw';
+import { isArchived, splitArchived } from './archive';
 import { EdgeModel, useTokenColor, type EdgeFit } from './EdgeModel';
 import { isGenericBody, parcThumbUrl, vehicleMesh } from './genericBody';
 import { normalizeUnit } from './kmTrack';
@@ -39,7 +40,18 @@ function Thumb({ vehicle, index, aspect }: { vehicle: VehicleSummary; index: num
       <FitCamera box={box} points={points} aspect={aspect} margin={THUMB_MARGIN} />
       <MeshErrorBoundary key={url} fallback={null}>
         <Suspense fallback={null}>
-          <EdgeModel url={url} angle={carEdgeAngle(url)} rotationY={spec.rotationY} fit={THUMB_FIT} ink={ink} delay={staggerDelay(index)} reduced={reduced} onBox={setBox} onPoints={setPoints} {...vehicleLines(vehicle.vehicleType)} />
+          <EdgeModel
+            url={url}
+            angle={carEdgeAngle(url)}
+            rotationY={spec.rotationY}
+            fit={THUMB_FIT}
+            ink={ink}
+            delay={staggerDelay(index)}
+            reduced={reduced}
+            onBox={setBox}
+            onPoints={setPoints}
+            {...vehicleLines(vehicle.vehicleType)}
+          />
         </Suspense>
       </MeshErrorBoundary>
     </View>
@@ -47,6 +59,7 @@ function Thumb({ vehicle, index, aspect }: { vehicle: VehicleSummary; index: num
 }
 
 function VehicleRow({ vehicle, bundle, now, href, index }: { vehicle: VehicleSummary; bundle: VehicleBundle | undefined; now: Date; href: string; index: number }) {
+  const archived = isArchived(vehicle);
   const t = useT();
   const [locale] = useLocale();
   const job = vehicleNextJob(vehicle, bundle, now);
@@ -62,7 +75,7 @@ function VehicleRow({ vehicle, bundle, now, href, index }: { vehicle: VehicleSum
     return () => ro.disconnect();
   }, []);
   return (
-    <a className="w-vrow" href={href} aria-label={t.workshop.home.open(name)} data-parc-card>
+    <a className={`w-vrow${archived ? ' is-archived' : ''}`} href={href} aria-label={t.workshop.home.open(name)} data-parc-card>
       <span className="w-vrow-thumb" ref={thumb}>
         <Thumb vehicle={vehicle} index={index} aspect={aspect} />
       </span>
@@ -72,7 +85,9 @@ function VehicleRow({ vehicle, bundle, now, href, index }: { vehicle: VehicleSum
         {isGenericBody(vehicle) && <span className="w-generic">{t.workshop.genericBody}</span>}
       </span>
       <span className="w-vrow-job">
-        {job && label ? (
+        {archived ? (
+          <span className="w-muted">{t.workshop.home.archivedMark}</span>
+        ) : job && label ? (
           <>
             <StateMark state={job.state} immediate={job.immediate} />
             <span className="w-vrow-job-title" title={label}>
@@ -117,8 +132,10 @@ export function ParcMosaic({
     setAdding(false);
     window.requestAnimationFrame(() => addButton.current?.focus());
   };
-  const ranked = rankParc(vehicles, bundles, now);
-  const names = new Map<Iri, string>(vehicles.map((v) => [v['@id'], vehicleName(v)]));
+  const [showArchived, setShowArchived] = useState(false);
+  const { active, archived } = useMemo(() => splitArchived(vehicles), [vehicles]);
+  const ranked = rankParc(active, bundles, now);
+  const names = new Map<Iri, string>(active.map((v) => [v['@id'], vehicleName(v)]));
   const loaded = ranked.map((v) => bundles[v['@id']]).filter((b): b is VehicleBundle => !!b);
   const dues = parcDues(loaded, now, { excludeHeadline: true });
 
@@ -136,7 +153,7 @@ export function ParcMosaic({
     <main className="w-home">
       <header className="w-home-head">
         <h1 className="w-home-title">{t.workshop.home.title}</h1>
-        <span className="w-data w-muted">{t.workshop.home.count(vehicles.length)}</span>
+        <span className="w-data w-muted">{t.workshop.home.count(active.length)}</span>
         {host && !adding && (
           <button ref={addButton} type="button" className="w-button w-home-add" onClick={() => setAdding(true)}>
             {t.workshop.edit.addVehicle}
@@ -157,9 +174,23 @@ export function ParcMosaic({
               <VehicleRow key={v['@id']} vehicle={v} bundle={bundles[v['@id']]} now={now} href={hrefFor(v['@id'])} index={i} />
             ))}
           </div>
+          {archived.length > 0 && (
+            <section className="w-archived">
+              <button type="button" className="w-archived-toggle" aria-expanded={showArchived} aria-controls="w-archived-list" onClick={() => setShowArchived((s) => !s)}>
+                {t.workshop.home.archivedSection(archived.length)}
+              </button>
+              {showArchived && (
+                <div className="w-vrows" id="w-archived-list">
+                  {archived.map((v, i) => (
+                    <VehicleRow key={v['@id']} vehicle={v} bundle={bundles[v['@id']]} now={now} href={hrefFor(v['@id'])} index={ranked.length + i} />
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
           {dues.length > 0 && (
-          <Module title={t.workshop.parcDues} className="w-home-dues" labelledBy="w-home-dues">
-            <ul className="w-rows">
+            <Module title={t.workshop.parcDues} className="w-home-dues" labelledBy="w-home-dues">
+              <ul className="w-rows">
                 {dues.slice(0, DUES_LIMIT).map(({ vehicleIri, job }) => (
                   <li key={`${vehicleIri}:${job.id}`} className="w-row">
                     <StateMark state={job.state} immediate={job.immediate} />
@@ -171,8 +202,8 @@ export function ParcMosaic({
                   </li>
                 ))}
               </ul>
-            {dues.length > DUES_LIMIT && <p className="w-muted w-more-note">{t.workshop.more.rows(dues.length - DUES_LIMIT)}</p>}
-          </Module>
+              {dues.length > DUES_LIMIT && <p className="w-muted w-more-note">{t.workshop.more.rows(dues.length - DUES_LIMIT)}</p>}
+            </Module>
           )}
           <Canvas className="w-thumbs-canvas" frameloop="always" dpr={[1, 1.5]} gl={{ antialias: true, alpha: true }} style={{ position: 'fixed', inset: 0, pointerEvents: 'none' }}>
             <View.Port />

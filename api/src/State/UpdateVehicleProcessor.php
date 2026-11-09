@@ -74,6 +74,7 @@ final readonly class UpdateVehicleProcessor implements ProcessorInterface
             usageValue: $data->usageValue,
             usageUnit: null !== $data->usageUnit ? UsageUnit::from($data->usageUnit) : null,
             engineVariant: $data->engineVariant,
+            archived: $data->archived,
         );
 
         $error = $outcome->toToolResult(

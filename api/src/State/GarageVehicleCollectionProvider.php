@@ -46,6 +46,6 @@ final readonly class GarageVehicleCollectionProvider implements ProviderInterfac
             $resource->nextDue = [] === $due ? null : $this->dueView->compact($due[0]);
 
             return $resource;
-        }, $this->vehicles->findShared());
+        }, $this->vehicles->findShared(includeArchived: true));
     }
 }

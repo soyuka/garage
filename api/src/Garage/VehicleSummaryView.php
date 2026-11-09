@@ -24,7 +24,7 @@ final readonly class VehicleSummaryView
     }
 
     /**
-     * @return array{make: string, model: string, year: int|null, engineVariant: string|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string}
+     * @return array{make: string, model: string, year: int|null, engineVariant: string|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string, archivedAt: string|null}
      */
     public function toArray(Vehicle $vehicle): array
     {
@@ -45,6 +45,7 @@ final readonly class VehicleSummaryView
             'factCount' => \count($this->factsProjector->forVehicle($vehicle)),
             'openTaskCount' => $vehicle->openTaskCount(),
             'addedAt' => $vehicle->getAddedAt()->format(\DateTimeInterface::ATOM),
+            'archivedAt' => $vehicle->getArchivedAt()?->format(\DateTimeInterface::ATOM),
         ];
     }
 }

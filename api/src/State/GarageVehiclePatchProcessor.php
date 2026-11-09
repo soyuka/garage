@@ -67,6 +67,12 @@ final readonly class GarageVehiclePatchProcessor implements ProcessorInterface
         $vehicle->setVehicleType($vehicleType);
         $vehicle->setPlate($data->plate);
 
+        if ($data->archived) {
+            $vehicle->archive(new \DateTimeImmutable());
+        } else {
+            $vehicle->unarchive();
+        }
+
         $this->em->flush();
         $this->publisher->publishVehicle($vehicle);
 
