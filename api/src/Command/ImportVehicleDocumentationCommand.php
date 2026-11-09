@@ -43,8 +43,8 @@ final class ImportVehicleDocumentationCommand extends Command
         $this
             ->addArgument('vehicle-id', InputArgument::REQUIRED, 'The vehicle ULID.')
             ->addArgument('path', InputArgument::REQUIRED | InputArgument::IS_ARRAY, 'One or more files to import.')
-            ->addOption('kind', null, InputOption::VALUE_REQUIRED, implode('|', array_column(VehicleDocumentKind::cases(), 'value')), VehicleDocumentKind::Manual->value)
-            ->addOption('source', null, InputOption::VALUE_REQUIRED, implode('|', array_column(VehicleDocumentSource::cases(), 'value')), VehicleDocumentSource::Dialogys->value)
+            ->addOption('kind', null, InputOption::VALUE_REQUIRED, implode('|', array_map(static fn (VehicleDocumentKind $kind): string => $kind->value, VehicleDocumentKind::cases())), VehicleDocumentKind::Manual->value)
+            ->addOption('source', null, InputOption::VALUE_REQUIRED, implode('|', array_map(static fn (VehicleDocumentSource $source): string => $source->value, VehicleDocumentSource::cases())), VehicleDocumentSource::Dialogys->value)
             ->addOption('source-ref', null, InputOption::VALUE_REQUIRED, 'Citation label, e.g. "MR 361 — Transmission".')
             ->addOption('title', null, InputOption::VALUE_REQUIRED, 'Defaults to the filename.')
             ->addOption('planned-task', null, InputOption::VALUE_REQUIRED, 'Planned task id (same vehicle) a quote belongs to.');
@@ -72,9 +72,10 @@ final class ImportVehicleDocumentationCommand extends Command
         $this->owner->set($vehicle->getOwner());
 
         $status = Command::SUCCESS;
-        foreach ((array) $input->getArgument('path') as $path) {
-            if (!is_file($path)) {
-                $io->error(\sprintf('%s: not a file.', $path));
+        $paths = $input->getArgument('path');
+        foreach (\is_array($paths) ? $paths : [] as $path) {
+            if (!\is_string($path) || !is_file($path)) {
+                $io->error(\sprintf('%s: not a file.', \is_string($path) ? $path : get_debug_type($path)));
                 $status = Command::FAILURE;
                 continue;
             }
@@ -86,9 +87,9 @@ final class ImportVehicleDocumentationCommand extends Command
                     basename($path),
                     $kind,
                     $source,
-                    $input->getOption('title'),
-                    $input->getOption('source-ref'),
-                    $input->getOption('planned-task'),
+                    self::stringOption($input, 'title'),
+                    self::stringOption($input, 'source-ref'),
+                    self::stringOption($input, 'planned-task'),
                 );
             } catch (InvalidVehicleDocumentException $e) {
                 $io->error(\sprintf('%s: %s', $path, $e->getMessage()));
@@ -100,5 +101,12 @@ final class ImportVehicleDocumentationCommand extends Command
         }
 
         return $status;
+    }
+
+    private static function stringOption(InputInterface $input, string $name): ?string
+    {
+        $value = $input->getOption($name);
+
+        return \is_string($value) ? $value : null;
     }
 }

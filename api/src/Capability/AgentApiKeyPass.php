@@ -29,7 +29,7 @@ final readonly class AgentApiKeyPass implements CompilerPassInterface
         $platforms = [];
         $platformId = null;
         foreach ($container->getExtensionConfig('ai') as $config) {
-            $platforms = array_replace_recursive($platforms, $config['platform'] ?? []);
+            $platforms = array_replace_recursive($platforms, \is_array($config['platform'] ?? null) ? $config['platform'] : []);
             $platformId = $config['agent'][$this->agent]['platform'] ?? $platformId;
         }
 
@@ -42,12 +42,13 @@ final readonly class AgentApiKeyPass implements CompilerPassInterface
             throw new LogicException(\sprintf('The ai agent "%s" runs on "%s", which is not a platform configured under ai.platform.', $this->agent, $platformId));
         }
 
-        $container->setParameter('app.agent.api_key', $platform['api_key'] ?? null);
+        $apiKey = $platform['api_key'] ?? null;
+        $container->setParameter('app.agent.api_key', \is_string($apiKey) ? $apiKey : null);
     }
 
     /**
-     * @param array<string, mixed> $platforms
-     * @param list<string>         $path
+     * @param array<array-key, mixed> $platforms
+     * @param list<string>            $path
      */
     private static function lookup(array $platforms, array $path): mixed
     {

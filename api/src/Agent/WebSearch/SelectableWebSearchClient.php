@@ -29,6 +29,11 @@ final readonly class SelectableWebSearchClient implements WebSearchClient
 
     private function client(): WebSearchClient
     {
-        return $this->clients->get($this->backend->value);
+        $client = $this->clients->get($this->backend->value);
+        if (!$client instanceof WebSearchClient) {
+            throw new \LogicException(\sprintf('The "%s" web search backend is not a WebSearchClient.', $this->backend->value));
+        }
+
+        return $client;
     }
 }

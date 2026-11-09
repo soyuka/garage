@@ -42,6 +42,9 @@ final class BackfillPlannedPartIdsCommand extends Command
         $tasksTouched = 0;
         $linesStamped = 0;
         foreach ($collection->find([], ['typeMap' => self::ARRAY_TYPE_MAP]) as $doc) {
+            if (!\is_array($doc)) {
+                continue;
+            }
             $parts = $doc['parts'] ?? [];
             if (!\is_array($parts) || [] === $parts) {
                 continue;

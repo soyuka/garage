@@ -70,13 +70,13 @@ final class PlannedTaskPart
     public ?string $supplier = null;
 
     /**
-     * @param array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string} $part
+     * @param array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string} $part
      */
     public static function fromArray(array $part, Ulid $taskId): self
     {
         $resource = new self();
         $resource->id = $part['id'];
-        $resource->task = '/garage/planned-tasks/'.$taskId;
+        $resource->task = '/garage/planned-tasks/'.(string) $taskId;
         $resource->ref = $part['ref'];
         $resource->label = $part['label'] ?? null;
         $resource->brand = $part['brand'] ?? null;

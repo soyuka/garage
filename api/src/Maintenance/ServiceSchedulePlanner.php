@@ -55,7 +55,7 @@ final readonly class ServiceSchedulePlanner
             return SetScheduleOutcome::notFound($resolution->vehicleId);
         }
 
-        $vehicle = $resolution->vehicle;
+        $vehicle = $resolution->resolvedVehicle();
         foreach ($intervals as $interval) {
             $vehicle->setServiceInterval($interval);
         }

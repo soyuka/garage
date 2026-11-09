@@ -60,7 +60,7 @@ final class Make
      * @param array{makeId: int|string, makeName: string} $row verified live 2026-06-12
      */
     /**
-     * @param array<string, mixed> $row
+     * @param array<array-key, mixed> $row
      */
     public static function fromApi(array $row): self
     {

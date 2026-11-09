@@ -80,6 +80,7 @@ final readonly class VehicleDocumentRecorder
         try {
             $key = $this->storage->store((string) $vehicle->getId(), $id, $stream);
         } finally {
+            // @mago-expect analysis:redundant-type-comparison,analysis:redundant-condition the storage adapter may already have closed the stream
             if (\is_resource($stream)) {
                 fclose($stream);
             }

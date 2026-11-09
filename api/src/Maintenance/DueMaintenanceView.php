@@ -7,6 +7,7 @@ namespace App\Maintenance;
 use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\GarageVehicle;
 use App\Entity\Vehicle;
+use App\Garage\ResourceIri;
 
 /**
  * Flattens the forecast into the arrays the list_due_maintenance tool surfaces. A due item
@@ -26,7 +27,7 @@ final class DueMaintenanceView
     public function identity(Vehicle $vehicle): array
     {
         return [
-            '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
+            '@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle)),
             'make' => $vehicle->getMake(),
             'model' => $vehicle->getModel(),
             'year' => $vehicle->getYear(),

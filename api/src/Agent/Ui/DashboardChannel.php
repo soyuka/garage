@@ -36,6 +36,7 @@ final class DashboardChannel implements ResetInterface
         #[Autowire('%env(DEFAULT_URI)%')]
         private readonly string $baseUri,
         #[Autowire('%kernel.secret%')]
+        #[\SensitiveParameter]
         private readonly string $secret,
     ) {
     }

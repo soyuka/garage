@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\GetMaintenanceHistoryInput;
+use App\Garage\ResourceIri;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
@@ -82,7 +83,7 @@ final readonly class GetMaintenanceHistoryProcessor implements ProcessorInterfac
         }
 
         if ([] !== $records) {
-            $identity = ['@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($records[0]->getVehicle()))] + $identity;
+            $identity = ['@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($records[0]->getVehicle()))] + $identity;
         }
 
         return ToolResult::of([

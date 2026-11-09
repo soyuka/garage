@@ -65,6 +65,7 @@ final readonly class ShowFactProcessor implements ProcessorInterface
                 $key,
                 self::text($node, 'label') ?? $key,
                 $value,
+                // @mago-expect analysis:mixed-operand model-supplied tool argument: any truthy flag marks the fact verified, as before
                 (bool) self::field($node, 'verified'),
                 self::text($node, 'info'),
             );
@@ -84,6 +85,6 @@ final readonly class ShowFactProcessor implements ProcessorInterface
     /** @param ShowFactNodeInput|array<string, mixed> $node */
     private static function field(ShowFactNodeInput|array $node, string $field): mixed
     {
-        return \is_array($node) ? ($node[$field] ?? null) : ($node->{$field} ?? null);
+        return \is_array($node) ? ($node[$field] ?? null) : (get_object_vars($node)[$field] ?? null);
     }
 }

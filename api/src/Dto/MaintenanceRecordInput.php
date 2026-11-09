@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use App\Entity\MaintenanceRecord;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -14,6 +15,8 @@ use Symfony\Component\Validator\Constraints as Assert;
  * A visit carries one or more {@see $items} (each a service type with the parts it consumed). The
  * legacy single-{@see $type}/{@see $partsUsed} pair is still accepted for a one-service log; either
  * shape resolves to the canonical item list via {@see resolveItems()}.
+ *
+ * @phpstan-import-type ItemWire from MaintenanceRecord
  */
 final class MaintenanceRecordInput
 {
@@ -88,24 +91,28 @@ final class MaintenanceRecordInput
      * Part prices stay in major units (the `price` key) here — {@see MaintenanceRecord::normaliseItems}
      * is the single chokepoint that converts them to the stored `priceCents`, shared with the MCP path.
      *
-     * @return list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}>
+     * @return list<ItemWire>
      */
     public function resolveItems(): array
     {
-        $raw = [] !== $this->items
-            ? $this->items
-            : (null !== $this->type ? [['type' => $this->type, 'parts' => $this->partsUsed]] : []);
+        $raw = match (true) {
+            [] !== $this->items => $this->items,
+            null !== $this->type => [['type' => $this->type, 'parts' => $this->partsUsed]],
+            default => [],
+        };
 
         $resolved = [];
         foreach ($raw as $item) {
+            // @mago-expect analysis:redundant-cast deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee
             $type = trim((string) ($item['type'] ?? ''));
             if ('' === $type) {
                 continue;
             }
 
-            // @phpstan-ignore arrayValues.list (deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee)
             $entry = ['type' => $type, 'parts' => array_values($item['parts'] ?? [])];
+            // @mago-expect analysis:redundant-cast deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee
             if (isset($item['label']) && '' !== trim((string) $item['label'])) {
+                // @mago-expect analysis:redundant-cast deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee
                 $entry['label'] = trim((string) $item['label']);
             }
             $resolved[] = $entry;

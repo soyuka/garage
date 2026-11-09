@@ -41,6 +41,7 @@ final readonly class PlannedTaskCreateProcessor implements ProcessorInterface
         $targetValue = $data->target['value'] ?? null;
         $targetUnit = null;
         if (isset($data->target['unit'])) {
+            // @mago-expect analysis:redundant-cast deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee
             $targetUnit = UsageUnit::tryFrom((string) $data->target['unit']);
             if (null === $targetUnit) {
                 throw new UnprocessableEntityHttpException(\sprintf('Unknown target unit "%s"; expected km, mi or h.', $data->target['unit']));
@@ -71,7 +72,7 @@ final readonly class PlannedTaskCreateProcessor implements ProcessorInterface
             throw new NotFoundHttpException('No vehicle at this IRI.');
         }
 
-        $task = $outcome->task;
+        $task = $outcome->plannedTask();
         $this->publisher->publishVehicle($task->getVehicle());
 
         return PlannedTask::fromEntity($task);

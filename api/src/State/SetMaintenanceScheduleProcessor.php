@@ -93,7 +93,7 @@ final readonly class SetMaintenanceScheduleProcessor implements ProcessorInterfa
             return $error;
         }
 
-        return $this->published($outcome->vehicle, $outcome->intervals);
+        return $this->published($outcome->scheduledVehicle(), $outcome->intervals);
     }
 
     /**
@@ -129,14 +129,24 @@ final readonly class SetMaintenanceScheduleProcessor implements ProcessorInterfa
             type: (string) $item['type'],
             action: MaintenanceAction::from((string) $item['action']),
             source: $data->source,
-            component: $item['component'] ?? null,
-            everyUsageValue: $item['everyUsageValue'] ?? null,
+            component: self::optionalString($item['component'] ?? null),
+            everyUsageValue: self::optionalInt($item['everyUsageValue'] ?? null),
             everyUsageUnit: $unit,
-            everyMonths: $item['everyMonths'] ?? null,
-            firstUsageValue: $item['firstUsageValue'] ?? null,
-            url: $item['url'] ?? null,
+            everyMonths: self::optionalInt($item['everyMonths'] ?? null),
+            firstUsageValue: self::optionalInt($item['firstUsageValue'] ?? null),
+            url: self::optionalString($item['url'] ?? null),
             addedBy: $data->addedBy,
         );
+    }
+
+    private static function optionalString(mixed $value): ?string
+    {
+        return \is_string($value) ? $value : null;
+    }
+
+    private static function optionalInt(mixed $value): ?int
+    {
+        return \is_int($value) ? $value : null;
     }
 
     /**
@@ -149,7 +159,7 @@ final readonly class SetMaintenanceScheduleProcessor implements ProcessorInterfa
 
         return ToolResult::of([
             'status' => 'ok',
-            'vehicle' => '/garage/vehicles/'.$vehicle->getId(),
+            'vehicle' => '/garage/vehicles/'.(string) $vehicle->getId(),
             'count' => \count($intervals),
             'schedule' => $this->scheduleView->toArray($intervals),
         ]);

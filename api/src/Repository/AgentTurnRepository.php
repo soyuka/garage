@@ -27,15 +27,11 @@ final class AgentTurnRepository extends ServiceDocumentRepository
      */
     public function findForOwner(string $owner, int $limit = 50): array
     {
-        return array_values(
-            $this->createQueryBuilder()
+        return QueryResults::listOf(AgentTurn::class, $this->createQueryBuilder()
                 ->field('owner')->equals($owner)
                 ->sort('startedAt', 'desc')
                 ->limit($limit)
-                ->getQuery()
-                ->getIterator()
-                ->toArray()
-        );
+                ->getQuery()->getIterator());
     }
 
     /**
@@ -44,10 +40,10 @@ final class AgentTurnRepository extends ServiceDocumentRepository
      */
     public function findOneForOwner(Ulid $id, string $owner): ?AgentTurn
     {
-        return $this->createQueryBuilder()
+        return QueryResults::oneOf(AgentTurn::class, $this->createQueryBuilder()
             ->field('id')->equals((string) $id)
             ->field('owner')->equals($owner)
             ->getQuery()
-            ->getSingleResult();
+            ->getSingleResult());
     }
 }

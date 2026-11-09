@@ -10,6 +10,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageVehicle;
 use App\Dto\ListPlannedMaintenanceInput;
 use App\Entity\Vehicle;
+use App\Garage\ResourceIri;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
@@ -57,9 +58,8 @@ final readonly class ListPlannedMaintenanceProcessor implements ProcessorInterfa
             return $this->okResult($vehicle);
         }
 
-        $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
-        if (null !== $guard) {
-            return $guard;
+        if (null === $data->make || null === $data->model) {
+            return $this->iriResolver->missingIdentity();
         }
 
         $vehicle = $this->vehicles->findByIdentity($data->make, $data->model, VehicleType::from($data->vehicleType), $data->year);
@@ -78,7 +78,7 @@ final readonly class ListPlannedMaintenanceProcessor implements ProcessorInterfa
         return ToolResult::of([
             'status' => 'ok',
             'vehicle' => [
-                '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
+                '@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle)),
                 'make' => $vehicle->getMake(),
                 'model' => $vehicle->getModel(),
                 'year' => $vehicle->getYear(),

@@ -98,7 +98,7 @@ final class PlannedTask
     public ?array $target = null;
     #[Assert\Date]
     public ?string $dueDate = null;
-    /** @var list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
+    /** @var list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}> */
     #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list. A PATCH MERGES the supplied parts in (dedup by ref); it never replaces or clears the list. A ref-less fluid line carries a read-only derived `spec` (which oil, what quantity) projected from the vehicle facts.')]
     public array $parts = [];
     #[ApiProperty(description: 'Lifecycle: "open" | "done" | "dismissed". Set "done" to tick the task off.')]
@@ -111,7 +111,7 @@ final class PlannedTask
     public ?string $completedAt = null;
 
     /**
-     * @param list<array<string, mixed>>|null $parts derived (fluid-enriched) parts; defaults to the stored parts
+     * @param list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}>|null $parts derived (fluid-enriched) parts; defaults to the stored parts
      */
     public static function fromEntity(PlannedMaintenance $task, ?array $parts = null): self
     {
@@ -119,13 +119,14 @@ final class PlannedTask
         $resource->id = $task->getId();
         $resource->type = $task->getType();
         $resource->label = $task->getLabel();
-        $resource->target = null !== $task->getTargetUsageValue()
-            ? ['value' => $task->getTargetUsageValue(), 'unit' => $task->getTargetUsageUnit()?->value]
+        $targetValue = $task->getTargetUsageValue();
+        $resource->target = null !== $targetValue
+            ? ['value' => $targetValue, 'unit' => $task->getTargetUsageUnit()?->value]
             : null;
         $resource->dueDate = $task->getDueDate()?->format('Y-m-d');
         $resource->parts = $parts ?? $task->getParts();
         $resource->status = $task->getStatus()->value;
-        $resource->vehicle = '/garage/vehicles/'.$task->getVehicle()->getId();
+        $resource->vehicle = '/garage/vehicles/'.(string) $task->getVehicle()->getId();
         $resource->createdAt = $task->getCreatedAt()->format(\DateTimeInterface::ATOM);
         $resource->completedAt = $task->getCompletedAt()?->format(\DateTimeInterface::ATOM);
 

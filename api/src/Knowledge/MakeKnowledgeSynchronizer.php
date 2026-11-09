@@ -32,7 +32,9 @@ final readonly class MakeKnowledgeSynchronizer
             $existing[self::key($document->getMakes(), $document->getTopic())] = $document;
         }
 
-        $created = $updated = $unchanged = 0;
+        $created = 0;
+        $updated = 0;
+        $unchanged = 0;
         foreach ($wanted as $key => $entry) {
             $document = $existing[$key] ?? null;
             unset($existing[$key]);
@@ -76,7 +78,8 @@ final readonly class MakeKnowledgeSynchronizer
                 throw new \InvalidArgumentException(\sprintf('%s: %s', basename($file), $e->getMessage()), 0, $e);
             }
 
-            foreach ($parsed['entries'] ?? [] as $index => $raw) {
+            $rawEntries = \is_array($parsed) && \is_array($parsed['entries'] ?? null) ? array_values($parsed['entries']) : [];
+            foreach ($rawEntries as $index => $raw) {
                 $entry = $this->validate($raw, \sprintf('%s entry #%d', basename($file), $index + 1));
                 $key = self::key($entry['makes'], $entry['topic']);
                 if (isset($entries[$key])) {
@@ -108,18 +111,20 @@ final readonly class MakeKnowledgeSynchronizer
         }
 
         $sources = [];
-        foreach ($raw['sources'] ?? [] as $source) {
+        foreach (\is_array($raw['sources'] ?? null) ? $raw['sources'] : [] as $source) {
             if (!\is_array($source) || !\is_string($source['url'] ?? null) || '' === $source['url']) {
                 throw new \InvalidArgumentException(\sprintf('%s: every source needs a url.', $where));
             }
+            // @mago-expect analysis:mixed-operand a YAML seed flag: any truthy scalar counts, as before
             $sources[] = new MakeKnowledgeSource($source['url'], (string) ($source['label'] ?? $source['url']), (bool) ($source['verified'] ?? false));
         }
 
         return [
-            'makes' => MakeKnowledge::normalizeMakes(array_map('strval', $raw['makes'])),
+            'makes' => MakeKnowledge::normalizeMakes(array_values(array_map('strval', $raw['makes']))),
             'topic' => $raw['topic'],
             'title' => $raw['title'],
             'body' => rtrim($raw['body']),
+            // @mago-expect analysis:mixed-operand a YAML seed flag: any truthy scalar counts, as before
             'verified' => (bool) ($raw['verified'] ?? false),
             'sources' => $sources,
         ];

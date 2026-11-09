@@ -36,6 +36,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
 
     public function __construct(
         private HttpClientInterface $http,
+        #[\SensitiveParameter]
         private string $apiKey,
         private string $voiceId,
         private string $model,
@@ -110,7 +111,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
         }
 
         $matched = [];
-        foreach ($voices as $voice) {
+        foreach (\is_array($voices) ? $voices : [] as $voice) {
             $id = $voice['voice_id'] ?? null;
             $name = $voice['name'] ?? null;
             if (!\is_string($id) || '' === $id || !\is_string($name) || '' === $name) {

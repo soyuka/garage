@@ -53,8 +53,14 @@ final class MigrateCacheToMongoCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $dryRun = (bool) $input->getOption('dry-run');
-        $ignore = array_flip((array) $input->getOption('ignore-namespace'));
+        $dryRun = true === $input->getOption('dry-run');
+        $ignore = [];
+        $ignoreOption = $input->getOption('ignore-namespace');
+        foreach (\is_array($ignoreOption) ? $ignoreOption : [] as $namespace) {
+            if (\is_string($namespace)) {
+                $ignore[$namespace] = true;
+            }
+        }
 
         $poolOf = [];
         $stats = [];
@@ -70,7 +76,9 @@ final class MigrateCacheToMongoCommand extends Command
         $unknown = [];
         $ignored = [];
 
-        foreach ($this->db->iterateAssociative('SELECT item_id, item_data, item_lifetime, item_time FROM cache_items ORDER BY item_id') as $row) {
+        /** @var \Traversable<int, array{item_id: string, item_data: string|resource, item_lifetime: int|string|null, item_time: int|string}> $rows the cache_items columns Symfony's PdoAdapter writes */
+        $rows = $this->db->iterateAssociative('SELECT item_id, item_data, item_lifetime, item_time FROM cache_items ORDER BY item_id');
+        foreach ($rows as $row) {
             [$namespace, $key] = str_contains($row['item_id'], ':') ? explode(':', $row['item_id'], 2) : ['', $row['item_id']];
             $pool = $poolOf[$namespace] ?? null;
             if (null === $pool) {
@@ -84,6 +92,9 @@ final class MigrateCacheToMongoCommand extends Command
 
             try {
                 $data = \is_resource($row['item_data']) ? stream_get_contents($row['item_data']) : $row['item_data'];
+                if (!\is_string($data)) {
+                    throw new \UnexpectedValueException('item_data is not readable');
+                }
                 $value = $marshaller->unmarshall($data);
             } catch (\Throwable $e) {
                 $errors[] = \sprintf('%s: cannot unserialize (%s)', $row['item_id'], $e->getMessage());
@@ -178,7 +189,8 @@ final class MigrateCacheToMongoCommand extends Command
     private function roundTrips(array $value): ?string
     {
         $payload = BsonPayload::encode($value);
-        $native = null === $payload['native'] ? null : Document::fromPHP(['v' => $payload['native']])->toPHP(self::TYPE_MAP)['v'];
+        $decoded = null === $payload['native'] ? null : Document::fromPHP(['v' => $payload['native']])->toPHP(self::TYPE_MAP);
+        $native = \is_array($decoded) && \is_array($decoded['v'] ?? null) ? $decoded['v'] : null;
 
         return BsonPayload::decode($native, $payload['json']) === $value ? null : 'does not round-trip through BSON unchanged';
     }

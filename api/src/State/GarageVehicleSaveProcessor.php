@@ -82,8 +82,7 @@ final readonly class GarageVehicleSaveProcessor implements ProcessorInterface
             ], Response::HTTP_CONFLICT);
         }
 
-        $vehicle = $resolution->vehicle;
-        \assert(null !== $vehicle);
+        $vehicle = $resolution->resolvedVehicle();
         $this->documentManager->flush();
         $this->publisher->publishVehicle($vehicle, $resolution->created ? 'created' : 'updated');
 
@@ -134,7 +133,10 @@ final readonly class GarageVehicleSaveProcessor implements ProcessorInterface
      */
     private function buildCodeFacts(?string $code, string $make): array
     {
-        $decoder = null === $code ? null : $this->decoders->forMake(MakeName::normalize($make));
+        if (null === $code) {
+            return [];
+        }
+        $decoder = $this->decoders->forMake(MakeName::normalize($make));
         if (null === $decoder) {
             return [];
         }

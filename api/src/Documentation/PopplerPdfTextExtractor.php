@@ -39,6 +39,8 @@ final class PopplerPdfTextExtractor implements PdfTextExtractor
             return null;
         }
 
-        return end($matches[0]);
+        $last = end($matches[0]);
+
+        return false === $last ? null : $last;
     }
 }

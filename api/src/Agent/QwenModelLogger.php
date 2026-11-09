@@ -33,8 +33,9 @@ final readonly class QwenModelLogger implements PlatformInterface
     {
         $result = $this->inner->invoke($model, $input, $options);
 
+        // @mago-expect analysis:mixed-operand platform options are untyped; any truthy stream flag streams, as the inner platform reads it
         $stream = (bool) ($options['stream'] ?? false);
-        $this->journal->recordModel('qwen', $model instanceof Model ? $model->getName() : (string) $model, $stream);
+        $this->journal->recordModel('qwen', $model instanceof Model ? $model->getName() : $model, $stream);
 
         return $result;
     }

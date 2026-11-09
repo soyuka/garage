@@ -20,7 +20,7 @@ final class MotulRecommendationParser
     private const MAX_DEPTH = 24;
 
     /**
-     * @param array<string, mixed> $nextData decoded __NEXT_DATA__
+     * @param array<array-key, mixed> $nextData decoded __NEXT_DATA__
      *
      * @return list<MotulCategory>
      */
@@ -33,7 +33,7 @@ final class MotulRecommendationParser
 
         $out = [];
         foreach ($pool as $node) {
-            if (!\is_array($node) || array_diff(self::CATEGORY_KEYS, array_keys($node))) {
+            if (!\is_array($node) || [] !== array_diff(self::CATEGORY_KEYS, array_keys($node))) {
                 continue;
             }
 
@@ -49,14 +49,14 @@ final class MotulRecommendationParser
     }
 
     /**
-     * @param array<string, mixed> $cat a fully-resolved category node
+     * @param array<array-key, mixed> $cat a fully-resolved category node
      */
     private function toCategory(array $cat): MotulCategory
     {
         $conditions = [];
         $aceaStandards = [];
 
-        foreach ($cat['recommendations'] ?? [] as $rec) {
+        foreach (\is_array($cat['recommendations'] ?? null) ? $cat['recommendations'] : [] as $rec) {
             if (!\is_array($rec)) {
                 continue;
             }
@@ -65,7 +65,7 @@ final class MotulRecommendationParser
             $viscosities = [];
             $interval = null;
 
-            foreach ($rec['products'] ?? [] as $product) {
+            foreach (\is_array($rec['products'] ?? null) ? $rec['products'] : [] as $product) {
                 if (!\is_array($product)) {
                     continue;
                 }
@@ -87,23 +87,27 @@ final class MotulRecommendationParser
             }
 
             $conditions[] = new MotulConditionGrade(
-                usage: (string) ($this->scalar($cond['usage'] ?? null, 'usage') ?? ''),
-                mileage: (string) ($this->scalar($cond['mileage'] ?? null, 'mileage') ?? ''),
+                usage: $this->scalar($cond['usage'] ?? null, 'usage') ?? '',
+                mileage: $this->scalar($cond['mileage'] ?? null, 'mileage') ?? '',
                 interval: $interval,
                 viscosities: array_keys($viscosities),
             );
         }
 
         $capacities = [];
-        foreach ($cat['capacities'] ?? [] as $cap) {
-            $label = \is_array($cap) ? $this->scalar($cap['label'] ?? null, 'label') : (\is_string($cap) ? $cap : null);
+        foreach (\is_array($cat['capacities'] ?? null) ? $cat['capacities'] : [] as $cap) {
+            $label = match (true) {
+                \is_array($cap) => $this->scalar($cap['label'] ?? null, 'label'),
+                \is_string($cap) => $cap,
+                default => null,
+            };
             if (null !== $label && '' !== $label) {
                 $capacities[] = $label;
             }
         }
 
         return new MotulCategory(
-            name: (string) ($this->scalar($cat['category']['name'] ?? null, 'name') ?? ''),
+            name: $this->scalar($cat['category']['name'] ?? null, 'name') ?? '',
             capacities: $capacities,
             aceaStandards: array_keys($aceaStandards),
             conditions: $conditions,
@@ -111,7 +115,7 @@ final class MotulRecommendationParser
     }
 
     /**
-     * @param array<string, mixed> $product
+     * @param array<array-key, mixed> $product
      */
     private function productInterval(array $product): ?string
     {
@@ -152,7 +156,7 @@ final class MotulRecommendationParser
     }
 
     /**
-     * @param list<mixed> $pool
+     * @param array<array-key, mixed> $pool
      */
     private function resolve(array $pool, mixed $ref, int $depth = 0): mixed
     {

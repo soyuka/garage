@@ -78,7 +78,7 @@ class GarageResolver
             return UpdateVehicleOutcome::notFound($resolution->vehicleId);
         }
 
-        $vehicle = $resolution->vehicle;
+        $vehicle = $resolution->resolvedVehicle();
 
         if (null !== $usageValue && null !== $usageUnit) {
             $vehicle->setUsage($usageValue, $usageUnit);

@@ -46,7 +46,7 @@ class VehicleRepository extends ServiceDocumentRepository
             $qb->field('year')->equals($year);
         }
 
-        return $qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getSingleResult();
+        return QueryResults::oneOf(Vehicle::class, $qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getSingleResult());
     }
 
     /**
@@ -79,7 +79,7 @@ class VehicleRepository extends ServiceDocumentRepository
 
         $qb->addAnd($qb->expr()->addOr(...$match));
 
-        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getIterator()->toArray());
+        return QueryResults::listOf(Vehicle::class, $qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getIterator());
     }
 
     /**
@@ -91,10 +91,10 @@ class VehicleRepository extends ServiceDocumentRepository
      */
     public function findByKType(int $kType): array
     {
-        return array_values($this->baseQuery()
+        return QueryResults::listOf(Vehicle::class, $this->baseQuery()
             ->field('kType')->equals($kType)
             ->sort('addedAt', 'desc')
-            ->getQuery()->getIterator()->toArray());
+            ->getQuery()->getIterator());
     }
 
     /**
@@ -116,7 +116,7 @@ class VehicleRepository extends ServiceDocumentRepository
             $qb->limit($limit)->skip(max(0, $offset));
         }
 
-        return array_values($qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getIterator()->toArray());
+        return QueryResults::listOf(Vehicle::class, $qb->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])->getIterator());
     }
 
     /**
@@ -125,10 +125,10 @@ class VehicleRepository extends ServiceDocumentRepository
      */
     public function countShared(?string $make = null, ?string $model = null, ?VehicleType $vehicleType = null, bool $includeArchived = false): int
     {
-        return $this->sharedQuery($make, $model, $vehicleType, $includeArchived)
+        return QueryResults::count($this->sharedQuery($make, $model, $vehicleType, $includeArchived)
             ->count()
             ->getQuery(['collation' => Vehicle::IDENTITY_COLLATION])
-            ->execute();
+            ->execute());
     }
 
     /**
@@ -157,10 +157,10 @@ class VehicleRepository extends ServiceDocumentRepository
             $qb->field('vehicleType')->equals($vehicleType->value);
         }
 
-        return array_values($qb
+        return QueryResults::listOf(Vehicle::class, $qb
             ->sort(['updatedAt' => 'desc', 'addedAt' => 'desc'])
             ->limit(max(1, $limit))
-            ->getQuery()->getIterator()->toArray());
+            ->getQuery()->getIterator());
     }
 
     private function sharedQuery(?string $make, ?string $model, ?VehicleType $vehicleType, bool $includeArchived): Builder
@@ -193,7 +193,7 @@ class VehicleRepository extends ServiceDocumentRepository
      */
     public function findOwned(Ulid|string $id): ?Vehicle
     {
-        return $this->baseQuery()->field('id')->equals((string) $id)->getQuery()->getSingleResult();
+        return QueryResults::oneOf(Vehicle::class, $this->baseQuery()->field('id')->equals((string) $id)->getQuery()->getSingleResult());
     }
 
     /**
@@ -208,8 +208,8 @@ class VehicleRepository extends ServiceDocumentRepository
             return null;
         }
 
-        $plated = $this->baseQuery()->field('plate')->notEqual(null)->sort('addedAt', 'asc')->getQuery()->execute();
-        foreach ($plated as $vehicle) {
+        $plated = $this->baseQuery()->field('plate')->notEqual(null)->sort('addedAt', 'asc')->getQuery()->getIterator();
+        foreach (QueryResults::listOf(Vehicle::class, $plated) as $vehicle) {
             if (self::normalizePlate((string) $vehicle->getPlate()) === $wanted) {
                 return $vehicle;
             }

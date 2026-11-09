@@ -67,7 +67,7 @@ final class Article
      * @param array<string, mixed> $row
      */
     /**
-     * @param array<string, mixed> $row
+     * @param array<array-key, mixed> $row
      */
     public static function fromApi(array $row): self
     {

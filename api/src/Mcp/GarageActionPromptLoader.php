@@ -107,11 +107,11 @@ final class GarageActionPromptLoader implements LoaderInterface
     private static function partsForService(?string $plate = null, ?string $make = null, ?string $model = null, ?string $service = null): array
     {
         $svc = null !== $service && '' !== $service ? $service : 'oil_change';
-        $idLine = null !== $plate && '' !== $plate
-            ? \sprintf('Resolve the vehicle from plate "%s" with lookup_plate to get its carId.', $plate)
-            : (null !== $make && '' !== $make
-                ? \sprintf('The vehicle is %s %s; get its carId via lookup_plate (if you have a plate) or list_cars.', $make, $model ?? '')
-                : 'First ask me for the vehicle (plate, or make+model).');
+        $idLine = match (true) {
+            null !== $plate && '' !== $plate => \sprintf('Resolve the vehicle from plate "%s" with lookup_plate to get its carId.', $plate),
+            null !== $make && '' !== $make => \sprintf('The vehicle is %s %s; get its carId via lookup_plate (if you have a plate) or list_cars.', $make, $model ?? ''),
+            default => 'First ask me for the vehicle (plate, or make+model).',
+        };
 
         return self::user(<<<PROMPT
             Prepare the parts and fluids for a {$svc} on my vehicle. Run every step:

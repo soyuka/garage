@@ -79,7 +79,7 @@ final readonly class VehicleWriteResolver
         if (!$confirmNew) {
             $candidates = $this->vehicles->findCandidates((string) $make, (string) $model, $vehicleType, $carId, null, $vin);
             if (null !== $plate) {
-                $candidates = array_values(array_filter($candidates, static fn (Vehicle $v): bool => null === $v->getPlate() || '' === trim($v->getPlate())));
+                $candidates = array_values(array_filter($candidates, static fn (Vehicle $v): bool => self::blank($v->getPlate())));
             }
             if ([] !== $candidates) {
                 return VehicleResolution::ambiguous($candidates);
@@ -99,12 +99,17 @@ final readonly class VehicleWriteResolver
         if (null !== $carId && null === $vehicle->getKType()) {
             $vehicle->setKType($carId);
         }
-        if (null !== $plate && (null === $vehicle->getPlate() || '' === trim($vehicle->getPlate()))) {
+        if (null !== $plate && self::blank($vehicle->getPlate())) {
             $vehicle->setPlate($plate);
         }
-        if (null !== $vin && (null === $vehicle->getVin() || '' === trim($vehicle->getVin()))) {
+        if (null !== $vin && self::blank($vehicle->getVin())) {
             $vehicle->setVin($vin);
         }
+    }
+
+    private static function blank(?string $value): bool
+    {
+        return null === $value || '' === trim($value);
     }
 
     public function resolveForWrite(
@@ -134,6 +139,10 @@ final readonly class VehicleWriteResolver
             $vehicle->touch();
 
             return VehicleResolution::resolved($vehicle);
+        }
+
+        if (null === $make || null === $model) {
+            throw new \InvalidArgumentException('A vehicle write without a vehicle id needs make and model.');
         }
 
         $vehicle = $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);

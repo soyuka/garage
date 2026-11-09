@@ -6,6 +6,7 @@ namespace App\Agent;
 
 use App\Entity\MakeKnowledge;
 use App\Entity\PlannedMaintenance;
+use App\Entity\PlannedPart;
 use App\Entity\Vehicle;
 use App\Garage\GarageResolver;
 use App\I18n\Locale;
@@ -25,6 +26,8 @@ use Symfony\Component\Uid\Ulid;
  *  - its KNOWN facts, flagged NOT to re-search — kills the redundant web_search;
  *  - its OPEN tasks WITH their ids — so the agent references a task by id to close it via
  *    log_maintenance, or attaches a spec to the right item.
+ *
+ * @phpstan-import-type PartArray from PlannedPart
  */
 final readonly class TurnContextBuilder
 {
@@ -110,18 +113,22 @@ final readonly class TurnContextBuilder
         if (null !== $vehicle->getYear()) {
             $parts[] = (string) $vehicle->getYear();
         }
-        if (null !== $vehicle->getEngineVariant()) {
-            $parts[] = 'finition '.$vehicle->getEngineVariant();
+        $engineVariant = $vehicle->getEngineVariant();
+        if (null !== $engineVariant) {
+            $parts[] = 'finition '.$engineVariant;
         }
-        if (null !== $vehicle->getEngineCode()) {
-            $parts[] = 'moteur '.$vehicle->getEngineCode();
+        $engineCode = $vehicle->getEngineCode();
+        if (null !== $engineCode) {
+            $parts[] = 'moteur '.$engineCode;
         }
-        if (null !== $vehicle->getPlate()) {
-            $parts[] = 'plaque '.$vehicle->getPlate();
+        $plate = $vehicle->getPlate();
+        if (null !== $plate) {
+            $parts[] = 'plaque '.$plate;
         }
 
-        if (null !== $vehicle->getKType()) {
-            $parts[] = 'kType '.$vehicle->getKType();
+        $kType = $vehicle->getKType();
+        if (null !== $kType) {
+            $parts[] = 'kType '.$kType;
         }
 
         return "\nVéhicule : ".implode(', ', $parts);
@@ -135,7 +142,8 @@ final readonly class TurnContextBuilder
         }
 
         $lines = array_map(static function ($fact): string {
-            $value = $fact->getValue().(null !== $fact->getUnit() ? ' '.$fact->getUnit() : '');
+            $unit = $fact->getUnit();
+            $value = $fact->getValue().(null !== $unit ? ' '.$unit : '');
             $provenance = $fact->getSource().($fact->isVerified() ? ', vérifié' : '');
 
             return \sprintf('  - %s : %s [%s]', $fact->getKey(), $value, $provenance);
@@ -155,9 +163,11 @@ final readonly class TurnContextBuilder
         }
 
         $lines = array_map(static function (PlannedMaintenance $task): string {
-            $name = $task->getType().(null !== $task->getLabel() ? ' ('.$task->getLabel().')' : '');
-            $target = null !== $task->getTargetUsageValue()
-                ? ' — cible '.$task->getTargetUsageValue().' '.($task->getTargetUsageUnit()->value ?? '')
+            $label = $task->getLabel();
+            $name = $task->getType().(null !== $label ? ' ('.$label.')' : '');
+            $targetValue = $task->getTargetUsageValue();
+            $target = null !== $targetValue
+                ? ' — cible '.$targetValue.' '.($task->getTargetUsageUnit()->value ?? '')
                 : '';
 
             $line = \sprintf('  - [%s] %s%s', $task->getId(), $name, rtrim($target));
@@ -172,7 +182,7 @@ final readonly class TurnContextBuilder
     }
 
     /**
-     * @param array{ref: string, label?: string, brand?: string, qty?: int, priceCents?: int} $part
+     * @param PartArray $part
      */
     private static function partLine(array $part): string
     {

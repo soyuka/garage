@@ -131,7 +131,7 @@ final readonly class OpenTaskPartsBackfiller
     {
         $name = (string) ($category['name'] ?? '');
         $parts = [];
-        foreach (\array_slice($category['brands'] ?? [], 0, self::BRANDS_PER_TASK) as $group) {
+        foreach (\array_slice(\is_array($category['brands'] ?? null) ? $category['brands'] : [], 0, self::BRANDS_PER_TASK) as $group) {
             $article = $group['articles'][0] ?? null;
             if (null === $article || !isset($article['number'])) {
                 continue;

@@ -44,6 +44,14 @@ abstract readonly class AbstractWebSearchClient implements WebSearchClient
     }
 
     /**
+     * @return array<array-key, mixed> the decoded JSON list or object, [] for anything else
+     */
+    final protected static function items(mixed $value): array
+    {
+        return \is_array($value) ? $value : [];
+    }
+
+    /**
      * Fold a flat source list into citations, deduped by URL (first occurrence wins), dropping empties.
      *
      * @param iterable<array{url: string, title: string}> $sources

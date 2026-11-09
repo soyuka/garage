@@ -29,8 +29,9 @@ final class PartCategoriesProcessor implements ProcessorInterface
     {
         $categories = $this->bonneref->partCategories($data->carId, CarTypeResolver::fromString($data->carType), $data->leafOnly, $data->search);
 
+        // @mago-expect analysis:less-specific-argument get_object_vars of a final DTO: the shape is sealed, mago leaves it open
         return CappedResult::of(
-            array_map(static fn (PartCategory $category): array => (array) $category, $categories),
+            array_map(static fn (PartCategory $category): array => get_object_vars($category), $categories),
             'categories',
             'Narrow with search=<term> (e.g. "filter", "oil", "brake").',
             $data->offset,

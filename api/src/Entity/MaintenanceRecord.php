@@ -26,6 +26,11 @@ use Symfony\Component\Uid\Ulid;
  * visit that changed N services seeds N independent due-dates from one row.
  *
  * `owner` is the same multi-tenancy seam as Vehicle: null = shared/global in phase 1.
+ *
+ * @phpstan-type PartWire array{ref?: string, brand?: string, label?: string, qty?: int, price?: float|int|string|null, priceCents?: int, id?: string, supplier?: string, findRoute?: string}
+ * @phpstan-type ItemWire array{type?: string, label?: string, parts?: list<PartWire>}
+ * @phpstan-type StoredPart array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int, id?: string, supplier?: string, findRoute?: string}
+ * @phpstan-type StoredItem array{type: string, label?: string, parts?: list<StoredPart>}
  */
 // Both indexes are sort-covering: history() matches on vehicle (optionally an item type) and sorts
 // performedAt desc, so the sort key rides in the index and a limited query early-cuts instead of
@@ -48,7 +53,7 @@ class MaintenanceRecord
      * A part's `priceCents` is a UNIT price in cents; its line total is `priceCents * qty` (qty
      * defaults to 1 when absent) — see {@see getEffectiveCostCents()}.
      *
-     * @var list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
+     * @var list<StoredItem>
      */
     #[ODM\Field(type: 'collection')]
     private array $items = [];
@@ -64,7 +69,7 @@ class MaintenanceRecord
     private Collection $attachments;
 
     /**
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     * @param list<ItemWire> $items
      */
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'maintenanceRecords')]
@@ -106,9 +111,9 @@ class MaintenanceRecord
     /**
      * Validate + normalise a visit's line-items: drop empties, keep {type, optional label, parts}.
      *
-     * @param array<array{type?: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     * @param array<ItemWire> $items
      *
-     * @return list<array{type: string, label?: string, parts: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
+     * @return list<array{type: string, label?: string, parts: list<StoredPart>}>
      */
     private static function normaliseItems(array $items): array
     {
@@ -137,19 +142,20 @@ class MaintenanceRecord
      * MaintenanceRecordInput and the MCP log/edit tools) yields one consistent shape. Every other key
      * passes through untouched; a part with no price simply carries none (never a 0).
      *
-     * @param array<array<string, mixed>> $parts
+     * @param array<PartWire> $parts
      *
-     * @return list<array<string, mixed>>
+     * @return list<StoredPart>
      */
     private static function normaliseParts(array $parts): array
     {
+        /** @var list<PartWire> $parts the same lines, only their ref and label rewritten to strings */
         $parts = PartRefRewriter::rewrite(array_values($parts))->parts;
 
         return array_map(static function (array $part): array {
             if (\array_key_exists('price', $part)) {
                 $price = $part['price'];
                 unset($part['price']);
-                if (null !== $price && '' !== $price) {
+                if (is_numeric($price)) {
                     $part['priceCents'] = (int) round(((float) $price) * 100);
                 }
             }
@@ -169,7 +175,7 @@ class MaintenanceRecord
     }
 
     /**
-     * @return list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>
+     * @return list<StoredItem>
      */
     public function getItems(): array
     {
@@ -277,7 +283,11 @@ class MaintenanceRecord
         return $partsSum > 0 ? $partsSum : null;
     }
 
-    /** Where {@see getEffectiveCostCents()} came from — drives the dashboard's "≈" estimate marker. */
+    /**
+     * Where {@see getEffectiveCostCents()} came from — drives the dashboard's "≈" estimate marker.
+     *
+     * @return 'bill'|'estimated'|null
+     */
     public function getCostSource(): ?string
     {
         if (null !== $this->costCents) {
@@ -325,7 +335,7 @@ class MaintenanceRecord
      * Manual edit from the dashboard — the one exception to the append-only rule. Replaces the whole
      * visit (items + visit-level fields); forecasting re-keys off the fresh item types on next read.
      *
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     * @param list<ItemWire> $items
      */
     public function replaceItems(array $items): void
     {

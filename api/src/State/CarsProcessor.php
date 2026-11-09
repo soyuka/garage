@@ -29,8 +29,9 @@ final class CarsProcessor implements ProcessorInterface
     {
         $cars = $this->bonneref->cars($data->makeId, $data->modelId, CarTypeResolver::fromString($data->carType), $data->year, $data->capacityLitres, $data->fuel, $data->search);
 
+        // @mago-expect analysis:less-specific-argument get_object_vars of a final DTO: the shape is sealed, mago leaves it open
         return CappedResult::of(
-            array_map(static fn (Car $car): array => (array) $car, $cars),
+            array_map(static fn (Car $car): array => get_object_vars($car), $cars),
             'vehicle variants',
             'Narrow with year, capacityLitres, fuel or search; never treat this list as complete.',
             limit: self::LIMIT,

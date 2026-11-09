@@ -81,7 +81,7 @@ final class Vehicle
      * @param array<string, mixed> $data SIV payload from apiplaqueimmatriculation.com
      */
     /**
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      */
     public static function fromApi(array $data): self
     {

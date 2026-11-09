@@ -45,7 +45,7 @@ final readonly class ReadDocumentationPageProcessor implements ProcessorInterfac
         if (0 === $pageCount) {
             return ToolResult::error('invalid_input', 'This document has no extracted text (a scanned file or an image): use show_document so the operator reads it.');
         }
-        if ($data->page < 1 || $data->page > $pageCount) {
+        if (null === $data->page || $data->page < 1 || $data->page > $pageCount) {
             return ToolResult::error('invalid_input', \sprintf('page must be between 1 and %d for this document.', $pageCount));
         }
 

@@ -44,6 +44,14 @@ final readonly class VehicleResolution
         return new self('ambiguous', candidates: $candidates);
     }
 
+    /**
+     * The vehicle of a `resolved` resolution; the caller has already returned on `ambiguous` and `not_found`.
+     */
+    public function resolvedVehicle(): Vehicle
+    {
+        return $this->vehicle ?? throw new \LogicException(\sprintf('A "%s" vehicle resolution names no vehicle.', $this->status));
+    }
+
     public static function notFound(Ulid $vehicleId): self
     {
         return new self('not_found', vehicleId: (string) $vehicleId);

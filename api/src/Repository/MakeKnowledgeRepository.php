@@ -26,18 +26,18 @@ class MakeKnowledgeRepository extends ServiceDocumentRepository
      */
     public function findForMake(string $make): array
     {
-        return array_values($this->createQueryBuilder()
+        return QueryResults::listOf(MakeKnowledge::class, $this->createQueryBuilder()
             ->field('makes')->equals(MakeName::normalize($make))
             ->sort('topic', 'asc')
-            ->getQuery()->getIterator()->toArray());
+            ->getQuery()->getIterator());
     }
 
     public function findOneForMake(string $make, string $topic): ?MakeKnowledge
     {
-        return $this->createQueryBuilder()
+        return QueryResults::oneOf(MakeKnowledge::class, $this->createQueryBuilder()
             ->field('makes')->equals(MakeName::normalize($make))
             ->field('topic')->equals($topic)
-            ->getQuery()->getSingleResult();
+            ->getQuery()->getSingleResult());
     }
 
     /**

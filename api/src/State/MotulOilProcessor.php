@@ -86,7 +86,9 @@ final readonly class MotulOilProcessor implements ProcessorInterface
         }
 
         unset($advice['status']);
-        $reason = $advice['hint'] ?? \sprintf('Motul\'s catalogue has no vehicle matching "%s". Check the make and model spelling, or use the ACEA spec from known facts.', $advice['query']);
+        $hint = $advice['hint'] ?? null;
+        $query = $advice['query'] ?? null;
+        $reason = \is_string($hint) ? $hint : \sprintf('Motul\'s catalogue has no vehicle matching "%s". Check the make and model spelling, or use the ACEA spec from known facts.', \is_scalar($query) ? $query : '');
         unset($advice['hint']);
 
         return ToolResult::error('not_found', $reason, array_filter($advice, static fn (mixed $v): bool => [] !== $v));

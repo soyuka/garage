@@ -41,7 +41,8 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
-        if (null === $data->vehicle || null === $data->query || '' === trim($data->query)) {
+        $query = $data->query;
+        if (null === $data->vehicle || null === $query || '' === trim($query)) {
             return ToolResult::error('invalid_input', 'Provide the vehicle @id (IRI) from list_vehicles and a non-empty query.');
         }
 
@@ -49,7 +50,7 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
         if (null !== $data->kind) {
             $kind = VehicleDocumentKind::tryFrom($data->kind);
             if (null === $kind) {
-                return ToolResult::error('invalid_input', \sprintf('kind must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value'))));
+                return ToolResult::error('invalid_input', \sprintf('kind must be one of: %s.', implode(', ', array_map(static fn (VehicleDocumentKind $kind): string => $kind->value, VehicleDocumentKind::cases()))));
             }
         }
 
@@ -58,19 +59,19 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
             return $vehicle;
         }
 
-        $hits = $this->searcher->search($vehicle, $data->query, $kind, $data->limit);
-        $this->render->documentScan(\sprintf('/garage/vehicles/%s', $vehicle->getId()), trim($data->query), $this->scanHits($vehicle, $hits));
+        $hits = $this->searcher->search($vehicle, $query, $kind, $data->limit);
+        $this->render->documentScan(\sprintf('/garage/vehicles/%s', $vehicle->getId()), trim($query), $this->scanHits($vehicle, $hits));
         if ([] === $hits) {
-            return ToolResult::of(['status' => 'no_match', 'query' => $data->query]);
+            return ToolResult::of(['status' => 'no_match', 'query' => $query]);
         }
 
-        $result = ToolResult::of(['status' => 'ok', 'query' => $data->query, 'hits' => $hits]);
+        $result = ToolResult::of(['status' => 'ok', 'query' => $query, 'hits' => $hits]);
 
         return new CallToolResult([...$result->content, ...$this->links($vehicle, $hits)], false, $result->structuredContent);
     }
 
     /**
-     * @param list<array{documentId: string}> $hits
+     * @param list<array{documentId: string, ...}> $hits
      *
      * @return list<ResourceLink>
      */
@@ -88,7 +89,7 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
     }
 
     /**
-     * @param list<array{documentId: string, page: int, pageLabel: ?string}> $hits
+     * @param list<array{documentId: string, page: int, pageLabel: ?string, ...}> $hits
      *
      * @return list<array{documentId: string, page: int, pageLabel: ?string, url: string, title: string, contentType: string, filename: string, pagesUrl: string}>
      */
@@ -98,7 +99,8 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
         $out = [];
         foreach (\array_slice($hits, 0, self::SCAN_HITS) as $hit) {
             $id = $hit['documentId'];
-            $document = $documents[$id] ??= $this->documents->findOneForVehicle($vehicle, $id);
+            $documents[$id] ??= $this->documents->findOneForVehicle($vehicle, $id);
+            $document = $documents[$id];
             if (null === $document) {
                 continue;
             }

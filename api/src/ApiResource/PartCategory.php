@@ -82,7 +82,7 @@ final class PartCategory
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param array<array-key, mixed> $row
      */
     public static function fromApi(array $row): self
     {
@@ -92,6 +92,7 @@ final class PartCategory
             level: (int) ($row['level'] ?? 0),
             name: (string) ($row['name'] ?? ''),
             path: (string) ($row['path'] ?? ''),
+            // @mago-expect analysis:mixed-operand bonneref's JSON flag: any truthy value marks a leaf, as before
             leaf: (bool) ($row['leaf'] ?? false),
         );
     }

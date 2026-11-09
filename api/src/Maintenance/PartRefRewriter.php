@@ -7,7 +7,7 @@ namespace App\Maintenance;
 final readonly class PartRefRewriter
 {
     /**
-     * @param list<array<string, mixed>>  $parts
+     * @param array<array-key, mixed>     $parts
      * @param list<array{string, string}> $changes    [from, to] per rewritten ref
      * @param list<string>                $collisions refs a rewrite made two lines share
      */
@@ -19,12 +19,12 @@ final readonly class PartRefRewriter
     }
 
     /**
-     * @param array<int, mixed> $parts
+     * @param array<array-key, mixed> $parts
      */
     public static function rewrite(array $parts): self
     {
         $changes = [];
-        $changed = [];
+        $rewritten = [];
         foreach ($parts as $i => $part) {
             if (!\is_array($part) || !\is_string($part['ref'] ?? null)) {
                 continue;
@@ -35,7 +35,7 @@ final readonly class PartRefRewriter
                 continue;
             }
             $changes[] = [$part['ref'], $ref];
-            $changed[] = $i;
+            $rewritten[$i] = $ref;
             $parts[$i]['ref'] = $ref;
             if ($newLabel !== $label) {
                 $parts[$i]['label'] = $newLabel;
@@ -43,10 +43,10 @@ final readonly class PartRefRewriter
         }
 
         $collisions = [];
-        foreach ($changed as $i) {
+        foreach ($rewritten as $i => $ref) {
             foreach ($parts as $j => $other) {
-                if ($i !== $j && \is_array($other) && ($other['ref'] ?? null) === $parts[$i]['ref'] && '' !== $other['ref']) {
-                    $collisions[$parts[$i]['ref']] = $parts[$i]['ref'];
+                if ($i !== $j && \is_array($other) && ($other['ref'] ?? null) === $ref && '' !== $ref) {
+                    $collisions[$ref] = $ref;
                 }
             }
         }

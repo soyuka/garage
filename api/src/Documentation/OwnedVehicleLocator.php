@@ -18,13 +18,7 @@ final readonly class OwnedVehicleLocator
 
     public function find(string|Ulid $id): ?Vehicle
     {
-        $vehicle = $this->vehicles->findOwned($id);
-
-        if (null === $vehicle) {
-            return null;
-        }
-
-        return $vehicle;
+        return $this->vehicles->findOwned($id);
     }
 
     public function require(string|Ulid $id): Vehicle

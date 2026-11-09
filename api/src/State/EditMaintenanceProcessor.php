@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\GarageMaintenanceRecord;
 use App\Dto\EditMaintenanceInput;
 use App\Garage\ToolResult;
 use App\Maintenance\CalendarDate;
@@ -47,15 +48,18 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
         }
 
         try {
-            $recordId = $this->iriConverter->getResourceFromIri($data->record)->id;
-            // @phpstan-ignore catch.neverThrown (GarageMaintenanceRecordProvider 404s through getResourceFromIri, whose @throws omits it)
+            $resource = $this->iriConverter->getResourceFromIri($data->record);
         } catch (ItemNotFoundException|NotFoundHttpException) {
             return ToolResult::error('not_found', \sprintf('No maintenance record at %s.', $data->record));
         } catch (\Throwable) {
             return ToolResult::error('invalid_input', \sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record));
         }
 
-        $record = $this->records->findOwned($recordId);
+        if (!$resource instanceof GarageMaintenanceRecord) {
+            return ToolResult::error('invalid_input', \sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record));
+        }
+
+        $record = $this->records->findOwned($resource->id);
         if (null === $record) {
             return ToolResult::error('not_found', \sprintf('No maintenance record at %s.', $data->record));
         }
@@ -87,6 +91,7 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
             $changes['performedBy'] = $data->performedBy;
         }
         if (null !== $data->cost) {
+            // @mago-expect analysis:invalid-type-cast the input's Regex constraint only lets a decimal number through
             $changes['costCents'] = (int) round(((float) $data->cost) * 100);
             $changes['currency'] = $data->currency ?? 'EUR';
         } elseif (null !== $data->currency) {

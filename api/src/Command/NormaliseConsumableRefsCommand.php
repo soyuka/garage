@@ -41,13 +41,16 @@ final class NormaliseConsumableRefsCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        $dryRun = (bool) $input->getOption('dry-run');
+        $dryRun = true === $input->getOption('dry-run');
 
         $rewritten = 0;
         $collisions = 0;
         foreach ([[PlannedMaintenance::class, 'planned task'], [MaintenanceRecord::class, 'maintenance record']] as [$class, $label]) {
             $collection = $this->dm->getDocumentCollection($class);
             foreach ($collection->find([], ['typeMap' => self::ARRAY_TYPE_MAP]) as $doc) {
+                if (!\is_array($doc)) {
+                    continue;
+                }
                 $id = (string) $doc['_id'];
                 $update = [];
                 $docChanges = [];

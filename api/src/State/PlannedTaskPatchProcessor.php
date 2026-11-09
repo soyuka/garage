@@ -89,6 +89,7 @@ final readonly class PlannedTaskPatchProcessor implements ProcessorInterface
 
         $unit = null;
         if (isset($target['unit'])) {
+            // @mago-expect analysis:redundant-cast deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee
             $unit = UsageUnit::tryFrom((string) $target['unit']);
             if (null === $unit) {
                 throw new UnprocessableEntityHttpException(\sprintf('Unknown target unit "%s"; expected km, mi or h.', $target['unit']));

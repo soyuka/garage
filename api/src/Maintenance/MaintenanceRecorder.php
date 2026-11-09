@@ -19,6 +19,8 @@ use Symfony\Component\Uid\Ulid;
  * same {@see VehicleWriteResolver} as plan_maintenance — so logging a service can never spawn a
  * duplicate the planning path would have caught. Unlike planned items, records are never updated
  * in place: each log() is a new row, so a vehicle accumulates a full service history.
+ *
+ * @phpstan-import-type ItemWire from MaintenanceRecord
  */
 final readonly class MaintenanceRecorder
 {
@@ -61,7 +63,8 @@ final readonly class MaintenanceRecorder
         }
 
         $usageValue = $vehicle->getUsageValue();
-        $usageUnit = null !== $vehicle->getUsageUnit() ? UsageUnit::fromGarageUnit($vehicle->getUsageUnit()) : null;
+        $garageUnit = $vehicle->getUsageUnit();
+        $usageUnit = null !== $garageUnit ? UsageUnit::fromGarageUnit($garageUnit) : null;
 
         // Everything completed in one pass is filed as ONE visit (a single dated row), each task
         // contributing a line-item with its own type/label/parts — not one record per task.
@@ -94,7 +97,7 @@ final readonly class MaintenanceRecorder
     }
 
     /**
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     * @param list<ItemWire> $items
      */
     public function log(
         ?Ulid $vehicleId,
@@ -133,7 +136,7 @@ final readonly class MaintenanceRecorder
             return MaintenanceLogOutcome::notFound($resolution->vehicleId);
         }
 
-        $vehicle = $resolution->vehicle;
+        $vehicle = $resolution->resolvedVehicle();
 
         // A known service entered under a label/synonym ("Huile") is canonicalised to its snake_case
         // key so it matches the schedule + forecast; the long tail is kept verbatim (never rejected).
@@ -184,7 +187,7 @@ final readonly class MaintenanceRecorder
      * odometer (unlike {@see log()}).
      *
      * @param array{
-     *     items?: list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}>,
+     *     items?: list<ItemWire>,
      *     performedAt?: \DateTimeImmutable,
      *     usageValue?: int|null,
      *     usageUnit?: UsageUnit|null,
@@ -244,9 +247,11 @@ final readonly class MaintenanceRecorder
         ?string $type = null,
         ?int $limit = null,
     ): ?array {
-        $vehicle = null !== $vehicleId
-            ? $this->vehicles->findOwned($vehicleId)
-            : $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
+        $vehicle = match (true) {
+            null !== $vehicleId => $this->vehicles->findOwned($vehicleId),
+            null !== $make && null !== $model => $this->vehicles->findByIdentity($make, $model, $vehicleType, $year),
+            default => null,
+        };
         if (null === $vehicle) {
             return null;
         }

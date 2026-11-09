@@ -48,7 +48,7 @@ final readonly class DomainPublisher
             'kind' => 'vehicle',
             'event' => $event,
             'vehicle' => (string) $vehicle->getId(),
-            'iri' => '/garage/vehicles/'.$vehicle->getId(),
+            'iri' => '/garage/vehicles/'.(string) $vehicle->getId(),
             'resource' => $this->view->toArray($vehicle),
         ], \JSON_THROW_ON_ERROR);
 

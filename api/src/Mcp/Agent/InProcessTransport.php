@@ -57,6 +57,12 @@ final class InProcessTransport extends BaseTransport implements StatelessAwareTr
             return [];
         }
 
-        return json_decode($result->toJson(), true, 512, \JSON_THROW_ON_ERROR);
+        $response = json_decode($result->toJson(), true, 512, \JSON_THROW_ON_ERROR);
+        if (!\is_array($response)) {
+            throw new LogicException('The MCP server answered with something other than a JSON-RPC object.');
+        }
+
+        // @mago-expect analysis:less-specific-return-statement a decoded JSON-RPC object only has string keys
+        return $response;
     }
 }

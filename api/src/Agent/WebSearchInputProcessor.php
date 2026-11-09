@@ -72,13 +72,15 @@ final readonly class WebSearchInputProcessor implements InputProcessorInterface
     {
         // Idempotent: the agent's tool-call loop re-runs input processors against the carried-over
         // options, so re-declaring web_search would trip Anthropic's "Tool names must be unique".
-        foreach ($options['server_tools'] ?? [] as $serverTool) {
-            if ('web_search' === ($serverTool['name'] ?? null)) {
+        $serverTools = \is_array($options['server_tools'] ?? null) ? $options['server_tools'] : [];
+        foreach ($serverTools as $serverTool) {
+            if (\is_array($serverTool) && 'web_search' === ($serverTool['name'] ?? null)) {
                 return;
             }
         }
 
-        $options['server_tools'][] = ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 1];
+        $serverTools[] = ['type' => 'web_search_20250305', 'name' => 'web_search', 'max_uses' => 1];
+        $options['server_tools'] = $serverTools;
     }
 
     /**
@@ -101,13 +103,13 @@ final readonly class WebSearchInputProcessor implements InputProcessorInterface
             return;
         }
 
-        if (!isset($options['server_tools'])) {
+        if (!\is_array($options['server_tools'] ?? null)) {
             return;
         }
 
         $options['server_tools'] = array_values(array_filter(
             $options['server_tools'],
-            static fn (array $tool): bool => 'web_search' !== ($tool['name'] ?? null),
+            static fn (mixed $tool): bool => !\is_array($tool) || 'web_search' !== ($tool['name'] ?? null),
         ));
 
         if ([] === $options['server_tools']) {

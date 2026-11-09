@@ -86,7 +86,7 @@ final readonly class MaintenanceRecordCreateProcessor implements ProcessorInterf
             throw new NotFoundHttpException('No vehicle at this IRI.');
         }
 
-        $record = $outcome->record;
+        $record = $outcome->recordedRecord();
         $this->publisher->publishVehicle($record->getVehicle());
 
         return GarageMaintenanceRecord::fromEntity($record);

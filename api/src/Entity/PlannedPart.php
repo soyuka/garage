@@ -16,6 +16,10 @@ use Symfony\Component\Uid\Ulid;
  *
  * A ref-less line is the bare fluid line ("Huile moteur ×5") whose derived spec is computed at read
  * time by {@see \App\Maintenance\PlannedTaskFluidEnricher} — never stored here.
+ *
+ * @phpstan-type PartArray array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string}
+ * @phpstan-type EnrichedPart array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}
+ * @phpstan-type PartInput array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, findRoute?: string|null, id?: string|null, spec?: array<string, mixed>}
  */
 #[ODM\EmbeddedDocument]
 class PlannedPart
@@ -66,13 +70,13 @@ class PlannedPart
     }
 
     /**
-     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, findRoute?: string|null, id?: string|null} $part
+     * @param PartInput $part
      */
     public static function fromArray(array $part): self
     {
         $part = self::normalisePrice($part);
 
-        [$ref, $label] = ConsumableStandard::resolve((string) ($part['ref'] ?? ''), $part['label'] ?? null);
+        [$ref, $label] = ConsumableStandard::resolve($part['ref'] ?? '', $part['label'] ?? null);
 
         return new self(
             ref: $ref,
@@ -101,6 +105,9 @@ class PlannedPart
         return $this->label;
     }
 
+    /**
+     * @phpstan-assert-if-true string $route
+     */
     public static function isValidFindRoute(mixed $route): bool
     {
         return \is_string($route) && \strlen($route) <= 200 && 1 === preg_match(self::FIND_ROUTE_PATTERN, $route);
@@ -115,7 +122,7 @@ class PlannedPart
      * Merge-patch a single line: only the supplied keys overwrite (a `ref` is never blanked by an
      * absent key). The shape mirrors {@see self::fromArray()} minus `id` (identity is immutable).
      *
-     * @param array{ref?: string, label?: string|null, brand?: string|null, qty?: int|null, priceCents?: int|null, price?: float|int|string|null, supplier?: string|null, findRoute?: string|null} $part
+     * @param PartInput $part
      */
     public function update(array $part): void
     {
@@ -123,16 +130,16 @@ class PlannedPart
 
         if (\array_key_exists('ref', $part)) {
             $current = \array_key_exists('label', $part) ? $part['label'] : $this->label;
-            [$this->ref, $label] = ConsumableStandard::resolve((string) $part['ref'], $current);
+            [$this->ref, $label] = ConsumableStandard::resolve($part['ref'], $current);
             if ($label !== $current) {
                 $part['label'] = $label;
             }
         }
         if (\array_key_exists('label', $part)) {
-            $this->label = null !== $part['label'] ? (string) $part['label'] : null;
+            $this->label = $part['label'];
         }
         if (\array_key_exists('brand', $part)) {
-            $this->brand = null !== $part['brand'] ? (string) $part['brand'] : null;
+            $this->brand = $part['brand'];
         }
         if (\array_key_exists('qty', $part)) {
             $this->qty = null !== $part['qty'] ? (int) $part['qty'] : null;
@@ -141,7 +148,7 @@ class PlannedPart
             $this->priceCents = null !== $part['priceCents'] ? (int) $part['priceCents'] : null;
         }
         if (\array_key_exists('supplier', $part)) {
-            $this->supplier = null !== $part['supplier'] ? (string) $part['supplier'] : null;
+            $this->supplier = $part['supplier'];
         }
         $findRoute = self::validFindRoute($part['findRoute'] ?? null);
         if (null !== $findRoute) {
@@ -150,7 +157,7 @@ class PlannedPart
     }
 
     /**
-     * @return array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string}
+     * @return PartArray
      */
     public function toArray(): array
     {
@@ -185,9 +192,9 @@ class PlannedPart
     /**
      * Wire `price` is major units; a null/blank one counts as absent so a re-plan never wipes a stored price.
      *
-     * @param array<string, mixed> $part
+     * @param PartInput $part
      *
-     * @return array<string, mixed>
+     * @return PartInput
      */
     private static function normalisePrice(array $part): array
     {

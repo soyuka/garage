@@ -331,6 +331,7 @@ class AgentTurn
         $this->error = $error;
         $this->errorId = $errorId;
         $this->finishedAt = new \DateTimeImmutable();
-        $this->durationMs = (int) (($this->finishedAt->format('U.u') - $this->startedAt->format('U.u')) * 1000);
+        $elapsedMicroseconds = ($this->finishedAt->getTimestamp() - $this->startedAt->getTimestamp()) * 1_000_000 + $this->finishedAt->getMicrosecond() - $this->startedAt->getMicrosecond();
+        $this->durationMs = intdiv($elapsedMicroseconds, 1000);
     }
 }

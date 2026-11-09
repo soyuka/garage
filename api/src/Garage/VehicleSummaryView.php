@@ -24,12 +24,12 @@ final readonly class VehicleSummaryView
     }
 
     /**
-     * @return array{make: string, model: string, year: int|null, engineVariant: string|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string, archivedAt: string|null}
+     * @return array{'@id': string, make: string, model: string, year: int|null, engineVariant: string|null, vehicleType: string, source: string, kType: int|null, plate: string|null, vin: string|null, owner: string|null, usageValue: int|null, usageUnit: string|null, factCount: int, openTaskCount: int, addedAt: string, archivedAt: string|null}
      */
     public function toArray(Vehicle $vehicle): array
     {
         return [
-            '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
+            '@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle)),
             'make' => $vehicle->getMake(),
             'model' => $vehicle->getModel(),
             'year' => $vehicle->getYear(),

@@ -38,6 +38,7 @@ final readonly class BonnerefClient
     public function __construct(
         #[Autowire(service: 'bonneref.client')]
         private HttpClientInterface $http,
+        #[\SensitiveParameter]
         private BonnerefToken $token,
         private RequestStack $requests,
         private LoggerInterface $logger = new NullLogger(),
@@ -114,15 +115,21 @@ final readonly class BonnerefClient
     /**
      * @param array<string, scalar|null> $query
      *
-     * @return list<array<string, mixed>>
+     * @return list<array<array-key, mixed>>
      */
     private function members(string $path, array $query): array
     {
         $all = [];
-        for ($page = 1;; ++$page) {
+        $page = 0;
+        while (true) {
+            ++$page;
             $data = $this->get($path, $query) ?? [];
             $members = $data['hydra:member'] ?? $data['member'] ?? [];
-            array_push($all, ...array_values(array_filter(\is_array($members) ? $members : [], \is_array(...))));
+            foreach (\is_array($members) ? $members : [] as $member) {
+                if (\is_array($member)) {
+                    $all[] = $member;
+                }
+            }
 
             $next = self::nextQuery($data, $path);
             if (null === $next) {
@@ -141,7 +148,7 @@ final readonly class BonnerefClient
      * The query of the next page, when the Hydra view links one on this same collection. A link to
      * another host or path is not followed: the bearer rides every request.
      *
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      *
      * @return array<string, scalar|null>|null
      */
@@ -157,9 +164,16 @@ final readonly class BonnerefClient
         if (false === $parts || isset($parts['host']) || ($parts['path'] ?? '') !== $path) {
             return null;
         }
-        parse_str($parts['query'] ?? '', $query);
+        parse_str($parts['query'] ?? '', $parsed);
 
-        /* @var array<string, scalar|null> $query */
+        $query = [];
+        foreach ($parsed as $key => $value) {
+            if (\is_string($value)) {
+                // @mago-expect analysis:redundant-cast parse_str turns a numeric key into an int
+                $query[(string) $key] = $value;
+            }
+        }
+
         return $query;
     }
 
@@ -167,11 +181,15 @@ final readonly class BonnerefClient
      * @param array<string, scalar|null> $query
      * @param string                     $feature what a 501 (bonneref has no provider key for it) reports as not configured
      *
-     * @return array<string, mixed>|null null on a 404 when the caller asked for it
+     * @return array<array-key, mixed>|null null on a 404 when the caller asked for it
      */
     private function get(string $path, array $query, bool $missingIsNull = false, string $feature = 'this catalogue feature'): ?array
     {
-        $query = array_map(static fn (mixed $v): string => \is_bool($v) ? ($v ? 'true' : 'false') : (string) $v, array_filter($query, static fn (mixed $v): bool => null !== $v));
+        $query = array_map(static fn (mixed $v): string => match ($v) {
+            true => 'true',
+            false => 'false',
+            default => (string) $v,
+        }, array_filter($query, static fn (mixed $v): bool => null !== $v));
         $headers = ['Accept' => 'application/ld+json'];
         if (null !== $bearer = $this->token->get() ?? BonnerefToken::fromRequest($this->requests->getMainRequest())) {
             $headers['Authorization'] = 'Bearer '.$bearer;

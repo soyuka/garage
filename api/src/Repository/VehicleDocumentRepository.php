@@ -33,20 +33,20 @@ final class VehicleDocumentRepository extends ServiceDocumentRepository
             $qb->field('kind')->equals($kind->value);
         }
 
-        return array_values($qb->getQuery()->getIterator()->toArray());
+        return QueryResults::listOf(VehicleDocument::class, $qb->getQuery()->getIterator());
     }
 
     public function findOneForVehicle(Vehicle $vehicle, string $id): ?VehicleDocument
     {
-        return $this->forVehicle($vehicle)->field('id')->equals($id)->getQuery()->getSingleResult();
+        return QueryResults::oneOf(VehicleDocument::class, $this->forVehicle($vehicle)->field('id')->equals($id)->getQuery()->getSingleResult());
     }
 
     public function findBySourceRef(Vehicle $vehicle, string $sourceRef, string $filename): ?VehicleDocument
     {
-        return $this->forVehicle($vehicle)
+        return QueryResults::oneOf(VehicleDocument::class, $this->forVehicle($vehicle)
             ->field('sourceRef')->equals($sourceRef)
             ->field('filename')->equals($filename)
-            ->getQuery()->getSingleResult();
+            ->getQuery()->getSingleResult());
     }
 
     private function forVehicle(Vehicle $vehicle): Builder

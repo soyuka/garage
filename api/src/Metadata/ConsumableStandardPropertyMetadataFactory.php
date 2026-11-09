@@ -29,15 +29,20 @@ final class ConsumableStandardPropertyMetadataFactory implements PropertyMetadat
         }
 
         if (PlanMaintenanceInput::class === $resourceClass && 'parts' === $property) {
-            $schema['description'] = $this->append($schema['description'] ?? '');
+            $schema['description'] = $this->append(\is_string($schema['description'] ?? null) ? $schema['description'] : '');
 
             return $metadata->withSchema($schema);
         }
 
         if ('items' === $property && \in_array($resourceClass, [LogMaintenanceInput::class, EditMaintenanceInput::class, MaintenanceRecordInput::class], true)) {
-            $parts = $schema['items']['properties']['parts'] ?? null;
-            if (null !== $parts) {
-                $schema['items']['properties']['parts']['description'] = $this->append($parts['description'] ?? '');
+            $items = $schema['items'] ?? null;
+            $properties = \is_array($items) ? ($items['properties'] ?? null) : null;
+            $parts = \is_array($properties) ? ($properties['parts'] ?? null) : null;
+            if (\is_array($items) && \is_array($properties) && \is_array($parts)) {
+                $parts['description'] = $this->append(\is_string($parts['description'] ?? null) ? $parts['description'] : '');
+                $properties['parts'] = $parts;
+                $items['properties'] = $properties;
+                $schema['items'] = $items;
 
                 return $metadata->withSchema($schema);
             }

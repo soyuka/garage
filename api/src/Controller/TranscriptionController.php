@@ -61,7 +61,7 @@ final readonly class TranscriptionController
         }
 
         $audio = $request->getContent();
-        $contentType = $request->headers->get('Content-Type', '');
+        $contentType = $request->headers->get('Content-Type') ?? '';
 
         if ('' === $audio) {
             throw new BadRequestHttpException('Nothing to transcribe.');

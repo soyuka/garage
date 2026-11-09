@@ -77,6 +77,7 @@ final readonly class LogMaintenanceProcessor implements ProcessorInterface
             usageValue: $data->usageValue,
             usageUnit: null !== $data->usageUnit ? UsageUnit::from($data->usageUnit) : null,
             notes: $data->notes,
+            // @mago-expect analysis:invalid-type-cast the input's Regex constraint only lets a decimal number through
             costCents: null !== $data->cost ? (int) round(((float) $data->cost) * 100) : null,
             currency: $data->currency,
             performedBy: $data->performedBy,
@@ -91,7 +92,7 @@ final readonly class LogMaintenanceProcessor implements ProcessorInterface
             return $error;
         }
 
-        return $this->publishedRecord($outcome->record);
+        return $this->publishedRecord($outcome->recordedRecord());
     }
 
     private function publishedRecord(MaintenanceRecord $record): CallToolResult

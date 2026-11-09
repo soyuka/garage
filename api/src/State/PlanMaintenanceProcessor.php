@@ -88,7 +88,7 @@ final readonly class PlanMaintenanceProcessor implements ProcessorInterface
             return $error;
         }
 
-        return $this->publishedTask($outcome->task);
+        return $this->publishedTask($outcome->plannedTask());
     }
 
     private function publishedTask(PlannedMaintenance $task): CallToolResult

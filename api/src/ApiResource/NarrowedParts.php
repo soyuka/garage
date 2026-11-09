@@ -84,26 +84,66 @@ final class NarrowedParts
     }
 
     /**
-     * @param array<string, mixed> $data
+     * @param array<array-key, mixed> $data
      */
     public static function fromApi(array $data): self
     {
         return new self(
             carId: (int) ($data['carId'] ?? 0),
             categoryId: (int) ($data['categoryId'] ?? 0),
-            clusters: $data['clusters'] ?? [],
+            clusters: self::objects($data['clusters'] ?? null),
             totalArticles: (int) ($data['totalArticles'] ?? 0),
             totalBrands: (int) ($data['totalBrands'] ?? 0),
             unclassifiedCount: (int) ($data['unclassifiedCount'] ?? 0),
-            differsOn: $data['differsOn'] ?? [],
-            narrowed: (bool) ($data['narrowed'] ?? false),
-            degradedReason: $data['degradedReason'] ?? null,
+            differsOn: self::objects($data['differsOn'] ?? null),
+            narrowed: true === ($data['narrowed'] ?? false),
+            degradedReason: \is_string($data['degradedReason'] ?? null) ? $data['degradedReason'] : null,
             upstreamCalls: (int) ($data['upstreamCalls'] ?? 0),
-            fallbackBrands: $data['fallbackBrands'] ?? null,
+            fallbackBrands: null === ($data['fallbackBrands'] ?? null) ? null : self::objects($data['fallbackBrands']),
             applicabilityScope: (string) ($data['applicabilityScope'] ?? 'article'),
-            productGroup: $data['productGroup'] ?? null,
-            productGroups: $data['productGroups'] ?? [],
-            groupRequired: (bool) ($data['groupRequired'] ?? false),
+            productGroup: self::productGroup($data['productGroup'] ?? null),
+            productGroups: self::productGroups($data['productGroups'] ?? null),
+            groupRequired: true === ($data['groupRequired'] ?? false),
         );
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private static function objects(mixed $value): array
+    {
+        $objects = [];
+        foreach (\is_array($value) ? $value : [] as $item) {
+            if (\is_array($item)) {
+                $objects[] = $item;
+            }
+        }
+
+        // @mago-expect analysis:less-specific-return-statement decoded JSON objects only have string keys
+        return $objects;
+    }
+
+    /**
+     * @return array{id: int, name: string}|null
+     */
+    private static function productGroup(mixed $value): ?array
+    {
+        return \is_array($value) && \is_int($value['id'] ?? null) && \is_string($value['name'] ?? null) ? ['id' => $value['id'], 'name' => $value['name']] : null;
+    }
+
+    /**
+     * @return list<array{id: int, name: string, articleCount: int}>
+     */
+    private static function productGroups(mixed $value): array
+    {
+        $groups = [];
+        foreach (\is_array($value) ? $value : [] as $group) {
+            $named = self::productGroup($group);
+            if (null !== $named && \is_array($group) && \is_int($group['articleCount'] ?? null)) {
+                $groups[] = $named + ['articleCount' => $group['articleCount']];
+            }
+        }
+
+        return $groups;
     }
 }

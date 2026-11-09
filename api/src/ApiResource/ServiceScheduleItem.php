@@ -90,8 +90,9 @@ final class ServiceScheduleItem
         $resource->type = $interval->getType();
         $resource->action = $interval->getAction()->value;
         $resource->component = $interval->getComponent();
-        $resource->everyUsage = null === $interval->getEveryUsageValue() ? null : [
-            'value' => $interval->getEveryUsageValue(),
+        $everyValue = $interval->getEveryUsageValue();
+        $resource->everyUsage = null === $everyValue ? null : [
+            'value' => $everyValue,
             'unit' => $interval->getEveryUsageUnit()?->value,
         ];
         $resource->everyMonths = $interval->getEveryMonths();

@@ -102,11 +102,11 @@ final class VehicleFactsProjector
                 continue;
             }
             foreach ($item['parts'] ?? [] as $part) {
-                $ref = trim((string) ($part['ref'] ?? ''));
+                $ref = trim($part['ref'] ?? '');
                 if ('' === $ref) {
                     continue;
                 }
-                $brand = trim((string) ($part['brand'] ?? ''));
+                $brand = trim($part['brand'] ?? '');
                 $facts[] = VehicleFact::fromSource(
                     key: $type.'_ref',
                     value: '' !== $brand ? $brand.' '.$ref : $ref,

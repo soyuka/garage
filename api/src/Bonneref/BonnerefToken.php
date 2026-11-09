@@ -16,7 +16,7 @@ final class BonnerefToken implements ResetInterface
 {
     private ?string $token = null;
 
-    public function set(?string $token): void
+    public function set(#[\SensitiveParameter] ?string $token): void
     {
         $this->token = '' === $token ? null : $token;
     }

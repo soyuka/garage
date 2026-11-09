@@ -59,10 +59,9 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->sort('createdAt', 'asc')
             ->sort('id', 'asc')
             ->getQuery()
-            ->getIterator()
-            ->toArray();
+            ->getIterator();
 
-        $actionable = array_values(array_filter($tasks, static fn (PlannedMaintenance $t): bool => $t->isActionable()));
+        $actionable = array_values(array_filter(QueryResults::listOf(PlannedMaintenance::class, $tasks), static fn (PlannedMaintenance $t): bool => $t->isActionable()));
         // Open, then done, then dismissed — preserving the createdAt order the query already applied
         // within each group. A stable sort keeps that intra-group order.
         usort($actionable, static fn (PlannedMaintenance $a, PlannedMaintenance $b): int => self::statusRank($a) <=> self::statusRank($b));
@@ -93,7 +92,7 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
             ->field('label')->equals($label)
             ->limit(1);
 
-        return $qb->getQuery()->getSingleResult();
+        return QueryResults::oneOf(PlannedMaintenance::class, $qb->getQuery()->getSingleResult());
     }
 
     /**
@@ -104,13 +103,11 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
      */
     public function openOfType(Vehicle $vehicle, string $type): array
     {
-        return array_values($this->createQueryBuilder()
+        return QueryResults::listOf(PlannedMaintenance::class, $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
             ->field('type')->equals($type)
             ->field('status')->equals(PlannedMaintenanceStatus::Open->value)
-            ->getQuery()
-            ->getIterator()
-            ->toArray());
+            ->getQuery()->getIterator());
     }
 
     /**
@@ -123,14 +120,12 @@ class PlannedMaintenanceRepository extends ServiceDocumentRepository
      */
     public function completedUnarchived(Vehicle $vehicle): array
     {
-        return array_values($this->createQueryBuilder()
+        return QueryResults::listOf(PlannedMaintenance::class, $this->createQueryBuilder()
             ->field('vehicle')->references($vehicle)
             ->field('status')->equals(PlannedMaintenanceStatus::Done->value)
             ->field('archivedAt')->equals(null)
             ->sort('completedAt', 'asc')
             ->sort('id', 'asc')
-            ->getQuery()
-            ->getIterator()
-            ->toArray());
+            ->getQuery()->getIterator());
     }
 }

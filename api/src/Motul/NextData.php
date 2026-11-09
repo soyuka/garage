@@ -14,7 +14,7 @@ use App\Exception\UpstreamException;
 final class NextData
 {
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     public static function extract(string $html): array
     {

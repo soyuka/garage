@@ -40,6 +40,14 @@ final readonly class MaintenanceLogOutcome implements WriteOutcome
     }
 
     /**
+     * The record of the success outcome; the caller has already handled every other status.
+     */
+    public function recordedRecord(): MaintenanceRecord
+    {
+        return $this->record ?? throw new \LogicException(\sprintf('A "%s" outcome carries no record.', $this->status));
+    }
+
+    /**
      * @param list<Vehicle> $candidates
      */
     public static function ambiguous(array $candidates): self

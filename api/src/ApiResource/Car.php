@@ -89,7 +89,7 @@ final class Car
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param array<array-key, mixed> $row
      */
     public static function fromApi(array $row): self
     {

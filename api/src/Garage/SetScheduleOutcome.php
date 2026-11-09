@@ -42,6 +42,14 @@ final readonly class SetScheduleOutcome implements WriteOutcome
     }
 
     /**
+     * The vehicle of the success outcome; the caller has already handled every other status.
+     */
+    public function scheduledVehicle(): Vehicle
+    {
+        return $this->vehicle ?? throw new \LogicException(\sprintf('A "%s" outcome carries no vehicle.', $this->status));
+    }
+
+    /**
      * @param list<Vehicle> $candidates
      */
     public static function ambiguous(array $candidates): self

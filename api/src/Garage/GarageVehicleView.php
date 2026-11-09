@@ -79,7 +79,7 @@ final readonly class GarageVehicleView
         $facts = $this->factsOf($vehicle);
 
         return [
-            '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
+            '@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle)),
             'make' => $vehicle->getMake(),
             'model' => $vehicle->getModel(),
             'year' => $vehicle->getYear(),

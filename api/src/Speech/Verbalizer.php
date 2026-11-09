@@ -199,10 +199,10 @@ final readonly class Verbalizer
         $formatter = new \NumberFormatter($locale->value, \NumberFormatter::SPELLOUT);
         $spell = function (array $m) use ($formatter, $locale): string {
             $whole = (int) $m[1];
-            $spoken = $formatter->format($whole).' '.$this->euroWord($whole, $locale);
+            $spoken = (string) $formatter->format($whole).' '.$this->euroWord($whole, $locale);
 
             if (isset($m[2]) && '' !== $m[2]) {
-                $spoken .= ' '.$formatter->format((int) $m[2]);
+                $spoken .= ' '.(string) $formatter->format((int) $m[2]);
             }
 
             return $spoken;
@@ -259,6 +259,7 @@ final readonly class Verbalizer
 
     private function isOne(string $value): bool
     {
+        // @mago-expect analysis:invalid-type-cast callers pass the amount a decimal-number pattern matched
         return 1.0 === (float) str_replace(',', '.', $value);
     }
 
@@ -353,6 +354,7 @@ final readonly class Verbalizer
         $letters = self::SPOKEN_LETTERS[$locale->value];
         $digits = self::SPOKEN_DIGITS[$locale->value];
 
+        // @mago-expect analysis:mismatched-array-index a digit character reads the digit table's int key ("5" is 5 as an array key)
         return implode(' ', array_map(static fn (string $character): string => $letters[$character] ?? $digits[$character], str_split($group)));
     }
 
@@ -388,6 +390,7 @@ final readonly class Verbalizer
             }
 
             $normalized = str_replace($decimalSeparator, '.', $m[0]);
+            // @mago-expect analysis:invalid-type-cast the number pattern matched $m[0], so it is a decimal number once normalised
             $number = $isInteger ? (int) $normalized : (float) $normalized;
 
             return $formatter->format($number) ?: $m[0];

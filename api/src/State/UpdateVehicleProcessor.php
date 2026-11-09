@@ -82,7 +82,7 @@ final readonly class UpdateVehicleProcessor implements ProcessorInterface
             return $error;
         }
 
-        return $this->publishedVehicle($outcome->vehicle);
+        return $this->publishedVehicle($outcome->writtenVehicle());
     }
 
     private function publishedVehicle(Vehicle $vehicle): CallToolResult

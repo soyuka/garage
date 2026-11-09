@@ -22,6 +22,9 @@ use Symfony\AI\Platform\PlatformInterface;
  */
 final readonly class GeminiWebSearchClient extends AbstractWebSearchClient
 {
+    /**
+     * @param non-empty-string $model
+     */
     public function __construct(
         private PlatformInterface $platform,
         private string $model,
@@ -42,7 +45,6 @@ final readonly class GeminiWebSearchClient extends AbstractWebSearchClient
             ['server_tools' => ['google_search' => true]],
         );
 
-        /** @var array<string, mixed> $data */
         $data = $result->getRawResult()->getData();
 
         // Trace the raw body BEFORE distilling: an empty answer (MAX_TOKENS cut, safety block, no
@@ -62,7 +64,7 @@ final readonly class GeminiWebSearchClient extends AbstractWebSearchClient
     private function extractAnswer(array $data): string
     {
         $text = '';
-        foreach ($data['candidates'][0]['content']['parts'] ?? [] as $part) {
+        foreach (self::items($data['candidates'][0]['content']['parts'] ?? null) as $part) {
             $text .= (string) ($part['text'] ?? '');
         }
 
@@ -89,7 +91,7 @@ final readonly class GeminiWebSearchClient extends AbstractWebSearchClient
      */
     private function sources(array $data): iterable
     {
-        foreach ($data['candidates'][0]['groundingMetadata']['groundingChunks'] ?? [] as $chunk) {
+        foreach (self::items($data['candidates'][0]['groundingMetadata']['groundingChunks'] ?? null) as $chunk) {
             yield ['url' => (string) ($chunk['web']['uri'] ?? ''), 'title' => (string) ($chunk['web']['title'] ?? '')];
         }
     }

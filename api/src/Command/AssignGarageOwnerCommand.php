@@ -58,8 +58,9 @@ final class AssignGarageOwnerCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $owner = (string) $input->getArgument('owner');
-        $from = $input->getOption('from');
-        $match = ['owner' => null === $from ? null : (string) $from];
+        $fromOption = $input->getOption('from');
+        $from = null === $fromOption ? null : (string) $fromOption;
+        $match = ['owner' => $from];
 
         foreach (self::COLLECTIONS as $class) {
             $result = $this->dm->getDocumentCollection($class)

@@ -99,8 +99,10 @@ final readonly class CachingSpeechClient implements SpeechClient
     {
         $body = yield from $live->chunks();
 
+        // @mago-expect analysis:null-argument yield from evaluates to chunks()'s TReturn, a string
         $this->write($bytesPath, $typePath, new SpokenAudio($body, $live->contentType));
 
+        // @mago-expect analysis:invalid-return-statement yield from evaluates to chunks()'s TReturn, a string
         return $body;
     }
 
@@ -121,12 +123,14 @@ final readonly class CachingSpeechClient implements SpeechClient
 
     private function write(string $bytesPath, string $typePath, SpokenAudio $audio): void
     {
+        // @mago-expect lint:no-error-control-operator best-effort cache: a failed write is logged just below, never raised
         if (!is_dir($this->cacheDir) && !@mkdir($this->cacheDir, 0775, true) && !is_dir($this->cacheDir)) {
             $this->logger->warning('TTS cache directory {dir} could not be created; this line will not be cached.', ['dir' => $this->cacheDir]);
 
             return;
         }
 
+        // @mago-expect lint:no-error-control-operator(2) best-effort cache: a failed write is logged just below, never raised
         if (false === @file_put_contents($bytesPath, $audio->bytes) || false === @file_put_contents($typePath, $audio->contentType)) {
             $this->logger->warning('TTS cache write failed for {path}; this line will not be cached.', ['path' => $bytesPath]);
         }
@@ -185,6 +189,7 @@ final readonly class CachingSpeechClient implements SpeechClient
     /** @param list<SpeechVoice> $voices */
     private function writeVoices(string $path, array $voices): void
     {
+        // @mago-expect lint:no-error-control-operator best-effort cache: a failed write is logged just below, never raised
         if (!is_dir($this->cacheDir) && !@mkdir($this->cacheDir, 0775, true) && !is_dir($this->cacheDir)) {
             $this->logger->warning('TTS cache directory {dir} could not be created; voices will not be cached.', ['dir' => $this->cacheDir]);
 
@@ -196,6 +201,7 @@ final readonly class CachingSpeechClient implements SpeechClient
             'voices' => array_map(static fn (SpeechVoice $v): array => ['id' => $v->id, 'label' => $v->label], $voices),
         ]);
 
+        // @mago-expect lint:no-error-control-operator best-effort cache: a failed write is logged just below, never raised
         if (false === $payload || false === @file_put_contents($path, $payload)) {
             $this->logger->warning('TTS voices cache write failed for {path}; this list will not be cached.', ['path' => $path]);
         }

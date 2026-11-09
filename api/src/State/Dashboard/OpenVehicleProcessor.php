@@ -11,6 +11,7 @@ use App\Agent\Ui\RenderIntentTools;
 use App\ApiResource\GarageVehicle;
 use App\Dto\Dashboard\OpenVehicleInput;
 use App\Entity\Vehicle;
+use App\Garage\ResourceIri;
 use App\Garage\ToolResult;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
@@ -74,7 +75,7 @@ final readonly class OpenVehicleProcessor implements ProcessorInterface
         }
 
         $vehicle = $matches[0];
-        $iri = $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle));
+        $iri = ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle));
 
         // Drive the car in FIRST: the render intent is the answer, and it should be on screen while
         // the model is still reading the forecast below it.
@@ -97,7 +98,7 @@ final readonly class OpenVehicleProcessor implements ProcessorInterface
     private function label(Vehicle $vehicle): array
     {
         return [
-            '@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle)),
+            '@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle)),
             'label' => trim($vehicle->getMake().' '.$vehicle->getModel()),
         ];
     }

@@ -26,7 +26,11 @@ final readonly class SelectableTranscriptionClient implements TranscriptionClien
 
     public function transcribe(string $audio, string $contentType, Locale $locale, array $keyterms = []): string
     {
-        // @phpstan-ignore symfonyContainer.serviceNotFound ($clients is a !service_locator keyed by backend, not the app container)
-        return $this->clients->get($this->backend->value)->transcribe($audio, $contentType, $locale, $keyterms);
+        $client = $this->clients->get($this->backend->value);
+        if (!$client instanceof TranscriptionClient) {
+            throw new \LogicException(\sprintf('The "%s" transcription backend is not a TranscriptionClient.', $this->backend->value));
+        }
+
+        return $client->transcribe($audio, $contentType, $locale, $keyterms);
     }
 }

@@ -164,6 +164,7 @@ final readonly class SpeechController
                 flush();
             }
         } catch (SpeechUnavailable) {
+            // @mago-expect lint:no-empty-catch-clause headers are out, nothing left to send
             // Headers are out and part of the line is already playing; a truncated stream is the
             // only honest ending. The card is on screen regardless.
         }

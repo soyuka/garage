@@ -67,7 +67,7 @@ final class GarageMaintenanceRecord
     #[ApiProperty(identifier: true, description: 'Public ULID identifier of the maintenance record.')]
     public Ulid $id;
 
-    /** @var list<array{type: string, label?: string, parts: list<array{ref: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}> */
+    /** @var list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int, id?: string, supplier?: string, findRoute?: string}>}> */
     public array $items = [];
 
     /**

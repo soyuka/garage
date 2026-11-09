@@ -10,6 +10,8 @@ use Mcp\Schema\Result\CallToolResult;
  * Shared {@see WriteOutcome::toToolResult()} implementation for the vehicle write outcomes. Reads the
  * `status`/`candidates`/`vehicleId` every one of them declares; the host class owns its success
  * payload (the `default` case here returns null to signal "keep going").
+ *
+ * @require-implements WriteOutcome
  */
 trait WriteOutcomeToolResult
 {

@@ -41,6 +41,14 @@ final readonly class DismissMaintenanceOutcome implements WriteOutcome
     }
 
     /**
+     * The task of the success outcome; the caller has already handled every other status.
+     */
+    public function dismissedTask(): PlannedMaintenance
+    {
+        return $this->task ?? throw new \LogicException(\sprintf('A "%s" outcome carries no task.', $this->status));
+    }
+
+    /**
      * @param list<Vehicle> $candidates
      */
     public static function ambiguous(array $candidates): self

@@ -44,7 +44,7 @@ final class CompositeToolbox implements ToolboxInterface
     /** @var array<string, true>|null cache of MCP tool names */
     private ?array $mcpNames = null;
 
-    /** @var array<class-string, RequiresCapability|null> */
+    /** @var array<string, RequiresCapability|null> */
     private array $requirements = [];
 
     public function __construct(

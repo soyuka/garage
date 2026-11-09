@@ -81,7 +81,7 @@ final readonly class DismissMaintenanceProcessor implements ProcessorInterface
             return ToolResult::error('task_not_found', \sprintf('No open task "%s"%s on this vehicle\'s checklist — nothing to remove.', $data->type, null !== $data->label ? \sprintf(' (%s)', $data->label) : ''));
         }
 
-        return $this->publishedTask($outcome->task);
+        return $this->publishedTask($outcome->dismissedTask());
     }
 
     private function publishedTask(PlannedMaintenance $task): CallToolResult

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Maintenance;
 
 use App\Entity\PlannedMaintenance;
+use App\Entity\PlannedPart;
 use App\Entity\Vehicle;
 use App\Garage\DismissMaintenanceOutcome;
 use App\Garage\PlanMaintenanceOutcome;
@@ -21,6 +22,8 @@ use Symfony\Component\Uid\Ulid;
  * log, planning is an UPSERT: re-running a turn for the same (vehicle, type, label) refreshes the
  * one open task instead of stacking duplicates — the agent re-emits the same plan when it re-reads a
  * service, and the checklist must stay a set, not a pile.
+ *
+ * @phpstan-import-type PartInput from PlannedPart
  */
 final readonly class PlannedMaintenancePlanner
 {
@@ -32,7 +35,7 @@ final readonly class PlannedMaintenancePlanner
     }
 
     /**
-     * @param list<array{ref: string, label?: string, brand?: string, qty?: int, price?: float, supplier?: string}> $parts
+     * @param list<PartInput> $parts
      */
     public function plan(
         ?Ulid $vehicleId,
@@ -64,7 +67,7 @@ final readonly class PlannedMaintenancePlanner
             return PlanMaintenanceOutcome::notFound($resolution->vehicleId);
         }
 
-        $vehicle = $resolution->vehicle;
+        $vehicle = $resolution->resolvedVehicle();
 
         $task = $this->tasks->findOpen($vehicle, $type, $label);
         if (null === $task) {
@@ -131,7 +134,7 @@ final readonly class PlannedMaintenancePlanner
             return DismissMaintenanceOutcome::notFound($resolution->vehicleId);
         }
 
-        $task = $this->tasks->findOpen($resolution->vehicle, $type, $label);
+        $task = $this->tasks->findOpen($resolution->resolvedVehicle(), $type, $label);
         if (null === $task) {
             return DismissMaintenanceOutcome::taskNotFound();
         }

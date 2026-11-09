@@ -26,6 +26,7 @@ final readonly class InvalidInputProvider implements ProviderInterface
     ) {
     }
 
+    // @mago-expect analysis:docblock-type-mismatch the inherited ProviderInterface @return names iterable<T>, which the native object|array|null cannot spell
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): object|array|null
     {
         try {
@@ -34,7 +35,7 @@ final readonly class InvalidInputProvider implements ProviderInterface
             $violations = [];
             foreach ($e->getConstraintViolationList() as $violation) {
                 $path = $violation->getPropertyPath();
-                $violations[] = ('' !== $path ? $path.': ' : '').$violation->getMessage();
+                $violations[] = ('' !== $path ? $path.': ' : '').(string) $violation->getMessage();
             }
 
             throw new InvalidToolInputException(implode('; ', $violations), previous: $e);

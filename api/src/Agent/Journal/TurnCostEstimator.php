@@ -29,6 +29,7 @@ final readonly class TurnCostEstimator
         foreach ($prices ?? [] as $model => $entry) {
             $parsed = self::entry($entry);
             if (null !== $parsed) {
+                // @mago-expect analysis:redundant-cast a numeric model name comes back from the array key as int
                 $valid[(string) $model] = $parsed;
             }
         }

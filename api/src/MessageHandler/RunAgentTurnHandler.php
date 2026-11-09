@@ -57,6 +57,7 @@ final readonly class RunAgentTurnHandler
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
+        #[\SensitiveParameter]
         private BonnerefToken $bonnerefToken,
         private LocaleContext $locale,
         private SelectedVehicleContext $selectedVehicle,
@@ -110,7 +111,8 @@ final readonly class RunAgentTurnHandler
             // Drive the lazy stream to completion: a StreamResult does nothing until consumed, and it
             // is the consumption that runs the tool-call loop and emits the render intents. The
             // web_search budget is fed by the listener ServerToolUseLogger attached to each call.
-            foreach ($result->getContent() as $delta) {
+            $deltas = $result->getContent();
+            foreach (is_iterable($deltas) ? $deltas : [] as $delta) {
                 // Deltas are side-effecting (tool execution, Mercure publishes); draining is enough.
                 unset($delta);
             }

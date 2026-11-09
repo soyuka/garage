@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Maintenance;
 
+use App\Entity\PlannedPart;
 use App\Entity\VehicleFact;
 
 /**
@@ -17,6 +18,9 @@ use App\Entity\VehicleFact;
  * Only a ref-LESS part is a fluid (a cataloged part carries a part number); only the first such part
  * of the task is enriched (an oil_change has one engine-oil line). Verified reflects the standard
  * (the manufacturer spec) — a catalog ACEA grade is authoritative, a web viscosity is not.
+ *
+ * @phpstan-import-type PartArray from PlannedPart
+ * @phpstan-import-type EnrichedPart from PlannedPart
  */
 final class PlannedTaskFluidEnricher
 {
@@ -27,10 +31,10 @@ final class PlannedTaskFluidEnricher
     ];
 
     /**
-     * @param list<array<string, mixed>> $parts the task's stored parts
-     * @param list<VehicleFact>          $facts the vehicle's projected facts
+     * @param list<PartArray>   $parts the task's stored parts
+     * @param list<VehicleFact> $facts the vehicle's projected facts
      *
-     * @return list<array<string, mixed>> the parts, with `spec` set on the first fluid part when derivable
+     * @return list<EnrichedPart> the parts, with `spec` set on the first fluid part when derivable
      */
     public function enrich(string $type, array $parts, array $facts): array
     {
@@ -61,11 +65,11 @@ final class PlannedTaskFluidEnricher
     }
 
     /**
-     * @param array<string, mixed> $part
+     * @param PartArray $part
      */
     private static function isFluid(array $part): bool
     {
-        return '' === trim((string) ($part['ref'] ?? ''));
+        return '' === trim($part['ref']);
     }
 
     /**
@@ -110,8 +114,9 @@ final class PlannedTaskFluidEnricher
         }
         if (null !== $capacity) {
             $spec['capacity'] = $capacity->getValue();
-            if (null !== $capacity->getUnit()) {
-                $spec['unit'] = $capacity->getUnit();
+            $unit = $capacity->getUnit();
+            if (null !== $unit) {
+                $spec['unit'] = $unit;
             }
         }
 

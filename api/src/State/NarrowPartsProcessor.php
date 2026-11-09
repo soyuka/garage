@@ -31,6 +31,7 @@ final class NarrowPartsProcessor implements ProcessorInterface
         ));
         unset($narrowed['carId']);
 
+        // @mago-expect analysis:less-specific-argument get_object_vars of a final DTO: the shape is sealed, mago leaves it open
         return ToolResult::of(['status' => 'ok'] + $narrowed);
     }
 }

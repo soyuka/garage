@@ -52,7 +52,7 @@ final readonly class ArchiveCompletedTasksProcessor implements ProcessorInterfac
 
         return new ArchiveTasksOutput(
             archived: $archived,
-            records: array_map(static fn ($record): string => '/garage/maintenance-records/'.$record->getId(), $records),
+            records: array_map(static fn ($record): string => '/garage/maintenance-records/'.(string) $record->getId(), $records),
         );
     }
 }

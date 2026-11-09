@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\PlannedTask;
 use App\Entity\PlannedMaintenance;
 use App\Entity\VehicleFact;
+use App\Garage\ResourceIri;
 
 /**
  * Flattens a PlannedMaintenance into the array the MCP tool and the vehicle item GET both surface —
@@ -30,7 +31,7 @@ final readonly class PlannedTaskView
      *     label: string|null,
      *     target: array{value: int, unit: string|null}|null,
      *     dueDate: string|null,
-     *     parts: list<array{ref: string, label?: string, brand?: string, qty?: int, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}>,
+     *     parts: list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string, findRoute?: string, spec?: array{verified: bool, viscosity?: string, standard?: string, capacity?: string, unit?: string}}>,
      *     attributes: list<array{key: string, value: string, unit: string|null, source: string, verified: bool, url: string|null}>,
      *     status: string,
      *     vehicle: string
@@ -41,7 +42,7 @@ final readonly class PlannedTaskView
         $targetValue = $task->getTargetUsageValue();
 
         return [
-            '@id' => $this->iriConverter->getIriFromResource(PlannedTask::fromEntity($task)),
+            '@id' => ResourceIri::of($this->iriConverter, PlannedTask::fromEntity($task)),
             'type' => $task->getType(),
             'label' => $task->getLabel(),
             'target' => null !== $targetValue
@@ -62,7 +63,7 @@ final readonly class PlannedTaskView
                 'url' => $f->getUrl(),
             ], array_values($task->getAttributes()->toArray())),
             'status' => $task->getStatus()->value,
-            'vehicle' => '/garage/vehicles/'.$task->getVehicle()->getId(),
+            'vehicle' => '/garage/vehicles/'.(string) $task->getVehicle()->getId(),
         ];
     }
 }

@@ -7,6 +7,7 @@ namespace App\Maintenance;
 use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\GarageMaintenanceRecord;
 use App\Entity\MaintenanceRecord;
+use App\Garage\ResourceIri;
 
 /**
  * Flattens a MaintenanceRecord into the array the MCP tools surface — mirrors
@@ -23,11 +24,11 @@ final class RecordView
     /**
      * @return array{
      *     '@id': string,
-     *     items: list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int}>}>,
+     *     items: list<array{type: string, label?: string, parts?: list<array{ref?: string, brand?: string, label?: string, qty?: int, priceCents?: int, id?: string, supplier?: string, findRoute?: string}>}>,
      *     label: string|null,
      *     performedAt: string,
      *     usage: array{value: int, unit: string|null}|null,
-     *     cost: array{amount: string, currency: string|null, source: 'bill'|'estimated'}|null,
+     *     cost: array{amount: string, currency: string|null, source: 'bill'|'estimated'|null}|null,
      *     notes: string|null,
      *     performedBy: string|null,
      *     source: string,
@@ -40,7 +41,7 @@ final class RecordView
         $effectiveCostCents = $record->getEffectiveCostCents();
 
         return [
-            '@id' => $this->iriConverter->getIriFromResource(GarageMaintenanceRecord::fromEntity($record)),
+            '@id' => ResourceIri::of($this->iriConverter, GarageMaintenanceRecord::fromEntity($record)),
             'items' => $record->getItems(),
             'label' => $record->getLabel(),
             'performedAt' => $record->getPerformedAt()->format('Y-m-d'),

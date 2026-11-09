@@ -56,18 +56,25 @@ final readonly class VehicleIriResolver
 
     /**
      * The dereferenced vehicle read-model behind the IRI (its identity fields, not just the id), or
-     * the canonical not_found/invalid_input result. A non-vehicle IRI trips the return type check
-     * inside the try and surfaces as invalid_input, same as a malformed handle.
+     * the canonical not_found/invalid_input result. A non-vehicle IRI surfaces as invalid_input, same
+     * as a malformed handle.
      */
     public function resolveResource(string $iri): GarageVehicle|ToolError
     {
         try {
-            return $this->iriConverter->getResourceFromIri($iri);
+            $resource = $this->iriConverter->getResourceFromIri($iri);
         } catch (ItemNotFoundException) {
             return $this->notFound($iri);
         } catch (\Throwable) {
-            return ToolResult::error('invalid_input', \sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $iri));
+            return $this->invalidIri($iri);
         }
+
+        return $resource instanceof GarageVehicle ? $resource : $this->invalidIri($iri);
+    }
+
+    private function invalidIri(string $iri): ToolError
+    {
+        return ToolResult::error('invalid_input', \sprintf('"%s" is not a valid vehicle @id. Use an @id from list_vehicles.', $iri));
     }
 
     /**
@@ -85,10 +92,11 @@ final readonly class VehicleIriResolver
      */
     public function requireIdentity(?string $make, ?string $model): ?ToolError
     {
-        if (null === $make || null === $model) {
-            return ToolResult::error('invalid_input', 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.');
-        }
+        return null === $make || null === $model ? $this->missingIdentity() : null;
+    }
 
-        return null;
+    public function missingIdentity(): ToolError
+    {
+        return ToolResult::error('invalid_input', 'Provide make and model, or a vehicle @id (IRI) from list_vehicles.');
     }
 }

@@ -7,6 +7,7 @@ namespace App\State;
 use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
+use App\ApiResource\PlannedTask;
 use App\Dto\RemovePlannedPartInput;
 use App\Entity\PlannedMaintenance;
 use App\Garage\ToolResult;
@@ -49,11 +50,11 @@ final readonly class RemovePlannedPartProcessor implements ProcessorInterface
     private function locateTask(string $iri): ?PlannedMaintenance
     {
         try {
-            $id = $this->iriConverter->getResourceFromIri($iri)->id;
+            $resource = $this->iriConverter->getResourceFromIri($iri);
         } catch (\Throwable) {
             return null;
         }
 
-        return $id instanceof Ulid ? $this->locator->find($id) : null;
+        return $resource instanceof PlannedTask ? $this->locator->find($resource->id) : null;
     }
 }

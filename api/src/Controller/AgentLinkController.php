@@ -39,7 +39,7 @@ final readonly class AgentLinkController
     public function __invoke(Request $request): JsonResponse
     {
         $owner = $this->security->getUser()?->getUserIdentifier() ?? '';
-        $session = (string) $request->query->get('session', '');
+        $session = $request->query->get('session', '');
 
         return new JsonResponse([
             'topic' => $this->channel->pilotTopic($owner),

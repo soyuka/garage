@@ -60,7 +60,7 @@ final readonly class PlannedTaskPlanProcessor implements ProcessorInterface
         }
 
         foreach ($data->parts as $part) {
-            // @phpstan-ignore function.alreadyNarrowedType, notIdentical.alwaysTrue (deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee)
+            // @mago-expect analysis:redundant-type-comparison(2), analysis:redundant-logical-operation(2), analysis:redundant-comparison deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee
             if (\is_array($part) && \array_key_exists('findRoute', $part) && null !== $part['findRoute'] && !PlannedPart::isValidFindRoute($part['findRoute'])) {
                 throw new UnprocessableEntityHttpException('Invalid findRoute on a part.');
             }
@@ -110,8 +110,8 @@ final readonly class PlannedTaskPlanProcessor implements ProcessorInterface
             ], Response::HTTP_CONFLICT);
         }
 
-        $this->publisher->publishVehicle($outcome->task->getVehicle());
+        $this->publisher->publishVehicle($outcome->plannedTask()->getVehicle());
 
-        return PlannedTask::fromEntity($outcome->task);
+        return PlannedTask::fromEntity($outcome->plannedTask());
     }
 }

@@ -47,7 +47,7 @@ final readonly class UploadVehicleDocumentController
         }
 
         $kind = VehicleDocumentKind::tryFrom((string) $request->request->get('kind'))
-            ?? throw new UnprocessableEntityHttpException(\sprintf('"kind" must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value'))));
+            ?? throw new UnprocessableEntityHttpException(\sprintf('"kind" must be one of: %s.', implode(', ', array_map(static fn (VehicleDocumentKind $kind): string => $kind->value, VehicleDocumentKind::cases()))));
 
         $this->rateLimit->consume($this->uploadLimiter, 'Upload');
 

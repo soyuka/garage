@@ -72,7 +72,11 @@ final readonly class ProposeActionsProcessor implements ProcessorInterface
     private static function parts(ProposeActionInput|array $action): array
     {
         $parts = [];
-        foreach (self::field($action, 'parts') ?? [] as $part) {
+        $actionParts = self::field($action, 'parts');
+        foreach (\is_array($actionParts) ? $actionParts : [] as $part) {
+            if (!$part instanceof ProposePartInput && !\is_array($part)) {
+                continue;
+            }
             $ref = (string) (self::field($part, 'ref') ?? '');
             if ('' === trim($ref)) {
                 continue;
@@ -84,7 +88,7 @@ final readonly class ProposeActionsProcessor implements ProcessorInterface
         return $parts;
     }
 
-    /** @param ProposeActionInput|ProposePartInput|array<string, mixed> $source */
+    /** @param ProposeActionInput|ProposePartInput|array<array-key, mixed> $source */
     private static function text(ProposeActionInput|ProposePartInput|array $source, string $field): ?string
     {
         $value = self::field($source, $field);
@@ -92,9 +96,9 @@ final readonly class ProposeActionsProcessor implements ProcessorInterface
         return null === $value || '' === trim((string) $value) ? null : (string) $value;
     }
 
-    /** @param ProposeActionInput|ProposePartInput|array<string, mixed> $source */
+    /** @param ProposeActionInput|ProposePartInput|array<array-key, mixed> $source */
     private static function field(ProposeActionInput|ProposePartInput|array $source, string $field): mixed
     {
-        return \is_array($source) ? ($source[$field] ?? null) : ($source->{$field} ?? null);
+        return \is_array($source) ? ($source[$field] ?? null) : (get_object_vars($source)[$field] ?? null);
     }
 }

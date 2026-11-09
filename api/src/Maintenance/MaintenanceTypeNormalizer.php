@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Maintenance;
 
+use App\Entity\MaintenanceRecord;
+
 /**
  * Canonicalises a service-item `type` on write. The log accepts any descriptive type (the long tail
  * is deliberate — a service we never planned must still be loggable), but a KNOWN service entered
@@ -11,6 +13,8 @@ namespace App\Maintenance;
  * because the schedule + forecast match baselines on that exact string. So this maps recognised
  * aliases → canonical; anything unrecognised is returned verbatim (only surrounding whitespace
  * trimmed), never rejected and never collapsed to "other".
+ *
+ * @phpstan-import-type ItemWire from MaintenanceRecord
  */
 final class MaintenanceTypeNormalizer
 {
@@ -110,14 +114,14 @@ final class MaintenanceTypeNormalizer
     /**
      * Canonicalise every item's `type` in place, leaving parts/label and any other key untouched.
      *
-     * @param list<array<string, mixed>> $items
+     * @param list<ItemWire> $items
      *
-     * @return list<array<string, mixed>>
+     * @return list<ItemWire>
      */
     public function normalizeItems(array $items): array
     {
         return array_map(function (array $item): array {
-            if (isset($item['type']) && \is_string($item['type'])) {
+            if (isset($item['type'])) {
                 $item['type'] = $this->canonical($item['type']);
             }
 

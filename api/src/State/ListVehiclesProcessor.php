@@ -77,7 +77,7 @@ final readonly class ListVehiclesProcessor implements ProcessorInterface
             return $page;
         }
 
-        $selectedId = substr($iri, strrpos($iri, '/') + 1);
+        $selectedId = substr($iri, (int) strrpos($iri, '/') + 1);
 
         $selectedVehicle = null;
         $rest = [];

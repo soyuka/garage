@@ -32,7 +32,12 @@ final class BsonPayload
     public static function decode(?array $native, ?string $json): array
     {
         if (null !== $json) {
-            return json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
+            $data = json_decode($json, true, flags: \JSON_THROW_ON_ERROR);
+            if (!\is_array($data)) {
+                throw new \UnexpectedValueException('A stored JSON payload is not an array.');
+            }
+
+            return $data;
         }
 
         return $native ?? [];

@@ -11,6 +11,7 @@ use App\ApiResource\GarageVehicle;
 use App\Dto\SetVehicleFactsInput;
 use App\Entity\VehicleFact;
 use App\Garage\FactView;
+use App\Garage\ResourceIri;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Maintenance\VehicleFactWriter;
@@ -57,7 +58,7 @@ final readonly class SetVehicleFactsProcessor implements ProcessorInterface
 
         return ToolResult::of([
             'status' => 'ok',
-            'vehicle' => ['@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle))],
+            'vehicle' => ['@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle))],
             'facts' => array_map($this->factView->toArray(...), $facts),
             'shadowed' => $this->writer->shadowed($vehicle, $facts),
         ]);

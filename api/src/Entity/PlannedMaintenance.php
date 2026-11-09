@@ -30,6 +30,9 @@ use Symfony\Component\Uid\Ulid;
  * multi-tenancy seam as Vehicle: null = shared/global in phase 1.
  *
  * @see \App\Maintenance\PlannedMaintenancePlanner
+ *
+ * @phpstan-import-type PartInput from PlannedPart
+ * @phpstan-import-type PartArray from PlannedPart
  */
 #[ODM\Document(collection: 'planned_maintenance', repositoryClass: PlannedMaintenanceRepository::class)]
 #[ODM\Index(keys: ['vehicle' => 'asc', 'status' => 'asc'], name: 'idx_planned_vehicle_status')]
@@ -62,7 +65,7 @@ class PlannedMaintenance
     #[ODM\Field(type: 'date_immutable', nullable: true)]
     private ?\DateTimeImmutable $archivedAt = null;
 
-    /** @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> $parts */
+    /** @param list<PartInput> $parts */
     public function __construct(
         #[ODM\ReferenceOne(targetDocument: Vehicle::class, storeAs: 'id', inversedBy: 'plannedTasks')]
         private Vehicle $vehicle,
@@ -179,7 +182,7 @@ class PlannedMaintenance
     }
 
     /**
-     * @return list<array{id: string, ref: string, label?: string, brand?: string, qty?: int, priceCents?: int, supplier?: string}>
+     * @return list<PartArray>
      */
     public function getParts(): array
     {
@@ -187,7 +190,7 @@ class PlannedMaintenance
     }
 
     /**
-     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string, id?: string}> $parts
+     * @param list<PartInput> $parts
      */
     public function setParts(array $parts): void
     {
@@ -201,7 +204,7 @@ class PlannedMaintenance
      * an incremental plan ("ajoute l'huile à la liste") must add to the shopping list, never clobber
      * the parts a prior pass resolved (e.g. the oil filter when only the oil is re-sent).
      *
-     * @param list<array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string}> $parts
+     * @param list<PartInput> $parts
      */
     public function mergeParts(array $parts): void
     {
@@ -219,7 +222,7 @@ class PlannedMaintenance
      * Append a part to the shopping list (the parts-subresource POST). Upserts like
      * {@see self::mergeParts()} so adding a known ref twice updates it rather than stacking a dupe.
      *
-     * @param array{ref?: string, label?: string, brand?: string, qty?: int, priceCents?: int, price?: float, supplier?: string} $part
+     * @param PartInput $part
      */
     public function addPart(array $part): PlannedPart
     {
@@ -264,11 +267,11 @@ class PlannedMaintenance
      * A refed line is identified by its ref; a ref-less line (a bare fluid) by its normalised label,
      * so several ref-less lines coexist. A ref-less line never matches a refed one.
      *
-     * @param array{ref?: string, label?: string|null} $incoming
+     * @param PartInput $incoming
      */
     private function partMatching(array $incoming): ?PlannedPart
     {
-        $ref = ConsumableStandard::normalise((string) ($incoming['ref'] ?? ''));
+        $ref = ConsumableStandard::normalise($incoming['ref'] ?? '');
         $label = PlannedPart::normaliseLabel($incoming['label'] ?? null);
 
         foreach ($this->parts as $part) {

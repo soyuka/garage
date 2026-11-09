@@ -12,6 +12,7 @@ use App\Dto\GetVehicleFactsInput;
 use App\Entity\Vehicle;
 use App\Garage\FactView;
 use App\Garage\GarageResolver;
+use App\Garage\ResourceIri;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleType;
@@ -44,9 +45,8 @@ final readonly class GetVehicleFactsProcessor implements ProcessorInterface
             return $this->factsByIri($data->vehicle, $data->keys);
         }
 
-        $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
-        if (null !== $guard) {
-            return $guard;
+        if (null === $data->make || null === $data->model) {
+            return $this->iriResolver->missingIdentity();
         }
 
         $type = VehicleType::from($data->vehicleType);
@@ -111,7 +111,7 @@ final readonly class GetVehicleFactsProcessor implements ProcessorInterface
 
         return ToolResult::of([
             'status' => 'ok',
-            'vehicle' => ['@id' => $this->iriConverter->getIriFromResource(GarageVehicle::fromEntity($vehicle))] + $identity,
+            'vehicle' => ['@id' => ResourceIri::of($this->iriConverter, GarageVehicle::fromEntity($vehicle))] + $identity,
             'facts' => $facts,
         ]);
     }

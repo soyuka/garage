@@ -43,7 +43,7 @@ final readonly class VehicleForecastProvider implements ProviderInterface
 
         $resource = new VehicleForecast();
         $resource->vehicleId = $vehicle->getId();
-        $resource->vehicle = '/garage/vehicles/'.$vehicle->getId();
+        $resource->vehicle = '/garage/vehicles/'.(string) $vehicle->getId();
         $resource->due = array_map($this->view->item(...), $forecast->due);
         $resource->gaps = array_map(static fn (MaintenanceType $t): string => $t->value, $forecast->unknownBaseline);
 

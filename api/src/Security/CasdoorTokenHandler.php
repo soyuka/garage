@@ -71,7 +71,8 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
             $claims = $this->verifySignature($jws, $this->keySetFor($jws));
             $this->verifyClaims($claims);
 
-            if (empty($claims[$this->claim]) || !\is_string($claims[$this->claim])) {
+            $owner = $claims[$this->claim] ?? null;
+            if (!\is_string($owner) || '' === $owner || '0' === $owner) {
                 throw new MissingClaimException(\sprintf('"%s" claim not found.', $this->claim));
             }
 
@@ -80,7 +81,7 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
                 throw new BadCredentialsException('The email owner claim is not verified.');
             }
 
-            return new UserBadge($claims[$this->claim], null, $claims);
+            return new UserBadge($owner, null, $claims);
         } catch (\Throwable $e) {
             // A refused token is the caller's problem, not ours: notice, not error. A malformed payload
             // (TypeError, JsonException) is refused the same way instead of escaping as a 500.
@@ -89,7 +90,7 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
                 'exception' => $e::class,
             ]);
 
-            throw new BadCredentialsException('Invalid credentials.', $e->getCode(), $e);
+            throw new BadCredentialsException('Invalid credentials.', (int) $e->getCode(), $e);
         }
     }
 
@@ -126,7 +127,7 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<array-key, mixed>>
      */
     private function computeDiscoveryKeys(ItemInterface $item): array
     {
@@ -141,11 +142,24 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
 
         $item->expiresAfter(3600);
 
-        return array_values($this->client->request('GET', $jwksUri)->toArray()['keys']);
+        $keys = $this->client->request('GET', $jwksUri)->toArray()['keys'] ?? null;
+        if (!\is_array($keys)) {
+            throw new \RuntimeException('The "keys" are missing from the JWKS document.');
+        }
+
+        $valid = [];
+        foreach ($keys as $key) {
+            if (!\is_array($key)) {
+                throw new \RuntimeException('A JWKS key is not a JSON object.');
+            }
+            $valid[] = $key;
+        }
+
+        return $valid;
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function verifySignature(JWS $jws, JWKSet $jwkset): array
     {
@@ -167,7 +181,7 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param array<array-key, mixed> $claims
      */
     private function verifyClaims(array $claims): void
     {

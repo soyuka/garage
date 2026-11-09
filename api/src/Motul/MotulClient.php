@@ -51,7 +51,7 @@ final readonly class MotulClient
             return \is_array($json['vehicles'] ?? null) ? $json['vehicles'] : [];
         });
 
-        return array_map(MotulVehicle::fromArray(...), $data);
+        return array_values(array_map(MotulVehicle::fromArray(...), $data));
     }
 
     /**
@@ -62,7 +62,10 @@ final readonly class MotulClient
         $url = $this->recommendationsUrl($vehicleId);
         // Cache the raw page (the dehydrated grade format is more stable than its decoded shape) and
         // re-parse on read — parsing is cheap, and the parser can evolve without busting the cache.
-        $html = $this->cached('recs.'.sha1($url), fn (): array => ['html' => $this->get($url, [], 'text/html')])['html'];
+        $html = $this->cached('recs.'.sha1($url), fn (): array => ['html' => $this->get($url, [], 'text/html')])['html'] ?? null;
+        if (!\is_string($html)) {
+            throw UpstreamException::definitive(self::SOURCE, 'The stored Motul page is not HTML text.');
+        }
 
         return $this->parser->fromNextData(NextData::extract($html));
     }

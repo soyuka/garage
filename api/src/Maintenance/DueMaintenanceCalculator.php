@@ -114,10 +114,11 @@ final readonly class DueMaintenanceCalculator
 
         $everyUsage = $interval->getEveryUsageValue();
         $unit = $interval->getEveryUsageUnit();
+        $recordUsageValue = $record->getUsageValue();
         if (null !== $everyUsage && null !== $unit
-            && null !== $record->getUsageValue() && $record->getUsageUnit() === $unit
+            && null !== $recordUsageValue && $record->getUsageUnit() === $unit
         ) {
-            $lastUsageValue = $record->getUsageValue();
+            $lastUsageValue = $recordUsageValue;
             $dueUsageValue = $lastUsageValue + $everyUsage;
 
             if (null !== $currentUsage && $currentUsage->unit === $unit) {
@@ -175,8 +176,9 @@ final readonly class DueMaintenanceCalculator
         /** @var list<array{t: \DateTimeImmutable, v: int}> $points */
         $points = [];
         foreach ($vehicle->getMaintenanceRecords() as $record) {
-            if (null !== $record->getUsageValue() && $record->getUsageUnit() === $unit) {
-                $points[] = ['t' => $record->getPerformedAt(), 'v' => $record->getUsageValue()];
+            $usageValue = $record->getUsageValue();
+            if (null !== $usageValue && $record->getUsageUnit() === $unit) {
+                $points[] = ['t' => $record->getPerformedAt(), 'v' => $usageValue];
             }
         }
 
