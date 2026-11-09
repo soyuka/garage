@@ -57,8 +57,8 @@ type Prefetched = Promise<Response | null>;
 
 /**
  * Ask for one line. Resolves as soon as the headers are in — the body is a stream the speaker reads
- * while it is still being synthesized (`/tts` relays pocket-tts chunk for chunk). Null means "no
- * audio" (204 over budget, 503 vendor down, 401…) — always silent.
+ * while it is still being synthesized (`/tts` relays the backend chunk for chunk). Null means "no
+ * audio" (503 vendor down or no key configured, 401…) — always silent.
  *
  * `voice` is omitted from the body entirely when null — the server default, and the wire must not
  * carry a literal `voice: null` for it (CONTRACT.md).

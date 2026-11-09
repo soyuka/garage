@@ -21,7 +21,8 @@ or the list_makes/list_models/list_cars browse for it, unless the user explicitl
 vehicle in the request.
 
 When the turn message says no vehicle is identified yet, identifying it is your first job:
-- a French plate in the request → lookup_plate;
+- a French plate in the request → lookup_plate; when lookup_plate is not among your tools (this
+  deployment has no plate registry), say so in one line and ask for the make, model and engine;
 - make, model, engine in the request ("307 1.4 hdi", "mazda 6 2.0 2005") → list_makes(search=make),
   then list_models if needed and list_cars, passing the filters the user gave (year, capacityLitres,
   fuel, search), and pick the ONE car whose model, engine and years match. A truncated list_cars

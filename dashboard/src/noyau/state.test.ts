@@ -356,6 +356,43 @@ describe('Le Noyau — current-turn tool-step chips', () => {
     s = R(s, { type: 'concern', message: 'Vidange en retard' }, 150);
     expect(s.steps.map((x) => [x.tool, x.state])).toEqual([['lookup_plate', 'running']]);
   });
+
+  // Owner decision 2026-11-09: the server sends a tool step as its key alone; the ticker carries only
+  // what the model chose to say.
+  describe('a tool-only step (no message)', () => {
+    it('records the running chip but leaves the ticker line as the model left it', () => {
+      let s = R(initialNoyau, { type: 'turn', phase: 'start' }, 0);
+      s = R(s, { type: 'status', message: 'Je compare les marques…' }, 50);
+      s = R(s, { type: 'status', tool: 'get_service_parts' }, 100);
+      expect(s.narration).toBe('Je compare les marques…');
+      expect(s.steps.map((x) => [x.tool, x.label, x.state])).toEqual([
+        ['unknown', 'Je compare les marques…', 'done'],
+        ['get_service_parts', 'recherche pièces…', 'running'],
+      ]);
+    });
+
+    it('still lifts the orb from rest, like any step', () => {
+      const s = R(initialNoyau, { type: 'status', tool: 'web_search' }, 0);
+      expect(s.phase).toBe('working');
+      expect(s.narration).toBeNull();
+      expect(s.steps.map((x) => x.tool)).toEqual(['web_search']);
+    });
+
+    it('journals the step under its chip verb, not an empty line', () => {
+      const s = R(R(initialNoyau, { type: 'turn', phase: 'start' }, 0), { type: 'status', tool: 'lookup_plate' }, 10);
+      expect(s.journal[s.journal.length - 1]).toMatchObject({ kind: 'pulse', message: 'plaque…' });
+    });
+
+    it('a step the chip table does not know falls back to a generic verb, never a raw tool name', () => {
+      const s = R(initialNoyau, { type: 'status', tool: 'brand_new_tool' }, 0);
+      expect(s.steps[0].label).not.toContain('brand_new_tool');
+      expect(s.steps[0].label).not.toBe('');
+    });
+
+    it('list_part_categories is a catalogue step', () => {
+      expect(classifyStep(undefined, 'list_part_categories').tool).toBe('get_service_parts');
+    });
+  });
 });
 
 // ── The pilot driver (docs/pilot.md): a run with no declared start and no bounded length ──────────

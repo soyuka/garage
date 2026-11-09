@@ -3112,6 +3112,69 @@ body {
   background: color-mix(in srgb, var(--w-blue) 45%, transparent);
   outline: 2px solid var(--w-blue);
 }
+/* The documentation scan (DESIGN.md § Motion): a 1px blue line sweeps the hit page top to bottom and
+   the hits on it are revealed behind it. Same duration and ease on both, so the reveal edge rides the
+   line. 700ms = SCAN.sweepMs in docScan.ts. */
+.w-doc-sweep {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+}
+.w-doc-sweepline {
+  display: block;
+  height: 100%;
+  border-bottom: 1px solid var(--w-blue);
+  transform: translateY(-100%);
+  animation:
+    w-doc-sweep 700ms var(--w-ease-out) forwards,
+    w-doc-sweep-out 150ms linear 700ms forwards;
+}
+.w-doc-page-sheet.is-sweeping .w-doc-text {
+  animation: w-doc-reveal 700ms var(--w-ease-out) both;
+}
+@keyframes w-doc-sweep {
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes w-doc-sweep-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes w-doc-reveal {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .w-doc-sweep {
+    display: none;
+  }
+  .w-doc-page-sheet.is-sweeping .w-doc-text {
+    animation: none;
+  }
+}
+.w-doc-scancap {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--w-ink-2);
+  font-family: var(--w-font-data);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-docs-page > .w-doc-scancap {
+  width: min(1100px, 100%);
+  padding: 8px 0;
+}
 .w-doc-state {
   margin: 16px;
   color: var(--w-ink-2);

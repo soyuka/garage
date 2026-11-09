@@ -199,20 +199,20 @@ final class CachingSpeechClientTest extends TestCase
     }
 
     /**
-     * The bug this guards against: `TTS_BACKEND=pockettts` must never serve the voice list cached by
-     * `TTS_BACKEND=elevenlabs` merely because both share the same on-disk cache directory. Switching
+     * The bug this guards against: a second backend must never serve the voice list cached by
+     * ElevenLabs merely because both share the same on-disk cache directory. Switching
      * backends must be a cache miss, the same way switching locale already is.
      */
     public function testVoicesAreCachedPerBackend(): void
     {
         $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
         $elevenlabs = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'test-voice-id', $this->cacheDir, new NullLogger());
-        $pockettts = new CachingSpeechClient($inner, 'pockettts', 'kyutai-pocket-tts', '', $this->cacheDir, new NullLogger());
+        $other = new CachingSpeechClient($inner, 'other-backend', 'other-model', '', $this->cacheDir, new NullLogger());
 
         $elevenlabs->voices(Locale::Fr);
-        $pockettts->voices(Locale::Fr);
+        $other->voices(Locale::Fr);
 
-        $this->assertSame(2, $inner->voicesCalls, 'Switching TTS_BACKEND must not serve the other backend\'s cached voice list.');
+        $this->assertSame(2, $inner->voicesCalls, 'Switching backends must not serve the other backend\'s cached voice list.');
     }
 
     /**

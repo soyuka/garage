@@ -8,7 +8,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
  * Carries the interface language across the invocation boundaries that do NOT thread it explicitly —
- * the render-intent tools, {@see \App\Agent\Ui\StepNarrator} and the async agent worker.
+ * the render-intent tools and the async agent worker.
  *
  * Deliberately the same shape as {@see \App\Security\OwnerContext}, and for the same reason: a value
  * that belongs to the caller has to reach services constructed once, and the two answers come from

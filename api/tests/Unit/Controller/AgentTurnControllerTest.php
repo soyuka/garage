@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
+use App\Agent\WebSearch\WebSearchBackend;
+use App\Capability\Capabilities;
 use App\Controller\AgentTurnController;
 use App\Message\RunAgentTurn;
 use PHPUnit\Framework\TestCase;
@@ -110,7 +112,7 @@ final class AgentTurnControllerTest extends TestCase
             }
         };
 
-        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $baseUri);
+        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $baseUri, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
     }
 
     private function dispatched(RunAgentTurn $turn): void

@@ -87,7 +87,7 @@ export type NoyauEvent =
   // A real agent turn omits it: its own `toast` already sits on `narration`, and that is the answer —
   // "nothing generic" is achieved by simply not overwriting it (see the 'end' branch below).
   | { type: 'turn'; phase: 'start' | 'end'; failed?: boolean; driver?: Driver; resultText?: string }
-  | { type: 'status'; message: string; tool?: string; driver?: Driver }
+  | { type: 'status'; message?: string; tool?: string; driver?: Driver }
   | { type: 'toast'; tone: Tone; message: string; driver?: Driver }
   // local: the pilot run has been silent past PILOT_QUIET_MS — stop claiming it is working
   | { type: 'quiet' }
@@ -141,6 +141,7 @@ const CHIP: Record<string, { tool: string; label: keyof Messages['chipVerb'] }> 
   acknowledge: { tool: 'acknowledge', label: 'acknowledged' },
   get_motul_oil: { tool: 'get_motul_oil', label: 'motulOil' },
   get_service_parts: { tool: 'get_service_parts', label: 'parts' },
+  list_part_categories: { tool: 'get_service_parts', label: 'parts' },
   lookup_plate: { tool: 'lookup_plate', label: 'plate' },
   plan_maintenance: { tool: 'plan_maintenance', label: 'planning' },
   list_due_maintenance: { tool: 'list_due_maintenance', label: 'forecast' },
@@ -157,8 +158,8 @@ function chip(entry: { tool: string; label: keyof Messages['chipVerb'] }, locale
   return { tool: entry.tool, label: messages(locale).chipVerb[entry.label] };
 }
 
-// Fallback path only. StepNarrator (api/src/Agent/Ui/StepNarrator.php) is keyed BY TOOL and now sends
-// that key on the frame, so the prose no longer carries the identity. These keyword rules stay for
+// Fallback path only. StepNarrator (api/src/Agent/Ui/StepNarrator.php) sends the tool key alone (no
+// sentence since 2026-11-09), so the prose no longer carries the identity. These keyword rules stay for
 // frames without the field — a server mid-deploy, and the mock scripts (mockStream.ts) — and they are
 // French-only by nature, which is exactly why they must not be load-bearing. Ordered: first match
 // wins, specific before generic.
@@ -183,8 +184,10 @@ const STEP_RULES: Array<{ match: string[]; tool: string }> = [
  * added server-side before this table knew about it) falls through to the prose rather than to
  * `unknown` — the sentence is then still the best evidence available.
  */
-export function classifyStep(message: string, tool?: string, locale: Locale = DEFAULT_LOCALE): { tool: string; label: string } {
+export function classifyStep(message: string | undefined, tool?: string, locale: Locale = DEFAULT_LOCALE): { tool: string; label: string } {
   if (tool && CHIP[tool]) return chip(CHIP[tool], locale);
+  // A bare key the table does not know: a generic verb, never the raw tool name.
+  if (message === undefined || message === '') return { tool: 'unknown', label: messages(locale).chipVerb.working };
 
   const m = message.toLowerCase();
   for (const rule of STEP_RULES) {
@@ -320,14 +323,15 @@ export function reduceNoyau(state: NoyauState, ev: NoyauEvent, at: number, local
       const { tool, label } = classifyStep(ev.message, ev.tool, locale);
       // A new tool narrating means the previous one finished → close it, then push the new running step.
       const steps = [...closeRunning(fresh ? [] : state.steps, 'done'), { id: state.stepSeq, tool, label, state: 'running' as const }];
+      // A tool-only step (no `message`) leaves the ticker alone: it carries only what the model said.
+      const said = ev.message || null;
       return {
         ...base,
-        narration: ev.message,
-        narrationOnce: false,
+        ...(said !== null ? { narration: said, narrationOnce: false } : {}),
         pulseCount: base.pulseCount + 1,
         steps,
         stepSeq: state.stepSeq + 1,
-        journal: append(base, { kind: 'pulse', message: ev.message }, at),
+        journal: append(base, { kind: 'pulse', message: said ?? label }, at),
         entrySeq: state.entrySeq + 1,
       };
     }

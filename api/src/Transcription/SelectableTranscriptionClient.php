@@ -14,7 +14,7 @@ use Psr\Container\ContainerInterface;
  *
  * Service locator so only the selected backend is instantiated, which is what lets an unused hosted
  * provider sit in the container without demanding its API key. Mirrors
- * {@see \App\Speech\SelectableSpeechClient} — one shape for provider seams in this app.
+ * {@see \App\Agent\WebSearch\SelectableWebSearchClient} — one shape for provider seams in this app.
  */
 final readonly class SelectableTranscriptionClient implements TranscriptionClient
 {

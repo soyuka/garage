@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Agent\WebSearch;
 
 use App\Agent\WebSearchBudget;
+use App\Capability\Capability;
+use App\Capability\RequiresCapability;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 
 /**
@@ -26,12 +28,15 @@ use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
  *
  * Class-level #[AsTool] (like {@see \App\Agent\Ui\EndTurnTool}) so `tools: true` autoloads it into the
  * garage toolbox; the bundle only autoconfigures class-level attributes.
+ *
+ * Withheld from the agent when the WEB_SEARCH_BACKEND provider has no key ({@see RequiresCapability}).
  */
 #[AsTool(
     'web_search',
     'Search the web for facts not available from the local garage tools or the parts catalog (a maintenance schedule/program, an interval, a fluid/spec, belt-vs-chain). Returns a grounded answer with source URLs. Last resort, max two searches per turn — put the exact vehicle (make, model, year, engine) in the query; if the first comes back empty, refine once. When it cannot answer it returns a leading token instead of prose: NO_RESULTS (the web had nothing — refining once is allowed), SEARCH_UNAVAILABLE (the service is down — do NOT retry, use the catalog) or SEARCH_BUDGET_SPENT (no searches left this turn).',
     'search',
 )]
+#[RequiresCapability(Capability::WebSearch)]
 final readonly class WebSearchTool
 {
     /**

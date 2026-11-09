@@ -35,13 +35,15 @@ export interface AudioPrefs {
   onSound: (on: boolean) => void;
   voiceOn: boolean;
   onVoiceOn: (on: boolean) => void;
+  /** False when the server has no TTS key (`capabilities.voice`): the switch shows off and disabled. */
+  voiceAvailable: boolean;
 }
 
-function PrefToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (on: boolean) => void }) {
+function PrefToggle({ label, checked, onChange, disabledReason }: { label: string; checked: boolean; onChange: (on: boolean) => void; disabledReason?: string }) {
   return (
-    <label className="w-pref-toggle">
+    <label className="w-pref-toggle" title={disabledReason}>
       <span>{label}</span>
-      <input type="checkbox" role="switch" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <input type="checkbox" role="switch" checked={checked && !disabledReason} disabled={!!disabledReason} onChange={(e) => onChange(e.target.checked)} />
     </label>
   );
 }
@@ -55,13 +57,18 @@ export function PreferencesMenu({ voice, onVoice, audio }: { voice: string | nul
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
 
+  const voiceAvailable = audio?.voiceAvailable ?? true;
   useEffect(() => {
+    if (!voiceAvailable) {
+      setVoices([]);
+      return;
+    }
     let live = true;
     void fetchVoices().then((list) => live && setVoices(list));
     return () => {
       live = false;
     };
-  }, [locale]);
+  }, [locale, voiceAvailable]);
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +97,14 @@ export function PreferencesMenu({ voice, onVoice, audio }: { voice: string | nul
         <div className="w-prefs-pop" role="dialog" aria-label={t.workshop.prefsLabel}>
           <LocaleToggle />
           {audio && <PrefToggle label={t.workshop.prefsSound} checked={audio.sound} onChange={audio.onSound} />}
-          {audio && <PrefToggle label={t.workshop.prefsVoice} checked={audio.voiceOn} onChange={audio.onVoiceOn} />}
+          {audio && (
+            <PrefToggle
+              label={t.workshop.prefsVoice}
+              checked={audio.voiceOn}
+              onChange={audio.onVoiceOn}
+              disabledReason={audio.voiceAvailable ? undefined : t.workshop.prefsVoiceUnavailable}
+            />
+          )}
           {voices.length > 0 && <VoiceSelect voices={voices} value={voice} onChange={onVoice} />}
           <Credits />
           <button

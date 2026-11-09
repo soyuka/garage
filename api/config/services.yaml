@@ -8,10 +8,6 @@ parameters:
     # One source of truth: config/packages/mcp.yaml routes it, the stream runner replays against it.
     app.mcp_path: '/mcp'
 
-    # PocketTtsSpeechClient::voices() label, when nothing sets the env var at all (never true once
-    # api/.env loads, which always sets it — this is the fallback for a stripped-down environment).
-    env(POCKET_TTS_VOICE_LABEL): 'Kyutai'
-
 services:
     # default configuration for services in *this* file
     _defaults:
@@ -106,10 +102,26 @@ services:
                 gemini: '@App\Agent\WebSearch\GeminiWebSearchClient'
             $backend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
 
-    # The voice (docs/voice-plan.md). Deliberately the SAME shape as the WebSearchClient seam above —
-    # runtime router over a !service_locator — so only the selected backend is instantiated and the
-    # unused provider never demands an API key. A Google Chirp 3 HD client drops in as one class, one
-    # enum case and one line here.
+    # Which paid providers this deployment has a key for (App\Capability\Capability). An empty key
+    # switches the feature off: tool not advertised, endpoint 503 without a vendor call, dashboard
+    # control hidden (GET /agent/link `capabilities`).
+    App\Capability\Capabilities:
+        arguments:
+            $anthropicApiKey: '%env(ANTHROPIC_API_KEY)%'
+            $elevenLabsApiKey: '%env(ELEVENLABS_API_KEY)%'
+            $geminiApiKey: '%env(GEMINI_API_KEY)%'
+            $webSearchBackend: '%env(enum:App\Agent\WebSearch\WebSearchBackend:WEB_SEARCH_BACKEND)%'
+
+    # Below the cached factory (-10), i.e. outside it: the cache keeps every tool and the env filters
+    # per call.
+    App\Capability\CapabilityGatedResourceMetadataCollectionFactory:
+        decorates: api_platform.metadata.resource.metadata_collection_factory
+        decoration_priority: -20
+        arguments:
+            $decorated: '@.inner'
+
+    # The voice (docs/voice-plan.md): ElevenLabs only since pocket-tts was removed (2026-11-09,
+    # docs/archive/pocket-tts.md). No key = Capability::Voice off, checked by SpeechController.
     App\Speech\ElevenLabsSpeechClient:
         arguments:
             $apiKey: '%env(ELEVENLABS_API_KEY)%'
@@ -117,24 +129,8 @@ services:
             $model: '%env(ELEVENLABS_MODEL)%'
             $speed: '%env(float:ELEVENLABS_SPEED)%'
 
-    # One `pocket-tts serve` per language: the model is bound at process start, so a locale with no
-    # server configured stays mute rather than borrowing another language's phonetics.
-    App\Speech\PocketTtsSpeechClient:
-        arguments:
-            $endpoints:
-                fr: '%env(POCKET_TTS_FR_URL)%'
-                en: '%env(POCKET_TTS_EN_URL)%'
-            $voiceLabel: '%env(POCKET_TTS_VOICE_LABEL)%'
-
-    # The disk cache (docs/voice-plan.md § Phase 2): a hit makes zero calls to the backend. Wraps
-    # EACH backend individually, not the routed SpeechClient below — only here is the model/voice
-    # identifying the coming audio a compile-time value, so the decorator itself never has to know
-    # which backend is live. `abstract: true` keeps the App\: resource glob from also trying (and
-    # failing) to autowire this class's scalar constructor arguments on its own.
-    App\Speech\CachingSpeechClient:
-        abstract: true
-
-    speech.caching.elevenlabs:
+    # The disk cache (docs/voice-plan.md § Phase 2): a hit makes zero calls to the backend.
+    App\Speech\SpeechClient:
         class: App\Speech\CachingSpeechClient
         arguments:
             $inner: '@App\Speech\ElevenLabsSpeechClient'
@@ -146,30 +142,15 @@ services:
             # (docs/voice-plan.md § Phase 2 note, defect 2026-09-06) leak into the live cache.
             $cacheDir: '%kernel.project_dir%/var/tts/%kernel.environment%'
 
-    speech.caching.pockettts:
-        class: App\Speech\CachingSpeechClient
-        arguments:
-            $inner: '@App\Speech\PocketTtsSpeechClient'
-            $backend: 'pockettts'
-            # pocket-tts serve exposes no separate model/voice choice — one Kyutai model per locale
-            # IS the whole identity — so these are fixed labels, not read from env.
-            $model: 'kyutai-pocket-tts'
-            $voice: ''
-            $speed: 1.0
-            $cacheDir: '%kernel.project_dir%/var/tts/%kernel.environment%'
+    # The CachingSpeechClient class itself is only ever built through the alias above; abstract keeps
+    # the App\: resource glob from autowiring its scalar constructor arguments on its own.
+    App\Speech\CachingSpeechClient:
+        abstract: true
 
-    App\Speech\SpeechClient:
-        class: App\Speech\SelectableSpeechClient
-        arguments:
-            $clients: !service_locator
-                elevenlabs: '@speech.caching.elevenlabs'
-                pockettts: '@speech.caching.pockettts'
-            $backend: '%env(enum:App\Speech\SpeechBackend:TTS_BACKEND)%'
-
-    # The ear (docs/dictation-plan.md). The SAME seam shape as the voice above — router over a
-    # !service_locator — so a local whisper sidecar drops in later as one class, one enum case and one
-    # line here. No caching decorator on this side on purpose: two recordings are never byte-identical,
-    # so a cache would be a disk full of single-use entries.
+    # The ear (docs/dictation-plan.md). Router over a !service_locator, so a local whisper sidecar
+    # drops in later as one class, one enum case and one line here. No caching decorator on this side
+    # on purpose: two recordings are never byte-identical, so a cache would be a disk full of
+    # single-use entries. No key = Capability::Dictation off, checked by TranscriptionController.
     App\Transcription\ElevenLabsTranscriptionClient:
         arguments:
             $apiKey: '%env(ELEVENLABS_API_KEY)%'

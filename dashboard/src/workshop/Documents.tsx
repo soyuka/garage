@@ -1,14 +1,17 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatDate } from '../format';
-import { Failure, ImagePane, PdfPane, type DocSkin } from '../scene/documentPanes';
+import { Failure, ImagePane, PdfPane, type DocSkin, type PdfScanHop } from '../scene/documentPanes';
 import { viewerKind } from '../scene/documentViewer';
 import { loadPdfJs } from '../scene/pdfjs';
 import type { DocumentSpec, VehicleBundle } from '../types';
 import { docBlob, docPreview } from './docBlob';
+import type { ScanCaption } from './docScan';
 import { docKinds, openRowId, previewTitle, stripRows, type DocKind } from './docs';
 import { Close, FileDoc } from './Icons';
 import { documentRows, type DocRow, type Modules } from './modules';
+import { useDocScan } from './useDocScan';
+import type { DocScan } from './view';
 
 const SKIN: DocSkin = { prefix: 'w-doc', button: 'w-button' };
 const PREVIEW_W = 112;
@@ -52,12 +55,31 @@ async function renderFirstPage(blob: Blob, width: number): Promise<string | null
   }
 }
 
-export function DocumentsPlane({ bundle, modules, viewer, active, onOpenRow }: { bundle: VehicleBundle; modules: Modules; viewer: { doc: DocumentSpec; key: number } | null; active: boolean; onOpenRow: (row: DocRow) => void }) {
+export function DocumentsPlane({
+  bundle,
+  modules,
+  viewer,
+  active,
+  scan,
+  reduced,
+  onOpenRow,
+}: {
+  bundle: VehicleBundle;
+  modules: Modules;
+  viewer: { doc: DocumentSpec; key: number } | null;
+  active: boolean;
+  scan: DocScan | null;
+  reduced: boolean;
+  onOpenRow: (row: DocRow) => void;
+}) {
   const t = useT();
   const rows = documentRows(bundle);
   const [kind, setKind] = useState<DocKind | null>(null);
   const shown = stripRows(rows, kind);
-  const open = viewer?.doc ?? (rows[0] ? rowToSpec(rows[0]) : null);
+  const play = useDocScan(scan, reduced);
+  const open = play?.doc ?? viewer?.doc ?? (rows[0] ? rowToSpec(rows[0]) : null);
+  const caption = play ? <ScanCaptionLine caption={play.caption} /> : null;
+  const stageKey = play?.doc && scan ? `scan:${scan.key}:${play.doc.url}` : viewer ? `${viewer.key}` : (open?.url ?? '');
   const openId = openRowId(rows, open);
   const kinds = docKinds(rows);
   const strip = useRef<HTMLDivElement>(null);
@@ -75,6 +97,7 @@ export function DocumentsPlane({ bundle, modules, viewer, active, onOpenRow }: {
   if (rows.length === 0) {
     return (
       <div className="w-docs-page">
+        {caption}
         <p className="w-muted w-docs-empty">{modules.documentsUnavailable ? t.workshop.empty.documentsUnavailable : t.workshop.empty.documents}</p>
       </div>
     );
@@ -82,7 +105,7 @@ export function DocumentsPlane({ bundle, modules, viewer, active, onOpenRow }: {
 
   return (
     <div className="w-docs-page">
-      {open && active && <DocStage key={viewer ? `${viewer.key}` : open.url} doc={open} kind={rows.find((r) => r.id === openId)?.kind ?? null} />}
+      {open && active && <DocStage key={stageKey} doc={open} kind={rows.find((r) => r.id === openId)?.kind ?? null} hop={play?.hop ?? null} caption={caption} />}
       <section className="w-strip" aria-label={t.workshop.documents.strip}>
         {kinds.length > 1 && (
           <div className="w-strip-kinds" role="group" aria-label={t.workshop.documents.kinds}>
@@ -142,7 +165,25 @@ function PreviewCard({ row, open, live, onOpen }: { row: DocRow; open: boolean; 
   );
 }
 
-export function DocStage({ doc, kind, onClose }: { doc: DocumentSpec; kind: DocKind | null; onClose?: () => void }) {
+/** « Recherche · « huile » · 2/4 »: muted, the figures in mono. */
+function ScanCaptionLine({ caption }: { caption: ScanCaption }) {
+  const t = useT().workshop.documents.scan;
+  if (caption.kind === 'none') return <p className="w-doc-scancap">{t.none(caption.query)}</p>;
+  return (
+    <p className="w-doc-scancap">
+      {`${t.search} · ${t.query(caption.query)} · `}
+      {caption.kind === 'position' ? (
+        <span className="w-data">{`${caption.position}/${caption.total}`}</span>
+      ) : (
+        <>
+          <span className="w-data">{caption.count}</span> {t.results(caption.count)}
+        </>
+      )}
+    </p>
+  );
+}
+
+export function DocStage({ doc, kind, hop, caption, onClose }: { doc: DocumentSpec; kind: DocKind | null; hop?: PdfScanHop | null; caption?: ReactNode; onClose?: () => void }) {
   const t = useT();
   const [attempt, setAttempt] = useState(0);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
@@ -169,6 +210,7 @@ export function DocStage({ doc, kind, onClose }: { doc: DocumentSpec; kind: DocK
         <h2 className="w-docstage-title" title={doc.filename}>
           {doc.title}
         </h2>
+        {caption}
         {kind && <span className="w-row-dim">{t.workshop.docKind[kind]}</span>}
         <button type="button" className="w-button" onClick={download} disabled={load.status !== 'ready'} aria-label={t.viewer.downloadAria(doc.filename)}>
           {t.viewer.download}
@@ -186,7 +228,7 @@ export function DocStage({ doc, kind, onClose }: { doc: DocumentSpec; kind: DocK
       )}
       {load.status === 'error' && <Failure message={load.message} onRetry={() => setAttempt((n) => n + 1)} skin={SKIN} />}
       {load.status === 'ready' && type === 'pdf' && (
-        <PdfPane key={attempt} blob={load.blob} initialPage={doc.page} highlight={doc.highlight} pagesUrl={doc.pagesUrl} onRetry={() => setAttempt((n) => n + 1)} skin={SKIN} />
+        <PdfPane key={attempt} blob={load.blob} initialPage={doc.page} highlight={doc.highlight} pagesUrl={doc.pagesUrl} hop={hop} onRetry={() => setAttempt((n) => n + 1)} skin={SKIN} />
       )}
       {load.status === 'ready' && type === 'image' && <ImagePane blob={load.blob} alt={t.viewer.imageAlt(doc.title)} skin={SKIN} fitMode="legible" />}
       {load.status === 'ready' && type === 'other' && (

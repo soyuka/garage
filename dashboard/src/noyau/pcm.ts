@@ -1,5 +1,5 @@
 // Pure PCM plumbing for the streamed voice.
-// `/tts` relays pocket-tts as it is produced: a 44-byte WAV header whose sizes are a 2 GB placeholder,
+// `/tts` relays the voice as it is produced (ElevenLabs PCM): a 44-byte WAV header whose sizes are a 2 GB placeholder,
 // then 24 kHz mono 16-bit pieces of 80 ms. Nothing here touches an AudioContext — the impure edge is
 // `speaker.ts` — so every rule (header walk, half-frame carry, clock placement) is a unit test.
 

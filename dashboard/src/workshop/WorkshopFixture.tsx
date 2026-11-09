@@ -4,7 +4,7 @@ import { useNoyau } from '../noyau/useNoyau';
 import { segForIri, useHashPath } from '../router';
 import { localeSearch } from '../i18n/locale';
 import { useReducedMotion } from '../scene/useReducedMotion';
-import type { CtaAction, Iri, UIAction, VehicleBundle } from '../types';
+import type { CtaAction, DocScanHit, Iri, UIAction, VehicleBundle } from '../types';
 import { useT } from '../i18n/LocaleProvider';
 import { offlineEdits } from './edits';
 import { useCommandStatus, useTheme } from './hooks';
@@ -126,6 +126,32 @@ const BUNDLES: VehicleBundle[] = Object.values(FIXTURES)
   .filter((b): b is VehicleBundle => b !== null)
   .map(enrich);
 
+const MR_HIT = (page: number, pageLabel: string): DocScanHit => ({
+  documentId: '01DOCMR',
+  page,
+  pageLabel,
+  url: '/garage/vehicles/01OVERDUEESPACE/documents/01DOCMR/file',
+  title: 'MR 361 · Mécanique moteur R9M',
+  contentType: 'application/pdf',
+  filename: 'mr361-moteur.pdf',
+  pagesUrl: '/garage/vehicles/01OVERDUEESPACE/documents/01DOCMR/pages',
+});
+const SHOW_DOC: UIAction = {
+  type: 'showDocument',
+  url: '/garage/vehicles/01OVERDUEESPACE/documents/01DOCMR/file',
+  title: 'MR 361 · Mécanique moteur R9M',
+  contentType: 'application/pdf',
+  filename: 'mr361-moteur.pdf',
+  page: 84,
+  highlight: 'courroie de distribution',
+};
+const SCAN_FRAME: UIAction = {
+  type: 'documentScan',
+  vehicle: '/garage/vehicles/01OVERDUEESPACE',
+  query: 'courroie de distribution',
+  hits: [MR_HIT(84, '11A-3'), MR_HIT(86, '11A-5'), MR_HIT(91, '11A-10'), MR_HIT(12, '10A-4'), MR_HIT(140, '19A-2')],
+};
+
 const FRAMES: Array<{ label: string; frames: UIAction[] }> = [
   { label: 'showFact (huile)', frames: [{ type: 'showFact', keys: ['oil_viscosity', 'oil_capacity'], title: 'Huile moteur' }] },
   { label: 'focusView tasks (vidange)', frames: [{ type: 'focusView', panel: 'tasks', keys: ['oil_change'] }] },
@@ -133,20 +159,7 @@ const FRAMES: Array<{ label: string; frames: UIAction[] }> = [
   { label: 'showParts (embrayage)', frames: [{ type: 'showParts', service: 'clutch', taskId: '/garage/planned-tasks/01TASKCLUTCH' }] },
   { label: 'revealAssembly (moteur)', frames: [{ type: 'revealAssembly', region: 'hood', partKeys: ['timing_belt', 'water_pump'] }] },
   { label: 'focusRegion (train avant)', frames: [{ type: 'focusRegion', region: 'frontAxle' }] },
-  {
-    label: 'showDocument',
-    frames: [
-      {
-        type: 'showDocument',
-        url: '/garage/vehicles/01OVERDUEESPACE/documents/01DOCMR/file',
-        title: 'MR 361 · Mécanique moteur R9M',
-        contentType: 'application/pdf',
-        filename: 'mr361-moteur.pdf',
-        page: 84,
-        highlight: 'courroie de distribution',
-      },
-    ],
-  },
+  { label: 'showDocument', frames: [SHOW_DOC] },
   {
     label: 'proposeActions',
     frames: [
@@ -189,10 +202,11 @@ export function WorkshopFixture() {
   const runTurn = useCallback(
     (driver: 'app' | 'pilot' = 'app') => {
       dispatch({ type: 'turn', phase: 'start', driver });
-      const step = { type: 'status', message: 'Je cherche le kit embrayage pour le R9M', tool: 'get_service_parts' } as const;
-      dispatch({ ...step, driver });
-      dispatchView(step);
-      later(2600, () => dispatch({ type: 'status', message: 'Je consulte le carnet', tool: 'get_maintenance_history', driver }));
+      const said = { type: 'status', message: 'Je cherche le kit embrayage pour le R9M' } as const;
+      dispatch({ ...said, driver });
+      dispatchView(said);
+      later(400, () => dispatch({ type: 'status', tool: 'get_service_parts', driver }));
+      later(2600, () => dispatch({ type: 'status', tool: 'get_maintenance_history', driver }));
       later(5200, () => dispatchView({ type: 'showParts', service: 'clutch', taskId: '/garage/planned-tasks/01TASKCLUTCH' }));
       later(6400, () => dispatch({ type: 'toast', tone: 'ok', message: 'Kit embrayage Valeo 826317 et volant LuK trouvés.', driver }));
       later(6600, () => dispatch({ type: 'turn', phase: 'end', driver }));
@@ -247,6 +261,22 @@ export function WorkshopFixture() {
                 {f.label}
               </button>
             ))}
+            <button type="button" className="w-button" onClick={() => dispatchView(SCAN_FRAME)}>
+              documentScan (courroie)
+            </button>
+            <button
+              type="button"
+              className="w-button"
+              onClick={() => {
+                dispatchView(SCAN_FRAME);
+                later(3000, () => dispatchView(SHOW_DOC));
+              }}
+            >
+              documentScan → showDocument (3 s)
+            </button>
+            <button type="button" className="w-button" onClick={() => dispatchView({ type: 'documentScan', vehicle: '/garage/vehicles/01OVERDUEESPACE', query: 'turbocompresseur', hits: [] })}>
+              documentScan (aucun résultat)
+            </button>
             <button type="button" className="w-button" onClick={() => runTurn('app')}>
               turn (app, 6 s)
             </button>

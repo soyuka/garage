@@ -7,7 +7,8 @@ namespace App\Tests\Unit\Agent\Toolbox;
 use App\Agent\Toolbox\CompositeToolbox;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
-use App\I18n\LocaleContext;
+use App\Agent\WebSearch\WebSearchBackend;
+use App\Capability\Capabilities;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
@@ -17,7 +18,6 @@ use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\ExecutionReference;
 use Symfony\AI\Platform\Tool\Tool;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -43,7 +43,7 @@ final class CompositeToolboxTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new CompositeToolbox($render, $mcp, new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0));
+        return new CompositeToolbox($render, $mcp, new StepNarrator($tools), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
     }
 
     private function mcpToolboxExposing(string $name): McpToolbox
@@ -68,7 +68,7 @@ final class CompositeToolboxTest extends TestCase
         $toolbox->execute(new ToolCall('id-1', 'get_service_parts', []));
 
         $this->assertSame(
-            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…', 'tool' => 'get_service_parts']],
+            [['type' => 'status', 'tool' => 'get_service_parts']],
             $published->getArrayCopy(),
         );
     }
@@ -91,8 +91,8 @@ final class CompositeToolboxTest extends TestCase
     {
         /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
-        $narrator = new StepNarrator($this->renderTools($published), new LocaleContext(new RequestStack()), static fn (int $n): int => 0);
-        $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator);
+        $narrator = new StepNarrator($this->renderTools($published));
+        $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
         // Simulate what EarlyStepNarrationListener would already have done from the stream.
         $narrator->announce('id-3', 'get_service_parts');
         $published->exchangeArray([]);
@@ -112,7 +112,7 @@ final class CompositeToolboxTest extends TestCase
         $toolbox->execute(new ToolCall('id-4', 'get_service_parts', []));
 
         $this->assertSame(
-            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…', 'tool' => 'get_service_parts']],
+            [['type' => 'status', 'tool' => 'get_service_parts']],
             $published->getArrayCopy(),
         );
     }
@@ -131,10 +131,10 @@ final class CompositeToolboxTest extends TestCase
             return new ToolResult($c, 'render-ok');
         });
 
-        $narrator = new StepNarrator($this->renderTools($published), new LocaleContext(new RequestStack()), static fn (int $n): int => 0);
+        $narrator = new StepNarrator($this->renderTools($published));
         $narrator->announceStep('id-5', 'Je compare les marques…');
         $published->exchangeArray([]);
-        $toolbox = new CompositeToolbox($render, $this->mcpToolboxExposing('get_service_parts'), $narrator);
+        $toolbox = new CompositeToolbox($render, $this->mcpToolboxExposing('get_service_parts'), $narrator, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini));
 
         $result = $toolbox->execute(new ToolCall('id-5', 'narrate_step', ['message' => 'Je compare les marques…']));
 

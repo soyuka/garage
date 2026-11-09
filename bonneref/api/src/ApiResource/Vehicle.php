@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\McpTool;
+use App\Capability\Capability;
 use App\Catalog\CarType;
 use App\Dto\PlateInput;
 use App\State\VehicleLookupProcessor;
@@ -28,6 +29,9 @@ use App\State\VehicleProvider;
             processor: VehicleLookupProcessor::class,
             // Hits the external SIV registry → open world; read-only from the caller's view.
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
+            // Not advertised without API_PLAQUE_TOKEN. The HTTP Get stays: mpa reads its 501 as
+            // "plate lookup is not configured on the catalogue server".
+            extraProperties: ['requires' => Capability::PlateLookup],
         ),
     ],
 )]

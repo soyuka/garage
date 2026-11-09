@@ -7,7 +7,6 @@ namespace App\Tests\Unit\Agent\Ui;
 use App\Agent\Ui\EarlyStepNarrationListener;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
-use App\I18n\LocaleContext;
 use App\Tests\Mock\TestDashboardChannel;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -15,7 +14,6 @@ use Symfony\AI\Platform\Result\Stream\Delta\ToolCallStart;
 use Symfony\AI\Platform\Result\Stream\Delta\ToolInputDelta;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
 use Symfony\AI\Platform\Result\StreamResult;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -35,9 +33,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        // Fixed picker: this listener only cares about WHEN a sentence is published, not which
-        // variant — pinning it to the first keeps the assertions below deterministic.
-        $narrator = new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0);
+        $narrator = new StepNarrator($tools);
 
         return new EarlyStepNarrationListener($narrator);
     }
@@ -58,7 +54,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
         $listener->onDelta($this->eventFor(new ToolCallStart('call-1', 'get_service_parts')));
 
         $this->assertSame(
-            [['type' => 'status', 'message' => 'Je consulte le catalogue de pièces…', 'tool' => 'get_service_parts']],
+            [['type' => 'status', 'tool' => 'get_service_parts']],
             $published->getArrayCopy(),
         );
     }

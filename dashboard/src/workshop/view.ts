@@ -1,6 +1,7 @@
 import { regionForFrame, type BodyRegion } from '../scene/anchors';
+import { specForHit } from './docScan';
 import { topicForService, topicForText, type FocusTopic } from './focusTopic';
-import type { CtaAction, DocumentSpec, Iri, PanelKind, PlannedPart, SpecNode, UIAction } from '../types';
+import type { CtaAction, DocScanHit, DocumentSpec, Iri, PanelKind, PlannedPart, SpecNode, UIAction } from '../types';
 
 export type Section = 'entretien' | 'pieces' | 'documents' | 'caracteristiques';
 
@@ -13,6 +14,13 @@ export interface CtaState {
 }
 
 export type DocRef = DocumentSpec;
+
+/** A documentation search being played on the viewer; `key` is new per run. `hits: []` = no match. */
+export interface DocScan {
+  query: string;
+  hits: DocScanHit[];
+  key: number;
+}
 
 export type Projection =
   | { kind: 'facts'; keys: string[]; title?: string; nodes?: SpecNode[] }
@@ -37,6 +45,10 @@ export interface ViewState {
   document: DocRef | null;
   /** Bumped each time the ring is aimed somewhere new: the car stage points once per value. Never reset. */
   focusSeq: number;
+  /** The documentation scan on the viewer, until `showDocument` settles it or the operator opens another. */
+  scan: DocScan | null;
+  /** Source of `scan.key`. Never reset. */
+  scanSeq: number;
 }
 
 export type ViewAction =
@@ -44,7 +56,8 @@ export type ViewAction =
   | { type: 'section'; section: Section }
   | { type: 'reset' }
   | { type: 'dismissProjection' }
-  | { type: 'clearProposal' };
+  | { type: 'clearProposal' }
+  | { type: 'endScan' };
 
 export const initialView: ViewState = {
   section: 'entretien',
@@ -56,6 +69,8 @@ export const initialView: ViewState = {
   proposal: null,
   document: null,
   focusSeq: 0,
+  scan: null,
+  scanSeq: 0,
 };
 
 const PANEL_SECTION: Record<PanelKind, Section> = {
@@ -93,7 +108,10 @@ function reduce(state: ViewState, action: ViewAction): ViewState {
       return state.section === action.section ? state : { ...state, section: action.section };
 
     case 'reset':
-      return { ...initialView, projectionKey: state.projectionKey, proposal: state.proposal, focusSeq: state.focusSeq };
+      return { ...initialView, projectionKey: state.projectionKey, proposal: state.proposal, focusSeq: state.focusSeq, scanSeq: state.scanSeq };
+
+    case 'endScan':
+      return state.scan ? { ...state, scan: null } : state;
 
     case 'dismissProjection':
       return { ...state, projection: null };
@@ -131,14 +149,21 @@ function reduce(state: ViewState, action: ViewAction): ViewState {
       return state.focusExplicit && state.focusRegion === action.region ? state : { ...state, focusRegion: action.region, focusTopic: null, focusExplicit: true };
 
     case 'status': {
-      const patch = derive(state, topicForText(action.message));
+      const patch = derive(state, topicForText(action.message ?? ''));
       if (patch.focusRegion === undefined || (patch.focusRegion === state.focusRegion && patch.focusTopic === state.focusTopic)) return state;
       return { ...state, ...patch };
     }
 
     case 'showDocument': {
       const { type: _type, ...doc } = action;
-      return project(state, { kind: 'document' }, { section: 'documents', document: doc });
+      return project(state, { kind: 'document' }, { section: 'documents', document: doc, scan: null });
+    }
+
+    case 'documentScan': {
+      const scan: DocScan = { query: action.query, hits: action.hits, key: state.scanSeq + 1 };
+      const best = action.hits[0];
+      if (!best) return { ...state, section: 'documents', scan, scanSeq: scan.key };
+      return project(state, { kind: 'document' }, { section: 'documents', document: specForHit(best, action.query), scan, scanSeq: scan.key });
     }
 
     case 'proposeActions': {

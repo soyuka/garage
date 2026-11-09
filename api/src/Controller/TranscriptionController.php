@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Capability\Capabilities;
+use App\Capability\Capability;
 use App\I18n\Locale;
 use App\Transcription\GarageVocabulary;
 use App\Transcription\TranscriptionClient;
@@ -42,12 +44,18 @@ final readonly class TranscriptionController
         private TranscriptionClient $transcription,
         private GarageVocabulary $vocabulary,
         private LoggerInterface $logger,
+        private Capabilities $capabilities,
     ) {
     }
 
     #[Route('/stt', name: 'speech_transcribe', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
+        // No key: dictation is off, not failing. Same silent 503 as a vendor outage, minus the call.
+        if (!$this->capabilities->has(Capability::Dictation)) {
+            return new Response(status: Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
         $audio = $request->getContent();
         $contentType = $request->headers->get('Content-Type', '');
 

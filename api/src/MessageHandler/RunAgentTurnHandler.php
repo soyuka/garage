@@ -82,7 +82,7 @@ final readonly class RunAgentTurnHandler
         // request to take it from. Cleared in `finally`, so it never outlives the turn in a long-lived worker.
         $this->bonnerefToken->set($message->accessToken);
         // Same shape, same reason: the worker has no request, so the interface language rides the turn
-        // message. Everything the agent says this turn — the heartbeat, the failure toasts, and the
+        // message. Everything the agent says this turn — the failure toasts and the
         // output-language directive in the context — reads off this.
         $locale = Locale::resolve($message->locale);
         $this->locale->set($locale);
@@ -107,7 +107,7 @@ final readonly class RunAgentTurnHandler
         // detected against THIS turn only.
         $this->activityTracker->reset();
         // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
-        // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
+        // ids (which EarlyStepNarrationListener records early) must not suppress this turn's step frames.
         $this->stepNarrator->reset();
         $context = $this->contextBuilder->build($message);
         // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so

@@ -11,9 +11,9 @@ use App\I18n\Locale;
  * from the vendor providing it: the browser only ever calls same-origin `/tts`, so the API key stays
  * server-side and the provider is an implementation detail nobody downstream can observe.
  *
- * One implementation per backend ({@see ElevenLabsSpeechClient}, {@see PocketTtsSpeechClient}). A new
- * provider is meant to cost exactly three things and nothing else: a class implementing this
- * interface, a case on {@see SpeechBackend}, and a line in the `!service_locator` in services.yaml.
+ * One implementation per backend; {@see ElevenLabsSpeechClient} is the only one since pocket-tts was
+ * removed (2026-11-09, docs/archive/pocket-tts.md). A new provider is a class implementing this
+ * interface plus its wiring under `App\Speech\SpeechClient` in services.yaml.
  *
  * pocket-tts was the swap docs/voice-plan.md § Phase 6 asks for, and it found two leaks. The return
  * type used to be raw mp3 bytes, so the controller stamped `audio/mpeg` on a WAV body — fixed by

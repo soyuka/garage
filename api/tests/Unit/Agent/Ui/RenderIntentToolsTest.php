@@ -181,7 +181,7 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertNotNull($published);
         $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
         // Model-authored narration has no tool identity: the dashboard's step chip keys on `tool`
-        // and must not receive a bogus one, unlike the deterministic StepNarrator-driven narrate().
+        // and must not receive a bogus one; a tool step is the key alone, see StepNarrator.
         $this->assertSame(
             ['type' => 'status', 'message' => 'Je relis le carnet…'],
             json_decode($published->getData(), true),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildTurnBody, dashboardSubscriptions, SESSION_KEY, tabSessionId } from './agent';
+import { buildTurnBody, dashboardSubscriptions, parseAgentLink, SESSION_KEY, tabSessionId } from './agent';
 
 // The agent turn request shape (CONTRACT.md §Agent). The pure body-builder pins the exact field names
 // and the omit-when-absent behavior so an unset optional never reaches the wire as a null.
@@ -101,5 +101,25 @@ describe('tabSessionId', () => {
     let n = 0;
     const mint = () => `id-${++n}`;
     expect(tabSessionId(memoryStorage(), mint)).not.toBe(tabSessionId(memoryStorage(), mint));
+  });
+});
+
+describe('parseAgentLink', () => {
+  it('reads the pilot topic and the capabilities the server advertises', () => {
+    expect(
+      parseAgentLink({ topic: 'https://localhost/agent/pilots/abc', capabilities: { agent: true, voice: false, dictation: false, web_search: true } }),
+    ).toEqual({ topic: 'https://localhost/agent/pilots/abc', capabilities: { agent: true, voice: false, dictation: false, web_search: true } });
+  });
+
+  it('treats a server that predates capabilities as having everything on, so the 503 fallbacks stay in charge', () => {
+    expect(parseAgentLink({ topic: 't' })).toEqual({ topic: 't', capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
+  });
+
+  it('only a literal false switches a capability off', () => {
+    expect(parseAgentLink({ capabilities: { agent: 'no', voice: 0, dictation: null } }).capabilities).toEqual({ agent: true, voice: true, dictation: true, web_search: true });
+  });
+
+  it('survives a body that is not an object', () => {
+    expect(parseAgentLink(null)).toEqual({ topic: null, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
   });
 });

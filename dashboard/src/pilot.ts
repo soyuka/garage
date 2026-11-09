@@ -85,6 +85,7 @@ function placesSurface(action: UIAction): boolean {
     case 'focusRegion':
     case 'proposeActions':
     case 'showDocument':
+    case 'documentScan':
       return true;
     default:
       return false;

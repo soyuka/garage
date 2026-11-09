@@ -5,14 +5,19 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use ApiPlatform\Test\Client;
+use App\Agent\Ui\RenderIntentTools;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\Mcp\Agent\McpToolbox;
+use App\Tests\Mock\RecordingHub;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class McpDocumentationTest extends AppTestCase
 {
     use McpClientTrait;
+    use PilotFrameTrait;
 
     /**
      * @return array{Client, string, string}
@@ -126,6 +131,71 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'huile', 'kind' => 'quote'],
         ], 4)['result']['structuredContent'];
         self::assertSame('no_match', $kind['status']);
+    }
+
+    public function testSearchPublishesADocumentScanFrameWithTheRankedHits(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'search_documentation',
+            'arguments' => ['vehicle' => $iri, 'query' => 'huile'],
+        ], 3)['result']['structuredContent'];
+
+        $frame = $this->lastPilotFrame();
+        self::assertNotNull($frame);
+        self::assertSame('documentScan', $frame['type']);
+        self::assertSame($iri, $frame['vehicle']);
+        self::assertSame('huile', $frame['query']);
+        self::assertSame(array_map(static fn (array $h): array => [$h['documentId'], $h['page']], $result['hits']), array_map(static fn (array $h): array => [$h['documentId'], $h['page']], $frame['hits']));
+        $documentId = $result['hits'][0]['documentId'];
+        self::assertSame([
+            'documentId' => $documentId,
+            'page' => $result['hits'][0]['page'],
+            'pageLabel' => $result['hits'][0]['pageLabel'],
+            'url' => $iri.'/documents/'.$documentId.'/file',
+            'title' => 'MR 361',
+            'contentType' => 'application/pdf',
+            'filename' => 'mr361.pdf',
+            'pagesUrl' => $iri.'/documents/'.$documentId.'/pages',
+        ], $frame['hits'][0]);
+    }
+
+    public function testANoMatchSearchStillPublishesTheScanWithNoHits(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'search_documentation',
+            'arguments' => ['vehicle' => $iri, 'query' => 'turbocompresseur'],
+        ], 3);
+
+        self::assertSame(['type' => 'documentScan', 'vehicle' => $iri, 'query' => 'turbocompresseur', 'hits' => []], $this->lastPilotFrame());
+    }
+
+    public function testTheInAppAgentScanGoesToTheTurnSession(): void
+    {
+        [, , $iri] = $this->seedManual();
+        static::getContainer()->get(RenderIntentTools::class)->bindSession('https://localhost/agent/sessions/abc');
+
+        static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('1', 'search_documentation', ['vehicle' => $iri, 'query' => 'huile']));
+
+        $hub = static::getContainer()->get(RecordingHub::class);
+        $update = $hub->updates[array_key_last($hub->updates)];
+        self::assertSame(['https://localhost/agent/sessions/abc'], $update->getTopics());
+        self::assertSame('documentScan', json_decode($update->getData(), true)['type']);
+    }
+
+    public function testAnInvalidSearchPublishesNothing(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+
+        $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'search_documentation',
+            'arguments' => ['vehicle' => $iri, 'query' => '   '],
+        ], 3);
+
+        self::assertNull($this->lastPilotFrame());
     }
 
     public function testListDocuments(): void

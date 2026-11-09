@@ -6,7 +6,7 @@ import './scene/scene.css';
 import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
 import { API, getIdentity, logout } from './auth';
-import { cancelTurn, dashboardSubscriptions, fetchPilotTopic, postTurn, tabSessionId } from './agent';
+import { cancelTurn, dashboardSubscriptions, fetchAgentLink, postTurn, tabSessionId } from './agent';
 import {
   addTaskPart,
   archiveTasks,
@@ -204,7 +204,7 @@ export function Atelier() {
   // The pilot topic — asked for once on mount (it is a keyed digest server-side, not derivable here).
   useEffect(() => {
     let live = true;
-    fetchPilotTopic().then((topic) => live && setPilotTopic(topic));
+    fetchAgentLink().then((link) => live && setPilotTopic(link.topic));
     return () => {
       live = false;
     };

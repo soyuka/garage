@@ -73,7 +73,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'narrate_step' => new McpTool(
             title: 'Narrate Step',
-            description: 'Put ONE running step sentence on the dashboard heartbeat, in the interface language, first person present ("Je relis le carnet…" / "Rereading the logbook…"). The orb lifts to work on the first one, and each call adds a step chip — so narrate before a slow lookup, not after. Close the run with settle_dashboard.',
+            description: 'Put ONE running step sentence on the dashboard heartbeat, in the interface language, first person present ("Je relis le carnet…" / "Rereading the logbook…"). The orb lifts to work on the first one, and each call adds a step chip — so narrate before a slow lookup, not after, and only before a step worth saying out loud, never before every call. Close the run with settle_dashboard.',
             input: NarrateStepInput::class,
             structuredContent: false,
             processor: NarrateStepProcessor::class,

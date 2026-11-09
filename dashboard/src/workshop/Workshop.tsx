@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useT } from '../i18n/LocaleProvider';
 import { API, getIdentity } from '../auth';
-import { cancelTurn, dashboardSubscriptions, fetchPilotTopic, postTurn, tabSessionId } from '../agent';
+import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, postTurn, tabSessionId } from '../agent';
 import { createTask, getVehicleBundle, getVehicles, mergeTaskParts } from '../garage';
 import { pickAcknowledgement } from '../noyau/acknowledge';
 import { drawGreeting, greetingForSelection, nothingDrawn, type Drawn } from '../noyau/greeting';
@@ -16,8 +16,9 @@ import { ABANDON_MS, STAGE_INIT, stageReduce, type Driver, type StageState } fro
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from '../router';
 import { useReducedMotion } from '../scene/useReducedMotion';
 import { DWELL, PILOT_QUIET_MS } from '../tokens/motion';
-import type { CtaAction, Iri, MercureFrame, UIAction, VehicleBundle, VehicleSummary } from '../types';
+import type { Capabilities, CtaAction, Iri, MercureFrame, UIAction, VehicleBundle, VehicleSummary } from '../types';
 import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from '../useMercure';
+import { scanIntents } from './docScan';
 import { liveEdits } from './edits';
 import { useCommandStatus, useFlag, useTheme } from './hooks';
 import { SOUND_KEY, VOICE_ON_KEY } from './prefs';
@@ -42,16 +43,20 @@ export function Workshop() {
   const { status } = useCommandStatus(state);
   const [sessionId] = useState(() => tabSessionId(window.sessionStorage, () => crypto.randomUUID()));
   const [pilotTopic, setPilotTopic] = useState<string | null>(null);
+  const [capabilities, setCapabilities] = useState<Capabilities>(ALL_CAPABILITIES);
   const [now, setNow] = useState(() => new Date());
   const [voice, setVoice] = useVoicePreference();
   const listening = state.phase === 'listening';
   const card = view.proposal ? { headline: view.proposal.headline, finding: view.proposal.finding } : null;
   const [soundOn, setSoundOn] = useFlag(SOUND_KEY, true);
   const [voiceOn, setVoiceOn] = useFlag(VOICE_ON_KEY, true);
-  const audio = useMemo(() => ({ sound: soundOn, onSound: setSoundOn, voiceOn, onVoiceOn: setVoiceOn }), [soundOn, setSoundOn, voiceOn, setVoiceOn]);
-  const speakingId = useVoice(state.notices, state.narration, state.narrationOnce, card, !listening && voiceOn, voice);
+  const audio = useMemo(
+    () => ({ sound: soundOn, onSound: setSoundOn, voiceOn, onVoiceOn: setVoiceOn, voiceAvailable: capabilities.voice }),
+    [soundOn, setSoundOn, voiceOn, setVoiceOn, capabilities.voice],
+  );
+  const speakingId = useVoice(state.notices, state.narration, state.narrationOnce, card, !listening && voiceOn && capabilities.voice, voice);
   const working = busy(state);
-  const heard: TurnHeard = { narration: state.narration, notices: state.notices.length, steps: state.steps.map((s) => s.tool), proposal: view.proposal !== null };
+  const heard: TurnHeard = { narration: state.narration, notices: state.notices.length, steps: state.steps.map((s) => s.tool), proposal: view.proposal !== null, scans: view.scanSeq };
   const turnHeard = useRef<TurnHeard | null>(null);
   if (!working) turnHeard.current = null;
   else turnHeard.current ??= heard;
@@ -66,7 +71,11 @@ export function Workshop() {
 
   useEffect(() => {
     let live = true;
-    fetchPilotTopic().then((topic) => live && setPilotTopic(topic));
+    fetchAgentLink().then((link) => {
+      if (!live) return;
+      setPilotTopic(link.topic);
+      setCapabilities(link.capabilities);
+    });
     return () => {
       live = false;
     };
@@ -272,6 +281,8 @@ export function Workshop() {
       } else if (frame.type === 'toast') {
         dispatch({ type: 'toast', tone: frame.tone, message: frame.message, driver });
         openRun(driver);
+      } else if (frame.type === 'documentScan') {
+        for (const action of scanIntents(frame, selectedRef.current)) runStage({ type: 'frame', action, shownIri: selectedRef.current, at: performance.now() });
       } else {
         runStage({ type: 'frame', action: frame, shownIri: selectedRef.current, at: performance.now() });
       }
@@ -416,6 +427,7 @@ export function Workshop() {
       onVoice={setVoice}
       edits={edits}
       audio={audio}
+      capabilities={capabilities}
       onPoint={onPoint}
     />
   );

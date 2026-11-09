@@ -15,7 +15,7 @@ import { View } from '@react-three/drei';
 import { useT } from '../i18n/LocaleProvider';
 import type { Notice, NoyauPhase } from '../noyau/state';
 import { regionForType } from '../scene/anchors';
-import type { CtaAction, DocumentSpec, Iri, VehicleBundle, VehicleSummary } from '../types';
+import type { Capabilities, CtaAction, DocumentSpec, Iri, VehicleBundle, VehicleSummary } from '../types';
 import { CtaTray } from './CtaTray';
 import { Dock } from './Dock';
 import { NARRATION_ID } from '../noyau/voice';
@@ -75,6 +75,8 @@ export interface WorkshopViewProps {
   edits?: WorkshopEdits;
   /** Sound and voice on/off, shown in the preferences menu. */
   audio?: AudioPrefs;
+  /** What the server can do (`GET /agent/link`); absent → everything assumed on. */
+  capabilities?: Capabilities;
   /** The car stage's ring has closed on a region the agent (or a click) pointed at. */
   onPoint?: () => void;
 }
@@ -139,6 +141,7 @@ export function WorkshopView(props: WorkshopViewProps) {
     (doc: DocumentSpec) => {
       viewerKey.current += 1;
       setViewer({ doc, key: viewerKey.current });
+      onView({ type: 'endScan' });
       if (selectedIri) onView({ type: 'section', section: 'documents' });
     },
     [onView, selectedIri],
@@ -250,7 +253,7 @@ export function WorkshopView(props: WorkshopViewProps) {
                       editor={editorNode}
                     />
                   )}
-                  {s === 'documents' && <DocumentsPlane bundle={bundle} modules={modules} viewer={front ? viewer : null} active={front} onOpenRow={openRow} />}
+                  {s === 'documents' && <DocumentsPlane bundle={bundle} modules={modules} viewer={front ? viewer : null} active={front} scan={view.scan} reduced={props.reduced} onOpenRow={openRow} />}
                   {s === 'caracteristiques' && <CaracteristiquesPlane {...planeProps} />}
                 </PartsLive.Provider>
               </section>
@@ -301,7 +304,18 @@ export function WorkshopView(props: WorkshopViewProps) {
         <div className="w-dock-area" ref={dockArea}>
           {view.proposal && <CtaTray proposal={view.proposal} onAction={props.onAction} onDismiss={() => onView({ type: 'clearProposal' })} disabled={props.status.running} />}
           <Ticker narration={props.narration ?? null} speaking={props.speakingId === NARRATION_ID} />
-          <Dock ref={command} status={props.status} scope={scope} phase={props.phase} reduced={props.reduced} onSubmit={submit} onCancel={props.onCancel} onListening={props.onListening} />
+          <Dock
+            ref={command}
+            status={props.status}
+            scope={scope}
+            phase={props.phase}
+            reduced={props.reduced}
+            onSubmit={submit}
+            onCancel={props.onCancel}
+            onListening={props.onListening}
+            agentAvailable={props.capabilities?.agent ?? true}
+            dictationAvailable={props.capabilities?.dictation ?? true}
+          />
         </div>
         <Notices notices={props.notices ?? []} speakingId={props.speakingId ?? null} onDismiss={props.onDismissNotice ?? noVoice} />
         {viewer && !bundle && (

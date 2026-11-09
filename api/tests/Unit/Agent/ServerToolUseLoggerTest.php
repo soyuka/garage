@@ -9,7 +9,6 @@ use App\Agent\ServerToolUseLogger;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
-use App\I18n\LocaleContext;
 use App\Tests\Mock\TestDashboardChannel;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
@@ -22,7 +21,6 @@ use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -89,7 +87,7 @@ final class ServerToolUseLoggerTest extends TestCase
         $this->assertSame(0, $raw->reads, 'streaming must not force the raw HTTP fetch');
         $this->assertTrue($budget->exhausted(), 'the streamed web_search count must feed the budget');
         // The same toolTokens delta also narrates the search on the dashboard heartbeat.
-        $this->assertSame([['type' => 'status', 'message' => 'Je cherche en ligne…', 'tool' => 'web_search']], $published->getArrayCopy());
+        $this->assertSame([['type' => 'status', 'tool' => 'web_search']], $published->getArrayCopy());
     }
 
     /**
@@ -120,7 +118,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack()), static fn (int $n): int => 0), $journal);
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools), $journal);
     }
 
     /**

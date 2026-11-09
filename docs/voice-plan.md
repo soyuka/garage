@@ -8,8 +8,8 @@ ElevenLabs now, a paid plan later for the French voice.
 
 | | |
 |---|---|
-| Provider now | **ElevenLabs**, `eleven_flash_v2_5` (~75 ms, 0.5 credit/char). Streams `pcm_24000` wrapped as WAV since 2026-09-05, so it rides the same chunked path as pocket-tts (`api/src/Speech/ElevenLabsSpeechClient.php`, `api/src/Speech/Wav.php`) — first sound after headers, not after the whole body |
-| Second backend | **pocket-tts**, local, shipped 2026-09-04 (`TTS_BACKEND=pockettts`) — it, not Google, is what proved the seam. Google Chirp 3 HD remains unimplemented |
+| Provider now | **ElevenLabs**, `eleven_flash_v2_5` (~75 ms, 0.5 credit/char). Streams `pcm_24000` wrapped as WAV since 2026-09-05, so it rides the chunked `SpeechStream` path (`api/src/Speech/ElevenLabsSpeechClient.php`, `api/src/Speech/Wav.php`) — first sound after headers, not after the whole body |
+| Second backend | none. pocket-tts (local, 2026-09-04) proved the seam and was removed 2026-11-09 — see docs/archive/pocket-tts.md. Google Chirp 3 HD remains unimplemented |
 | What is spoken | the existing **`toast {tone, message}`** frame. **No new wire verb** |
 | Default state | **muted**, one persisted toggle |
 | Where the key lives | `api/` only. The browser never sees it |
@@ -33,9 +33,7 @@ parameter — `null` keeps meaning "the backend's own default".
   `labels.language` matches $locale (or that carry no `language` label at all), trims the name at
   the first `-`/`–` for the label, and sorts the configured default first. Any HTTP/transport/JSON
   failure falls back to `[new SpeechVoice($voiceId, 'ElevenLabs')]` — never a broken `/tts/voices`.
-- `PocketTtsSpeechClient::voices()` answers one voice, id `'default'`, labelled from a new
-  `POCKET_TTS_VOICE_LABEL` env var (`Estelle` in `api/.env`, matching the compose stack's voice);
-  `stream()` ignores the requested voice — one model per locale endpoint, nothing to pick per call.
+- pocket-tts `voices()` note: see docs/archive/pocket-tts.md.
 - `CachingSpeechClient` folds the REQUESTED voice (not just the configured default) into the audio
   cache key, and caches `voices()` itself for 1h per locale as `.voices.<locale>.json` in the same
   `var/tts` directory.
@@ -76,14 +74,14 @@ and the budget guard is a local counter by design (phase 2), not a quota read.
 
 ```
 # api/.env.local
-TTS_BACKEND=elevenlabs
-ELEVENLABS_API_KEY=…
+ELEVENLABS_API_KEY=…            # empty = voice and dictation reported off (no TTS_BACKEND since 2026-11-09)
 ELEVENLABS_VOICE_ID=…          # picked by listening, see phase 1 step 4
 ELEVENLABS_MODEL=eleven_flash_v2_5
-TTS_MONTHLY_CHAR_BUDGET=9000   # free tier is 10k credits ≈ 20k chars at 0.5/char; stay under
 ```
 
 ## Architecture
+
+> Superseded 2026-11-09: `TTS_BACKEND`, `SpeechBackend` and the `!service_locator` router no longer exist. ElevenLabs is wired directly, and an empty `ELEVENLABS_API_KEY` turns voice off (hidden in the dashboard). The diagram and phase 1 below describe the seam as first built.
 
 ```
 toast frame ──Mercure──▶ dashboard ──POST /tts {text}──▶ Symfony ──▶ SelectableSpeechClient
@@ -233,37 +231,7 @@ Original plan:
 - `docs/voice.md`: mark route A superseded by the hosted decision, keep Piper documented as the
   offline fallback (it is the only option that survives a dead conference wifi).
 
-## Phase 6 — prove the swap ✅ DONE 2026-09-04, with pocket-tts rather than Google
-
-The swap was proven by a **local** provider instead of Google: `TTS_BACKEND=pockettts` reaches a
-Kyutai `pocket-tts serve` sidecar (`docs/voice.md` § PocketTTS measured). Cost, as the acceptance
-criterion demanded: one class (`PocketTtsSpeechClient`), one enum case, one locator line — plus one
-genuine leak the exercise existed to find.
-
-**The leak.** `SpeechClient::synthesize()` returned raw mp3 bytes and `SpeechController` hardcoded
-`Content-Type: audio/mpeg`. pocket-tts emits 24 kHz mono WAV, so the second backend would have served
-a WAV body labelled mp3. `App\Speech\SpokenAudio` now carries the format with the bytes. This is
-exactly the "expensive after the code has grown ElevenLabs-shaped assumptions" the phase warned about,
-caught while it was a three-line fix.
-
-**What it changes for phase 2.** A local backend has no credits, so `TTS_MONTHLY_CHAR_BUDGET` and the
-204-over-budget path only ever apply to a hosted backend. The disk cache is still worth having; the
-budget guard is not, when `pockettts` is selected.
-
-**One constraint the seam did not anticipate:** `pocket-tts serve` binds ONE model per process
-(`--language`), so the client takes a locale→endpoint map and a locale with no server configured
-raises `SpeechUnavailable` (→ 503 → silence) rather than reading English with French phonetics. The
-compose stack ships the French container; the English twin is one more service plus one env var.
-
-Google Chirp 3 HD remains unimplemented and is no longer the thing blocking confidence in the seam.
-
-### Original plan, for reference
-
-Add `GoogleSpeechClient` behind the same interface and flip `TTS_BACKEND=google` in a scratch env.
-If that is more than *one class + one enum case + one locator line*, the seam is wrong and phase 1
-needs fixing. This is the acceptance test for "we can switch later", and it is cheap **now** and
-expensive after the code has grown ElevenLabs-shaped assumptions (voice id format, mp3 vs
-LINEAR16/OGG_OPUS, header vs OAuth).
+pocket-tts (local Kyutai backend, 2026-09-04 to 2026-11-09): measured, wired, then removed — see docs/archive/pocket-tts.md.
 
 ## Phase 7 — the `échéance` icon (independent of phases 1–6, ship it first)
 

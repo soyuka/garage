@@ -10,7 +10,7 @@ use Symfony\AI\Platform\Result\Stream\Delta\ToolInputDelta;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
 
 /**
- * Narrates a tool call the moment the model BEGINS it, instead of waiting for
+ * Signals a tool call (its step frame) the moment the model BEGINS it, instead of waiting for
  * {@see \App\Agent\Toolbox\CompositeToolbox::execute()} — which only runs once the whole assistant
  * message has streamed (`vendor/symfony/ai-agent/src/Toolbox/StreamListener.php` acts on
  * `ToolCallComplete`). Measured turn `01M1SM291H06DJYFFRF0M8JT01`: seven `plan_maintenance` calls sat
@@ -27,8 +27,8 @@ use Symfony\AI\Platform\Result\Stream\DeltaEvent;
  * Qwen (the commented-out generic OpenAI-compatible bridge in `config/packages/ai.yaml`) also emits
  * both deltas — `vendor/symfony/ai-platform/src/Bridge/Generic/Completions/CompletionsConversionTrait.php:157,159`
  * — so this listener covers that path unchanged; a bridge that emitted neither would simply fall back
- * to {@see \App\Agent\Toolbox\CompositeToolbox}'s execute-time narration, which checks
- * {@see StepNarrator::wasAnnounced()} before narrating again.
+ * to {@see \App\Agent\Toolbox\CompositeToolbox}'s execute-time step, which checks
+ * {@see StepNarrator::wasAnnounced()} before signalling again.
  */
 final class EarlyStepNarrationListener extends AbstractStreamListener
 {

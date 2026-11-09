@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Controller;
 
+use App\Capability\Capabilities;
+use App\Capability\Capability;
 use App\I18n\Locale;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
@@ -26,11 +28,14 @@ use Symfony\Component\Routing\Attribute\Route;
  * gate is authentication, not ownership. Per-owner budget accounting arrives with the cache layer
  * (docs/voice-plan.md § Phase 2).
  *
- * STREAMED, chunk for chunk, since 2026-09-05. pocket-tts produces the first 80 ms of audio ~250 ms
- * after the request and the rest at ~0.77× real time; the browser plays each piece as it lands
- * (dashboard `noyau/speaker.ts`). Buffering the body here made the first byte wait for the last one —
- * 3.2 s for a short line, 10 s for a medium one (docs/voice.md) — which is the whole gap between the
+ * STREAMED, chunk for chunk, since 2026-09-05: the browser plays each piece as it lands (dashboard
+ * `noyau/speaker.ts`). Buffering the body here made the first byte wait for the last one — 3.2 s for a
+ * short line, 10 s for a medium one (docs/archive/pocket-tts.md) — which is the whole gap between the
  * card appearing and the voice starting.
+ *
+ * Without an ElevenLabs key ({@see Capability::Voice} off) both routes answer as if the vendor were
+ * down, without calling it: 503 on `/tts`, an empty list on `/tts/voices`. The dashboard already knows
+ * from GET /agent/link and never asks; these are the fallback for a client that does.
  */
 final readonly class SpeechController
 {
@@ -43,12 +48,17 @@ final readonly class SpeechController
     public function __construct(
         private SpeechClient $speech,
         private Verbalizer $verbalizer,
+        private Capabilities $capabilities,
     ) {
     }
 
     #[Route('/tts', name: 'speech_synthesize', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
+        if (!$this->capabilities->has(Capability::Voice)) {
+            return new Response(status: Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
         $payload = json_decode($request->getContent(), true);
         $text = trim(\is_array($payload) && \is_string($payload['text'] ?? null) ? $payload['text'] : '');
         $requestedVoice = \is_array($payload) && \is_string($payload['voice'] ?? null) ? $payload['voice'] : null;
@@ -77,7 +87,7 @@ final readonly class SpeechController
         }
 
         return new StreamedResponse(static fn () => self::send($stream), Response::HTTP_OK, [
-            // Whatever the backend produced: mp3 from ElevenLabs, WAV from a pocket-tts sidecar.
+            // Whatever the backend produced (ElevenLabs: streamed PCM in a WAV header).
             'Content-Type' => $stream->contentType,
             // The text is the cache key upstream, so the same sentence is byte-identical forever.
             'Cache-Control' => 'private, max-age=86400',
@@ -94,6 +104,10 @@ final readonly class SpeechController
     #[Route('/tts/voices', name: 'speech_voices', methods: ['GET'])]
     public function voices(Request $request): Response
     {
+        if (!$this->capabilities->has(Capability::Voice)) {
+            return new JsonResponse([]);
+        }
+
         $locale = Locale::resolve($request->getLocale());
 
         $voices = array_map(

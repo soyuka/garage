@@ -114,7 +114,7 @@ mic, no disfluency. A real engine bay is worse than every number here.
 | `large-v3-turbo` int8 | 27.4 s | 1.87 | ~7.0 s | 1.6 GB |
 
 Warm re-runs tracked cold within noise, so the per-utterance cost dominates and the model load is a
-genuine one-off — the `pocket-tts` lesson (`docs/voice.md` § PocketTTS) held here too.
+genuine one-off — the `pocket-tts` lesson (`docs/archive/pocket-tts.md`) held here too.
 
 Accuracy, verbatim, on the sentences that matter:
 

@@ -55,8 +55,9 @@ Collections are hydra — read members from **`member` ?? `hydra:member`**. The 
 | Maintenance records | `GET/POST {iri}/maintenance-records` | newest first; each `@id`→`id` |
 | Record mutate | `PATCH/DELETE /garage/maintenance-records/{id}` | PATCH body replaces the whole visit |
 | Bill attachments | `POST {recordIri}/attachments` (multipart, **don't set Content-Type**) · `DELETE {url}` | owner-gated download → **fetch with Bearer + objectURL**, not `<img src>` |
+| Agent link + capabilities | `GET /agent/link` | `{topic, capabilities:{agent, voice, dictation, web_search}}` (`types.ts` `Capabilities`), read once on mount by `fetchAgentLink`. A `false` is a provider with no key on the server: `agent` false → dock input disabled with the reason; `voice` false → « Voix » switch disabled with the reason, no `/tts` call; `dictation` false → no mic. Missing field or failed fetch → everything assumed on (the endpoints' 503s stay the fallback) |
 | Speak a line | `POST /tts` `{text, voice?}` | same-origin, same bearer as other reads — **not** `authFetch` (a 401 must stay silent, never bounce to login); `Accept-Language` picks pronunciation; optional `voice` is a `SpeechVoice.id` from `GET /tts/voices`, omitted (never `null`) for the server default; a stale/foreign id is silently ignored server-side, falling back to default |
-| Voice list | `GET /tts/voices` | same auth posture as `/tts`; returns `[{id, label}, …]` for the resolved `Accept-Language`, **first entry is the backend's default**; `Cache-Control: private, max-age=3600` + `Vary: Accept-Language` |
+| Voice list | `GET /tts/voices` | same auth posture as `/tts`; returns `[{id, label}, …]` for the resolved `Accept-Language`, **first entry is the backend's default**, `[]` when voice is not configured; `Cache-Control: private, max-age=3600` + `Vary: Accept-Language` |
 | Transcribe a line | `POST /stt` (raw audio body) | same auth posture as `/tts` — bearer, **not** `authFetch` (a 401 must stay silent, never bounce to login). Body is the recorder's blob as-is with its own `Content-Type` (`audio/webm;codecs=opus`), **not** multipart: one part, no filename, so `post_max_size` is the only limit to check. `Accept-Language` picks the transcription language. → `{text}`, the operator's words **verbatim** (no cleanup, no rephrase); `{text:''}` on silence. Empty or over-cap body → 400 with no backend call; backend refusing/unreachable → **503 empty**, never a 500 — the composer keeps what it had and the operator types |
 
 **The opening line is deliberately NOT on this table.** It had a row here for a few hours on
@@ -92,11 +93,13 @@ major-unit euros the client converts.
   **no follow-up fetch**.
 - **Session frames** (session topic): the real `UIAction` union +
   - `{type:'turn', phase:'start'|'end', outcome?:'failed'}` → busy (`outcome` only on a turn that died server-side)
-  - `{type:'status', message, tool?}` → narration line + Noyau pulse. `tool` is the server's own tool
-    key (`StepNarrator` is keyed by it) and is what the step chip is derived from; `message` is prose.
-    Optional: a pilot's `narrate_step` has no tool to name, and a server predating the field still
-    renders — the client then keyword-matches the French sentence, which is a FALLBACK, not the
-    contract (it was the contract until 2026-08-16, and it made the chips hostage to the wording)
+  - `{type:'status', tool}` → a tool is running: step chip + Noyau pulse + the waiting bed fades; the
+    narration line is **left alone**. Emitted by `StepNarrator` for its whitelist of tools only, with
+    **no sentence** (owner decision 2026-11-09: the canned per-tool lines, « Je consulte le
+    catalogue… », were noise; the ticker carries only what the model chose to say).
+  - `{type:'status', message}` → the model's own `narrate_step` line (in-app or pilot): narration line
+    + pulse + a chip classified from the prose (keyword fallback, French-only by nature). The server
+    never sends both fields; the client still accepts both (a mock script, an older server).
   - `{type:'toast', tone, message}` → retained notice card (every tone) + narration (non-alarm)
     + **spoken aloud when the audition is on** — no new frame, no new field: the voice reads the card's
     own `message` verbatim, so the wire contract is UNCHANGED by the audition
@@ -108,7 +111,19 @@ major-unit euros the client converts.
 `focusView` `{panel: "specs"|"tasks"|"carnet"|"parts"|"docs", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
 CtaAction[]}` · `showDocument` `{url, title, contentType, filename, page?, highlight?, pagesUrl?}` ·
-`toast` `{tone, message}` · `status` `{message, tool?}` · `turn` `{phase}`.
+`documentScan` `{vehicle, query, hits[]}` · `toast` `{tone, message}` · `status` `{tool}` | `{message}` · `turn` `{phase}`.
+
+**`documentScan` `{vehicle, query, hits: [{documentId, page, pageLabel, url, title, contentType, filename,
+pagesUrl}]}` (2026-11-09)** — published by `SearchDocumentationProcessor` itself on every
+`search_documentation` that resolves its vehicle (`ok` **and** `no_match`, then `hits: []`; nothing on
+`invalid_input` / `not_found`), through `RenderIntentTools::documentScan()`, so the same `DashboardChannel`
+routing as `showDocument` applies to both drivers and the model spends no call on it. `vehicle` is the
+canonical `/garage/vehicles/{id}` IRI; `hits` are the ranked search hits, best first, at most 6, each
+carrying what the viewer needs to open it without a lookup (`url`/`pagesUrl` as in `showDocument`).
+The client drives that car in if another is on screen (a synthetic `selectVehicle`, then the scan is
+held by the staging gate like any per-vehicle surface), opens Documents on the best hit with `query`
+highlighted, and plays the scan (`workshop/docScan.ts`). A later `showDocument` settles it: the scan
+stops and the viewer lands on the agent's pick.
 
 **`showDocument` `{url, title, contentType, filename, page?, highlight?, pagesUrl?}` (2026-10-05)** — opens the
 in-Atelier **document viewer** on one vehicle document. A REAL server emission: the MCP tool
@@ -202,8 +217,10 @@ project the ladder, the server enum is the only thing in the way.
   next `status` overwrites it and `settle` clears it. **Every** toast, alarm or not, additionally raises a
   **retained notice card** that stays until the operator dismisses it,
   and an **`alarm`**-tone toast additionally docks a `notify` item on the à-décider queue.
-- **Pulse granularity:** `status` frames fire only for a **whitelisted subset of tools** (a step
-  narrator) — **not one per tool-call**. Le Noyau pulses **per narrated step, sparsely**. Mock
+- **Narration line vs. step:** a tool-only `status` (`{tool}`) never touches the narration line;
+  only `narrate_step` (`{message}`) and toasts write it.
+- **Pulse granularity:** `status` frames fire only for a **whitelisted subset of tools** (`StepNarrator::TOOLS`)
+  — **not one per tool-call**. Le Noyau pulses **per narrated step, sparsely**. Mock
   streams must fire `status` sparsely to match. ⚠️ This **supersedes the early vision text** ("Every
   tool-call fires one discrete pulse" / "visibly pulses four times") — the live contract narrates per
   step, not per tool-call. Build against the contract; the vision text on this point is stale.
@@ -213,4 +230,4 @@ project the ladder, the server enum is the only thing in the way.
 `selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in (stored facts OR projected
 `nodes`) · `focusView {panel:'carnet'}` → carnet projection · `proposeActions` → CTA rises
 from cradle (incl. `patchTask` deterministic path) · `toast` → retained notice card · `status` →
-Noyau pulse · `turn` → busy state.
+Noyau pulse · `documentScan` → Documents opens, the viewer scans the hits · `turn` → busy state.

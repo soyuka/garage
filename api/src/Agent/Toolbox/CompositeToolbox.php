@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace App\Agent\Toolbox;
 
 use App\Agent\Ui\StepNarrator;
+use App\Capability\Capabilities;
+use App\Capability\RequiresCapability;
 use App\Mcp\Agent\McpToolbox;
+use Symfony\AI\Agent\Toolbox\Exception\ToolNotFoundException;
 use Symfony\AI\Agent\Toolbox\ToolboxInterface;
 use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
+use Symfony\AI\Platform\Tool\Tool;
 
 /**
  * Gives the garage agent both tool families through one {@see ToolboxInterface} — the bundle wires
@@ -20,37 +24,79 @@ use Symfony\AI\Platform\Result\ToolCall;
  * bridge, everything else to the decorated render toolbox.
  *
  * This is also the one seam that sees every garage tool the agent runs — the MCP bridge bypasses the
- * bundle Toolbox that dispatches ToolCallRequested — so it is where the running narration is emitted:
- * before delegating an MCP call, {@see StepNarrator} publishes its French step sentence to the
- * dashboard heartbeat. Render-intent calls are NOT narrated (they ARE the UI, not a work step).
+ * bundle Toolbox that dispatches ToolCallRequested — so it is where the step frame is emitted: before
+ * delegating an MCP call, {@see StepNarrator} tells the dashboard which tool runs (its key, no
+ * sentence). Render-intent calls raise no step (they ARE the UI, not a work step).
  *
- * Narration here is now the FALLBACK: {@see \App\Agent\Ui\EarlyStepNarrationListener} announces most
+ * The step here is the FALLBACK: {@see \App\Agent\Ui\EarlyStepNarrationListener} announces most
  * calls from the stream, well before they reach this method — see
- * {@see StepNarrator::wasAnnounced()}. An MCP call narrates here only if the stream never announced it
+ * {@see StepNarrator::wasAnnounced()}. An MCP call signals here only if the stream never announced it
  * (a bridge that emits no `ToolCallStart`). `narrate_step` is the mirror case: if the stream already
  * published its sentence, executing it again here would push a duplicate pulse/step chip through the
  * dashboard reducer, so an already-announced call just acks without running.
+ *
+ * An `#[AsTool]` class marked {@see RequiresCapability} is withheld while its capability is not
+ * configured (`web_search` without the selected backend's key): neither offered nor executable. MCP
+ * tools are gated upstream, in the metadata the MCP server lists.
  */
 final class CompositeToolbox implements ToolboxInterface
 {
     /** @var array<string, true>|null cache of MCP tool names */
     private ?array $mcpNames = null;
 
+    /** @var array<class-string, RequiresCapability|null> */
+    private array $requirements = [];
+
     public function __construct(
         private readonly ToolboxInterface $renderToolbox,
         private readonly McpToolbox $mcpToolbox,
         private readonly StepNarrator $narrator,
+        private readonly Capabilities $capabilities,
     ) {
     }
 
     public function getTools(): array
     {
-        return array_merge($this->mcpToolbox->getTools(), $this->renderToolbox->getTools());
+        return array_merge($this->mcpToolbox->getTools(), $this->renderTools());
+    }
+
+    /**
+     * @return list<Tool>
+     */
+    private function renderTools(): array
+    {
+        return array_values(array_filter($this->renderToolbox->getTools(), $this->available(...)));
+    }
+
+    private function withheld(string $name): bool
+    {
+        foreach ($this->renderToolbox->getTools() as $tool) {
+            if ($tool->getName() === $name) {
+                return !$this->available($tool);
+            }
+        }
+
+        return false;
+    }
+
+    private function available(Tool $tool): bool
+    {
+        $class = $tool->getReference()->getClass();
+        if (!\array_key_exists($class, $this->requirements)) {
+            $attribute = class_exists($class) ? (new \ReflectionClass($class))->getAttributes(RequiresCapability::class)[0] ?? null : null;
+            $this->requirements[$class] = $attribute?->newInstance();
+        }
+
+        return null === $this->requirements[$class] || $this->capabilities->has($this->requirements[$class]->capability);
     }
 
     public function execute(ToolCall $toolCall): ToolResult
     {
         if (!$this->ownsMcp($toolCall->getName())) {
+            if ($this->withheld($toolCall->getName())) {
+                throw ToolNotFoundException::notFoundForToolCall($toolCall);
+            }
+
             if ('narrate_step' === $toolCall->getName() && $this->narrator->wasAnnounced($toolCall->getId())) {
                 return new ToolResult($toolCall, 'ok');
             }

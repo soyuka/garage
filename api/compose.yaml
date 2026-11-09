@@ -137,32 +137,7 @@ services:
       - mongodb_data:/data/db
 ###< doctrine/mongodb-odm-bundle ###
 
-  # The Atelier's local voice (docs/voice-plan.md). Reached only when TTS_BACKEND=pockettts; the
-  # container is inert otherwise, so it costs nothing but disk while ElevenLabs is selected.
-  #
-  # ONE CONTAINER PER LANGUAGE — `pocket-tts serve` binds a single model at process start. An English
-  # twin is this block again with POCKET_TTS_LANGUAGE=english and POCKET_TTS_EN_URL pointed at it.
-  #
-  # No port mapping on purpose: this is reachable only from inside the compose network, exactly like
-  # the API key it replaces. The browser always talks to same-origin /tts and never to this.
-  pocket-tts-fr:
-    restart: unless-stopped
-    build:
-      context: ./docker/pocket-tts
-    environment:
-      POCKET_TTS_LANGUAGE: french_24l
-    volumes:
-      - pocket_tts_models:/models
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
-      # First boot downloads ~760 MB of weights before /health answers, hence the long start period.
-      start_period: 600s
-      interval: 15s
-      timeout: 5s
-      retries: 3
-
 volumes:
-  pocket_tts_models:
   caddy_data:
   caddy_config:
 ###> symfony/mercure-bundle ###

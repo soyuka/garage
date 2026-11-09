@@ -18,10 +18,14 @@ interface DockProps {
   onSubmit: (text: string) => void;
   onCancel: () => void;
   onListening?: (active: boolean) => void;
+  /** `capabilities.agent`: false = no Anthropic key, the input says so and cannot send. */
+  agentAvailable?: boolean;
+  /** `capabilities.dictation`: false = no STT key, the mic is not rendered. */
+  dictationAvailable?: boolean;
 }
 
 /** The agent dock: orb, cancel while running and the one input, fixed at the bottom of every screen. */
-export const Dock = forwardRef<HTMLInputElement, DockProps>(function Dock({ status, scope, phase, reduced, onSubmit, onCancel, onListening }, ref) {
+export const Dock = forwardRef<HTMLInputElement, DockProps>(function Dock({ status, scope, phase, reduced, onSubmit, onCancel, onListening, agentAvailable = true, dictationAvailable = true }, ref) {
   const t = useT();
   const [text, setText] = useState('');
   const textRef = useRef(text);
@@ -49,7 +53,7 @@ export const Dock = forwardRef<HTMLInputElement, DockProps>(function Dock({ stat
   const submit = (e: FormEvent) => {
     e.preventDefault();
     const value = text.trim();
-    if (!value || status.running) return;
+    if (!value || status.running || !agentAvailable) return;
     onSubmit(value);
     setText('');
   };
@@ -73,7 +77,9 @@ export const Dock = forwardRef<HTMLInputElement, DockProps>(function Dock({ stat
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={(phone ? t.workshop.command.scopesShort : t.workshop.command.scopes)[scope]}
+          placeholder={agentAvailable ? (phone ? t.workshop.command.scopesShort : t.workshop.command.scopes)[scope] : t.workshop.command.unavailable}
+          title={agentAvailable ? undefined : t.workshop.command.unavailable}
+          disabled={!agentAvailable}
           autoComplete="off"
           spellCheck={false}
         />
@@ -81,7 +87,7 @@ export const Dock = forwardRef<HTMLInputElement, DockProps>(function Dock({ stat
           /
         </kbd>
       </label>
-      {!dictation.state.unavailable && (
+      {dictationAvailable && agentAvailable && !dictation.state.unavailable && (
         <button
           type="button"
           className={`w-icon-button w-dock-mic${open ? ' is-open' : ''}`}
@@ -95,7 +101,7 @@ export const Dock = forwardRef<HTMLInputElement, DockProps>(function Dock({ stat
           {open ? <Stop /> : <Mic />}
         </button>
       )}
-      <button type="submit" className="w-icon-button w-dock-send" aria-label={t.workshop.command.send} title={t.workshop.command.send} disabled={!text.trim() || status.running}>
+      <button type="submit" className="w-icon-button w-dock-send" aria-label={t.workshop.command.send} title={t.workshop.command.send} disabled={!text.trim() || status.running || !agentAvailable}>
         <Send />
       </button>
     </form>

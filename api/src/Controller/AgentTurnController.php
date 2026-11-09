@@ -6,6 +6,8 @@ namespace App\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
 use App\Bonneref\BonnerefToken;
+use App\Capability\Capabilities;
+use App\Capability\Capability;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
 use Symfony\Bundle\SecurityBundle\Security;
@@ -42,12 +44,18 @@ final readonly class AgentTurnController
         private RateLimiterFactoryInterface $agentTurnLimiter,
         #[Autowire('%env(DEFAULT_URI)%')]
         private string $baseUri,
+        private Capabilities $capabilities,
     ) {
     }
 
     #[Route('/agent/turn', name: 'agent_turn', methods: ['POST'])]
     public function __invoke(Request $request): Response
     {
+        // No Anthropic key: nothing would run the turn. Refused before the rate limiter spends a slot.
+        if (!$this->capabilities->has(Capability::Agent)) {
+            return new JsonResponse(['error' => 'agent not configured'], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
         $payload = json_decode($request->getContent() ?: '{}', true);
         $payload = \is_array($payload) ? $payload : [];
 

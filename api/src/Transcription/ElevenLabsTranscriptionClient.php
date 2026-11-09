@@ -21,8 +21,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  *
  * Same account and same key as the voice ({@see \App\Speech\ElevenLabsSpeechClient}), and worth
  * knowing: ElevenLabs bills one shared monthly credit pool across TTS and STT at ~330 credits per
- * minute of audio, so dictation and the voice spend from the same purse. The voice's
- * `TTS_MONTHLY_CHAR_BUDGET` counter cannot see this side of it.
+ * minute of audio, so dictation and the voice spend from the same purse. No budget guard exists on
+ * either side (docs/voice.md).
  */
 final readonly class ElevenLabsTranscriptionClient implements TranscriptionClient
 {

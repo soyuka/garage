@@ -12,9 +12,8 @@ use App\Garage\ToolResult;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
- * MCP `narrate_step`: the heartbeat line + a step chip while the pilot works. In an in-app turn the
- * same frame is emitted deterministically per tool call by {@see \App\Agent\Ui\StepNarrator}; a pilot
- * has no such loop to hook, so it narrates its own steps.
+ * MCP `narrate_step`: the pilot's own heartbeat line while it works — the only sentence the ticker
+ * shows. A pilot's tool calls raise no step frame of their own (no in-app tool loop to hook).
  *
  * The frame doubles as the turn's start — the dashboard's reducer lifts the orb on a status frame
  * that arrives at rest — so a pilot run needs no explicit begin, only {@see SettleDashboardProcessor}

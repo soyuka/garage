@@ -16,10 +16,8 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
  * streaming decoder (`noyau/pcm.ts`) only knows how to read WAV, chunk by chunk — headerless PCM
  * would fall to the non-WAV path (`speaker.ts`'s `decodeAudioData`), which cannot decode raw samples
  * at all, and mp3 cannot be decoded incrementally either (no `MediaSource` codec for it exists,
- * docs/voice.md). Wrapping the PCM in the same header {@see PocketTtsSpeechClient} emits means both
- * backends ride the identical chunked path with ZERO dashboard change — the browser sees one header
- * shape regardless of which backend spoke. 24 kHz is chosen to MATCH pocket-tts for the same reason:
- * one client, one assumption about the sample rate.
+ * docs/voice.md). The header and the 24 kHz rate are the ones the former pocket-tts backend emitted
+ * (docs/archive/pocket-tts.md), kept so the browser has one header shape and one sample rate to read.
  *
  * MEASURED CONSTRAINT (2026-08-16, docs/voice-plan.md § Prerequisite): a FREE-tier key cannot speak
  * French. Free keys see 21 voices, all `language: en`; every French voice is a shared-library voice
@@ -72,8 +70,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
             ]);
 
             // Blocks until the headers are in, which is what surfaces "refused" HERE rather than from
-            // inside the generator, where no status could be chosen any more (mirrors
-            // PocketTtsSpeechClient).
+            // inside the generator, where no status could be chosen any more.
             $status = $response->getStatusCode();
             if (200 !== $status) {
                 // 401 bad key, 402 free tier reaching for a library voice, 429 rate limit — all the

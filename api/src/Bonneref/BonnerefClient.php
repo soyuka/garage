@@ -12,6 +12,7 @@ use App\ApiResource\NarrowedParts;
 use App\ApiResource\PartCategory;
 use App\ApiResource\Vehicle;
 use App\Catalog\CarType;
+use App\Exception\NotConfiguredException;
 use App\Exception\UpstreamException;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -97,7 +98,7 @@ final readonly class BonnerefClient
     public function vehicleByPlate(string $plate): ?Vehicle
     {
         $normalised = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $plate));
-        $row = $this->get('/vehicles/'.rawurlencode($normalised), [], missingIsNull: true);
+        $row = $this->get('/vehicles/'.rawurlencode($normalised), [], missingIsNull: true, feature: 'plate lookup');
 
         return null === $row ? null : Vehicle::fromApi($row);
     }
@@ -117,10 +118,11 @@ final readonly class BonnerefClient
 
     /**
      * @param array<string, scalar|null> $query
+     * @param string                     $feature what a 501 (bonneref has no provider key for it) reports as not configured
      *
      * @return array<string, mixed>|null null on a 404 when the caller asked for it
      */
-    private function get(string $path, array $query, bool $missingIsNull = false): ?array
+    private function get(string $path, array $query, bool $missingIsNull = false, string $feature = 'this catalogue feature'): ?array
     {
         $query = array_map(static fn (mixed $v): string => \is_bool($v) ? ($v ? 'true' : 'false') : (string) $v, array_filter($query, static fn (mixed $v): bool => null !== $v));
         $headers = ['Accept' => 'application/ld+json'];
@@ -134,6 +136,9 @@ final readonly class BonnerefClient
 
             if (404 === $status && $missingIsNull) {
                 return null;
+            }
+            if (501 === $status) {
+                throw NotConfiguredException::onCatalogueServer($feature);
             }
             if ($status >= 400) {
                 throw $this->failed($path, $status);

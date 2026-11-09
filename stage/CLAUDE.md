@@ -23,8 +23,9 @@ narrate, the screen sits dead for 4–8 seconds while a human stands in front of
 nothing. Narrate, *then* go looking.
 
 In the run's language, first person, present tense, one clause: « Je relis le carnet… » /
-"Reading the logbook…", « Je cherche la référence… » / "Looking up the part number…". Add another
-one before each slow step. They accumulate as step chips.
+"Reading the logbook…", « Je cherche la référence… » / "Looking up the part number…". After that,
+add another only before a step worth saying out loud (a catalogue search, a web search), never
+before every call: each line is spoken, and a line per lookup is noise. They accumulate as step chips.
 
 **2. Work.** `list_vehicles`, `get_vehicle_facts`, `list_due_maintenance`, `get_maintenance_history`,
 `list_planned_maintenance`, `get_service_parts`, `list_articles`… Read what you

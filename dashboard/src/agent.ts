@@ -1,5 +1,6 @@
 import { API, authFetch } from './auth';
 import type { Subscription } from './useMercure';
+import type { Capabilities } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — the agent turn (Tier-1 transport re-authored fresh from
@@ -91,20 +92,38 @@ export function dashboardSubscriptions(api: string, sessionId: string, pilotTopi
   return subs;
 }
 
+export interface AgentLink {
+  topic: string | null;
+  capabilities: Capabilities;
+}
+
+/** Until the server says otherwise everything is assumed on: the endpoints' own 503s stay the fallback. */
+export const ALL_CAPABILITIES: Capabilities = { agent: true, voice: true, dictation: true, web_search: true };
+
+/** Only a literal `false` switches a capability off — a malformed or older body never hides a feature. */
+export function parseAgentLink(body: unknown): AgentLink {
+  const link = body !== null && typeof body === 'object' ? (body as { topic?: unknown; capabilities?: unknown }) : {};
+  const raw = link.capabilities !== null && typeof link.capabilities === 'object' ? (link.capabilities as Record<string, unknown>) : {};
+  const capabilities = { ...ALL_CAPABILITIES };
+  for (const key of Object.keys(capabilities) as (keyof Capabilities)[]) {
+    if (raw[key] === false) capabilities[key] = false;
+  }
+  return { topic: typeof link.topic === 'string' ? link.topic : null, capabilities };
+}
+
 /**
- * Resolve the owner's pilot topic. It is a keyed digest server-side (the hub takes anonymous
- * subscribers, so the topic is the only thing scoping one owner's intents to their own dashboards),
- * hence it can only be asked for, not derived. Null when unauthenticated or the endpoint is absent —
- * the dashboard then simply runs without the pilot channel.
+ * Resolve the owner's pilot topic and what this deployment can do. The topic is a keyed digest
+ * server-side (the hub takes anonymous subscribers, so the topic is the only thing scoping one owner's
+ * intents to their own dashboards), hence it can only be asked for, not derived. Topic null when
+ * unauthenticated or the endpoint is absent — the dashboard then simply runs without the pilot channel.
  */
-export async function fetchPilotTopic(): Promise<string | null> {
+export async function fetchAgentLink(): Promise<AgentLink> {
   try {
     const res = await authFetch(`${API}/agent/link`);
-    if (!res.ok) return null;
-    const body = (await res.json()) as { topic?: string };
-    return body.topic ?? null;
+    if (!res.ok) return parseAgentLink(null);
+    return parseAgentLink(await res.json());
   } catch {
-    return null;
+    return parseAgentLink(null);
   }
 }
 

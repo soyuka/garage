@@ -73,6 +73,19 @@ services:
     App\Agent\Finder\FinderRenderTools:
         autoconfigure: false
 
+    # Which paid providers this deployment has a key for (App\Capability\Capability).
+    App\Capability\Capabilities:
+        arguments:
+            $apiPlaqueToken: '%env(API_PLAQUE_TOKEN)%'
+
+    # Drops McpTools whose `requires` capability is not configured. Below the cached factory (-10),
+    # i.e. outside it: the cache keeps every tool and the env filters per call.
+    App\Capability\CapabilityGatedResourceMetadataCollectionFactory:
+        decorates: api_platform.metadata.resource.metadata_collection_factory
+        decoration_priority: -20
+        arguments:
+            $decorated: '@.inner'
+
     # In-process MCP bridge: drives the same Server the /mcp endpoint uses (service id mcp.server.catalog,
     # not autowireable by FQCN), so the agent reuses the catalogue tools without HTTP/OAuth. An
     # allowlist, so a tool added to the server later can never reach the finder unannounced.

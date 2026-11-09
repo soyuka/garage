@@ -25,13 +25,13 @@ use Psr\Log\LoggerInterface;
  * ElevenLabs voice, or change its speed and the old audio must not keep answering for text that also
  * existed under the old config.
  *
- * Wraps each backend INDIVIDUALLY (config/services.yaml `speech.caching.*`), not the routed
- * {@see SelectableSpeechClient}: only at that point is the model/voice identifying the coming audio
- * a compile-time value, so the decorator itself never has to know which backend is live.
+ * Wraps the backend directly (config/services.yaml `App\Speech\SpeechClient`), with the model/voice
+ * identifying the coming audio passed in, so the decorator itself never has to know which backend
+ * it fronts.
  *
  * Storage: two sibling files per key, `<hash>.bin` (raw bytes) and `<hash>.type` (the content type).
  * A sidecar rather than an inferred extension: {@see SpokenAudio} already carries whatever content
- * type the backend produced (mp3 from ElevenLabs, wav from pocket-tts), and a sidecar round-trips it
+ * type the backend produced (today ElevenLabs PCM in a WAV header), and a sidecar round-trips it
  * exactly with no MIME-to-extension table to keep in sync as backends change.
  *
  * Best-effort like the rest of the voice path: a cache directory that cannot be created or written
@@ -75,7 +75,7 @@ final readonly class CachingSpeechClient implements SpeechClient
     /**
      * Cached for an hour, same disk directory, `.voices.<sha256(backend|model|voice|locale)>.json` —
      * a vendor voice list changes rarely and is not worth a call on every picker render. Backend is in
-     * the key, not just locale: switching `TTS_BACKEND` must never serve the other backend's list off
+     * the key, not just locale: swapping the backend must never serve the other backend's list off
      * the same cache directory. Best-effort like the rest of this class: a cache miss on write just
      * means the next call pays for a fresh vendor round trip.
      */
@@ -144,7 +144,7 @@ final readonly class CachingSpeechClient implements SpeechClient
 
     /**
      * Keyed on backend|model|voice|locale. Speed is deliberately absent: it changes generated audio,
-     * not the list of voices. Locale alone is not enough, or switching `TTS_BACKEND` would keep
+     * not the list of voices. Locale alone is not enough, or swapping the backend would keep
      * serving the previously configured backend's voice list under the same cache directory.
      */
     private function voicesPath(Locale $locale): string

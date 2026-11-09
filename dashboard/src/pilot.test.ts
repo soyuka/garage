@@ -77,6 +77,16 @@ describe('the render-intent staging gate', () => {
     expect(stageReduce(state, { type: 'arrived', iri: KANGOO, at: 900 }).emit).toEqual([doc]);
   });
 
+  it('holds a documentation scan about the car still driving in', () => {
+    const scan: UIAction = { type: 'documentScan', vehicle: KANGOO, query: 'huile', hits: [] };
+    const { state, emitted } = run([
+      { type: 'frame', action: select(KANGOO), shownIri: CLIO, at: 0 },
+      { type: 'frame', action: scan, shownIri: CLIO, at: 200 },
+    ]);
+    expect(emitted).toEqual([select(KANGOO)]);
+    expect(stageReduce(state, { type: 'arrived', iri: KANGOO, at: 900 }).emit).toEqual([scan]);
+  });
+
   it('does not stage anything when the pilot re-selects the car already on screen', () => {
     const { state, emitted } = run([
       { type: 'frame', action: select(CLIO), shownIri: CLIO, at: 0 },

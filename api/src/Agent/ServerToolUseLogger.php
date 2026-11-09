@@ -32,7 +32,7 @@ use Symfony\AI\Platform\Result\StreamResult;
  * through — outer turn and each nested tool-loop pass — so attaching here covers them all. Queries are
  * not logged on this path (the stream drops the server_tool_use blocks that carry the query text).
  *
- * A second listener rides the same streamed result: {@see EarlyStepNarrationListener} narrates a garage
+ * A second listener rides the same streamed result: {@see EarlyStepNarrationListener} signals a garage
  * tool call as soon as the model BEGINS it (`ToolCallStart`), rather than waiting for
  * {@see Toolbox\CompositeToolbox::execute()} at message end — see that listener's docblock.
  *

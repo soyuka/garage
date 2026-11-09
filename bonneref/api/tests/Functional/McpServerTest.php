@@ -77,37 +77,23 @@ final class McpServerTest extends AppTestCase
     }
 
     /**
-     * Domain errors reach the model as a CallToolResult it can read and act on, NOT as a
-     * JSON-RPC -32603 protocol error whose message the agent layer discards
-     * (Symfony\AI ToolExecutionException::getToolCallResult() throws the message away, so
-     * every failure otherwise collapses to the same opaque sentence).
+     * Without the SIV token, lookup_plate is not advertised at all (CapabilityGatedToolsTest), but the
+     * HTTP plate route stays and answers 501: mon-parc-auto cannot read this server's env, so that
+     * status is how it learns "plate lookup is not configured on the catalogue server".
      */
-    public function testMissingApiKeySurfacesAsAStructuredResultWithoutLeakingTheEnvVar(): void
+    public function testMissingApiKeyAnswers501OverHttp(): void
     {
         $previous = $_SERVER['API_PLAQUE_TOKEN'] ?? '';
         $_SERVER['API_PLAQUE_TOKEN'] = $_ENV['API_PLAQUE_TOKEN'] = '';
 
         try {
             $client = static::createClient();
-            $sessionId = $this->initialize($client);
+            $client->request('GET', '/vehicles/AB123CD', ['headers' => ['Accept' => 'application/ld+json']]);
 
-            $result = $this->call($client, $sessionId, 'tools/call', [
-                'name' => 'lookup_plate',
-                'arguments' => ['plate' => 'AB-123-CD'],
-            ], 5);
+            $this->assertResponseStatusCodeSame(501);
         } finally {
             $_SERVER['API_PLAQUE_TOKEN'] = $_ENV['API_PLAQUE_TOKEN'] = $previous;
         }
-
-        $this->assertArrayNotHasKey('error', $result, 'a missing key is a tool error, not a protocol error');
-
-        $content = $result['result']['structuredContent'];
-        $this->assertSame('not_configured', $content['status']);
-        $this->assertFalse($content['retryable'], 'no amount of retrying configures a key');
-        $this->assertTrue($result['result']['isError']);
-
-        $encoded = json_encode($result, \JSON_THROW_ON_ERROR);
-        $this->assertStringNotContainsString('API_PLAQUE_TOKEN', $encoded, 'never leak env var names to the model');
     }
 
     /**

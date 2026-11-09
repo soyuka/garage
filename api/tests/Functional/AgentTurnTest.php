@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use App\I18n\AgentMessages;
 use App\I18n\Locale;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\RecordingHub;
@@ -130,18 +129,15 @@ final class AgentTurnTest extends AppTestCase
         $this->assertStringContainsString('English', $prompt, 'the model must be told which language to answer in');
         $this->assertStringNotContainsString('user-facing string this turn in French', $prompt);
 
-        // …and the heartbeat the user actually hears follows the same locale.
+        // The tool step reaches the dashboard as its key alone: the ticker carries only what the model chose to say.
         $hub = $container->get(RecordingHub::class);
         $statuses = [];
         foreach ($hub->updates as $u) {
             $payload = json_decode($u->getData(), true);
             if ('status' === ($payload['type'] ?? null)) {
-                $statuses[] = $payload['message'];
+                $statuses[] = $payload;
             }
         }
-        $english = AgentMessages::for(Locale::En)->narration['list_vehicles'];
-        $french = AgentMessages::for(Locale::Fr)->narration['list_vehicles'];
-        $this->assertNotSame([], array_intersect($statuses, $english), 'the list_vehicles heartbeat is one of the English variants');
-        $this->assertSame([], array_intersect($statuses, $french), 'no French variant leaks into an English turn');
+        $this->assertContains(['type' => 'status', 'tool' => 'list_vehicles'], $statuses);
     }
 }

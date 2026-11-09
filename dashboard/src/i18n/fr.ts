@@ -542,6 +542,7 @@ export const fr = {
     updating: 'mise à jour…',
     recording: 'enregistrement…',
     garage: 'garage…',
+    working: 'en cours…',
   },
 
   truth: {
@@ -670,6 +671,7 @@ export const fr = {
     prefsLabel: 'Préférences',
     prefsSound: 'Sons',
     prefsVoice: 'Voix',
+    prefsVoiceUnavailable: 'Voix indisponible : aucune clé ElevenLabs configurée sur ce serveur.',
     themeToLight: 'Passer au thème clair',
     themeToDark: 'Passer au thème sombre',
     command: {
@@ -678,6 +680,7 @@ export const fr = {
       send: 'Envoyer',
       cancel: 'Annuler',
       busy: "L'agent travaille déjà — annulez ou attendez la fin.",
+      unavailable: 'Agent non configuré : aucune clé Anthropic sur ce serveur.',
       scopes: {
         parc: "Demander à l'agent sur le parc…",
         entretien: "Demander à l'agent sur l'entretien…",
@@ -886,6 +889,13 @@ export const fr = {
       all: 'Tous',
       pages: (n: number) => `${n}${NBSP}p.`,
       open: 'ouvert',
+      /** The documentation scan's caption on the viewer: « Recherche · « huile » · 2/4 ». */
+      scan: {
+        search: 'Recherche',
+        query: (q: string) => `«${NBSP}${q}${NBSP}»`,
+        none: (q: string) => `Aucun résultat pour «${NBSP}${q}${NBSP}»`,
+        results: (n: number): string => (n === 1 ? 'résultat' : 'résultats'),
+      },
     },
     datasheet: {
       systems: {

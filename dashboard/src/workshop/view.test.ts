@@ -11,7 +11,19 @@ const doc = {
 
 describe('reduceView', () => {
   it('starts on Entretien with nothing projected', () => {
-    expect(initialView).toEqual({ section: 'entretien', focusRegion: null, focusTopic: null, focusExplicit: false, projection: null, projectionKey: 0, proposal: null, document: null, focusSeq: 0 });
+    expect(initialView).toEqual({
+      section: 'entretien',
+      focusRegion: null,
+      focusTopic: null,
+      focusExplicit: false,
+      projection: null,
+      projectionKey: 0,
+      proposal: null,
+      document: null,
+      focusSeq: 0,
+      scan: null,
+      scanSeq: 0,
+    });
   });
 
   it('switches section on a local section action without touching the projection', () => {
@@ -82,6 +94,56 @@ describe('reduceView', () => {
     expect(next.section).toBe('documents');
     expect(next.document).toEqual(doc);
     expect(next.projection).toEqual({ kind: 'document' });
+  });
+
+  describe('documentScan', () => {
+    const hit = (page: number) => ({
+      documentId: '01D',
+      page,
+      pageLabel: null,
+      url: doc.url,
+      title: doc.title,
+      contentType: doc.contentType,
+      filename: doc.filename,
+      pagesUrl: '/garage/vehicles/01X/documents/01D/pages',
+    });
+    const scan = { type: 'documentScan' as const, vehicle: '/garage/vehicles/01X', query: 'huile', hits: [hit(4), hit(9)] };
+
+    it('opens Documents on the best hit, with the query highlighted, and keeps the scan', () => {
+      const next = reduceView(initialView, scan);
+      expect(next.section).toBe('documents');
+      expect(next.projection).toEqual({ kind: 'document' });
+      expect(next.document).toMatchObject({ url: doc.url, page: 4, highlight: 'huile' });
+      expect(next.scan).toEqual({ query: 'huile', hits: scan.hits, key: next.scanSeq });
+    });
+
+    it('each scan is a new run, even with the same hits', () => {
+      const once = reduceView(initialView, scan);
+      expect(reduceView(once, scan).scan?.key).not.toBe(once.scan?.key);
+    });
+
+    it('no match opens Documents with the caption only: the open document stays', () => {
+      const start: ViewState = { ...initialView, document: doc, projection: { kind: 'document' }, projectionKey: 5 };
+      const next = reduceView(start, { ...scan, hits: [] });
+      expect(next.section).toBe('documents');
+      expect(next.document).toBe(doc);
+      expect(next.projectionKey).toBe(5);
+      expect(next.scan).toMatchObject({ query: 'huile', hits: [] });
+    });
+
+    it('showDocument settles the scan on the document the agent picked', () => {
+      const next = reduceView(reduceView(initialView, scan), { type: 'showDocument', ...doc });
+      expect(next.scan).toBeNull();
+      expect(next.document).toEqual(doc);
+    });
+
+    it('endScan (the operator opened something else) drops it', () => {
+      expect(reduceView(reduceView(initialView, scan), { type: 'endScan' }).scan).toBeNull();
+    });
+
+    it('reset (another vehicle) drops it', () => {
+      expect(reduceView(reduceView(initialView, scan), { type: 'reset' }).scan).toBeNull();
+    });
   });
 
   it('proposeActions fills the tray only: the section and the slot stay as they were', () => {

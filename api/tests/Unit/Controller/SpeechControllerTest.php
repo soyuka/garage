@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Controller;
 
+use App\Agent\WebSearch\WebSearchBackend;
+use App\Capability\Capabilities;
 use App\Controller\SpeechController;
 use App\I18n\Locale;
 use App\Speech\SpeechClient;
@@ -18,7 +20,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 /**
  * The controller used to buffer the whole line and stamp `audio/mpeg` on it. Both were ElevenLabs-
  * shaped assumptions: pocket-tts emits WAV, and it emits it as a STREAM — 80 ms of audio every
- * ~60 ms, first sound at ~250 ms (docs/voice.md, 2026-09-05). Buffering turned that into a 3–10 s
+ * ~60 ms, first sound at ~250 ms (docs/archive/pocket-tts.md, 2026-09-05). Buffering turned that into a 3–10 s
  * wait for the first byte, which is exactly the gap the operator read as "the voice is broken".
  */
 final class SpeechControllerTest extends TestCase
@@ -57,7 +59,7 @@ final class SpeechControllerTest extends TestCase
         $speech = new class implements SpeechClient {
             public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
             {
-                throw new SpeechUnavailable('pocket-tts could not be reached.');
+                throw new SpeechUnavailable('the vendor could not be reached.');
             }
 
             public function voices(Locale $locale): array
@@ -66,7 +68,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        $response = (new SpeechController($speech, new Verbalizer()))(self::request());
+        $response = (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini)))(self::request());
 
         $this->assertSame(Response::HTTP_SERVICE_UNAVAILABLE, $response->getStatusCode());
     }
@@ -88,7 +90,7 @@ final class SpeechControllerTest extends TestCase
                     yield from $this->chunks;
 
                     if ($this->diesAfter) {
-                        throw new SpeechUnavailable('pocket-tts dropped the stream.');
+                        throw new SpeechUnavailable('the vendor dropped the stream.');
                     }
 
                     return implode('', $this->chunks);
@@ -101,7 +103,7 @@ final class SpeechControllerTest extends TestCase
             }
         };
 
-        return (new SpeechController($speech, new Verbalizer()))(self::request());
+        return (new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini)))(self::request());
     }
 
     private static function request(): Request

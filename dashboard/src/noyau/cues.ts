@@ -83,12 +83,14 @@ export function cueRepeats(lastAt: number | undefined, at: number, repeatMs: num
   return lastAt === undefined || repeatMs === undefined || at - lastAt >= repeatMs;
 }
 
-/** What the operator has heard from a turn so far: the ticker line, the retained notices, the step chips, the tray. */
+/** What the operator has heard from a turn so far: the ticker line, the retained notices, the step chips, the tray, the documentation scans. */
 export interface TurnHeard {
   narration: string | null;
   notices: number;
   steps: string[];
   proposal: boolean;
+  /** documentation scans played so far (the view's `scanSeq`); absent where nothing scans */
+  scans?: number;
 }
 
 /**
@@ -96,5 +98,5 @@ export interface TurnHeard {
  * (`acknowledge.ts`) is the app talking, not the agent, so it does not end the wait.
  */
 export function agentAnswered(start: TurnHeard, now: TurnHeard): boolean {
-  return now.steps.some((s) => s !== 'acknowledge') || now.narration !== start.narration || now.notices > start.notices || (now.proposal && !start.proposal);
+  return now.steps.some((s) => s !== 'acknowledge') || now.narration !== start.narration || now.notices > start.notices || (now.proposal && !start.proposal) || (now.scans ?? 0) > (start.scans ?? 0);
 }

@@ -134,7 +134,7 @@ describe('palettes', () => {
 });
 
 describe('agentAnswered', () => {
-  const start = { narration: 'Je regarde.', notices: 1, steps: ['acknowledge'], proposal: false };
+  const start = { narration: 'Je regarde.', notices: 1, steps: ['acknowledge'], proposal: false, scans: 3 };
 
   it('does not count the click-time acknowledgement as the agent speaking', () => {
     expect(agentAnswered(start, start)).toBe(false);
@@ -145,6 +145,10 @@ describe('agentAnswered', () => {
     expect(agentAnswered(start, { ...start, narration: 'Vidange dans 2 000 km.' })).toBe(true);
     expect(agentAnswered(start, { ...start, notices: 2 })).toBe(true);
     expect(agentAnswered(start, { ...start, proposal: true })).toBe(true);
+  });
+
+  it('counts a documentation scan on the viewer: a visible step, so the bed does not play over it', () => {
+    expect(agentAnswered(start, { ...start, scans: 4 })).toBe(true);
   });
 
   it('ignores a notice going away', () => {

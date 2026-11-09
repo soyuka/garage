@@ -502,6 +502,7 @@ export const en: Messages = {
     updating: 'updating…',
     recording: 'recording…',
     garage: 'garage…',
+    working: 'working…',
   },
 
   truth: {
@@ -627,6 +628,7 @@ export const en: Messages = {
     prefsLabel: 'Preferences',
     prefsSound: 'Sounds',
     prefsVoice: 'Voice',
+    prefsVoiceUnavailable: 'Voice unavailable: no ElevenLabs key is configured on this server.',
     themeToLight: 'Switch to light theme',
     themeToDark: 'Switch to dark theme',
     command: {
@@ -635,6 +637,7 @@ export const en: Messages = {
       send: 'Send',
       cancel: 'Cancel',
       busy: 'The agent is already working — cancel or wait for it to finish.',
+      unavailable: 'Agent not configured: no Anthropic key on this server.',
       scopes: {
         parc: 'Ask the agent about the fleet…',
         entretien: 'Ask the agent about maintenance…',
@@ -843,6 +846,12 @@ export const en: Messages = {
       all: 'All',
       pages: (n: number) => `${n}${NBSP}pp.`,
       open: 'open',
+      scan: {
+        search: 'Search',
+        query: (q: string) => `“${q}”`,
+        none: (q: string) => `No results for “${q}”`,
+        results: (n: number) => (n === 1 ? 'result' : 'results'),
+      },
     },
     datasheet: {
       systems: {

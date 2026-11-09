@@ -116,4 +116,28 @@ final class McpServerTest extends AppTestCase
         $this->assertTrue($result['result']['isError']);
         $this->assertNotSame('not_found', $content['status']);
     }
+
+    /**
+     * bonneref answers 501 when its plate registry has no token. mpa cannot see bonneref's env, so the
+     * answer itself is the signal: a clean, final "not configured", never a retryable outage.
+     */
+    public function testAPlateLookupTheCatalogueServerHasNotConfiguredSaysSo(): void
+    {
+        $client = static::createClient();
+        static::bonneref()->route('/vehicles/NC000NC', '{"title":"An error occurred","status":501}', 501);
+        $sessionId = $this->initialize($client);
+
+        $result = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'lookup_plate',
+            'arguments' => ['plate' => 'NC-000-NC'],
+        ], 8);
+
+        $this->assertArrayNotHasKey('error', $result);
+
+        $content = $result['result']['structuredContent'];
+        $this->assertSame('not_configured', $content['status']);
+        $this->assertFalse($content['retryable']);
+        $this->assertSame('plate lookup is not configured on the catalogue server', $content['reason']);
+        $this->assertTrue($result['result']['isError']);
+    }
 }

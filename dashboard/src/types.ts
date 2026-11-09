@@ -328,6 +328,19 @@ export interface SpecNode {
   volumeLitres?: number | null;
 }
 
+/** What this deployment can do (`GET /agent/link` `capabilities`, keyed like `api/src/Capability/Capability.php`).
+ *  A paid provider with no key is false: the matching control is hidden or disabled up front. */
+export interface Capabilities {
+  /** The in-app agent (Anthropic). Off: the dock says the agent is not configured. */
+  agent: boolean;
+  /** The spoken notices (ElevenLabs TTS). Off: the « Voix » switch is disabled. */
+  voice: boolean;
+  /** The dock's dictation (ElevenLabs STT). Off: the mic is hidden. */
+  dictation: boolean;
+  /** The agent's `web_search` tool. Informational: the server already withholds the tool. */
+  web_search: boolean;
+}
+
 /** One voice a TTS backend can speak with (`GET /tts/voices`, `api/src/Speech/SpeechVoice.php`). The
  *  first entry the server returns is its default — the id `POST /tts`'s optional `voice` field takes. */
 export interface SpeechVoice {
@@ -364,17 +377,31 @@ export type UIAction =
   // (fetch with the Bearer); `page` is the 1-based physical page; `highlight` is free text folded like
   // the API searcher. Also built locally by « Ouvrir » / a bill chip — same surface, no frame.
   | { type: 'showDocument'; url: string; title: string; contentType: string; filename: string; page?: number; highlight?: string; pagesUrl?: string }
+  // A `search_documentation` call, played on the viewer (CONTRACT.md § documentScan): the ranked hits
+  // (≤ 6, best first), each self-contained enough to open; `hits: []` is a no_match. Published by the
+  // search processor itself, so both drivers send it. A later `showDocument` settles it.
+  | { type: 'documentScan'; vehicle: Iri; query: string; hits: DocScanHit[] }
   | { type: 'toast'; tone: Tone; message: string }
-  // Transient per-narrated-step cue (sparse — only a whitelisted subset of tools narrate). Feeds the
-  // Noyau narration/heartbeat line and a Noyau pulse; carries no reducer state.
-  //
-  // `tool` is the server's own tool key (StepNarrator is keyed by it). It is what the chip is derived
-  // from — `message` is prose and is free to be written in any language. Optional so a server that
-  // predates the field still renders: the client then keyword-matches the French sentence, which is
-  // a fallback, not the contract.
-  | { type: 'status'; message: string; tool?: string }
+  // Transient step cue (CONTRACT.md § status). Two shapes, never both fields from the server:
+  //  - `{tool}` — a tool is running (StepNarrator, whitelisted tools only): a step chip + a pulse, the
+  //    ticker line is left alone. No sentence since 2026-11-09: the ticker carries only what the model said.
+  //  - `{message}` — the model's own `narrate_step` line: the ticker line + a pulse + a chip classified
+  //    from the prose (keyword fallback, French-only by nature).
+  | { type: 'status'; message?: string; tool?: string }
   // Turn lifecycle — drives the busy/working state. Carries no reducer state.
   | { type: 'turn'; phase: 'start' | 'end'; outcome?: 'failed' };
+
+/** One page a documentation search matched, as the `documentScan` frame carries it. */
+export interface DocScanHit {
+  documentId: string;
+  page: number;
+  pageLabel: string | null;
+  url: string;
+  title: string;
+  contentType: string;
+  filename: string;
+  pagesUrl: string;
+}
 
 /** What the document viewer opens — a `showDocument` frame's payload, or one built from a row/bill. */
 export type DocumentSpec = Omit<Extract<UIAction, { type: 'showDocument' }>, 'type'>;

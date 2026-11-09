@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp;
 
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
+use App\Exception\NotConfiguredException;
 use App\Exception\RecordNotFoundException;
 use App\Exception\UpstreamException;
 use Mcp\Schema\Content\TextContent;
@@ -85,6 +86,12 @@ final readonly class DomainErrorHandler implements RequestHandlerInterface
                 'retryable' => false,
                 'source' => $e->source,
                 'hint' => \sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source),
+            ],
+            $e instanceof NotConfiguredException => [
+                'status' => 'not_configured',
+                'retryable' => false,
+                'reason' => $e->getMessage(),
+                'hint' => 'This capability is unavailable on this deployment. Tell the user so; do not retry and do not guess an answer.',
             ],
             $e instanceof RecordNotFoundException, $e instanceof NotFoundHttpException, $e instanceof ItemNotFoundException => [
                 'status' => self::MISS,

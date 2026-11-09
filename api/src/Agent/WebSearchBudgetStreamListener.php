@@ -30,10 +30,9 @@ final class WebSearchBudgetStreamListener extends AbstractStreamListener
 {
     public function __construct(
         private readonly WebSearchBudget $budget,
-        // Narrate the search on the dashboard heartbeat. web_search is server-side (no Toolbox call),
-        // so this toolTokens delta — Anthropic's per-message web_search_requests count — is the only
-        // mid-turn seam that sees a search ran, just as it is for the budget. Optional: a listener
-        // built without a narrator (none today) simply does not narrate.
+        // Signal the search step to the dashboard. web_search is server-side (no Toolbox call), so this
+        // toolTokens delta — Anthropic's per-message web_search_requests count — is the only mid-turn
+        // seam that sees a search ran, just as it is for the budget.
         private readonly ?StepNarrator $narrator = null,
         // The debug journal, fed from the same TokenUsage delta: the streamed path has no raw body, so
         // this is where token usage and web-search spend are observable for the journal. Optional —

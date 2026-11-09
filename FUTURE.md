@@ -794,3 +794,28 @@ Split done per `docs/bonneref-extraction.md` (commits 207a586, 439a101). Left be
   backend through flysystem `lazy` storages; dev/stage compose has no minio services, bills and documents persist
   in the `storage_data` volume on php and worker (`/app/var/storage`); `bin/backup` tars it. Prod `bonneref-garage`
   must set `STORAGE_ADAPTER=s3`.
+
+## `symfony/json-schema` behind API Platform (noted 2026-11-09, later)
+
+Tool and LLM schemas go through API Platform's `SchemaFactory` (standing rule, see `api/CLAUDE.md`). The new
+`symfony/json-schema` component could back that factory instead of API Platform's own builder, which is an API
+Platform change first (core), then a swap here. Not before the hackathon submission.
+
+## Capability gating follow-ups (noted 2026-11-09)
+
+Paid providers are now capabilities (`api/src/Capability`, `bonneref/api/src/Capability`): an empty key
+removes the feature (tool not listed, endpoint 503 without a vendor call, dashboard control hidden via
+`GET /agent/link` `capabilities`). Left open:
+
+- **The garage agent's system prompt still names `web_search`** (`api/config/packages/ai.yaml`) when the tool
+  is withheld for a missing `GEMINI_API_KEY`. The model cannot call it (CompositeToolbox drops it and refuses
+  the call), but the prompt promises a tool it does not have. A prompt fragment keyed on the capability
+  would close it.
+- **`Capability::Agent` is keyed on `ANTHROPIC_API_KEY` only.** Toggling ai.yaml's agent to Qwen would need
+  the check to follow the platform (`ALIBABACLOUD_API_KEY`).
+- **bonneref's 501 body names the env var.** `GET /vehicles/{plate}` without `API_PLAQUE_TOKEN` answers
+  501 with `detail: "… (env API_PLAQUE_TOKEN)"` (API Platform puts the exception message in `detail`).
+  mpa replaces it with its own sentence, but a direct HTTP caller sees the env var name. MCP never leaks it
+  (lookup_plate is not listed).
+- **`STT_BACKEND` is a selector with one case** (`elevenlabs`). Kept since the default makes it free, but it
+  could go the way of `TTS_BACKEND` (removed with pocket-tts, `docs/archive/pocket-tts.md`).
