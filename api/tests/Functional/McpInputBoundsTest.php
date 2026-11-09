@@ -21,6 +21,9 @@ final class McpInputBoundsTest extends AppTestCase
         yield 'list_due_maintenance limit' => ['list_due_maintenance', ['limit' => 1000]];
         yield 'toast message' => ['toast', ['message' => str_repeat('a', 2001)]];
         yield 'log_maintenance notes' => ['log_maintenance', ['make' => 'MAZDA', 'model' => 'MAZDA6', 'items' => [['type' => 'oil_change']], 'notes' => str_repeat('a', 2001)]];
+        yield 'log_maintenance non-numeric cost' => ['log_maintenance', ['make' => 'MAZDA', 'model' => 'MAZDA6', 'items' => [['type' => 'oil_change']], 'cost' => 'abc']];
+        yield 'log_maintenance comma cost' => ['log_maintenance', ['make' => 'MAZDA', 'model' => 'MAZDA6', 'items' => [['type' => 'oil_change']], 'cost' => '149,90']];
+        yield 'edit_maintenance non-numeric cost' => ['edit_maintenance', ['record' => '/garage/maintenance-records/01JC0000000000000000000000', 'cost' => 'abc']];
         yield 'plan_maintenance parts' => ['plan_maintenance', ['make' => 'MAZDA', 'model' => 'MAZDA6', 'type' => 'brakes', 'parts' => array_fill(0, 51, ['ref' => 'X'])]];
     }
 

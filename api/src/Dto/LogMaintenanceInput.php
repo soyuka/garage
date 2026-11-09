@@ -82,6 +82,7 @@ final class LogMaintenanceInput
 
     #[ApiProperty(description: 'Cost of the work as a decimal string, e.g. "89.90". Pair with currency.')]
     #[Assert\Length(max: 32)]
+    #[Assert\Regex(pattern: '/^\d+(?:\.\d+)?$/', message: 'cost must be a decimal number with a dot, e.g. "149.90".')]
     public ?string $cost = null;
 
     #[ApiProperty(description: 'ISO 4217 currency code for cost, e.g. "EUR".')]

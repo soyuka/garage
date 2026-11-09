@@ -59,6 +59,7 @@ final class EditMaintenanceInput
 
     #[ApiProperty(description: 'New cost as a decimal string, e.g. "149.90". Pair with currency. Omit to leave unchanged.')]
     #[Assert\Length(max: 32)]
+    #[Assert\Regex(pattern: '/^\d+(?:\.\d+)?$/', message: 'cost must be a decimal number with a dot, e.g. "149.90".')]
     public ?string $cost = null;
 
     #[ApiProperty(description: 'ISO 4217 currency for cost, e.g. "EUR". Defaults to EUR when a cost is given.')]
