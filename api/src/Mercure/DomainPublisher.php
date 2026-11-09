@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace App\Mercure;
 
-use ApiPlatform\Metadata\IriConverterInterface;
-use ApiPlatform\Metadata\UrlGeneratorInterface;
-use App\ApiResource\GarageVehicle;
+use App\Agent\Ui\DashboardChannel;
 use App\Entity\Vehicle;
 use App\Garage\GarageVehicleView;
 use Psr\Log\LoggerInterface;
@@ -15,21 +13,15 @@ use Symfony\Component\Mercure\Update;
 
 /**
  * Pushes the full vehicle read-model to the dashboard on a write, called explicitly from the write
- * processors after they flush. Replaces the implicit Doctrine postFlush listener (DomainEventPublisher):
- * a write path now opts in by calling {@see self::publishVehicle()}, and the payload CARRIES the
- * vehicle read-model (scalars + projected facts + the composed health badge — see
- * {@see GarageVehicleView::toArray()}) instead of a bare "something changed" notification, so the
- * dashboard renders the fresh state directly, with no follow-up GET and no refetch race.
+ * processors after they flush. The payload CARRIES the read-model (scalars + projected facts + the
+ * composed health badge — see {@see GarageVehicleView::toArray()}), so the dashboard renders the fresh
+ * state with no follow-up GET and no refetch race; a write that shifts the forecast ships the
+ * recomputed health in the same frame. The open checklist is its own subresource, refetched on select.
  *
- * Publishing the WHOLE read-model (not a per-entity delta) keeps the client trivially consistent and
- * absorbs cascades for free: a write that shifts the forecast ships the recomputed health badge in the
- * same frame. The open checklist is NOT part of this frame — it is its own subresource
- * (GET /garage/vehicles/{id}/planned-tasks), which the dashboard refetches on select. Cost is one small
- * JSON payload per write — vehicles are tiny.
- *
- * Two topics per change, matching the frontend's subscriptions:
- *   - the item topic       ({origin}/garage/vehicles/{ulid}) — the open detail card;
- *   - the collection topic ({origin}/garage/vehicles)        — the sidebar parc list.
+ * One topic: the vehicle owner's fleet topic ({@see DashboardChannel::fleetTopic()}), a keyed digest
+ * handed out by GET /agent/link. The hub accepts anonymous subscribers, so a topic derived from the
+ * vehicle IRI would broadcast every owner's plates and VINs to anyone who guesses it. A vehicle with
+ * no owner is not published.
  *
  * Best-effort, like the render intents: the write already committed, so a hub that is down or
  * untrusted must never turn a successful write into a failure — log and move on.
@@ -38,7 +30,7 @@ final readonly class DomainPublisher
 {
     public function __construct(
         private HubInterface $hub,
-        private IriConverterInterface $iriConverter,
+        private DashboardChannel $channel,
         private GarageVehicleView $view,
         private LoggerInterface $logger,
     ) {
@@ -46,13 +38,12 @@ final readonly class DomainPublisher
 
     public function publishVehicle(Vehicle $vehicle, string $event = 'updated'): void
     {
-        $itemTopic = $this->iriConverter->getIriFromResource(
-            GarageVehicle::class,
-            UrlGeneratorInterface::ABS_URL,
-            context: ['uri_variables' => ['id' => (string) $vehicle->getId()]],
-        );
-        $collectionTopic = substr($itemTopic, 0, (int) strrpos($itemTopic, '/'));
+        $owner = $vehicle->getOwner();
+        if (null === $owner || '' === $owner) {
+            return;
+        }
 
+        $topic = $this->channel->fleetTopic($owner);
         $payload = json_encode([
             'kind' => 'vehicle',
             'event' => $event,
@@ -61,15 +52,10 @@ final readonly class DomainPublisher
             'resource' => $this->view->toArray($vehicle),
         ], \JSON_THROW_ON_ERROR);
 
-        foreach ([$itemTopic, $collectionTopic] as $topic) {
-            try {
-                $this->hub->publish(new Update($topic, $payload));
-            } catch (\Throwable $e) {
-                $this->logger->warning('Mercure publish failed for topic {topic}: {error}', [
-                    'topic' => $topic,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+        try {
+            $this->hub->publish(new Update($topic, $payload));
+        } catch (\Throwable $e) {
+            $this->logger->warning('Mercure publish failed for the fleet topic: {error}', ['error' => $e->getMessage()]);
         }
     }
 }

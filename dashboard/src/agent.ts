@@ -74,8 +74,9 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
 }
 
 /**
- * What this dashboard listens on: the public vehicle collection, its own per-tab turn session, and —
- * once GET /agent/link has resolved it — the owner's PILOT topic, where render intents driven from an
+ * What this dashboard listens on: its own per-tab turn session and — once GET /agent/link has resolved
+ * them — the owner's FLEET topic (vehicle writes; a keyed digest, since the hub takes anonymous
+ * subscribers and a guessable topic would broadcast every owner's plates) and the owner's PILOT topic, where render intents driven from an
  * external MCP host (Claude Code, Goose…) land. The pilot topic carries the very same UIAction
  * frames, so the same handler drives the same choreography whoever is at the controls.
  *
@@ -86,14 +87,23 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
  * pilot.ts). One EventSource per driver makes provenance STRUCTURAL: the stream a frame arrived on is
  * the answer, with nothing to forget to stamp and nothing new on the wire.
  */
-export function dashboardSubscriptions(api: string, sessionId: string, pilotTopic: string | null): Subscription[] {
-  const subs: Subscription[] = [{ driver: 'app', topics: [`${api}/garage/vehicles`, `${api}/agent/sessions/${sessionId}`] }];
-  if (pilotTopic) subs.push({ driver: 'pilot', topics: [pilotTopic] });
+export function dashboardSubscriptions(api: string, sessionId: string, link: OwnerTopics): Subscription[] {
+  const app = [`${api}/agent/sessions/${sessionId}`];
+  if (link.fleetTopic) app.unshift(link.fleetTopic);
+  const subs: Subscription[] = [{ driver: 'app', topics: app }];
+  if (link.topic) subs.push({ driver: 'pilot', topics: [link.topic] });
   return subs;
 }
 
-export interface AgentLink {
+/** The owner-scoped topics GET /agent/link hands out: `topic` = pilot intents, `fleetTopic` = vehicle writes. */
+export interface OwnerTopics {
   topic: string | null;
+  fleetTopic: string | null;
+}
+
+export const NO_OWNER_TOPICS: OwnerTopics = { topic: null, fleetTopic: null };
+
+export interface AgentLink extends OwnerTopics {
   capabilities: Capabilities;
 }
 
@@ -102,13 +112,17 @@ export const ALL_CAPABILITIES: Capabilities = { agent: true, voice: true, dictat
 
 /** Only a literal `false` switches a capability off — a malformed or older body never hides a feature. */
 export function parseAgentLink(body: unknown): AgentLink {
-  const link = body !== null && typeof body === 'object' ? (body as { topic?: unknown; capabilities?: unknown }) : {};
+  const link = body !== null && typeof body === 'object' ? (body as { topic?: unknown; fleetTopic?: unknown; capabilities?: unknown }) : {};
   const raw = link.capabilities !== null && typeof link.capabilities === 'object' ? (link.capabilities as Record<string, unknown>) : {};
   const capabilities = { ...ALL_CAPABILITIES };
   for (const key of Object.keys(capabilities) as (keyof Capabilities)[]) {
     if (raw[key] === false) capabilities[key] = false;
   }
-  return { topic: typeof link.topic === 'string' ? link.topic : null, capabilities };
+  return {
+    topic: typeof link.topic === 'string' ? link.topic : null,
+    fleetTopic: typeof link.fleetTopic === 'string' ? link.fleetTopic : null,
+    capabilities,
+  };
 }
 
 /**

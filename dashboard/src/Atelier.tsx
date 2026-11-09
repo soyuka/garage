@@ -6,7 +6,8 @@ import './scene/scene.css';
 import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
 import { API, getIdentity, logout } from './auth';
-import { cancelTurn, dashboardSubscriptions, fetchAgentLink, postTurn, tabSessionId } from './agent';
+import type { OwnerTopics } from './agent';
+import { cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId } from './agent';
 import {
   addTaskPart,
   archiveTasks,
@@ -99,10 +100,10 @@ export function Atelier() {
   // One session per TAB — scopes the agent's render-intent topic (slice 5 posts turns onto it). Kept in
   // sessionStorage so a reload mid-turn rejoins its own topic instead of orphaning the reply (agent.ts).
   const [sessionId] = useState(() => tabSessionId(window.sessionStorage, () => crypto.randomUUID()));
-  // The owner's PILOT topic: render intents driven from an external MCP host (Claude Code, Goose…),
-  // which has no tab and therefore no session. Resolved once from GET /agent/link — until then (and
-  // when unauthenticated) the dashboard just runs without that channel.
-  const [pilotTopic, setPilotTopic] = useState<string | null>(null);
+  // The owner's PILOT topic (render intents from an external MCP host, which has no tab) and FLEET
+  // topic (vehicle writes). Resolved once from GET /agent/link — until then (and when unauthenticated)
+  // the dashboard runs on its session topic alone.
+  const [ownerTopics, setOwnerTopics] = useState<OwnerTopics>(NO_OWNER_TOPICS);
   // Turn-scoped agent surfaces: a `proposeActions` card + the unified slot focus (which panel is in the
   // centre slot + which keys are spotlit on the car/panel). Driven by `focusView`/`showFact` intents and
   // by car-pin clicks. Cleared on a new turn (its context is captured in pendingContext first) and on nav.
@@ -203,10 +204,10 @@ export function Atelier() {
   }, [dispatch]);
   useEffect(() => clearDet, [clearDet]);
 
-  // The pilot topic — asked for once on mount (it is a keyed digest server-side, not derivable here).
+  // The owner topics — asked for once on mount (keyed digests server-side, not derivable here).
   useEffect(() => {
     let live = true;
-    fetchAgentLink().then((link) => live && setPilotTopic(link.topic));
+    fetchAgentLink().then((link) => live && setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic }));
     return () => {
       live = false;
     };
@@ -589,7 +590,7 @@ export function Atelier() {
     },
     [closeRun, dispatch, openRun, runStage],
   );
-  useMercure(dashboardSubscriptions(API, sessionId, pilotTopic), onFrame);
+  useMercure(dashboardSubscriptions(API, sessionId, ownerTopics), onFrame);
 
   // The car the gate was waiting for is on screen → replay what it held, in order. Guarded on the
   // awaited IRI so the effect is inert on every other bundle change (the live cascade re-runs it).

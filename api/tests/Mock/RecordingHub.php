@@ -12,7 +12,7 @@ use Symfony\Component\Mercure\Update;
 /**
  * Records every published {@see Update} instead of POSTing to a real hub, so tests can assert what
  * the agent / domain layer streamed (render intents on the session topic, domain events on the
- * public vehicle topics) without a running Mercure hub. Decorates `mercure.hub.default` in the test
+ * owner fleet topic) without a running Mercure hub. Decorates `mercure.hub.default` in the test
  * environment; it does not delegate, so no HTTP ever leaves the test.
  */
 final class RecordingHub implements HubInterface

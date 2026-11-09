@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useT } from '../i18n/LocaleProvider';
 import { API, getIdentity } from '../auth';
-import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, postTurn, tabSessionId } from '../agent';
+import type { OwnerTopics } from '../agent';
+import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId } from '../agent';
 import { createTask, getVehicleBundle, getVehicles, mergeTaskParts } from '../garage';
 
 const PREFETCH_CONCURRENCY = 3;
@@ -45,7 +46,7 @@ export function Workshop() {
   const { state, dispatch } = useNoyau();
   const { status } = useCommandStatus(state);
   const [sessionId] = useState(() => tabSessionId(window.sessionStorage, () => crypto.randomUUID()));
-  const [pilotTopic, setPilotTopic] = useState<string | null>(null);
+  const [ownerTopics, setOwnerTopics] = useState<OwnerTopics>(NO_OWNER_TOPICS);
   const [capabilities, setCapabilities] = useState<Capabilities>(ALL_CAPABILITIES);
   const [now, setNow] = useState(() => new Date());
   const [voice, setVoice] = useVoicePreference();
@@ -76,7 +77,7 @@ export function Workshop() {
     let live = true;
     fetchAgentLink().then((link) => {
       if (!live) return;
-      setPilotTopic(link.topic);
+      setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic });
       setCapabilities(link.capabilities);
     });
     return () => {
@@ -307,7 +308,7 @@ export function Workshop() {
     },
     [closeRun, cues.play, dispatch, openRun, loadBundle, runStage],
   );
-  useMercure(dashboardSubscriptions(API, sessionId, pilotTopic), onFrame);
+  useMercure(dashboardSubscriptions(API, sessionId, ownerTopics), onFrame);
 
   // ── The command bar ──
   const lastAck = useRef(-1);

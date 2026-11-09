@@ -45,6 +45,22 @@ final class DashboardChannelTest extends TestCase
         $this->assertStringNotContainsString('owner-1', (string) $first);
     }
 
+    public function testTheFleetTopicIsPerOwnerAndNotThePilotDigest(): void
+    {
+        $channel = $this->channel(null);
+
+        $fleet = $channel->fleetTopic('owner-1');
+
+        $this->assertStringStartsWith('https://localhost/garage/owners/', $fleet);
+        $this->assertStringEndsWith('/vehicles', $fleet);
+        $this->assertSame($fleet, $this->channel(null)->fleetTopic('owner-1'));
+        $this->assertNotSame($fleet, $channel->fleetTopic('owner-2'));
+        $this->assertStringNotContainsString('owner-1', $fleet);
+
+        $pilotDigest = substr($channel->pilotTopic('owner-1'), (int) strrpos($channel->pilotTopic('owner-1'), '/') + 1);
+        $this->assertStringNotContainsString($pilotDigest, $fleet, 'knowing one topic must not reveal the other');
+    }
+
     public function testNoOwnerAndNoSessionMeansNoTopic(): void
     {
         $this->assertNull($this->channel(null)->topic());

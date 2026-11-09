@@ -6,10 +6,9 @@ import type { DomainEvent, MercureFrame, UIAction, VehicleSummary } from './type
 // Atelier — the Mercure subscription (Tier-1 transport re-authored
 // fresh from the EventSource topic-subscribe contract, no import path back).
 //
-// Subscribe to EXACTLY two absolute-IRI topics: the collection topic
-// `${API}/garage/vehicles` (the publisher fans the SAME full-vehicle payload to the
-// item AND the collection topic, so the collection subscription alone covers every
-// vehicle — never add per-item subs) and the per-tab session topic
+// The in-app subscription carries two absolute-IRI topics: the owner's fleet topic
+// (`fleetTopic` from GET /agent/link — every vehicle write of this owner, one
+// topic for the whole fleet, never per-item subs) and the per-tab session topic
 // `${API}/agent/sessions/<id>`. A domain event carries the full read-model in
 // `resource`, so the live cascade reconciles state with NO follow-up fetch.
 // ─────────────────────────────────────────────────────────────────────────────

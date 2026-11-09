@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Ui\DashboardChannel;
 use App\Tests\Mock\RecordingHub;
 
 /**
@@ -38,12 +39,27 @@ final class DomainPublishTest extends AppTestCase
 
         // The write fanned out a data-carrying 'vehicle' frame whose resource holds the checklist.
         $hub = static::getContainer()->get(RecordingHub::class);
+        $fleetTopic = static::getContainer()->get(DashboardChannel::class)->fleetTopic(self::TEST_OWNER);
         $vehicleFrames = array_values(array_filter(
-            array_map(static fn ($u) => json_decode($u->getData(), true), $hub->updates),
+            array_map(static fn ($u) => json_decode($u->getData(), true), $hub->updatesForTopic($fleetTopic)),
             static fn ($p) => 'vehicle' === ($p['kind'] ?? null) && isset($p['resource']),
         ));
 
-        $this->assertNotEmpty($vehicleFrames, 'a write must publish a data-carrying vehicle frame');
+        $this->assertNotEmpty($vehicleFrames, 'a write must publish a data-carrying vehicle frame on the owner fleet topic');
+
+        foreach ($hub->updates as $update) {
+            if ('vehicle' !== (json_decode($update->getData(), true)['kind'] ?? null)) {
+                continue;
+            }
+            $this->assertSame([$fleetTopic], $update->getTopics(), 'a vehicle frame goes to the owner fleet topic only');
+            $this->assertFalse($update->isPrivate());
+        }
+        foreach ($hub->updates as $update) {
+            foreach ($update->getTopics() as $topic) {
+                $this->assertStringNotContainsString('/garage/vehicles', $topic, 'no update on a guessable vehicle topic');
+            }
+        }
+        $this->assertNotSame($fleetTopic, static::getContainer()->get(DashboardChannel::class)->fleetTopic('someone-else@example.com'));
         $resource = $vehicleFrames[0]['resource'];
         $this->assertSame($vehicleIri, $resource['@id']);
         $this->assertSame('MAZDA', $resource['make']);

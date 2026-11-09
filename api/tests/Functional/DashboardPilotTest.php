@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Ui\DashboardChannel;
 use App\Tests\Mock\RecordingHub;
 
 /**
@@ -410,6 +411,17 @@ final class DashboardPilotTest extends AppTestCase
 
         $hub = static::getContainer()->get(RecordingHub::class);
         $this->assertNotEmpty($hub->updatesForTopic($topic));
+    }
+
+    public function testAgentLinkGivesTheDashboardItsFleetTopic(): void
+    {
+        $response = static::createClient()->request('GET', '/agent/link', ['headers' => self::authHeaders()]);
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame(
+            static::getContainer()->get(DashboardChannel::class)->fleetTopic(self::TEST_OWNER),
+            json_decode($response->getContent(), true)['fleetTopic'] ?? null,
+        );
     }
 
     public function testTheLinkRequiresAToken(): void

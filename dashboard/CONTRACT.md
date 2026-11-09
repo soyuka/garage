@@ -61,7 +61,7 @@ Collections are hydra — read members from **`member` ?? `hydra:member`**. The 
 | Maintenance records | `GET/POST {iri}/maintenance-records` | newest first; each `@id`→`id` |
 | Record mutate | `PATCH/DELETE /garage/maintenance-records/{id}` | PATCH body replaces the whole visit |
 | Bill attachments | `POST {recordIri}/attachments` (multipart, **don't set Content-Type**) · `DELETE {url}` | owner-gated download → **fetch with Bearer + objectURL**, not `<img src>` |
-| Agent link + capabilities | `GET /agent/link` | `{topic, capabilities:{agent, voice, dictation, web_search}}` (`types.ts` `Capabilities`), read once on mount by `fetchAgentLink`. A `false` is a provider with no key on the server: `agent` false → dock input disabled with the reason; `voice` false → « Voix » switch disabled with the reason, no `/tts` call; `dictation` false → no mic. Missing field or failed fetch → everything assumed on (the endpoints' 503s stay the fallback) |
+| Agent link + capabilities | `GET /agent/link` | `{topic, fleetTopic, capabilities:{agent, voice, dictation, web_search}}` (`types.ts` `Capabilities`), read once on mount by `fetchAgentLink`. `topic` = owner pilot topic, `fleetTopic` = owner fleet topic (both keyed HMAC digests, see Mercure). A `false` is a provider with no key on the server: `agent` false → dock input disabled with the reason; `voice` false → « Voix » switch disabled with the reason, no `/tts` call; `dictation` false → no mic. Missing field or failed fetch → everything assumed on (the endpoints' 503s stay the fallback) |
 | Speak a line | `POST /tts` `{text, voice?}` | same-origin, same bearer as other reads — **not** `authFetch` (a 401 must stay silent, never bounce to login); `Accept-Language` picks pronunciation; optional `voice` is a `SpeechVoice.id` from `GET /tts/voices`, omitted (never `null`) for the server default; a stale/foreign id is silently ignored server-side, falling back to default |
 | Voice list | `GET /tts/voices` | same auth posture as `/tts`; returns `[{id, label}, …]` for the resolved `Accept-Language`, **first entry is the backend's default**, `[]` when voice is not configured; `Cache-Control: private, max-age=3600` + `Vary: Accept-Language` |
 | Transcribe a line | `POST /stt` (raw audio body) | same auth posture as `/tts` — bearer, **not** `authFetch` (a 401 must stay silent, never bounce to login). Body is the recorder's blob as-is with its own `Content-Type` (`audio/webm;codecs=opus`), **not** multipart: one part, no filename, so `post_max_size` is the only limit to check. `Accept-Language` picks the transcription language. → `{text}`, the operator's words **verbatim** (no cleanup, no rephrase); `{text:''}` on silence. Empty or over-cap body → 400 with no backend call; backend refusing/unreachable → **503 empty**, never a 500 — the composer keeps what it had and the operator types |
@@ -82,11 +82,15 @@ major-unit euros the client converts.
   on this ack.
 - **Hidden chat: never render a transcript.** The reply IS the state mutations below.
 
-## Mercure — subscribe to exactly TWO absolute-IRI topics
+## Mercure — the in-app subscription carries TWO absolute-IRI topics
 
-1. **Collection topic** `${VITE_API_BASE}/garage/vehicles` — the publisher fans the *same* full-vehicle
-   payload to item + collection, so the collection subscription **alone covers every vehicle**. Do
-   **not** add per-item subscriptions.
+The hub accepts **anonymous** subscribers, so an owner-scoped topic is a keyed digest the server hands
+out (GET /agent/link), never a string the client can build. Since 2026-11-09 there is **no**
+`/garage/vehicles` topic, collection or item: it broadcast every owner's plates and VINs.
+
+1. **Fleet topic** `fleetTopic` from GET /agent/link (`…/garage/owners/<digest>/vehicles`) — every
+   vehicle write of this owner, full read-model. One topic covers the whole fleet; no per-item
+   subscriptions. Absent until the link resolves (the session topic alone runs meanwhile).
 2. **Session topic** `${VITE_API_BASE}/agent/sessions/<sessionId>`. The id is the **tab's**, held in
    `sessionStorage` (`mpa.session`, since 2026-09-05) — a reload rejoins the same topic, so a turn that
    is queued or running when the page reloads still lands. Two tabs are two sessions; a *duplicated* tab
@@ -94,7 +98,7 @@ major-unit euros the client converts.
 
 **Frame types** (told apart by `kind` vs `type`):
 
-- **Domain event** (collection topic): `{kind:'vehicle', event:'created'|'updated'|'deleted',
+- **Domain event** (fleet topic): `{kind:'vehicle', event:'created'|'updated'|'deleted',
   vehicle, iri, resource}` — `resource` is the full `VehicleSummary`; drives the live data cascade,
   **no follow-up fetch**.
 - **Session frames** (session topic): the real `UIAction` union +

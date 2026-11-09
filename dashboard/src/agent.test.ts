@@ -36,15 +36,13 @@ describe('buildTurnBody', () => {
 // which GET /agent/link resolves. Until it does (or when unauthenticated), the dashboard runs on its
 // two usual topics — the pilot subscription is additive, never a prerequisite.
 describe('dashboardSubscriptions', () => {
-  it('subscribes to the vehicle collection and this tab session under the in-app driver', () => {
-    expect(dashboardSubscriptions('https://localhost', 's1', null)).toEqual([
-      { driver: 'app', topics: ['https://localhost/garage/vehicles', 'https://localhost/agent/sessions/s1'] },
-    ]);
+  it('subscribes to this tab session alone until the link resolves — never to a guessable vehicle topic', () => {
+    expect(dashboardSubscriptions('https://localhost', 's1', { topic: null, fleetTopic: null })).toEqual([{ driver: 'app', topics: ['https://localhost/agent/sessions/s1'] }]);
   });
 
-  it('puts the owner pilot topic on its OWN subscription — the topic a frame arrived on IS its driver', () => {
-    expect(dashboardSubscriptions('https://localhost', 's1', 'https://localhost/agent/pilots/deadbeef')).toEqual([
-      { driver: 'app', topics: ['https://localhost/garage/vehicles', 'https://localhost/agent/sessions/s1'] },
+  it('adds the owner fleet topic to the in-app subscription and puts the pilot topic on its OWN one', () => {
+    expect(dashboardSubscriptions('https://localhost', 's1', { topic: 'https://localhost/agent/pilots/deadbeef', fleetTopic: 'https://localhost/garage/owners/cafe/vehicles' })).toEqual([
+      { driver: 'app', topics: ['https://localhost/garage/owners/cafe/vehicles', 'https://localhost/agent/sessions/s1'] },
       { driver: 'pilot', topics: ['https://localhost/agent/pilots/deadbeef'] },
     ]);
   });
@@ -107,12 +105,20 @@ describe('tabSessionId', () => {
 describe('parseAgentLink', () => {
   it('reads the pilot topic and the capabilities the server advertises', () => {
     expect(
-      parseAgentLink({ topic: 'https://localhost/agent/pilots/abc', capabilities: { agent: true, voice: false, dictation: false, web_search: true } }),
-    ).toEqual({ topic: 'https://localhost/agent/pilots/abc', capabilities: { agent: true, voice: false, dictation: false, web_search: true } });
+      parseAgentLink({
+        topic: 'https://localhost/agent/pilots/abc',
+        fleetTopic: 'https://localhost/garage/owners/def/vehicles',
+        capabilities: { agent: true, voice: false, dictation: false, web_search: true },
+      }),
+    ).toEqual({
+      topic: 'https://localhost/agent/pilots/abc',
+      fleetTopic: 'https://localhost/garage/owners/def/vehicles',
+      capabilities: { agent: true, voice: false, dictation: false, web_search: true },
+    });
   });
 
   it('treats a server that predates capabilities as having everything on, so the 503 fallbacks stay in charge', () => {
-    expect(parseAgentLink({ topic: 't' })).toEqual({ topic: 't', capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
+    expect(parseAgentLink({ topic: 't' })).toEqual({ topic: 't', fleetTopic: null, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
   });
 
   it('only a literal false switches a capability off', () => {
@@ -120,6 +126,6 @@ describe('parseAgentLink', () => {
   });
 
   it('survives a body that is not an object', () => {
-    expect(parseAgentLink(null)).toEqual({ topic: null, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
+    expect(parseAgentLink(null)).toEqual({ topic: null, fleetTopic: null, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
   });
 });

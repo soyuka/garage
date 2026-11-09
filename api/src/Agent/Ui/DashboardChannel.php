@@ -61,6 +61,16 @@ final class DashboardChannel
         return rtrim($this->baseUri, '/').'/agent/pilots/'.hash_hmac('sha256', $owner, $this->secret);
     }
 
+    /**
+     * The owner's fleet topic, where every write pushes the vehicle read-model (plate, VIN, facts,
+     * health). Same reasoning as the pilot topic, with its own HMAC context so neither digest
+     * reveals the other.
+     */
+    public function fleetTopic(string $owner): string
+    {
+        return rtrim($this->baseUri, '/').'/garage/owners/'.hash_hmac('sha256', 'fleet|'.$owner, $this->secret).'/vehicles';
+    }
+
     /** Where to publish: the bound turn session, else the caller's pilot topic, else nowhere. */
     public function topic(): ?string
     {
