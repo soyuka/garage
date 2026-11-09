@@ -47,10 +47,7 @@ final readonly class PlanMaintenanceProcessor implements ProcessorInterface
         }
 
         if ((null === $data->targetUsageValue) !== (null === $data->targetUsageUnit)) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'targetUsageValue and targetUsageUnit must be provided together.',
-            ]);
+            return ToolResult::error('invalid_input', 'targetUsageValue and targetUsageUnit must be provided together.');
         }
 
         $vehicleId = null;

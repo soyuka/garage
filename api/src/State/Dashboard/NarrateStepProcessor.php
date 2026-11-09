@@ -30,7 +30,7 @@ final readonly class NarrateStepProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if ('' === trim($data->message)) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'message must not be empty.']);
+            return ToolResult::error('invalid_input', 'message must not be empty.');
         }
 
         $this->render->narrate($data->message);

@@ -78,10 +78,7 @@ final readonly class DismissMaintenanceProcessor implements ProcessorInterface
         }
 
         if ('task_not_found' === $outcome->status) {
-            return ToolResult::of([
-                'status' => 'task_not_found',
-                'reason' => \sprintf('No open task "%s"%s on this vehicle\'s checklist — nothing to remove.', $data->type, null !== $data->label ? \sprintf(' (%s)', $data->label) : ''),
-            ]);
+            return ToolResult::error('task_not_found', \sprintf('No open task "%s"%s on this vehicle\'s checklist — nothing to remove.', $data->type, null !== $data->label ? \sprintf(' (%s)', $data->label) : ''));
         }
 
         return $this->publishedTask($outcome->task);

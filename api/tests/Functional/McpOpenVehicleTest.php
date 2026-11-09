@@ -32,7 +32,7 @@ final class McpOpenVehicleTest extends AppTestCase
         $client->disableReboot();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -43,13 +43,13 @@ final class McpOpenVehicleTest extends AppTestCase
                 'targetUsageValue' => 250000,
                 'targetUsageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
         $vehicleIri = $plan['task']['vehicle'];
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'open_vehicle',
             'arguments' => ['query' => 'mazda'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $result['status']);
         $this->assertSame($vehicleIri, $result['vehicle']['@id']);
@@ -72,7 +72,7 @@ final class McpOpenVehicleTest extends AppTestCase
         $client->disableReboot();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'RENAULT',
@@ -81,12 +81,12 @@ final class McpOpenVehicleTest extends AppTestCase
                 'plate' => 'AB-123-CD',
                 'type' => 'oil_change',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'open_vehicle',
             'arguments' => ['query' => 'AB-123-CD'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $result['status']);
         $this->assertSame($plan['task']['vehicle'], $result['vehicle']['@id']);
@@ -116,15 +116,15 @@ final class McpOpenVehicleTest extends AppTestCase
             'name' => 'plan_maintenance',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6', 'confirmNew' => true, 'type' => 'oil_change'],
         ], 3);
-        $second = $this->call($client, $sessionId, 'tools/call', [
+        $second = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MX-5', 'confirmNew' => true, 'type' => 'oil_change'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'open_vehicle',
             'arguments' => ['query' => 'mazda'],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         // Never a clarifying question mid-run: the most-recently-touched wins and the runner-up is
         // NAMED so the pilot can say which one it took.

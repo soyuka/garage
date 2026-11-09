@@ -10,6 +10,8 @@ use App\ApiResource\Make;
 use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
 use App\Vehicle\VehicleIndex;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 /**
  * The whole catalogue from the derived read-only TecDoc extract (docs/tecdoc-sqlite.md): vehicles, the
@@ -36,6 +38,7 @@ final class TecdocCatalog implements PartsCatalog
         private readonly string $path,
         private readonly int $lang = 6,
         private readonly ?VehicleIndex $vehicles = null,
+        private readonly LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -687,7 +690,9 @@ final class TecdocCatalog implements PartsCatalog
         }
 
         if ('' === $this->path || !is_file($this->path) || !is_readable($this->path)) {
-            throw new \RuntimeException(\sprintf('TECDOC_CATALOG_PATH "%s" is not a readable file.', $this->path));
+            $this->logger->critical('TECDOC_CATALOG_PATH "{path}" is not a readable file.', ['path' => $this->path]);
+
+            throw new \RuntimeException('The parts catalogue is unavailable on this server.');
         }
 
         return $this->pdo = new \PDO(

@@ -37,10 +37,7 @@ final readonly class RemovePlannedPartProcessor implements ProcessorInterface
     {
         $task = $this->locateTask($data->task);
         if (null === $task || !Ulid::isValid($data->part) || !$this->remover->remove($task, Ulid::fromString($data->part))) {
-            return ToolResult::of([
-                'status' => 'not_found',
-                'reason' => \sprintf('No part "%s" on the planned task %s — read both ids from list_planned_maintenance.', $data->part, $data->task),
-            ]);
+            return ToolResult::error('not_found', \sprintf('No part "%s" on the planned task %s — read both ids from list_planned_maintenance.', $data->part, $data->task));
         }
 
         return ToolResult::of([

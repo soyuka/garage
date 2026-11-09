@@ -23,7 +23,7 @@ final class McpDismissMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -34,7 +34,7 @@ final class McpDismissMaintenanceTest extends AppTestCase
                 'targetUsageValue' => 250000,
                 'targetUsageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
         $taskIri = $plan['task']['@id'];
@@ -43,14 +43,14 @@ final class McpDismissMaintenanceTest extends AppTestCase
         $before = $client->request('GET', $vehicleIri.'/planned-tasks', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
         $this->assertCount(1, $before['member'] ?? $before['hydra:member'] ?? []);
 
-        $dismiss = $this->call($client, $sessionId, 'tools/call', [
+        $dismiss = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'dismiss_maintenance',
             'arguments' => [
                 'vehicle' => $vehicleIri,
                 'type' => 'timing_belt',
                 'label' => 'courroie de distribution',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $dismiss['status']);
         $this->assertSame('dismissed', $dismiss['task']['status']);
@@ -71,7 +71,7 @@ final class McpDismissMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -80,19 +80,19 @@ final class McpDismissMaintenanceTest extends AppTestCase
                 'confirmNew' => true,
                 'type' => 'oil_change',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
 
-        $dismiss = $this->call($client, $sessionId, 'tools/call', [
+        $dismiss = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'dismiss_maintenance',
             'arguments' => [
                 'vehicle' => $vehicleIri,
                 'type' => 'brakes',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
-        $this->assertSame('task_not_found', $dismiss['status']);
+        $this->assertSame('task_not_found', $dismiss['error']);
     }
 
     public function testDismissWithoutVehicleIdentificationIsRejected(): void
@@ -100,11 +100,11 @@ final class McpDismissMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $dismiss = $this->call($client, $sessionId, 'tools/call', [
+        $dismiss = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'dismiss_maintenance',
             'arguments' => ['type' => 'oil_change'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
-        $this->assertSame('invalid_input', $dismiss['status']);
+        $this->assertSame('invalid_input', $dismiss['error']);
     }
 }

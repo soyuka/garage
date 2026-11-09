@@ -34,7 +34,7 @@ final readonly class RemoveVehicleFactsProcessor implements ProcessorInterface
         // @phpstan-ignore function.alreadyNarrowedType (deserialized input: the phpdoc shape is the advertised schema, not a runtime guarantee)
         $keys = array_values(array_unique(array_filter($data->keys, static fn (mixed $k): bool => \is_string($k) && '' !== trim($k))));
         if ([] === $keys) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'keys must hold at least one fact key.']);
+            return ToolResult::error('invalid_input', 'keys must hold at least one fact key.');
         }
 
         $resolved = $this->iriResolver->resolve($data->vehicle);

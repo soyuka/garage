@@ -30,7 +30,7 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $log = $this->call($client, $sessionId, 'tools/call', [
+        $log = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
                 'make' => 'TORO',
@@ -38,11 +38,11 @@ final class McpMaintenanceTest extends AppTestCase
                 'vehicleType' => 'groundscare',
                 'performedAt' => '2026-05-01',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
-        $this->assertSame('invalid_input', $log['status']);
-        $this->assertStringContainsString('items', $log['reason'], 'the error must name the `items` field');
-        $this->assertStringContainsString('"type"', $log['reason'], 'the error must show the item shape');
+        $this->assertSame('invalid_input', $log['error']);
+        $this->assertStringContainsString('items', $log['message'], 'the error must name the `items` field');
+        $this->assertStringContainsString('"type"', $log['message'], 'the error must show the item shape');
     }
 
     public function testLoggingUnderAnAmbiguousMakeSurfacesCandidateInsteadOfCreating(): void
@@ -61,7 +61,7 @@ final class McpMaintenanceTest extends AppTestCase
         ], 3);
 
         // Logging a service under the other brand string must surface the candidate, not dup.
-        $log = $this->call($client, $sessionId, 'tools/call', [
+        $log = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
                 'make' => 'Wheel Horse',
@@ -70,16 +70,16 @@ final class McpMaintenanceTest extends AppTestCase
                 'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
-        $this->assertSame('ambiguous_match', $log['status']);
+        $this->assertSame('ambiguous_match', $log['error']);
         $this->assertSame('TORO', $log['candidates'][0]['make']);
         $this->assertMatchesRegularExpression('~^/garage/vehicles/[0-9A-HJKMNP-TV-Z]{26}$~', $log['candidates'][0]['@id']);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame(1, $list['count'], 'An ambiguous log must not create a second row.');
     }
 
@@ -97,31 +97,31 @@ final class McpMaintenanceTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 4))['vehicles'][0]['@id'];
 
-        $log = $this->call($client, $sessionId, 'tools/call', [
+        $log = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
                 'vehicle' => $iri,
                 'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame('ok', $log['status']);
 
-        $history = $this->call($client, $sessionId, 'tools/call', [
+        $history = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
-        ], 6)['result']['structuredContent'];
+        ], 6));
         $this->assertCount(1, $history['records'], 'Logging by @id must append to the existing row.');
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 7)['result']['structuredContent'];
+        ], 7));
         $this->assertSame(1, $list['count']);
     }
 
@@ -141,16 +141,16 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 4))['vehicles'][0]['@id'];
 
         // History by the @id alone — no make/model.
-        $history = $this->call($client, $sessionId, 'tools/call', [
+        $history = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['vehicle' => $iri],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         $this->assertSame('ok', $history['status']);
         $this->assertSame($iri, $history['vehicle']['@id']);
@@ -180,15 +180,15 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 4))['vehicles'][0]['@id'];
 
-        $record = $this->call($client, $sessionId, 'tools/call', [
+        $record = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['vehicle' => $iri],
-        ], 5)['result']['structuredContent']['records'][0];
+        ], 5))['records'][0];
 
         $this->assertSame(['oil_change', 'spark_plug', 'fuel_line'], array_column($record['items'], 'type'));
         // The canonicalisation never disturbs the parts riding on the item.
@@ -211,10 +211,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $records = $this->call($client, $sessionId, 'tools/call', [
+        $records = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
-        ], 4)['result']['structuredContent']['records'];
+        ], 4))['records'];
 
         $iri = $records[0]['@id'] ?? null;
         $this->assertMatchesRegularExpression('~^/garage/maintenance-records/[0-9A-HJKMNP-TV-Z]{26}$~', (string) $iri);
@@ -238,7 +238,7 @@ final class McpMaintenanceTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $log = $this->call($client, $sessionId, 'tools/call', [
+        $log = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
                 'make' => 'Wheel Horse',
@@ -248,13 +248,13 @@ final class McpMaintenanceTest extends AppTestCase
                 'items' => [['type' => 'oil_change', 'parts' => []]],
                 'performedAt' => '2026-05-01',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
         $this->assertSame('ok', $log['status']);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame(2, $list['count'], 'confirmNew must create the distinct row.');
     }
 
@@ -277,13 +277,13 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
-        ], 4)['result']['structuredContent']['records'][0]['@id'];
+        ], 4))['records'][0]['@id'];
 
         // Edit only the cost and notes; performedBy is NOT supplied — a sparse edit must leave it.
-        $edit = $this->call($client, $sessionId, 'tools/call', [
+        $edit = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'edit_maintenance',
             'arguments' => [
                 'record' => $iri,
@@ -291,13 +291,13 @@ final class McpMaintenanceTest extends AppTestCase
                 'currency' => 'EUR',
                 'notes' => 'corrected bill',
             ],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame('ok', $edit['status']);
 
-        $history = $this->call($client, $sessionId, 'tools/call', [
+        $history = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
-        ], 6)['result']['structuredContent'];
+        ], 6));
 
         $this->assertCount(1, $history['records'], 'an edit must mutate the visit in place, never append a second row');
         $record = $history['records'][0];
@@ -308,7 +308,7 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame('oil_change', $record['items'][0]['type'], 'items untouched when not supplied');
     }
 
-    public function testEditMaintenanceOnAnUnknownRecordIsNotFoundNotAnError(): void
+    public function testEditMaintenanceOnAnUnknownRecordIsANotFoundToolError(): void
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
@@ -321,8 +321,7 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $this->assertFalse($edit['result']['isError'] ?? false, 'a missing record is a result, not a protocol error');
-        $this->assertSame('not_found', $edit['result']['structuredContent']['status']);
+        $this->assertSame('not_found', $this->outcome($edit)['error'], 'a missing record is a tool error, not a protocol error');
     }
 
     public function testEditMaintenanceReplacesItemsWhenSupplied(): void
@@ -341,10 +340,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
-        ], 4)['result']['structuredContent']['records'][0]['@id'];
+        ], 4))['records'][0]['@id'];
 
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'edit_maintenance',
@@ -357,10 +356,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 5);
 
-        $record = $this->call($client, $sessionId, 'tools/call', [
+        $record = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
-        ], 6)['result']['structuredContent']['records'][0];
+        ], 6))['records'][0];
 
         $this->assertSame(['oil_change', 'oil_filter'], array_column($record['items'], 'type'));
         $this->assertSame('W712/73', $record['items'][0]['parts'][0]['ref']);
@@ -384,10 +383,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $record = $this->call($client, $sessionId, 'tools/call', [
+        $record = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
-        ], 4)['result']['structuredContent']['records'][0];
+        ], 4))['records'][0];
         $this->assertSame(1250, $record['items'][0]['parts'][0]['priceCents']);
         $this->assertArrayNotHasKey('price', $record['items'][0]['parts'][0], 'the wire "price" is converted, never stored raw');
 
@@ -399,10 +398,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 5);
 
-        $edited = $this->call($client, $sessionId, 'tools/call', [
+        $edited = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv'],
-        ], 6)['result']['structuredContent']['records'][0];
+        ], 6))['records'][0];
         $this->assertSame(1490, $edited['items'][0]['parts'][0]['priceCents']);
     }
 
@@ -445,10 +444,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $facts = $this->call($client, $sessionId, 'tools/call', [
+        $facts = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6'],
-        ], 4)['result']['structuredContent']['facts'];
+        ], 4))['facts'];
 
         $byKey = array_column($facts, null, 'key');
         $this->assertArrayHasKey('oil_filter_ref', $byKey);
@@ -608,7 +607,7 @@ final class McpMaintenanceTest extends AppTestCase
 
         // A vidange that changed oil + oil filter + fuel filter on one date is ONE visit carrying
         // three items and a single bill — not three separate records.
-        $log = $this->call($client, $sessionId, 'tools/call', [
+        $log = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -623,13 +622,13 @@ final class McpMaintenanceTest extends AppTestCase
                     ['type' => 'fuel_filter', 'parts' => []],
                 ],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
         $this->assertSame('ok', $log['status']);
 
-        $history = $this->call($client, $sessionId, 'tools/call', [
+        $history = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertCount(1, $history['records'], 'the visit is a single record, not one per part');
         $visit = $history['records'][0];
@@ -638,10 +637,10 @@ final class McpMaintenanceTest extends AppTestCase
         $this->assertSame('W712/73', $visit['items'][1]['parts'][0]['ref']);
 
         // Each item seeds its own forecast — a type-narrowed history finds the visit.
-        $byFilter = $this->call($client, $sessionId, 'tools/call', [
+        $byFilter = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6', 'type' => 'fuel_filter'],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertCount(1, $byFilter['records'], 'a per-type history query matches a visit that contains that item type');
     }
 
@@ -665,10 +664,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $estimated = $this->call($client, $sessionId, 'tools/call', [
+        $estimated = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'SUBARU', 'model' => 'FORESTER'],
-        ], 4)['result']['structuredContent']['records'][0];
+        ], 4))['records'][0];
 
         $this->assertSame(['amount' => '33.40', 'currency' => null, 'source' => 'estimated'], $estimated['cost']);
 
@@ -686,10 +685,10 @@ final class McpMaintenanceTest extends AppTestCase
             ],
         ], 5);
 
-        $billed = $this->call($client, $sessionId, 'tools/call', [
+        $billed = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_maintenance_history',
             'arguments' => ['make' => 'SUBARU', 'model' => 'FORESTER', 'type' => 'tires'],
-        ], 6)['result']['structuredContent']['records'][0];
+        ], 6))['records'][0];
 
         $this->assertSame(['amount' => '50.00', 'currency' => 'EUR', 'source' => 'bill'], $billed['cost']);
     }
@@ -882,7 +881,7 @@ final class McpMaintenanceTest extends AppTestCase
 
         // log_maintenance creates the vehicle on first write; the reading the user mentioned
         // ("vidange à 250 000 km") must land on the vehicle's own usage, not only on the record.
-        $log = $this->call($client, $sessionId, 'tools/call', [
+        $log = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -894,14 +893,14 @@ final class McpMaintenanceTest extends AppTestCase
                 'usageValue' => 250000,
                 'usageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame('ok', $log['status']);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => ['make' => 'IVECO'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
         $this->assertSame(250000, $list['vehicles'][0]['usageValue']);
         $this->assertSame('km', $list['vehicles'][0]['usageUnit']);
     }
@@ -911,7 +910,7 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'IVECO',
@@ -921,7 +920,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'usageValue' => 100000,
                 'usageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent']['vehicle']['@id'];
+        ], 3))['vehicle']['@id'];
 
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'log_maintenance',
@@ -944,7 +943,7 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'IVECO',
@@ -954,7 +953,7 @@ final class McpMaintenanceTest extends AppTestCase
                 'usageValue' => 120000,
                 'usageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent']['vehicle']['@id'];
+        ], 3))['vehicle']['@id'];
 
         // A backdated service logged at an earlier odometer must not rewind the current reading.
         $this->call($client, $sessionId, 'tools/call', [

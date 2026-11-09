@@ -39,6 +39,8 @@ use Symfony\Component\Validator\Constraints as Assert;
             title: 'List Models',
             description: 'List the model lines of a manufacturer (use list_makes first to get the makeId). Results are capped: pass `search` with the model name without the make (e.g. "6", "CX-5") instead of paging through offsets.',
             input: ModelsInput::class,
+            // returns a capped {totalItems, items, …} CallToolResult, not a Hydra collection.
+            structuredContent: false,
             processor: ModelsProcessor::class,
             annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
         ),

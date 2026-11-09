@@ -9,7 +9,6 @@ use ApiPlatform\State\ProcessorInterface;
 use App\Bonneref\BonnerefClient;
 use App\Dto\MotulOilInput;
 use App\Entity\Vehicle;
-use App\Exception\UpstreamException;
 use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
@@ -49,20 +48,13 @@ final readonly class MotulOilProcessor implements ProcessorInterface
         // Pins the row directly — no search, no @id/SIV derivation — so a CTA click converges.
         $motulId = trim((string) $data->motulId);
         if ('' !== $motulId) {
-            try {
-                return ToolResult::of($this->advisor->adviseVariant($motulId));
-            } catch (UpstreamException $e) {
-                return $this->upstreamError($motulId, $e);
-            }
+            return self::result($this->advisor->adviseVariant($motulId));
         }
 
         if (null !== $data->vehicle) {
             $vehicle = $this->resolveVehicle($data->vehicle);
             if (null === $vehicle) {
-                return ToolResult::of([
-                    'status' => 'not_found',
-                    'reason' => \sprintf('No vehicle at %s in the garage. Use an @id from list_vehicles.', $data->vehicle),
-                ]);
+                return ToolResult::error('not_found', \sprintf('No vehicle at %s in the garage. Use an @id from list_vehicles.', $data->vehicle));
             }
 
             // The row's identity + plate fill whatever the caller did not override. The stored engine
@@ -75,26 +67,29 @@ final readonly class MotulOilProcessor implements ProcessorInterface
         }
 
         if ('' === $search) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide a vehicle @id, or a search like "Mazda 6".',
-            ]);
+            return ToolResult::error('invalid_input', 'Provide a vehicle @id, or a search like "Mazda 6".');
         }
 
-        try {
-            return ToolResult::of($this->advisor->advise($search, $year, $engine));
-        } catch (UpstreamException $e) {
-            return $this->upstreamError($search, $e);
-        }
+        // A Motul outage bubbles to DomainErrorHandler: upstream_unavailable/upstream_rejected, as for any upstream.
+        return self::result($this->advisor->advise($search, $year, $engine));
     }
 
-    private function upstreamError(string $query, UpstreamException $e): CallToolResult
+    /**
+     * matched and ambiguous are answers (the candidates carry each variant's grades); not_found is a miss.
+     *
+     * @param array<string, mixed> $advice
+     */
+    private static function result(array $advice): CallToolResult
     {
-        return ToolResult::of([
-            'status' => 'upstream_error',
-            'query' => $query,
-            'reason' => $e->getMessage(),
-        ]);
+        if ('not_found' !== $advice['status']) {
+            return ToolResult::of($advice);
+        }
+
+        unset($advice['status']);
+        $reason = $advice['hint'] ?? \sprintf('Motul\'s catalogue has no vehicle matching "%s". Check the make and model spelling, or use the ACEA spec from known facts.', $advice['query']);
+        unset($advice['hint']);
+
+        return ToolResult::error('not_found', $reason, array_filter($advice, static fn (mixed $v): bool => [] !== $v));
     }
 
     private function resolveVehicle(string $iri): ?Vehicle

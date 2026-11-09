@@ -17,10 +17,9 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * count, this keys on (tool name + arguments + that the result failed), so it leaves a legitimately long
  * but PROGRESSING turn alone and only fires on genuine non-convergence.
  *
- * A failure is a garage tool result whose status is an error (the garage tools never throw; they return
- * a structured status — see {@see \App\Garage\ToolResult}), or any result flagged isError. A different
- * argument set, or a success, resets nothing but counts under its own signature, so only true repetition
- * accumulates.
+ * A failure is a tool result flagged isError ({@see \App\Mcp\Agent\McpToolbox} hands those over as the
+ * CallToolResult itself). A different argument set, or a success, resets nothing but counts under its
+ * own signature, so only true repetition accumulates.
  *
  * Singleton in the consume worker, so {@see reset()} is called per turn by
  * {@see \App\MessageHandler\RunAgentTurnHandler} — otherwise counts would leak across turns.
@@ -28,9 +27,6 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
 #[AsEventListener(event: ToolCallsExecuted::class)]
 final class RepeatedToolFailureGuard
 {
-    /** Statuses a garage tool returns when the call did not accomplish anything and would be retried. */
-    private const FAILED_STATUSES = ['invalid_input', 'not_found', 'error', 'refused'];
-
     /** @var array<string, int> signature => consecutive identical-failure count this turn */
     private array $failures = [];
 
@@ -62,11 +58,7 @@ final class RepeatedToolFailureGuard
 
     private function isFailure(mixed $result): bool
     {
-        if (!$result instanceof CallToolResult) {
-            return false;
-        }
-
-        return $result->isError || \in_array($result->structuredContent['status'] ?? null, self::FAILED_STATUSES, true);
+        return $result instanceof CallToolResult && $result->isError;
     }
 
     private function signature(ToolResult $toolResult): string

@@ -26,10 +26,7 @@ final readonly class RevealAssemblyProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (!\in_array($data->region, RenderIntentTools::BODY_REGIONS, true)) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'hint' => \sprintf('region must be one of: %s.', implode(', ', RenderIntentTools::BODY_REGIONS)),
-            ]);
+            return ToolResult::error('invalid_input', \sprintf('region must be one of: %s.', implode(', ', RenderIntentTools::BODY_REGIONS)));
         }
 
         $keys = array_values(array_filter(array_map(trim(...), $data->partKeys), static fn (string $k): bool => '' !== $k));

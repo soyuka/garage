@@ -37,7 +37,7 @@ final readonly class ProposeActionsProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if ('' === trim($data->headline) || [] === $data->actions) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'headline and at least one action are required.']);
+            return ToolResult::error('invalid_input', 'headline and at least one action are required.');
         }
 
         $buttons = [];
@@ -47,10 +47,10 @@ final readonly class ProposeActionsProcessor implements ProcessorInterface
             $taskId = self::text($action, 'taskId');
 
             if ('' === trim($label)) {
-                return ToolResult::of(['status' => 'invalid_input', 'hint' => 'every action needs a label.']);
+                return ToolResult::error('invalid_input', 'every action needs a label.');
             }
             if (null === $instruction && null === $taskId) {
-                return ToolResult::of(['status' => 'invalid_input', 'hint' => 'an action is EITHER an NL follow-up (instruction) OR a deterministic write (taskId + parts).']);
+                return ToolResult::error('invalid_input', 'an action is EITHER an NL follow-up (instruction) OR a deterministic write (taskId + parts).');
             }
 
             $buttons[] = new ActionButton($label, $instruction, $taskId, self::parts($action));

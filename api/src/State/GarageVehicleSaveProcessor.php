@@ -10,6 +10,7 @@ use App\ApiResource\GarageVehicle;
 use App\Dto\RegistrationFactsInput;
 use App\Dto\VehicleSaveInput;
 use App\Entity\VehicleFact;
+use App\Garage\ToolError;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
@@ -20,7 +21,6 @@ use App\Knowledge\MakeName;
 use App\Maintenance\VehicleFactWriter;
 use App\Mercure\DomainPublisher;
 use Doctrine\ODM\MongoDB\DocumentManager;
-use Mcp\Schema\Result\CallToolResult;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -60,13 +60,12 @@ final readonly class GarageVehicleSaveProcessor implements ProcessorInterface
         $vehicleId = null;
         if (null !== self::text($data->vehicle)) {
             $resolved = $this->iriResolver->resolve((string) $data->vehicle);
-            if ($resolved instanceof CallToolResult) {
-                $reason = $resolved->structuredContent['reason'];
-                throw 'not_found' === $resolved->structuredContent['status'] ? new NotFoundHttpException($reason) : new UnprocessableEntityHttpException($reason);
+            if ($resolved instanceof ToolError) {
+                throw 'not_found' === $resolved->status ? new NotFoundHttpException($resolved->reason) : new UnprocessableEntityHttpException($resolved->reason);
             }
             $vehicleId = $resolved;
         } elseif (null !== $guard = $this->iriResolver->requireIdentity($make, $model)) {
-            throw new UnprocessableEntityHttpException($guard->structuredContent['reason']);
+            throw new UnprocessableEntityHttpException($guard->reason);
         }
 
         $resolution = $this->resolver->resolveForSave($vehicleId, $make, $model, VehicleType::Car, $data->carId, $plate, $vin, $data->confirmNew, 'user');

@@ -48,7 +48,7 @@ final class McpMakeKnowledgeTest extends AppTestCase
             'arguments' => $arguments,
         ], 2);
 
-        return $result['result']['structuredContent'];
+        return $this->outcome($result);
     }
 
     public function testListsTheTopicsOfAMakeMatchedCaseAndAccentInsensitively(): void
@@ -83,7 +83,7 @@ final class McpMakeKnowledgeTest extends AppTestCase
     {
         $content = $this->get(['make' => 'Peugeot', 'topic' => 'nope']);
 
-        $this->assertSame('not_found', $content['status']);
+        $this->assertSame('not_found', $content['error']);
         $this->assertSame(['numero-organisation', 'ou-trouver-opr'], array_column($content['topics'], 'topic'));
     }
 
@@ -91,15 +91,16 @@ final class McpMakeKnowledgeTest extends AppTestCase
     {
         $content = $this->get(['make' => 'Fiat']);
 
-        $this->assertSame('not_found', $content['status']);
-        $this->assertSame([], $content['topics']);
+        $this->assertSame('not_found', $content['error']);
+        $this->assertStringContainsString('FIAT', strtoupper($content['message']));
+        $this->assertArrayNotHasKey('topics', $content);
     }
 
     public function testRequiresAMake(): void
     {
         $content = $this->get(['make' => ' ']);
 
-        $this->assertSame('invalid_input', $content['status']);
+        $this->assertSame('invalid_input', $content['error']);
     }
 
     public function testBothToolsAreAdvertisedAndReadOnly(): void

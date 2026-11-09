@@ -230,7 +230,7 @@ ai:
                       be done — distinct from ticking it DONE, which is a log_maintenance.
                     - update_vehicle — patches a vehicle's own fields (usageValue+usageUnit, owner, plate,
                       vin, year, engineVariant = the engine/trim label, never a fluid grade), not facts.
-                    - On a write returning "ambiguous_match": inspect the candidates and re-call with
+                    - On a write refused with an "ambiguous_match" error: inspect the candidates and re-call with
                       vehicleId set to the match to update it, or confirmNew:true only if it is genuinely a
                       different vehicle. Pass carId/plate/vin whenever known so the vehicle is recognised
                       later.

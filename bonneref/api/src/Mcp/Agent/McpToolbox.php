@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Mcp\Agent;
 
 use Mcp\Schema\JsonRpc\Error;
+use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server;
 use Symfony\AI\Agent\Toolbox\Exception\ToolExecutionException;
 use Symfony\AI\Agent\Toolbox\Exception\ToolNotFoundException;
@@ -91,7 +92,7 @@ class McpToolbox implements ToolboxInterface
 
         if (isset($response['error'])) {
             // A genuine unknown-tool is METHOD_NOT_FOUND; anything else (INTERNAL_ERROR from a handler
-            // that threw — e.g. a catalog upstream 401/timeout — or INVALID_PARAMS) means the tool
+            // that threw — e.g. a catalog upstream 401/timeout) means the tool
             // exists but its execution failed. Surface that as a recoverable ToolExecutionException so
             // FaultTolerantToolbox hands the model an error to recover from, instead of a "tool not
             // found" lie that drops the tool, or a raw exception that aborts the whole turn.
@@ -103,6 +104,12 @@ class McpToolbox implements ToolboxInterface
         }
 
         $result = $response['result'] ?? [];
+
+        // A tool execution error stays a flagged CallToolResult: the model reads `isError` beside the
+        // text, and RepeatedToolFailureGuard counts it.
+        if ($result['isError'] ?? false) {
+            return new ToolResult($toolCall, CallToolResult::fromArray($result));
+        }
 
         // Prefer the structured payload (what the tests rely on); fall back to text.
         $payload = $result['structuredContent']

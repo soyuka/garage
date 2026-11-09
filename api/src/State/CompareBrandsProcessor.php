@@ -27,7 +27,7 @@ final readonly class CompareBrandsProcessor implements ProcessorInterface
     {
         $brands = array_values(array_filter(array_map(trim(...), $data->brands), static fn (string $b): bool => '' !== $b));
         if ([] === $brands) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'pass at least one brand to rank.']);
+            return ToolResult::error('invalid_input', 'pass at least one brand to rank.');
         }
 
         $ranking = BrandTier::rankAll($brands);

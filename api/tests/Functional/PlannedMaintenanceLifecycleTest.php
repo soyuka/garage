@@ -13,7 +13,7 @@ final class PlannedMaintenanceLifecycleTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -22,7 +22,7 @@ final class PlannedMaintenanceLifecycleTest extends AppTestCase
                 'confirmNew' => true,
                 'type' => 'oil_change',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
 

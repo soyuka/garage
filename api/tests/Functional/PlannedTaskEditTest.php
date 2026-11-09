@@ -18,7 +18,7 @@ final class PlannedTaskEditTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => array_merge([
                 'make' => 'IVECO',
@@ -26,7 +26,7 @@ final class PlannedTaskEditTest extends AppTestCase
                 'vehicleType' => 'cv',
                 'confirmNew' => true,
             ], $arguments),
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         return ['client' => $client, 'taskIri' => $plan['task']['@id']];
     }

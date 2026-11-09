@@ -40,10 +40,10 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $page1 = $this->call($client, $sessionId, 'tools/call', [
+        $page1 = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => [],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertGreaterThan(10, $page1['totalItems']);
         $this->assertSame(10, $page1['returned']);
@@ -53,19 +53,19 @@ final class McpCatalogTest extends AppTestCase
         $this->assertSame(10, $page1['nextOffset']);
         $this->assertCount(10, $page1['items']);
 
-        $page2 = $this->call($client, $sessionId, 'tools/call', [
+        $page2 = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => ['offset' => 10],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame(10, $page2['offset']);
         $this->assertCount(10, $page2['items']);
         $this->assertSame([], array_intersect(array_column($page1['items'], 'id'), array_column($page2['items'], 'id')), 'distinct page — no overlap with page 1');
 
-        $beyond = $this->call($client, $sessionId, 'tools/call', [
+        $beyond = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => ['offset' => 999],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame([], $beyond['items']);
         $this->assertArrayNotHasKey('nextOffset', $beyond);
@@ -91,10 +91,10 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $all = $this->call($client, $sessionId, 'tools/call', [
+        $all = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => [],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $all['status']);
         $this->assertArrayHasKey('totalItems', $all);
@@ -105,10 +105,10 @@ final class McpCatalogTest extends AppTestCase
         $names = array_column($all['items'], 'name');
         $needle = $names[0];
 
-        $filtered = $this->call($client, $sessionId, 'tools/call', [
+        $filtered = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => ['search' => $needle],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertLessThanOrEqual($all['totalItems'], $filtered['totalItems']);
         foreach ($filtered['items'] as $make) {
@@ -209,10 +209,10 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_models',
             'arguments' => ['makeId' => 72, 'carType' => 'PC', 'search' => '6 Hatchback'],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $content['status']);
         $this->assertArrayNotHasKey('@id', $content['items'][0]);
@@ -238,10 +238,10 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_models',
             'arguments' => ['makeId' => 72, 'carType' => 'PC', 'search' => $search],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $content['status']);
         $this->assertContains(4887, array_column($content['items'], 'id'));
@@ -252,10 +252,10 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC'],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $content['status']);
         $this->assertSame(13, $content['totalItems']);
@@ -272,10 +272,10 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'year' => 2005, 'capacityLitres' => 2.0],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame(5, $content['total']);
         $this->assertFalse($content['truncated']);
@@ -283,10 +283,10 @@ final class McpCatalogTest extends AppTestCase
         sort($ids);
         $this->assertSame([16681, 16683, 16844, 18827, 19107], $ids);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'year' => 2005, 'capacityLitres' => 2.0, 'fuel' => 'essence'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $ids = array_column($content['items'], 'id');
         sort($ids);
@@ -298,15 +298,15 @@ final class McpCatalogTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC', 'search' => 'LFF7'],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame(1, $content['total']);
-        $this->assertSame(13, $this->call($client, $sessionId, 'tools/call', [
+        $this->assertSame(13, $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC'],
-        ], 3)['result']['structuredContent']['total']);
+        ], 3))['total']);
     }
 }

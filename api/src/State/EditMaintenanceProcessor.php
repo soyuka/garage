@@ -44,33 +44,21 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (null === $data->record) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide the record @id (the IRI from get_maintenance_history) in the `record` field.',
-            ]);
+            return ToolResult::error('invalid_input', 'Provide the record @id (the IRI from get_maintenance_history) in the `record` field.');
         }
 
         try {
             $recordId = $this->iriConverter->getResourceFromIri($data->record)->id;
             // @phpstan-ignore catch.neverThrown (GarageMaintenanceRecordProvider 404s through getResourceFromIri, whose @throws omits it)
         } catch (ItemNotFoundException|NotFoundHttpException) {
-            return ToolResult::of([
-                'status' => 'not_found',
-                'reason' => \sprintf('No maintenance record at %s.', $data->record),
-            ]);
+            return ToolResult::error('not_found', \sprintf('No maintenance record at %s.', $data->record));
         } catch (\Throwable) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => \sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record),
-            ]);
+            return ToolResult::error('invalid_input', \sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record));
         }
 
         $record = $this->records->find($recordId);
         if (null === $record || $record->getVehicle()->getOwner() !== $this->owner->current() || $record->getVehicle()->isDeleted()) {
-            return ToolResult::of([
-                'status' => 'not_found',
-                'reason' => \sprintf('No maintenance record at %s.', $data->record),
-            ]);
+            return ToolResult::error('not_found', \sprintf('No maintenance record at %s.', $data->record));
         }
 
         $changes = [];
@@ -84,10 +72,7 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
             try {
                 $changes['performedAt'] = new \DateTimeImmutable($data->performedAt);
             } catch (\Exception) {
-                return ToolResult::of([
-                    'status' => 'invalid_input',
-                    'reason' => \sprintf('Invalid performedAt date "%s"; expected an ISO date like "2026-06-15".', $data->performedAt),
-                ]);
+                return ToolResult::error('invalid_input', \sprintf('Invalid performedAt date "%s"; expected an ISO date like "2026-06-15".', $data->performedAt));
             }
         }
         if (null !== $data->usageValue) {
@@ -96,10 +81,7 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
         if (null !== $data->usageUnit) {
             $unit = UsageUnit::tryFrom($data->usageUnit);
             if (null === $unit) {
-                return ToolResult::of([
-                    'status' => 'invalid_input',
-                    'reason' => \sprintf('Unknown usageUnit "%s"; expected km, mi or hours.', $data->usageUnit),
-                ]);
+                return ToolResult::error('invalid_input', \sprintf('Unknown usageUnit "%s"; expected km, mi or hours.', $data->usageUnit));
             }
             $changes['usageUnit'] = $unit;
         }

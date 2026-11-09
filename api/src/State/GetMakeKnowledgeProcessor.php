@@ -27,14 +27,18 @@ final class GetMakeKnowledgeProcessor implements ProcessorInterface
     {
         $make = MakeName::normalize($data->make);
         if ('' === $make) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'Provide the vehicle make (e.g. "Peugeot").']);
+            return ToolResult::error('invalid_input', 'Provide the vehicle make (e.g. "Peugeot").');
         }
 
         $entries = $this->repository->findForMake($make);
         $topic = trim((string) $data->topic);
 
+        if ([] === $entries) {
+            return ToolResult::error('not_found', \sprintf('No curated knowledge about %s yet. Do not guess how its codes work; say so, or search the web.', $make));
+        }
+
         if ('' === $topic) {
-            return ToolResult::of(['status' => [] === $entries ? 'not_found' : 'ok', 'make' => $make, 'topics' => self::topics($entries)]);
+            return ToolResult::of(['status' => 'ok', 'make' => $make, 'topics' => self::topics($entries)]);
         }
 
         foreach ($entries as $entry) {
@@ -52,7 +56,7 @@ final class GetMakeKnowledgeProcessor implements ProcessorInterface
             }
         }
 
-        return ToolResult::of(['status' => 'not_found', 'make' => $make, 'topic' => $topic, 'topics' => self::topics($entries)]);
+        return ToolResult::error('not_found', \sprintf('No topic "%s" for %s. Re-call with one of the topics below.', $topic, $make), ['topics' => self::topics($entries)]);
     }
 
     /**

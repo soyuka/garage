@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Mcp;
 
+use App\Agent\Exception\RepeatedToolFailureException;
+use App\Agent\Ui\RepeatedToolFailureGuard;
 use App\Mcp\Agent\McpToolbox;
+use Mcp\Schema\Content\TextContent;
+use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server;
 use PHPUnit\Framework\TestCase;
+use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
+use Symfony\AI\Platform\Result\ToolCall;
 
 final class McpToolboxTest extends TestCase
 {
@@ -49,6 +55,27 @@ final class McpToolboxTest extends TestCase
         $names = array_map(static fn ($t) => $t->getName(), $toolbox->getTools());
 
         $this->assertSame(['list_vehicles'], $names);
+    }
+
+    /**
+     * An isError result reaches the model as what it is — the error text, flagged — and stays a
+     * CallToolResult so RepeatedToolFailureGuard can count it.
+     */
+    public function testAnErrorResultIsHandedOverFlagged(): void
+    {
+        $error = ['isError' => true, 'content' => [['type' => 'text', 'text' => 'not_found: No vehicle at /garage/vehicles/x in the garage.']]];
+        $toolbox = $this->toolboxDriving([['result' => $error], ['result' => $error]]);
+        $guard = new RepeatedToolFailureGuard(maxRepeats: 2);
+
+        $result = $toolbox->execute(new ToolCall('1', 'get_vehicle_facts', ['vehicle' => '/garage/vehicles/x']));
+
+        $this->assertInstanceOf(CallToolResult::class, $result->getResult());
+        $this->assertTrue($result->getResult()->isError);
+        $this->assertEquals([new TextContent($error['content'][0]['text'])], $result->getResult()->content);
+
+        $guard(new ToolCallsExecuted([$result]));
+        $this->expectException(RepeatedToolFailureException::class);
+        $guard(new ToolCallsExecuted([$toolbox->execute(new ToolCall('2', 'get_vehicle_facts', ['vehicle' => '/garage/vehicles/x']))]));
     }
 
     /**

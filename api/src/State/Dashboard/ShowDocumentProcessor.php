@@ -35,7 +35,7 @@ final readonly class ShowDocumentProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (null === $data->vehicle || '' === trim($data->vehicle) || null === $data->document || '' === trim($data->document)) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'Provide the vehicle @id (IRI) and a documentId from list_documents or search_documentation.']);
+            return ToolResult::error('invalid_input', 'Provide the vehicle @id (IRI) and a documentId from list_documents or search_documentation.');
         }
 
         $resolved = $this->iriResolver->resolve($data->vehicle);
@@ -50,16 +50,16 @@ final readonly class ShowDocumentProcessor implements ProcessorInterface
 
         $document = $this->documents->findOneForVehicle($vehicle, $data->document);
         if (null === $document) {
-            return ToolResult::of(['status' => 'not_found', 'reason' => \sprintf('No document %s on this vehicle. Use a documentId from list_documents or search_documentation.', $data->document)]);
+            return ToolResult::error('not_found', \sprintf('No document %s on this vehicle. Use a documentId from list_documents or search_documentation.', $data->document));
         }
 
         if (null !== $data->page) {
             $pageCount = $document->getPages()->count();
             if (0 === $pageCount) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => 'This document has no text pages (an image or a scanned file): omit page.']);
+                return ToolResult::error('invalid_input', 'This document has no text pages (an image or a scanned file): omit page.');
             }
             if ($data->page < 1 || $data->page > $pageCount) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => \sprintf('page must be between 1 and %d for this document.', $pageCount)]);
+                return ToolResult::error('invalid_input', \sprintf('page must be between 1 and %d for this document.', $pageCount));
             }
         }
 

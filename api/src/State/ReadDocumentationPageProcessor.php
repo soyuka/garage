@@ -30,7 +30,7 @@ final readonly class ReadDocumentationPageProcessor implements ProcessorInterfac
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (null === $data->vehicle || '' === trim($data->vehicle) || null === $data->document || '' === trim($data->document) || null === $data->page) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'Provide the vehicle @id (IRI), a documentId from list_documents or search_documentation, and the page number (the `page` of a search_documentation hit).']);
+            return ToolResult::error('invalid_input', 'Provide the vehicle @id (IRI), a documentId from list_documents or search_documentation, and the page number (the `page` of a search_documentation hit).');
         }
 
         $resolved = $this->iriResolver->resolve($data->vehicle);
@@ -45,15 +45,15 @@ final readonly class ReadDocumentationPageProcessor implements ProcessorInterfac
 
         $document = $this->documents->findOneForVehicle($vehicle, $data->document);
         if (null === $document) {
-            return ToolResult::of(['status' => 'not_found', 'reason' => \sprintf('No document %s on this vehicle. Use a documentId from list_documents or search_documentation.', $data->document)]);
+            return ToolResult::error('not_found', \sprintf('No document %s on this vehicle. Use a documentId from list_documents or search_documentation.', $data->document));
         }
 
         $pageCount = $document->getPages()->count();
         if (0 === $pageCount) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'This document has no extracted text (a scanned file or an image): use show_document so the operator reads it.']);
+            return ToolResult::error('invalid_input', 'This document has no extracted text (a scanned file or an image): use show_document so the operator reads it.');
         }
         if ($data->page < 1 || $data->page > $pageCount) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => \sprintf('page must be between 1 and %d for this document.', $pageCount)]);
+            return ToolResult::error('invalid_input', \sprintf('page must be between 1 and %d for this document.', $pageCount));
         }
 
         $page = null;
@@ -64,7 +64,7 @@ final readonly class ReadDocumentationPageProcessor implements ProcessorInterfac
             }
         }
         if (null === $page) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => \sprintf('page must be between 1 and %d for this document.', $pageCount)]);
+            return ToolResult::error('invalid_input', \sprintf('page must be between 1 and %d for this document.', $pageCount));
         }
 
         return ToolResult::of([

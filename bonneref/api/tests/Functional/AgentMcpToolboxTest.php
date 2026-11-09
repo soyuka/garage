@@ -6,6 +6,8 @@ namespace App\Tests\Functional;
 
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\FixtureHttpClient;
+use Mcp\Schema\Content\TextContent;
+use Mcp\Schema\Result\CallToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\Tool;
 
@@ -47,10 +49,10 @@ final class AgentMcpToolboxTest extends AppTestCase
         $inProcess = self::toolbox()->execute(new ToolCall('1', 'list_makes', []))->getResult();
 
         $sessionId = $this->initialize($client);
-        $http = $this->call($client, $sessionId, 'tools/call', [
+        $http = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => new \stdClass(),
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame($http, $inProcess);
         $this->assertNotEmpty($inProcess);
@@ -64,7 +66,7 @@ final class AgentMcpToolboxTest extends AppTestCase
         $inProcess = self::toolbox()->execute(new ToolCall('1', 'decode_build_code', $arguments))->getResult();
 
         $sessionId = $this->initialize($client);
-        $http = $this->call($client, $sessionId, 'tools/call', ['name' => 'decode_build_code', 'arguments' => $arguments], 2)['result']['structuredContent'];
+        $http = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'decode_build_code', 'arguments' => $arguments], 2));
 
         $this->assertSame($http, $inProcess);
         $this->assertSame('10173', $inProcess['organisationNumber']);
@@ -75,12 +77,16 @@ final class AgentMcpToolboxTest extends AppTestCase
         static::createClient();
 
         // A stalled SIV upstream once aborted a whole agent turn with an uncaught exception; it comes
-        // back as a structured result so the model can tell a dead upstream from an unknown plate.
+        // back as a tool error whose status token lets the model tell a dead upstream from an unknown plate.
         $result = self::toolbox()->execute(new ToolCall('x', 'lookup_plate', [
             'plate' => FixtureHttpClient::TIMEOUT_PLATE,
         ]))->getResult();
 
-        $this->assertSame('upstream_unavailable', $result['status']);
-        $this->assertTrue($result['retryable']);
+        $this->assertInstanceOf(CallToolResult::class, $result);
+        $this->assertTrue($result->isError);
+        $this->assertCount(1, $result->content);
+        $this->assertInstanceOf(TextContent::class, $result->content[0]);
+        $this->assertStringStartsWith('upstream_unavailable: ', $result->content[0]->text);
+        $this->assertStringContainsString('retry', $result->content[0]->text);
     }
 }

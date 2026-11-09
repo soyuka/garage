@@ -41,14 +41,14 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (null === $data->vehicle || null === $data->query || '' === trim($data->query)) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'Provide the vehicle @id (IRI) from list_vehicles and a non-empty query.']);
+            return ToolResult::error('invalid_input', 'Provide the vehicle @id (IRI) from list_vehicles and a non-empty query.');
         }
 
         $kind = null;
         if (null !== $data->kind) {
             $kind = VehicleDocumentKind::tryFrom($data->kind);
             if (null === $kind) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => \sprintf('kind must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value')))]);
+                return ToolResult::error('invalid_input', \sprintf('kind must be one of: %s.', implode(', ', array_column(VehicleDocumentKind::cases(), 'value'))));
             }
         }
 

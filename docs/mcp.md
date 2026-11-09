@@ -846,8 +846,8 @@ The knowledge is versioned in `api/config/knowledge/*.yaml` and loaded by
 
 Facts (build date, paint code, tyre size, oil grade/capacity, part references…) have their own write tools;
 `plan_maintenance` no longer takes them. Both address the vehicle by its `@id` (as `update_vehicle` does), are
-owner-scoped, and reach the in-app agent through `McpToolbox` untouched. Both return a structured
-`invalid_input` / `not_found` result rather than an error. The write path is `App\Maintenance\VehicleFactWriter`,
+owner-scoped, and reach the in-app agent through `McpToolbox` untouched. A bad argument or an unknown `@id` is an
+`isError` tool result whose text opens with `invalid_input:` / `not_found:`, never a JSON-RPC error. The write path is `App\Maintenance\VehicleFactWriter`,
 shared with the dashboard's `POST|DELETE /garage/vehicles/{id}/facts`.
 
 | Tool                   | Purpose                                                                                                   |

@@ -8,6 +8,8 @@ use App\Exception\MissingApiKeyException;
 use App\Exception\RateLimitExceededException;
 use App\Exception\UpstreamException;
 use App\Security\OwnerRateLimiter;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\Exception\TransportExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -33,6 +35,7 @@ final readonly class SivClient
         private OwnerRateLimiter $quota,
         private int $maxRetries = 2,
         private int $retryDelayMs = 1000,
+        private LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -62,6 +65,8 @@ final readonly class SivClient
         }
 
         if ('' === $this->token) {
+            $this->logger->error('Plate lookup refused: API_PLAQUE_TOKEN is empty, no apiplaqueimmatriculation.com token configured.');
+
             throw MissingApiKeyException::forSiv();
         }
 

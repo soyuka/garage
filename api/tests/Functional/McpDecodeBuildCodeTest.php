@@ -26,7 +26,7 @@ final class McpDecodeBuildCodeTest extends AppTestCase
             'arguments' => $arguments,
         ], 2);
 
-        return $result['result']['structuredContent'];
+        return $this->outcome($result);
     }
 
     public function testDecodesAnApvForACitroen(): void
@@ -55,36 +55,36 @@ final class McpDecodeBuildCodeTest extends AppTestCase
     {
         $content = $this->decode(['make' => 'PEUGEOT']);
 
-        $this->assertSame('invalid_input', $content['status']);
+        $this->assertSame('invalid_input', $content['error']);
     }
 
     public function testRejectsAnInvalidCodeWithADomainError(): void
     {
         $content = $this->decode(['make' => 'PEUGEOT', 'code' => 'nope']);
 
-        $this->assertSame('invalid_input', $content['status']);
-        $this->assertStringContainsString('nope', $content['reason']);
+        $this->assertSame('invalid_input', $content['error']);
+        $this->assertStringContainsString('nope', $content['message']);
     }
 
     public function testRequiresAMake(): void
     {
         $content = $this->decode(['code' => '10263']);
 
-        $this->assertSame('invalid_input', $content['status']);
+        $this->assertSame('invalid_input', $content['error']);
     }
 
     public function testRejectsAnInvalidDate(): void
     {
         $content = $this->decode(['make' => 'PEUGEOT', 'date' => '15/09/2004']);
 
-        $this->assertSame('invalid_input', $content['status']);
+        $this->assertSame('invalid_input', $content['error']);
     }
 
     public function testUnsupportedMakeIsReportedNotThrown(): void
     {
         $content = $this->decode(['make' => 'Renault', 'code' => '10263']);
 
-        $this->assertSame('unsupported_make', $content['status']);
+        $this->assertSame('unsupported_make', $content['error']);
     }
 
     public function testToolSchemaIsGeneratedFromTheInputDto(): void

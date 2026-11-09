@@ -21,7 +21,7 @@ use App\State\SearchDocumentationProcessor;
     mcp: [
         'list_documents' => new McpTool(
             title: 'List Vehicle Documents',
-            description: 'List the documents attached to a vehicle — workshop manuals (e.g. Renault MR), technical notes (NT), quotes (devis) and other PDFs/images — with their kind, title, sourceRef (citation label such as "MR 361 — Transmission"), page count and download url. Use it to see what documentation exists before answering a repair question, or to find the quote linked to a planned task (plannedTaskId). Identify the vehicle by its @id (the `vehicle` argument, from list_vehicles). An unknown vehicle returns a not_found result (NOT an error). Read-only.',
+            description: 'List the documents attached to a vehicle — workshop manuals (e.g. Renault MR), technical notes (NT), quotes (devis) and other PDFs/images — with their kind, title, sourceRef (citation label such as "MR 361 — Transmission"), page count and download url. Use it to see what documentation exists before answering a repair question, or to find the quote linked to a planned task (plannedTaskId). Identify the vehicle by its @id (the `vehicle` argument, from list_vehicles). An unknown vehicle is a not_found error. Read-only.',
             input: ListDocumentsInput::class,
             structuredContent: false,
             processor: ListDocumentsProcessor::class,
@@ -37,7 +37,7 @@ use App\State\SearchDocumentationProcessor;
         ),
         'read_documentation_page' => new McpTool(
             title: 'Read Vehicle Documentation Page',
-            description: 'Return the FULL text of ONE page of a vehicle document (as extracted from the PDF, layout preserved so table columns stay aligned). Use it after search_documentation whenever the answer — a torque, a capacity, a clearance, a procedure step — is not entirely inside the hit\'s snippet: snippets are cut at 300 characters and tables usually fall outside them. Pass the hit\'s documentId as `document` and its `page` (the physical page number, NOT the pageLabel). Answer from the page text only and cite sourceRef + pageLabel; never complete a value the page does not state. Then call show_document with the same page and your query as highlight so the operator sees the source. An unknown document returns not_found, a page out of range or a document without extracted text (scan, image) returns invalid_input. Read-only.',
+            description: 'Return the FULL text of ONE page of a vehicle document (as extracted from the PDF, layout preserved so table columns stay aligned). Use it after search_documentation whenever the answer — a torque, a capacity, a clearance, a procedure step — is not entirely inside the hit\'s snippet: snippets are cut at 300 characters and tables usually fall outside them. Pass the hit\'s documentId as `document` and its `page` (the physical page number, NOT the pageLabel). Answer from the page text only and cite sourceRef + pageLabel; never complete a value the page does not state. Then call show_document with the same page and your query as highlight so the operator sees the source. An unknown document is a not_found error; a page out of range or a document without extracted text (scan, image) is an invalid_input error. Read-only.',
             input: ReadDocumentationPageInput::class,
             structuredContent: false,
             processor: ReadDocumentationPageProcessor::class,

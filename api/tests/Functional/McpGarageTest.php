@@ -82,10 +82,10 @@ final class McpGarageTest extends AppTestCase
             ], 3 + $i);
         }
 
-        $page1 = $this->call($client, $sessionId, 'tools/call', [
+        $page1 = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => ['limit' => 2],
-        ], 10)['result']['structuredContent'];
+        ], 10));
 
         $this->assertSame(3, $page1['total']);
         $this->assertSame(2, $page1['count']);
@@ -93,10 +93,10 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame(2, $page1['limit']);
         $this->assertTrue($page1['hasMore']);
 
-        $page2 = $this->call($client, $sessionId, 'tools/call', [
+        $page2 = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => ['limit' => 2, 'offset' => 2],
-        ], 11)['result']['structuredContent'];
+        ], 11));
 
         $this->assertSame(1, $page2['count']);
         $this->assertFalse($page2['hasMore']);
@@ -114,7 +114,7 @@ final class McpGarageTest extends AppTestCase
         $this->planFact($client, $sessionId, ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare', 'key' => 'oil_type', 'value' => 'x', 'source' => 'llm'], 3);
         $this->planFact($client, $sessionId, ['make' => 'IVECO', 'model' => 'DAILY', 'vehicleType' => 'cv', 'key' => 'oil_type', 'value' => 'y', 'source' => 'llm'], 4);
 
-        $list = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 5)['result']['structuredContent'];
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 5));
         $this->assertSame('IVECO', $list['vehicles'][0]['make'], 'default order is most-recently-touched first');
         $toroIri = $this->vehicleByMake($list['vehicles'], 'TORO')['@id'];
 
@@ -122,7 +122,7 @@ final class McpGarageTest extends AppTestCase
         $selected = static::getContainer()->get(SelectedVehicleContext::class);
         $selected->set($toroIri);
 
-        $list = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 6)['result']['structuredContent'];
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 6));
         $this->assertSame('TORO', $list['vehicles'][0]['make'], 'the selected vehicle is floated to the top');
     }
 
@@ -439,10 +439,10 @@ final class McpGarageTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $iri = $list['vehicles'][0]['@id'] ?? null;
         $this->assertNotNull($iri, 'list_vehicles must surface a dereferenceable @id, not a leaked DB integer.');
@@ -468,10 +468,10 @@ final class McpGarageTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $facts = $this->call($client, $sessionId, 'tools/call', [
+        $facts = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
             'arguments' => ['make' => 'TORO', 'model' => '246-H', 'vehicleType' => 'groundscare'],
-        ], 4)['result']['structuredContent']['facts'];
+        ], 4))['facts'];
 
         // Facts are projected from the vehicle's items: the value + full provenance travel inline, and
         // a fact has no own dereferenceable IRI (no @id, no /garage/vehicle-facts endpoint).
@@ -500,26 +500,26 @@ final class McpGarageTest extends AppTestCase
 
         // Adding under the other brand string must NOT silently create a second row:
         // same vehicleType + same model is a candidate the agent must confront.
-        $add = $this->planFact($client, $sessionId, [
+        $add = $this->outcome($this->planFact($client, $sessionId, [
             'make' => 'Wheel Horse',
             'model' => '246-H',
             'vehicleType' => 'groundscare',
             'key' => 'engine',
             'value' => 'Briggs & Stratton 303777',
             'source' => 'user',
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
-        $this->assertSame('ambiguous_match', $add['status']);
+        $this->assertSame('ambiguous_match', $add['error']);
         $this->assertCount(1, $add['candidates']);
         $this->assertSame('TORO', $add['candidates'][0]['make']);
         $this->assertSame('246-H', $add['candidates'][0]['model']);
         $this->assertMatchesRegularExpression('~^/garage/vehicles/[0-9A-HJKMNP-TV-Z]{26}$~', $add['candidates'][0]['@id']);
 
         // The store must be untouched — still a single vehicle, still its one fact.
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame(1, $list['count'], 'An ambiguous add must not create a second row.');
         $this->assertSame(1, $list['vehicles'][0]['factCount']);
     }
@@ -538,24 +538,24 @@ final class McpGarageTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 4))['vehicles'][0]['@id'];
 
         // Resolve the ambiguity by addressing the existing row directly via its @id.
-        $add = $this->planFact($client, $sessionId, [
+        $add = $this->outcome($this->planFact($client, $sessionId, [
             'vehicle' => $iri,
             'key' => 'engine',
             'value' => 'Briggs & Stratton 303777',
             'source' => 'user',
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame('ok', $add['status']);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 6)['result']['structuredContent'];
+        ], 6));
         $this->assertSame(1, $list['count'], 'Writing by id must fold onto the existing row, not create.');
         $this->assertSame(2, $list['vehicles'][0]['factCount']);
     }
@@ -575,7 +575,7 @@ final class McpGarageTest extends AppTestCase
         ], 3);
 
         // The agent decided it is genuinely a different machine: confirmNew overrides.
-        $add = $this->planFact($client, $sessionId, [
+        $add = $this->outcome($this->planFact($client, $sessionId, [
             'make' => 'Wheel Horse',
             'model' => '246-H',
             'vehicleType' => 'groundscare',
@@ -583,13 +583,13 @@ final class McpGarageTest extends AppTestCase
             'key' => 'engine',
             'value' => 'Briggs & Stratton 303777',
             'source' => 'user',
-        ], 4)['result']['structuredContent'];
+        ], 4));
         $this->assertSame('ok', $add['status']);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame(2, $list['count'], 'confirmNew must create the distinct row.');
     }
 
@@ -610,7 +610,7 @@ final class McpGarageTest extends AppTestCase
         ], 3);
 
         // A second add for the same carId under a different model label must be caught.
-        $add = $this->planFact($client, $sessionId, [
+        $add = $this->outcome($this->planFact($client, $sessionId, [
             'make' => 'IVECO',
             'model' => 'DAILY III Van',
             'vehicleType' => 'cv',
@@ -618,9 +618,9 @@ final class McpGarageTest extends AppTestCase
             'key' => 'engine_code',
             'value' => 'F1AE0481B',
             'source' => 'web',
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
-        $this->assertSame('ambiguous_match', $add['status']);
+        $this->assertSame('ambiguous_match', $add['error']);
         $this->assertSame(34247, $add['candidates'][0]['kType']);
     }
 
@@ -656,16 +656,16 @@ final class McpGarageTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 4))['vehicles'][0]['@id'];
 
         // Read its facts by the @id alone — the selected-vehicle handle, no make/model.
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
             'arguments' => ['vehicle' => $iri, 'keys' => ['oil_capacity']],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         $this->assertSame('ok', $content['status']);
         $this->assertSame($iri, $content['vehicle']['@id']);
@@ -677,12 +677,12 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'get_vehicle_facts',
             'arguments' => ['vehicle' => '/garage/vehicles/01JZZZZZZZZZZZZZZZZZZZZZZZ'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
-        $this->assertSame('not_found', $content['status']);
+        $this->assertSame('not_found', $content['error']);
     }
 
     /**

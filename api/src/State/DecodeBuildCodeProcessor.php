@@ -38,11 +38,7 @@ final class DecodeBuildCodeProcessor implements ProcessorInterface
 
         $decoder = $this->decoders->forMake($make);
         if (null === $decoder) {
-            return ToolResult::of([
-                'status' => 'unsupported_make',
-                'make' => $make,
-                'hint' => 'No build-code decoder for this make yet (only PSA: Peugeot, Citroën, DS). Do not guess a date.',
-            ]);
+            return ToolResult::error('unsupported_make', \sprintf('No build-code decoder for %s yet (only PSA: Peugeot, Citroën, DS). Do not guess a date.', $make));
         }
 
         try {
@@ -68,6 +64,6 @@ final class DecodeBuildCodeProcessor implements ProcessorInterface
 
     private static function invalid(string $reason): CallToolResult
     {
-        return ToolResult::of(['status' => 'invalid_input', 'reason' => $reason]);
+        return ToolResult::error('invalid_input', $reason);
     }
 }

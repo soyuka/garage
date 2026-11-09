@@ -54,6 +54,6 @@ final class McpMotulOilTest extends AppTestCase
             'arguments' => ['search' => '  '],
         ], 2);
 
-        $this->assertSame('invalid_input', $result['result']['structuredContent']['status']);
+        $this->assertSame('invalid_input', $this->outcome($result)['error']);
     }
 }

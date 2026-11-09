@@ -13,6 +13,7 @@ use App\Catalog\ArticleCriterion;
 use App\Catalog\ArticleCross;
 use App\Catalog\CarType;
 use App\Catalog\TecdocCatalog;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -40,10 +41,16 @@ final class TecdocCatalogTest extends TestCase
     #[DataProvider('unreadablePaths')]
     public function testAnUnreadableCatalogPathFailsClearly(string $path): void
     {
-        $this->expectException(\RuntimeException::class);
-        $this->expectExceptionMessage('TECDOC_CATALOG_PATH');
+        $logger = new RecordingLogger();
 
-        (new TecdocCatalog($path))->makes(CarType::PassengerCar);
+        try {
+            (new TecdocCatalog($path, logger: $logger))->makes(CarType::PassengerCar);
+            $this->fail('An unreadable catalogue must throw.');
+        } catch (\RuntimeException $e) {
+            $this->assertStringNotContainsString('TECDOC_CATALOG_PATH', $e->getMessage(), 'the message can reach a client');
+        }
+
+        $this->assertStringContainsString('TECDOC_CATALOG_PATH', $logger->dump());
     }
 
     /**

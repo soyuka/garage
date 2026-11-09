@@ -56,10 +56,7 @@ final readonly class OpenVehicleProcessor implements ProcessorInterface
     {
         $query = trim($data->query);
         if ('' === $query) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'hint' => 'query must name the vehicle — a make, model, plate or VIN, e.g. "mazda" or "AB-123-CD".',
-            ]);
+            return ToolResult::error('invalid_input', 'query must name the vehicle — a make, model, plate or VIN, e.g. "mazda" or "AB-123-CD".');
         }
 
         $matches = $this->vehicles->searchShared(

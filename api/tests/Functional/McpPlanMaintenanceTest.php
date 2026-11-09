@@ -23,7 +23,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -37,7 +37,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
                     ['ref' => 'OEM-DRAIN-GASKET', 'label' => 'Joint de bouchon de vidange'],
                 ],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame('ok', $plan['status']);
         $this->assertSame('open', $plan['task']['status']);
@@ -60,27 +60,27 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
         $base = ['make' => 'MAZDA', 'model' => 'MAZDA6', 'confirmNew' => true, 'type' => 'oil_filter'];
 
-        $first = $this->call($client, $sessionId, 'tools/call', [
+        $first = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => $base + ['parts' => [['ref' => 'W 712/75', 'brand' => 'MANN', 'price' => 12.5, 'supplier' => 'trodo.fr']]],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame(1250, $first['task']['parts'][0]['priceCents']);
         $this->assertSame('trodo.fr', $first['task']['parts'][0]['supplier']);
 
-        $omitted = $this->call($client, $sessionId, 'tools/call', [
+        $omitted = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => $base + ['parts' => [['ref' => 'W 712/75', 'qty' => 2]]],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertCount(1, $omitted['task']['parts']);
         $this->assertSame(1250, $omitted['task']['parts'][0]['priceCents'], 'a re-plan omitting price must not wipe it');
         $this->assertSame('trodo.fr', $omitted['task']['parts'][0]['supplier'], 'a re-plan omitting supplier must not wipe it');
 
-        $updated = $this->call($client, $sessionId, 'tools/call', [
+        $updated = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => $base + ['parts' => [['ref' => 'W 712/75', 'price' => 9.99, 'supplier' => 'oscaro.com']]],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         $this->assertSame(999, $updated['task']['parts'][0]['priceCents']);
         $this->assertSame('oscaro.com', $updated['task']['parts'][0]['supplier']);
@@ -107,7 +107,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -117,7 +117,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
                 'targetUsageValue' => 250000,
                 'targetUsageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame('ok', $plan['status']);
         $this->assertSame('timing_belt', $plan['task']['type']);
@@ -128,7 +128,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $first = $this->call($client, $sessionId, 'tools/call', [
+        $first = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -138,19 +138,19 @@ final class McpPlanMaintenanceTest extends AppTestCase
                 'type' => 'oil_change',
                 'parts' => [['ref' => 'OLD-REF']],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $first['task']['vehicle'];
 
         // Same vehicle + same type again, addressed by @id — must update the existing open task.
-        $second = $this->call($client, $sessionId, 'tools/call', [
+        $second = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'vehicle' => $vehicleIri,
                 'type' => 'oil_change',
                 'parts' => [['ref' => 'NEW-REF']],
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $second['status']);
         $this->assertSame($first['task']['@id'], $second['task']['@id'], 'A re-run of the same service must update the same task, not create a new one.');
@@ -170,7 +170,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $first = $this->call($client, $sessionId, 'tools/call', [
+        $first = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -184,18 +184,18 @@ final class McpPlanMaintenanceTest extends AppTestCase
                     ['ref' => '', 'label' => 'Loctite Frenbloc'],
                 ],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertCount(3, $first['task']['parts']);
 
-        $second = $this->call($client, $sessionId, 'tools/call', [
+        $second = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'vehicle' => $first['task']['vehicle'],
                 'type' => 'brake_service',
                 'parts' => [['ref' => '', 'label' => 'liquide de frein dot 4', 'qty' => 2]],
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertCount(3, $second['task']['parts']);
         $this->assertSame(
@@ -212,19 +212,19 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
         $base = ['make' => 'MAZDA', 'model' => 'MAZDA6', 'confirmNew' => true, 'type' => 'brakes'];
 
-        $first = $this->call($client, $sessionId, 'tools/call', [
+        $first = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => $base + ['parts' => [['ref' => 'dot4', 'label' => 'Liquide de frein Motul', 'qty' => 1], ['ref' => '623 3150 33']]],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame('DOT 4', $first['task']['parts'][0]['ref']);
         $this->assertSame('623 3150 33', $first['task']['parts'][1]['ref']);
         $lineId = $first['task']['parts'][0]['id'];
 
-        $second = $this->call($client, $sessionId, 'tools/call', [
+        $second = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => $base + ['parts' => [['ref' => 'DOT-4', 'qty' => 2]]],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertCount(2, $second['task']['parts']);
         $this->assertSame($lineId, $second['task']['parts'][0]['id']);

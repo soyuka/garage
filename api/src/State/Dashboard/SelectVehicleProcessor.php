@@ -26,7 +26,7 @@ final readonly class SelectVehicleProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if ('' === trim($data->vehicle)) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'vehicle must be a vehicle @id, e.g. "/garage/vehicles/01J…".']);
+            return ToolResult::error('invalid_input', 'vehicle must be a vehicle @id, e.g. "/garage/vehicles/01J…".');
         }
 
         $this->render->selectVehicle($data->vehicle);

@@ -32,9 +32,7 @@ final readonly class ServicePartsProcessor implements ProcessorInterface
     {
         $service = ServiceKind::tryFrom($data->service);
         if (null === $service) {
-            return ToolResult::of([
-                'status' => 'error',
-                'message' => sprintf('Unknown service "%s".', $data->service),
+            return ToolResult::error('invalid_input', \sprintf('Unknown service "%s". Re-call with one of validServices.', $data->service), [
                 'validServices' => array_map(static fn (ServiceKind $s): string => $s->value, ServiceKind::cases()),
             ]);
         }

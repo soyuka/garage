@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Siv;
 
+use App\Exception\MissingApiKeyException;
 use App\Exception\UpstreamException;
 use App\Siv\SivClient;
 use App\Tests\Support\InMemorySivLookupStore;
+use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\UnlimitedQuota;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
@@ -15,6 +17,21 @@ use Symfony\Component\HttpClient\Response\MockResponse;
 
 final class SivClientTest extends TestCase
 {
+    public function testAMissingTokenNamesItsEnvVarInTheLogOnly(): void
+    {
+        $logger = new RecordingLogger();
+        $client = new SivClient(new MockHttpClient(), '', new InMemorySivLookupStore(), UnlimitedQuota::create(), logger: $logger);
+
+        try {
+            $client->lookup('AB-123-CD');
+            $this->fail('A missing token must throw.');
+        } catch (MissingApiKeyException $e) {
+            $this->assertStringNotContainsString('API_PLAQUE_TOKEN', $e->getMessage(), 'the message can reach a client');
+        }
+
+        $this->assertStringContainsString('API_PLAQUE_TOKEN', $logger->dump());
+    }
+
     public function testKnownPlateIsCachedAndNotRefetched(): void
     {
         $calls = 0;

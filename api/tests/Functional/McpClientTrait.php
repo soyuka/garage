@@ -12,6 +12,8 @@ use ApiPlatform\Test\Client;
  */
 trait McpClientTrait
 {
+    private const TOOL_ERROR_STATUSES = ['invalid_input', 'not_found', 'task_not_found', 'not_configured', 'upstream_unavailable', 'upstream_rejected', 'upstream_error', 'ambiguous_match', 'unsupported_make', 'rate_limited', 'error', 'refused'];
+
     private const MCP_HEADERS = [
         'Content-Type' => 'application/json',
         'Accept' => 'application/json, text/event-stream',
@@ -80,7 +82,52 @@ trait McpClientTrait
         $json = $this->extractJson($body);
         $this->assertArrayNotHasKey('error', $json, 'JSON-RPC error: '.$body);
 
+        if ('tools/call' === $method) {
+            $this->assertToolResultContract($json['result']);
+        }
+
         return $json;
+    }
+
+    /**
+     * The tool result contract (MCP 2026-07-28 § Tools, error handling): a failure is a result flagged
+     * isError whose text starts with its status token; it carries no structuredContent, which would
+     * have to match the outputSchema. A success never carries a failure status.
+     *
+     * @param array<string, mixed> $result
+     */
+    private function assertToolResultContract(array $result): void
+    {
+        if ($result['isError'] ?? false) {
+            $this->assertArrayNotHasKey('structuredContent', $result, 'an error result must not carry structuredContent');
+            $this->assertMatchesRegularExpression('/^[a-z_]+: \S/', $result['content'][0]['text'] ?? '', 'an error result text starts with its status token');
+
+            return;
+        }
+
+        $this->assertNotContains($result['structuredContent']['status'] ?? null, self::TOOL_ERROR_STATUSES, 'a failure must be flagged isError: '.json_encode($result));
+    }
+
+    /**
+     * The decoded outcome of a tools/call: the structuredContent of a success, or
+     * {error: <status token>, message: <text>, …details} for an isError result, the details being the
+     * JSON line that may follow the message.
+     *
+     * @param array<string, mixed> $response
+     *
+     * @return array<string, mixed>
+     */
+    private function outcome(array $response): array
+    {
+        $result = $response['result'];
+        if (!($result['isError'] ?? false)) {
+            return $result['structuredContent'] ?? [];
+        }
+
+        [$status, $text] = explode(': ', implode("\n", array_column($result['content'], 'text')), 2);
+        [$message, $details] = explode("\n", $text, 2) + [1 => '{}'];
+
+        return ['error' => $status, 'message' => $message] + json_decode($details, true, 512, \JSON_THROW_ON_ERROR);
     }
 
     /**

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Mcp\Agent\McpToolbox;
+use Mcp\Schema\Content\TextContent;
+use Mcp\Schema\Result\CallToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\Tool;
 
@@ -67,10 +69,10 @@ final class AgentMcpToolboxTest extends AppTestCase
 
         // ...must equal list_vehicles over real Streamable HTTP.
         $sessionId = $this->initialize($client);
-        $http = $this->call($client, $sessionId, 'tools/call', [
+        $http = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame($http, $inProcess);
         $this->assertSame(1, $inProcess['count']);
@@ -85,16 +87,16 @@ final class AgentMcpToolboxTest extends AppTestCase
 
         // bonneref answering HTTP 401 (a token it rejects) is the upstream failure that once aborted a
         // whole agent turn with an uncaught exception. Since 4a9dc77 it
-        // comes back as a structured result rather than a ToolExecutionException: that exception's
+        // comes back as a tool error result rather than a ToolExecutionException: that exception's
         // getToolCallResult() discards the message, which is what made a dead upstream and an unknown
-        // plate the same string to the model. The status is what lets it tell them apart.
+        // plate the same string to the model. The status token is what lets it tell them apart.
         $result = $toolbox->execute(new ToolCall('x', 'get_service_parts', [
             'carId' => 500200,
             'service' => 'oil_change',
         ]))->getResult();
 
-        $this->assertSame('upstream_rejected', $result['status']);
-        $this->assertFalse($result['retryable'], 'a rejected upstream is not worth retrying');
-        $this->assertSame('the bonneref catalog', $result['source']);
+        $this->assertInstanceOf(CallToolResult::class, $result);
+        $this->assertTrue($result->isError);
+        $this->assertEquals([new TextContent('upstream_rejected: the bonneref catalog rejected the request. Retrying will not help; check the arguments.')], $result->content);
     }
 }

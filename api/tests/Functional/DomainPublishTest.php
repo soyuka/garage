@@ -22,7 +22,7 @@ final class DomainPublishTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -32,7 +32,7 @@ final class DomainPublishTest extends AppTestCase
                 'targetUsageValue' => 250000,
                 'targetUsageUnit' => 'km',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
 

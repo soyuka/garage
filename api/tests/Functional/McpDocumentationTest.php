@@ -58,10 +58,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'CAPACITE huile'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         self::assertSame('ok', $result['status']);
         self::assertCount(1, $result['hits']);
@@ -80,10 +80,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'couple vidange boite'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         self::assertSame(1, $result['hits'][0]['page']);
         self::assertSame('21A-5', $result['hits'][0]['pageLabel']);
@@ -93,10 +93,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual(PdfFixture::rankingManual());
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'vis de volant couple'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         self::assertSame('ok', $result['status']);
         self::assertSame(3, $result['hits'][0]['page']);
@@ -107,10 +107,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual(PdfFixture::rankingManual());
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'de la'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         self::assertSame('no_match', $result['status']);
     }
@@ -119,17 +119,17 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'turbocompresseur'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         self::assertSame('no_match', $result['status']);
 
-        $kind = $this->call($client, $sessionId, 'tools/call', [
+        $kind = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'huile', 'kind' => 'quote'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
         self::assertSame('no_match', $kind['status']);
     }
 
@@ -137,10 +137,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'huile'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $frame = $this->lastPilotFrame();
         self::assertNotNull($frame);
@@ -202,10 +202,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_documents',
             'arguments' => ['vehicle' => $iri],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         self::assertSame('ok', $result['status']);
         self::assertCount(1, $result['documents']);
@@ -217,12 +217,12 @@ final class McpDocumentationTest extends AppTestCase
     {
         [$client, $sessionId] = $this->seedManual();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_documents',
             'arguments' => ['vehicle' => '/garage/vehicles/01JZZZZZZZZZZZZZZZZZZZZZZZ'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
-        self::assertSame('not_found', $result['status']);
+        self::assertSame('not_found', $result['error']);
     }
 
     /**
@@ -232,12 +232,12 @@ final class McpDocumentationTest extends AppTestCase
      */
     private function read(Client $client, string $sessionId, array $arguments): array
     {
-        return $this->call($client, $sessionId, 'tools/call', ['name' => 'read_documentation_page', 'arguments' => $arguments], 9)['result']['structuredContent'] ?? [];
+        return $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'read_documentation_page', 'arguments' => $arguments], 9));
     }
 
     private function documentId(Client $client, string $sessionId, string $iri): string
     {
-        $listed = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_documents', 'arguments' => ['vehicle' => $iri]], 8)['result']['structuredContent'];
+        $listed = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_documents', 'arguments' => ['vehicle' => $iri]], 8));
 
         return $listed['documents'][0]['id'];
     }
@@ -283,8 +283,8 @@ final class McpDocumentationTest extends AppTestCase
 
         foreach ([0, 3] as $page) {
             $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => $page]);
-            self::assertSame('invalid_input', $result['status']);
-            self::assertStringContainsString('between 1 and 2', $result['reason']);
+            self::assertSame('invalid_input', $result['error']);
+            self::assertStringContainsString('between 1 and 2', $result['message']);
         }
     }
 
@@ -293,9 +293,9 @@ final class McpDocumentationTest extends AppTestCase
         [$client, $sessionId, $iri] = $this->seedManual();
         $documentId = $this->documentId($client, $sessionId, $iri);
 
-        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId])['status']);
-        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'page' => 1])['status']);
-        self::assertSame('invalid_input', $this->read($client, $sessionId, ['document' => $documentId, 'page' => 1])['status']);
+        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId])['error']);
+        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'page' => 1])['error']);
+        self::assertSame('invalid_input', $this->read($client, $sessionId, ['document' => $documentId, 'page' => 1])['error']);
     }
 
     public function testReadDocumentationPageUnknownDocumentIsNotFound(): void
@@ -304,7 +304,7 @@ final class McpDocumentationTest extends AppTestCase
 
         $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => '01JZZZZZZZZZZZZZZZZZZZZZZZ', 'page' => 1]);
 
-        self::assertSame('not_found', $result['status']);
+        self::assertSame('not_found', $result['error']);
     }
 
     public function testReadDocumentationPageOfAnotherOwnersVehicleIsNotFound(): void
@@ -319,6 +319,6 @@ final class McpDocumentationTest extends AppTestCase
 
         $result = $this->read($client, $sessionId, ['vehicle' => '/garage/vehicles/'.$vehicle->getId(), 'document' => $documentId, 'page' => 1]);
 
-        self::assertSame('not_found', $result['status']);
+        self::assertSame('not_found', $result['error']);
     }
 }

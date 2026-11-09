@@ -33,7 +33,7 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         // Plan an open task carrying a shopping-list part AND a spec attribute.
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'MAZDA',
@@ -43,7 +43,7 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
                 'targetUsageUnit' => 'km',
                 'parts' => [['ref' => 'W712/73', 'brand' => 'MANN-FILTER', 'label' => 'oil filter']],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
         $this->assertSame('ok', $plan['status']);
 
         // Spec attributes stay on a task for catalog/legacy data; no tool writes them onto a task now.
@@ -54,10 +54,10 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_planned_maintenance',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6'],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $result['status']);
         $this->assertCount(1, $result['tasks'], 'the open task must be listed');
@@ -93,15 +93,15 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
             ],
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 4)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 4))['vehicles'][0]['@id'];
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_planned_maintenance',
             'arguments' => ['vehicle' => $iri],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         $this->assertSame('ok', $result['status']);
         $this->assertSame($iri, $result['vehicle']['@id']);
@@ -125,15 +125,15 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
             'arguments' => ['make' => 'RENAULT', 'model' => 'CLIO', 'type' => 'brakes', 'parts' => [['ref' => 'BR1']]],
         ], 4);
 
-        $vehicleIri = $this->call($client, $sessionId, 'tools/call', [
+        $vehicleIri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 5)['result']['structuredContent']['vehicles'][0]['@id'];
+        ], 5))['vehicles'][0]['@id'];
 
-        $tasks = $this->call($client, $sessionId, 'tools/call', [
+        $tasks = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_planned_maintenance',
             'arguments' => ['vehicle' => $vehicleIri],
-        ], 6)['result']['structuredContent']['tasks'];
+        ], 6))['tasks'];
         $brakesIri = null;
         foreach ($tasks as $task) {
             if ('brakes' === $task['type']) {
@@ -149,10 +149,10 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
         ]);
         $this->assertResponseIsSuccessful();
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_planned_maintenance',
             'arguments' => ['vehicle' => $vehicleIri],
-        ], 7)['result']['structuredContent'];
+        ], 7));
 
         $this->assertSame(['oil_change'], array_column($result['tasks'], 'type'), 'only the open task remains');
     }
@@ -178,11 +178,11 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_planned_maintenance',
             'arguments' => ['make' => 'MAZDA'],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
-        $this->assertSame('invalid_input', $content['status']);
+        $this->assertSame('invalid_input', $content['error']);
     }
 }

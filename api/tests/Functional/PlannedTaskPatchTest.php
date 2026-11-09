@@ -13,7 +13,7 @@ final class PlannedTaskPatchTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -22,7 +22,7 @@ final class PlannedTaskPatchTest extends AppTestCase
                 'confirmNew' => true,
                 'type' => 'brakes',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $taskIri = $plan['task']['@id'];
         $vehicleIri = $plan['task']['vehicle'];
@@ -46,7 +46,7 @@ final class PlannedTaskPatchTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -55,7 +55,7 @@ final class PlannedTaskPatchTest extends AppTestCase
                 'confirmNew' => true,
                 'type' => 'brakes',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $taskIri = $plan['task']['@id'];
         $vehicleIri = $plan['task']['vehicle'];

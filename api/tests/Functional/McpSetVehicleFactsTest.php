@@ -23,10 +23,10 @@ final class McpSetVehicleFactsTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
-        $vehicle = $this->call($client, $sessionId, 'tools/call', [
+        $vehicle = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6', 'year' => 2007],
-        ], 2)['result']['structuredContent']['vehicle'];
+        ], 2))['vehicle'];
 
         return [$client, $sessionId, $vehicle['@id']];
     }
@@ -38,7 +38,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
      */
     private function tool(Client $client, string $sessionId, string $name, array $arguments, int $id): array
     {
-        return $this->call($client, $sessionId, 'tools/call', ['name' => $name, 'arguments' => $arguments], $id)['result']['structuredContent'];
+        return $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => $name, 'arguments' => $arguments], $id));
     }
 
     public function testBothToolsAreDiscoverableWithGeneratedSchemas(): void
@@ -177,8 +177,8 @@ final class McpSetVehicleFactsTest extends AppTestCase
             'facts' => [['key' => 'paint_code', 'value' => '41W', 'source' => 'user'], $fact],
         ], 3);
 
-        $this->assertSame('invalid_input', $result['status']);
-        $this->assertNotEmpty($result['reason']);
+        $this->assertSame('invalid_input', $result['error']);
+        $this->assertNotEmpty($result['message']);
         $this->assertSame([], $this->tool($client, $sessionId, 'get_vehicle_facts', ['vehicle' => $iri, 'keys' => ['paint_code']], 4)['facts']);
     }
 
@@ -197,7 +197,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->clientWithVehicle();
 
-        $this->assertSame('invalid_input', $this->tool($client, $sessionId, 'set_vehicle_facts', ['vehicle' => $iri, 'facts' => []], 3)['status']);
+        $this->assertSame('invalid_input', $this->tool($client, $sessionId, 'set_vehicle_facts', ['vehicle' => $iri, 'facts' => []], 3)['error']);
     }
 
     public function testUnknownVehicleIsNotFound(): void
@@ -210,7 +210,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
             'facts' => [['key' => 'paint_code', 'value' => '41W', 'source' => 'user']],
         ], 2);
 
-        $this->assertContains($result['status'], ['not_found', 'invalid_input']);
+        $this->assertContains($result['error'], ['not_found', 'invalid_input']);
     }
 
     public function testAnotherOwnersVehicleIsNotWritable(): void
@@ -227,7 +227,8 @@ final class McpSetVehicleFactsTest extends AppTestCase
             'vehicle' => $iri,
             'facts' => [['key' => 'paint_code', 'value' => '41W', 'source' => 'user']],
         ]))->getResult();
-        $this->assertSame('not_found', $result['status']);
+        $this->assertTrue($result->isError);
+        $this->assertStringStartsWith('not_found: ', $result->content[0]->text);
 
         $owner->set('alice@example.com');
         $this->assertSame([], $toolbox->execute(new ToolCall('c', 'get_vehicle_facts', ['vehicle' => $iri, 'keys' => ['paint_code']]))->getResult()['facts']);
@@ -259,6 +260,6 @@ final class McpSetVehicleFactsTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->clientWithVehicle();
 
-        $this->assertSame('invalid_input', $this->tool($client, $sessionId, 'remove_vehicle_facts', ['vehicle' => $iri, 'keys' => []], 3)['status']);
+        $this->assertSame('invalid_input', $this->tool($client, $sessionId, 'remove_vehicle_facts', ['vehicle' => $iri, 'keys' => []], 3)['error']);
     }
 }

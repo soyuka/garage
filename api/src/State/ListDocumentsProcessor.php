@@ -30,7 +30,7 @@ final readonly class ListDocumentsProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (null === $data->vehicle) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => 'Provide the vehicle @id (IRI) from list_vehicles.']);
+            return ToolResult::error('invalid_input', 'Provide the vehicle @id (IRI) from list_vehicles.');
         }
 
         $resolved = $this->iriResolver->resolve($data->vehicle);

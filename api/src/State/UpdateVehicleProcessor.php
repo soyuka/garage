@@ -46,10 +46,7 @@ final readonly class UpdateVehicleProcessor implements ProcessorInterface
         }
 
         if ((null === $data->usageValue) !== (null === $data->usageUnit)) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'usageValue and usageUnit must be provided together.',
-            ]);
+            return ToolResult::error('invalid_input', 'usageValue and usageUnit must be provided together.');
         }
 
         $vehicleId = null;

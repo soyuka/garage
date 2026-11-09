@@ -28,7 +28,7 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'set_maintenance_schedule',
             'arguments' => [
                 'make' => 'TORO',
@@ -44,7 +44,7 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
                     ['type' => 'spark_plug', 'action' => 'replace', 'everyUsageValue' => 100, 'everyUsageUnit' => 'hours'],
                 ],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame('ok', $result['status']);
         $this->assertSame(6, $result['count'], 'Six independent cadences — two of them sharing the type air_filter / spark_plug.');
@@ -76,7 +76,7 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
 
         // Re-send the same (type, action) with a corrected cadence → replaces in place.
         $args['items'][0]['everyUsageValue'] = 60;
-        $result = $this->call($client, $sessionId, 'tools/call', ['name' => 'set_maintenance_schedule', 'arguments' => $args], 4)['result']['structuredContent'];
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'set_maintenance_schedule', 'arguments' => $args], 4));
 
         $this->assertSame(1, $result['count'], 'oil_change:change is one rule — refreshed, not duplicated.');
         $this->assertSame(60, $result['schedule'][0]['everyUsage']['value']);
@@ -111,10 +111,10 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
             ],
         ], 4);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_due_maintenance',
             'arguments' => ['vehicleType' => 'groundscare'],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         $oil = $this->dueItem($content['due'], 'TORO', 'oil_change');
         $this->assertSame('schedule', $oil['rule'], 'The per-vehicle rule drove this, not a generic default.');

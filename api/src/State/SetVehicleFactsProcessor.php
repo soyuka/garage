@@ -40,7 +40,7 @@ final readonly class SetVehicleFactsProcessor implements ProcessorInterface
     {
         $facts = $this->parse($data->facts);
         if (\is_string($facts)) {
-            return ToolResult::of(['status' => 'invalid_input', 'reason' => $facts]);
+            return ToolResult::error('invalid_input', $facts);
         }
 
         $resolved = $this->iriResolver->resolve($data->vehicle);

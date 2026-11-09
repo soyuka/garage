@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Exception;
 
 /**
- * `source` is the model-safe name of the service. The message names the env var and stays for the
- * logs; it must never reach an MCP client (see App\Mcp\DomainErrorHandler).
+ * The message is client-safe: in debug mode API Platform ships it as the 501 `detail`. The env var it
+ * misses is the thrower's to log, never this message's to carry.
  */
 final class MissingApiKeyException extends \RuntimeException
 {
@@ -18,7 +18,7 @@ final class MissingApiKeyException extends \RuntimeException
     public static function forSiv(): self
     {
         return new self(
-            'No apiplaqueimmatriculation.com token configured (env API_PLAQUE_TOKEN).',
+            'Plate lookup is not configured on this server.',
             'the French vehicle registry (SIV)',
         );
     }

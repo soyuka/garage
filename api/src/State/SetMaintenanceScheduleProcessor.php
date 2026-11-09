@@ -50,17 +50,14 @@ final readonly class SetMaintenanceScheduleProcessor implements ProcessorInterfa
         }
 
         if ([] === $data->items) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'Provide at least one schedule rule in items.',
-            ]);
+            return ToolResult::error('invalid_input', 'Provide at least one schedule rule in items.');
         }
 
         $intervals = [];
         foreach ($data->items as $i => $item) {
             $error = $this->validateItem($item, $i);
             if (null !== $error) {
-                return ToolResult::of(['status' => 'invalid_input', 'reason' => $error]);
+                return ToolResult::error('invalid_input', $error);
             }
             $intervals[] = $this->interval($item, $data);
         }

@@ -72,7 +72,7 @@ final class RepeatedToolFailureGuardTest extends TestCase
     {
         return new ToolResult(
             new ToolCall('id', $tool, $args),
-            new CallToolResult([new TextContent('{}')], false, ['status' => 'invalid_input']),
+            new CallToolResult([new TextContent('invalid_input: x must be 2.')], true),
         );
     }
 

@@ -28,7 +28,7 @@ final readonly class SettleDashboardProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if (!\in_array($data->tone, ['info', 'ok', 'warn', 'alarm'], true)) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'tone must be one of: info, ok, warn, alarm.']);
+            return ToolResult::error('invalid_input', 'tone must be one of: info, ok, warn, alarm.');
         }
 
         if (null !== $data->message && '' !== trim($data->message)) {

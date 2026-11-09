@@ -36,7 +36,7 @@ final readonly class ShowFactProcessor implements ProcessorInterface
         $nodes = self::nodes($data->nodes);
 
         if ([] === $keys && [] === $nodes) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'pass either keys (stored vehicle facts, e.g. ["oil_capacity"]) or nodes (lines you fetched, e.g. [{"key":"oil_capacity","label":"Huile moteur","value":"4,3 l"}]).']);
+            return ToolResult::error('invalid_input', 'pass either keys (stored vehicle facts, e.g. ["oil_capacity"]) or nodes (lines you fetched, e.g. [{"key":"oil_capacity","label":"Huile moteur","value":"4,3 l"}]).');
         }
 
         $this->render->showFact($keys, $data->title, $nodes);

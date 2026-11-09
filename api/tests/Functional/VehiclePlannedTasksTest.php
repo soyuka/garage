@@ -13,7 +13,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -22,7 +22,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
                 'confirmNew' => true,
                 'type' => 'oil_change',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
 
@@ -43,7 +43,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
 
         // An oil_change plus a cataloged filter and a
         // bare "Huile moteur" line — the vague "×5" the spec must enrich.
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -56,7 +56,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
                     ['ref' => '', 'label' => 'Huile moteur', 'qty' => 5],
                 ],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
         $this->call($client, $sessionId, 'tools/call', [
@@ -102,7 +102,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -112,7 +112,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
                 'type' => 'timing_belt',
                 'label' => 'courroie de distribution',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
 
@@ -137,7 +137,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -147,7 +147,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
                 'type' => 'oil_filter',
                 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile']],
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $taskIri = $plan['task']['@id'];
 
@@ -179,7 +179,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $plan = $this->call($client, $sessionId, 'tools/call', [
+        $plan = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'plan_maintenance',
             'arguments' => [
                 'make' => 'IVECO',
@@ -188,7 +188,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
                 'confirmNew' => true,
                 'type' => 'oil_change',
             ],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $vehicleIri = $plan['task']['vehicle'];
 

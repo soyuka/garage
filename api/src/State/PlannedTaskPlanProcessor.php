@@ -9,13 +9,13 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
 use App\Dto\PlanMaintenanceInput;
 use App\Entity\PlannedPart;
+use App\Garage\ToolError;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
 use App\Maintenance\PlannedMaintenancePlanner;
 use App\Mercure\DomainPublisher;
-use Mcp\Schema\Result\CallToolResult;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -44,7 +44,7 @@ final readonly class PlannedTaskPlanProcessor implements ProcessorInterface
         if (null === $data->vehicle) {
             $guard = $this->iriResolver->requireIdentity($data->make, $data->model);
             if (null !== $guard) {
-                throw new UnprocessableEntityHttpException($guard->structuredContent['reason']);
+                throw new UnprocessableEntityHttpException($guard->reason);
             }
         }
 
@@ -71,9 +71,8 @@ final readonly class PlannedTaskPlanProcessor implements ProcessorInterface
         $vehicleId = null;
         if (null !== $data->vehicle) {
             $resolved = $this->iriResolver->resolve($data->vehicle);
-            if ($resolved instanceof CallToolResult) {
-                $reason = $resolved->structuredContent['reason'];
-                throw 'not_found' === $resolved->structuredContent['status'] ? new NotFoundHttpException($reason) : new UnprocessableEntityHttpException($reason);
+            if ($resolved instanceof ToolError) {
+                throw 'not_found' === $resolved->status ? new NotFoundHttpException($resolved->reason) : new UnprocessableEntityHttpException($resolved->reason);
             }
             $vehicleId = $resolved;
         }

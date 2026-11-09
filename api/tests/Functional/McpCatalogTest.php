@@ -46,19 +46,19 @@ final class McpCatalogTest extends AppTestCase
 
         $args = ['carId' => 34247, 'carType' => 'CV', 'leafOnly' => false];
 
-        $page1 = $this->call($client, $sessionId, 'tools/call', [
+        $page1 = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_part_categories',
             'arguments' => $args,
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame(0, $page1['offset']);
         $this->assertSame(10, $page1['nextOffset']);
         $this->assertCount(10, $page1['items']);
 
-        $page2 = $this->call($client, $sessionId, 'tools/call', [
+        $page2 = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_part_categories',
             'arguments' => $args + ['offset' => 10],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         $this->assertSame(10, $page2['offset']);
         $this->assertCount(10, $page2['items']);
@@ -69,10 +69,10 @@ final class McpCatalogTest extends AppTestCase
         );
 
         // offset past the end: empty page, no further nextOffset
-        $beyond = $this->call($client, $sessionId, 'tools/call', [
+        $beyond = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_part_categories',
             'arguments' => $args + ['offset' => 999],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame([], $beyond['items']);
         $this->assertArrayNotHasKey('nextOffset', $beyond);
@@ -100,10 +100,10 @@ final class McpCatalogTest extends AppTestCase
         static::catalogue();
         $sessionId = $this->initialize($client);
 
-        $all = $this->call($client, $sessionId, 'tools/call', [
+        $all = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_makes',
             'arguments' => [],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $all['status']);
         $this->assertArrayHasKey('totalItems', $all);
@@ -219,10 +219,10 @@ final class McpCatalogTest extends AppTestCase
         static::catalogue();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_models',
             'arguments' => ['makeId' => 72, 'carType' => 'PC', 'search' => '6 Hatchback'],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $content['status']);
         $this->assertArrayNotHasKey('@id', $content['items'][0]);
@@ -249,10 +249,10 @@ final class McpCatalogTest extends AppTestCase
         static::catalogue();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_models',
             'arguments' => ['makeId' => 72, 'carType' => 'PC', 'search' => $search],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $content['status']);
         $this->assertContains(4887, array_column($content['items'], 'id'));
@@ -264,10 +264,10 @@ final class McpCatalogTest extends AppTestCase
         static::catalogue();
         $sessionId = $this->initialize($client);
 
-        $content = $this->call($client, $sessionId, 'tools/call', [
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_cars',
             'arguments' => ['makeId' => 72, 'modelId' => 4887, 'carType' => 'PC'],
-        ], 2)['result']['structuredContent'];
+        ], 2));
 
         $this->assertSame('ok', $content['status']);
         $this->assertSame(14, $content['totalItems']);

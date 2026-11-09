@@ -82,27 +82,27 @@ final class GarageVehicleArchiveTest extends AppTestCase
         $iri = $this->seedVehicle($client, 'MAZDA', 'MAZDA6');
         $this->seedVehicle($client, 'PEUGEOT', '308');
 
-        $update = $this->call($client, $sessionId, 'tools/call', [
+        $update = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => ['vehicle' => $iri, 'archived' => true],
-        ], 3)['result']['structuredContent'];
+        ], 3));
         $this->assertSame('ok', $update['status']);
         $this->assertIsString($update['vehicle']['archivedAt']);
 
-        $default = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 4)['result']['structuredContent'];
+        $default = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 4));
         $this->assertSame(1, $default['total']);
         $this->assertSame(['308'], array_column($default['vehicles'], 'model'));
 
-        $all = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => ['includeArchived' => true]], 5)['result']['structuredContent'];
+        $all = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => ['includeArchived' => true]], 5));
         $this->assertSame(2, $all['total']);
         $byModel = array_column($all['vehicles'], null, 'model');
         $this->assertIsString($byModel['MAZDA6']['archivedAt']);
         $this->assertNull($byModel['308']['archivedAt']);
 
-        $restored = $this->call($client, $sessionId, 'tools/call', [
+        $restored = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => ['vehicle' => $iri, 'archived' => false],
-        ], 6)['result']['structuredContent'];
+        ], 6));
         $this->assertNull($restored['vehicle']['archivedAt']);
     }
 
@@ -132,7 +132,7 @@ final class GarageVehicleArchiveTest extends AppTestCase
         $daily = array_column($iri, null, 'model')['DAILY']['@id'];
         $client->request('PATCH', $daily, ['headers' => self::authHeaders() + self::PATCH_HEADERS, 'json' => ['archived' => true]]);
 
-        $due = $this->call($client, $sessionId, 'tools/call', ['name' => 'list_due_maintenance', 'arguments' => []], 9)['result']['structuredContent'];
+        $due = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_due_maintenance', 'arguments' => []], 9));
 
         $models = array_unique(array_map(static fn (array $item): string => $item['vehicle']['model'], $due['due']));
         $this->assertSame(['ECO'], array_values($models));

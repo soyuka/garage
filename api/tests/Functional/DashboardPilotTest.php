@@ -67,12 +67,12 @@ final class DashboardPilotTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $error = $this->callExpectingError($client, $sessionId, 'tools/call', [
+        $error = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'reveal_assembly',
             'arguments' => ['region' => 'coffre'],
-        ], 3);
+        ], 3));
 
-        $this->assertSame(-32602, $error['code']);
+        $this->assertSame('invalid_input', $error['error'], 'an argument off the input schema is a tool error the model can fix');
         $this->assertStringContainsString('"hood"', $error['message']);
         $this->assertNull($this->lastPilotFrame());
     }
@@ -145,12 +145,12 @@ final class DashboardPilotTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $error = $this->callExpectingError($client, $sessionId, 'tools/call', [
+        $error = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'focus_view',
             'arguments' => ['panel' => 'parc'],
-        ], 3);
+        ], 3));
 
-        $this->assertSame(-32602, $error['code']);
+        $this->assertSame('invalid_input', $error['error'], 'an argument off the input schema is a tool error the model can fix');
         $this->assertStringContainsString('"docs"', $error['message']);
         $this->assertNull($this->lastPilotFrame());
     }

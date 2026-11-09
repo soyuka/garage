@@ -55,7 +55,7 @@ final class McpShowDocumentTest extends AppTestCase
      */
     private function show(Client $client, string $sessionId, array $arguments): array
     {
-        return $this->call($client, $sessionId, 'tools/call', ['name' => 'show_document', 'arguments' => $arguments], 9)['result']['structuredContent'] ?? [];
+        return $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'show_document', 'arguments' => $arguments], 9));
     }
 
     public function testIsAdvertisedWithItsArguments(): void
@@ -125,8 +125,8 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 3]);
 
-        self::assertSame('invalid_input', $result['status']);
-        self::assertStringContainsString('between 1 and 2', $result['reason']);
+        self::assertSame('invalid_input', $result['error']);
+        self::assertStringContainsString('between 1 and 2', $result['message']);
         self::assertNull($this->lastPilotFrame());
     }
 
@@ -136,7 +136,7 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 0]);
 
-        self::assertSame('invalid_input', $result['status']);
+        self::assertSame('invalid_input', $result['error']);
         self::assertNull($this->lastPilotFrame());
     }
 
@@ -146,7 +146,7 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => 'nope']);
 
-        self::assertSame('not_found', $result['status']);
+        self::assertSame('not_found', $result['error']);
         self::assertNull($this->lastPilotFrame());
     }
 
@@ -154,7 +154,7 @@ final class McpShowDocumentTest extends AppTestCase
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        self::assertSame('invalid_input', $this->show($client, $sessionId, ['vehicle' => $iri])['status']);
+        self::assertSame('invalid_input', $this->show($client, $sessionId, ['vehicle' => $iri])['error']);
         self::assertNull($this->lastPilotFrame());
     }
 
@@ -164,7 +164,7 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId]);
 
-        self::assertSame('not_found', $result['status']);
+        self::assertSame('not_found', $result['error']);
         self::assertNull($this->lastPilotFrame());
     }
 

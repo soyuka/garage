@@ -16,15 +16,10 @@ trait WriteOutcomeToolResult
     public function toToolResult(VehicleSummaryView $view, string $ambiguousReason): ?CallToolResult
     {
         return match ($this->status) {
-            'ambiguous' => ToolResult::of([
-                'status' => 'ambiguous_match',
-                'reason' => $ambiguousReason,
+            'ambiguous' => ToolResult::error('ambiguous_match', $ambiguousReason, [
                 'candidates' => array_map($view->toArray(...), $this->candidates),
             ]),
-            'not_found' => ToolResult::of([
-                'status' => 'not_found',
-                'reason' => \sprintf('No vehicle %s in the garage.', $this->vehicleId),
-            ]),
+            'not_found' => ToolResult::error('not_found', \sprintf('No vehicle %s in the garage.', $this->vehicleId)),
             default => null,
         };
     }

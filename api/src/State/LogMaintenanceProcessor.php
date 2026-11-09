@@ -47,10 +47,7 @@ final readonly class LogMaintenanceProcessor implements ProcessorInterface
         }
 
         if ([] === $data->items) {
-            return ToolResult::of([
-                'status' => 'invalid_input',
-                'reason' => 'The services go in the `items` array (not partsUsed/services) — one entry per service covered. Example: "items": [{"type": "oil_change", "parts": []}, {"type": "oil_filter", "parts": [{"ref": "W 712/73"}]}]. Provide at least one item, each with a "type".',
-            ]);
+            return ToolResult::error('invalid_input', 'The services go in the `items` array (not partsUsed/services) — one entry per service covered. Example: "items": [{"type": "oil_change", "parts": []}, {"type": "oil_filter", "parts": [{"ref": "W 712/73"}]}]. Provide at least one item, each with a "type".');
         }
 
         $vehicleId = null;

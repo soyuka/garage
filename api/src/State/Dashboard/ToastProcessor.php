@@ -25,10 +25,10 @@ final readonly class ToastProcessor implements ProcessorInterface
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
         if ('' === trim($data->message)) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'message must not be empty.']);
+            return ToolResult::error('invalid_input', 'message must not be empty.');
         }
         if (!\in_array($data->tone, ['info', 'ok', 'warn', 'alarm'], true)) {
-            return ToolResult::of(['status' => 'invalid_input', 'hint' => 'tone must be one of: info, ok, warn, alarm.']);
+            return ToolResult::error('invalid_input', 'tone must be one of: info, ok, warn, alarm.');
         }
 
         $this->render->toast($data->message, $data->tone);

@@ -481,27 +481,39 @@ makes staleness readable, it does not prevent it.
   Carnet — both share the left ~60% of the viewport as-is, untested against a very long car (utilitaire).
 - tasks/visits focus has no body yet.
 
-## MCP error mapping — CLOSED (2026-09-14), with one loose end
+## MCP error mapping — CLOSED (2026-09-14, contract revised 2026-11-09)
 
 Domain errors no longer leave ApiPlatform's MCP handler as a JSON-RPC `-32603` carrying the raw
-exception message. `App\Mcp\DomainErrorHandler` (decorates `api_platform.mcp.handler`) maps them to a
-`CallToolResult` with `status` + `retryable`; anything unmapped still throws, so real bugs stay loud.
+exception message. `App\Mcp\DomainErrorHandler` (decorates `api_platform.mcp.handler`, both apps) maps
+them to a tool result; anything unmapped still throws, so real bugs stay loud.
 
-This closes the "MCP error mapping" entry in `docs/archive/TODO.md:109`. What decided it: on the
-in-app agent path the message was *structurally* unreachable — Symfony AI's
+What decided it: on the in-app agent path the message was *structurally* unreachable — Symfony AI's
 `ToolExecutionException::getToolCallResult()` replaces it with a fixed sentence — so a stalled SIV and
 an unknown plate were the same string to the model. On 2026-09-14 it guessed, and told the user a
 possibly-valid plate did not exist.
 
-Statuses: `upstream_unavailable` (retryable), `upstream_rejected`, `not_configured`,
-`budget_exhausted`, `not_found` (the only one with `isError=false` — a miss is a result, matching
-`App\Garage\ToolResult`). `MissingApiKeyException` / `BudgetExhaustedException` messages name env
-vars and are deliberately NOT forwarded; only their `source` label is.
+2026-11-09, per MCP 2026-07-28 § Tools: every failure (bad input — including arguments the input
+schema rejects, which API Platform answers -32602 —, a miss, a refused write, an unavailable upstream or
+capability) is a `ToolError`: `isError: true`, text `<status>: <what to do>`, an optional JSON line of
+details (candidates, topics), and NO `structuredContent` (it would have to match the outputSchema).
+Statuses: `upstream_unavailable` (says retry), `upstream_rejected`, `not_configured`, `rate_limited`,
+`not_found`, `task_not_found`, `invalid_input`, `ambiguous_match`, `unsupported_make`. Empty searches
+(`no_match`, `no_records`) and multi-candidate *answers* (Motul / service-defaults `ambiguous`,
+`not_in_catalog`) stay successes. `McpToolbox` hands an error over as the `CallToolResult` itself, so the
+model reads `isError` and `RepeatedToolFailureGuard` counts it. The functional tests' `McpClientTrait::call()`
+asserts the contract on every tools/call.
 
-**Loose end:** `App\Mcp\Agent\McpToolbox::execute()` still branches on a JSON-RPC `error` key. Mapped
-failures no longer produce one, so they now reach the model through the normal `structuredContent`
-path — which is the intent, but it means the agent turn journal records them as successful tool calls.
-Worth a `isError` check there so the journal stays honest.
+## Error-surface loose ends (found 2026-11-09, not fixed)
+
+- The turn journal's `error` (`AgentTurn::$error`, `GET /agent/turns`, both apps) stores the raw message
+  of whatever threw (`RunAgentTurnHandler`, `TurnSettlementMiddleware`, `TurnSettlement::onShutdown`).
+  Owner-scoped, but an unexpected exception's message (file paths, hosts) reaches the client verbatim.
+  The two known config-detail messages (`MissingApiKeyException`, `TecdocCatalog`'s unreadable path) are
+  now client-safe and log the env var instead; the general fix is a public message on Failed turns.
+- bonneref's finder `#[AsTool]` results (`FinderRenderTools`: `refused`, `invalid_input`,
+  `unsupported_make` arrays) are not MCP and are not counted by `RepeatedToolFailureGuard`, which only
+  counts `isError` CallToolResults.
+- The output-schema conformance tests use `opis/json-schema`, present only transitively (mcp/sdk).
 
 ## partsapi fixture tests are red on `main` (found 2026-09-14, NOT caused by the MCP error work)
 
@@ -819,3 +831,44 @@ removes the feature (tool not listed, endpoint 503 without a vendor call, dashbo
   (lookup_plate is not listed).
 - **`STT_BACKEND` is a selector with one case** (`elevenlabs`). Kept since the default makes it free, but it
   could go the way of `TTS_BACKEND` (removed with pocket-tts, `docs/archive/pocket-tts.md`).
+
+## Token passthrough mpa → bonneref — DEBT (2026-11-09)
+
+Since 2026-11-09 both apps check the token audience (`api/docs/AUTH.md` § Audience). mpa still forwards its
+caller's bearer to bonneref (`App\Bonneref\BonnerefClient`, `BonnerefToken` in the worker), which the MCP
+authorization spec forbids ("MUST NOT accept or transit any other tokens"). bonneref tolerates it through a
+narrow exception: the `catalogue_passthrough` firewall (`bonneref/api/config/packages/security.yaml`, GET only,
+exactly `/makes…`, `/cars/{id}/part-categories…`, `/vehicles/{plate}`, never `/mcp`) also accepts
+`CATALOGUE_PASSTHROUGH_AUDIENCES` (mpa's Atelier client + mpa's MCP resource URIs).
+
+The fix is mpa calling bonneref with a token minted *for bonneref*:
+
+- **RFC 8693 token exchange** (Casdoor advertises it) does not work today: Casdoor only lets the subject token's
+  issuing client (`azp`) or a client listed in its `aud` exchange it (`object/token_oauth_util.go`,
+  `parseAndValidateSubjectToken`, "Audience binding"). An MCP token's `azp` is the caller's DCR client and its
+  `aud` is mpa's resource URI, so a confidential "mpa backend" client is neither. The exchange also targets
+  `audience` = a client_id, not an RFC 8707 resource. Would need a Casdoor change (accept the resource server
+  whose URI is in `aud`), or mpa registered as an application whose client_id *is* its resource URI.
+- **mpa as a confidential client of bonneref** (client credentials) plus the user identity in a signed
+  assertion bonneref trusts (e.g. a JWT signed by mpa carrying `email`, verified against mpa's JWKS). Spec-clean,
+  more moving parts; bonneref's per-owner rate limits keep working on the asserted email.
+- **One audience for both**: register a shared resource (e.g. `https://bonneref.fr`) and have bonneref's
+  catalogue be part of mpa's resource. Only fits if the two stop being separate products.
+
+Also left: a dev Claude Code on `http(s)://localhost/mcp` → local mpa → **prod** bonneref (the default
+`BONNEREF_API_URL`) is now 401 on the catalogue, because prod bonneref does not list localhost audiences (on
+purpose). Point `BONNEREF_API_URL` at a local bonneref, whose `.env.dev` lists them.
+
+## CIMD (Client ID Metadata Documents) — not available on auth.bonneref.fr yet (2026-11-09)
+
+MCP 2026-07-28 deprecates DCR in favour of CIMD (priority: pre-registered → CIMD → DCR). Casdoor implemented
+it on 2026-10-19/20 (`0b9a09fe`, `82e214f3`, first in tag `v4.25.0`; discovery field
+`client_id_metadata_document_supported`, `object/oauth_cimd.go`). The hosted instance predates it: its discovery
+document has no such field (it would be present, even `false`, since the Go struct has no `omitempty`). Claude
+Code reads the field (2.1.317 parses `client_id_metadata_document_supported`).
+
+To adopt: upgrade the Casdoor container to ≥ v4.25.0 and enable CIMD for the `bonneref` org (the Caddy
+`organization=bonneref` rewrite on `/api/oauth/register` stays for DCR fallbacks; check how `82e214f3` picks the
+org from the authorize request). Nothing changes server-side in mpa or bonneref: the RFC 9728 metadata only
+names the authorization server, and the audience check is the same (`aud` = resource URI) whichever way the
+client registered.

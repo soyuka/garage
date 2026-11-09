@@ -132,7 +132,7 @@ final class McpServiceDefaultsTest extends AppTestCase
 
         $content = $this->defaults($client, $sessionId, ['type' => 'oil_change', 'vehicle' => 'not-an-iri'], 2);
 
-        $this->assertSame('invalid_input', $content['status']);
+        $this->assertSame('invalid_input', $content['error']);
     }
 
     /**
@@ -142,10 +142,10 @@ final class McpServiceDefaultsTest extends AppTestCase
      */
     private function defaults(Client $client, string $sessionId, array $arguments, int $id): array
     {
-        return $this->call($client, $sessionId, 'tools/call', [
+        return $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_service_defaults',
             'arguments' => $arguments,
-        ], $id)['result']['structuredContent'];
+        ], $id));
     }
 
     /**
@@ -157,10 +157,10 @@ final class McpServiceDefaultsTest extends AppTestCase
     {
         $this->planFact($client, $sessionId, $args, 2);
 
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => [],
-        ], 3)['result']['structuredContent'];
+        ], 3));
 
         return $list['vehicles'][0]['@id'];
     }

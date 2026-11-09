@@ -33,7 +33,7 @@ final class McpUpdateVehicleTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $update = $this->call($client, $sessionId, 'tools/call', [
+        $update = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'IVECO',
@@ -43,7 +43,7 @@ final class McpUpdateVehicleTest extends AppTestCase
                 'usageValue' => 120000,
                 'usageUnit' => 'km',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $update['status']);
         $this->assertSame(120000, $update['vehicle']['usageValue']);
@@ -56,10 +56,10 @@ final class McpUpdateVehicleTest extends AppTestCase
         $this->assertJsonContains(['usageValue' => 120000, 'usageUnit' => 'km']);
 
         // And via list_vehicles.
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => ['make' => 'IVECO'],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame(120000, $list['vehicles'][0]['usageValue']);
         $this->assertSame('km', $list['vehicles'][0]['usageUnit']);
     }
@@ -77,7 +77,7 @@ final class McpUpdateVehicleTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $update = $this->call($client, $sessionId, 'tools/call', [
+        $update = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'PEUGEOT',
@@ -85,16 +85,16 @@ final class McpUpdateVehicleTest extends AppTestCase
                 'confirmNew' => true,
                 'engineVariant' => '2.0 16V Coupé',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $update['status']);
         $this->assertSame('2.0 16V Coupé', $update['vehicle']['engineVariant']);
 
         // Survives a round-trip: list_vehicles surfaces the stored trim.
-        $list = $this->call($client, $sessionId, 'tools/call', [
+        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'list_vehicles',
             'arguments' => ['make' => 'PEUGEOT'],
-        ], 5)['result']['structuredContent'];
+        ], 5));
         $this->assertSame('2.0 16V Coupé', $list['vehicles'][0]['engineVariant']);
     }
 
@@ -112,7 +112,7 @@ final class McpUpdateVehicleTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $iri = $this->call($client, $sessionId, 'tools/call', [
+        $iri = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'IVECO',
@@ -122,16 +122,16 @@ final class McpUpdateVehicleTest extends AppTestCase
                 'usageValue' => 87000,
                 'usageUnit' => 'km',
             ],
-        ], 4)['result']['structuredContent']['vehicle']['@id'];
+        ], 4))['vehicle']['@id'];
 
         // Update ONLY one scalar (engineVariant) by addressing the row via its @id.
-        $update = $this->call($client, $sessionId, 'tools/call', [
+        $update = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'vehicle' => $iri,
                 'engineVariant' => '35S14',
             ],
-        ], 5)['result']['structuredContent'];
+        ], 5));
 
         $this->assertSame('ok', $update['status']);
         $this->assertSame('35S14', $update['vehicle']['engineVariant']);
@@ -155,7 +155,7 @@ final class McpUpdateVehicleTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $update = $this->call($client, $sessionId, 'tools/call', [
+        $update = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'TORO',
@@ -165,7 +165,7 @@ final class McpUpdateVehicleTest extends AppTestCase
                 'usageValue' => 320,
                 'usageUnit' => 'h',
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
         $this->assertSame('ok', $update['status']);
         $this->assertSame(320, $update['vehicle']['usageValue']);
@@ -186,7 +186,7 @@ final class McpUpdateVehicleTest extends AppTestCase
             'source' => 'llm',
         ], 3);
 
-        $update = $this->call($client, $sessionId, 'tools/call', [
+        $update = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'update_vehicle',
             'arguments' => [
                 'make' => 'IVECO',
@@ -195,8 +195,8 @@ final class McpUpdateVehicleTest extends AppTestCase
                 'confirmNew' => true,
                 'usageValue' => 120000,
             ],
-        ], 4)['result']['structuredContent'];
+        ], 4));
 
-        $this->assertSame('invalid_input', $update['status']);
+        $this->assertSame('invalid_input', $update['error']);
     }
 }

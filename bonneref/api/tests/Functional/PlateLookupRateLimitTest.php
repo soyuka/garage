@@ -58,17 +58,14 @@ final class PlateLookupRateLimitTest extends AppTestCase
         $sessionId = $this->initialize($client);
         self::exhaust(self::TEST_OWNER);
 
-        $result = $this->call($client, $sessionId, 'tools/call', [
+        // call() fails on a JSON-RPC error: that would hide the limit from the model.
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'lookup_plate',
             'arguments' => ['plate' => 'XC302ZC'],
-        ], 2);
+        ], 2));
 
-        $this->assertArrayNotHasKey('error', $result, 'a JSON-RPC error would hide the limit from the model: '.json_encode($result));
-        $content = $result['result']['structuredContent'];
-        $this->assertSame('rate_limited', $content['status']);
-        $this->assertFalse($content['retryable']);
-        $this->assertGreaterThan(0, $content['retryAfter']);
-        $this->assertTrue($result['result']['isError']);
+        $this->assertSame('rate_limited', $result['error']);
+        $this->assertMatchesRegularExpression('/try again in about [1-9]\d* minutes; do not retry now/', $result['message']);
     }
 
     private static function exhaust(string $owner): void
