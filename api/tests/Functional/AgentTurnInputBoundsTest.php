@@ -37,7 +37,7 @@ final class AgentTurnInputBoundsTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(400);
-        $this->assertSame(0, $calls->count());
+        $this->assertCount(0, $calls);
         $this->assertTrue(static::getContainer()->get('limiter.agent_turn')->create(self::TEST_OWNER)->consume(30)->isAccepted(), 'a refused request spends no turn');
     }
 
@@ -58,7 +58,7 @@ final class AgentTurnInputBoundsTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertSame(1, $calls->count());
+        $this->assertCount(1, $calls);
     }
 
     /** @return \ArrayObject<int, true> */
