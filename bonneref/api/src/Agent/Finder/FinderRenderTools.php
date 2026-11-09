@@ -13,6 +13,7 @@ use App\Catalog\Narrowing\ArticleNarrower;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\InvalidBuildCode;
 use App\Knowledge\MakeName;
+use App\Mcp\ToolError;
 use App\Vehicle\VehicleIndex;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
@@ -26,6 +27,9 @@ use Webmozart\Assert\Assert;
  * show_parts narrows server-side instead of taking the payload as an argument: the frame must carry
  * exactly what GET /narrowed returns (one client mapper), and a model transcribing a 220-article
  * analysis would be slow, costly and lossy. The narrowing reads the article cache narrow_parts fills.
+ *
+ * A refusal is a {@see ToolError}, the same shape the MCP tools fail with, so RepeatedToolFailureGuard
+ * counts a model retrying it.
  */
 #[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 shown per turn. A category node can hold several TecDoc product groups (precise generic-article names: « Direction > Rotules » holds « Rotule de barre de connexion », the outer tie rod end, AND « Rotule de direction intérieure, barre de connexion », the inner axial joint): then status choose_group comes back with productGroups [{id, name, articleCount}] and nothing is drawn; pick the group whose name matches what the user asked (function and position) and call again with productGroupId. The title shown is the product group name, never your text. rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary whose productGroup (and each cluster\'s productGroup) is what was drawn: check it against the request before end_turn. If clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, or per variant from its own link to this car under the TecDoc catalogue: see applicabilityCaveat); status empty means the category (or that product group) holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part. clusterId selects one of several clusters once something the user gave settles it (a decoded code de fabrication against the clusters\' breakpoints): pass the SAME categoryId and productGroupId as the result on screen plus the cluster id from its summary (c1, c2…); the sheet opens that variant marked « retenue d\'après » your rationale, which is then a short noun phrase naming the basis, e.g. « code de fabrication (OPR 09824 ≤ 10310) ». setAside, with clusterId only: a short noun phrase for why the other clusters do not fit this car, printed after « Ne correspond pas : », e.g. « OPR ≥ 10311 ». An id that is not one of that result\'s clusters is refused and nothing is drawn. Redrawing a category already shown this turn does not count against the 4.', 'showParts')]
 #[AsTool('set_build_code', 'Decode the code de fabrication the user gave for THIS turn\'s car (typed, or read off the vignette photo) and pin it on the finder page\'s vehicle, so later turns on this car carry it. Use it instead of decode_build_code for the car\'s own code; decode_build_code stays for decoding a catalogue threshold or a date. Returns the same fields as decode_build_code (status decoded, organisationNumber, date, codeKind…).', 'setBuildCode')]
@@ -89,12 +93,12 @@ final class FinderRenderTools
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, mixed>|ToolError
      */
-    public function showParts(int $categoryId, string $rationale, ?int $productGroupId = null, ?string $clusterId = null, ?string $setAside = null): array
+    public function showParts(int $categoryId, string $rationale, ?int $productGroupId = null, ?string $clusterId = null, ?string $setAside = null): array|ToolError
     {
         if (null === $this->vehicle) {
-            return ['status' => 'refused', 'reason' => 'No vehicle yet: identify it (lookup_plate or list_makes/list_models/list_cars), call set_vehicle, then show_parts.'];
+            return new ToolError('refused', 'No vehicle yet: identify it (lookup_plate or list_makes/list_models/list_cars), call set_vehicle, then show_parts.');
         }
         Assert::greaterThan($categoryId, 0);
         $clusterId = null === $clusterId || '' === trim($clusterId) ? null : trim($clusterId);
@@ -102,7 +106,7 @@ final class FinderRenderTools
         $rationale = self::cap($rationale, self::MAX_RATIONALE_LENGTH);
         $key = $categoryId.':'.($productGroupId ?? '');
         if (!isset($this->shown[$key]) && \count($this->shown) >= self::MAX_CATEGORIES) {
-            return ['status' => 'refused', 'reason' => \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES)];
+            return new ToolError('refused', \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES));
         }
 
         $narrowed = get_object_vars(NarrowedParts::from(
@@ -128,11 +132,11 @@ final class FinderRenderTools
         }
         $clusterIds = array_column($narrowed['clusters'], 'id');
         if (null !== $clusterId && !\in_array($clusterId, $clusterIds, true)) {
-            return [
-                'status' => 'refused',
-                'reason' => \sprintf('clusterId %s is not a cluster of this result: nothing was drawn. Pick one of clusterIds, from the summary of this same categoryId and productGroupId.', $clusterId),
-                'clusterIds' => $clusterIds,
-            ];
+            return new ToolError(
+                'refused',
+                \sprintf('clusterId %s is not a cluster of this result: nothing was drawn. Pick one of clusterIds, from the summary of this same categoryId and productGroupId.', $clusterId),
+                ['clusterIds' => $clusterIds],
+            );
         }
         $this->shown[$key] = true;
         $groupName = $narrowed['productGroup']['name'] ?? '';
@@ -196,15 +200,15 @@ final class FinderRenderTools
         return $divergence['label'].' : '.implode(', ', $values);
     }
 
-    public function showWebPart(string $categoryLabel, string $reference, string $brand, string $sourceUrl, string $sourceTitle, string $rationale): string
+    public function showWebPart(string $categoryLabel, string $reference, string $brand, string $sourceUrl, string $sourceTitle, string $rationale): string|ToolError
     {
         Assert::stringNotEmpty(trim($reference));
         Assert::regex($sourceUrl, '#^https?://#', 'sourceUrl must be the http(s) URL of the cited source.');
         if (!$this->webSearch->cites($sourceUrl)) {
-            return 'refused: sourceUrl is not a source cited by a web_search of this turn: nothing was drawn.';
+            return new ToolError('refused', 'sourceUrl is not a source cited by a web_search of this turn: nothing was drawn.');
         }
         if (!$this->webSearch->mentions($reference)) {
-            return 'refused: this reference does not appear in what this turn\'s web_search returned: nothing was drawn. Copy it exactly as the cited source writes it.';
+            return new ToolError('refused', 'this reference does not appear in what this turn\'s web_search returned: nothing was drawn. Copy it exactly as the cited source writes it.');
         }
 
         $this->frames->publishFrame([
@@ -220,11 +224,11 @@ final class FinderRenderTools
         return 'ok';
     }
 
-    public function setVehicle(int $carId, string $carType, string $make, string $model, string $engine = '', ?string $plate = null): string
+    public function setVehicle(int $carId, string $carType, string $make, string $model, string $engine = '', ?string $plate = null): string|ToolError
     {
         $type = CarType::tryFrom($carType);
         if ($carId <= 0 || null === $type) {
-            return 'refused: carId must be a positive TecDoc kType and carType PC or CV.';
+            return new ToolError('refused', 'carId must be a positive TecDoc kType and carType PC or CV.');
         }
         try {
             $plate = FinderVehicleResolver::plate($plate);
@@ -235,7 +239,7 @@ final class FinderRenderTools
             // The page shows the catalogue's names for this kType, never the agent's spelling of them.
             $vehicle = $this->vehicles->forCar($carId, $type, $plate);
         } catch (InvalidTurnInput $e) {
-            return 'refused: '.$e->getMessage().': take the carId from lookup_plate or list_cars.';
+            return new ToolError('refused', $e->getMessage().': take the carId from lookup_plate or list_cars.');
         }
         $this->vehicle = $vehicle;
         $this->organisationNumber = null;
@@ -257,16 +261,16 @@ final class FinderRenderTools
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, mixed>|ToolError
      */
-    public function setBuildCode(string $code): array
+    public function setBuildCode(string $code): array|ToolError
     {
         if (null === $this->vehicle) {
-            return ['status' => 'refused', 'reason' => 'No vehicle yet: identify it (lookup_plate or list_makes/list_models/list_cars), call set_vehicle, then set_build_code.'];
+            return new ToolError('refused', 'No vehicle yet: identify it (lookup_plate or list_makes/list_models/list_cars), call set_vehicle, then set_build_code.');
         }
         $make = MakeName::normalize($this->vehicle->make ?? '');
         if ('' === $make) {
-            return ['status' => 'refused', 'reason' => 'The make of this vehicle is unknown: nothing was pinned. Use decode_build_code with the make if you know it.'];
+            return new ToolError('refused', 'The make of this vehicle is unknown: nothing was pinned. Use decode_build_code with the make if you know it.');
         }
         $decoder = $this->decoders->forMake($make);
         if (null === $decoder) {
@@ -276,7 +280,7 @@ final class FinderRenderTools
         try {
             $decoded = $decoder->decode($code);
         } catch (InvalidBuildCode $e) {
-            return ['status' => 'invalid_input', 'reason' => $e->getMessage()];
+            return new ToolError('invalid_input', $e->getMessage());
         }
 
         $this->organisationNumber = $decoded->organisationNumber;

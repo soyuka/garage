@@ -44,7 +44,7 @@ final readonly class TurnRoute
                 $vehicle = self::vehicle($call['arguments']) ?? $vehicle;
             } elseif ('show_parts' === $call['name']) {
                 $result = json_decode($call['result'] ?? '', true);
-                if (\is_array($result) && isset($result['status']) && 'shown' !== $result['status']) {
+                if (\is_array($result) && (true === ($result['isError'] ?? null) || (isset($result['status']) && 'shown' !== $result['status']))) {
                     continue;
                 }
                 $shown = self::int($call['arguments']['categoryId'] ?? null);

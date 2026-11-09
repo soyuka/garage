@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\Journal;
 
 use App\Agent\Journal\TurnRoute;
+use App\Mcp\ToolError;
 use PHPUnit\Framework\TestCase;
 
 final class TurnRouteTest extends TestCase
@@ -83,6 +84,16 @@ final class TurnRouteTest extends TestCase
             ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198], 'result' => '{"status":"choose_group","productGroups":[]}'],
             ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'productGroupId' => 51], 'result' => '{"status":"shown","productGroup":{"id":51,"name":"Rotule de direction intérieure, barre de connexion"}}'],
             ['name' => 'show_parts', 'arguments' => ['categoryId' => 100777], 'result' => '{"status":"empty"}'],
+        ]);
+
+        $this->assertSame('p/XD-303-ZD/c/100198/g/51', $route->route);
+    }
+
+    public function testARefusedShowPartsIsNotTheRoute(): void
+    {
+        $route = TurnRoute::forAgent(['carId' => 16182, 'carType' => 'PC', 'plate' => 'XD-303-ZD'], [
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100198, 'productGroupId' => 51], 'result' => '{"status":"shown","productGroup":{"id":51}}'],
+            ['name' => 'show_parts', 'arguments' => ['categoryId' => 100777], 'result' => json_encode(new ToolError('refused', 'At most 4 categories per turn: end the turn now.'), \JSON_THROW_ON_ERROR)],
         ]);
 
         $this->assertSame('p/XD-303-ZD/c/100198/g/51', $route->route);

@@ -86,8 +86,8 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         $this->runTurn('courroie de distribution', 'sess-cited');
 
-        self::assertStringStartsWith('refused', $results->items[0] ?? '');
-        self::assertStringStartsWith('refused', $results->items[3] ?? '');
+        self::assertRefused($results->items[0] ?? '');
+        self::assertRefused($results->items[3] ?? '');
         $web = array_values(array_filter(self::frames('sess-cited'), static fn (array $f): bool => 'showWebPart' === $f['type']));
         self::assertCount(1, $web);
         self::assertSame('CT1088', $web[0]['reference']);
@@ -124,7 +124,7 @@ final class FinderWebSearchGateTest extends AppTestCase
 
         $this->runTurn('filtre à huile mazda 6', 'sess-set-vehicle', vehicle: null);
 
-        self::assertStringStartsWith('refused', $results->items[0] ?? '');
+        self::assertRefused($results->items[0] ?? '');
         $set = array_values(array_filter(self::frames('sess-set-vehicle'), static fn (array $f): bool => 'setVehicle' === $f['type']));
         self::assertSame([['type' => 'setVehicle', 'carId' => 19107, 'carType' => 'PC', 'make' => 'MAZDA', 'model' => '6 Hatchback (GG)', 'engine' => '2.0', 'plate' => null]], $set);
     }
@@ -185,5 +185,12 @@ final class FinderWebSearchGateTest extends AppTestCase
         );
 
         return array_values(array_map(static fn ($u): array => json_decode($u->getData(), true), $updates));
+    }
+
+    private static function assertRefused(string $toolMessage): void
+    {
+        $result = json_decode($toolMessage, true);
+        self::assertTrue($result['isError'] ?? null);
+        self::assertStringStartsWith('refused: ', $result['content'][0]['text'] ?? '');
     }
 }

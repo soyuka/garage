@@ -9,6 +9,7 @@ use App\Entity\AgentTurn;
 use App\Entity\AgentTurnKind;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
+use App\Mcp\ToolError;
 use App\Repository\AgentTurnRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 
@@ -119,6 +120,7 @@ final class FinderJournalTest extends AppTestCase
         $this->seed('rotule', TurnSurface::Finder, static function (AgentTurn $t): void {
             $t->addToolCall(new AgentTurnToolCall(0, 'show_parts', ['categoryId' => 1, 'categoryLabel' => 'Silentbloc', 'rationale' => 'x'], '{"status":"refused"}', new \DateTimeImmutable()));
             $t->addToolCall(new AgentTurnToolCall(1, 'show_parts', ['categoryId' => 100259, 'categoryLabel' => 'Rotule', 'rationale' => 'x'], '{"status":"shown"}', new \DateTimeImmutable()));
+            $t->addToolCall(new AgentTurnToolCall(2, 'show_parts', ['categoryId' => 2, 'categoryLabel' => 'Cardan', 'rationale' => 'x'], json_encode(new ToolError('refused', 'At most 4 categories per turn: end the turn now.'), \JSON_THROW_ON_ERROR), new \DateTimeImmutable()));
         });
 
         $listed = $this->members($client->request('GET', '/agent/turns?surface=finder', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray());

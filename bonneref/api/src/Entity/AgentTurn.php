@@ -279,6 +279,9 @@ class AgentTurn
             return;
         }
         $result = json_decode($toolCall->getResult(), true);
+        if (\is_array($result) && true === ($result['isError'] ?? null)) {
+            return;
+        }
         $status = \is_array($result) ? ($result['status'] ?? null) : null;
         // The label shown is the product group name the server returns; rows from before carried the agent's argument.
         $label = \is_array($result) && \is_string($result['categoryLabel'] ?? null) ? $result['categoryLabel'] : ($toolCall->getArguments()['categoryLabel'] ?? null);

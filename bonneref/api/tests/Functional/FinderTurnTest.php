@@ -527,8 +527,10 @@ final class FinderTurnTest extends AppTestCase
         self::runFinderTurn('Code de fabrication : 982488', 'sess-unknown-cluster', vehicle: self::VEHICLE);
 
         $result = json_decode($seen['toolResults'][0] ?? '', true);
-        self::assertSame('refused', $result['status'] ?? null);
-        self::assertSame(['c1', 'c2'], $result['clusterIds'] ?? null);
+        self::assertTrue($result['isError'] ?? null);
+        [$reason, $details] = explode("\n", $result['content'][0]['text'], 2);
+        self::assertStringStartsWith('refused: clusterId c9', $reason);
+        self::assertSame(['clusterIds' => ['c1', 'c2']], json_decode($details, true));
         self::assertSame([], array_values(array_filter(self::frames('sess-unknown-cluster'), static fn (array $f): bool => 'showParts' === $f['type'])));
     }
 
