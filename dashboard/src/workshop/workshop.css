@@ -777,7 +777,7 @@ body {
   stroke-width: 2;
   stroke-dasharray: 100;
   stroke-dashoffset: 0;
-  animation: w-ring-draw 300ms var(--w-ease-out) both;
+  animation: w-ring-draw var(--w-dur-ring) var(--w-ease-out) both;
 }
 .w-ring-leader {
   position: absolute;
@@ -786,7 +786,7 @@ body {
   width: 1px;
   height: 46px;
   background: var(--w-blue);
-  animation: w-fade-in 150ms var(--w-ease-out) 150ms both;
+  animation: w-fade-in var(--w-dur-fade) var(--w-ease-out) var(--w-dur-fade) both;
 }
 .w-ring-label {
   position: absolute;
@@ -797,7 +797,7 @@ body {
   color: var(--w-blue-ink);
   font: 700 11.5px/1.3 var(--w-font-ui);
   white-space: nowrap;
-  animation: w-fade-in 150ms var(--w-ease-out) 150ms both;
+  animation: w-fade-in var(--w-dur-fade) var(--w-ease-out) var(--w-dur-fade) both;
 }
 @keyframes w-ring-draw {
   from {
@@ -833,7 +833,7 @@ body {
   inset: 0;
 }
 .w-proj-layer.is-entering {
-  animation: w-proj-rise 380ms var(--w-ease-out) both;
+  animation: w-proj-rise var(--w-dur-proj-rise) var(--w-ease-out) both;
 }
 .w-proj-layer.is-entering::after {
   content: '';
@@ -844,11 +844,11 @@ body {
   height: 1px;
   background: var(--w-blue);
   pointer-events: none;
-  animation: w-proj-scan 520ms var(--w-ease-out) both;
+  animation: w-proj-scan var(--w-dur-proj-scan) var(--w-ease-out) both;
 }
 .w-proj-layer.is-leaving {
   pointer-events: none;
-  animation: w-proj-sink 260ms var(--w-ease-out) both;
+  animation: w-proj-sink var(--w-dur-proj-sink) var(--w-ease-out) both;
 }
 @keyframes w-proj-rise {
   from {
@@ -1136,7 +1136,7 @@ body {
   flex-direction: column;
   text-decoration: none;
   color: var(--w-ink);
-  transition: background-color 120ms var(--w-ease-out);
+  transition: background-color var(--w-dur-hover) var(--w-ease-out);
 }
 .w-car-mod:hover {
   background: var(--w-plate);
@@ -1838,7 +1838,7 @@ body {
   outline: 1px solid var(--w-rule);
   color: var(--w-ink);
   text-decoration: none;
-  transition: background-color 120ms var(--w-ease-out);
+  transition: background-color var(--w-dur-hover) var(--w-ease-out);
 }
 .w-vrow:hover {
   background: var(--w-plate);
@@ -2037,7 +2037,7 @@ body {
   border: 1px solid var(--w-rule);
   background: var(--w-ground);
   color: var(--w-ink-2);
-  transition: border-color 120ms var(--w-ease-out);
+  transition: border-color var(--w-dur-hover) var(--w-ease-out);
 }
 .w-dock-field:focus-within {
   border-color: var(--w-blue);
@@ -2080,7 +2080,7 @@ body {
   width: 44px;
   height: 44px;
   color: var(--w-ink);
-  transition: color 240ms var(--w-ease-out);
+  transition: color var(--w-dur-swap) var(--w-ease-out);
 }
 .w-orb.is-blue {
   color: var(--w-blue);
@@ -2097,7 +2097,7 @@ body {
 .w-orb-stroke {
   stroke-dasharray: 1 1;
   stroke-dashoffset: 0;
-  animation: w-orb-draw-on 900ms var(--w-ease-out) both;
+  animation: w-orb-draw-on var(--w-dur-draw-on) var(--w-ease-out) both;
   animation-delay: calc(var(--i) * 140ms);
 }
 .w-orb.is-idle .w-orb-body {
@@ -2114,7 +2114,7 @@ body {
   animation-delay: calc(var(--i) * 220ms);
 }
 .w-orb.is-settle .w-orb-body {
-  animation: w-orb-settle 700ms var(--w-ease-out) 1;
+  animation: w-orb-settle var(--w-dur-orb-settle) var(--w-ease-out) 1;
 }
 .w-orb[data-reduced] *,
 .w-orb[data-reduced] .w-orb-body {
@@ -2180,7 +2180,7 @@ body {
   border-top-color: var(--w-blue);
   border-bottom: 0;
   background: var(--w-module);
-  animation: w-tray-in 220ms var(--w-ease-out);
+  animation: w-tray-in var(--w-dur-tray) var(--w-ease-out);
 }
 .w-tray-head {
   display: flex;
@@ -2751,7 +2751,7 @@ body {
   display: block;
   outline: 1px solid transparent;
   outline-offset: -1px;
-  transition: outline-color 120ms var(--w-ease-out);
+  transition: outline-color var(--w-dur-hover) var(--w-ease-out);
 }
 .w-part--lg {
   width: 100%;
@@ -2869,7 +2869,7 @@ body {
     overflow-y: auto;
     padding-bottom: env(safe-area-inset-bottom, 0px);
     border-top: 1px solid var(--w-blue);
-    animation: w-tray-in 220ms var(--w-ease-out);
+    animation: w-tray-in var(--w-dur-tray) var(--w-ease-out);
   }
   .w-inspector.is-sheet .w-inspector-render {
     flex: none;
@@ -3132,7 +3132,7 @@ body {
     w-doc-sweep-out 150ms linear 700ms forwards;
 }
 .w-doc-page-sheet.is-sweeping .w-doc-text {
-  animation: w-doc-reveal 700ms var(--w-ease-out) both;
+  animation: w-doc-reveal var(--w-dur-doc-scan) var(--w-ease-out) both;
 }
 @keyframes w-doc-sweep {
   to {
@@ -3558,7 +3558,7 @@ body {
   background: var(--w-plate);
   color: var(--w-ink);
   font: 400 12.5px var(--w-font-ui);
-  transition: border-color 120ms var(--w-ease-out);
+  transition: border-color var(--w-dur-hover) var(--w-ease-out);
 }
 .w-input:hover:not(:disabled) {
   border-color: var(--w-ink-2);

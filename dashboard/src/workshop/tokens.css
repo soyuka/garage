@@ -40,6 +40,17 @@
   --w-font-data: 'JetBrains Mono', ui-monospace, monospace;
   --w-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --w-plane-ms: 320ms;
+  --w-dur-hover: 120ms;
+  --w-dur-fade: 150ms;
+  --w-dur-swap: 240ms;
+  --w-dur-tray: 220ms;
+  --w-dur-proj-sink: 260ms;
+  --w-dur-ring: 300ms;
+  --w-dur-proj-rise: 380ms;
+  --w-dur-proj-scan: 520ms;
+  --w-dur-doc-scan: 700ms;
+  --w-dur-orb-settle: 700ms;
+  --w-dur-draw-on: 900ms;
   --w-top: 48px;
   --w-dock: 68px;
   --w-dock-space: var(--w-dock);
