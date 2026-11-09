@@ -104,6 +104,7 @@
     "require-dev": {
         "api-platform/test": "^5.0.6",
         "friendsofphp/php-cs-fixer": "^3.95.30",
+        "opis/json-schema": "^2.6.1",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.3.5",
         "phpstan/phpstan-doctrine": "^2.1.2",

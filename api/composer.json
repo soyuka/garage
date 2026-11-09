@@ -108,6 +108,7 @@
         "api-platform/test": "^5.0",
         "dama/doctrine-test-bundle": "^8.6",
         "friendsofphp/php-cs-fixer": "^3.95",
+        "opis/json-schema": "^2.6.1",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.3",
         "phpstan/phpstan-doctrine": "^2.1",
