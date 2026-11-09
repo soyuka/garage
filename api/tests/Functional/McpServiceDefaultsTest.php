@@ -20,7 +20,7 @@ final class McpServiceDefaultsTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $tools = $this->listTools($client, $sessionId);
         $tool = $this->toolByName($tools, 'list_service_defaults');
 
         $this->assertTrue($tool['annotations']['readOnlyHint']);

@@ -11,6 +11,7 @@ use App\Tests\Mock\TestDashboardChannel;
 use App\Tests\Mock\TestRenderTargets;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
+use Symfony\AI\Platform\Result\Stream\Delta\DeltaInterface;
 use Symfony\AI\Platform\Result\Stream\Delta\ToolCallStart;
 use Symfony\AI\Platform\Result\Stream\Delta\ToolInputDelta;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
@@ -39,7 +40,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
         return new EarlyStepNarrationListener($narrator);
     }
 
-    private function eventFor(object $delta): DeltaEvent
+    private function eventFor(DeltaInterface $delta): DeltaEvent
     {
         $empty = (static function (): \Generator { yield from []; })();
 

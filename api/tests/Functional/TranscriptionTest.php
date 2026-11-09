@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use App\I18n\Locale;
@@ -258,7 +259,7 @@ final class TranscriptionTest extends AppTestCase
     }
 
     private function post(
-        object $client,
+        Client $client,
         string $body,
         bool $authed = true,
         string $contentType = self::AUDIO_TYPE,

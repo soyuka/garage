@@ -61,7 +61,7 @@ final class McpCompareBrandsTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], null, 'name');
+        $tools = array_column($this->listTools($client, $sessionId), null, 'name');
 
         $this->assertArrayHasKey('compare_brands', $tools);
         $this->assertTrue($tools['compare_brands']['annotations']['readOnlyHint']);

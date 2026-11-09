@@ -18,7 +18,7 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = array_column($this->listTools($client, $sessionId), 'name');
 
         $this->assertContains('set_maintenance_schedule', $tools);
     }

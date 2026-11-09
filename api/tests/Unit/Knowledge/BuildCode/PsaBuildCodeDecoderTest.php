@@ -21,7 +21,7 @@ final class PsaBuildCodeDecoderTest extends TestCase
     #[DataProvider('supportedMakes')]
     public function testSupportsPsaMakesCaseAndAccentInsensitively(string $make): void
     {
-        self::assertTrue($this->decoder->supports($make));
+        $this->assertTrue($this->decoder->supports($make));
     }
 
     /**
@@ -36,7 +36,7 @@ final class PsaBuildCodeDecoderTest extends TestCase
 
     public function testDoesNotSupportOtherMakes(): void
     {
-        self::assertFalse($this->decoder->supports('Renault'));
+        $this->assertFalse($this->decoder->supports('Renault'));
     }
 
     #[DataProvider('oprDates')]
@@ -44,12 +44,12 @@ final class PsaBuildCodeDecoderTest extends TestCase
     {
         $decoded = $this->decoder->decode($opr);
 
-        self::assertSame('opr', $decoded->kind);
-        self::assertSame(str_pad(ltrim($opr, '0'), 5, '0', \STR_PAD_LEFT), $decoded->organisationNumber);
-        self::assertSame($date, $decoded->date->format('Y-m-d'));
-        self::assertNull($decoded->plantCode);
-        self::assertNotEmpty($decoded->caveats);
-        self::assertNotEmpty($decoded->sources);
+        $this->assertSame('opr', $decoded->kind);
+        $this->assertSame(str_pad(ltrim($opr, '0'), 5, '0', \STR_PAD_LEFT), $decoded->organisationNumber);
+        $this->assertSame($date, $decoded->date->format('Y-m-d'));
+        $this->assertNull($decoded->plantCode);
+        $this->assertNotEmpty($decoded->caveats);
+        $this->assertNotEmpty($decoded->sources);
     }
 
     /**
@@ -71,76 +71,76 @@ final class PsaBuildCodeDecoderTest extends TestCase
     {
         $decoded = $this->decoder->decode('102638910232');
 
-        self::assertSame('apv', $decoded->kind);
-        self::assertSame('10263', $decoded->organisationNumber);
-        self::assertSame('2004-12-14', $decoded->date->format('Y-m-d'));
-        self::assertSame('89', $decoded->plantCode);
-        self::assertSame('Sochaux', $decoded->plantName);
-        self::assertSame('10232', $decoded->sequence);
+        $this->assertSame('apv', $decoded->kind);
+        $this->assertSame('10263', $decoded->organisationNumber);
+        $this->assertSame('2004-12-14', $decoded->date->format('Y-m-d'));
+        $this->assertSame('89', $decoded->plantCode);
+        $this->assertSame('Sochaux', $decoded->plantName);
+        $this->assertSame('10232', $decoded->sequence);
     }
 
     public function testDecodesADamWithADroppedLeadingZero(): void
     {
         $decoded = $this->decoder->decode('982488');
 
-        self::assertSame('dam', $decoded->kind);
-        self::assertSame('09824', $decoded->organisationNumber);
-        self::assertSame('2003-10-02', $decoded->date->format('Y-m-d'));
-        self::assertSame('88', $decoded->plantCode);
-        self::assertSame('Mulhouse', $decoded->plantName);
-        self::assertNull($decoded->sequence);
+        $this->assertSame('dam', $decoded->kind);
+        $this->assertSame('09824', $decoded->organisationNumber);
+        $this->assertSame('2003-10-02', $decoded->date->format('Y-m-d'));
+        $this->assertSame('88', $decoded->plantCode);
+        $this->assertSame('Mulhouse', $decoded->plantName);
+        $this->assertNull($decoded->sequence);
     }
 
     public function testDecodesASevenDigitDam(): void
     {
         $decoded = $this->decoder->decode('1026389');
 
-        self::assertSame('dam', $decoded->kind);
-        self::assertSame('10263', $decoded->organisationNumber);
-        self::assertSame('Sochaux', $decoded->plantName);
+        $this->assertSame('dam', $decoded->kind);
+        $this->assertSame('10263', $decoded->organisationNumber);
+        $this->assertSame('Sochaux', $decoded->plantName);
     }
 
     public function testApvWithLettersInsteadOfPlantDigitsKeepsTheOprAndLeavesThePlantUnknown(): void
     {
         $decoded = $this->decoder->decode('10823CJ 20494');
 
-        self::assertSame('apv', $decoded->kind);
-        self::assertSame('10823', $decoded->organisationNumber);
-        self::assertNull($decoded->plantCode);
-        self::assertNull($decoded->plantName);
-        self::assertSame('20494', $decoded->sequence);
+        $this->assertSame('apv', $decoded->kind);
+        $this->assertSame('10823', $decoded->organisationNumber);
+        $this->assertNull($decoded->plantCode);
+        $this->assertNull($decoded->plantName);
+        $this->assertSame('20494', $decoded->sequence);
     }
 
     public function testApvTolerantOfSpacesAndLowerCase(): void
     {
         $decoded = $this->decoder->decode(' 10263 89 10232 ');
 
-        self::assertSame('10263', $decoded->organisationNumber);
-        self::assertSame('89', $decoded->plantCode);
+        $this->assertSame('10263', $decoded->organisationNumber);
+        $this->assertSame('89', $decoded->plantCode);
     }
 
     public function testUnknownPlantCodeIsKeptWithoutAName(): void
     {
         $decoded = $this->decoder->decode('1026355');
 
-        self::assertSame('55', $decoded->plantCode);
-        self::assertNull($decoded->plantName);
+        $this->assertSame('55', $decoded->plantCode);
+        $this->assertNull($decoded->plantName);
     }
 
     public function testCaveatsMentionTheOrderDateDispute(): void
     {
         $caveats = implode(' ', $this->decoder->decode('10263')->caveats);
 
-        self::assertStringContainsString('commande', $caveats);
+        $this->assertStringContainsString('commande', $caveats);
     }
 
     public function testReversesADateToItsOrganisationNumber(): void
     {
         $decoded = $this->decoder->fromDate(new \DateTimeImmutable('2004-09-15'));
 
-        self::assertSame('10173', $decoded->organisationNumber);
-        self::assertSame('2004-09-15', $decoded->date->format('Y-m-d'));
-        self::assertSame('date', $decoded->kind);
+        $this->assertSame('10173', $decoded->organisationNumber);
+        $this->assertSame('2004-09-15', $decoded->date->format('Y-m-d'));
+        $this->assertSame('date', $decoded->kind);
     }
 
     #[DataProvider('invalidCodes')]

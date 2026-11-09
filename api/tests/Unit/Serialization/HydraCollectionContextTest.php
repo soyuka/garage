@@ -43,6 +43,7 @@ final class HydraCollectionContextTest extends TestCase
             'operation' => new GetCollection(),
             'jsonld_has_context' => true,
         ]);
+        $this->assertIsArray($document);
         $context = $builder->getBaseContext();
         $expand = static function (string $term) use ($context): string {
             if (str_contains($term, ':')) {
@@ -54,9 +55,9 @@ final class HydraCollectionContextTest extends TestCase
             return $context[$term] ?? $context['@vocab'].$term;
         };
 
-        self::assertSame('http://www.w3.org/ns/hydra/core#Collection', $expand($document['@type']));
-        $expandedProperties = array_map($expand, array_values(array_filter(array_keys($document), static fn (string $key): bool => !str_starts_with($key, '@'))));
-        self::assertContains('http://www.w3.org/ns/hydra/core#member', $expandedProperties);
-        self::assertContains('http://www.w3.org/ns/hydra/core#totalItems', $expandedProperties);
+        $this->assertSame('http://www.w3.org/ns/hydra/core#Collection', $expand($document['@type']));
+        $expandedProperties = array_map(static fn (int|string $key): string => $expand((string) $key), array_values(array_filter(array_keys($document), static fn (int|string $key): bool => !str_starts_with((string) $key, '@'))));
+        $this->assertContains('http://www.w3.org/ns/hydra/core#member', $expandedProperties);
+        $this->assertContains('http://www.w3.org/ns/hydra/core#totalItems', $expandedProperties);
     }
 }

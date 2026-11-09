@@ -20,7 +20,7 @@ final class MaintenanceRecordPartRefTest extends TestCase
             'user',
         );
 
-        $parts = $record->getItems()[0]['parts'];
+        $parts = $record->getItems()[0]['parts'] ?? [];
         $this->assertSame(['ref' => 'DOT 4', 'priceCents' => 850], $parts[0]);
         $this->assertSame(['ref' => 'frein-filet moyen', 'label' => 'Loctite 243'], $parts[1]);
     }

@@ -26,12 +26,12 @@ final class DeletedVehicleWriteTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $outcome = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'log_maintenance', 'arguments' => [
-            'vehicle' => '/garage/vehicles/'.$vehicle->getId(),
+            'vehicle' => '/garage/vehicles/'.(string) $vehicle->getId(),
             'items' => [['type' => 'oil_change']],
         ]], 3));
 
         $this->assertSame('not_found', $outcome['error'] ?? null, json_encode($outcome, \JSON_THROW_ON_ERROR));
-        $this->assertSame(0, $dm->getRepository(MaintenanceRecord::class)->createQueryBuilder()->count()->getQuery()->execute());
+        $this->assertSame(0, $dm->createQueryBuilder(MaintenanceRecord::class)->count()->getQuery()->execute());
     }
 
     public function testTheWriteResolverRefusesADeletedVehicleById(): void

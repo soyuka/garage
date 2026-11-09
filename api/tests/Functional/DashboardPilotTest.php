@@ -28,7 +28,7 @@ final class DashboardPilotTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = array_column($this->listTools($client, $sessionId), 'name');
 
         foreach (['select_vehicle', 'toast', 'show_fact', 'focus_view', 'propose_actions', 'narrate_step', 'settle_dashboard', 'reveal_assembly'] as $tool) {
             $this->assertContains($tool, $tools);
@@ -88,7 +88,7 @@ final class DashboardPilotTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $schemas = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $schemas[$tool['name']] = $tool['inputSchema'];
         }
 
@@ -104,7 +104,7 @@ final class DashboardPilotTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $tools = $this->listTools($client, $sessionId);
         $schemas = array_column($tools, 'inputSchema', 'name');
 
         $this->assertSame(

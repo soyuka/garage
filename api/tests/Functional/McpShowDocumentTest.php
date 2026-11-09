@@ -34,7 +34,7 @@ final class McpShowDocumentTest extends AppTestCase
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $path = tempnam(sys_get_temp_dir(), 'mpa_doc_');
         file_put_contents($path, PdfFixture::renaultManual());
@@ -44,6 +44,7 @@ final class McpShowDocumentTest extends AppTestCase
         ], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for('mcp-user', $owner)]);
         self::assertSame(201, $browser->getResponse()->getStatusCode(), (string) $browser->getResponse()->getContent());
         $documentId = json_decode((string) $browser->getResponse()->getContent(), true)['id'];
+        self::assertIsString($documentId);
 
         return [$client, $this->initialize($client), $iri, $documentId];
     }
@@ -62,13 +63,13 @@ final class McpShowDocumentTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
-        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $tools = $this->listTools($client, $sessionId);
         $byName = array_column($tools, null, 'name');
 
-        self::assertArrayHasKey('show_document', $byName);
+        $this->assertArrayHasKey('show_document', $byName);
         $properties = array_keys($byName['show_document']['inputSchema']['properties']);
         foreach (['vehicle', 'document', 'page', 'highlight'] as $property) {
-            self::assertContains($property, $properties);
+            $this->assertContains($property, $properties);
         }
     }
 
@@ -78,7 +79,7 @@ final class McpShowDocumentTest extends AppTestCase
 
         $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 2, 'highlight' => 'capacité huile']);
 
-        self::assertSame([
+        $this->assertSame([
             'type' => 'showDocument',
             'url' => $iri.'/documents/'.$documentId.'/file',
             'title' => 'MR 361',
@@ -99,8 +100,8 @@ final class McpShowDocumentTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'document' => $documentId],
         ], 9)['result'];
 
-        self::assertStringContainsString('rendered', json_encode($result));
-        self::assertStringContainsString('showDocument', json_encode($result));
+        $this->assertStringContainsString('rendered', json_encode($result));
+        $this->assertStringContainsString('showDocument', json_encode($result));
     }
 
     public function testPageAndHighlightAreAbsentWhenNotGiven(): void
@@ -109,7 +110,7 @@ final class McpShowDocumentTest extends AppTestCase
 
         $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId]);
 
-        self::assertSame([
+        $this->assertSame([
             'type' => 'showDocument',
             'url' => $iri.'/documents/'.$documentId.'/file',
             'title' => 'MR 361',
@@ -125,9 +126,9 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 3]);
 
-        self::assertSame('invalid_input', $result['error']);
-        self::assertStringContainsString('between 1 and 2', $result['message']);
-        self::assertNull($this->lastPilotFrame());
+        $this->assertSame('invalid_input', $result['error']);
+        $this->assertStringContainsString('between 1 and 2', $result['message']);
+        $this->assertNull($this->lastPilotFrame());
     }
 
     public function testPageZeroIsRejected(): void
@@ -136,8 +137,8 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 0]);
 
-        self::assertSame('invalid_input', $result['error']);
-        self::assertNull($this->lastPilotFrame());
+        $this->assertSame('invalid_input', $result['error']);
+        $this->assertNull($this->lastPilotFrame());
     }
 
     public function testAnUnknownDocumentIsNotFoundAndNothingOpens(): void
@@ -146,16 +147,16 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => 'nope']);
 
-        self::assertSame('not_found', $result['error']);
-        self::assertNull($this->lastPilotFrame());
+        $this->assertSame('not_found', $result['error']);
+        $this->assertNull($this->lastPilotFrame());
     }
 
     public function testMissingArgumentsAreInvalidInput(): void
     {
         [$client, $sessionId, $iri] = $this->seedManual();
 
-        self::assertSame('invalid_input', $this->show($client, $sessionId, ['vehicle' => $iri])['error']);
-        self::assertNull($this->lastPilotFrame());
+        $this->assertSame('invalid_input', $this->show($client, $sessionId, ['vehicle' => $iri])['error']);
+        $this->assertNull($this->lastPilotFrame());
     }
 
     public function testADocumentOfAnotherOwnersVehicleIsNotFound(): void
@@ -164,8 +165,8 @@ final class McpShowDocumentTest extends AppTestCase
 
         $result = $this->show($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId]);
 
-        self::assertSame('not_found', $result['error']);
-        self::assertNull($this->lastPilotFrame());
+        $this->assertSame('not_found', $result['error']);
+        $this->assertNull($this->lastPilotFrame());
     }
 
     public function testTheInAppAgentSeesItAndItsFrameGoesToTheTurnSession(): void
@@ -174,14 +175,14 @@ final class McpShowDocumentTest extends AppTestCase
         $toolbox = static::getContainer()->get(McpToolbox::class);
 
         $names = array_map(static fn ($t): string => $t->getName(), $toolbox->getTools());
-        self::assertContains('show_document', $names);
+        $this->assertContains('show_document', $names);
 
         static::getContainer()->get(RenderIntentTools::class)->bindSession('https://localhost/agent/sessions/abc');
         $toolbox->execute(new ToolCall('1', 'show_document', ['vehicle' => $iri, 'document' => $documentId, 'page' => 1]));
 
         $hub = static::getContainer()->get(RecordingHub::class);
         $update = $hub->updates[array_key_last($hub->updates)];
-        self::assertSame(['https://localhost/agent/sessions/abc'], $update->getTopics());
-        self::assertSame('showDocument', json_decode($update->getData(), true)['type']);
+        $this->assertSame(['https://localhost/agent/sessions/abc'], $update->getTopics());
+        $this->assertSame('showDocument', json_decode($update->getData(), true)['type']);
     }
 }

@@ -41,7 +41,7 @@ final class GarageVehicleHealthTest extends AppTestCase
             new MaintenanceRecord($vehicle, [['type' => MaintenanceType::OilChange->value, 'parts' => []]], new \DateTimeImmutable('2018-01-01'), 'user');
         });
 
-        $client->request('GET', '/garage/vehicles/'.$vehicle->getId(), ['headers' => ['Accept' => 'application/ld+json']]);
+        $client->request('GET', '/garage/vehicles/'.(string) $vehicle->getId(), ['headers' => ['Accept' => 'application/ld+json']]);
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains(['health' => ['status' => 'red', 'overdue' => 1]]);
@@ -52,7 +52,7 @@ final class GarageVehicleHealthTest extends AppTestCase
         $client = static::createClient();
         $vehicle = $this->seed(static function (): void {});
 
-        $client->request('GET', '/garage/vehicles/'.$vehicle->getId(), ['headers' => ['Accept' => 'application/ld+json']]);
+        $client->request('GET', '/garage/vehicles/'.(string) $vehicle->getId(), ['headers' => ['Accept' => 'application/ld+json']]);
 
         $this->assertResponseIsSuccessful();
         $this->assertJsonContains(['health' => ['status' => 'unknown', 'score' => null]]);

@@ -18,7 +18,7 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $tools[$tool['name']] = $tool;
         }
 
@@ -134,6 +134,7 @@ final class McpListPlannedMaintenanceTest extends AppTestCase
             'name' => 'list_planned_maintenance',
             'arguments' => ['vehicle' => $vehicleIri],
         ], 6))['tasks'];
+        $this->assertIsArray($tasks);
         $brakesIri = null;
         foreach ($tasks as $task) {
             if ('brakes' === $task['type']) {

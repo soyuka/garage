@@ -45,10 +45,10 @@ final class VehicleForecastTest extends AppTestCase
         $client = static::createClient();
         $vehicle = $this->seedToro();
 
-        $body = $client->request('GET', '/garage/vehicles/'.$vehicle->getId().'/forecast', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $body = $client->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/forecast', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
 
         $this->assertResponseIsSuccessful();
-        $this->assertSame('/garage/vehicles/'.$vehicle->getId(), $body['vehicle']);
+        $this->assertSame('/garage/vehicles/'.(string) $vehicle->getId(), $body['vehicle']);
 
         $oil = array_values(array_filter($body['due'], static fn (array $d): bool => 'oil_change' === $d['type']));
         $this->assertCount(1, $oil);

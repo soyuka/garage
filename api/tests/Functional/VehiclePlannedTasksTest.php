@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\OpenApi\Factory\OpenApiFactoryInterface;
+
 final class VehiclePlannedTasksTest extends AppTestCase
 {
     use McpClientTrait;
@@ -72,6 +74,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
         $members = $body['member'] ?? $body['hydra:member'] ?? [];
         $parts = $members[0]['parts'] ?? [];
 
+        $this->assertIsArray($parts);
         $byRef = [];
         foreach ($parts as $part) {
             $byRef[$part['ref'] ?? ''] = $part;
@@ -89,7 +92,7 @@ final class VehiclePlannedTasksTest extends AppTestCase
     public function testTheSeeAllToggleIsADeclaredQueryParameter(): void
     {
         static::createClient();
-        $openApi = static::getContainer()->get('api_platform.openapi.factory')();
+        $openApi = self::serviceAs('api_platform.openapi.factory', OpenApiFactoryInterface::class)();
 
         $get = $openApi->getPaths()->getPath('/garage/vehicles/{vehicleId}/planned-tasks')->getGet();
         $names = array_map(static fn ($parameter): string => $parameter->getName(), $get->getParameters());

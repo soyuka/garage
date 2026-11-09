@@ -52,8 +52,8 @@ final class AgentTurnLifecycleTest extends AppTestCase
                 'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
                 'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-boom'],
             ]);
+            // @mago-expect lint:no-empty-catch-clause the worker rethrows by design; the published frames are asserted below
         } catch (\Throwable) {
-            // The worker rethrows (dead-lettered, never retried); we only care that `end` was published first.
         }
 
         $phases = $this->turnPhases($container->get(RecordingHub::class), 'sess-boom');
@@ -85,6 +85,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
                 'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
                 'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-early'],
             ]);
+            // @mago-expect lint:no-empty-catch-clause the worker rethrows by design; the published frames are asserted below
         } catch (\Throwable) {
         }
 
@@ -107,6 +108,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
             }
             $payload = json_decode($update->getData(), true);
             if ('turn' === ($payload['type'] ?? null)) {
+                $this->assertIsString($payload['phase']);
                 $phases[] = $payload['phase'];
             }
         }

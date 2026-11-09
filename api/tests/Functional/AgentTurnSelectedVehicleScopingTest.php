@@ -45,7 +45,7 @@ final class AgentTurnSelectedVehicleScopingTest extends AppTestCase
 
         $client->request('POST', '/agent/turn', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
-            'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-scope', 'selectedId' => '/garage/vehicles/'.$vehicle->getId()],
+            'json' => ['instruction' => 'Bonjour', 'sessionId' => 'sess-scope', 'selectedId' => '/garage/vehicles/'.(string) $vehicle->getId()],
         ]);
         $this->assertResponseStatusCodeSame(202);
 

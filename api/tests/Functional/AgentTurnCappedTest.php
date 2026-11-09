@@ -11,6 +11,7 @@ use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
 use Symfony\Component\Messenger\Envelope;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
+use Symfony\Component\Messenger\Retry\RetryStrategyInterface;
 
 /**
  * A turn is never retried: a replay re-runs its writes and spends the same expensive tool loop again.
@@ -61,7 +62,7 @@ final class AgentTurnCappedTest extends AppTestCase
     public function testTheTurnTransportNeverRetries(): void
     {
         static::bootKernel();
-        $strategy = static::getContainer()->get('messenger.retry.multiplier_retry_strategy.async');
+        $strategy = self::serviceAs('messenger.retry.multiplier_retry_strategy.async', RetryStrategyInterface::class);
         $envelope = new Envelope(new RunAgentTurn('x', 'https://localhost/agent/sessions/s', self::TEST_OWNER));
 
         $this->assertFalse($strategy->isRetryable($envelope, new \RuntimeException('transient')));

@@ -28,7 +28,10 @@ final class PlannedTaskEditTest extends AppTestCase
             ], $arguments),
         ], 3));
 
-        return ['client' => $client, 'taskIri' => $plan['task']['@id']];
+        $taskIri = $plan['task']['@id'];
+        $this->assertIsString($taskIri);
+
+        return ['client' => $client, 'taskIri' => $taskIri];
     }
 
     public function testPatchEditsTheTaskIdentityFields(): void
@@ -142,6 +145,7 @@ final class PlannedTaskEditTest extends AppTestCase
 
         $task = $client->request('GET', $taskIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
         $byRef = [];
+        $this->assertIsArray($task['parts']);
         foreach ($task['parts'] as $part) {
             $byRef[$part['ref']] = $part['id'];
         }

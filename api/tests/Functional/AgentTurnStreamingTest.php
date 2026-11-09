@@ -60,13 +60,13 @@ final class AgentTurnStreamingTest extends AppTestCase
             owner: self::TEST_OWNER,
         ));
 
-        self::assertTrue($receivedOptions['stream'] ?? false, 'the worker must invoke the agent in streaming mode');
+        $this->assertTrue($receivedOptions['stream'] ?? false, 'the worker must invoke the agent in streaming mode');
 
         // Draining the stream ran the tool loop, which executed the toast tool and published it.
         $hub = $container->get(RecordingHub::class);
         $payloads = array_map(static fn ($u) => json_decode($u->getData(), true), $hub->updates);
         $toasts = array_filter($payloads, static fn ($p) => 'toast' === ($p['type'] ?? null));
-        self::assertNotEmpty($toasts, 'draining the stream must run the tool loop and emit the toast render intent');
-        self::assertSame('Viscosité 5W-30.', array_values($toasts)[0]['message']);
+        $this->assertNotEmpty($toasts, 'draining the stream must run the tool loop and emit the toast render intent');
+        $this->assertSame('Viscosité 5W-30.', array_values($toasts)[0]['message']);
     }
 }

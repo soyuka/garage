@@ -35,7 +35,7 @@ final class TurnContextBuilderMakeKnowledgeTest extends TestCase
             instruction: 'quelle bougie ?',
             sessionTopic: 'https://localhost/agent/sessions/abc',
             owner: 'test-user',
-            selectedId: '/garage/vehicles/'.$vehicle->getId(),
+            selectedId: '/garage/vehicles/'.(string) $vehicle->getId(),
         ));
     }
 
@@ -49,24 +49,24 @@ final class TurnContextBuilderMakeKnowledgeTest extends TestCase
 
         $context = $this->build($vehicle, $entries);
 
-        self::assertStringContainsString('get_make_knowledge', $context);
-        self::assertStringContainsString('Numéro d\'organisation (OPR)', $context);
-        self::assertStringContainsString('Où trouver le DAM', $context);
-        self::assertStringNotContainsString('long corps', $context);
+        $this->assertStringContainsString('get_make_knowledge', $context);
+        $this->assertStringContainsString('Numéro d\'organisation (OPR)', $context);
+        $this->assertStringContainsString('Où trouver le DAM', $context);
+        $this->assertStringNotContainsString('long corps', $context);
     }
 
     public function testAddsNothingWhenTheMakeHasNoKnowledge(): void
     {
         $context = $this->build(new Vehicle('Mazda', '6', VehicleType::Car, 'user'), []);
 
-        self::assertStringNotContainsString('get_make_knowledge', $context);
+        $this->assertStringNotContainsString('get_make_knowledge', $context);
     }
 
     public function testStillWorksWithoutAKnowledgeRepository(): void
     {
         $context = $this->build(new Vehicle('Mazda', '6', VehicleType::Car, 'user'), [], withRepository: false);
 
-        self::assertStringContainsString('Mazda', $context);
-        self::assertStringNotContainsString('get_make_knowledge', $context);
+        $this->assertStringContainsString('Mazda', $context);
+        $this->assertStringNotContainsString('get_make_knowledge', $context);
     }
 }

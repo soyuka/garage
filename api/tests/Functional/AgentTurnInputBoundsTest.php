@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Tests\Mock\ScriptedStreamPlatform;
 use PHPUnit\Framework\Attributes\DataProvider;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final class AgentTurnInputBoundsTest extends AppTestCase
 {
@@ -38,7 +39,7 @@ final class AgentTurnInputBoundsTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(400);
         $this->assertCount(0, $calls);
-        $this->assertTrue(static::getContainer()->get('limiter.agent_turn')->create(self::TEST_OWNER)->consume(30)->isAccepted(), 'a refused request spends no turn');
+        $this->assertTrue(self::serviceAs('limiter.agent_turn', RateLimiterFactoryInterface::class)->create(self::TEST_OWNER)->consume(30)->isAccepted(), 'a refused request spends no turn');
     }
 
     public function testATurnAtTheBoundsIsAccepted(): void

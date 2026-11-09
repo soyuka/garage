@@ -28,6 +28,8 @@ final class McpSetVehicleFactsTest extends AppTestCase
             'arguments' => ['make' => 'MAZDA', 'model' => 'MAZDA6', 'year' => 2007],
         ], 2))['vehicle'];
 
+        $this->assertIsString($vehicle['@id']);
+
         return [$client, $sessionId, $vehicle['@id']];
     }
 
@@ -47,7 +49,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $tools[$tool['name']] = $tool;
         }
 
@@ -65,7 +67,7 @@ final class McpSetVehicleFactsTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             if ('plan_maintenance' === $tool['name']) {
                 $this->assertArrayNotHasKey('attributes', $tool['inputSchema']['properties']);
                 $this->assertStringNotContainsString('attributes', $tool['description']);

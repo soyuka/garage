@@ -20,7 +20,7 @@ final class MaintenanceTypeNormalizerTest extends TestCase
     #[DataProvider('knownAliases')]
     public function testMapsKnownAliasToCanonicalType(string $input, string $expected): void
     {
-        self::assertSame($expected, $this->normalizer->canonical($input));
+        $this->assertSame($expected, $this->normalizer->canonical($input));
     }
 
     /**
@@ -51,22 +51,22 @@ final class MaintenanceTypeNormalizerTest extends TestCase
 
     public function testAlreadyCanonicalPassesThrough(): void
     {
-        self::assertSame('oil_change', $this->normalizer->canonical('oil_change'));
-        self::assertSame('spark_plug', $this->normalizer->canonical('spark_plug'));
+        $this->assertSame('oil_change', $this->normalizer->canonical('oil_change'));
+        $this->assertSame('spark_plug', $this->normalizer->canonical('spark_plug'));
     }
 
     public function testUnknownLongTailIsKeptVerbatim(): void
     {
         // The whole point: services we never planned must still log, untouched, so they are not lost.
-        self::assertSame('fuel_line', $this->normalizer->canonical('fuel_line'));
-        self::assertSame('Housse de siège', $this->normalizer->canonical('Housse de siège'));
+        $this->assertSame('fuel_line', $this->normalizer->canonical('fuel_line'));
+        $this->assertSame('Housse de siège', $this->normalizer->canonical('Housse de siège'));
     }
 
     public function testTrimsSurroundingWhitespaceBeforeMatching(): void
     {
-        self::assertSame('oil_change', $this->normalizer->canonical('  Huile  '));
+        $this->assertSame('oil_change', $this->normalizer->canonical('  Huile  '));
         // An unknown value keeps its own content but loses only the surrounding whitespace.
-        self::assertSame('Durite spéciale', $this->normalizer->canonical('  Durite spéciale  '));
+        $this->assertSame('Durite spéciale', $this->normalizer->canonical('  Durite spéciale  '));
     }
 
     public function testNormalizesEveryItemTypeInPlace(): void
@@ -79,10 +79,10 @@ final class MaintenanceTypeNormalizerTest extends TestCase
 
         $normalized = $this->normalizer->normalizeItems($items);
 
-        self::assertSame('oil_change', $normalized[0]['type']);
-        self::assertSame('spark_plug', $normalized[1]['type']);
-        self::assertSame('fuel_line', $normalized[2]['type']);
+        $this->assertSame('oil_change', $normalized[0]['type'] ?? null);
+        $this->assertSame('spark_plug', $normalized[1]['type'] ?? null);
+        $this->assertSame('fuel_line', $normalized[2]['type'] ?? null);
         // Parts and other keys ride along untouched.
-        self::assertSame([['ref' => 'X']], $normalized[0]['parts']);
+        $this->assertSame([['ref' => 'X']], $normalized[0]['parts'] ?? null);
     }
 }

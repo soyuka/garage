@@ -39,6 +39,7 @@ final class BonnerefForwardingTest extends AppTestCase
             instruction: 'Quelles catégories de pièces ?',
             sessionTopic: 'https://localhost/agent/sessions/sess-worker-token',
             owner: self::TEST_OWNER,
+            // @mago-expect lint:no-literal-password test fixture
             accessToken: 'queued-token',
         ));
 

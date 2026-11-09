@@ -18,8 +18,8 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
     {
         $encoded = $this->serializer()->encode(new Envelope($this->turn()));
 
-        self::assertJson($encoded['body']);
-        self::assertStringNotContainsString('O:', $encoded['body']);
+        $this->assertJson($encoded['body']);
+        $this->assertStringNotContainsString('O:', $encoded['body']);
     }
 
     public function testQueuedTurnRoundTrips(): void
@@ -27,7 +27,7 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
         $serializer = $this->serializer();
         $turn = $this->turn();
 
-        self::assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
+        $this->assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
     }
 
     public function testFailedTurnKeepsItsStamps(): void
@@ -41,15 +41,18 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
 
         $decoded = $serializer->decode($serializer->encode($envelope));
 
-        self::assertEquals($this->turn(), $decoded->getMessage());
-        self::assertSame(2, $decoded->last(RedeliveryStamp::class)?->getRetryCount());
-        self::assertSame('async', $decoded->last(SentToFailureTransportStamp::class)?->getOriginalReceiverName());
-        self::assertSame('upstream timed out', $decoded->last(ErrorDetailsStamp::class)?->getExceptionMessage());
+        $this->assertEquals($this->turn(), $decoded->getMessage());
+        $this->assertSame(2, $decoded->last(RedeliveryStamp::class)?->getRetryCount());
+        $this->assertSame('async', $decoded->last(SentToFailureTransportStamp::class)?->getOriginalReceiverName());
+        $this->assertSame('upstream timed out', $decoded->last(ErrorDetailsStamp::class)?->getExceptionMessage());
     }
 
     private function serializer(): SerializerInterface
     {
-        return static::getContainer()->get('messenger.default_serializer');
+        $serializer = static::getContainer()->get('messenger.default_serializer');
+        self::assertInstanceOf(SerializerInterface::class, $serializer);
+
+        return $serializer;
     }
 
     private function turn(): RunAgentTurn
@@ -62,6 +65,7 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
             summary: 'Espace IV 2.0 16V',
             pendingContext: 'Quelle motorisation ?',
             locale: 'en',
+            // @mago-expect lint:no-literal-password test fixture
             accessToken: 'token.value',
         );
     }

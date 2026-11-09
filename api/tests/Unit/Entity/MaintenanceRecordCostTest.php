@@ -13,11 +13,13 @@ use PHPUnit\Framework\TestCase;
  * The derived "effective cost" (Option A): a visit's bill total (costCents) wins when present;
  * otherwise the sum of its parts' unit prices × qty stands in as an estimate. Dashboard/agent both
  * read this single server-computed value instead of re-deriving it client-side.
+ *
+ * @phpstan-import-type ItemWire from MaintenanceRecord
  */
 final class MaintenanceRecordCostTest extends TestCase
 {
     /**
-     * @param list<array{type: string, label?: string, parts?: list<array{ref: string, brand?: string, label?: string, qty?: int, price?: float}>}> $items
+     * @param list<ItemWire> $items
      */
     private function record(array $items, ?int $costCents = null): MaintenanceRecord
     {
@@ -39,8 +41,8 @@ final class MaintenanceRecordCostTest extends TestCase
             costCents: 8900,
         );
 
-        self::assertSame(8900, $record->getEffectiveCostCents());
-        self::assertSame('bill', $record->getCostSource());
+        $this->assertSame(8900, $record->getEffectiveCostCents());
+        $this->assertSame('bill', $record->getCostSource());
     }
 
     public function testEstimatedFromPartsWhenNoBillCost(): void
@@ -53,8 +55,8 @@ final class MaintenanceRecordCostTest extends TestCase
         ]);
 
         // 1250 * 5 + 890 * 1 (qty defaults to 1)
-        self::assertSame(7140, $record->getEffectiveCostCents());
-        self::assertSame('estimated', $record->getCostSource());
+        $this->assertSame(7140, $record->getEffectiveCostCents());
+        $this->assertSame('estimated', $record->getCostSource());
     }
 
     public function testSumsPartsAcrossMultipleItems(): void
@@ -64,8 +66,8 @@ final class MaintenanceRecordCostTest extends TestCase
             ['type' => 'brakes', 'parts' => [['ref' => 'BRK-1', 'priceCents' => 3000]]],
         ]);
 
-        self::assertSame(5000, $record->getEffectiveCostCents());
-        self::assertSame('estimated', $record->getCostSource());
+        $this->assertSame(5000, $record->getEffectiveCostCents());
+        $this->assertSame('estimated', $record->getCostSource());
     }
 
     public function testNullWhenNoBillAndNoPricedParts(): void
@@ -75,8 +77,8 @@ final class MaintenanceRecordCostTest extends TestCase
             ['type' => 'oil_change', 'parts' => [['ref' => '5W30']]],
         ]);
 
-        self::assertNull($record->getEffectiveCostCents());
-        self::assertNull($record->getCostSource());
+        $this->assertNull($record->getEffectiveCostCents());
+        $this->assertNull($record->getCostSource());
     }
 
     public function testPartsWithoutPriceContributeZero(): void
@@ -88,7 +90,7 @@ final class MaintenanceRecordCostTest extends TestCase
             ]],
         ]);
 
-        self::assertSame(500, $record->getEffectiveCostCents());
-        self::assertSame('estimated', $record->getCostSource());
+        $this->assertSame(500, $record->getEffectiveCostCents());
+        $this->assertSame('estimated', $record->getCostSource());
     }
 }

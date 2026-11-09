@@ -13,7 +13,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = array_column($this->listTools($client, $sessionId), 'name');
 
         $this->assertContains('plan_maintenance', $tools);
     }
@@ -91,7 +91,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $tools = $this->listTools($client, $sessionId);
         $tool = current(array_filter($tools, static fn (array $t): bool => 'plan_maintenance' === $t['name']));
         $props = $tool['inputSchema']['properties']['parts']['items']['properties'];
 
@@ -238,7 +238,7 @@ final class McpPlanMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $tools[$tool['name']] = $tool;
         }
 

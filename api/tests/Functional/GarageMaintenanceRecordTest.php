@@ -24,7 +24,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        return '/garage/vehicles/'.$vehicle->getId();
+        return '/garage/vehicles/'.(string) $vehicle->getId();
     }
 
     public function testPostThenListReturnsTheHistory(): void
@@ -102,6 +102,7 @@ final class GarageMaintenanceRecordTest extends AppTestCase
         ]);
 
         $members = $client->request('GET', $iri.'/maintenance-records', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
+        $this->assertIsArray($members);
         $this->assertCount(3, $members);
 
         $byDate = [];

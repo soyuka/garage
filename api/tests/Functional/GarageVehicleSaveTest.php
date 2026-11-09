@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use App\Tests\Mock\RecordingHub;
@@ -85,10 +86,10 @@ final class GarageVehicleSaveTest extends AppTestCase
         $dm->persist($stored);
         $dm->flush();
 
-        $body = $this->save($client, ['vehicle' => '/garage/vehicles/'.$stored->getId()] + self::PEUGEOT);
+        $body = $this->save($client, ['vehicle' => '/garage/vehicles/'.(string) $stored->getId()] + self::PEUGEOT);
 
         $this->assertResponseStatusCodeSame(200);
-        $this->assertSame('/garage/vehicles/'.$stored->getId(), $body['@id']);
+        $this->assertSame('/garage/vehicles/'.(string) $stored->getId(), $body['@id']);
         $this->assertSame([9586, 'XB-301-ZB'], [$body['kType'], $body['plate']]);
     }
 
@@ -209,9 +210,9 @@ final class GarageVehicleSaveTest extends AppTestCase
     /**
      * @param array<string, mixed> $payload
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
-    private function save(object $client, array $payload): array
+    private function save(Client $client, array $payload): array
     {
         return $client->request('POST', '/garage/vehicles/save', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
@@ -222,7 +223,7 @@ final class GarageVehicleSaveTest extends AppTestCase
     /**
      * @return list<array<string, mixed>>
      */
-    private function garage(object $client): array
+    private function garage(Client $client): array
     {
         return $client->request('GET', '/garage/vehicles', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
     }
@@ -230,12 +231,14 @@ final class GarageVehicleSaveTest extends AppTestCase
     /**
      * @param array<string, string> $sources expected source per fact key, 'carte grise' otherwise
      *
-     * @return array<string, array{string, string|null}> key => [value, unit]
+     * @return array<array-key, array{mixed, mixed}> key => [value, unit]
      */
-    private function factsOf(object $client, string $iri, array $sources = []): array
+    private function factsOf(Client $client, string $iri, array $sources = []): array
     {
         $facts = [];
-        foreach ($client->request('GET', $iri, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()['facts'] as $fact) {
+        $stored = $client->request('GET', $iri, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray()['facts'];
+        $this->assertIsArray($stored);
+        foreach ($stored as $fact) {
             $this->assertSame($sources[$fact['key']] ?? 'carte grise', $fact['source']);
             $this->assertFalse($fact['verified']);
             $facts[$fact['key']] = [$fact['value'], $fact['unit']];

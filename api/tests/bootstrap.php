@@ -18,7 +18,8 @@ if ('test' === ($_SERVER['APP_ENV'] ?? $_ENV['APP_ENV'] ?? null)) {
     if (!str_ends_with($db, '_test')) {
         $db .= '_test';
     }
-    $_ENV['MONGODB_DB'] = $_SERVER['MONGODB_DB'] = $db;
+    $_SERVER['MONGODB_DB'] = $db;
+    $_ENV['MONGODB_DB'] = $_SERVER['MONGODB_DB'];
 }
 
 if ($_SERVER['APP_DEBUG']) {

@@ -19,6 +19,7 @@ use Symfony\AI\Platform\Result\ToolCallResult;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\KernelInterface;
 use Symfony\Component\HttpKernel\TerminableInterface;
+use Symfony\Component\Mercure\Update;
 
 final class AgentTurnTerminateDispatchTest extends AppTestCase
 {
@@ -27,7 +28,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
     protected function setUp(): void
     {
         $this->previousMode = $_SERVER['AGENT_TURN_DISPATCH'];
-        $_SERVER['AGENT_TURN_DISPATCH'] = $_ENV['AGENT_TURN_DISPATCH'] = 'terminate';
+        $_ENV['AGENT_TURN_DISPATCH'] = 'terminate';
+        $_SERVER['AGENT_TURN_DISPATCH'] = $_ENV['AGENT_TURN_DISPATCH'];
 
         parent::setUp();
     }
@@ -35,7 +37,8 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
     protected function tearDown(): void
     {
         // .env sets the mode, so the next test's kernel must find it back, not an unset variable.
-        $_SERVER['AGENT_TURN_DISPATCH'] = $_ENV['AGENT_TURN_DISPATCH'] = $this->previousMode;
+        $_ENV['AGENT_TURN_DISPATCH'] = $this->previousMode;
+        $_SERVER['AGENT_TURN_DISPATCH'] = $_ENV['AGENT_TURN_DISPATCH'];
 
         parent::tearDown();
     }
@@ -57,18 +60,18 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         [$kernel, $request] = self::turnRequest('sess-deferred');
         $response = $kernel->handle($request);
 
-        self::assertSame(202, $response->getStatusCode());
-        self::assertSame([], self::frames('sess-deferred'), 'the turn must not run before the response is sent');
-        self::assertSame([], $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10));
+        $this->assertSame(202, $response->getStatusCode());
+        $this->assertSame([], self::frames('sess-deferred'), 'the turn must not run before the response is sent');
+        $this->assertSame([], $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10));
 
         $kernel->terminate($request, $response);
 
         $frames = self::frames('sess-deferred');
-        self::assertSame(['type' => 'turn', 'phase' => 'start'], $frames[0]);
-        self::assertSame(['type' => 'turn', 'phase' => 'end'], $frames[array_key_last($frames)]);
+        $this->assertSame(['type' => 'turn', 'phase' => 'start'], $frames[0]);
+        $this->assertSame(['type' => 'turn', 'phase' => 'end'], $frames[array_key_last($frames)]);
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns);
-        self::assertSame(AgentTurnStatus::Completed, $turns[0]->getStatus());
+        $this->assertCount(1, $turns);
+        $this->assertSame(AgentTurnStatus::Completed, $turns[0]->getStatus());
     }
 
     public function testTheTurnForwardsTheTokenOfTheRequestThatQueuedItOnceTheRequestIsGone(): void
@@ -89,11 +92,11 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         [$kernel, $request] = self::turnRequest('sess-deferred-token');
         $response = $kernel->handle($request);
         $beforeResponse = static::bonneref()->lastRequest();
-        self::assertNull($beforeResponse, 'nothing is asked of bonneref before the response is sent');
+        $this->assertNull($beforeResponse, 'nothing is asked of bonneref before the response is sent');
 
         $kernel->terminate($request, $response);
 
-        self::assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
+        $this->assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
     }
 
     public function testCrashedTurnIsJournalledFailedAndStillEndsTheTurn(): void
@@ -106,17 +109,17 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
 
         [$kernel, $request] = self::turnRequest('sess-deferred-boom');
         $response = $kernel->handle($request);
-        self::assertSame(202, $response->getStatusCode());
+        $this->assertSame(202, $response->getStatusCode());
 
         $kernel->terminate($request, $response);
 
         $frames = self::frames('sess-deferred-boom');
-        self::assertSame(['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed'], $frames[array_key_last($frames)]);
+        $this->assertSame(['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed'], $frames[array_key_last($frames)]);
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns);
-        self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
-        self::assertNotNull($turns[0]->getErrorId());
+        $this->assertCount(1, $turns);
+        $this->assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
+        $this->assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
+        $this->assertNotNull($turns[0]->getErrorId());
     }
 
     public function testTurnFailingBeforeItsLoopStillEndsFailed(): void
@@ -141,16 +144,16 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
 
         [$kernel, $request] = self::turnRequest('sess-deferred-early');
         $response = $kernel->handle($request);
-        self::assertSame(202, $response->getStatusCode());
+        $this->assertSame(202, $response->getStatusCode());
 
         $kernel->terminate($request, $response);
 
-        self::assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], self::frames('sess-deferred-early'));
+        $this->assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], self::frames('sess-deferred-early'));
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns);
-        self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
-        self::assertNotNull($turns[0]->getErrorId());
+        $this->assertCount(1, $turns);
+        $this->assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
+        $this->assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
+        $this->assertNotNull($turns[0]->getErrorId());
     }
 
     public function testTurnKilledByAFatalIsEndedFailedAtShutdown(): void
@@ -167,15 +170,15 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $settlement->open($turn);
         $settlement->onShutdown(['type' => \E_ERROR, 'message' => 'Maximum execution time of 120 seconds exceeded', 'file' => '', 'line' => 0]);
 
-        self::assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], self::frames('sess-fatal'));
+        $this->assertSame([['type' => 'turn', 'phase' => 'end', 'outcome' => 'failed']], self::frames('sess-fatal'));
         $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
-        self::assertCount(1, $turns);
-        self::assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
-        self::assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
-        self::assertNotNull($turns[0]->getErrorId());
+        $this->assertCount(1, $turns);
+        $this->assertSame(AgentTurnStatus::Failed, $turns[0]->getStatus());
+        $this->assertSame(TurnSettlement::PUBLIC_ERROR, $turns[0]->getError());
+        $this->assertNotNull($turns[0]->getErrorId());
 
         $settlement->onShutdown(null);
-        self::assertCount(1, self::frames('sess-fatal'), 'a settled turn is not ended twice');
+        $this->assertCount(1, self::frames('sess-fatal'), 'a settled turn is not ended twice');
     }
 
     /**
@@ -206,9 +209,12 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
     {
         $updates = array_filter(
             static::getContainer()->get(RecordingHub::class)->updates,
-            static fn ($u): bool => ($u->getTopics()[0] ?? '') === static::getContainer()->get(DashboardChannel::class)->sessionTopic(self::TEST_OWNER, $session),
+            static fn (Update $u): bool => ($u->getTopics()[0] ?? '') === static::getContainer()->get(DashboardChannel::class)->sessionTopic(self::TEST_OWNER, $session),
         );
 
-        return array_values(array_map(static fn ($u): array => json_decode($u->getData(), true), $updates));
+        /** @var list<array<string, mixed>> $frames */
+        $frames = array_values(array_map(static fn (Update $u): array => json_decode($u->getData(), true), $updates));
+
+        return $frames;
     }
 }

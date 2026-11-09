@@ -14,6 +14,7 @@ final class McpPromptTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $prompts = $this->call($client, $sessionId, 'prompts/list', [], 2)['result']['prompts'];
+        $this->assertIsArray($prompts);
 
         $byName = [];
         foreach ($prompts as $prompt) {

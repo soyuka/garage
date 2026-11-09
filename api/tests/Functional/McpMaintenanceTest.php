@@ -15,7 +15,7 @@ final class McpMaintenanceTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = array_column($this->listTools($client, $sessionId), 'name');
 
         $this->assertContains('log_maintenance', $tools);
         $this->assertContains('get_maintenance_history', $tools);
@@ -316,7 +316,7 @@ final class McpMaintenanceTest extends AppTestCase
         $edit = $this->call($client, $sessionId, 'tools/call', [
             'name' => 'edit_maintenance',
             'arguments' => [
-                'record' => '/garage/maintenance-records/'.new Ulid(),
+                'record' => '/garage/maintenance-records/'.(string) new Ulid(),
                 'notes' => 'ghost',
             ],
         ], 3);
@@ -411,7 +411,7 @@ final class McpMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $tools[$tool['name']] = $tool;
         }
 
@@ -859,7 +859,7 @@ final class McpMaintenanceTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $tools[$tool['name']] = $tool;
         }
 

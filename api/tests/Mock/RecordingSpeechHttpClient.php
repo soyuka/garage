@@ -34,7 +34,7 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
         ['voice_id' => 'other-voice-id', 'name' => 'Louis', 'labels' => ['language' => 'fr']],
     ];
 
-    /** @var list<array{method: string, url: string, options: array<string, mixed>}> */
+    /** @var list<array{method: string, url: string, options: array<array-key, mixed>}> */
     public array $requests = [];
 
     /** Flipped by a test to rehearse a vendor failure (401 bad key, 429 rate limit). */
@@ -62,7 +62,7 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
@@ -75,7 +75,7 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function withOptions(array $options): static
     {
@@ -85,7 +85,7 @@ final class RecordingSpeechHttpClient implements HttpClientInterface
     /**
      * The last outgoing request, or null when the endpoint short-circuited before calling the vendor.
      *
-     * @return array{method: string, url: string, options: array<string, mixed>}|null
+     * @return array{method: string, url: string, options: array<array-key, mixed>}|null
      */
     public function lastRequest(): ?array
     {

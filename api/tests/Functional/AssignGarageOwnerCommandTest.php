@@ -33,11 +33,11 @@ final class AssignGarageOwnerCommandTest extends AppTestCase
         $tester = new CommandTester((new Application(static::$kernel))->find('app:garage:assign-owner'));
         $tester->execute(['owner' => 'soyuka@example.com', '--from' => 'admin@example.com']);
 
-        self::assertSame(0, $tester->getStatusCode());
+        $this->assertSame(0, $tester->getStatusCode());
         foreach (self::OWNED as $class) {
             $collection = $dm->getDocumentCollection($class);
-            self::assertSame(0, $collection->countDocuments(['owner' => 'admin@example.com']), $class);
-            self::assertSame(1, $collection->countDocuments(['owner' => 'soyuka@example.com']), $class);
+            $this->assertSame(0, $collection->countDocuments(['owner' => 'admin@example.com']), $class);
+            $this->assertSame(1, $collection->countDocuments(['owner' => 'soyuka@example.com']), $class);
         }
     }
 }

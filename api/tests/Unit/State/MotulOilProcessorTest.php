@@ -69,7 +69,7 @@ final class MotulOilProcessorTest extends TestCase
         $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref);
 
         $input = new MotulOilInput();
-        $input->vehicle = '/garage/vehicles/'.$vehicle->getId();
+        $input->vehicle = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $result = $processor->process($input, $this->createStub(Operation::class));
 
@@ -141,7 +141,7 @@ final class MotulOilProcessorTest extends TestCase
         $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref);
 
         $input = new MotulOilInput();
-        $input->vehicle = '/garage/vehicles/'.$vehicle->getId();
+        $input->vehicle = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $result = $processor->process($input, $this->createStub(Operation::class));
 

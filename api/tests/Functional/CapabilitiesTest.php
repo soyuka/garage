@@ -102,7 +102,7 @@ final class CapabilitiesTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = array_column($this->listTools($client, $sessionId), 'name');
 
         $this->assertContains('list_vehicles', $tools);
         $this->assertContains('lookup_plate', $tools);
@@ -134,7 +134,7 @@ final class CapabilitiesTest extends AppTestCase
         /** @var ToolboxInterface $toolbox */
         $toolbox = static::getContainer()->get('ai.toolbox.garage');
 
-        return array_map(static fn (Tool $tool): string => $tool->getName(), $toolbox->getTools());
+        return array_values(array_map(static fn (Tool $tool): string => $tool->getName(), $toolbox->getTools()));
     }
 
     private function unsetEnv(string $name): void

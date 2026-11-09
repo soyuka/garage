@@ -24,7 +24,7 @@ final class RecordingTranscriptionHttpClient implements HttpClientInterface
     /** What the fake backend heard. Any test asserting on a transcript expects this string. */
     public const string TRANSCRIPT = 'Enregistre une vidange sur la Mazda 6.';
 
-    /** @var list<array{method: string, url: string, options: array<string, mixed>, body: string}> */
+    /** @var list<array{method: string, url: string, options: array<array-key, mixed>, body: string}> */
     public array $requests = [];
 
     /** Flipped by a test to rehearse a backend failure (a 503 sidecar, an OOM-killed model). */
@@ -58,7 +58,7 @@ final class RecordingTranscriptionHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
@@ -71,7 +71,7 @@ final class RecordingTranscriptionHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function withOptions(array $options): static
     {
@@ -81,7 +81,7 @@ final class RecordingTranscriptionHttpClient implements HttpClientInterface
     /**
      * The last outgoing request, or null when the endpoint short-circuited before calling the backend.
      *
-     * @return array{method: string, url: string, options: array<string, mixed>, body: string}|null
+     * @return array{method: string, url: string, options: array<array-key, mixed>, body: string}|null
      */
     public function lastRequest(): ?array
     {

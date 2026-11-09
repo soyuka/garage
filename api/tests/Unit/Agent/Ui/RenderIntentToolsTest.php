@@ -222,11 +222,11 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertSame('object', $items['type']);
         $this->assertSame('string', $items['properties']['label']['type']);
         // instruction/taskId are nullable, so the unused side can be passed as null.
-        $this->assertContains('null', (array) $items['properties']['instruction']['type']);
-        $this->assertContains('null', (array) $items['properties']['taskId']['type']);
+        $this->assertContains('null', self::typeNames($items['properties']['instruction']['type']));
+        $this->assertContains('null', self::typeNames($items['properties']['taskId']['type']));
 
         // parts is nullable too: a model filling the unused kind-(2) field sends null, not [].
-        $this->assertContains('null', (array) $items['properties']['parts']['type']);
+        $this->assertContains('null', self::typeNames($items['properties']['parts']['type']));
         $part = $items['properties']['parts']['items'];
         $this->assertSame('object', $part['type']);
         $this->assertSame('string', $part['properties']['ref']['type']);
@@ -386,7 +386,7 @@ final class RenderIntentToolsTest extends TestCase
             $this->assertSame('string', $node['properties'][$field]['type']);
         }
         $this->assertSame('boolean', $node['properties']['verified']['type']);
-        $this->assertContains('null', (array) $node['properties']['info']['type']);
+        $this->assertContains('null', self::typeNames($node['properties']['info']['type']));
     }
 
     public function testProposeActionsPublishesAStructuredPatchTaskWrite(): void
@@ -645,5 +645,13 @@ final class RenderIntentToolsTest extends TestCase
             'actions' => [['label' => 'Liste de courses', 'instruction' => 'prépare la liste de courses pour la vidange']],
             'finding' => 'Trouvé en ligne : vidange',
         ], json_decode($published->getData(), true));
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private static function typeNames(mixed $type): array
+    {
+        return \is_array($type) ? $type : [$type];
     }
 }

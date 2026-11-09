@@ -19,7 +19,8 @@ final class StorageAdapterTest extends KernelTestCase
 
     protected function tearDown(): void
     {
-        $_SERVER['STORAGE_ADAPTER'] = $_ENV['STORAGE_ADAPTER'] = $this->adapter;
+        $_ENV['STORAGE_ADAPTER'] = $this->adapter;
+        $_SERVER['STORAGE_ADAPTER'] = $_ENV['STORAGE_ADAPTER'];
         putenv('STORAGE_ADAPTER='.$this->adapter);
         parent::tearDown();
     }
@@ -31,8 +32,8 @@ final class StorageAdapterTest extends KernelTestCase
 
         $key = $storage->store('record-1', 'attachment-1', 'bill-bytes');
 
-        self::assertSame('bill-bytes', stream_get_contents($storage->readStream($key)));
-        self::assertSame(
+        $this->assertSame('bill-bytes', stream_get_contents($storage->readStream($key)));
+        $this->assertSame(
             self::getContainer()->get('maintenance.local'),
             self::getContainer()->get('maintenance.storage'),
         );
@@ -44,7 +45,7 @@ final class StorageAdapterTest extends KernelTestCase
     {
         self::bootKernel();
 
-        self::assertSame(
+        $this->assertSame(
             self::getContainer()->get('vehicle_documents.local'),
             self::getContainer()->get('vehicle_documents.storage'),
         );
@@ -52,20 +53,24 @@ final class StorageAdapterTest extends KernelTestCase
 
     private static function service(string $id): object
     {
-        return self::getContainer()->get($id);
+        $service = self::getContainer()->get($id);
+        self::assertIsObject($service);
+
+        return $service;
     }
 
     public function testS3AdapterIsSelectedByEnv(): void
     {
-        $_SERVER['STORAGE_ADAPTER'] = $_ENV['STORAGE_ADAPTER'] = 's3';
+        $_ENV['STORAGE_ADAPTER'] = 's3';
+        $_SERVER['STORAGE_ADAPTER'] = $_ENV['STORAGE_ADAPTER'];
         putenv('STORAGE_ADAPTER=s3');
 
         self::bootKernel();
         $container = self::getContainer();
 
-        self::assertInstanceOf(FilesystemOperator::class, self::service('maintenance.storage'));
-        self::assertSame($container->get('maintenance.s3'), $container->get('maintenance.storage'));
-        self::assertSame($container->get('vehicle_documents.s3'), $container->get('vehicle_documents.storage'));
-        self::assertNotSame($container->get('maintenance.local'), $container->get('maintenance.storage'));
+        $this->assertInstanceOf(FilesystemOperator::class, self::service('maintenance.storage'));
+        $this->assertSame($container->get('maintenance.s3'), $container->get('maintenance.storage'));
+        $this->assertSame($container->get('vehicle_documents.s3'), $container->get('vehicle_documents.storage'));
+        $this->assertNotSame($container->get('maintenance.local'), $container->get('maintenance.storage'));
     }
 }

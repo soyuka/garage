@@ -27,7 +27,7 @@ final class ArticleGroupTest extends TestCase
             flags: \JSON_THROW_ON_ERROR,
         )['hydra:member'];
 
-        return array_map(Article::fromApi(...), $rows);
+        return array_values(array_map(Article::fromApi(...), $rows));
     }
 
     public function testKeepsFullTotalsRegardlessOfTruncation(): void
@@ -55,6 +55,7 @@ final class ArticleGroupTest extends TestCase
         $group = ArticleGroup::of(100259, $this->oilFilterArticles());
 
         // every surfaced brand is tier 1 (the category has far more than MAX_BRANDS tier-1 brands)
+        $this->assertIsArray($group['brands']);
         foreach ($group['brands'] as $b) {
             $this->assertSame(1, $b['tier']);
         }
@@ -65,6 +66,7 @@ final class ArticleGroupTest extends TestCase
     {
         $group = ArticleGroup::of(100259, $this->oilFilterArticles());
         $byBrand = [];
+        $this->assertIsArray($group['brands']);
         foreach ($group['brands'] as $b) {
             $byBrand[$b['brand']] = array_column($b['articles'], 'number');
         }

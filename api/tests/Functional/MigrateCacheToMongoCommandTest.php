@@ -26,7 +26,7 @@ final class MigrateCacheToMongoCommandTest extends AppTestCase
     {
         parent::setUp();
         self::bootKernel();
-        $this->db = static::getContainer()->get('doctrine.dbal.default_connection');
+        $this->db = self::serviceAs('doctrine.dbal.default_connection', Connection::class);
         // The retired pool no longer creates its table, so a fresh database (CI) has none. Postgres DDL is
         // transactional: DAMA rolls the CREATE back with the rest of the test.
         if (!$this->db->createSchemaManager()->tablesExist(['cache_items'])) {
@@ -120,12 +120,13 @@ final class MigrateCacheToMongoCommandTest extends AppTestCase
     }
 
     /**
-     * @return array<string, array<string, mixed>>
+     * @return array<array-key, array<array-key, mixed>>
      */
     private function rawAll(string $class): array
     {
         $docs = [];
         foreach (static::getContainer()->get(DocumentManager::class)->getDocumentCollection($class)->find([], ['sort' => ['_id' => 1], 'typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]) as $doc) {
+            $this->assertIsArray($doc);
             $docs[$doc['_id']] = $doc;
         }
 

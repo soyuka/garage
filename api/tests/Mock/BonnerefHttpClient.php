@@ -62,7 +62,7 @@ final class BonnerefHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function request(string $method, string $url, array $options = []): ResponseInterface
     {
@@ -75,7 +75,7 @@ final class BonnerefHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     public function withOptions(array $options): static
     {
@@ -91,7 +91,7 @@ final class BonnerefHttpClient implements HttpClientInterface
     }
 
     /**
-     * @param array<string, mixed> $options
+     * @param array<array-key, mixed> $options
      */
     private function respond(string $method, string $url, array $options): MockResponse
     {
@@ -100,8 +100,10 @@ final class BonnerefHttpClient implements HttpClientInterface
         $path = $parts['path'] ?? '/';
 
         $headers = [];
-        foreach ($options['normalized_headers'] ?? [] as $name => $lines) {
-            $headers[$name] = preg_replace('/^[^:]+:\s*/', '', (string) $lines[0]);
+        /** @var array<string, list<string>> $normalizedHeaders */
+        $normalizedHeaders = $options['normalized_headers'] ?? [];
+        foreach ($normalizedHeaders as $name => $lines) {
+            $headers[$name] = preg_replace('/^[^:]+:\s*/', '', $lines[0]);
         }
 
         self::$requests[] = ['method' => $method, 'url' => $url, 'path' => $path, 'query' => $query, 'headers' => $headers];

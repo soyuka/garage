@@ -28,7 +28,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        return '/garage/vehicles/'.$vehicle->getId();
+        return '/garage/vehicles/'.(string) $vehicle->getId();
     }
 
     /** A logged visit's IRI (POST a bare record), ready to receive attachments. */
@@ -65,16 +65,16 @@ final class MaintenanceAttachmentTest extends AppTestCase
             'file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf'),
         ], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
 
-        self::assertSame(201, $browser->getResponse()->getStatusCode());
+        $this->assertSame(201, $browser->getResponse()->getStatusCode());
         $att = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertSame('facture.pdf', $att['filename']);
-        self::assertSame('application/pdf', $att['contentType']);
-        self::assertSame(\strlen(self::PDF), $att['size']);
-        self::assertStringStartsWith($recordIri.'/attachments/', $att['url']);
+        $this->assertSame('facture.pdf', $att['filename']);
+        $this->assertSame('application/pdf', $att['contentType']);
+        $this->assertSame(\strlen(self::PDF), $att['size']);
+        $this->assertStringStartsWith($recordIri.'/attachments/', $att['url']);
 
         $record = $client->request('GET', $recordIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
-        self::assertCount(1, $record['attachments']);
-        self::assertSame('facture.pdf', $record['attachments'][0]['filename']);
+        $this->assertCount(1, $record['attachments']);
+        $this->assertSame('facture.pdf', $record['attachments'][0]['filename']);
     }
 
     public function testDownloadStreamsTheStoredBytes(): void
@@ -90,11 +90,11 @@ final class MaintenanceAttachmentTest extends AppTestCase
 
         $browser->request('GET', $url, [], [], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
         $res = $browser->getResponse();
-        self::assertSame(200, $res->getStatusCode());
-        self::assertSame('application/pdf', $res->headers->get('Content-Type'));
-        self::assertSame('sandbox', $res->headers->get('Content-Security-Policy'), 'an uploaded file must never run script on our origin');
-        self::assertSame('nosniff', $res->headers->get('X-Content-Type-Options'));
-        self::assertSame(self::PDF, $browser->getInternalResponse()->getContent());
+        $this->assertSame(200, $res->getStatusCode());
+        $this->assertSame('application/pdf', $res->headers->get('Content-Type'));
+        $this->assertSame('sandbox', $res->headers->get('Content-Security-Policy'), 'an uploaded file must never run script on our origin');
+        $this->assertSame('nosniff', $res->headers->get('X-Content-Type-Options'));
+        $this->assertSame(self::PDF, $browser->getInternalResponse()->getContent());
     }
 
     public function testMultipleBillsOnOneVisit(): void
@@ -105,19 +105,19 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
 
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $auth);
-        self::assertSame(201, $browser->getResponse()->getStatusCode());
+        $this->assertSame(201, $browser->getResponse()->getStatusCode());
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PNG, 'ticket.png', 'image/png')], $auth);
-        self::assertSame(201, $browser->getResponse()->getStatusCode());
+        $this->assertSame(201, $browser->getResponse()->getStatusCode());
 
         $record = $client->request('GET', $recordIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
-        self::assertCount(2, $record['attachments']);
+        $this->assertCount(2, $record['attachments']);
     }
 
     public function testAFailedDeleteKeepsTheBill(): void
     {
         $recordIri = $this->seedRecordIri();
         $browser = static::getClient();
-        self::assertInstanceOf(KernelBrowser::class, $browser);
+        $this->assertInstanceOf(KernelBrowser::class, $browser);
         $browser->disableReboot();
         $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $auth);
@@ -133,11 +133,11 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $events->addEventListener(Events::onFlush, $failing);
         $browser->catchExceptions(true);
         $browser->request('DELETE', $url, [], [], $auth);
-        self::assertSame(500, $browser->getResponse()->getStatusCode());
+        $this->assertSame(500, $browser->getResponse()->getStatusCode());
         $events->removeEventListener(Events::onFlush, $failing);
 
         $browser->request('GET', $url, [], [], $auth);
-        self::assertSame(200, $browser->getResponse()->getStatusCode(), 'the record still lists the bill, so its bytes must still be there');
+        $this->assertSame(200, $browser->getResponse()->getStatusCode(), 'the record still lists the bill, so its bytes must still be there');
     }
 
     public function testDeleteRemovesOneBill(): void
@@ -151,10 +151,10 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
 
         $browser->request('DELETE', $url, [], [], $auth);
-        self::assertSame(204, $browser->getResponse()->getStatusCode());
+        $this->assertSame(204, $browser->getResponse()->getStatusCode());
 
         $record = $client->request('GET', $recordIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
-        self::assertCount(0, $record['attachments']);
+        $this->assertCount(0, $record['attachments']);
     }
 
     public function testRejectsDisallowedMimeType(): void
@@ -167,7 +167,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
             'file' => $this->tmpUpload("just some text\n", 'notes.txt', 'text/plain'),
         ], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
 
-        self::assertSame(422, $browser->getResponse()->getStatusCode());
+        $this->assertSame(422, $browser->getResponse()->getStatusCode());
     }
 
     public function testUploadRequiresAFile(): void
@@ -178,7 +178,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
 
         $browser->request('POST', $recordIri.'/attachments', [], [], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
 
-        self::assertSame(422, $browser->getResponse()->getStatusCode());
+        $this->assertSame(422, $browser->getResponse()->getStatusCode());
     }
 
     public function testForeignOwnerCannotUploadDownloadOrDelete(): void
@@ -191,16 +191,16 @@ final class MaintenanceAttachmentTest extends AppTestCase
 
         // Intruder cannot upload onto someone else's visit.
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $intruder);
-        self::assertSame(404, $browser->getResponse()->getStatusCode());
+        $this->assertSame(404, $browser->getResponse()->getStatusCode());
 
         // Owner uploads; intruder can neither download nor delete it.
         $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $owner);
         $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
 
         $browser->request('GET', $url, [], [], $intruder);
-        self::assertSame(404, $browser->getResponse()->getStatusCode());
+        $this->assertSame(404, $browser->getResponse()->getStatusCode());
 
         $browser->request('DELETE', $url, [], [], $intruder);
-        self::assertSame(404, $browser->getResponse()->getStatusCode());
+        $this->assertSame(404, $browser->getResponse()->getStatusCode());
     }
 }

@@ -36,12 +36,12 @@ final class TurnJournalUsageTest extends TestCase
 
         $journal->finish(AgentTurnStatus::Completed, null);
 
-        self::assertInstanceOf(AgentTurn::class, $persisted);
-        self::assertSame(8, $persisted->getPromptTokens());
-        self::assertSame(12000, $persisted->getCacheReadTokens());
-        self::assertSame(3000, $persisted->getCacheCreationTokens());
-        self::assertSame(250, $persisted->getCompletionTokens());
-        self::assertSame(15258, $persisted->getTotalTokens(), 'the total counts cached input too');
+        $this->assertInstanceOf(AgentTurn::class, $persisted);
+        $this->assertSame(8, $persisted->getPromptTokens());
+        $this->assertSame(12000, $persisted->getCacheReadTokens());
+        $this->assertSame(3000, $persisted->getCacheCreationTokens());
+        $this->assertSame(250, $persisted->getCompletionTokens());
+        $this->assertSame(15258, $persisted->getTotalTokens(), 'the total counts cached input too');
     }
 
     private function deltaOf(TokenUsage $usage): DeltaEvent

@@ -236,6 +236,7 @@ final class SpeechTest extends AppTestCase
         $this->assertResponseStatusCodeSame(200);
 
         $projectDir = static::getContainer()->getParameter('kernel.project_dir');
+        $this->assertIsString($projectDir);
         $this->assertSame(
             [],
             glob($projectDir.'/var/tts/.voices.*.json') ?: [],

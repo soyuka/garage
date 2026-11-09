@@ -6,7 +6,7 @@ namespace App\Tests\Unit\Mcp;
 
 use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Ui\RepeatedToolFailureGuard;
-use App\Mcp\Agent\McpToolbox;
+use App\Tests\Support\ScriptedMcpToolbox;
 use Mcp\Schema\Content\TextContent;
 use Mcp\Schema\Result\CallToolResult;
 use Mcp\Server;
@@ -23,7 +23,7 @@ final class McpToolboxTest extends TestCase
      */
     public function testEmptyToolListIsNotMemoisedSoItCanSelfHeal(): void
     {
-        $toolbox = $this->toolboxDriving([
+        $toolbox = new ScriptedMcpToolbox($this->server(), [
             ['result' => ['tools' => []]],                                  // 1st tools/list: blip
             ['result' => ['tools' => [['name' => 'list_vehicles']]]],       // 2nd: recovered
         ]);
@@ -36,7 +36,7 @@ final class McpToolboxTest extends TestCase
 
     public function testNonEmptyToolListIsMemoised(): void
     {
-        $toolbox = $this->toolboxDriving([
+        $toolbox = new ScriptedMcpToolbox($this->server(), [
             ['result' => ['tools' => [['name' => 'list_vehicles']]]],
             ['result' => ['tools' => [['name' => 'list_vehicles'], ['name' => 'plan_maintenance']]]],
         ]);
@@ -48,7 +48,7 @@ final class McpToolboxTest extends TestCase
 
     public function testExcludedBrowseRootsAreFilteredOut(): void
     {
-        $toolbox = $this->toolboxDriving([
+        $toolbox = new ScriptedMcpToolbox($this->server(), [
             ['result' => ['tools' => [['name' => 'list_vehicles'], ['name' => 'list_makes']]]],
         ]);
 
@@ -64,7 +64,7 @@ final class McpToolboxTest extends TestCase
     public function testAnErrorResultIsHandedOverFlagged(): void
     {
         $error = ['isError' => true, 'content' => [['type' => 'text', 'text' => 'not_found: No vehicle at /garage/vehicles/x in the garage.']]];
-        $toolbox = $this->toolboxDriving([['result' => $error], ['result' => $error]]);
+        $toolbox = new ScriptedMcpToolbox($this->server(), [['result' => $error], ['result' => $error]]);
         $guard = new RepeatedToolFailureGuard(maxRepeats: 2);
 
         $result = $toolbox->execute(new ToolCall('1', 'get_vehicle_facts', ['vehicle' => '/garage/vehicles/x']));
@@ -76,30 +76,6 @@ final class McpToolboxTest extends TestCase
         $guard(new ToolCallsExecuted([$result]));
         $this->expectException(RepeatedToolFailureException::class);
         $guard(new ToolCallsExecuted([$toolbox->execute(new ToolCall('2', 'get_vehicle_facts', ['vehicle' => '/garage/vehicles/x']))]));
-    }
-
-    /**
-     * @param list<array<string, mixed>> $responses successive decoded JSON-RPC responses to return
-     *
-     * @return McpToolbox&object{driveCount: int}
-     */
-    private function toolboxDriving(array $responses): McpToolbox
-    {
-        // Override the transport seam only — the real getTools() filter + memoise policy runs.
-        return new class($this->server(), $responses) extends McpToolbox {
-            public int $driveCount = 0;
-
-            /** @param list<array<string, mixed>> $responses */
-            public function __construct(Server $server, private array $responses)
-            {
-                parent::__construct($server);
-            }
-
-            protected function drive(array $request): array
-            {
-                return $this->responses[$this->driveCount++] ?? [];
-            }
-        };
     }
 
     private function server(): Server

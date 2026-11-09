@@ -20,6 +20,7 @@ use App\Tests\Mock\RecordingHub;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
+use Symfony\Component\DependencyInjection\ServicesResetter;
 
 final class TurnStateResetTest extends AppTestCase
 {
@@ -51,7 +52,7 @@ final class TurnStateResetTest extends AppTestCase
         $tracker(new ToolCallsExecuted([new ToolResult(new ToolCall('call-2', 'end_turn', []), 'ok')]));
         $journal->begin(new RunAgentTurn('x', $sessionTopic, owner: self::FOREIGN_OWNER), '');
 
-        $container->get('services_resetter')->reset();
+        self::serviceAs('services_resetter', ServicesResetter::class)->reset();
 
         $this->assertNull($channel->sessionId());
         $this->assertSame($channel->pilotTopic(self::TEST_OWNER), $channel->topic(), 'the fallback owner, not the previous turn\'s');
@@ -77,7 +78,7 @@ final class TurnStateResetTest extends AppTestCase
         $hub = static::getContainer()->get(RecordingHub::class);
 
         $settlement->open(new RunAgentTurn('x', 'https://localhost/agent/sessions/abc', owner: self::FOREIGN_OWNER));
-        static::getContainer()->get('services_resetter')->reset();
+        self::serviceAs('services_resetter', ServicesResetter::class)->reset();
         $hub->updates = [];
         $settlement->onShutdown(null);
 

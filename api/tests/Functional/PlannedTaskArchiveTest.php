@@ -49,7 +49,7 @@ final class PlannedTaskArchiveTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        return ['/garage/vehicles/'.$vehicle->getId(), $dm];
+        return ['/garage/vehicles/'.(string) $vehicle->getId(), $dm];
     }
 
     public function testArchiveTransformsDoneTasksIntoMaintenanceRecords(): void

@@ -31,7 +31,7 @@ final class GarageOwnerScopingGapsTest extends AppTestCase
         $client->disableReboot();
         $vehicle = $this->seedVehicle(self::OTHER_OWNER);
 
-        $client->request('POST', '/garage/vehicles/'.$vehicle->getId().'/facts', [
+        $client->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/facts', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => ['key' => 'oil_type', 'value' => '5W-30'],
         ]);
@@ -52,7 +52,7 @@ final class GarageOwnerScopingGapsTest extends AppTestCase
         $dm->persist(new PlannedMaintenance($vehicle, 'oil_change', 'user', parts: [['ref' => 'W 712/75']]));
         $dm->flush();
 
-        $body = $client->request('GET', '/garage/vehicles/'.$vehicle->getId().'/planned-tasks', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
+        $body = $client->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/planned-tasks', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
 
         $this->assertResponseIsSuccessful();
         $this->assertSame([], $body['member'] ?? $body['hydra:member'] ?? []);
@@ -68,7 +68,7 @@ final class GarageOwnerScopingGapsTest extends AppTestCase
         $dm->persist($record);
         $dm->flush();
 
-        $client->request('GET', '/garage/maintenance-records/'.$record->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $client->request('GET', '/garage/maintenance-records/'.(string) $record->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
 
         $this->assertResponseStatusCodeSame(404);
     }
@@ -84,9 +84,9 @@ final class GarageOwnerScopingGapsTest extends AppTestCase
         $dm->persist(new PlannedMaintenance($vehicle, 'oil_change', 'user', parts: [['ref' => 'W 712/75']]));
         $dm->flush();
 
-        $client->request('GET', '/garage/maintenance-records/'.$record->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $client->request('GET', '/garage/maintenance-records/'.(string) $record->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
         $this->assertResponseIsSuccessful();
-        $body = $client->request('GET', '/garage/vehicles/'.$vehicle->getId().'/planned-tasks', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
+        $body = $client->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/planned-tasks', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->toArray();
         $this->assertCount(1, $body['member'] ?? $body['hydra:member']);
     }
 }

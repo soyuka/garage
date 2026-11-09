@@ -43,8 +43,8 @@ final class MaintenanceRecorderArchiveCostTest extends AppTestCase
 
         $records = $recorder->archiveCompletedTasks($vehicle, new \DateTimeImmutable());
 
-        self::assertCount(1, $records);
-        self::assertNull($records[0]->getCostCents());
+        $this->assertCount(1, $records);
+        $this->assertNull($records[0]->getCostCents());
     }
 
     public function testArchiveWithCostCentsStampsTheRecordWithTheBill(): void
@@ -54,9 +54,9 @@ final class MaintenanceRecorderArchiveCostTest extends AppTestCase
 
         $records = $recorder->archiveCompletedTasks($vehicle, new \DateTimeImmutable(), costCents: 7500);
 
-        self::assertCount(1, $records);
-        self::assertSame(7500, $records[0]->getCostCents());
-        self::assertSame(7500, $records[0]->getEffectiveCostCents());
-        self::assertSame('bill', $records[0]->getCostSource());
+        $this->assertCount(1, $records);
+        $this->assertSame(7500, $records[0]->getCostCents());
+        $this->assertSame(7500, $records[0]->getEffectiveCostCents());
+        $this->assertSame('bill', $records[0]->getCostSource());
     }
 }

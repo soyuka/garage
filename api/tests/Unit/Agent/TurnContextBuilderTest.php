@@ -38,16 +38,16 @@ final class TurnContextBuilderTest extends TestCase
             instruction: 'ajoute l\'huile et la quantité à la liste',
             sessionTopic: 'https://localhost/agent/sessions/abc',
             owner: 'test-user',
-            selectedId: '/garage/vehicles/'.$vehicle->getId(),
+            selectedId: '/garage/vehicles/'.(string) $vehicle->getId(),
         ));
 
         // Known fact must be present so the agent reads it instead of web-searching.
-        self::assertStringContainsString('oil_capacity', $context);
-        self::assertStringContainsString('4.3', $context);
+        $this->assertStringContainsString('oil_capacity', $context);
+        $this->assertStringContainsString('4.3', $context);
         // Open task must carry its id so the agent can close it via log_maintenance.
-        self::assertStringContainsString((string) $task->getId(), $context);
-        self::assertStringContainsString('oil_change', $context);
-        self::assertStringContainsString('250000', $context);
+        $this->assertStringContainsString((string) $task->getId(), $context);
+        $this->assertStringContainsString('oil_change', $context);
+        $this->assertStringContainsString('250000', $context);
     }
 
     public function testInlinesVehicleIdentitySoToolsPinTheVariantWithoutARoundTrip(): void
@@ -67,16 +67,16 @@ final class TurnContextBuilderTest extends TestCase
             instruction: 'quelle viscosité pour la mazda ?',
             sessionTopic: 'https://localhost/agent/sessions/abc',
             owner: 'test-user',
-            selectedId: '/garage/vehicles/'.$vehicle->getId(),
+            selectedId: '/garage/vehicles/'.(string) $vehicle->getId(),
         ));
 
         // Identity must be inline so get_motul_oil / web_search pin the exact variant
         // without first calling list_vehicles to learn which Mazda this is.
-        self::assertStringContainsString('Mazda', $context);
-        self::assertStringContainsString('6', $context);
-        self::assertStringContainsString('2007', $context);
-        self::assertStringContainsString('2.0 MZR-CD', $context);
-        self::assertStringContainsString('RF5C', $context);
+        $this->assertStringContainsString('Mazda', $context);
+        $this->assertStringContainsString('6', $context);
+        $this->assertStringContainsString('2007', $context);
+        $this->assertStringContainsString('2.0 MZR-CD', $context);
+        $this->assertStringContainsString('RF5C', $context);
     }
 
     public function testInjectsPendingCtaContextSoTerseRepliesLandInContext(): void
@@ -96,8 +96,8 @@ final class TurnContextBuilderTest extends TestCase
 
         // The card the user is answering must be in context so a terse reply ("la 2.0 16V") is
         // interpreted against it rather than re-routed from scratch.
-        self::assertStringContainsString('406 2.0 16V', $context);
-        self::assertStringContainsString('la 2.0 16V', $context);
+        $this->assertStringContainsString('406 2.0 16V', $context);
+        $this->assertStringContainsString('la 2.0 16V', $context);
     }
 
     public function testKeepsContextLeanWhenNoVehicleIsSelected(): void
@@ -109,8 +109,8 @@ final class TurnContextBuilderTest extends TestCase
 
         $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc', 'test-user'));
 
-        self::assertStringContainsString('bonjour', $context);
-        self::assertStringNotContainsString('Faits connus', $context);
+        $this->assertStringContainsString('bonjour', $context);
+        $this->assertStringNotContainsString('Faits connus', $context);
     }
 
     public function testListsEachOpenTaskPartsWithPriceSoTheAgentAnswersFromTheDataset(): void
@@ -123,11 +123,11 @@ final class TurnContextBuilderTest extends TestCase
         ]);
 
         $builder = new TurnContextBuilder($this->resolver($vehicle), new VehicleFactsProjector(), $this->repository([$task]));
-        $context = $builder->build(new RunAgentTurn('combien coûtent les pièces ?', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.$vehicle->getId()));
+        $context = $builder->build(new RunAgentTurn('combien coûtent les pièces ?', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.(string) $vehicle->getId()));
 
-        self::assertStringContainsString('      · LUK 623315033 ×1 — Kit embrayage (Oscaro 174 €) [174 €]', $context);
-        self::assertStringContainsString('      · frein-filet moyen — Frein-filet (LOCTITE-243)', $context);
-        self::assertStringNotContainsString('Frein-filet (LOCTITE-243) [', $context);
+        $this->assertStringContainsString('      · LUK 623315033 ×1 — Kit embrayage (Oscaro 174 €) [174 €]', $context);
+        $this->assertStringContainsString('      · frein-filet moyen — Frein-filet (LOCTITE-243)', $context);
+        $this->assertStringNotContainsString('Frein-filet (LOCTITE-243) [', $context);
     }
 
     public function testInlinesTheKTypeSoTheServiceRecipeSkipsPlateLookup(): void
@@ -136,9 +136,9 @@ final class TurnContextBuilderTest extends TestCase
         $vehicle->setKType(18679);
 
         $builder = new TurnContextBuilder($this->resolver($vehicle), new VehicleFactsProjector(), $this->repository([]));
-        $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.$vehicle->getId()));
+        $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.(string) $vehicle->getId()));
 
-        self::assertStringContainsString('kType 18679', $context);
+        $this->assertStringContainsString('kType 18679', $context);
     }
 
     private function resolver(?Vehicle $vehicle): GarageResolver
@@ -183,10 +183,10 @@ final class TurnContextBuilderTest extends TestCase
             locale: 'en',
         ));
 
-        self::assertStringContainsString('French', $french);
-        self::assertStringContainsString('English', $english);
-        self::assertStringNotContainsString('English', $french);
-        self::assertStringNotContainsString('French', $english);
+        $this->assertStringContainsString('French', $french);
+        $this->assertStringContainsString('English', $english);
+        $this->assertStringNotContainsString('English', $french);
+        $this->assertStringNotContainsString('French', $english);
     }
 
     public function testAnUnknownLocaleStillGetsADirectiveRatherThanNone(): void
@@ -200,6 +200,6 @@ final class TurnContextBuilderTest extends TestCase
             locale: 'de',
         ));
 
-        self::assertStringContainsString('French', $context);
+        $this->assertStringContainsString('French', $context);
     }
 }

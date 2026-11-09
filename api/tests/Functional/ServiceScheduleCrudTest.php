@@ -41,7 +41,7 @@ final class ServiceScheduleCrudTest extends AppTestCase
             $v->setServiceInterval(ServiceInterval::fromSource('oil_change', MaintenanceAction::Change, 'web', everyUsageValue: 50, everyUsageUnit: UsageUnit::Hours, firstUsageValue: 5));
         });
 
-        $body = $client->request('GET', '/garage/vehicles/'.$vehicle->getId().'/service-schedule', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
+        $body = $client->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/service-schedule', ['headers' => ['Accept' => 'application/ld+json']])->toArray();
 
         $this->assertResponseIsSuccessful();
         $rules = $body['hydra:member'];
@@ -59,7 +59,7 @@ final class ServiceScheduleCrudTest extends AppTestCase
         $client = static::createClient();
         $vehicle = $this->seedToro();
 
-        $created = $client->request('POST', '/garage/vehicles/'.$vehicle->getId().'/service-schedule', [
+        $created = $client->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/service-schedule', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => ['type' => 'spark_plug', 'action' => 'replace', 'everyUsageValue' => 100, 'everyUsageUnit' => 'hours'],
         ])->toArray();
@@ -76,7 +76,7 @@ final class ServiceScheduleCrudTest extends AppTestCase
         $vehicle = $this->seedToro(static function (Vehicle $v): void {
             $v->setServiceInterval(ServiceInterval::fromSource('oil_change', MaintenanceAction::Change, 'web', everyUsageValue: 50, everyUsageUnit: UsageUnit::Hours));
         });
-        $base = '/garage/vehicles/'.$vehicle->getId().'/service-schedule';
+        $base = '/garage/vehicles/'.(string) $vehicle->getId().'/service-schedule';
 
         // Same (type, action) → corrects the cadence in place, no second row.
         $client->request('POST', $base, [
@@ -96,7 +96,7 @@ final class ServiceScheduleCrudTest extends AppTestCase
         $vehicle = $this->seedToro(static function (Vehicle $v): void {
             $v->setServiceInterval(ServiceInterval::fromSource('air_filter', MaintenanceAction::Clean, 'web', component: 'foam element', everyUsageValue: 25, everyUsageUnit: UsageUnit::Hours));
         });
-        $base = '/garage/vehicles/'.$vehicle->getId().'/service-schedule';
+        $base = '/garage/vehicles/'.(string) $vehicle->getId().'/service-schedule';
 
         $id = $client->request('GET', $base, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'][0]['id'];
         $client->request('DELETE', $base.'/'.$id, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);

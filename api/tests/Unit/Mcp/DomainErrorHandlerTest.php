@@ -7,11 +7,9 @@ namespace App\Tests\Unit\Mcp;
 use App\Exception\InvalidToolInputException;
 use App\Garage\ToolError;
 use App\Mcp\DomainErrorHandler;
-use Mcp\Schema\JsonRpc\Error;
-use Mcp\Schema\JsonRpc\Request;
+use App\Tests\Support\ThrowingRequestHandler;
 use Mcp\Schema\JsonRpc\Response;
 use Mcp\Schema\Request\CallToolRequest;
-use Mcp\Server\Handler\Request\RequestHandlerInterface;
 use Mcp\Server\Session\SessionInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -54,20 +52,6 @@ final class DomainErrorHandlerTest extends TestCase
 
     private function handler(\Throwable $thrown): DomainErrorHandler
     {
-        return new DomainErrorHandler(new class($thrown) implements RequestHandlerInterface {
-            public function __construct(private readonly \Throwable $thrown)
-            {
-            }
-
-            public function supports(Request $request): bool
-            {
-                return true;
-            }
-
-            public function handle(Request $request, SessionInterface $session): Response|Error
-            {
-                throw $this->thrown;
-            }
-        });
+        return new DomainErrorHandler(new ThrowingRequestHandler($thrown));
     }
 }

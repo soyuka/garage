@@ -68,6 +68,13 @@ final class ScriptedStreamPlatform implements PlatformInterface
             return;
         }
 
-        yield new TextDelta($result instanceof TextResult ? $result->getContent() : (string) $result);
+        if ($result instanceof TextResult) {
+            $result = $result->getContent();
+        }
+        if (!\is_string($result)) {
+            throw new \LogicException(\sprintf('A scripted stream cannot replay a %s.', $result::class));
+        }
+
+        yield new TextDelta($result);
     }
 }

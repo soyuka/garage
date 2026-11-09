@@ -20,7 +20,7 @@ final class McpRemovePlannedPartTest extends AppTestCase
         $sessionId = $this->initialize($client);
 
         $tools = [];
-        foreach ($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'] as $tool) {
+        foreach ($this->listTools($client, $sessionId) as $tool) {
             $tools[$tool['name']] = $tool;
         }
 

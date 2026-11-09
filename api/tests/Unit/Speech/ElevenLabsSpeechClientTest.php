@@ -23,7 +23,7 @@ final class ElevenLabsSpeechClientTest extends TestCase
 {
     public function testItPostsToTheStreamEndpointWithPcm24000(): void
     {
-        $sent = [];
+        $sent = ['method' => '', 'url' => '', 'options' => []];
         $http = new MockHttpClient(static function (string $method, string $url, array $options) use (&$sent): MockResponse {
             $sent = ['method' => $method, 'url' => $url, 'options' => $options];
 

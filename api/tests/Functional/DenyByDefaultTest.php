@@ -32,7 +32,7 @@ final class DenyByDefaultTest extends AppTestCase
         $response = static::createAnonymousClient()->request('GET', $path, ['headers' => ['Accept' => 'application/ld+json']]);
 
         self::assertResponseStatusCodeSame(401);
-        self::assertStringStartsWith('Bearer', $response->getHeaders(false)['www-authenticate'][0] ?? '');
+        $this->assertStringStartsWith('Bearer', $response->getHeaders(false)['www-authenticate'][0] ?? '');
     }
 
     #[DataProvider('gatedGetProvider')]
@@ -63,7 +63,7 @@ final class DenyByDefaultTest extends AppTestCase
     {
         static::createAnonymousClient()->request('GET', '/cars/12345/part-categories?carType=PC', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
 
-        self::assertNotSame(401, static::getClient()->getResponse()->getStatusCode());
+        $this->assertNotSame(401, self::lastResponse()->getStatusCode());
     }
 
     public function testAuthenticatedGarageReadIsServed(): void
@@ -85,6 +85,6 @@ final class DenyByDefaultTest extends AppTestCase
         $response = static::createAnonymousClient()->request('POST', '/mcp', ['headers' => ['Content-Type' => 'application/json', 'Accept' => 'application/json, text/event-stream'], 'json' => ['jsonrpc' => '2.0', 'id' => 1, 'method' => 'ping']]);
 
         self::assertResponseStatusCodeSame(401);
-        self::assertStringContainsString('resource_metadata=', $response->getHeaders(false)['www-authenticate'][0] ?? '');
+        $this->assertStringContainsString('resource_metadata=', $response->getHeaders(false)['www-authenticate'][0] ?? '');
     }
 }

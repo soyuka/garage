@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
+
 final class GarageVehicleArchiveTest extends AppTestCase
 {
     use McpClientTrait;
@@ -138,7 +140,7 @@ final class GarageVehicleArchiveTest extends AppTestCase
         $this->assertSame(['ECO'], array_values($models));
     }
 
-    private function seedVehicle(object $client, string $make, string $model): string
+    private function seedVehicle(Client $client, string $make, string $model): string
     {
         $sessionId = $this->initialize($client);
         $this->call($client, $sessionId, 'tools/call', [

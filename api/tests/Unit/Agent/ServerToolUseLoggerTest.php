@@ -11,6 +11,7 @@ use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
 use App\Tests\Mock\TestDashboardChannel;
 use App\Tests\Mock\TestRenderTargets;
+use App\Tests\Support\CountingRawResult;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -29,7 +30,7 @@ final class ServerToolUseLoggerTest extends TestCase
 {
     public function testLogsWebSearchCountAndQueries(): void
     {
-        $raw = $this->rawResult([
+        $raw = new CountingRawResult([
             'content' => [
                 ['type' => 'server_tool_use', 'name' => 'web_search', 'input' => ['query' => 'Mazda6 2007 distribution chaine 250000 km']],
                 ['type' => 'text', 'text' => 'ok'],
@@ -49,7 +50,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
     public function testDoesNotLogWhenNoServerToolUse(): void
     {
-        $raw = $this->rawResult([
+        $raw = new CountingRawResult([
             'content' => [['type' => 'text', 'text' => 'ok']],
             'usage' => ['server_tool_use' => ['web_search_requests' => 0]],
         ]);
@@ -62,7 +63,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
     public function testStreamingFeedsBudgetFromTokenUsageWithoutReadingRaw(): void
     {
-        $raw = $this->rawResult(['content' => [], 'usage' => []]);
+        $raw = new CountingRawResult(['content' => [], 'usage' => []]);
 
         // The Anthropic ResultConverter surfaces server_tool_use.web_search_requests as a TokenUsage
         // delta's toolTokens; mirror that shape in the streamed result.
@@ -81,7 +82,9 @@ final class ServerToolUseLoggerTest extends TestCase
             ->invoke('claude', 'hi', ['stream' => true]);
 
         // The worker drains the stream; that is when the listener fires.
-        foreach ($result->getResult()->getContent() as $delta) {
+        $streamed = $result->getResult();
+        $this->assertInstanceOf(StreamResult::class, $streamed);
+        foreach ($streamed->getContent() as $delta) {
             unset($delta);
         }
 
@@ -120,39 +123,5 @@ final class ServerToolUseLoggerTest extends TestCase
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
 
         return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools), $journal);
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     *
-     * @return RawResultInterface&object{reads: int}
-     */
-    private function rawResult(array $data): RawResultInterface
-    {
-        return new class($data) implements RawResultInterface {
-            public int $reads = 0;
-
-            /** @param array<string, mixed> $data */
-            public function __construct(private readonly array $data)
-            {
-            }
-
-            public function getData(): array
-            {
-                ++$this->reads;
-
-                return $this->data;
-            }
-
-            public function getDataStream(): iterable
-            {
-                yield $this->data;
-            }
-
-            public function getObject(): object
-            {
-                return (object) $this->data;
-            }
-        };
     }
 }

@@ -25,7 +25,7 @@ final class PlannedPartTest extends TestCase
 
         $array = $part->toArray();
 
-        self::assertSame('OC90', $array['ref']);
-        self::assertArrayNotHasKey('qty', $array, 'an unset optional field is omitted, not fatal');
+        $this->assertSame('OC90', $array['ref']);
+        $this->assertArrayNotHasKey('qty', $array, 'an unset optional field is omitted, not fatal');
     }
 }

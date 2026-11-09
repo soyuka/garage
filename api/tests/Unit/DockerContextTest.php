@@ -12,21 +12,21 @@ final class DockerContextTest extends TestCase
 
     public function testSecretsAndLocalStateStayOutOfTheBuildContext(): void
     {
-        self::assertTrue(self::ignored('.env.stage'), '.env.stage');
-        self::assertTrue(self::ignored('.env.dev'), '.env.dev');
-        self::assertTrue(self::ignored('.env.elevenlabs.local'), '.env.elevenlabs.local');
-        self::assertTrue(self::ignored('config/foo.local'), 'config/foo.local');
-        self::assertTrue(self::ignored('tondeuse/bill.pdf'), 'tondeuse/bill.pdf');
-        self::assertTrue(self::ignored('docker/cloudflared/config.yml'), 'docker/cloudflared/config.yml');
-        self::assertTrue(self::ignored('var/storage/bills/x.pdf'), 'var/storage/bills/x.pdf');
+        $this->assertTrue(self::ignored('.env.stage'), '.env.stage');
+        $this->assertTrue(self::ignored('.env.dev'), '.env.dev');
+        $this->assertTrue(self::ignored('.env.elevenlabs.local'), '.env.elevenlabs.local');
+        $this->assertTrue(self::ignored('config/foo.local'), 'config/foo.local');
+        $this->assertTrue(self::ignored('tondeuse/bill.pdf'), 'tondeuse/bill.pdf');
+        $this->assertTrue(self::ignored('docker/cloudflared/config.yml'), 'docker/cloudflared/config.yml');
+        $this->assertTrue(self::ignored('var/storage/bills/x.pdf'), 'var/storage/bills/x.pdf');
     }
 
     public function testMatcherFollowsDockerSemantics(): void
     {
-        self::assertTrue(self::ignored('README.md'));
-        self::assertTrue(self::ignored('src/Foo/notes.md'));
-        self::assertTrue(self::ignored('var/cache/x.php'));
-        self::assertFalse(self::ignored('src/Kernel.php'));
+        $this->assertTrue(self::ignored('README.md'));
+        $this->assertTrue(self::ignored('src/Foo/notes.md'));
+        $this->assertTrue(self::ignored('var/cache/x.php'));
+        $this->assertFalse(self::ignored('src/Kernel.php'));
     }
 
     /**

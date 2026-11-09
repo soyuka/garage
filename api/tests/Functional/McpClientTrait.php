@@ -9,6 +9,8 @@ use ApiPlatform\Test\Client;
 /**
  * JSON-RPC over Streamable HTTP plumbing for the /mcp endpoint, shared by the
  * MCP functional tests (initialize handshake, tools/list, tools/call).
+ *
+ * @require-extends AppTestCase
  */
 trait McpClientTrait
 {
@@ -90,6 +92,20 @@ trait McpClientTrait
     }
 
     /**
+     * @return list<array<string, mixed>>
+     */
+    private function listTools(Client $client, string $sessionId): array
+    {
+        $decoded = $this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'];
+        $this->assertIsArray($decoded);
+
+        /** @var list<array<string, mixed>> $tools */
+        $tools = $decoded;
+
+        return $tools;
+    }
+
+    /**
      * The tool result contract (MCP 2026-07-28 § Tools, error handling): a failure is a result flagged
      * isError whose text starts with its status token; it carries no structuredContent, which would
      * have to match the outputSchema. A success never carries a failure status.
@@ -124,8 +140,13 @@ trait McpClientTrait
             return $result['structuredContent'] ?? [];
         }
 
-        [$status, $text] = explode(': ', implode("\n", array_column($result['content'], 'text')), 2);
-        [$message, $details] = explode("\n", $text, 2) + [1 => '{}'];
+        /** @var list<array{text: string}> $content */
+        $content = $result['content'];
+        $statusAndText = explode(': ', implode("\n", array_column($content, 'text')), 2);
+        $status = $statusAndText[0];
+        $messageAndDetails = explode("\n", $statusAndText[1] ?? '', 2);
+        $message = $messageAndDetails[0];
+        $details = $messageAndDetails[1] ?? '{}';
 
         return ['error' => $status, 'message' => $message] + json_decode($details, true, 512, \JSON_THROW_ON_ERROR);
     }

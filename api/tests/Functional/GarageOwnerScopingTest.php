@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Mcp\Agent\McpToolbox;
 use App\Security\OwnerContext;
 use Symfony\AI\Platform\Result\ToolCall;
@@ -30,7 +31,7 @@ final class GarageOwnerScopingTest extends AppTestCase
     }
 
     /** @return list<array<string, mixed>> */
-    private function listAs(object $client, string $owner): array
+    private function listAs(Client $client, string $owner): array
     {
         return $client->request('GET', '/garage/vehicles', [
             // Since 55bf873 the owner is the email claim, so the tenant varies on the second argument.
@@ -45,12 +46,12 @@ final class GarageOwnerScopingTest extends AppTestCase
         $this->seedVehicleFor('bob@example.com', 'RENAULT', 'CLIO');
 
         $alice = $this->listAs($client, 'alice@example.com');
-        self::assertCount(1, $alice);
-        self::assertSame('MAZDA6', $alice[0]['model']);
+        $this->assertCount(1, $alice);
+        $this->assertSame('MAZDA6', $alice[0]['model']);
 
         $bob = $this->listAs($client, 'bob@example.com');
-        self::assertCount(1, $bob);
-        self::assertSame('CLIO', $bob[0]['model']);
+        $this->assertCount(1, $bob);
+        $this->assertSame('CLIO', $bob[0]['model']);
     }
 
     public function testCrossOwnerItemReadIs404(): void

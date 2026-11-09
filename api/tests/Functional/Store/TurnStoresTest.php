@@ -54,7 +54,10 @@ final class TurnStoresTest extends AppTestCase
 
     private static function service(string $id): object
     {
-        return static::getContainer()->get($id);
+        $service = static::getContainer()->get($id);
+        self::assertIsObject($service);
+
+        return $service;
     }
 
     private static function dm(): DocumentManager

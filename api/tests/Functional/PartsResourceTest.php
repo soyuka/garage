@@ -20,6 +20,7 @@ final class PartsResourceTest extends AppTestCase
         $paths = array_column($data['hydra:member'], 'path');
         $this->assertContains('Filters > Air Filter', $paths);
 
+        $this->assertIsArray($data['hydra:member']);
         foreach ($data['hydra:member'] as $node) {
             $this->assertTrue($node['leaf']);
         }

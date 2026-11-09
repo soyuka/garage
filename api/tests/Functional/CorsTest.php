@@ -11,7 +11,8 @@ final class CorsTest extends AppTestCase
     protected function tearDown(): void
     {
         if (null !== $this->previous) {
-            $_SERVER['CORS_ALLOW_ORIGIN'] = $_ENV['CORS_ALLOW_ORIGIN'] = $this->previous;
+            $_ENV['CORS_ALLOW_ORIGIN'] = $this->previous;
+            $_SERVER['CORS_ALLOW_ORIGIN'] = $_ENV['CORS_ALLOW_ORIGIN'];
         }
 
         parent::tearDown();
@@ -24,7 +25,7 @@ final class CorsTest extends AppTestCase
         $this->preflight('https://bonneref.example', 'POST', '/garage/vehicles');
 
         $this->assertResponseHeaderSame('access-control-allow-origin', 'https://bonneref.example');
-        $this->assertStringContainsStringIgnoringCase('Authorization', (string) static::getClient()->getResponse()->headers->get('access-control-allow-headers'));
+        $this->assertStringContainsStringIgnoringCase('Authorization', (string) self::lastResponse()->headers->get('access-control-allow-headers'));
     }
 
     public function testAnOriginTheEnvDoesNotNameIsNotAllowed(): void
@@ -46,7 +47,8 @@ final class CorsTest extends AppTestCase
     private function allowOrigins(string $regex): void
     {
         $this->previous = $_SERVER['CORS_ALLOW_ORIGIN'];
-        $_SERVER['CORS_ALLOW_ORIGIN'] = $_ENV['CORS_ALLOW_ORIGIN'] = $regex;
+        $_ENV['CORS_ALLOW_ORIGIN'] = $regex;
+        $_SERVER['CORS_ALLOW_ORIGIN'] = $_ENV['CORS_ALLOW_ORIGIN'];
     }
 
     private function preflight(string $origin, string $method, string $path): void

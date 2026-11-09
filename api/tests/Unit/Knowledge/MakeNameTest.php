@@ -13,7 +13,7 @@ final class MakeNameTest extends TestCase
     #[DataProvider('makes')]
     public function testNormalizesCaseAccentsAndWhitespace(string $raw, string $expected): void
     {
-        self::assertSame($expected, MakeName::normalize($raw));
+        $this->assertSame($expected, MakeName::normalize($raw));
     }
 
     /**

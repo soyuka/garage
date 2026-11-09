@@ -23,7 +23,7 @@ final class PlannedTaskCreateTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        return '/garage/vehicles/'.$vehicle->getId();
+        return '/garage/vehicles/'.(string) $vehicle->getId();
     }
 
     public function testPostCreatesAnOpenTaskOnTheChecklist(): void

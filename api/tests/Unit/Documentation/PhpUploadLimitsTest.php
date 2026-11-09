@@ -11,7 +11,7 @@ final class PhpUploadLimitsTest extends TestCase
 {
     public function testPhpAcceptsADocumentAtTheRecorderLimit(): void
     {
-        self::assertGreaterThanOrEqual(VehicleDocumentRecorder::MAX_BYTES, ini_parse_quantity((string) \ini_get('upload_max_filesize')));
-        self::assertGreaterThan(VehicleDocumentRecorder::MAX_BYTES, ini_parse_quantity((string) \ini_get('post_max_size')));
+        $this->assertGreaterThanOrEqual(VehicleDocumentRecorder::MAX_BYTES, ini_parse_quantity((string) \ini_get('upload_max_filesize')));
+        $this->assertGreaterThan(VehicleDocumentRecorder::MAX_BYTES, ini_parse_quantity((string) \ini_get('post_max_size')));
     }
 }

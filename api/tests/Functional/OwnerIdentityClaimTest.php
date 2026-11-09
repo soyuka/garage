@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
+
 /**
  * Tenancy keys on the `email` claim, not on the OIDC `sub`.
  *
@@ -14,7 +16,7 @@ namespace App\Tests\Functional;
  */
 final class OwnerIdentityClaimTest extends AppTestCase
 {
-    private function createVehicleAs(object $client, string $sub, string $email): void
+    private function createVehicleAs(Client $client, string $sub, string $email): void
     {
         $client->request('POST', '/garage/vehicles', [
             'headers' => self::authHeaders($sub, $email) + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
@@ -24,7 +26,7 @@ final class OwnerIdentityClaimTest extends AppTestCase
     }
 
     /** @return list<array<string, mixed>> */
-    private function listAs(object $client, string $sub, string $email): array
+    private function listAs(Client $client, string $sub, string $email): array
     {
         $body = $client->request('GET', '/garage/vehicles', [
             'headers' => self::authHeaders($sub, $email) + ['Accept' => 'application/ld+json'],
@@ -40,7 +42,7 @@ final class OwnerIdentityClaimTest extends AppTestCase
 
         $after = $this->listAs($client, 'casdoor-uuid-after-restart', 'owner@example.com');
 
-        self::assertCount(1, $after);
+        $this->assertCount(1, $after);
     }
 
     public function testADifferentEmailStillSeesNothing(): void
@@ -48,6 +50,6 @@ final class OwnerIdentityClaimTest extends AppTestCase
         $client = static::createClient();
         $this->createVehicleAs($client, 'casdoor-uuid-before-restart', 'owner@example.com');
 
-        self::assertSame([], $this->listAs($client, 'casdoor-uuid-before-restart', 'stranger@example.com'));
+        $this->assertSame([], $this->listAs($client, 'casdoor-uuid-before-restart', 'stranger@example.com'));
     }
 }

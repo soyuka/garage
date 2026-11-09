@@ -87,11 +87,11 @@ final class PlannedTaskPlanTest extends AppTestCase
 
         $data = $client->request('POST', '/garage/planned-tasks', [
             'headers' => self::headers(),
-            'json' => ['vehicle' => '/garage/vehicles/'.$chosen->getId(), 'type' => 'other', 'label' => 'Rotule axiale', 'parts' => [['ref' => 'JAR123', 'brand' => 'TRW']]],
+            'json' => ['vehicle' => '/garage/vehicles/'.(string) $chosen->getId(), 'type' => 'other', 'label' => 'Rotule axiale', 'parts' => [['ref' => 'JAR123', 'brand' => 'TRW']]],
         ])->toArray();
 
         $this->assertResponseStatusCodeSame(201);
-        $this->assertSame('/garage/vehicles/'.$chosen->getId(), $data['vehicle']);
+        $this->assertSame('/garage/vehicles/'.(string) $chosen->getId(), $data['vehicle']);
     }
 
     public function testFindRouteIsStoredReturnedAndReplacedByTheLatestFind(): void
@@ -203,7 +203,7 @@ final class PlannedTaskPlanTest extends AppTestCase
         $this->assertSame('ambiguous_match', $body['status']);
         $this->assertCount(1, $body['candidates']);
         $this->assertSame('TORO', $body['candidates'][0]['make']);
-        $this->assertSame('/garage/vehicles/'.$existing->getId(), $body['candidates'][0]['@id']);
+        $this->assertSame('/garage/vehicles/'.(string) $existing->getId(), $body['candidates'][0]['@id']);
 
         $list = $client->request('GET', '/garage/vehicles', ['headers' => ['Accept' => 'application/ld+json']])->toArray()['hydra:member'];
         $this->assertCount(1, $list);

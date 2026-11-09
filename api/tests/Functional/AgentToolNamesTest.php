@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TerminalToolListener;
 use App\Agent\Ui\TurnActivityTracker;
+use Symfony\AI\Agent\Toolbox\ToolboxInterface;
 use Symfony\AI\Platform\Tool\Tool;
 
 /**
@@ -22,10 +23,11 @@ final class AgentToolNamesTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $agentToolbox = static::getContainer()->get('ai.toolbox.garage');
+        $agentToolbox = self::serviceAs('ai.toolbox.garage', ToolboxInterface::class);
 
+        /** @var list<string> $known */
         $known = [
-            ...array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name'),
+            ...array_map(static fn (array $tool): string => $tool['name'], $this->listTools($client, $sessionId)),
             ...array_map(static fn (Tool $tool): string => $tool->getName(), $agentToolbox->getTools()),
         ];
 
@@ -35,7 +37,7 @@ final class AgentToolNamesTest extends AppTestCase
             'StepNarrator::TOOLS' => StepNarrator::TOOLS,
         ];
         foreach ($named as $list => $names) {
-            self::assertSame([], array_values(array_diff($names, $known)), $list.' names tools nothing serves');
+            $this->assertSame([], array_values(array_diff($names, $known)), $list.' names tools nothing serves');
         }
     }
 }

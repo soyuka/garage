@@ -65,7 +65,7 @@ final class VehicleDocumentTest extends AppTestCase
      */
     private function upload(KernelBrowser $browser, Vehicle $vehicle, UploadedFile $file, array $params = [], ?string $email = null, int $expect = 201): array
     {
-        $browser->request('POST', '/garage/vehicles/'.$vehicle->getId().'/documents', $params + ['kind' => 'manual'], ['file' => $file], $this->bearer($email ?? self::TEST_OWNER));
+        $browser->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', $params + ['kind' => 'manual'], ['file' => $file], $this->bearer($email ?? self::TEST_OWNER));
         self::assertSame($expect, $browser->getResponse()->getStatusCode(), (string) $browser->getResponse()->getContent());
 
         return 201 === $expect ? json_decode((string) $browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR) : [];
@@ -82,23 +82,23 @@ final class VehicleDocumentTest extends AppTestCase
             'sourceRef' => 'MR 361 — Transmission',
         ]);
 
-        self::assertSame('manual', $doc['kind']);
-        self::assertSame('upload', $doc['source']);
-        self::assertSame('MR 361 — Transmission', $doc['sourceRef']);
-        self::assertSame('mr361.pdf', $doc['filename']);
-        self::assertSame('application/pdf', $doc['contentType']);
-        self::assertSame(2, $doc['pageCount']);
-        self::assertNull($doc['plannedTaskId']);
-        self::assertSame('/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'].'/file', $doc['url']);
-        self::assertSame('/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'].'/pages', $doc['pagesUrl']);
+        $this->assertSame('manual', $doc['kind']);
+        $this->assertSame('upload', $doc['source']);
+        $this->assertSame('MR 361 — Transmission', $doc['sourceRef']);
+        $this->assertSame('mr361.pdf', $doc['filename']);
+        $this->assertSame('application/pdf', $doc['contentType']);
+        $this->assertSame(2, $doc['pageCount']);
+        $this->assertNull($doc['plannedTaskId']);
+        $this->assertSame('/garage/vehicles/'.(string) $vehicle->getId().'/documents/'.$doc['id'].'/file', $doc['url']);
+        $this->assertSame('/garage/vehicles/'.(string) $vehicle->getId().'/documents/'.$doc['id'].'/pages', $doc['pagesUrl']);
 
-        $browser->request('GET', '/garage/vehicles/'.$vehicle->getId().'/documents', [], [], $this->bearer());
-        self::assertSame(200, $browser->getResponse()->getStatusCode());
+        $browser->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', [], [], $this->bearer());
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
         $list = json_decode((string) $browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR);
-        self::assertCount(1, $list);
-        self::assertSame($doc['id'], $list[0]['id']);
-        self::assertArrayNotHasKey('pages', $list[0]);
-        self::assertStringNotContainsString('Couple de serrage', (string) $browser->getResponse()->getContent());
+        $this->assertCount(1, $list);
+        $this->assertSame($doc['id'], $list[0]['id']);
+        $this->assertArrayNotHasKey('pages', $list[0]);
+        $this->assertStringNotContainsString('Couple de serrage', (string) $browser->getResponse()->getContent());
     }
 
     public function testImageIsStoredWithoutPages(): void
@@ -109,9 +109,9 @@ final class VehicleDocumentTest extends AppTestCase
 
         $doc = $this->upload($browser, $vehicle, $this->tmpUpload(self::PNG, 'devis.png', 'image/png'), ['kind' => 'quote']);
 
-        self::assertSame('quote', $doc['kind']);
-        self::assertSame(0, $doc['pageCount']);
-        self::assertSame('devis.png', $doc['title']);
+        $this->assertSame('quote', $doc['kind']);
+        $this->assertSame(0, $doc['pageCount']);
+        $this->assertSame('devis.png', $doc['title']);
     }
 
     public function testFileIsStreamedBackInline(): void
@@ -124,12 +124,12 @@ final class VehicleDocumentTest extends AppTestCase
         $doc = $this->upload($browser, $vehicle, $this->tmpUpload($pdf, 'mr361.pdf', 'application/pdf'));
 
         $browser->request('GET', $doc['url'], [], [], $this->bearer());
-        self::assertSame(200, $browser->getResponse()->getStatusCode());
-        self::assertSame('application/pdf', $browser->getResponse()->headers->get('Content-Type'));
-        self::assertSame('sandbox', $browser->getResponse()->headers->get('Content-Security-Policy'));
-        self::assertSame('nosniff', $browser->getResponse()->headers->get('X-Content-Type-Options'));
-        self::assertStringContainsString('inline', (string) $browser->getResponse()->headers->get('Content-Disposition'));
-        self::assertSame($pdf, $browser->getInternalResponse()->getContent());
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
+        $this->assertSame('application/pdf', $browser->getResponse()->headers->get('Content-Type'));
+        $this->assertSame('sandbox', $browser->getResponse()->headers->get('Content-Security-Policy'));
+        $this->assertSame('nosniff', $browser->getResponse()->headers->get('X-Content-Type-Options'));
+        $this->assertStringContainsString('inline', (string) $browser->getResponse()->headers->get('Content-Disposition'));
+        $this->assertSame($pdf, $browser->getInternalResponse()->getContent());
     }
 
     public function testPagesEndpointListsNumbersAndLabelsWithoutText(): void
@@ -141,10 +141,10 @@ final class VehicleDocumentTest extends AppTestCase
 
         $browser->request('GET', $doc['pagesUrl'], [], [], $this->bearer());
 
-        self::assertSame(200, $browser->getResponse()->getStatusCode());
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
         $content = (string) $browser->getResponse()->getContent();
-        self::assertSame([['number' => 1, 'label' => '21A-5'], ['number' => 2, 'label' => '21A-6']], json_decode($content, true, flags: \JSON_THROW_ON_ERROR));
-        self::assertStringNotContainsString('Couple de serrage', $content);
+        $this->assertSame([['number' => 1, 'label' => '21A-5'], ['number' => 2, 'label' => '21A-6']], json_decode($content, true, flags: \JSON_THROW_ON_ERROR));
+        $this->assertStringNotContainsString('Couple de serrage', $content);
     }
 
     public function testPagesEndpointIs404ForForeignOwnerAndUnknownDocument(): void
@@ -153,13 +153,13 @@ final class VehicleDocumentTest extends AppTestCase
         $browser = $client->getKernelBrowser();
         $vehicle = $this->seedVehicle();
         $doc = $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'mr361.pdf', 'application/pdf'));
-        $base = '/garage/vehicles/'.$vehicle->getId().'/documents';
+        $base = '/garage/vehicles/'.(string) $vehicle->getId().'/documents';
 
         $browser->request('GET', $doc['pagesUrl'], [], [], $this->bearer('intruder@example.com'));
-        self::assertSame(404, $browser->getResponse()->getStatusCode());
+        $this->assertSame(404, $browser->getResponse()->getStatusCode());
 
         $browser->request('GET', $base.'/unknown/pages', [], [], $this->bearer());
-        self::assertSame(404, $browser->getResponse()->getStatusCode());
+        $this->assertSame(404, $browser->getResponse()->getStatusCode());
     }
 
     public function testAFailedDeleteKeepsTheDocumentBytes(): void
@@ -178,12 +178,12 @@ final class VehicleDocumentTest extends AppTestCase
             }
         };
         $events->addEventListener(Events::onFlush, $failing);
-        $browser->request('DELETE', '/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'], [], [], $this->bearer());
-        self::assertSame(500, $browser->getResponse()->getStatusCode());
+        $browser->request('DELETE', '/garage/vehicles/'.(string) $vehicle->getId().'/documents/'.$doc['id'], [], [], $this->bearer());
+        $this->assertSame(500, $browser->getResponse()->getStatusCode());
         $events->removeEventListener(Events::onFlush, $failing);
 
         $browser->request('GET', $doc['url'], [], [], $this->bearer());
-        self::assertSame(200, $browser->getResponse()->getStatusCode());
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
     }
 
     public function testDeleteRemovesTheDocument(): void
@@ -193,14 +193,14 @@ final class VehicleDocumentTest extends AppTestCase
         $vehicle = $this->seedVehicle();
         $doc = $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'mr361.pdf', 'application/pdf'));
 
-        $browser->request('DELETE', '/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'], [], [], $this->bearer());
-        self::assertSame(204, $browser->getResponse()->getStatusCode());
+        $browser->request('DELETE', '/garage/vehicles/'.(string) $vehicle->getId().'/documents/'.$doc['id'], [], [], $this->bearer());
+        $this->assertSame(204, $browser->getResponse()->getStatusCode());
 
-        $browser->request('GET', '/garage/vehicles/'.$vehicle->getId().'/documents', [], [], $this->bearer());
-        self::assertSame([], json_decode((string) $browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR));
+        $browser->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', [], [], $this->bearer());
+        $this->assertSame([], json_decode((string) $browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR));
 
         $browser->request('GET', $doc['url'], [], [], $this->bearer());
-        self::assertSame(404, $browser->getResponse()->getStatusCode());
+        $this->assertSame(404, $browser->getResponse()->getStatusCode());
     }
 
     public function testRejectsUnsupportedTypeMissingFileAndBadKind(): void
@@ -212,8 +212,8 @@ final class VehicleDocumentTest extends AppTestCase
         $this->upload($browser, $vehicle, $this->tmpUpload("plain text\n", 'a.txt', 'text/plain'), expect: 422);
         $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'a.pdf', 'application/pdf'), ['kind' => 'recipe'], expect: 422);
 
-        $browser->request('POST', '/garage/vehicles/'.$vehicle->getId().'/documents', ['kind' => 'manual'], [], $this->bearer());
-        self::assertSame(422, $browser->getResponse()->getStatusCode());
+        $browser->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', ['kind' => 'manual'], [], $this->bearer());
+        $this->assertSame(422, $browser->getResponse()->getStatusCode());
     }
 
     public function testQuoteLinksToAPlannedTaskOfTheSameVehicle(): void
@@ -225,7 +225,7 @@ final class VehicleDocumentTest extends AppTestCase
 
         $doc = $this->upload($browser, $vehicle, $this->tmpUpload(self::PNG, 'devis.png', 'image/png'), ['kind' => 'quote', 'plannedTaskId' => $taskId]);
 
-        self::assertSame($taskId, $doc['plannedTaskId']);
+        $this->assertSame($taskId, $doc['plannedTaskId']);
     }
 
     public function testQuoteLinkedToAForeignVehiclesTaskIs422(): void
@@ -246,17 +246,17 @@ final class VehicleDocumentTest extends AppTestCase
         $browser = $client->getKernelBrowser();
         $vehicle = $this->seedVehicle();
         $doc = $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'mr361.pdf', 'application/pdf'));
-        $base = '/garage/vehicles/'.$vehicle->getId().'/documents';
+        $base = '/garage/vehicles/'.(string) $vehicle->getId().'/documents';
 
         $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'x.pdf', 'application/pdf'), email: 'intruder@example.com', expect: 404);
 
         foreach ([['GET', $base], ['GET', $base.'/'.$doc['id'].'/file'], ['DELETE', $base.'/'.$doc['id']]] as [$method, $url]) {
             $browser->request($method, $url, [], [], $this->bearer('intruder@example.com'));
-            self::assertSame(404, $browser->getResponse()->getStatusCode(), $method.' '.$url);
+            $this->assertSame(404, $browser->getResponse()->getStatusCode(), $method.' '.$url);
         }
 
         $browser->request('GET', $base, [], [], $this->bearer());
-        self::assertCount(1, json_decode((string) $browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR));
+        $this->assertCount(1, json_decode((string) $browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR));
     }
 
     public function testImportCommandIsIdempotentOnSourceRefAndFilename(): void
@@ -270,16 +270,18 @@ final class VehicleDocumentTest extends AppTestCase
         $tester = new CommandTester($application->find('app:documentation:import'));
         $args = ['vehicle-id' => (string) $vehicle->getId(), 'path' => [$path], '--kind' => 'manual', '--source-ref' => 'MR 361 — Transmission'];
 
-        self::assertSame(0, $tester->execute($args), $tester->getDisplay());
-        self::assertSame(0, $tester->execute($args), $tester->getDisplay());
+        $this->assertSame(0, $tester->execute($args), $tester->getDisplay());
+        $this->assertSame(0, $tester->execute($args), $tester->getDisplay());
 
         $dm = static::getContainer()->get(DocumentManager::class);
         $collection = $dm->getDocumentCollection(VehicleDocument::class);
         $filter = ['vehicle' => (string) $vehicle->getId()];
-        self::assertSame(1, $collection->countDocuments($filter));
-        self::assertCount(2, $collection->findOne($filter)['pages']);
+        $this->assertSame(1, $collection->countDocuments($filter));
+        $document = $collection->findOne($filter);
+        $this->assertIsArray($document);
+        $this->assertCount(2, $document['pages']);
 
         $tester->execute(['--source-ref' => 'MR 362'] + $args);
-        self::assertSame(2, $collection->countDocuments($filter));
+        $this->assertSame(2, $collection->countDocuments($filter));
     }
 }

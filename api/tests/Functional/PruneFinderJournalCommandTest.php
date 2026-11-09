@@ -27,17 +27,17 @@ final class PruneFinderJournalCommandTest extends AppTestCase
 
         $tester = $this->prune();
 
-        self::assertSame(0, $tester->getStatusCode());
-        self::assertSame(0, $turns->countDocuments(['_id' => ['$in' => ['finder-search', 'finder-agent']]]));
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertSame(0, $turns->countDocuments(['_id' => ['$in' => ['finder-search', 'finder-agent']]]));
         $garage = $turns->findOne(['_id' => 'garage'], ['typeMap' => ['root' => 'array', 'document' => 'array', 'array' => 'array']]);
-        self::assertIsArray($garage);
-        self::assertSame('vidange faite', $garage['instruction']);
+        $this->assertIsArray($garage);
+        $this->assertSame('vidange faite', $garage['instruction']);
         foreach (self::FINDER_FIELDS as $field) {
-            self::assertArrayNotHasKey($field, $garage);
+            $this->assertArrayNotHasKey($field, $garage);
         }
         $indexes = array_map(static fn ($index): string => $index->getName(), iterator_to_array($turns->listIndexes()));
-        self::assertNotContains('idx_turn_owner_search', $indexes);
-        self::assertNotContains('idx_turn_owner_surface_started', $indexes);
+        $this->assertNotContains('idx_turn_owner_search', $indexes);
+        $this->assertNotContains('idx_turn_owner_surface_started', $indexes);
     }
 
     public function testASecondRunChangesNothing(): void
@@ -47,8 +47,8 @@ final class PruneFinderJournalCommandTest extends AppTestCase
 
         $tester = $this->prune();
 
-        self::assertSame(0, $tester->getStatusCode());
-        self::assertStringContainsString('0 finder row(s) deleted, 0 garage row(s) cleaned', $tester->getDisplay());
+        $this->assertSame(0, $tester->getStatusCode());
+        $this->assertStringContainsString('0 finder row(s) deleted, 0 garage row(s) cleaned', $tester->getDisplay());
     }
 
     private function turns(): Collection

@@ -31,7 +31,7 @@ final class McpDocumentationTest extends AppTestCase
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $path = tempnam(sys_get_temp_dir(), 'mpa_doc_');
         file_put_contents($path, $pdf ?? PdfFixture::renaultManual());
@@ -48,10 +48,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
-        $names = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $names = array_column($this->listTools($client, $sessionId), 'name');
 
-        self::assertContains('list_documents', $names);
-        self::assertContains('search_documentation', $names);
+        $this->assertContains('list_documents', $names);
+        $this->assertContains('search_documentation', $names);
     }
 
     public function testSearchReturnsThePageWithItsRenaultLabelAndIsAccentInsensitive(): void
@@ -63,17 +63,17 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'CAPACITE huile'],
         ], 3));
 
-        self::assertSame('ok', $result['status']);
-        self::assertCount(1, $result['hits']);
+        $this->assertSame('ok', $result['status']);
+        $this->assertCount(1, $result['hits']);
         $hit = $result['hits'][0];
-        self::assertSame('MR 361', $hit['title']);
-        self::assertSame('manual', $hit['kind']);
-        self::assertSame('MR 361 — Transmission', $hit['sourceRef']);
-        self::assertSame(2, $hit['page']);
-        self::assertSame('21A-6', $hit['pageLabel']);
-        self::assertStringContainsString('Capacité en huile', $hit['snippet']);
-        self::assertStringEndsWith('/file', $hit['url']);
-        self::assertArrayHasKey('documentId', $hit);
+        $this->assertSame('MR 361', $hit['title']);
+        $this->assertSame('manual', $hit['kind']);
+        $this->assertSame('MR 361 — Transmission', $hit['sourceRef']);
+        $this->assertSame(2, $hit['page']);
+        $this->assertSame('21A-6', $hit['pageLabel']);
+        $this->assertStringContainsString('Capacité en huile', $hit['snippet']);
+        $this->assertStringEndsWith('/file', $hit['url']);
+        $this->assertArrayHasKey('documentId', $hit);
     }
 
     public function testSearchLinksEachHitDocumentAsAResource(): void
@@ -87,13 +87,13 @@ final class McpDocumentationTest extends AppTestCase
         $documentId = $this->outcome($response)['hits'][0]['documentId'];
 
         $links = array_values(array_filter($response['result']['content'], static fn (array $c): bool => 'resource_link' === $c['type']));
-        self::assertSame('text', $response['result']['content'][0]['type']);
-        self::assertCount(1, $links, 'one link per document hit, not per page');
-        self::assertMatchesRegularExpression('#^https?://[^/]+'.preg_quote($iri, '#').'/documents/'.$documentId.'/file$#', $links[0]['uri']);
-        self::assertSame('mr361.pdf', $links[0]['name']);
-        self::assertSame('MR 361', $links[0]['title']);
-        self::assertSame('application/pdf', $links[0]['mimeType']);
-        self::assertGreaterThan(0, $links[0]['size']);
+        $this->assertSame('text', $response['result']['content'][0]['type']);
+        $this->assertCount(1, $links, 'one link per document hit, not per page');
+        $this->assertMatchesRegularExpression('#^https?://[^/]+'.preg_quote($iri, '#').'/documents/'.$documentId.'/file$#', $links[0]['uri']);
+        $this->assertSame('mr361.pdf', $links[0]['name']);
+        $this->assertSame('MR 361', $links[0]['title']);
+        $this->assertSame('application/pdf', $links[0]['mimeType']);
+        $this->assertGreaterThan(0, $links[0]['size']);
     }
 
     public function testNoMatchCarriesNoResourceLink(): void
@@ -105,7 +105,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'zzzzqqq'],
         ], 3);
 
-        self::assertSame(['text'], array_column($response['result']['content'], 'type'));
+        $this->assertSame(['text'], array_column($response['result']['content'], 'type'));
     }
 
     public function testSearchRanksByTermsMatched(): void
@@ -117,8 +117,8 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'couple vidange boite'],
         ], 3));
 
-        self::assertSame(1, $result['hits'][0]['page']);
-        self::assertSame('21A-5', $result['hits'][0]['pageLabel']);
+        $this->assertSame(1, $result['hits'][0]['page']);
+        $this->assertSame('21A-5', $result['hits'][0]['pageLabel']);
     }
 
     public function testPhraseAndRareTermsOutrankStopwordNoise(): void
@@ -130,9 +130,9 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'vis de volant couple'],
         ], 3));
 
-        self::assertSame('ok', $result['status']);
-        self::assertSame(3, $result['hits'][0]['page']);
-        self::assertStringContainsString('Vis de volant', $result['hits'][0]['snippet']);
+        $this->assertSame('ok', $result['status']);
+        $this->assertSame(3, $result['hits'][0]['page']);
+        $this->assertStringContainsString('Vis de volant', $result['hits'][0]['snippet']);
     }
 
     public function testStopwordOnlyQueryIsNoMatch(): void
@@ -144,7 +144,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'de la'],
         ], 3));
 
-        self::assertSame('no_match', $result['status']);
+        $this->assertSame('no_match', $result['status']);
     }
 
     public function testMissIsNoMatchNotAnError(): void
@@ -156,13 +156,13 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'turbocompresseur'],
         ], 3));
 
-        self::assertSame('no_match', $result['status']);
+        $this->assertSame('no_match', $result['status']);
 
         $kind = $this->outcome($this->call($client, $sessionId, 'tools/call', [
             'name' => 'search_documentation',
             'arguments' => ['vehicle' => $iri, 'query' => 'huile', 'kind' => 'quote'],
         ], 4));
-        self::assertSame('no_match', $kind['status']);
+        $this->assertSame('no_match', $kind['status']);
     }
 
     public function testSearchPublishesADocumentScanFrameWithTheRankedHits(): void
@@ -175,13 +175,13 @@ final class McpDocumentationTest extends AppTestCase
         ], 3));
 
         $frame = $this->lastPilotFrame();
-        self::assertNotNull($frame);
-        self::assertSame('documentScan', $frame['type']);
-        self::assertSame($iri, $frame['vehicle']);
-        self::assertSame('huile', $frame['query']);
-        self::assertSame(array_map(static fn (array $h): array => [$h['documentId'], $h['page']], $result['hits']), array_map(static fn (array $h): array => [$h['documentId'], $h['page']], $frame['hits']));
+        $this->assertNotNull($frame);
+        $this->assertSame('documentScan', $frame['type']);
+        $this->assertSame($iri, $frame['vehicle']);
+        $this->assertSame('huile', $frame['query']);
+        $this->assertSame(array_map(static fn (array $h): array => [$h['documentId'], $h['page']], $result['hits']), array_map(static fn (array $h): array => [$h['documentId'], $h['page']], $frame['hits']));
         $documentId = $result['hits'][0]['documentId'];
-        self::assertSame([
+        $this->assertSame([
             'documentId' => $documentId,
             'page' => $result['hits'][0]['page'],
             'pageLabel' => $result['hits'][0]['pageLabel'],
@@ -202,7 +202,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'turbocompresseur'],
         ], 3);
 
-        self::assertSame(['type' => 'documentScan', 'vehicle' => $iri, 'query' => 'turbocompresseur', 'hits' => []], $this->lastPilotFrame());
+        $this->assertSame(['type' => 'documentScan', 'vehicle' => $iri, 'query' => 'turbocompresseur', 'hits' => []], $this->lastPilotFrame());
     }
 
     public function testTheInAppAgentScanGoesToTheTurnSession(): void
@@ -214,8 +214,8 @@ final class McpDocumentationTest extends AppTestCase
 
         $hub = static::getContainer()->get(RecordingHub::class);
         $update = $hub->updates[array_key_last($hub->updates)];
-        self::assertSame(['https://localhost/agent/sessions/abc'], $update->getTopics());
-        self::assertSame('documentScan', json_decode($update->getData(), true)['type']);
+        $this->assertSame(['https://localhost/agent/sessions/abc'], $update->getTopics());
+        $this->assertSame('documentScan', json_decode($update->getData(), true)['type']);
     }
 
     public function testAnInvalidSearchPublishesNothing(): void
@@ -227,7 +227,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => '   '],
         ], 3);
 
-        self::assertNull($this->lastPilotFrame());
+        $this->assertNull($this->lastPilotFrame());
     }
 
     public function testListDocuments(): void
@@ -239,10 +239,10 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri],
         ], 3));
 
-        self::assertSame('ok', $result['status']);
-        self::assertCount(1, $result['documents']);
-        self::assertSame(2, $result['documents'][0]['pageCount']);
-        self::assertSame('MR 361 — Transmission', $result['documents'][0]['sourceRef']);
+        $this->assertSame('ok', $result['status']);
+        $this->assertCount(1, $result['documents']);
+        $this->assertSame(2, $result['documents'][0]['pageCount']);
+        $this->assertSame('MR 361 — Transmission', $result['documents'][0]['sourceRef']);
     }
 
     public function testUnknownVehicleIsNotFound(): void
@@ -254,7 +254,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => '/garage/vehicles/01JZZZZZZZZZZZZZZZZZZZZZZZ'],
         ], 3));
 
-        self::assertSame('not_found', $result['error']);
+        $this->assertSame('not_found', $result['error']);
     }
 
     /**
@@ -278,10 +278,10 @@ final class McpDocumentationTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
-        $byName = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], null, 'name');
+        $byName = array_column($this->listTools($client, $sessionId), null, 'name');
 
-        self::assertArrayHasKey('read_documentation_page', $byName);
-        self::assertEqualsCanonicalizing(['vehicle', 'document', 'page'], array_keys($byName['read_documentation_page']['inputSchema']['properties']));
+        $this->assertArrayHasKey('read_documentation_page', $byName);
+        $this->assertEqualsCanonicalizing(['vehicle', 'document', 'page'], array_keys($byName['read_documentation_page']['inputSchema']['properties']));
     }
 
     public function testReadDocumentationPageReturnsTheFullPageText(): void
@@ -296,16 +296,16 @@ final class McpDocumentationTest extends AppTestCase
 
         $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => 2]);
 
-        self::assertSame('ok', $result['status']);
-        self::assertSame($documentId, $result['documentId']);
-        self::assertSame('MR 361', $result['title']);
-        self::assertSame('manual', $result['kind']);
-        self::assertSame('MR 361 — Transmission', $result['sourceRef']);
-        self::assertSame(2, $result['page']);
-        self::assertSame('21A-9', $result['pageLabel']);
-        self::assertSame(2, $result['pageCount']);
-        self::assertGreaterThan(300, mb_strpos($result['text'], 'Couple de serrage vis demarreur 44 Nm'));
-        self::assertStringEndsWith('/documents/'.$documentId.'/file', $result['url']);
+        $this->assertSame('ok', $result['status']);
+        $this->assertSame($documentId, $result['documentId']);
+        $this->assertSame('MR 361', $result['title']);
+        $this->assertSame('manual', $result['kind']);
+        $this->assertSame('MR 361 — Transmission', $result['sourceRef']);
+        $this->assertSame(2, $result['page']);
+        $this->assertSame('21A-9', $result['pageLabel']);
+        $this->assertSame(2, $result['pageCount']);
+        $this->assertGreaterThan(300, mb_strpos($result['text'], 'Couple de serrage vis demarreur 44 Nm'));
+        $this->assertStringEndsWith('/documents/'.$documentId.'/file', $result['url']);
     }
 
     public function testReadDocumentationPageRejectsAPageOutOfRange(): void
@@ -315,8 +315,8 @@ final class McpDocumentationTest extends AppTestCase
 
         foreach ([0, 3] as $page) {
             $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId, 'page' => $page]);
-            self::assertSame('invalid_input', $result['error']);
-            self::assertStringContainsString('between 1 and 2', $result['message']);
+            $this->assertSame('invalid_input', $result['error']);
+            $this->assertStringContainsString('between 1 and 2', $result['message']);
         }
     }
 
@@ -325,9 +325,9 @@ final class McpDocumentationTest extends AppTestCase
         [$client, $sessionId, $iri] = $this->seedManual();
         $documentId = $this->documentId($client, $sessionId, $iri);
 
-        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId])['error']);
-        self::assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'page' => 1])['error']);
-        self::assertSame('invalid_input', $this->read($client, $sessionId, ['document' => $documentId, 'page' => 1])['error']);
+        $this->assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => $documentId])['error']);
+        $this->assertSame('invalid_input', $this->read($client, $sessionId, ['vehicle' => $iri, 'page' => 1])['error']);
+        $this->assertSame('invalid_input', $this->read($client, $sessionId, ['document' => $documentId, 'page' => 1])['error']);
     }
 
     public function testReadDocumentationPageUnknownDocumentIsNotFound(): void
@@ -336,7 +336,7 @@ final class McpDocumentationTest extends AppTestCase
 
         $result = $this->read($client, $sessionId, ['vehicle' => $iri, 'document' => '01JZZZZZZZZZZZZZZZZZZZZZZZ', 'page' => 1]);
 
-        self::assertSame('not_found', $result['error']);
+        $this->assertSame('not_found', $result['error']);
     }
 
     public function testReadDocumentationPageOfAnotherOwnersVehicleIsNotFound(): void
@@ -349,9 +349,9 @@ final class McpDocumentationTest extends AppTestCase
         $dm->persist($vehicle);
         $dm->flush();
 
-        $result = $this->read($client, $sessionId, ['vehicle' => '/garage/vehicles/'.$vehicle->getId(), 'document' => $documentId, 'page' => 1]);
+        $result = $this->read($client, $sessionId, ['vehicle' => '/garage/vehicles/'.(string) $vehicle->getId(), 'document' => $documentId, 'page' => 1]);
 
-        self::assertSame('not_found', $result['error']);
+        $this->assertSame('not_found', $result['error']);
     }
 
     public function testSearchingAnotherOwnersVehicleIsNotFound(): void
@@ -364,7 +364,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri, 'query' => 'huile'],
         ], 3));
 
-        self::assertSame('not_found', $result['error'] ?? null);
+        $this->assertSame('not_found', $result['error'] ?? null);
     }
 
     public function testListingAnotherOwnersDocumentsIsNotFound(): void
@@ -377,7 +377,7 @@ final class McpDocumentationTest extends AppTestCase
             'arguments' => ['vehicle' => $iri],
         ], 3));
 
-        self::assertSame('not_found', $result['error'] ?? null);
+        $this->assertSame('not_found', $result['error'] ?? null);
     }
 
     private function handOver(string $iri, string $owner): void

@@ -11,6 +11,9 @@ use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
 use App\Speech\SpeechVoice;
 use App\Speech\SpokenAudio;
+use App\Tests\Support\CountingSpeechClient;
+use App\Tests\Support\StreamingSpeechClient;
+use App\Tests\Support\VoicesCountingSpeechClient;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
 
@@ -41,7 +44,7 @@ final class CachingSpeechClientTest extends TestCase
 
     public function testASecondIdenticalRequestMakesZeroCallsToTheBackend(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
         $cache = $this->client($inner);
 
         $first = self::body($cache->stream('Vidange enregistrée.', Locale::Fr));
@@ -58,7 +61,7 @@ final class CachingSpeechClientTest extends TestCase
      */
     public function testTheSameTextInADifferentLocaleIsAMiss(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
         $cache = $this->client($inner);
 
         self::body($cache->stream('Oil change logged.', Locale::Fr));
@@ -73,7 +76,7 @@ final class CachingSpeechClientTest extends TestCase
      */
     public function testTheContentTypeSurvivesARoundTripThroughTheCache(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('ID3fake', 'audio/mpeg'));
+        $inner = new CountingSpeechClient(new SpokenAudio('ID3fake', 'audio/mpeg'));
         $cache = $this->client($inner);
 
         self::body($cache->stream('Vidange enregistrée.', Locale::Fr));
@@ -90,7 +93,7 @@ final class CachingSpeechClientTest extends TestCase
      */
     public function testADifferentVoiceForTheSameTextAndLocaleIsAMiss(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
         $a = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'voice-a', $this->cacheDir, new NullLogger());
         $b = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'voice-b', $this->cacheDir, new NullLogger());
 
@@ -102,7 +105,7 @@ final class CachingSpeechClientTest extends TestCase
 
     public function testADifferentSpeedForTheSameTextAndVoiceIsAMiss(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
         $natural = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', 'voice-a', $this->cacheDir, new NullLogger(), speed: 1.0);
         $faster = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', 'voice-a', $this->cacheDir, new NullLogger(), speed: 1.05);
 
@@ -120,7 +123,7 @@ final class CachingSpeechClientTest extends TestCase
      */
     public function testAMissPassesTheChunksThroughAndCachesTheCompletedBody(): void
     {
-        $inner = $this->streamingClient(['RIFF-placeholder', 'pcm-1', 'pcm-2'], 'RIFF-stamped pcm-1pcm-2');
+        $inner = new StreamingSpeechClient(['RIFF-placeholder', 'pcm-1', 'pcm-2'], 'RIFF-stamped pcm-1pcm-2');
         $cache = $this->client($inner);
 
         $first = iterator_to_array($cache->stream('Vidange enregistrée.', Locale::Fr)->chunks(), false);
@@ -134,12 +137,13 @@ final class CachingSpeechClientTest extends TestCase
     /** A backend that dies mid-line must not leave a half-line in the cache answering forever. */
     public function testABackendFailingMidStreamCachesNothing(): void
     {
-        $inner = $this->streamingClient(['RIFF-placeholder', 'pcm-1'], 'RIFF-stamped pcm-1', diesFirst: true);
+        $inner = new StreamingSpeechClient(['RIFF-placeholder', 'pcm-1'], 'RIFF-stamped pcm-1', diesFirst: true);
         $cache = $this->client($inner);
 
         try {
             iterator_to_array($cache->stream('Vidange enregistrée.', Locale::Fr)->chunks(), false);
             $this->fail('The failure must reach the caller.');
+            // @mago-expect lint:no-empty-catch-clause the failure is expected; the test asserts the backend is called again
         } catch (SpeechUnavailable) {
         }
 
@@ -154,7 +158,7 @@ final class CachingSpeechClientTest extends TestCase
      */
     public function testARequestedVoiceIsADifferentCacheEntryFromTheConfiguredDefault(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
         $cache = $this->client($inner); // configured default voice is 'test-voice-id'
 
         self::body($cache->stream('Vidange enregistrée.', Locale::Fr));
@@ -165,7 +169,7 @@ final class CachingSpeechClientTest extends TestCase
 
     public function testTheSameRequestedVoiceIsACacheHit(): void
     {
-        $inner = $this->countingClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
         $cache = $this->client($inner);
 
         self::body($cache->stream('Vidange enregistrée.', Locale::Fr, 'other-voice-id'));
@@ -176,7 +180,7 @@ final class CachingSpeechClientTest extends TestCase
 
     public function testVoicesDelegatesToTheInnerClientAndCachesTheResult(): void
     {
-        $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
+        $inner = new VoicesCountingSpeechClient([new SpeechVoice('v1', 'Claire')]);
         $cache = $this->client($inner);
 
         $first = $cache->voices(Locale::Fr);
@@ -189,7 +193,7 @@ final class CachingSpeechClientTest extends TestCase
 
     public function testVoicesAreCachedPerLocale(): void
     {
-        $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
+        $inner = new VoicesCountingSpeechClient([new SpeechVoice('v1', 'Claire')]);
         $cache = $this->client($inner);
 
         $cache->voices(Locale::Fr);
@@ -205,7 +209,7 @@ final class CachingSpeechClientTest extends TestCase
      */
     public function testVoicesAreCachedPerBackend(): void
     {
-        $inner = $this->voicesCountingClient([new SpeechVoice('v1', 'Claire')]);
+        $inner = new VoicesCountingSpeechClient([new SpeechVoice('v1', 'Claire')]);
         $elevenlabs = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'test-voice-id', $this->cacheDir, new NullLogger());
         $other = new CachingSpeechClient($inner, 'other-backend', 'other-model', '', $this->cacheDir, new NullLogger());
 
@@ -213,35 +217,6 @@ final class CachingSpeechClientTest extends TestCase
         $other->voices(Locale::Fr);
 
         $this->assertSame(2, $inner->voicesCalls, 'Switching backends must not serve the other backend\'s cached voice list.');
-    }
-
-    /**
-     * @param list<SpeechVoice> $voices
-     *
-     * @return SpeechClient&object{voicesCalls: int}
-     */
-    private function voicesCountingClient(array $voices): SpeechClient
-    {
-        return new class($voices) implements SpeechClient {
-            public int $voicesCalls = 0;
-
-            /** @param list<SpeechVoice> $voices */
-            public function __construct(private readonly array $voices)
-            {
-            }
-
-            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
-            {
-                throw new \LogicException('Not exercised by the voices() tests.');
-            }
-
-            public function voices(Locale $locale): array
-            {
-                ++$this->voicesCalls;
-
-                return $this->voices;
-            }
-        };
     }
 
     private function client(SpeechClient $inner): CachingSpeechClient
@@ -252,68 +227,5 @@ final class CachingSpeechClientTest extends TestCase
     private static function body(SpeechStream $stream): string
     {
         return implode('', iterator_to_array($stream->chunks(), false));
-    }
-
-    /** @return SpeechClient&object{calls: int} */
-    private function countingClient(SpokenAudio $audio): SpeechClient
-    {
-        return new class($audio) implements SpeechClient {
-            public int $calls = 0;
-
-            public function __construct(private readonly SpokenAudio $audio)
-            {
-            }
-
-            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
-            {
-                ++$this->calls;
-
-                return SpeechStream::whole($this->audio);
-            }
-
-            public function voices(Locale $locale): array
-            {
-                return [];
-            }
-        };
-    }
-
-    /**
-     * @param list<string> $chunks    what goes over the wire, in order
-     * @param string       $completed the body the backend returns once done
-     * @param bool         $diesFirst the FIRST call dies after its chunks instead of completing
-     *
-     * @return SpeechClient&object{calls: int}
-     */
-    private function streamingClient(array $chunks, string $completed, bool $diesFirst = false): SpeechClient
-    {
-        return new class($chunks, $completed, $diesFirst) implements SpeechClient {
-            public int $calls = 0;
-
-            /** @param list<string> $chunks */
-            public function __construct(private readonly array $chunks, private readonly string $completed, private readonly bool $diesFirst)
-            {
-            }
-
-            public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
-            {
-                $call = ++$this->calls;
-
-                return new SpeechStream('audio/wav', (function () use ($call): \Generator {
-                    yield from $this->chunks;
-
-                    if (1 === $call && $this->diesFirst) {
-                        throw new SpeechUnavailable('pocket-tts dropped the stream.');
-                    }
-
-                    return $this->completed;
-                })());
-            }
-
-            public function voices(Locale $locale): array
-            {
-                return [];
-            }
-        };
     }
 }

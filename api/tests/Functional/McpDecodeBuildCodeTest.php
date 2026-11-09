@@ -92,9 +92,8 @@ final class McpDecodeBuildCodeTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $list = $this->call($client, $sessionId, 'tools/list', [], 2);
         $tool = null;
-        foreach ($list['result']['tools'] as $candidate) {
+        foreach ($this->listTools($client, $sessionId) as $candidate) {
             if ('decode_build_code' === $candidate['name']) {
                 $tool = $candidate;
             }

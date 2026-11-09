@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Agent\Ui\DashboardChannel;
-use App\I18n\Locale;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;

@@ -56,7 +56,7 @@ final class PlannedTaskPartOwnerScopingTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(404);
-        $this->assertSame(1, static::getContainer()->get(DocumentManager::class)->find(PlannedMaintenance::class, $taskId)->getParts()[0]['qty']);
+        $this->assertSame(1, static::getContainer()->get(DocumentManager::class)->find(PlannedMaintenance::class, $taskId)->getParts()[0]['qty'] ?? null);
     }
 
     public function testForeignTaskPartCannotBeDeleted(): void

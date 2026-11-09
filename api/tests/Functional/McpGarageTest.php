@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Agent\SelectedVehicleContext;
-use App\Entity\Vehicle;
-use App\Garage\VehicleType;
 use App\Mcp\Agent\McpToolbox;
 use Symfony\AI\Platform\Result\ToolCall;
 
@@ -19,7 +17,7 @@ final class McpGarageTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $tools = array_column($this->call($client, $sessionId, 'tools/list', [], 2)['result']['tools'], 'name');
+        $tools = array_column($this->listTools($client, $sessionId), 'name');
 
         $this->assertContains('get_vehicle_facts', $tools);
         $this->assertContains('list_vehicles', $tools);

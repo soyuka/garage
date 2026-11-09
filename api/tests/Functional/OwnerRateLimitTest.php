@@ -55,7 +55,7 @@ final class OwnerRateLimitTest extends AppTestCase
         $vehicle = $this->seedVehicle();
         $this->exhaust('limiter.upload', self::TEST_OWNER);
 
-        $browser->request('POST', '/garage/vehicles/'.$vehicle->getId().'/documents', ['kind' => 'manual'], ['file' => $this->pdf()], $this->bearer());
+        $browser->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', ['kind' => 'manual'], ['file' => $this->pdf()], $this->bearer());
 
         $this->assertSame(429, $browser->getResponse()->getStatusCode());
         $this->assertGreaterThan(0, (int) $browser->getResponse()->headers->get('Retry-After'));
@@ -72,7 +72,7 @@ final class OwnerRateLimitTest extends AppTestCase
         $dm->flush();
         $this->exhaust('limiter.upload', self::TEST_OWNER);
 
-        $browser->request('POST', '/garage/maintenance-records/'.$record->getId().'/attachments', [], ['file' => $this->pdf()], $this->bearer());
+        $browser->request('POST', '/garage/maintenance-records/'.(string) $record->getId().'/attachments', [], ['file' => $this->pdf()], $this->bearer());
 
         $this->assertSame(429, $browser->getResponse()->getStatusCode());
         $this->assertGreaterThan(0, (int) $browser->getResponse()->headers->get('Retry-After'));
@@ -102,7 +102,9 @@ final class OwnerRateLimitTest extends AppTestCase
     {
         $factory = static::getContainer()->get($limiter);
         $this->assertInstanceOf(RateLimiterFactoryInterface::class, $factory);
-        while ($factory->create($key)->consume()->isAccepted()) {
+        $accepted = true;
+        while ($accepted) {
+            $accepted = $factory->create($key)->consume()->isAccepted();
         }
     }
 

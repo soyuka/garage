@@ -32,26 +32,31 @@ final class HubTokenConfigTest extends TestCase
         $container->setParameter('env(MERCURE_JWT_ISSUER)', self::ISSUER);
 
         $config = Yaml::parseFile(\dirname(__DIR__, 3).'/config/packages/mercure.yaml');
+        $this->assertIsArray($config['mercure']);
         (new MercureExtension())->load([$config['mercure']], $container);
         $container->getDefinition('mercure.hub.default.jwt.provider')->setPublic(true);
         $container->compile(true);
 
         $provider = self::service($container, 'mercure.hub.default.jwt.provider');
-        self::assertInstanceOf(TokenProviderInterface::class, $provider);
+        $this->assertInstanceOf(TokenProviderInterface::class, $provider);
         [$header, $payload] = array_map(
-            static fn (string $part): array => json_decode(base64_decode(strtr($part, '-_', '+/')), true, flags: \JSON_THROW_ON_ERROR),
+            static fn (string $part): array => json_decode(base64_decode(strtr($part, '-_', '+/'), true), true, flags: \JSON_THROW_ON_ERROR),
             \array_slice(explode('.', $provider->getJwt()), 0, 2),
         );
 
-        self::assertSame('at+jwt', $header['typ']);
-        self::assertSame(self::ISSUER, $payload['iss']);
-        self::assertEqualsCanonicalizing([self::URL, self::PUBLIC_URL], (array) $payload['aud']);
-        self::assertSame(['publish'], $payload['authorization_details'][0]['actions']);
-        self::assertSame([['match' => '*']], $payload['authorization_details'][0]['topics']);
+        $this->assertSame('at+jwt', $header['typ']);
+        $this->assertSame(self::ISSUER, $payload['iss']);
+        $audience = $payload['aud'];
+        $this->assertEqualsCanonicalizing([self::URL, self::PUBLIC_URL], \is_array($audience) ? $audience : [$audience]);
+        $this->assertSame(['publish'], $payload['authorization_details'][0]['actions']);
+        $this->assertSame([['match' => '*']], $payload['authorization_details'][0]['topics']);
     }
 
     private static function service(ContainerBuilder $container, string $id): object
     {
-        return $container->get($id);
+        $service = $container->get($id);
+        self::assertNotNull($service);
+
+        return $service;
     }
 }

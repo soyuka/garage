@@ -49,7 +49,7 @@ final class GarageVehicleCrudTest extends AppTestCase
     public function testPatchEditsEveryCardField(): void
     {
         $client = static::createClient();
-        $iri = '/garage/vehicles/'.$this->seedVehicle()->getId();
+        $iri = '/garage/vehicles/'.(string) $this->seedVehicle()->getId();
 
         $client->request('PATCH', $iri, [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/merge-patch+json', 'Accept' => 'application/ld+json'],
@@ -84,7 +84,7 @@ final class GarageVehicleCrudTest extends AppTestCase
     {
         $client = static::createClient();
         $vehicle = $this->seedVehicle();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $client->request('DELETE', $iri, ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
         $this->assertResponseStatusCodeSame(204);
@@ -108,7 +108,7 @@ final class GarageVehicleCrudTest extends AppTestCase
     {
         $client = static::createClient();
         $vehicle = $this->seedVehicle();
-        $client->request('DELETE', '/garage/vehicles/'.$vehicle->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
+        $client->request('DELETE', '/garage/vehicles/'.(string) $vehicle->getId(), ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']]);
 
         // A new vehicle of the same identity is not shadowed by the tombstoned one.
         $fresh = $this->seedVehicle();

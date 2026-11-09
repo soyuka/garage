@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Test\Client;
 use App\Mcp\Agent\McpToolbox;
 use Symfony\AI\Platform\Result\ToolCall;
 
@@ -14,7 +15,7 @@ use Symfony\AI\Platform\Result\ToolCall;
  */
 final class GarageWriteAuthTest extends AppTestCase
 {
-    private function seedVehicleIri(object $client): string
+    private function seedVehicleIri(Client $client): string
     {
         static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('seed', 'plan_maintenance', [
             'make' => 'MAZDA',

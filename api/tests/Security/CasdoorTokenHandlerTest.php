@@ -58,34 +58,35 @@ final class CasdoorTokenHandlerTest extends TestCase
 
         try {
             $this->handler(logger: $logger)->getUserBadgeFrom('not.a.jwt');
-            self::fail('an invalid token must be refused');
+            $this->fail('an invalid token must be refused');
+            // @mago-expect lint:no-empty-catch-clause the refusal is expected; the assertions below inspect the logger and the JWKS fetches
         } catch (BadCredentialsException) {
         }
 
-        self::assertNotEmpty($logger->records);
-        self::assertSame([], array_filter($logger->records, static fn (array $r): bool => \in_array($r['level'], ['error', 'critical', 'alert', 'emergency'], true)));
+        $this->assertNotEmpty($logger->records);
+        $this->assertSame([], array_filter($logger->records, static fn (array $r): bool => \in_array($r['level'], ['error', 'critical', 'alert', 'emergency'], true)));
     }
 
     public function testASmallClockSkewIsTolerated(): void
     {
         $token = $this->mintToken(['sub' => 'built-in/alice', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1520, 'nbf' => 1520, 'exp' => 2000]);
 
-        self::assertSame('built-in/alice', $this->handler(now: 1500)->getUserBadgeFrom($token)->getUserIdentifier());
+        $this->assertSame('built-in/alice', $this->handler(now: 1500)->getUserBadgeFrom($token)->getUserIdentifier());
     }
 
     public function testARotatedKeyIsPickedUpWithoutWaitingForTheCache(): void
     {
         $handler = $this->handler();
         $handler->getUserBadgeFrom($this->mintToken(['sub' => 'a', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000]));
-        self::assertSame(1, $this->jwksFetches);
+        $this->assertSame(1, $this->jwksFetches);
 
         $rotated = JWKFactory::createRSAKey(2048, ['alg' => 'RS256', 'use' => 'sig', 'kid' => 'cert-rotated']);
         $this->served = [$rotated];
 
         $badge = $handler->getUserBadgeFrom($this->mintToken(['sub' => 'b', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000], $rotated));
 
-        self::assertSame('b', $badge->getUserIdentifier());
-        self::assertSame(2, $this->jwksFetches);
+        $this->assertSame('b', $badge->getUserIdentifier());
+        $this->assertSame(2, $this->jwksFetches);
     }
 
     public function testAnUnknownKidRefetchesOnlyOnce(): void
@@ -96,11 +97,12 @@ final class CasdoorTokenHandlerTest extends TestCase
 
         try {
             $handler->getUserBadgeFrom($this->mintToken(['sub' => 'b', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000], $stranger));
-            self::fail('a key the issuer does not publish must be refused');
+            $this->fail('a key the issuer does not publish must be refused');
+            // @mago-expect lint:no-empty-catch-clause the refusal is expected; the assertions below inspect the logger and the JWKS fetches
         } catch (BadCredentialsException) {
         }
 
-        self::assertSame(2, $this->jwksFetches);
+        $this->assertSame(2, $this->jwksFetches);
     }
 
     public function testValidAccessTokenIsAccepted(): void
@@ -116,9 +118,9 @@ final class CasdoorTokenHandlerTest extends TestCase
 
         $badge = $this->handler()->getUserBadgeFrom($token);
 
-        self::assertSame('built-in/alice', $badge->getUserIdentifier());
-        self::assertSame('alice@example.com', $badge->getAttributes()['email']);
-        self::assertSame(['https://mcp.example.test/mcp'], $badge->getAttributes()['aud']);
+        $this->assertSame('built-in/alice', $badge->getUserIdentifier());
+        $this->assertSame('alice@example.com', $badge->getAttributes()['email']);
+        $this->assertSame(['https://mcp.example.test/mcp'], $badge->getAttributes()['aud']);
     }
 
     #[DataProvider('notAnAccessToken')]
@@ -207,7 +209,7 @@ final class CasdoorTokenHandlerTest extends TestCase
     {
         $badge = $this->handler(claim: 'email')->getUserBadgeFrom($this->emailToken(['email_verified' => true]));
 
-        self::assertSame('alice@example.com', $badge->getUserIdentifier());
+        $this->assertSame('alice@example.com', $badge->getUserIdentifier());
     }
 
     /**
@@ -235,14 +237,14 @@ final class CasdoorTokenHandlerTest extends TestCase
         $badge = $this->handler(claim: 'email', requireVerifiedEmail: false)
             ->getUserBadgeFrom($this->emailToken(['email_verified' => false]));
 
-        self::assertSame('alice@example.com', $badge->getUserIdentifier());
+        $this->assertSame('alice@example.com', $badge->getUserIdentifier());
     }
 
     public function testSubOwnerClaimIgnoresEmailVerification(): void
     {
         $badge = $this->handler()->getUserBadgeFrom($this->emailToken(['email_verified' => false]));
 
-        self::assertSame('built-in/alice', $badge->getUserIdentifier());
+        $this->assertSame('built-in/alice', $badge->getUserIdentifier());
     }
 
     /**

@@ -11,6 +11,8 @@ use Symfony\Component\Mercure\Update;
  * Reads back the render intents an MCP tool published on the owner's PILOT topic — the assertion any
  * test of a dashboard-driving tool needs. Note the kernel reboots between requests by default, which
  * drops every frame but the last call's: a test spanning several tool calls must `disableReboot()`.
+ *
+ * @require-extends AppTestCase
  */
 trait PilotFrameTrait
 {
@@ -21,10 +23,13 @@ trait PilotFrameTrait
     {
         $hub = static::getContainer()->get(RecordingHub::class);
 
-        return array_values(array_map(
+        /** @var list<array<string, mixed>> $frames */
+        $frames = array_values(array_map(
             static fn (Update $u): array => json_decode($u->getData(), true),
             array_filter($hub->updates, static fn (Update $u): bool => str_contains($u->getTopics()[0] ?? '', '/agent/pilots/')),
         ));
+
+        return $frames;
     }
 
     /**

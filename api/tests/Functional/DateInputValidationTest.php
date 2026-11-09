@@ -38,7 +38,7 @@ final class DateInputValidationTest extends AppTestCase
 
         $this->assertSame('invalid_input', $outcome['error'] ?? null, json_encode($outcome, \JSON_THROW_ON_ERROR));
         $this->assertStringContainsString('Fix these arguments and call again.', $outcome['message']);
-        $this->assertSame(0, static::getContainer()->get(DocumentManager::class)->getRepository(Vehicle::class)->createQueryBuilder()->count()->getQuery()->execute());
+        $this->assertSame(0, static::getContainer()->get(DocumentManager::class)->createQueryBuilder(Vehicle::class)->count()->getQuery()->execute());
     }
 
     public function testAValidDateStillPlans(): void
@@ -122,6 +122,6 @@ final class DateInputValidationTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        return '/garage/vehicles/'.$vehicle->getId();
+        return '/garage/vehicles/'.(string) $vehicle->getId();
     }
 }

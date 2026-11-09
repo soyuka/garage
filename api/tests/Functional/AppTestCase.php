@@ -8,6 +8,7 @@ use ApiPlatform\Test\ApiTestCase;
 use ApiPlatform\Test\Client as ApiClient;
 use App\Tests\Mock\BonnerefHttpClient;
 use MongoDB\Client;
+use Symfony\Component\HttpFoundation\Response;
 
 abstract class AppTestCase extends ApiTestCase
 {
@@ -123,6 +124,29 @@ abstract class AppTestCase extends ApiTestCase
         return ['Authorization' => 'Bearer '.FakeOidcToken::for($sub, $email)];
     }
 
+    /**
+     * @template T of object
+     *
+     * @param class-string<T> $class
+     *
+     * @return T
+     */
+    protected static function serviceAs(string $id, string $class): object
+    {
+        $service = static::getContainer()->get($id);
+        self::assertInstanceOf($class, $service);
+
+        return $service;
+    }
+
+    protected static function lastResponse(): Response
+    {
+        $response = static::getClient()?->getResponse();
+        self::assertInstanceOf(Response::class, $response);
+
+        return $response;
+    }
+
     protected static function bonneref(): BonnerefHttpClient
     {
         return static::getContainer()->get(BonnerefHttpClient::class);
@@ -138,7 +162,9 @@ abstract class AppTestCase extends ApiTestCase
         $http = static::bonneref();
         $empty = ['999999'];
         foreach (glob(\dirname(__DIR__).'/Fixtures/bonneref/categories_34247_*.json') ?: [] as $file) {
-            foreach (json_decode((string) file_get_contents($file), true)['hydra:member'] as $category) {
+            /** @var list<array{id: int|string}> $members */
+            $members = json_decode((string) file_get_contents($file), true)['hydra:member'];
+            foreach ($members as $category) {
                 $empty[] = (string) $category['id'];
             }
         }

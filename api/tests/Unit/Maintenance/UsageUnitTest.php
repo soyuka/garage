@@ -19,14 +19,14 @@ final class UsageUnitTest extends TestCase
     public function testEveryLogUnitRoundTripsThroughGarage(): void
     {
         foreach (UsageUnit::cases() as $unit) {
-            self::assertSame($unit, UsageUnit::fromGarageUnit($unit->toGarageUnit()));
+            $this->assertSame($unit, UsageUnit::fromGarageUnit($unit->toGarageUnit()));
         }
     }
 
     public function testEveryGarageUnitRoundTripsThroughLog(): void
     {
         foreach (GarageUsageUnit::cases() as $unit) {
-            self::assertSame($unit, UsageUnit::fromGarageUnit($unit)->toGarageUnit());
+            $this->assertSame($unit, UsageUnit::fromGarageUnit($unit)->toGarageUnit());
         }
     }
 }

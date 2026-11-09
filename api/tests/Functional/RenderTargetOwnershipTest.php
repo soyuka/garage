@@ -25,11 +25,11 @@ final class RenderTargetOwnershipTest extends AppTestCase
     {
         [, $task] = $this->seed(self::TEST_OWNER);
 
-        foreach ([(string) $task->getId(), '/garage/planned-tasks/'.$task->getId()] as $handle) {
+        foreach ([(string) $task->getId(), '/garage/planned-tasks/'.(string) $task->getId()] as $handle) {
             $outcome = $this->proposeOn($handle);
 
             $this->assertSame('rendered', $outcome['status'] ?? null);
-            $this->assertSame('/garage/planned-tasks/'.$task->getId(), $this->lastPilotFrame()['actions'][0]['patchTask']['id'] ?? null);
+            $this->assertSame('/garage/planned-tasks/'.(string) $task->getId(), $this->lastPilotFrame()['actions'][0]['patchTask']['id'] ?? null);
         }
     }
 
@@ -47,7 +47,7 @@ final class RenderTargetOwnershipTest extends AppTestCase
     {
         [, $task] = $this->seed(self::TEST_OWNER);
 
-        foreach (['https://evil.example/garage/planned-tasks/'.$task->getId(), '//evil.example/x', '/garage/vehicles/'.$task->getId(), '01JTASK', '/garage/planned-tasks/'.$task->getId().'/../x'] as $handle) {
+        foreach (['https://evil.example/garage/planned-tasks/'.(string) $task->getId(), '//evil.example/x', '/garage/vehicles/'.(string) $task->getId(), '01JTASK', '/garage/planned-tasks/'.(string) $task->getId().'/../x'] as $handle) {
             $outcome = $this->proposeOn($handle);
 
             $this->assertSame('invalid_input', $outcome['error'] ?? null, $handle);
@@ -60,12 +60,12 @@ final class RenderTargetOwnershipTest extends AppTestCase
         [$own] = $this->seed(self::TEST_OWNER);
         [$foreign] = $this->seed(self::INTRUDER);
 
-        $this->assertSame('rendered', $this->select('/garage/vehicles/'.$own->getId())['status'] ?? null);
-        $this->assertSame(['type' => 'selectVehicle', 'id' => '/garage/vehicles/'.$own->getId()], $this->lastPilotFrame());
+        $this->assertSame('rendered', $this->select('/garage/vehicles/'.(string) $own->getId())['status'] ?? null);
+        $this->assertSame(['type' => 'selectVehicle', 'id' => '/garage/vehicles/'.(string) $own->getId()], $this->lastPilotFrame());
 
-        $this->assertSame('not_found', $this->select('/garage/vehicles/'.$foreign->getId())['error'] ?? null);
-        $this->assertSame('invalid_input', $this->select('https://evil.example/garage/vehicles/'.$own->getId())['error'] ?? null);
-        $this->assertSame('invalid_input', $this->select('/garage/planned-tasks/'.$own->getId())['error'] ?? null);
+        $this->assertSame('not_found', $this->select('/garage/vehicles/'.(string) $foreign->getId())['error'] ?? null);
+        $this->assertSame('invalid_input', $this->select('https://evil.example/garage/vehicles/'.(string) $own->getId())['error'] ?? null);
+        $this->assertSame('invalid_input', $this->select('/garage/planned-tasks/'.(string) $own->getId())['error'] ?? null);
     }
 
     /**

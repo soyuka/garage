@@ -24,7 +24,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $client->request('POST', $iri.'/facts', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
@@ -55,7 +55,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $client->request('POST', $iri.'/facts', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
@@ -88,7 +88,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->persist($record);
         $dm->flush();
         $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $facts = $client->request('GET', $iri, ['headers' => ['Accept' => 'application/ld+json']])->toArray()['facts'];
         $this->assertContains('oil_filter_ref', array_column($facts, 'key'), 'the logged part surfaces as a fact first');
@@ -111,7 +111,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->persist($vehicle);
         $dm->flush();
         $dm->clear();
-        $iri = '/garage/vehicles/'.$vehicle->getId();
+        $iri = '/garage/vehicles/'.(string) $vehicle->getId();
 
         $post = static fn (string $value) => $client->request('POST', $iri.'/facts', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
@@ -136,7 +136,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        $client->request('DELETE', '/garage/vehicles/'.$vehicle->getId().'/facts/nonexistent', [
+        $client->request('DELETE', '/garage/vehicles/'.(string) $vehicle->getId().'/facts/nonexistent', [
             'headers' => self::authHeaders() + ['Accept' => 'application/ld+json'],
         ]);
         $this->assertResponseStatusCodeSame(404);
@@ -152,7 +152,7 @@ final class GarageVehicleFactTest extends AppTestCase
         $dm->flush();
         $dm->clear();
 
-        $client->request('POST', '/garage/vehicles/'.$vehicle->getId().'/facts', [
+        $client->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/facts', [
             'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
             'json' => ['key' => '', 'value' => '4.3'],
         ]);

@@ -46,7 +46,7 @@ final class OpenTaskPartsBackfillerTest extends TestCase
         $untouched = $airFilter->getParts();
         $this->assertCount(1, $untouched, 'a task that already has parts is never touched');
         $this->assertSame('C 3233', $untouched[0]['ref']);
-        $this->assertSame('MANN-FILTER', $untouched[0]['brand']);
+        $this->assertSame('MANN-FILTER', $untouched[0]['brand'] ?? null);
         $this->assertSame([], $sparkPlug->getParts(), 'a task with no matching category stays empty');
     }
 

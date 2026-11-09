@@ -8,6 +8,7 @@ use App\Agent\Journal\TurnJournal;
 use App\Agent\QwenModelLogger;
 use App\Entity\AgentTurn;
 use App\Message\RunAgentTurn;
+use App\Tests\Support\CountingRawResult;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -26,27 +27,27 @@ final class QwenModelLoggerTest extends TestCase
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
         $journal->begin($this->message(), 'le contexte');
 
-        $this->decorator($this->rawResult(['choices' => []]), $journal)
+        $this->decorator(new CountingRawResult(['choices' => []]), $journal)
             ->invoke('qwen3.5-flash', 'hi', ['stream' => true]);
 
         $turn = $this->openTurn($journal);
-        self::assertSame('qwen', $turn->getProvider());
-        self::assertSame('qwen3.5-flash', $turn->getModel());
-        self::assertTrue($turn->isStream());
+        $this->assertSame('qwen', $turn->getProvider());
+        $this->assertSame('qwen3.5-flash', $turn->getModel());
+        $this->assertTrue($turn->isStream());
     }
 
     public function testNeverReadsTheRawResult(): void
     {
         // The turn always streams; the logger only reports the model and must not touch the body
         // (an eager raw read would drain the stream).
-        $raw = $this->rawResult(['search_info' => ['search_results' => [['url' => 'https://example.com']]]]);
+        $raw = new CountingRawResult(['search_info' => ['search_results' => [['url' => 'https://example.com']]]]);
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
         $journal->begin($this->message(), 'le contexte');
 
         $this->decorator($raw, $journal)->invoke('qwen3.5-flash', 'hi', ['stream' => true, 'enable_search' => true]);
 
-        self::assertSame(0, $raw->reads, 'the logger must not force the raw HTTP fetch');
+        $this->assertSame(0, $raw->reads, 'the logger must not force the raw HTTP fetch');
     }
 
     private function message(): RunAgentTurn
@@ -75,39 +76,5 @@ final class QwenModelLoggerTest extends TestCase
         self::assertInstanceOf(AgentTurn::class, $current);
 
         return $current;
-    }
-
-    /**
-     * @param array<string, mixed> $data
-     *
-     * @return RawResultInterface&object{reads: int}
-     */
-    private function rawResult(array $data): RawResultInterface
-    {
-        return new class($data) implements RawResultInterface {
-            public int $reads = 0;
-
-            /** @param array<string, mixed> $data */
-            public function __construct(private readonly array $data)
-            {
-            }
-
-            public function getData(): array
-            {
-                ++$this->reads;
-
-                return $this->data;
-            }
-
-            public function getDataStream(): iterable
-            {
-                yield $this->data;
-            }
-
-            public function getObject(): object
-            {
-                return (object) $this->data;
-            }
-        };
     }
 }

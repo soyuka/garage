@@ -69,10 +69,8 @@ final class McpAppsUiTest extends AppTestCase
         $client = static::createClient();
         $sessionId = $this->initialize($client);
 
-        $result = $this->call($client, $sessionId, 'tools/list', [], 2);
-
         $tool = null;
-        foreach ($result['result']['tools'] as $t) {
+        foreach ($this->listTools($client, $sessionId) as $t) {
             if ('get_maintenance_history' === $t['name']) {
                 $tool = $t;
                 break;
@@ -91,6 +89,7 @@ final class McpAppsUiTest extends AppTestCase
         $result = $this->call($client, $sessionId, 'resources/list', [], 3);
 
         $resource = null;
+        $this->assertIsArray($result['result']['resources']);
         foreach ($result['result']['resources'] as $r) {
             if (self::UI_RESOURCE_URI === $r['uri']) {
                 $resource = $r;

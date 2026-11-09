@@ -12,9 +12,12 @@ use Symfony\Component\DependencyInjection\Exception\LogicException;
 final class AgentApiKeyPassTest extends TestCase
 {
     private const PLATFORMS = [
+        // @mago-expect lint:no-literal-password test fixture
         'anthropic' => ['api_key' => '%env(ANTHROPIC_API_KEY)%'],
+        // @mago-expect lint:no-literal-password test fixture
         'gemini' => ['api_key' => '%env(GEMINI_API_KEY)%'],
         'generic' => [
+            // @mago-expect lint:no-literal-password test fixture
             'qwen' => ['base_url' => '%env(QWEN_BASE_URL)%', 'api_key' => '%env(ALIBABACLOUD_API_KEY)%'],
             'local' => ['base_url' => 'http://ollama:11434'],
         ],
@@ -22,17 +25,17 @@ final class AgentApiKeyPassTest extends TestCase
 
     public function testTheAnthropicAgentNeedsTheAnthropicKey(): void
     {
-        self::assertSame('%env(ANTHROPIC_API_KEY)%', $this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.anthropic']]]]));
+        $this->assertSame('%env(ANTHROPIC_API_KEY)%', $this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.anthropic']]]]));
     }
 
     public function testTheQwenAgentNeedsTheAlibabaKey(): void
     {
-        self::assertSame('%env(ALIBABACLOUD_API_KEY)%', $this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.generic.qwen']]]]));
+        $this->assertSame('%env(ALIBABACLOUD_API_KEY)%', $this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.generic.qwen']]]]));
     }
 
     public function testALaterConfigurationWins(): void
     {
-        self::assertSame('%env(ALIBABACLOUD_API_KEY)%', $this->keyFor(
+        $this->assertSame('%env(ALIBABACLOUD_API_KEY)%', $this->keyFor(
             ['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.anthropic']]]],
             ['ai' => ['agent' => ['garage' => ['platform' => 'ai.platform.generic.qwen']]]],
         ));
@@ -40,13 +43,13 @@ final class AgentApiKeyPassTest extends TestCase
 
     public function testAKeylessPlatformNeedsNoKey(): void
     {
-        self::assertNull($this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.generic.local']]]]));
+        $this->assertNull($this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.generic.local']]]]));
     }
 
     public function testAnUnconfiguredPlatformIsAConfigurationError(): void
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('ai.platform.mistral');
+        $this->expectExceptionMessageIsOrContains('ai.platform.mistral');
 
         $this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => ['garage' => ['platform' => 'ai.platform.mistral']]]]);
     }
@@ -54,7 +57,7 @@ final class AgentApiKeyPassTest extends TestCase
     public function testAnUnconfiguredAgentIsAConfigurationError(): void
     {
         $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('"garage"');
+        $this->expectExceptionMessageIsOrContains('"garage"');
 
         $this->keyFor(['ai' => ['platform' => self::PLATFORMS, 'agent' => []]]);
     }

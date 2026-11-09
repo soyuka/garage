@@ -26,8 +26,8 @@ final class PlannedTaskFluidEnricherTest extends TestCase
     public function testEnrichesRefLessOilPartFromFacts(): void
     {
         $parts = [
-            ['ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile'],
-            ['ref' => '', 'label' => 'Huile moteur', 'qty' => 5],
+            ['id' => 'part-1', 'ref' => 'W 712/73', 'brand' => 'MANN-FILTER', 'label' => 'Filtre à huile'],
+            ['id' => 'part-2', 'ref' => '', 'label' => 'Huile moteur', 'qty' => 5],
         ];
 
         $enriched = $this->enricher->enrich('oil_change', $parts, $this->oilFacts());
@@ -42,17 +42,17 @@ final class PlannedTaskFluidEnricherTest extends TestCase
             'standard' => 'ACEA A3/B3|ACEA A5/B5',
             'capacity' => '4.3',
             'unit' => 'L',
-        ], $enriched[1]['spec']);
+        ], $enriched[1]['spec'] ?? null);
         // The stored part fields survive untouched.
-        $this->assertSame('Huile moteur', $enriched[1]['label']);
-        $this->assertSame(5, $enriched[1]['qty']);
+        $this->assertSame('Huile moteur', $enriched[1]['label'] ?? null);
+        $this->assertSame(5, $enriched[1]['qty'] ?? null);
     }
 
     public function testEnrichesOnlyTheFirstFluidPart(): void
     {
         $parts = [
-            ['ref' => '', 'label' => 'Huile moteur'],
-            ['ref' => '', 'label' => 'Bidon supplémentaire'],
+            ['id' => 'part-3', 'ref' => '', 'label' => 'Huile moteur'],
+            ['id' => 'part-4', 'ref' => '', 'label' => 'Bidon supplémentaire'],
         ];
 
         $enriched = $this->enricher->enrich('oil_change', $parts, $this->oilFacts());
@@ -63,14 +63,14 @@ final class PlannedTaskFluidEnricherTest extends TestCase
 
     public function testLeavesNonFluidTaskUntouched(): void
     {
-        $parts = [['ref' => '', 'label' => 'Plaquettes']];
+        $parts = [['id' => 'part-5', 'ref' => '', 'label' => 'Plaquettes']];
 
         $this->assertSame($parts, $this->enricher->enrich('brakes', $parts, $this->oilFacts()));
     }
 
     public function testDerivesFreeTextFluidTypeUsingTypeAsPrefix(): void
     {
-        $parts = [['ref' => '', 'label' => 'Huile de boîte']];
+        $parts = [['id' => 'part-6', 'ref' => '', 'label' => 'Huile de boîte']];
         $facts = [
             VehicleFact::fromSource('gearbox_oil_type', 'API GL4 SAE 75W-90', 'partsapi'),
             VehicleFact::fromSource('gearbox_oil_capacity', '2.95', 'partsapi', unit: 'liter'),
@@ -83,25 +83,25 @@ final class PlannedTaskFluidEnricherTest extends TestCase
             'standard' => 'API GL4 SAE 75W-90',
             'capacity' => '2.95',
             'unit' => 'liter',
-        ], $enriched[0]['spec']);
+        ], $enriched[0]['spec'] ?? null);
     }
 
     public function testNoMatchingFactsLeavesPartsUntouched(): void
     {
-        $parts = [['ref' => '', 'label' => 'Huile moteur']];
+        $parts = [['id' => 'part-7', 'ref' => '', 'label' => 'Huile moteur']];
 
         $this->assertSame($parts, $this->enricher->enrich('oil_change', $parts, []));
     }
 
     public function testUnverifiedStandardYieldsUnverifiedSpec(): void
     {
-        $parts = [['ref' => '', 'label' => 'Huile moteur']];
+        $parts = [['id' => 'part-8', 'ref' => '', 'label' => 'Huile moteur']];
         $facts = [VehicleFact::fromSource('oil_capacity', '4.3', 'user', unit: 'L')];
 
         $enriched = $this->enricher->enrich('oil_change', $parts, $facts);
 
-        $this->assertFalse($enriched[0]['spec']['verified']);
-        $this->assertSame('4.3', $enriched[0]['spec']['capacity']);
+        $this->assertFalse($enriched[0]['spec']['verified'] ?? null);
+        $this->assertSame('4.3', $enriched[0]['spec']['capacity'] ?? null);
     }
 
     /**

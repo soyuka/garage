@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Tests\Mock\ScriptedStreamPlatform;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * In-app turns spend our Anthropic credits on a public demo, so each owner gets a budget. The MCP
@@ -24,7 +25,7 @@ final class AgentTurnRateLimitTest extends AppTestCase
             return 'Fait.';
         }));
 
-        $limiter = $container->get('limiter.agent_turn');
+        $limiter = self::serviceAs('limiter.agent_turn', RateLimiterFactoryInterface::class);
         $this->assertTrue($limiter->create(self::TEST_OWNER)->consume(30)->isAccepted(), 'the default budget is 30 turns');
         $this->assertFalse($limiter->create(self::TEST_OWNER)->consume()->isAccepted());
 

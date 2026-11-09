@@ -16,7 +16,10 @@ final class MotulOilAdvisorTest extends TestCase
 {
     private static function fixture(string $name): string
     {
-        return file_get_contents(__DIR__.'/../../Fixtures/motul/'.$name);
+        $contents = file_get_contents(__DIR__.'/../../Fixtures/motul/'.$name);
+        self::assertNotFalse($contents);
+
+        return $contents;
     }
 
     private static function advisor(?string $searchBody = null): MotulOilAdvisor
