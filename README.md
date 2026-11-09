@@ -10,7 +10,7 @@ visit closes the planned task. Parts come from **bonneref**, a second Symfony ap
 catalogue and plate lookup as its own MCP server and runs a parts-finder agent.
 
 Built with Symfony 7, API Platform 5 (`api-platform/mcp`), `symfony/mcp-bundle`, Symfony AI, Mercure and
-React / react-three-fiber. Entry for the Symfony AI & MCP hackathon.
+React / react-three-fiber. This is a pet project for testing MCP with API Platform. Entry for the Symfony AI & MCP hackathon.
 
 ## Try it in 2 minutes
 
@@ -27,23 +27,79 @@ Add the server:
   registration) and opens the login page.
 
 Open https://garage.bonneref.fr in a browser logged in with the same account to watch the Atelier react, then
-paste:
+paste these in order. The tools in brackets are what the client is expected to call.
 
-1. `What's due on my cars? Forecast the next services and tell me which one is the most urgent.`
-   (`list_vehicles`, `list_due_maintenance`, `list_planned_maintenance`)
+1. `What's due on the Mazda?`
+   (`open_vehicle` drives the car into the Atelier and returns its forecast and open tasks; `focus_view` raises
+   the task list)
 2. `Which oil filter should I order for the Mazda? Narrow it down to the physically different parts and compare brands.`
-   (`get_service_parts`, `narrow_parts`, `compare_brands`, catalogue served by bonneref)
-3. `Look up plate AB-123-CD and tell me which engine it has.` <!-- TODO: replace with a plate that resolves -->
-   (`lookup_plate`, `decode_vin`)
-4. `I just did the oil change on the Mazda today with that filter. Log it.`
-   (`log_maintenance`: the visit closes the matching planned task and the forecast shifts)
-5. `Open the Mazda in the Atelier and show me where the oil filter sits.`
-   (`open_vehicle`, `reveal_assembly`, `focus_view`, `narrate_step`: render intents pushed to the browser)
+   (`get_service_parts`, `narrow_parts`, `compare_brands`; the catalogue is served by bonneref)
+3. `When did I last change the oil on the Mazda? Show me the logbook.`
+   (`get_maintenance_history`, then `focus_view` on the `carnet` panel filtered to `oil_change`, and a `toast`
+   with the date)
+4. `Show me where the fuel filter sits on the Mazda.`
+   (`reveal_assembly` on the `bay` region: the body turns to wireframe and the fuel circuit is drawn under it)
+5. `I've just replaced the fuel filter on the Mazda, at 252 524 km. Log it.`
+   (`log_maintenance`: the visit closes the open fuel filter task and the forecast moves)
 
-The full tool list is advertised by `tools/list`; garage tools are declared as `McpTool` operations on API
-Platform resources in [`api/src/ApiResource/`](api/src/ApiResource/) (for example
-[`Maintenance.php`](api/src/ApiResource/Maintenance.php), [`Garage.php`](api/src/ApiResource/Garage.php),
-[`Dashboard.php`](api/src/ApiResource/Dashboard.php)).
+Prompt 5 writes to the shared garage. If someone already logged it today, the task is gone until the nightly
+reset.
+
+The full tool list is advertised by `tools/list`. Garage tools are declared as `McpTool` operations on API
+Platform resources in [`api/src/ApiResource/`](api/src/ApiResource/), for example
+[`Garage.php`](api/src/ApiResource/Garage.php), [`Maintenance.php`](api/src/ApiResource/Maintenance.php) and
+[`Dashboard.php`](api/src/ApiResource/Dashboard.php) for the render intents.
+
+## What Symfony AI and the MCP SDK unlocked
+
+**One tool declaration, two callers.** Garage tools are `McpTool` operations on API Platform resources
+(`api-platform/mcp` on `symfony/mcp-bundle` and the PHP MCP SDK). The in-app Symfony AI agent does not redeclare
+them: [`McpToolbox`](api/src/Mcp/Agent/McpToolbox.php) implements Symfony AI's `ToolboxInterface` by calling the
+same `Mcp\Server` instance in process, so schemas, validation and dedup results are identical for both. Its
+denylist hides the pilot-only tools from the agent.
+
+**The UI is an MCP client's output device.** An MCP tool call renders nothing in the host, so the tools in
+[`Dashboard.php`](api/src/ApiResource/Dashboard.php) (`open_vehicle`, `focus_view`, `reveal_assembly`,
+`show_document`, `propose_actions`…) publish a Mercure frame instead, through processors in
+[`api/src/State/Dashboard/`](api/src/State/Dashboard/). The in-app agent has the same intents as `#[AsTool]`
+methods in [`RenderIntentTools.php`](api/src/Agent/Ui/RenderIntentTools.php), on the same publisher.
+[`DashboardChannel.php`](api/src/Agent/Ui/DashboardChannel.php) picks the topic: the turn's session for the
+in-app agent, or the owner's pilot topic (an HMAC of the owner identity) for an external client. The Atelier
+subscribes to both ([`agent.ts`](dashboard/src/agent.ts),
+[`Workshop.tsx`](dashboard/src/workshop/Workshop.tsx)). Claude Code or Claude Desktop can therefore drive the
+browser with no chat UI of ours in between.
+
+**A remote MCP server with no client id to hand out.**
+[`ProtectedResourceMetadataController`](api/src/Controller/Mcp/ProtectedResourceMetadataController.php) serves
+RFC 9728 metadata, [`McpProtectedResourceChallengeListener`](api/src/EventListener/McpProtectedResourceChallengeListener.php)
+adds the `WWW-Authenticate` challenge, and [`CasdoorTokenHandler`](api/src/Security/CasdoorTokenHandler.php) is a
+Symfony `AccessTokenHandlerInterface` validating the bearer. The issuer accepts anonymous RFC 7591 dynamic client
+registration, so stock clients register themselves ([`api/docs/AUTH.md`](api/docs/AUTH.md)). Every tool is then
+scoped to the caller by [`OwnerContext`](api/src/Security/OwnerContext.php).
+
+**Agent turns off the request.** `POST /agent/turn` dispatches a
+[`RunAgentTurn`](api/src/Message/RunAgentTurn.php) Messenger message; the
+[handler](api/src/MessageHandler/RunAgentTurnHandler.php) runs the Symfony AI agent in the worker under the CLI
+SAPI, with no request time limit. Without a worker,
+[`DeferredTurnDispatcher`](api/src/Agent/Dispatch/DeferredTurnDispatcher.php) runs it in `kernel.terminate`
+after the 202 is sent.
+
+**A tool loop that stops.** [`CompositeToolbox`](api/src/Agent/Toolbox/CompositeToolbox.php) merges the render
+intents and the MCP tools inside the bundle's `FaultTolerantToolbox`, so a malformed call becomes an error tool
+result instead of a 500 ([`services.yaml`](api/config/services.yaml)). Listeners on Symfony AI's
+`ToolCallsExecuted` event end the turn on an explicit [`end_turn`](api/src/Agent/Ui/EndTurnTool.php) tool
+([`TerminalToolListener`](api/src/Agent/Ui/TerminalToolListener.php)) or on the same failing call repeated
+([`RepeatedToolFailureGuard`](api/src/Agent/Ui/RepeatedToolFailureGuard.php)); `max_tool_calls: 25` in
+[`ai.yaml`](api/config/packages/ai.yaml) is the backstop. The same event feeds the turn journal
+([`ToolCallJournalListener`](api/src/Agent/Journal/ToolCallJournalListener.php)), and
+[`TurnCostEstimator`](api/src/Agent/Journal/TurnCostEstimator.php) prices each turn's token counts.
+
+**A second server, a second agent.** bonneref is its own Symfony app exposing the parts catalogue as a read-only
+MCP server ([`bonneref/api/src/ApiResource/`](bonneref/api/src/ApiResource/)) and running a parts-finder agent
+([`bonneref/api/src/Agent/Finder/`](bonneref/api/src/Agent/Finder/)). mpa calls it over HTTP with the caller's
+bearer ([`BonnerefClient.php`](api/src/Bonneref/BonnerefClient.php)).
+
+What broke on the way is listed in [What we found broken upstream](#what-we-found-broken-upstream).
 
 ## Run it locally
 
@@ -52,10 +108,23 @@ Requirements: Docker with Compose. Ports 443/80 free, or set `HTTPS_PORT`/`HTTP_
 ```bash
 git clone https://github.com/soyuka/mon-parc-auto.fr.git
 cd mon-parc-auto.fr/api
-docker compose up -d        # php (FrankenPHP + Mercure), worker, MongoDB, Postgres, dashboard (Vite)
+docker compose up -d
 ```
 
-- Atelier: https://localhost (self-signed certificate). MCP: https://localhost/mcp.
+This starts php (FrankenPHP with Caddy and Mercure), the Messenger worker, MongoDB, Postgres and the Vite dev
+servers for the Atelier and bonneref.
+
+A fresh clone runs with an empty `api/.env.local`: every value in `api/.env` has a working default for the
+compose stack. Paid keys are optional, and a missing key turns its feature off instead of breaking it:
+
+- `ANTHROPIC_API_KEY`: the in-app agent. MCP clients bring their own model and need no key.
+- `GEMINI_API_KEY`: the agent's `web_search` tool. Gemini is the web-search backend on purpose.
+- `ELEVENLABS_API_KEY`: voice and dictation. ElevenLabs is the only voice backend.
+
+Tools whose key is missing are not listed by `tools/list` (see [`api/src/Capability/`](api/src/Capability/)).
+
+- Atelier: https://localhost (self-signed certificate). MCP: https://localhost/mcp. A local garage starts
+  empty: add a car from the Atelier or by asking your MCP client.
 - Auth uses the hosted Casdoor at `https://auth.bonneref.fr` (`CASDOOR_ISSUER` in `api/.env`); there is no local
   identity server.
 - The catalogue and plate lookup are fetched from bonneref over HTTP: `BONNEREF_API_URL` defaults to
@@ -65,6 +134,12 @@ docker compose up -d        # php (FrankenPHP + Mercure), worker, MongoDB, Postg
   `ANTHROPIC_API_KEY` in `api/.env.local`.
 - Tests: `docker compose exec php php -d memory_limit=1G vendor/bin/phpunit <file>`;
   dashboard: `cd dashboard && npm install && npm test`.
+
+### Switching the model
+
+The in-app agent's provider is set in [`api/config/packages/ai.yaml`](api/config/packages/ai.yaml): one
+platform/model pair is uncommented. Anthropic is the default; Qwen, through the generic OpenAI-compatible
+bridge, is the alternative. Walkthrough: [`api/docs/AGENT_PROVIDER.md`](api/docs/AGENT_PROVIDER.md).
 
 <!-- TODO: confirm that a localhost redirect URI is registered for the dashboard app on auth.bonneref.fr,
      otherwise the local Atelier login fails. -->
@@ -77,6 +152,7 @@ docker compose up -d        # php (FrankenPHP + Mercure), worker, MongoDB, Postg
 | OAuth for MCP: protected-resource metadata (RFC 9728), `WWW-Authenticate` challenge, Casdoor bearer validation; Casdoor chosen because it accepts anonymous dynamic client registration (RFC 7591), so stock clients self-register | [`ProtectedResourceMetadataController.php`](api/src/Controller/Mcp/ProtectedResourceMetadataController.php), [`McpProtectedResourceChallengeListener.php`](api/src/EventListener/McpProtectedResourceChallengeListener.php), [`CasdoorTokenHandler.php`](api/src/Security/CasdoorTokenHandler.php), [`api/docs/AUTH.md`](api/docs/AUTH.md) |
 | Owner-scoped garage: every read and write is filtered by the caller's identity (Casdoor `email` claim) | [`OwnerContext.php`](api/src/Security/OwnerContext.php) |
 | Maintenance domain: a record is a visit with `items[]`; recurring intervals + usage give a forecast and a health figure; logging a service closes its planned task | [`api/src/Maintenance/`](api/src/Maintenance/), [`api/src/Garage/`](api/src/Garage/) (`VehicleWriteResolver` dedups vehicles across labels) |
+| Archiving: a sold or scrapped car leaves `list_vehicles` and `list_due_maintenance` but keeps its history (`update_vehicle` with `archived: true`) | [`Garage.php`](api/src/ApiResource/Garage.php), [`GarageVehicleArchiveTest.php`](api/tests/Functional/GarageVehicleArchiveTest.php) |
 | Render intents over Mercure, one pipeline with two drivers: an MCP client (pilot) or the in-app agent call the same `Dashboard` tools; `DashboardChannel` picks the agent-turn topic or the owner's HMAC-derived pilot topic | [`Dashboard.php`](api/src/ApiResource/Dashboard.php), [`RenderIntentTools.php`](api/src/Agent/Ui/RenderIntentTools.php), [`DashboardChannel.php`](api/src/Agent/Ui/DashboardChannel.php), [`dashboard/src/agent.ts`](dashboard/src/agent.ts) |
 | Symfony AI agent loop, async on Messenger (worker under CLI, no request time limit) or in `kernel.terminate` | [`RunAgentTurn.php`](api/src/Message/RunAgentTurn.php), [`RunAgentTurnHandler.php`](api/src/MessageHandler/RunAgentTurnHandler.php), [`api/src/Agent/Dispatch/`](api/src/Agent/Dispatch/), [`api/config/packages/ai.yaml`](api/config/packages/ai.yaml) |
 | Turn journal, token and cost tracking | [`api/src/Agent/Journal/`](api/src/Agent/Journal/) (`TurnJournal`, `ToolCallJournalListener`, `TurnCostEstimator`) |
