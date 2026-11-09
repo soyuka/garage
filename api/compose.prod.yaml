@@ -1,22 +1,27 @@
 ---
-# Production environment override
+# Production environment override. Every secret fails closed: compose.yaml's defaults are public
+# (!ChangeMe!, !ChangeThisMercureHubJWTSecretKey!), so a missing variable aborts `up` instead of
+# booting with one of them.
 services:
   php:
     image: ${IMAGES_PREFIX:-}app-php-prod
     build:
       context: .
       target: frankenphp_prod
-    environment:
-      APP_SECRET: ${APP_SECRET}
-      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
-      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+    environment: &prod_secrets
+      APP_SECRET: ${APP_SECRET:?APP_SECRET required}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=${POSTGRES_CHARSET:-utf8}
 
   worker:
     image: ${IMAGES_PREFIX:-}app-php-prod
     build:
       context: .
       target: frankenphp_prod
+    environment: *prod_secrets
+
+  database:
     environment:
-      APP_SECRET: ${APP_SECRET}
-      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
-      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}

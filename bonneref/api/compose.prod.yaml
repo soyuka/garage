@@ -1,26 +1,32 @@
 ---
-# Production environment override
+# Production environment override. Every secret fails closed: compose.yaml's defaults are public
+# (!ChangeThisMercureHubJWTSecretKey!, !ChangeMe!), so a missing variable aborts `up` instead of
+# booting with one of them.
 services:
   php:
     image: ${IMAGES_PREFIX:-}bonneref-php-prod
     build:
       context: .
       target: frankenphp_prod
-    environment:
-      APP_SECRET: ${APP_SECRET}
-      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
-      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+    environment: &prod_secrets
+      APP_SECRET: ${APP_SECRET:?APP_SECRET required}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
     volumes:
-      - ${TECDOC_CATALOG_HOST_PATH}:/srv/tecdoc/catalog.sqlite:ro
+      - ${TECDOC_CATALOG_HOST_PATH:?TECDOC_CATALOG_HOST_PATH required}:/srv/tecdoc/catalog.sqlite:ro
 
   worker:
     image: ${IMAGES_PREFIX:-}bonneref-php-prod
     build:
       context: .
       target: frankenphp_prod
-    environment:
-      APP_SECRET: ${APP_SECRET}
-      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
-      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+    environment: *prod_secrets
     volumes:
-      - ${TECDOC_CATALOG_HOST_PATH}:/srv/tecdoc/catalog.sqlite:ro
+      - ${TECDOC_CATALOG_HOST_PATH:?TECDOC_CATALOG_HOST_PATH required}:/srv/tecdoc/catalog.sqlite:ro
+
+  # Only under the `messenger` profile; compose still interpolates it, so POSTGRES_PASSWORD is required
+  # for every prod run, Postgres or not.
+  database:
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
