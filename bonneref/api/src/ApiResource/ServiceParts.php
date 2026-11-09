@@ -25,7 +25,7 @@ use App\State\ServicePartsProcessor;
             // suppress the auto JSON-LD output schema (built from this empty class otherwise).
             structuredContent: false,
             processor: ServicePartsProcessor::class,
-            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => false],
         ),
     ],
 )]

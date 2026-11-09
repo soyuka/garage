@@ -18,7 +18,7 @@ use App\State\DecodeBuildCodeProcessor;
             validate: true,
             structuredContent: false,
             processor: DecodeBuildCodeProcessor::class,
-            annotations: ['readOnlyHint' => true],
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => false],
         ),
     ],
 )]

@@ -66,7 +66,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             // returns a capped {totalItems, items, …} CallToolResult, not a Hydra collection.
             structuredContent: false,
             processor: CarsProcessor::class,
-            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => false],
         ),
     ],
 )]

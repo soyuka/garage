@@ -24,7 +24,7 @@ use App\State\VinDecodingProvider;
             validate: true,
             structuredContent: false,
             processor: DecodeVinProcessor::class,
-            annotations: ['readOnlyHint' => true],
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => false],
         ),
     ],
 )]

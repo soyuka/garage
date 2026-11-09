@@ -46,7 +46,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             // suppress the auto-generated JSON-LD collection output schema (it would mislead hosts).
             structuredContent: false,
             processor: ArticlesProcessor::class,
-            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => false],
         ),
     ],
 )]

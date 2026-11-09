@@ -52,7 +52,7 @@ use Symfony\Component\Validator\Constraints as Assert;
             validate: true,
             structuredContent: false,
             processor: NarrowPartsProcessor::class,
-            annotations: ['readOnlyHint' => true, 'openWorldHint' => true],
+            annotations: ['readOnlyHint' => true, 'openWorldHint' => false],
         ),
     ],
 )]

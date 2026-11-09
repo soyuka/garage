@@ -55,8 +55,10 @@ final class McpServerTest extends AppTestCase
             $this->assertArrayHasKey('readOnlyHint', $tool['annotations'] ?? [], "{$name} must declare readOnlyHint");
         }
 
-        // lookup_plate queries an external registry (SIV) → open world.
-        $this->assertTrue($tools['lookup_plate']['annotations']['openWorldHint'] ?? null);
+        // lookup_plate queries an external registry (SIV) → open world; the rest read the local catalogue.
+        foreach ($tools as $name => $tool) {
+            $this->assertSame('lookup_plate' === $name, $tool['annotations']['openWorldHint'] ?? null, "{$name} openWorldHint");
+        }
         // The catalogue server is read-only end to end.
         foreach ($tools as $name => $tool) {
             $this->assertTrue($tool['annotations']['readOnlyHint'], "{$name} must be read-only");
