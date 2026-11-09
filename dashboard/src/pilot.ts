@@ -1,4 +1,5 @@
 import { NBSP } from './format';
+import { segForIri } from './router';
 import { BURST_MS, PILOT_QUIET_MS } from './tokens/motion';
 import type { BodyRegion } from './scene/anchors';
 import type { Iri, UIAction } from './types';
@@ -50,7 +51,7 @@ export type StageEvent =
   | { type: 'arrived'; iri: Iri; at: number }
   /** the clock moved — drop a stage whose car never arrived */
   | { type: 'expire'; at: number }
-  /** the operator navigated / the driver changed: forget everything staged */
+  /** the operator navigated / the driver changed: forget everything staged (dropped, narrated) */
   | { type: 'reset' };
 
 export interface StageOut {
@@ -120,9 +121,20 @@ export function stageReduce(state: StageState, ev: StageEvent): StageOut {
       return { state: STAGE_INIT, emit: [], ...(dropped > 0 ? { dropped } : {}) };
     }
 
-    case 'reset':
-      return { state: STAGE_INIT, emit: [] };
+    case 'reset': {
+      const dropped = state.held.length;
+      return { state: STAGE_INIT, emit: [], ...(dropped > 0 ? { dropped } : {}) };
+    }
   }
+}
+
+/**
+ * Has navigation abandoned the car being driven in? Read off the hash segment, not off the resolved
+ * selection: a car that is not in the loaded fleet yet resolves to no selection while the hash still
+ * points at it, and that is the drive-in still in progress, not a departure.
+ */
+export function stageTargetLeft(awaiting: Iri | null, seg: string | null): boolean {
+  return awaiting !== null && seg !== segForIri(awaiting);
 }
 
 // ── 2. The burst coalescer ────────────────────────────────────────────────────

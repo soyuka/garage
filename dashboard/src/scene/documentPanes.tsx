@@ -3,6 +3,7 @@ import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
 import { useT } from '../i18n/LocaleProvider';
 import { fetchDocumentPages } from '../garage';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, FitScreen, FitWidth, Minus, Plus } from '../workshop/Icons';
+import { isEditableTarget } from './editableTarget';
 import { loadPdfJs } from './pdfjs';
 import {
   clampPage,
@@ -36,7 +37,6 @@ const PAGE_GAP = 12;
 const SIDE_GUTTER = 32;
 const MAX_CANVAS_PIXELS = 16_777_216;
 const INDEX_BATCH = 25;
-
 
 export function Failure({ message, onRetry, skin }: { message: string; onRetry: () => void; skin: DocSkin }) {
   const t = useT();
@@ -262,9 +262,7 @@ export function PdfPane({
   const pagesWithMatches = useMemo(() => [...matchesByPage.keys()].sort((a, b) => a - b), [matchesByPage]);
   const total = pagesWithMatches.reduce((sum, n) => sum + (matchesByPage.get(n)?.length ?? 0), 0);
   const indexing = numPages > 0 && texts.size < numPages;
-  const ordinal = current
-    ? pagesWithMatches.filter((n) => n < current.page).reduce((sum, n) => sum + (matchesByPage.get(n)?.length ?? 0), 0) + current.local + 1
-    : 0;
+  const ordinal = current ? pagesWithMatches.filter((n) => n < current.page).reduce((sum, n) => sum + (matchesByPage.get(n)?.length ?? 0), 0) + current.local + 1 : 0;
 
   // The opening hit: the first match on (or after) the page the agent cited, revealed once — unless the
   // operator has already started moving through the document.
@@ -309,6 +307,9 @@ export function PdfPane({
     scrollToPage(n);
   };
 
+  // One listener for the viewer's life; it reads the page it is on through a ref.
+  const pageKey = useRef<(dir: 1 | -1) => void>(() => undefined);
+  pageKey.current = (dir) => gotoPage(currentPage + dir);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
@@ -317,16 +318,15 @@ export function PdfPane({
         findInput.current?.select();
         return;
       }
-      const inField = e.target instanceof HTMLInputElement;
-      if (inField) return;
+      if (isEditableTarget(e.target)) return;
       if (e.key === 'PageDown' || e.key === 'PageUp') {
         e.preventDefault();
-        gotoPage(currentPage + (e.key === 'PageDown' ? 1 : -1));
+        pageKey.current(e.key === 'PageDown' ? 1 : -1);
       }
     };
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
-  });
+  }, []);
 
   const onScroll = () => {
     const el = scroller.current;
@@ -346,7 +346,9 @@ export function PdfPane({
     <>
       <div className={`${skin.prefix}-toolbar`} role="toolbar" aria-label={t.viewer.toolbar}>
         <span className={`${skin.prefix}-group`}>
-          <span className={`${skin.prefix}-of`} aria-hidden="true">{t.viewer.pagePrefix}</span>
+          <span className={`${skin.prefix}-of`} aria-hidden="true">
+            {t.viewer.pagePrefix}
+          </span>
           <button type="button" className={`${skin.prefix}-btn`} onClick={() => gotoPage(currentPage - 1)} disabled={currentPage <= 1} aria-label={t.viewer.prevPage}>
             <ChevronLeft />
           </button>
@@ -429,15 +431,12 @@ export function PdfPane({
         </span>
       </div>
 
-      <div
-        ref={scroller}
-        className={`${skin.prefix}-scroller`}
-        tabIndex={0}
-        onScroll={onScroll}
-        onWheel={() => (touched.current = true)}
-        onPointerDown={() => (touched.current = true)}
-      >
-        {!pdf && <p className={`${skin.prefix}-state`} role="status">{t.viewer.loading}</p>}
+      <div ref={scroller} className={`${skin.prefix}-scroller`} tabIndex={0} onScroll={onScroll} onWheel={() => (touched.current = true)} onPointerDown={() => (touched.current = true)}>
+        {!pdf && (
+          <p className={`${skin.prefix}-state`} role="status">
+            {t.viewer.loading}
+          </p>
+        )}
         {pdf && (
           <div className={`${skin.prefix}-stack`} style={{ height: layout.total, width: contentWidth }}>
             {layout.tops.map((top, i) => {
@@ -568,7 +567,12 @@ function PdfPage({
   // Paint the find hits into the text layer: each run's text is rebuilt as plain text + <mark>s.
   useEffect(() => {
     if (!layer) return;
-    const segments = matches ? segmentsByItem(matches, layer.strings.map((s) => s.length)) : new Map();
+    const segments = matches
+      ? segmentsByItem(
+          matches,
+          layer.strings.map((s) => s.length),
+        )
+      : new Map();
     let currentEl: HTMLElement | null = null;
     layer.divs.forEach((div, i) => {
       const str = layer.strings[i] ?? '';
@@ -680,16 +684,7 @@ export function ImagePane({ blob, alt, skin, fitMode = 'contain' }: { blob: Blob
         onPointerCancel={() => (drag.current = null)}
       >
         <div className={`${skin.prefix}-imagestage`} style={w && h ? { width: Math.max(w + SIDE_GUTTER, box.width), height: Math.max(h + SIDE_GUTTER, box.height) } : undefined}>
-          {src && (
-            <img
-              src={src}
-              alt={alt}
-              draggable={false}
-              width={w}
-              height={h}
-              onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })}
-            />
-          )}
+          {src && <img src={src} alt={alt} draggable={false} width={w} height={h} onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />}
         </div>
       </div>
     </>

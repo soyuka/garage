@@ -3,6 +3,8 @@ import { useT } from '../i18n/LocaleProvider';
 import { API, getIdentity } from '../auth';
 import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, postTurn, tabSessionId } from '../agent';
 import { createTask, getVehicleBundle, getVehicles, mergeTaskParts } from '../garage';
+
+const PREFETCH_CONCURRENCY = 3;
 import { pickAcknowledgement } from '../noyau/acknowledge';
 import { drawGreeting, greetingForSelection, nothingDrawn, type Drawn } from '../noyau/greeting';
 import { busy } from '../noyau/state';
@@ -12,12 +14,13 @@ import { useCues } from '../noyau/useCues';
 import { useNoticeAutoClose } from '../noyau/useNoticeAutoClose';
 import { useNoyau } from '../noyau/useNoyau';
 import { useVoice, useVoicePreference } from '../noyau/useVoice';
-import { ABANDON_MS, STAGE_INIT, stageReduce, type Driver, type StageState } from '../pilot';
+import { ABANDON_MS, STAGE_INIT, stageReduce, stageTargetLeft, type Driver, type StageState } from '../pilot';
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from '../router';
 import { useReducedMotion } from '../scene/useReducedMotion';
 import { DWELL, PILOT_QUIET_MS } from '../tokens/motion';
 import type { Capabilities, CtaAction, Iri, MercureFrame, UIAction, VehicleBundle, VehicleSummary } from '../types';
 import { isDomainEvent, reconcileVehicleEvent, removeVehicle, upsertVehicle, useMercure } from '../useMercure';
+import { createBundleSeq, nextPrefetch } from './bundleLoads';
 import { scanIntents } from './docScan';
 import { liveEdits } from './edits';
 import { useCommandStatus, useFlag, useTheme } from './hooks';
@@ -120,6 +123,17 @@ export function Workshop() {
   }, [seg, heroBundle, dispatch, t, cues.opening]);
 
   const putBundle = useCallback((iri: Iri, b: VehicleBundle) => setBundles((prev) => ({ ...prev, [iri]: b })), []);
+  // Every bundle read goes through here: a slower, older read of the same car never lands over a newer one.
+  const bundleSeq = useRef(createBundleSeq());
+  const loadBundle = useCallback(
+    (iri: Iri): Promise<void> => {
+      const ticket = bundleSeq.current.begin(iri);
+      return getVehicleBundle(iri).then((b) => {
+        if (bundleSeq.current.accept(iri, ticket)) putBundle(iri, b);
+      });
+    },
+    [putBundle],
+  );
 
   // A paper slide on every vehicle or section change, whoever made it; the first paint is not a change.
   const shownSeg = useRef(seg);
@@ -139,27 +153,34 @@ export function Workshop() {
     setLoadError(null);
     if (!selectedIri) return;
     let live = true;
-    getVehicleBundle(selectedIri)
-      .then((b) => live && putBundle(selectedIri, b))
-      .catch((e) => live && setLoadError((e as Error).message));
+    loadBundle(selectedIri).catch((e) => live && setLoadError((e as Error).message));
     return () => {
       live = false;
     };
-  }, [selectedIri, putBundle]);
+  }, [selectedIri, loadBundle]);
 
-  useEffect(() => {
-    if (seg !== null) return;
-    let live = true;
-    for (const v of vehicles) {
-      if (bundlesRef.current[v['@id']]) continue;
-      getVehicleBundle(v['@id'])
-        .then((b) => live && putBundle(v['@id'], b))
-        .catch(() => undefined);
+  // The parc prefetch: each car read once, a few at a time. Driven by refs so a fleet update (every
+  // domain event) tops the queue up instead of restarting every read.
+  const prefetching = useRef(new Set<Iri>());
+  const prefetched = useRef(new Set<Iri>());
+  const onParc = useRef(seg === null);
+  onParc.current = seg === null;
+  const pumpPrefetch = useCallback(() => {
+    if (!onParc.current) return;
+    const candidates = vehiclesRef.current.map((v) => v['@id']);
+    const skip = (iri: Iri) => prefetched.current.has(iri) || bundlesRef.current[iri] !== undefined;
+    for (const iri of nextPrefetch(candidates, skip, prefetching.current, PREFETCH_CONCURRENCY)) {
+      prefetching.current.add(iri);
+      prefetched.current.add(iri);
+      loadBundle(iri)
+        .catch(() => undefined)
+        .finally(() => {
+          prefetching.current.delete(iri);
+          pumpPrefetch();
+        });
     }
-    return () => {
-      live = false;
-    };
-  }, [seg, vehicles, putBundle]);
+  }, [loadBundle]);
+  useEffect(pumpPrefetch, [seg, vehicles, pumpPrefetch]);
 
   // ── Liveness: the in-app turn's watchdog and the pilot's quiet timer (same policy as Atelier). ──
   const watchdog = useRef<number | null>(null);
@@ -237,8 +258,8 @@ export function Workshop() {
 
   const heroIri = selectedIri && bundles[selectedIri] ? selectedIri : null;
   useEffect(() => {
-    if (stage.current.awaiting !== null && stage.current.awaiting !== selectedIri) stage.current = stageReduce(stage.current, { type: 'reset' }).state;
-  }, [selectedIri]);
+    if (stageTargetLeft(stage.current.awaiting, seg)) runStage({ type: 'reset' });
+  }, [seg, runStage]);
   useEffect(() => {
     if (heroIri && stage.current.awaiting === heroIri) runStage({ type: 'arrived', iri: heroIri, at: performance.now() });
   }, [heroIri, runStage]);
@@ -261,10 +282,7 @@ export function Workshop() {
         const iri = frame.resource['@id'];
         if (bundlesRef.current[iri]) {
           setBundles((prev) => (prev[iri] ? { ...prev, [iri]: { ...prev[iri], vehicle: { ...prev[iri].vehicle, ...frame.resource } } } : prev));
-          if (iri === selectedRef.current)
-            getVehicleBundle(iri)
-              .then((b) => putBundle(iri, b))
-              .catch(() => undefined);
+          if (iri === selectedRef.current) loadBundle(iri).catch(() => undefined);
         }
         return;
       }
@@ -287,7 +305,7 @@ export function Workshop() {
         runStage({ type: 'frame', action: frame, shownIri: selectedRef.current, at: performance.now() });
       }
     },
-    [closeRun, cues.play, dispatch, openRun, putBundle, runStage],
+    [closeRun, cues.play, dispatch, openRun, loadBundle, runStage],
   );
   useMercure(dashboardSubscriptions(API, sessionId, pilotTopic), onFrame);
 
@@ -329,7 +347,7 @@ export function Workshop() {
         const iri = selectedRef.current;
         dispatchView({ type: 'clearProposal' });
         mergeTaskParts(patch.id, patch.parts)
-          .then(() => (iri ? getVehicleBundle(iri).then((b) => putBundle(iri, b)) : undefined))
+          .then(() => (iri ? loadBundle(iri) : undefined))
           .catch((e) => {
             dispatch({ type: 'toast', tone: 'alarm', message: t.atelier.addFailed((e as Error).message) });
             cues.play('blocked');
@@ -338,7 +356,7 @@ export function Workshop() {
       }
       if (action.instruction) send(action.instruction);
     },
-    [cues.play, dispatch, putBundle, send, t],
+    [cues.play, dispatch, loadBundle, send, t],
   );
 
   const onPlan = useCallback(
@@ -346,23 +364,20 @@ export function Workshop() {
       const iri = selectedRef.current;
       if (!iri) return;
       createTask(iri, { type: job.type })
-        .then(() => getVehicleBundle(iri))
-        .then((b) => putBundle(iri, b))
+        .then(() => loadBundle(iri))
         .catch((e) => {
           dispatch({ type: 'toast', tone: 'alarm', message: t.workshop.planFailed((e as Error).message) });
           cues.play('blocked');
         });
     },
-    [cues.play, dispatch, putBundle, t],
+    [cues.play, dispatch, loadBundle, t],
   );
 
   const edits = useMemo(
     () =>
       liveEdits({
         refresh: (iri) => {
-          getVehicleBundle(iri)
-            .then((b) => putBundle(iri, b))
-            .catch(() => undefined);
+          loadBundle(iri).catch(() => undefined);
         },
         created: (v) => {
           setVehicles((prev) => upsertVehicle(prev, v));
@@ -387,7 +402,7 @@ export function Workshop() {
           cues.play('blocked');
         },
       }),
-    [cues.play, dispatch, putBundle, t],
+    [cues.play, dispatch, loadBundle, t],
   );
 
   const onSelectVehicle = useCallback((iri: Iri) => {

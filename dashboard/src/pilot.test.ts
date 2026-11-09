@@ -1,17 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { NBSP } from './format';
 import { BURST_MS, PILOT_QUIET_MS } from './tokens/motion';
-import {
-  ABANDON_MS,
-  BURST_INIT,
-  burstReduce,
-  formatSilence,
-  isQuiet,
-  silenceMs,
-  STAGE_INIT,
-  stageReduce,
-  type StageState,
-} from './pilot';
+import { ABANDON_MS, BURST_INIT, burstReduce, formatSilence, isQuiet, silenceMs, STAGE_INIT, stageReduce, stageTargetLeft, type StageState } from './pilot';
 import type { UIAction } from './types';
 
 const CLIO = '/garage/vehicles/clio';
@@ -67,8 +57,16 @@ describe('the render-intent staging gate', () => {
     expect(emitted).toEqual([select(KANGOO), status]);
   });
 
-  it('holds a document the pilot opens while its car is still driving in — it is that car\'s paper', () => {
-    const doc: UIAction = { type: 'showDocument', url: '/garage/vehicles/kangoo/documents/01D/file', title: 'MR 361', contentType: 'application/pdf', filename: 'mr361.pdf', page: 2, highlight: 'huile' };
+  it("holds a document the pilot opens while its car is still driving in — it is that car's paper", () => {
+    const doc: UIAction = {
+      type: 'showDocument',
+      url: '/garage/vehicles/kangoo/documents/01D/file',
+      title: 'MR 361',
+      contentType: 'application/pdf',
+      filename: 'mr361.pdf',
+      page: 2,
+      highlight: 'huile',
+    };
     const { state, emitted } = run([
       { type: 'frame', action: select(KANGOO), shownIri: CLIO, at: 0 },
       { type: 'frame', action: doc, shownIri: CLIO, at: 200 },
@@ -125,7 +123,28 @@ describe('the render-intent staging gate', () => {
       { type: 'frame', action: select(KANGOO), shownIri: CLIO, at: 0 },
       { type: 'frame', action: fact, shownIri: CLIO, at: 50 },
     ]);
-    expect(stageReduce(state, { type: 'reset' }).state).toEqual(STAGE_INIT);
+    const out = stageReduce(state, { type: 'reset' });
+    expect(out.state).toEqual(STAGE_INIT);
+    expect(out.dropped).toBe(1); // never silent: the caller narrates it
+  });
+
+  it('a reset with nothing held drops nothing', () => {
+    expect(stageReduce(STAGE_INIT, { type: 'reset' }).dropped).toBeUndefined();
+  });
+});
+
+describe('stageTargetLeft — when navigation abandons a drive-in', () => {
+  it('is false while the hash still points at the car being driven in, loaded or not', () => {
+    expect(stageTargetLeft('/garage/vehicles/01KANGOO', '01KANGOO')).toBe(false);
+  });
+
+  it('is true once the hash points at another car or the parc', () => {
+    expect(stageTargetLeft('/garage/vehicles/01KANGOO', '01CLIO')).toBe(true);
+    expect(stageTargetLeft('/garage/vehicles/01KANGOO', null)).toBe(true);
+  });
+
+  it('is false with nothing staged', () => {
+    expect(stageTargetLeft(null, '01CLIO')).toBe(false);
   });
 });
 
