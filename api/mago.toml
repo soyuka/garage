@@ -1,0 +1,81 @@
+version = "1.59"
+php-version = "8.4"
+
+[source]
+paths = ["bin", "config", "public", "src", "tests"]
+includes = ["vendor"]
+excludes = ["config/reference.php", "config/bundles.php", "var"]
+
+[analyzer]
+# Types static::getContainer()->get(Foo::class) as Foo.
+plugins = ["psr-container"]
+ignore = [
+    # preg_match(..., $m) out-parameter idiom: the matches array is always written before it is read.
+    "reference-to-undefined-variable",
+    # Holding a decoded value in a variable before narrowing it is the guard pattern itself; every unguarded
+    # USE of a mixed value (mixed-argument, -array-access, -operand, -method-access…) stays an error in src/.
+    "mixed-assignment",
+
+    # ODM-mapped properties are read and written by the hydrator (or by raw collection writes keyed on the
+    # field name), never by the class itself.
+    { code = "unused-property", in = ["src/Entity/"] },
+    { code = "write-only-property", in = ["src/Entity/"] },
+
+    # Tests: decoded response bodies and nullable test-client accessors. The assertion that consumes the
+    # value fails the test on a wrong shape or a null; src/ stays at full strictness.
+    { code = "mixed-argument", in = ["tests/"] },
+    { code = "mixed-array-access", in = ["tests/"] },
+    { code = "mixed-array-assignment", in = ["tests/"] },
+    { code = "mixed-array-index", in = ["tests/"] },
+    { code = "mixed-assignment", in = ["tests/"] },
+    { code = "mixed-clone", in = ["tests/"] },
+    { code = "mixed-destructuring-shape", in = ["tests/"] },
+    { code = "mixed-method-access", in = ["tests/"] },
+    { code = "mixed-operand", in = ["tests/"] },
+    { code = "mixed-property-access", in = ["tests/"] },
+    { code = "mixed-property-type-coercion", in = ["tests/"] },
+    { code = "mixed-return-statement", in = ["tests/"] },
+    { code = "possible-method-access-on-null", in = ["tests/"] },
+    { code = "possibly-null-argument", in = ["tests/"] },
+    { code = "possibly-null-array-access", in = ["tests/"] },
+    { code = "possibly-null-array-index", in = ["tests/"] },
+    { code = "possibly-null-destructuring-source", in = ["tests/"] },
+    { code = "possibly-null-iterator", in = ["tests/"] },
+    { code = "possibly-null-operand", in = ["tests/"] },
+    { code = "possibly-null-property-access", in = ["tests/"] },
+    { code = "nullable-return-statement", in = ["tests/"] },
+    { code = "possibly-false-argument", in = ["tests/"] },
+    { code = "possibly-false-array-access", in = ["tests/"] },
+    { code = "possibly-false-iterator", in = ["tests/"] },
+    { code = "possibly-false-operand", in = ["tests/"] },
+]
+
+[linter]
+integrations = ["symfony", "phpunit"]
+
+[linter.rules]
+# The suite calls $this->assert*().
+assertion-style = { style = "this" }
+
+# Style: php-cs-fixer (@Symfony) owns formatting and style; these are opinions it does not share.
+readable-literal = { enabled = false }
+literal-named-argument = { enabled = false }
+no-isset = { enabled = false }
+no-shorthand-ternary = { enabled = false }
+no-else-clause = { enabled = false }
+prefer-early-continue = { enabled = false }
+prefer-static-closure = { enabled = false }
+prefer-arrow-function = { enabled = false }
+braced-string-interpolation = { enabled = false }
+inline-variable-return = { enabled = false }
+no-sprintf-concat = { enabled = false }
+explicit-octal = { enabled = false }
+no-boolean-flag-parameter = { enabled = false }
+
+# Complexity metrics: never gated here; DTO constructors and catalogue queries exceed them by design.
+excessive-parameter-list = { enabled = false }
+cyclomatic-complexity = { enabled = false }
+too-many-methods = { enabled = false }
+too-many-properties = { enabled = false }
+halstead = { enabled = false }
+kan-defect = { enabled = false }

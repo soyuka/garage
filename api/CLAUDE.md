@@ -36,16 +36,16 @@ docker compose exec php vendor/bin/phpunit tests/Functional/McpOpenVehicleTest.p
 docker compose exec php vendor/bin/phpunit --filter testOpensByQuery
 docker compose exec php php -d memory_limit=1G vendor/bin/phpunit    # ALWAYS — see below
 docker compose exec php composer cs:check
-docker compose exec php composer phpstan
+docker compose exec php composer mago
 ```
 
 Code quality (2026-10-31): `composer cs` / `composer cs:check` (php-cs-fixer, `@Symfony` +
 `@Symfony:risky` with `declare_strict_types` kept — the risky set's default would strip it from every
-file) and `composer phpstan` (level 6, no baseline, no `ignoreErrors`; it warms the **test** debug
-container first because test-only services like `RecordingHub` live only there). Inline
-`@phpstan-ignore` is reserved for genuine false positives and always carries its reason.
-`tests/PHPStan/OdmMappedPropertiesExtension.php` teaches PHPStan that ODM-mapped properties are
-hydrated/persisted: phpstan-doctrine's equivalent is ORM-only.
+file) and `composer mago` (Mago analyzer + linter since 2026-11-10, `mago.toml`, no baseline; php-cs-fixer
+still owns style). `src/` runs at full analyzer strictness; `tests/` ignores only the mixed and
+possibly-null/false families. A genuine false positive gets a `// @mago-expect <category>:<code> <reason>`
+on the line before; decoded/deserialized payloads are guarded, not suppressed. ODM-mapped properties
+(written by hydration) are covered by a path-scoped `unused-property`/`write-only-property` ignore.
 
 **Always raise the memory limit**, not just for the full suite (corrected 2026-09-11): the container's
 `memory_limit` is 128M and building the MCP registry alone costs ~120 MB, so even a single functional

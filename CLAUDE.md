@@ -68,13 +68,13 @@ Every dispatched worker inherits the conventions at the bottom of this file.
 ## Commands
 
 ```bash
-# api — phpunit, php-cs-fixer (@Symfony + @Symfony:risky), phpstan level 6 (no baseline)
+# api — phpunit, php-cs-fixer (@Symfony + @Symfony:risky), mago analyzer + linter (no baseline)
 cd api && docker compose exec php vendor/bin/phpunit
 docker compose exec php vendor/bin/phpunit tests/Functional/McpOpenVehicleTest.php
 docker compose exec php vendor/bin/phpunit --filter testOpensByQuery
 docker compose exec php php -d memory_limit=1G vendor/bin/phpunit   # full suite needs this
 docker compose exec php composer cs          # fix; `composer cs:check` is the dry-run gate
-docker compose exec php composer phpstan     # warms the test debug container, then analyses
+docker compose exec php composer mago        # mago analyze + mago lint (mago.toml)
 
 # dashboard
 cd dashboard && npm test            # vitest, run once
