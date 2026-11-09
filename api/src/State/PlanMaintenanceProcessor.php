@@ -13,6 +13,7 @@ use App\Garage\UsageUnit;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\PlannedMaintenancePlanner;
 use App\Maintenance\PlannedTaskView;
 use App\Mercure\DomainPublisher;
@@ -74,7 +75,7 @@ final readonly class PlanMaintenanceProcessor implements ProcessorInterface
             label: $data->label,
             targetUsageValue: $data->targetUsageValue,
             targetUsageUnit: null !== $data->targetUsageUnit ? UsageUnit::from($data->targetUsageUnit) : null,
-            dueDate: null !== $data->dueDate ? new \DateTimeImmutable($data->dueDate) : null,
+            dueDate: CalendarDate::parseNullable($data->dueDate),
             parts: $data->parts,
             addedBy: $data->addedBy,
         );

@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageMaintenanceRecord;
 use App\Dto\MaintenanceRecordInput;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
@@ -63,11 +64,7 @@ final readonly class MaintenanceRecordUpdateProcessor implements ProcessorInterf
         }
 
         if ('' !== trim($data->performedAt)) {
-            try {
-                $changes['performedAt'] = new \DateTimeImmutable($data->performedAt);
-            } catch (\Exception) {
-                throw new UnprocessableEntityHttpException(\sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
-            }
+            $changes['performedAt'] = CalendarDate::parse($data->performedAt);
         }
 
         if (null !== $data->usageUnit) {

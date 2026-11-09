@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class LogMaintenanceInput
 {
@@ -58,6 +59,7 @@ final class LogMaintenanceInput
     public ?string $label = null;
 
     #[ApiProperty(description: 'Date the work was performed, ISO 8601 (e.g. "2026-06-15"). Optional — omit it for work just done ("je viens de faire la vidange") and it defaults to today.')]
+    #[Assert\Date]
     public ?string $performedAt = null;
 
     #[ApiProperty(description: 'Odometer / hour-meter reading at the time of service, when known.')]

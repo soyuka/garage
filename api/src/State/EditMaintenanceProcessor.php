@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\EditMaintenanceInput;
 use App\Garage\ToolResult;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\RecordView;
 use App\Maintenance\UsageUnit;
@@ -69,11 +70,7 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
             $changes['label'] = $data->label;
         }
         if (null !== $data->performedAt) {
-            try {
-                $changes['performedAt'] = new \DateTimeImmutable($data->performedAt);
-            } catch (\Exception) {
-                return ToolResult::error('invalid_input', \sprintf('Invalid performedAt date "%s"; expected an ISO date like "2026-06-15".', $data->performedAt));
-            }
+            $changes['performedAt'] = CalendarDate::parse($data->performedAt);
         }
         if (null !== $data->usageValue) {
             $changes['usageValue'] = $data->usageValue;

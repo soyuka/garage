@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * Input for the `edit_maintenance` MCP tool: a SPARSE in-place edit of one already-logged visit,
@@ -40,6 +41,7 @@ final class EditMaintenanceInput
     public ?string $label = null;
 
     #[ApiProperty(description: 'New service date, ISO 8601 (e.g. "2026-06-15"). Omit to leave unchanged.')]
+    #[Assert\Date]
     public ?string $performedAt = null;
 
     #[ApiProperty(description: 'New odometer/hour-meter reading at service time. Omit to leave unchanged. NOTE: editing this corrects the record only — it does not move the vehicle\'s current reading.')]

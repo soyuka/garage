@@ -9,6 +9,7 @@ use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\GarageMaintenanceRecord;
 use App\Dto\MaintenanceRecordInput;
 use App\Garage\VehicleType;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
@@ -41,11 +42,7 @@ final readonly class MaintenanceRecordCreateProcessor implements ProcessorInterf
             throw new UnprocessableEntityHttpException('performedAt is required (YYYY-MM-DD).');
         }
 
-        try {
-            $performedAt = new \DateTimeImmutable($data->performedAt);
-        } catch (\Exception) {
-            throw new UnprocessableEntityHttpException(\sprintf('Invalid performedAt date "%s"; expected YYYY-MM-DD.', $data->performedAt));
-        }
+        $performedAt = CalendarDate::parse($data->performedAt);
 
         $items = $data->resolveItems();
         if ([] === $items) {

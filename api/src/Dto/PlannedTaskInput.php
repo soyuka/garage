@@ -26,6 +26,7 @@ final class PlannedTaskInput
     public ?array $target = null;
 
     #[ApiProperty(description: 'Due date (YYYY-MM-DD) the work is pegged to, when there is no usage target.')]
+    #[Assert\Date]
     public ?string $dueDate = null;
 
     /**

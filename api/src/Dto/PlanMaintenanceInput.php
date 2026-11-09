@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class PlanMaintenanceInput
 {
@@ -48,6 +49,7 @@ final class PlanMaintenanceInput
     public ?string $targetUsageUnit = null;
 
     #[ApiProperty(description: 'Date the work should be done by, ISO 8601 (e.g. "2026-09-01"), when time-based.')]
+    #[Assert\Date]
     public ?string $dueDate = null;
 
     /**

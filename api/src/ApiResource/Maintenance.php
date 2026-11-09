@@ -42,6 +42,7 @@ use App\State\SetMaintenanceScheduleProcessor;
             title: 'Log Maintenance Event',
             description: 'Record a dated maintenance/service VISIT for a vehicle. This is an append-only LOG: every call adds one record, so a vehicle keeps its full service history — use it for "I changed the oil on <date>". ONE VISIT = ONE CALL: a vidange that changed oil AND the oil filter AND the fuel filter on the same day is a SINGLE log_maintenance call whose `items` array carries one entry per service ([{type:"oil_change",parts:[…]},{type:"oil_filter",parts:[{ref,brand}]},{type:"fuel_filter"}]) — NEVER one call per part. Each item is its own service type (so each still seeds its own due-date forecast); the parts changed go in that item\'s `parts`. The bill is visit-level: pass `cost`+`currency` once for the whole visit, plus `performedBy`, `performedAt` and the odometer/hours `usageValue`. Distinct from set_vehicle_facts, which stores a spec (e.g. oil_capacity), not an event. Identify the vehicle by make+model (its row is created if unknown) OR, to append to one you already saw in list_vehicles, by its @id (the `vehicle` argument). To avoid duplicates, if make+model has no exact match but a stored vehicle looks like the same one, the call is refused with an ambiguous_match error listing the candidates instead of creating: re-call with the chosen candidate\'s @id in `vehicle`, or confirmNew:true if it is genuinely different. Use an item type="other" with that item\'s label for anything not in the type list (e.g. groundscare blade-sharpening). Use usageUnit="hours" for engine-hour machinery.',
             input: LogMaintenanceInput::class,
+            validate: true,
             structuredContent: false,
             processor: LogMaintenanceProcessor::class,
             // Append-only: writes (not read-only), additive only (not destructive), and every call
@@ -52,6 +53,7 @@ use App\State\SetMaintenanceScheduleProcessor;
             title: 'Edit Maintenance Event',
             description: 'Fix an ALREADY-logged maintenance visit in place — use it for "the oil change actually cost 149€", "set the bill on the révision complète", "that service was on the 12th not the 15th". Address the visit by its @id (the `record` argument, the IRI surfaced by get_maintenance_history). This is a SPARSE edit: pass ONLY the fields to change and everything else is left exactly as it was — its identity (@id) and any attached bills are preserved. Distinct from log_maintenance, which RECORDS a NEW visit: never edit to log a fresh service, and never log to fix an existing one (that would duplicate it). Editing usageValue corrects the record only — it does NOT move the vehicle\'s current odometer. To replace the services covered, pass a full `items` array (an empty array keeps the current items, it does not clear them). An unknown @id is a not_found error.',
             input: EditMaintenanceInput::class,
+            validate: true,
             structuredContent: false,
             processor: EditMaintenanceProcessor::class,
             // In-place edit keyed on the record @id: writes (not read-only), mutates one existing row
@@ -74,6 +76,7 @@ use App\State\SetMaintenanceScheduleProcessor;
             title: 'Plan Maintenance Task',
             description: 'Add a service to a vehicle\'s checklist as an OPEN task the user intends to do — use it to answer "what should I do at 250 000 km?" or to turn a vidange into a tracked job. Each task carries the parts/fluids it needs (the shopping list, each with a part-number "ref"), an optional target it is pegged to (targetUsageValue+targetUsageUnit like "à 250 000 km", or a dueDate), and an optional free-text label. Distinct from log_maintenance, which records work ALREADY done — a planned task auto-closes once that service is logged. This is an UPSERT keyed on (vehicle, type, label): re-planning the same service on the same vehicle UPDATES the existing open task instead of duplicating it. Identify the vehicle by make+model (its row is created if unknown) OR by its @id (the `vehicle` argument); same ambiguous_match/confirmNew dedup as the other write tools.',
             input: PlanMaintenanceInput::class,
+            validate: true,
             structuredContent: false,
             processor: PlanMaintenanceProcessor::class,
             // Upsert keyed on (vehicle, type, label): re-sending the same plan updates one task, never

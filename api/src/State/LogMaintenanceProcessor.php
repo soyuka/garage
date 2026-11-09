@@ -12,6 +12,7 @@ use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\RecordView;
 use App\Maintenance\UsageUnit;
@@ -70,7 +71,7 @@ final readonly class LogMaintenanceProcessor implements ProcessorInterface
             vin: $data->vin,
             confirmNew: $data->confirmNew,
             items: $data->items,
-            performedAt: new \DateTimeImmutable($data->performedAt ?? 'now'),
+            performedAt: CalendarDate::parseNullable($data->performedAt) ?? new \DateTimeImmutable(),
             source: $data->source,
             label: $data->label,
             usageValue: $data->usageValue,

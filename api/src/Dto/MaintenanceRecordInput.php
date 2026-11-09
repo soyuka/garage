@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * The body of the dashboard's manual maintenance log — POST to create a past service, PATCH to edit
@@ -48,6 +49,7 @@ final class MaintenanceRecordInput
     public array $partsUsed = [];
 
     #[ApiProperty(description: 'Date the service was performed (YYYY-MM-DD). Required on create; on edit, omit to keep the current date.')]
+    #[Assert\Date]
     public string $performedAt = '';
 
     #[ApiProperty(description: 'Optional human label, e.g. "vidange annuelle".')]

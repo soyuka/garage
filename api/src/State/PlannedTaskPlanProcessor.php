@@ -14,6 +14,7 @@ use App\Garage\UsageUnit;
 use App\Garage\VehicleIriResolver;
 use App\Garage\VehicleSummaryView;
 use App\Garage\VehicleType;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\PlannedMaintenancePlanner;
 use App\Mercure\DomainPublisher;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -92,7 +93,7 @@ final readonly class PlannedTaskPlanProcessor implements ProcessorInterface
             label: $data->label,
             targetUsageValue: $data->targetUsageValue,
             targetUsageUnit: $targetUnit,
-            dueDate: null !== $data->dueDate ? new \DateTimeImmutable($data->dueDate) : null,
+            dueDate: CalendarDate::parseNullable($data->dueDate),
             parts: $data->parts,
             addedBy: $data->addedBy,
         );

@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\ApiResource\PlannedTask;
 use App\Garage\UsageUnit;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\OwnedPlannedTaskLocator;
 use App\Maintenance\PlannedMaintenanceStatus;
 use App\Mercure\DomainPublisher;
@@ -63,7 +64,7 @@ final readonly class PlannedTaskPatchProcessor implements ProcessorInterface
         $task->setType($data->type);
         $task->setLabel($data->label);
         $task->setTarget(...$this->target($data->target));
-        $task->setDueDate(null !== $data->dueDate ? new \DateTimeImmutable($data->dueDate) : null);
+        $task->setDueDate(CalendarDate::parseNullable($data->dueDate));
 
         if ([] !== $data->parts) {
             $task->mergeParts($data->parts);

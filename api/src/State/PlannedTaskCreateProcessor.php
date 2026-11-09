@@ -10,6 +10,7 @@ use App\ApiResource\PlannedTask;
 use App\Dto\PlannedTaskInput;
 use App\Garage\UsageUnit;
 use App\Garage\VehicleType;
+use App\Maintenance\CalendarDate;
 use App\Maintenance\PlannedMaintenancePlanner;
 use App\Mercure\DomainPublisher;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -62,7 +63,7 @@ final readonly class PlannedTaskCreateProcessor implements ProcessorInterface
             label: $data->label,
             targetUsageValue: $targetValue,
             targetUsageUnit: $targetUnit,
-            dueDate: null !== $data->dueDate ? new \DateTimeImmutable($data->dueDate) : null,
+            dueDate: CalendarDate::parseNullable($data->dueDate),
             parts: $data->parts,
         );
 
