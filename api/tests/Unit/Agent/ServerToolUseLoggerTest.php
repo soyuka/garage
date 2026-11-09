@@ -10,6 +10,7 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Mock\TestRenderTargets;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -113,7 +114,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new TestRenderTargets());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));

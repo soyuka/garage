@@ -9,6 +9,7 @@ use App\Agent\Ui\RenderIntentTools;
 use App\I18n\LocaleContext;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Mock\TestRenderTargets;
 use App\Tests\Support\InMemoryTurnCancellations;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
@@ -26,7 +27,7 @@ final class CancelTurnListenerTest extends TestCase
         $cancellations->request('sess-abc');
 
         $hub = new RecordingHub();
-        $render = new RenderIntentTools($hub, new NullLogger(), TestDashboardChannel::create());
+        $render = new RenderIntentTools($hub, new NullLogger(), TestDashboardChannel::create(), new TestRenderTargets());
         $render->bindSession(self::SESSION_TOPIC);
 
         $event = new ToolCallsExecuted([]);
@@ -49,7 +50,7 @@ final class CancelTurnListenerTest extends TestCase
     {
         $cancellations = new InMemoryTurnCancellations();
 
-        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create());
+        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create(), new TestRenderTargets());
         $render->bindSession(self::SESSION_TOPIC);
 
         $event = new ToolCallsExecuted([]);
@@ -63,7 +64,7 @@ final class CancelTurnListenerTest extends TestCase
         $cancellations = new InMemoryTurnCancellations();
         $cancellations->request('sess-abc');
 
-        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create());
+        $render = new RenderIntentTools(new RecordingHub(), new NullLogger(), TestDashboardChannel::create(), new TestRenderTargets());
         $render->bindSession(self::SESSION_TOPIC);
 
         // A terminal tool (end_turn) already ended the turn this round — do not double-handle.

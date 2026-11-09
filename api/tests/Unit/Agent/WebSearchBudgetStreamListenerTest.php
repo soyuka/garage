@@ -9,6 +9,7 @@ use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
 use App\Agent\WebSearchBudgetStreamListener;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Mock\TestRenderTargets;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
@@ -30,7 +31,7 @@ final class WebSearchBudgetStreamListenerTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new TestRenderTargets());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         return new WebSearchBudgetStreamListener($budget, new StepNarrator($tools));

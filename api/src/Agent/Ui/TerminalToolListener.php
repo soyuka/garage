@@ -42,6 +42,11 @@ final class TerminalToolListener
         }
 
         foreach ($event->getToolResults() as $toolResult) {
+            // A refused card (a handle outside the owner's records, a malformed call) published nothing:
+            // the model must see the error and retry, not end on an empty dashboard.
+            if ('propose_actions' === $toolResult->getToolCall()->getName() && 'ok' !== $toolResult->getResult()) {
+                continue;
+            }
             if (\in_array($toolResult->getToolCall()->getName(), self::TERMINAL_TOOLS, true)) {
                 $event->setResult(new TextResult(''));
 

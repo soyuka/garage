@@ -41,6 +41,17 @@ final class TerminalToolListenerTest extends TestCase
         $this->assertInstanceOf(TextResult::class, $event->getResult());
     }
 
+    public function testARefusedProposeActionsLeavesTheLoopRunningSoTheModelSeesTheError(): void
+    {
+        $event = new ToolCallsExecuted([
+            new ToolResult(new ToolCall('c1', 'propose_actions', []), 'not_found: No such open task in this garage.'),
+        ]);
+
+        (new TerminalToolListener())($event);
+
+        $this->assertFalse($event->hasResult());
+    }
+
     public function testLeavesTheLoopRunningWhenNoTerminalToolRan(): void
     {
         $event = new ToolCallsExecuted([

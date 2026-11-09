@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Agent\Ui;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Mock\TestRenderTargets;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\HubInterface;
@@ -26,7 +27,7 @@ final class StepNarratorTest extends TestCase
             return 'id';
         });
 
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new TestRenderTargets());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         return new StepNarrator($tools);

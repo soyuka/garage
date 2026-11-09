@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use App\Garage\ToolError;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
@@ -15,7 +16,7 @@ use Webmozart\Assert\Assert;
  * Agent-local render-intent tools: the LLM calls these to drive the dashboard. Each validates its
  * arguments against the typed {@see UiAction} vocabulary and publishes the resulting intent to the
  * caller's *per-session* Mercure topic, so only the requesting dashboard reacts (domain writes,
- * by contrast, fan out on public vehicle topics via {@see \App\Mercure\DomainPublisher}).
+ * by contrast, go to the owner's fleet topic via {@see \App\Mercure\DomainPublisher}).
  *
  * These stay `#[AsTool]` (NOT MCP): an MCP tool *call* renders nothing in a host — only a tool
  * *result* carrying a UI resource does. Host-reach therefore comes from the delivery channel, not
@@ -47,6 +48,7 @@ final class RenderIntentTools
         private readonly HubInterface $hub,
         private readonly LoggerInterface $logger,
         private readonly DashboardChannel $channel,
+        private readonly RenderTargets $targets,
     ) {
     }
 
@@ -121,9 +123,19 @@ final class RenderIntentTools
 
     public function selectVehicle(string $id): string
     {
-        $this->publish(['type' => 'selectVehicle', 'id' => $id]);
+        return self::ack($this->trySelectVehicle($id));
+    }
 
-        return 'ok';
+    /** `select_vehicle` for the MCP driver: the refusal as a tool error, or null once published. */
+    public function trySelectVehicle(string $id): ?ToolError
+    {
+        $iri = $this->targets->vehicle($id);
+        if ($iri instanceof ToolError) {
+            return $iri;
+        }
+        $this->publish(['type' => 'selectVehicle', 'id' => $iri]);
+
+        return null;
     }
 
     public function toast(#[Schema(maxLength: SpokenSummary::TOAST_MAX)] string $message, string $tone = 'info'): string
@@ -263,19 +275,38 @@ final class RenderIntentTools
      */
     public function proposeActions(string $headline, array $actions, #[Schema(maxLength: SpokenSummary::FINDING_MAX)] ?string $finding = null): string
     {
+        return self::ack($this->tryProposeActions($headline, $actions, $finding));
+    }
+
+    /**
+     * `propose_actions` for the MCP driver: the refusal as a tool error, or null once published. A
+     * write button's task must be one of the owner's open tasks — the dashboard PATCHes it with the
+     * operator's bearer.
+     *
+     * @param list<ActionButton> $actions
+     */
+    public function tryProposeActions(string $headline, array $actions, ?string $finding = null): ?ToolError
+    {
         Assert::notEmpty($actions);
-        $buttons = array_map(static function (ActionButton $action): array {
+        $buttons = [];
+        foreach ($actions as $action) {
             Assert::stringNotEmpty($action->label);
 
             $parts = $action->parts ?? [];
             if (null !== $action->taskId && [] !== $parts) {
-                return [
+                $task = $this->targets->task($action->taskId);
+                if ($task instanceof ToolError) {
+                    return $task;
+                }
+                $buttons[] = [
                     'label' => $action->label,
                     'patchTask' => [
-                        'id' => self::taskIri($action->taskId),
+                        'id' => $task,
                         'parts' => array_map(static fn (ActionPart $p): array => $p->toArray(), $parts),
                     ],
                 ];
+
+                continue;
             }
 
             Assert::stringNotEmpty(
@@ -283,8 +314,8 @@ final class RenderIntentTools
                 'A button must carry either an instruction (NL follow-up) or a taskId + parts (deterministic write).',
             );
 
-            return ['label' => $action->label, 'instruction' => $action->instruction];
-        }, $actions);
+            $buttons[] = ['label' => $action->label, 'instruction' => $action->instruction];
+        }
 
         $payload = ['type' => 'proposeActions', 'headline' => $headline, 'actions' => $buttons];
         if (null !== $finding && '' !== trim($finding)) {
@@ -293,17 +324,13 @@ final class RenderIntentTools
         $this->pendingToast = null;
         $this->publish($payload);
 
-        return 'ok';
+        return null;
     }
 
-    /**
-     * Normalise a task handle to its dereferenceable tick-off IRI. The turn context inlines open
-     * tasks by bare ULID ({@see \App\Agent\TurnContextBuilder}), so the model usually passes a ULID;
-     * accept an already-qualified IRI unchanged so it stays robust if the model returns the full path.
-     */
-    private static function taskIri(string $taskId): string
+    /** The agent tool's answer: `ok`, or the tool error's text so the model can correct the handle. */
+    private static function ack(?ToolError $error): string
     {
-        return str_contains($taskId, '/') ? $taskId : '/garage/planned-tasks/'.$taskId;
+        return null === $error ? 'ok' : $error->status.': '.$error->reason;
     }
 
     /**

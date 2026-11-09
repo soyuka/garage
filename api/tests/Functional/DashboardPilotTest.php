@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Agent\Ui\DashboardChannel;
+use App\Entity\PlannedMaintenance;
+use App\Entity\Vehicle;
+use App\Garage\VehicleType;
 use App\Tests\Mock\RecordingHub;
+use Doctrine\ODM\MongoDB\DocumentManager;
 
 /**
  * The pilot channel: an external MCP host (Claude Code, Goose…) drives the SAME dashboard the in-app
@@ -238,14 +242,15 @@ final class DashboardPilotTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
+        [$vehicle] = $this->ownedTask();
 
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'select_vehicle',
-            'arguments' => ['vehicle' => '/garage/vehicles/01J'],
+            'arguments' => ['vehicle' => '/garage/vehicles/'.$vehicle],
         ], 3);
 
         $this->assertSame(
-            ['type' => 'selectVehicle', 'id' => '/garage/vehicles/01J'],
+            ['type' => 'selectVehicle', 'id' => '/garage/vehicles/'.$vehicle],
             $this->lastPilotFrame(),
         );
     }
@@ -281,6 +286,7 @@ final class DashboardPilotTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
+        [, $task] = $this->ownedTask();
 
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'propose_actions',
@@ -289,7 +295,7 @@ final class DashboardPilotTest extends AppTestCase
                 'finding' => '2 références compatibles',
                 'actions' => [
                     ['label' => 'Chercher au catalogue', 'instruction' => 'cherche les références'],
-                    ['label' => 'Ajouter MANN W 712/73', 'taskId' => '01JTASK', 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]],
+                    ['label' => 'Ajouter MANN W 712/73', 'taskId' => $task, 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]],
                 ],
             ],
         ], 3);
@@ -299,7 +305,7 @@ final class DashboardPilotTest extends AppTestCase
             'headline' => 'Références filtre à huile',
             'actions' => [
                 ['label' => 'Chercher au catalogue', 'instruction' => 'cherche les références'],
-                ['label' => 'Ajouter MANN W 712/73', 'patchTask' => ['id' => '/garage/planned-tasks/01JTASK', 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]]],
+                ['label' => 'Ajouter MANN W 712/73', 'patchTask' => ['id' => '/garage/planned-tasks/'.$task, 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]]],
             ],
             'finding' => '2 références compatibles',
         ], $this->lastPilotFrame());
@@ -342,13 +348,14 @@ final class DashboardPilotTest extends AppTestCase
     {
         $client = static::createClient();
         $sessionId = $this->initialize($client);
+        [, $task] = $this->ownedTask();
 
         $this->call($client, $sessionId, 'tools/call', [
             'name' => 'propose_actions',
             'arguments' => [
                 'headline' => 'Références filtre à huile',
                 'actions' => [
-                    ['label' => 'Ajouter MANN W 712/73', 'instruction' => null, 'taskId' => '01JTASK', 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]],
+                    ['label' => 'Ajouter MANN W 712/73', 'instruction' => null, 'taskId' => $task, 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]],
                 ],
             ],
         ], 3);
@@ -357,7 +364,7 @@ final class DashboardPilotTest extends AppTestCase
             'type' => 'proposeActions',
             'headline' => 'Références filtre à huile',
             'actions' => [
-                ['label' => 'Ajouter MANN W 712/73', 'patchTask' => ['id' => '/garage/planned-tasks/01JTASK', 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]]],
+                ['label' => 'Ajouter MANN W 712/73', 'patchTask' => ['id' => '/garage/planned-tasks/'.$task, 'parts' => [['ref' => 'W 712/73', 'brand' => 'MANN-FILTER']]]],
             ],
         ], $this->lastPilotFrame());
     }
@@ -429,5 +436,21 @@ final class DashboardPilotTest extends AppTestCase
         static::createAnonymousClient()->request('GET', '/agent/link');
 
         $this->assertResponseStatusCodeSame(401);
+    }
+
+    /**
+     * @return array{string, string} the vehicle and open task ULIDs, owned by the test owner
+     */
+    private function ownedTask(): array
+    {
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $vehicle = new Vehicle('RENAULT', 'ESPACE', VehicleType::Car, 'test');
+        $vehicle->setOwner(self::TEST_OWNER);
+        $task = new PlannedMaintenance($vehicle, 'oil_change', 'test');
+        $dm->persist($vehicle);
+        $dm->persist($task);
+        $dm->flush();
+
+        return [(string) $vehicle->getId(), (string) $task->getId()];
     }
 }

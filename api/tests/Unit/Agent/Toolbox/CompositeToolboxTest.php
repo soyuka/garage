@@ -11,6 +11,7 @@ use App\Agent\WebSearch\WebSearchBackend;
 use App\Capability\Capabilities;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Mock\TestRenderTargets;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\ToolboxInterface;
@@ -40,7 +41,7 @@ final class CompositeToolboxTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new TestRenderTargets());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         return new CompositeToolbox($render, $mcp, new StepNarrator($tools), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
@@ -176,7 +177,7 @@ final class CompositeToolboxTest extends TestCase
 
             return 'id';
         });
-        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
+        $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create(), new TestRenderTargets());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
         return $tools;

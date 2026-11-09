@@ -56,7 +56,10 @@ final readonly class ProposeActionsProcessor implements ProcessorInterface
             $buttons[] = new ActionButton($label, $instruction, $taskId, self::parts($action));
         }
 
-        $this->render->proposeActions($data->headline, $buttons, $data->finding);
+        $refused = $this->render->tryProposeActions($data->headline, $buttons, $data->finding);
+        if (null !== $refused) {
+            return $refused;
+        }
 
         return ToolResult::of(['status' => 'rendered', 'intent' => 'proposeActions']);
     }

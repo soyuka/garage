@@ -29,7 +29,10 @@ final readonly class SelectVehicleProcessor implements ProcessorInterface
             return ToolResult::error('invalid_input', 'vehicle must be a vehicle @id, e.g. "/garage/vehicles/01J…".');
         }
 
-        $this->render->selectVehicle($data->vehicle);
+        $refused = $this->render->trySelectVehicle($data->vehicle);
+        if (null !== $refused) {
+            return $refused;
+        }
 
         return ToolResult::of(['status' => 'rendered', 'intent' => 'selectVehicle']);
     }
