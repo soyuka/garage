@@ -9,7 +9,7 @@ import type { DomainEvent, MercureFrame, UIAction, VehicleSummary } from './type
 // The in-app subscription carries two absolute-IRI topics: the owner's fleet topic
 // (`fleetTopic` from GET /agent/link — every vehicle write of this owner, one
 // topic for the whole fleet, never per-item subs) and the per-tab session topic
-// `${API}/agent/sessions/<id>`. A domain event carries the full read-model in
+// (`sessionTopic`, a digest of owner + tab session id). A domain event carries the full read-model in
 // `resource`, so the live cascade reconciles state with NO follow-up fetch.
 // ─────────────────────────────────────────────────────────────────────────────
 

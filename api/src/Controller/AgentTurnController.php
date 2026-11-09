@@ -5,13 +5,13 @@ declare(strict_types=1);
 namespace App\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
+use App\Agent\Ui\DashboardChannel;
 use App\Bonneref\BonnerefToken;
 use App\Capability\Capabilities;
 use App\Capability\Capability;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -28,13 +28,13 @@ use Symfony\Component\Routing\Attribute\Route;
  *
  * The HTTP contract stays a bare 202 ack: there is no chat transcript and no action list in the
  * body. The dashboard updates progressively from the render intents the worker streams to the
- * caller's per-session Mercure topic; domain writes fan out on public vehicle topics for free.
+ * caller's per-session Mercure topic; domain writes go to the owner's fleet topic for free.
  *
- * The session topic is built from the configured public base URL (DEFAULT_URI), the SAME origin
- * {@see \App\Mercure\DomainPublisher} derives the vehicle topics from and the dashboard subscribes
- * to (`${VITE_API_BASE}/agent/sessions/<id>`). NOT the request host: behind the reverse proxy
- * `Request::getSchemeAndHttpHost()` can report the internal scheme/host (e.g. http://php), which
- * would publish render intents to a topic no dashboard listens on.
+ * The session topic is {@see DashboardChannel::sessionTopic()}: a keyed digest of (owner, sessionId)
+ * on the configured public base URL (DEFAULT_URI, never the request host, which behind the proxy can
+ * be http://php). The browser picks the session id, so the owner binding is what stops another owner
+ * from streaming into, or watching, this tab's session. The dashboard learns the topic from
+ * GET /agent/link?session=<id>.
  */
 final readonly class AgentTurnController
 {
@@ -42,8 +42,7 @@ final readonly class AgentTurnController
         private TurnDispatcher $turns,
         private Security $security,
         private RateLimiterFactoryInterface $agentTurnLimiter,
-        #[Autowire('%env(DEFAULT_URI)%')]
-        private string $baseUri,
+        private DashboardChannel $channel,
         private Capabilities $capabilities,
     ) {
     }
@@ -65,6 +64,9 @@ final readonly class AgentTurnController
         if ('' === $instruction || '' === $sessionId) {
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
         }
+        if (1 !== preg_match(DashboardChannel::SESSION_ID_PATTERN, $sessionId)) {
+            return new JsonResponse(['error' => 'sessionId must be 1-128 of [A-Za-z0-9_-]'], Response::HTTP_BAD_REQUEST);
+        }
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
         // owner is always present — the turn never runs unowned.
@@ -81,7 +83,7 @@ final readonly class AgentTurnController
 
         $this->turns->dispatch(new RunAgentTurn(
             instruction: $instruction,
-            sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
+            sessionTopic: $this->channel->sessionTopic($owner, $sessionId),
             owner: $owner,
             selectedId: trim((string) ($payload['selectedId'] ?? '')),
             summary: trim((string) ($payload['summary'] ?? '')),

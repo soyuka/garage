@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Agent\TurnCancellations;
 use App\Agent\TurnSettlement;
+use App\Agent\Ui\DashboardChannel;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\Repository\AgentTurnRepository;
@@ -160,7 +161,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $turn = new RunAgentTurn(
             owner: self::TEST_OWNER,
             instruction: 'Quelle viscosité ?',
-            sessionTopic: 'https://localhost/agent/sessions/sess-fatal',
+            sessionTopic: $container->get(DashboardChannel::class)->sessionTopic(self::TEST_OWNER, 'sess-fatal'),
         );
 
         $settlement->open($turn);
@@ -205,7 +206,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
     {
         $updates = array_filter(
             static::getContainer()->get(RecordingHub::class)->updates,
-            static fn ($u): bool => str_ends_with($u->getTopics()[0] ?? '', '/agent/sessions/'.$session),
+            static fn ($u): bool => ($u->getTopics()[0] ?? '') === static::getContainer()->get(DashboardChannel::class)->sessionTopic(self::TEST_OWNER, $session),
         );
 
         return array_values(array_map(static fn ($u): array => json_decode($u->getData(), true), $updates));

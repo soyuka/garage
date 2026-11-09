@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useT } from '../i18n/LocaleProvider';
-import { API, getIdentity } from '../auth';
+import { getIdentity } from '../auth';
 import type { OwnerTopics } from '../agent';
 import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId } from '../agent';
 import { createTask, getVehicleBundle, getVehicles, mergeTaskParts } from '../garage';
@@ -75,15 +75,15 @@ export function Workshop() {
 
   useEffect(() => {
     let live = true;
-    fetchAgentLink().then((link) => {
+    fetchAgentLink(sessionId).then((link) => {
       if (!live) return;
-      setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic });
+      setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic, sessionTopic: link.sessionTopic });
       setCapabilities(link.capabilities);
     });
     return () => {
       live = false;
     };
-  }, []);
+  }, [sessionId]);
 
   useEffect(() => {
     let live = true;
@@ -308,7 +308,7 @@ export function Workshop() {
     },
     [closeRun, cues.play, dispatch, openRun, loadBundle, runStage],
   );
-  useMercure(dashboardSubscriptions(API, sessionId, ownerTopics), onFrame);
+  useMercure(dashboardSubscriptions(ownerTopics), onFrame);
 
   // ── The command bar ──
   const lastAck = useRef(-1);

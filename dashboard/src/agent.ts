@@ -74,10 +74,10 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
 }
 
 /**
- * What this dashboard listens on: its own per-tab turn session and — once GET /agent/link has resolved
- * them — the owner's FLEET topic (vehicle writes; a keyed digest, since the hub takes anonymous
- * subscribers and a guessable topic would broadcast every owner's plates) and the owner's PILOT topic, where render intents driven from an
- * external MCP host (Claude Code, Goose…) land. The pilot topic carries the very same UIAction
+ * What this dashboard listens on, all resolved by GET /agent/link (keyed digests: the hub takes
+ * anonymous subscribers, so a guessable topic would broadcast another owner's data): this tab's turn
+ * SESSION topic, the owner's FLEET topic (vehicle writes) and the owner's PILOT topic, where render
+ * intents driven from an external MCP host (Claude Code, Goose…) land. Nothing before it resolves. The pilot topic carries the very same UIAction
  * frames, so the same handler drives the same choreography whoever is at the controls.
  *
  * The pilot topic gets its OWN subscription rather than a third `?match=` on the shared one. Mercure
@@ -87,21 +87,25 @@ export async function postTurn(instruction: string, ctx: TurnContext): Promise<v
  * pilot.ts). One EventSource per driver makes provenance STRUCTURAL: the stream a frame arrived on is
  * the answer, with nothing to forget to stamp and nothing new on the wire.
  */
-export function dashboardSubscriptions(api: string, sessionId: string, link: OwnerTopics): Subscription[] {
-  const app = [`${api}/agent/sessions/${sessionId}`];
-  if (link.fleetTopic) app.unshift(link.fleetTopic);
-  const subs: Subscription[] = [{ driver: 'app', topics: app }];
+export function dashboardSubscriptions(link: OwnerTopics): Subscription[] {
+  const app = [link.fleetTopic, link.sessionTopic].filter((t): t is string => t !== null);
+  const subs: Subscription[] = app.length > 0 ? [{ driver: 'app', topics: app }] : [];
   if (link.topic) subs.push({ driver: 'pilot', topics: [link.topic] });
   return subs;
 }
 
-/** The owner-scoped topics GET /agent/link hands out: `topic` = pilot intents, `fleetTopic` = vehicle writes. */
+/**
+ * The owner-bound topics GET /agent/link hands out: `topic` = pilot intents, `fleetTopic` = vehicle
+ * writes, `sessionTopic` = this tab's in-app turns (a digest of owner + tab session id, so another
+ * owner reusing the id lands elsewhere).
+ */
 export interface OwnerTopics {
   topic: string | null;
   fleetTopic: string | null;
+  sessionTopic: string | null;
 }
 
-export const NO_OWNER_TOPICS: OwnerTopics = { topic: null, fleetTopic: null };
+export const NO_OWNER_TOPICS: OwnerTopics = { topic: null, fleetTopic: null, sessionTopic: null };
 
 export interface AgentLink extends OwnerTopics {
   capabilities: Capabilities;
@@ -112,7 +116,7 @@ export const ALL_CAPABILITIES: Capabilities = { agent: true, voice: true, dictat
 
 /** Only a literal `false` switches a capability off — a malformed or older body never hides a feature. */
 export function parseAgentLink(body: unknown): AgentLink {
-  const link = body !== null && typeof body === 'object' ? (body as { topic?: unknown; fleetTopic?: unknown; capabilities?: unknown }) : {};
+  const link = body !== null && typeof body === 'object' ? (body as { topic?: unknown; fleetTopic?: unknown; sessionTopic?: unknown; capabilities?: unknown }) : {};
   const raw = link.capabilities !== null && typeof link.capabilities === 'object' ? (link.capabilities as Record<string, unknown>) : {};
   const capabilities = { ...ALL_CAPABILITIES };
   for (const key of Object.keys(capabilities) as (keyof Capabilities)[]) {
@@ -121,19 +125,20 @@ export function parseAgentLink(body: unknown): AgentLink {
   return {
     topic: typeof link.topic === 'string' ? link.topic : null,
     fleetTopic: typeof link.fleetTopic === 'string' ? link.fleetTopic : null,
+    sessionTopic: typeof link.sessionTopic === 'string' ? link.sessionTopic : null,
     capabilities,
   };
 }
 
 /**
- * Resolve the owner's pilot topic and what this deployment can do. The topic is a keyed digest
+ * Resolve the owner's topics for this tab and what this deployment can do. Each topic is a keyed digest
  * server-side (the hub takes anonymous subscribers, so the topic is the only thing scoping one owner's
- * intents to their own dashboards), hence it can only be asked for, not derived. Topic null when
- * unauthenticated or the endpoint is absent — the dashboard then simply runs without the pilot channel.
+ * frames to their own dashboards), hence it can only be asked for, not derived. Null when
+ * unauthenticated or the endpoint is absent.
  */
-export async function fetchAgentLink(): Promise<AgentLink> {
+export async function fetchAgentLink(sessionId: string): Promise<AgentLink> {
   try {
-    const res = await authFetch(`${API}/agent/link`);
+    const res = await authFetch(`${API}/agent/link?session=${encodeURIComponent(sessionId)}`);
     if (!res.ok) return parseAgentLink(null);
     return parseAgentLink(await res.json());
   } catch {

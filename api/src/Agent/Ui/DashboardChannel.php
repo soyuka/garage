@@ -12,7 +12,8 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * drivers:
  *
  *  - the in-app agent turn, which binds the caller's per-tab session topic
- *    (`…/agent/sessions/<uuid>`) before the loop runs, so only the tab that asked reacts;
+ *    (`…/agent/sessions/<hmac(owner, tab id)>`, {@see self::sessionTopic()}) before the loop runs, so
+ *    only the tab that asked reacts;
  *  - an external MCP host (Claude Code, Goose…) calling the dashboard tools directly, which has no
  *    tab and no session id. Those intents go to the owner's PILOT topic (`…/agent/pilots/<digest>`),
  *    which every dashboard of that owner subscribes to (see {@see \App\Controller\AgentLinkController}).
@@ -24,6 +25,9 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  */
 final class DashboardChannel
 {
+    /** A browser-chosen session id: no separator, no path segment, bounded. */
+    public const string SESSION_ID_PATTERN = '/^[A-Za-z0-9_-]{1,128}$/D';
+
     private ?string $sessionTopic = null;
 
     public function __construct(
@@ -42,7 +46,7 @@ final class DashboardChannel
     }
 
     /**
-     * The bound turn session's id — the last segment of `…/agent/sessions/<id>`. It is the key the
+     * The bound turn session's key ({@see self::sessionKey()}) — the last segment of the topic. It is the key the
      * cancel flag is stored under, so {@see CancelTurnListener} can tell whether THIS turn was asked
      * to stop. Null when no turn session is bound (an MCP pilot call has none to cancel).
      */
@@ -59,6 +63,21 @@ final class DashboardChannel
     public function pilotTopic(string $owner): string
     {
         return rtrim($this->baseUri, '/').'/agent/pilots/'.hash_hmac('sha256', $owner, $this->secret);
+    }
+
+    /**
+     * The key a turn session is published and cancelled under. The session id comes from the browser,
+     * so it is bound to the owner: the same id posted by another owner lands on another topic and
+     * raises another cancel flag. The pattern keeps `|` out of the id, so the HMAC input is unambiguous.
+     */
+    public function sessionKey(string $owner, string $sessionId): string
+    {
+        return hash_hmac('sha256', 'session|'.$owner.'|'.$sessionId, $this->secret);
+    }
+
+    public function sessionTopic(string $owner, string $sessionId): string
+    {
+        return rtrim($this->baseUri, '/').'/agent/sessions/'.$this->sessionKey($owner, $sessionId);
     }
 
     /**

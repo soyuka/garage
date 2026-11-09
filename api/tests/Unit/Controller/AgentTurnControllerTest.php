@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Controller;
 
 use App\Agent\Dispatch\TurnDispatcher;
+use App\Agent\Ui\DashboardChannel;
 use App\Agent\WebSearch\WebSearchBackend;
 use App\Capability\Capabilities;
 use App\Controller\AgentTurnController;
 use App\Message\RunAgentTurn;
+use App\Security\OwnerContext;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -31,9 +33,8 @@ final class AgentTurnControllerTest extends TestCase
     public function testDispatchesRunAgentTurnAndReturns202(): void
     {
         // The session topic is built from the configured public base URL (DEFAULT_URI), NOT the
-        // request host: the worker publishes render intents to it and the dashboard subscribes to
-        // `${VITE_API_BASE}/agent/sessions/<id>`, so both must derive from the same fixed origin —
-        // behind a reverse proxy the request host is unreliable. Trailing slash is normalised.
+        // request host (unreliable behind the proxy), and is bound to the owner. Trailing slash is
+        // normalised.
         $controller = $this->controller('owner-sub', baseUri: 'https://app.example/');
         $response = $controller($this->request([
             'instruction' => 'Quoi prévoir pour mon entretien ?',
@@ -47,7 +48,8 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertCount(1, $this->dispatched);
         $dispatched = $this->dispatched[0];
         $this->assertSame('Quoi prévoir pour mon entretien ?', $dispatched->instruction);
-        $this->assertSame('https://app.example/agent/sessions/sess-1', $dispatched->sessionTopic);
+        $this->assertSame((new DashboardChannel(new OwnerContext($this->securityFor('owner-sub')), 'https://app.example/', 'test-secret'))->sessionTopic('owner-sub', 'sess-1'), $dispatched->sessionTopic);
+        $this->assertStringStartsWith('https://app.example/agent/sessions/', $dispatched->sessionTopic);
         // The turn carries the authenticated owner so the worker's writes are owner-scoped.
         $this->assertSame('owner-sub', $dispatched->owner);
         $this->assertSame('/garage/vehicles/01J', $dispatched->selectedId);
@@ -112,7 +114,7 @@ final class AgentTurnControllerTest extends TestCase
             }
         };
 
-        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $baseUri, new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
+        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), new DashboardChannel(new OwnerContext($this->securityFor($owner)), $baseUri, 'test-secret'), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
     }
 
     private function dispatched(RunAgentTurn $turn): void

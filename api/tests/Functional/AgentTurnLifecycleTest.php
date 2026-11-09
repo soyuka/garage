@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 use App\Agent\TurnCancellations;
+use App\Agent\Ui\DashboardChannel;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;
 
@@ -101,7 +102,7 @@ final class AgentTurnLifecycleTest extends AppTestCase
     {
         $phases = [];
         foreach ($hub->updates as $update) {
-            if (!str_contains($update->getTopics()[0] ?? '', '/agent/sessions/'.$sessionId)) {
+            if (($update->getTopics()[0] ?? '') !== static::getContainer()->get(DashboardChannel::class)->sessionTopic(self::TEST_OWNER, $sessionId)) {
                 continue;
             }
             $payload = json_decode($update->getData(), true);

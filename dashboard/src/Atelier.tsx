@@ -5,7 +5,7 @@ import './floor/floor.css';
 import './scene/scene.css';
 import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
-import { API, getIdentity, logout } from './auth';
+import { getIdentity, logout } from './auth';
 import type { OwnerTopics } from './agent';
 import { cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId } from './agent';
 import {
@@ -207,11 +207,11 @@ export function Atelier() {
   // The owner topics — asked for once on mount (keyed digests server-side, not derivable here).
   useEffect(() => {
     let live = true;
-    fetchAgentLink().then((link) => live && setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic }));
+    fetchAgentLink(sessionId).then((link) => live && setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic, sessionTopic: link.sessionTopic }));
     return () => {
       live = false;
     };
-  }, []);
+  }, [sessionId]);
 
   // The parc collection — loaded once on mount; Mercure (slice 4) keeps it fresh thereafter.
   useEffect(() => {
@@ -590,7 +590,7 @@ export function Atelier() {
     },
     [closeRun, dispatch, openRun, runStage],
   );
-  useMercure(dashboardSubscriptions(API, sessionId, ownerTopics), onFrame);
+  useMercure(dashboardSubscriptions(ownerTopics), onFrame);
 
   // The car the gate was waiting for is on screen → replay what it held, in order. Guarded on the
   // awaited IRI so the effect is inert on every other bundle change (the live cascade re-runs it).

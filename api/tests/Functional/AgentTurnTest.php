@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Ui\DashboardChannel;
 use App\I18n\Locale;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\RecordingHub;
@@ -70,7 +71,7 @@ final class AgentTurnTest extends AppTestCase
         $hub = $container->get(RecordingHub::class);
         $sessionUpdates = array_filter(
             $hub->updates,
-            static fn ($u) => str_contains($u->getTopics()[0] ?? '', '/agent/sessions/sess-abc'),
+            static fn ($u) => ($u->getTopics()[0] ?? '') === $container->get(DashboardChannel::class)->sessionTopic(self::TEST_OWNER, 'sess-abc'),
         );
         $this->assertNotEmpty($sessionUpdates, 'expected a render intent on the session topic');
 
