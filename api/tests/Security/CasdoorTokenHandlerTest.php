@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Security;
 
 use App\Security\CasdoorTokenHandler;
+use App\Tests\Mock\RecordingLogger;
 use Jose\Component\Core\AlgorithmManager;
 use Jose\Component\Core\JWK;
 use Jose\Component\KeyManagement\JWKFactory;
@@ -26,9 +27,80 @@ final class CasdoorTokenHandlerTest extends TestCase
 
     private JWK $signingKey;
 
+    /** @var list<JWK> what the JWKS endpoint serves right now */
+    private array $served;
+
+    private int $jwksFetches = 0;
+
+    private ArrayAdapter $cache;
+
     protected function setUp(): void
     {
         $this->signingKey = JWKFactory::createRSAKey(2048, ['alg' => 'RS256', 'use' => 'sig', 'kid' => 'cert-built-in']);
+        $this->served = [$this->signingKey];
+        $this->cache = new ArrayAdapter();
+    }
+
+    public function testANonObjectPayloadIsRejectedNotA500(): void
+    {
+        $jws = (new JWSBuilder(new AlgorithmManager([new RS256()])))->create()
+            ->withPayload('42')
+            ->addSignature($this->signingKey, ['alg' => 'RS256', 'kid' => 'cert-built-in'])
+            ->build();
+
+        $this->expectException(BadCredentialsException::class);
+        $this->handler()->getUserBadgeFrom((new CompactSerializer())->serialize($jws, 0));
+    }
+
+    public function testAnInvalidTokenIsLoggedBelowError(): void
+    {
+        $logger = new RecordingLogger();
+
+        try {
+            $this->handler(logger: $logger)->getUserBadgeFrom('not.a.jwt');
+            self::fail('an invalid token must be refused');
+        } catch (BadCredentialsException) {
+        }
+
+        self::assertNotEmpty($logger->records);
+        self::assertSame([], array_filter($logger->records, static fn (array $r): bool => \in_array($r['level'], ['error', 'critical', 'alert', 'emergency'], true)));
+    }
+
+    public function testASmallClockSkewIsTolerated(): void
+    {
+        $token = $this->mintToken(['sub' => 'built-in/alice', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1520, 'nbf' => 1520, 'exp' => 2000]);
+
+        self::assertSame('built-in/alice', $this->handler(now: 1500)->getUserBadgeFrom($token)->getUserIdentifier());
+    }
+
+    public function testARotatedKeyIsPickedUpWithoutWaitingForTheCache(): void
+    {
+        $handler = $this->handler();
+        $handler->getUserBadgeFrom($this->mintToken(['sub' => 'a', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000]));
+        self::assertSame(1, $this->jwksFetches);
+
+        $rotated = JWKFactory::createRSAKey(2048, ['alg' => 'RS256', 'use' => 'sig', 'kid' => 'cert-rotated']);
+        $this->served = [$rotated];
+
+        $badge = $handler->getUserBadgeFrom($this->mintToken(['sub' => 'b', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000], $rotated));
+
+        self::assertSame('b', $badge->getUserIdentifier());
+        self::assertSame(2, $this->jwksFetches);
+    }
+
+    public function testAnUnknownKidRefetchesOnlyOnce(): void
+    {
+        $handler = $this->handler();
+        $handler->getUserBadgeFrom($this->mintToken(['sub' => 'a', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000]));
+        $stranger = JWKFactory::createRSAKey(2048, ['alg' => 'RS256', 'use' => 'sig', 'kid' => 'cert-stranger']);
+
+        try {
+            $handler->getUserBadgeFrom($this->mintToken(['sub' => 'b', 'iss' => self::ISSUER, 'aud' => ['x'], 'iat' => 1000, 'exp' => 2000], $stranger));
+            self::fail('a key the issuer does not publish must be refused');
+        } catch (BadCredentialsException) {
+        }
+
+        self::assertSame(2, $this->jwksFetches);
     }
 
     public function testValidAccessTokenIsAccepted(): void
@@ -204,23 +276,25 @@ final class CasdoorTokenHandlerTest extends TestCase
         return (new CompactSerializer())->serialize($jws, 0);
     }
 
-    private function handler(int $now = 1500, string $claim = 'sub', bool $requireVerifiedEmail = true): CasdoorTokenHandler
+    private function handler(int $now = 1500, string $claim = 'sub', bool $requireVerifiedEmail = true, ?RecordingLogger $logger = null): CasdoorTokenHandler
     {
         $client = new MockHttpClient(function (string $method, string $url): JsonMockResponse {
             if (str_contains($url, '.well-known/openid-configuration')) {
                 return new JsonMockResponse(['jwks_uri' => self::JWKS_URI]);
             }
+            ++$this->jwksFetches;
 
-            return new JsonMockResponse(['keys' => [$this->signingKey->toPublic()->jsonSerialize()]]);
+            return new JsonMockResponse(['keys' => array_map(static fn (JWK $key): array => $key->toPublic()->jsonSerialize(), $this->served)]);
         });
 
         return new CasdoorTokenHandler(
             client: $client,
-            discoveryCache: new ArrayAdapter(),
+            discoveryCache: $this->cache,
             oidcConfigurationCacheKey: 'casdoor_oidc_config',
             issuers: [self::ISSUER],
             claim: $claim,
             requireVerifiedEmail: $requireVerifiedEmail,
+            logger: $logger,
             clock: new MockClock((new \DateTimeImmutable())->setTimestamp($now)),
         );
     }

@@ -200,8 +200,16 @@ services:
 
     # Signature, issuer, expiry, token type of a Casdoor JWT. JWKS discovered from CASDOOR_ISSUER, cached in
     # cache.app. The audience is the per-firewall AudienceTokenHandler's job, below.
+    # Discovery and JWKS run inside the request that presents the token: bounded, so a slow Casdoor
+    # costs a 401, not a hung worker thread.
+    app.casdoor_http_client:
+        class: Symfony\Contracts\HttpClient\HttpClientInterface
+        factory: ['@http_client', 'withOptions']
+        arguments: [{ timeout: 5, max_duration: 10 }]
+
     App\Security\CasdoorTokenHandler:
         arguments:
+            $client: '@app.casdoor_http_client'
             $discoveryCache: '@cache.app'
             $oidcConfigurationCacheKey: 'casdoor_oidc_config'
             $issuers: ['%env(CASDOOR_ISSUER)%']

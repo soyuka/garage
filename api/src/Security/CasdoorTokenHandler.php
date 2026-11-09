@@ -13,6 +13,7 @@ use Jose\Component\Signature\Algorithm\ES384;
 use Jose\Component\Signature\Algorithm\ES512;
 use Jose\Component\Signature\Algorithm\RS256;
 use Jose\Component\Signature\Algorithm\RS512;
+use Jose\Component\Signature\JWS;
 use Jose\Component\Signature\JWSTokenSupport;
 use Jose\Component\Signature\JWSVerifier;
 use Jose\Component\Signature\Serializer\CompactSerializer;
@@ -37,6 +38,12 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
  */
 final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
 {
+    /** Seconds of clock skew tolerated between Casdoor and this host on iat/nbf/exp. */
+    private const int ALLOWED_TIME_DRIFT = 30;
+
+    /** A forced JWKS refetch (unknown kid) happens at most once per this many seconds. */
+    private const int REFETCH_COOLDOWN = 60;
+
     private AlgorithmManager $signatureAlgorithm;
 
     /**
@@ -60,10 +67,8 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
     public function getUserBadgeFrom(#[\SensitiveParameter] string $accessToken): UserBadge
     {
         try {
-            $keys = $this->discoveryCache->get($this->oidcConfigurationCacheKey, $this->computeDiscoveryKeys(...));
-            $jwkset = JWKSet::createFromKeyData(['keys' => $keys]);
-
-            $claims = $this->loadAndVerifyJws($accessToken, $jwkset);
+            $jws = (new JWSSerializerManager([new CompactSerializer()]))->unserialize($accessToken);
+            $claims = $this->verifySignature($jws, $this->keySetFor($jws));
             $this->verifyClaims($claims);
 
             if (empty($claims[$this->claim]) || !\is_string($claims[$this->claim])) {
@@ -76,8 +81,10 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
             }
 
             return new UserBadge($claims[$this->claim], null, $claims);
-        } catch (\Exception $e) {
-            $this->logger?->error('Failed to validate the Casdoor access token.', [
+        } catch (\Throwable $e) {
+            // A refused token is the caller's problem, not ours: notice, not error. A malformed payload
+            // (TypeError, JsonException) is refused the same way instead of escaping as a 500.
+            $this->logger?->notice('Refused a Casdoor access token.', [
                 'error' => $e->getMessage(),
                 'exception' => $e::class,
             ]);
@@ -87,11 +94,41 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
     }
 
     /**
-     * @return list<array<string, mixed>>
-     *
-     * @internal public so the cache callback can populate it
+     * The cached JWKS, refetched once when it does not hold the token's `kid`: Casdoor rotated its
+     * key and the cache would otherwise refuse every new token for up to an hour. The cooldown keeps
+     * a stream of forged kids from turning into a stream of requests to Casdoor.
      */
-    public function computeDiscoveryKeys(ItemInterface $item): array
+    private function keySetFor(JWS $jws): JWKSet
+    {
+        $keySet = JWKSet::createFromKeyData(['keys' => $this->discoveryCache->get($this->oidcConfigurationCacheKey, $this->computeDiscoveryKeys(...))]);
+
+        $signature = $jws->getSignature(0);
+        $kid = $signature->hasProtectedHeaderParameter('kid') ? $signature->getProtectedHeaderParameter('kid') : null;
+        if (!\is_string($kid) || $keySet->has($kid)) {
+            return $keySet;
+        }
+
+        $cooldownKey = $this->oidcConfigurationCacheKey.'_refetched';
+        $refetched = true;
+        $this->discoveryCache->get($cooldownKey, static function (ItemInterface $item) use (&$refetched): bool {
+            $item->expiresAfter(self::REFETCH_COOLDOWN);
+            $refetched = false;
+
+            return true;
+        });
+        if ($refetched) {
+            return $keySet;
+        }
+
+        $this->discoveryCache->delete($this->oidcConfigurationCacheKey);
+
+        return JWKSet::createFromKeyData(['keys' => $this->discoveryCache->get($this->oidcConfigurationCacheKey, $this->computeDiscoveryKeys(...))]);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function computeDiscoveryKeys(ItemInterface $item): array
     {
         $config = $this->client
             ->request('GET', rtrim($this->issuers[0], '/').'/.well-known/openid-configuration')
@@ -110,10 +147,8 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
     /**
      * @return array<string, mixed>
      */
-    private function loadAndVerifyJws(string $accessToken, JWKSet $jwkset): array
+    private function verifySignature(JWS $jws, JWKSet $jwkset): array
     {
-        $jws = (new JWSSerializerManager([new CompactSerializer()]))->unserialize($accessToken);
-
         if (!(new JWSVerifier($this->signatureAlgorithm))->verifyWithKeySet($jws, $jwkset, 0)) {
             throw new InvalidSignatureException();
         }
@@ -123,7 +158,12 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
             [new JWSTokenSupport()],
         ))->check($jws, 0);
 
-        return json_decode($jws->getPayload() ?? '', true, flags: \JSON_THROW_ON_ERROR);
+        $claims = json_decode($jws->getPayload() ?? '', true, flags: \JSON_THROW_ON_ERROR);
+        if (!\is_array($claims) || ([] !== $claims && array_is_list($claims))) {
+            throw new \UnexpectedValueException('The token payload is not a claims object.');
+        }
+
+        return $claims;
     }
 
     /**
@@ -132,9 +172,9 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
     private function verifyClaims(array $claims): void
     {
         (new ClaimCheckerManager([
-            new Checker\IssuedAtChecker(clock: $this->clock, allowedTimeDrift: 0),
-            new Checker\NotBeforeChecker(clock: $this->clock, allowedTimeDrift: 0),
-            new Checker\ExpirationTimeChecker(clock: $this->clock, allowedTimeDrift: 0),
+            new Checker\IssuedAtChecker(clock: $this->clock, allowedTimeDrift: self::ALLOWED_TIME_DRIFT),
+            new Checker\NotBeforeChecker(clock: $this->clock, allowedTimeDrift: self::ALLOWED_TIME_DRIFT),
+            new Checker\ExpirationTimeChecker(clock: $this->clock, allowedTimeDrift: self::ALLOWED_TIME_DRIFT),
             new Checker\IssuerChecker($this->issuers),
         ]))->check($claims, ['iat', 'exp', 'iss']);
 
