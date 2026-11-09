@@ -188,6 +188,8 @@ final class TecdocCatalogTest extends TestCase
             $this->catalog->partCategories(1446, CarType::CommercialVehicle, false),
         );
         $this->assertSame('Filtre à huile', $this->catalog->categoryName(1446, 200136, CarType::CommercialVehicle));
+        $this->assertSame('Lubrification', $this->catalog->categoryName(1446, 200033, CarType::CommercialVehicle), 'an inner node of the car\'s tree is named too');
+        $this->assertNull($this->catalog->categoryName(1446, 100259, CarType::CommercialVehicle), 'a node of the other tree is not the car\'s');
     }
 
     public function testACommercialCarIdIsOnlyLookedUpAmongCommercialTypes(): void

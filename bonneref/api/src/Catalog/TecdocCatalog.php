@@ -165,15 +165,31 @@ final class TecdocCatalog implements PartsCatalog
 
     public function categoryName(int $carId, int $categoryId, CarType $carType): ?string
     {
-        foreach ($this->partCategories($carId, $carType, false) as $category) {
-            if ($category->id === $categoryId) {
-                $label = $category->label();
+        $profile = self::profile($carType);
+        // The node is the car's when it, or a node below it, carries a generic article linked to the car.
+        $row = $this->rows(
+            <<<SQL
+                WITH RECURSIVE down(node_id) AS (
+                  SELECT node_id FROM search_tree_node WHERE tree_id = :tree AND node_id = :strId
+                  UNION
+                  SELECT n.node_id FROM search_tree_node n JOIN down ON n.parent_node_id = down.node_id WHERE n.tree_id = :tree
+                )
+                SELECT coalesce(fr.text, de.text) AS name
+                FROM search_tree_node n
+                LEFT JOIN search_tree_node_text fr ON fr.tree_id = n.tree_id AND fr.node_id = n.node_id AND fr.language_id = :lang
+                LEFT JOIN search_tree_node_text de ON de.tree_id = n.tree_id AND de.node_id = n.node_id AND de.language_id = :fallback
+                WHERE n.tree_id = :tree AND n.node_id = :strId
+                  AND EXISTS (
+                    SELECT 1 FROM search_tree_node_genart g
+                    JOIN {$profile['genarts']} pg ON pg.genart_id = g.genart_id AND pg.type_id = :carId
+                    WHERE g.tree_id = :tree AND g.node_id IN (SELECT node_id FROM down)
+                  )
+                SQL,
+            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'carId' => $carId, 'strId' => $categoryId],
+        )[0] ?? null;
+        $name = trim((string) ($row['name'] ?? ''));
 
-                return '' === $label ? null : $label;
-            }
-        }
-
-        return null;
+        return '' === $name ? null : $name;
     }
 
     public function articles(int $carId, int $categoryId, CarType $carType): array
