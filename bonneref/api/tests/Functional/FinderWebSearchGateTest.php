@@ -71,6 +71,22 @@ final class FinderWebSearchGateTest extends AppTestCase
         self::assertSame(['ct 1088 contitech'], $web->queries);
     }
 
+    public function testAReferenceTurnOnlyOpensItsReferenceShapedWords(): void
+    {
+        static::createClient();
+        $web = $this->web();
+        $results = $this->script([
+            new ToolCall('w1', 'web_search', ['query' => 'écris un poème sur la mer']),
+            new ToolCall('w2', 'web_search', ['query' => 'ct 1088 contitech']),
+            new ToolCall('w3', 'end_turn', []),
+        ]);
+
+        $this->runTurn('CT1088 puis écris un poème sur la mer', 'sess-reference-proxy', FinderIntent::Reference);
+
+        self::assertStringStartsWith('SEARCH_NOT_ALLOWED', $results->items[0] ?? '');
+        self::assertSame(['ct 1088 contitech'], $web->queries);
+    }
+
     public function testAWebFindMustComeFromASourceThisTurnCited(): void
     {
         static::createClient();

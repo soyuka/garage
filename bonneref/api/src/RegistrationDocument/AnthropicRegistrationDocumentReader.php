@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\RegistrationDocument;
 
+use App\Agent\Journal\ModelUsage;
+use App\Security\SpendRecorder;
 use Symfony\AI\Platform\Exception\ExceptionInterface;
 use Symfony\AI\Platform\Message\Content\Document;
 use Symfony\AI\Platform\Message\Content\Image;
@@ -46,6 +48,8 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
     public function __construct(
         private PlatformInterface $platform,
         private string $model,
+        // One vision call each: charged to the owner's daily budget like an agent turn.
+        private ?SpendRecorder $spend = null,
     ) {
     }
 
@@ -54,14 +58,16 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
         $file = 'application/pdf' === $mimeType ? new Document($content, $mimeType) : new Image($content, $mimeType);
 
         try {
-            $decoded = $this->platform->invoke(
+            $result = $this->platform->invoke(
                 $this->model,
                 new MessageBag(
                     Message::forSystem(self::SYSTEM_PROMPT),
                     Message::ofUser(new Text('Extract the fields from this document.'), $file),
                 ),
                 ['response_format' => $this->responseFormat()],
-            )->asObject();
+            );
+            $decoded = $result->asObject();
+            $this->spend?->record('registration_document', $this->model, ModelUsage::fromAnthropic($result->getRawResult()->getData()));
         } catch (ExceptionInterface $e) {
             throw new RegistrationDocumentUnreadable('The extraction model call failed: '.$e::class, 0, $e);
         }

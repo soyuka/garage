@@ -111,13 +111,17 @@ final class TurnJournal implements WebSearchTracer
 
     /**
      * Raw web-search response, tagged so it is identifiable among the turn's raw payloads. Goes into the
-     * same `rawCalls` bucket the frontend journal already renders, WITHOUT touching token usage (the side
-     * call's tokens are not the orchestrator's). Best-effort: a no-op when no turn is open.
+     * same `rawCalls` bucket the frontend journal already renders. Its usage is billed, so it is recorded
+     * as side-call usage, apart from the orchestrator's tokens. Best-effort: a no-op when no turn is open.
      *
      * @param array<string, mixed> $rawBody
      */
-    public function recordWebSearchResponse(string $backend, string $query, array $rawBody): void
+    public function recordWebSearchResponse(string $backend, string $query, array $rawBody, string $model = ''): void
     {
+        $usage = 'gemini' === $backend ? ModelUsage::fromGemini($rawBody) : ModelUsage::fromAnthropic($rawBody);
+        $model = '' !== $model ? $model : (\is_string($rawBody['model'] ?? null) ? $rawBody['model'] : $backend);
+        $this->current?->addSideCallUsage($model, $usage);
+
         $this->current?->addRawCall([
             'kind' => 'web_search',
             'backend' => $backend,

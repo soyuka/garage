@@ -34,6 +34,8 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
         private int $maxUses = 3,
         // WEB_SEARCH_ALLOWED_DOMAINS, comma-separated; empty searches the whole web.
         private string $allowedDomains = '',
+        // Journals the raw body: its usage is billed to the turn as side-call usage.
+        private ?WebSearchTracer $tracer = null,
     ) {
     }
 
@@ -57,6 +59,7 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
 
         /** @var array<string, mixed> $data */
         $data = $result->getRawResult()->getData();
+        $this->tracer?->recordWebSearchResponse('anthropic', $query, $data, $this->model);
 
         if (null !== ($unavailable = $this->errorEnvelope($data))) {
             return $unavailable;

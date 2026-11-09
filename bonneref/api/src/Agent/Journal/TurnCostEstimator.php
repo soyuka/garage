@@ -24,6 +24,9 @@ final readonly class TurnCostEstimator
     public function __construct(
         #[Autowire('%env(default::json:AGENT_PRICES)%')]
         ?array $prices = null,
+        // Anthropic's web_search server tool, billed per search on top of the side call's tokens.
+        #[Autowire('%env(float:AGENT_WEB_SEARCH_USD)%')]
+        private float $webSearchUsd = 0.0,
     ) {
         $valid = [];
         foreach ($prices ?? [] as $model => $entry) {
@@ -50,6 +53,26 @@ final readonly class TurnCostEstimator
             + ($completionTokens ?? 0) * $price['output']
             + ($cacheReadTokens ?? 0) * $price['cache_read']
             + ($cacheCreationTokens ?? 0) * $price['cache_write']) / 1_000_000;
+    }
+
+    /**
+     * A whole turn: its own tokens, its side calls' tokens (an unpriced side model counts as zero) and
+     * its web searches. Null only when nothing in it can be priced.
+     *
+     * @param array{model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int, sideCalls: array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>, webSearchRequests: int} $usage
+     */
+    public function estimateUsage(array $usage): ?float
+    {
+        $costs = [$this->estimate($usage['model'], $usage['promptTokens'], $usage['completionTokens'], $usage['cacheReadTokens'], $usage['cacheCreationTokens'])];
+        foreach ($usage['sideCalls'] as $model => $tokens) {
+            $costs[] = $this->estimate((string) $model, $tokens['promptTokens'], $tokens['completionTokens'], $tokens['cacheReadTokens'], $tokens['cacheCreationTokens']);
+        }
+        if ($usage['webSearchRequests'] > 0) {
+            $costs[] = $usage['webSearchRequests'] * $this->webSearchUsd;
+        }
+        $priced = array_filter($costs, is_float(...));
+
+        return [] === $priced ? null : array_sum($priced);
     }
 
     /**

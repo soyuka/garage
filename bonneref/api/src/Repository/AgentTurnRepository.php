@@ -76,13 +76,13 @@ final class AgentTurnRepository extends ServiceDocumentRepository
      * The cost-bearing fields of an owner's turns since a date, oldest first, read raw (no hydration of
      * the tool calls and raw payloads a journal row carries).
      *
-     * @return list<array{startedAt: \DateTimeImmutable, model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int}>
+     * @return list<array{startedAt: \DateTimeImmutable, model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int, sideCalls: array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>, webSearchRequests: int}>
      */
     public function usageSince(string $owner, \DateTimeImmutable $since): array
     {
         $rows = $this->createQueryBuilder()
             ->hydrate(false)
-            ->select('startedAt', 'model', 'promptTokens', 'completionTokens', 'cacheReadTokens', 'cacheCreationTokens')
+            ->select('startedAt', 'model', 'promptTokens', 'completionTokens', 'cacheReadTokens', 'cacheCreationTokens', 'sideCallUsage', 'webSearchRequests')
             ->field('owner')->equals($owner)
             ->field('startedAt')->gte($since)
             ->sort('startedAt', 'asc')
@@ -98,6 +98,27 @@ final class AgentTurnRepository extends ServiceDocumentRepository
             'completionTokens' => $int($row['completionTokens'] ?? null),
             'cacheReadTokens' => $int($row['cacheReadTokens'] ?? null),
             'cacheCreationTokens' => $int($row['cacheCreationTokens'] ?? null),
+            'sideCalls' => self::sideCalls($row['sideCallUsage'] ?? null),
+            'webSearchRequests' => $int($row['webSearchRequests'] ?? null) ?? 0,
         ], $rows));
+    }
+
+    /**
+     * @return array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>
+     */
+    private static function sideCalls(mixed $raw): array
+    {
+        $calls = [];
+        foreach (\is_array($raw) || $raw instanceof \Traversable ? $raw : [] as $model => $tokens) {
+            $tokens = (array) $tokens;
+            $calls[(string) $model] = [
+                'promptTokens' => (int) ($tokens['promptTokens'] ?? 0),
+                'completionTokens' => (int) ($tokens['completionTokens'] ?? 0),
+                'cacheReadTokens' => (int) ($tokens['cacheReadTokens'] ?? 0),
+                'cacheCreationTokens' => (int) ($tokens['cacheCreationTokens'] ?? 0),
+            ];
+        }
+
+        return $calls;
     }
 }

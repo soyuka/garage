@@ -7,6 +7,7 @@ namespace App\Tests\Unit\RegistrationDocument;
 use App\RegistrationDocument\AnthropicRegistrationDocumentReader;
 use App\RegistrationDocument\RegistrationDocumentUnreadable;
 use App\Tests\Support\AnthropicStructuredPlatform;
+use App\Tests\Support\RecordingSpendRecorder;
 use PHPUnit\Framework\TestCase;
 
 final class AnthropicRegistrationDocumentReaderTest extends TestCase
@@ -54,5 +55,18 @@ final class AnthropicRegistrationDocumentReaderTest extends TestCase
     private function reader(string $answer, ?array &$request = null): AnthropicRegistrationDocumentReader
     {
         return new AnthropicRegistrationDocumentReader(AnthropicStructuredPlatform::answering($answer, $request), 'claude-sonnet-5-5?max_tokens=2048');
+    }
+
+    public function testTheVisionCallIsChargedToTheOwnersSpend(): void
+    {
+        $spend = new RecordingSpendRecorder();
+        $reader = new AnthropicRegistrationDocumentReader(AnthropicStructuredPlatform::answering('{"legible":true,"warnings":[]}'), 'claude-sonnet-5-5?max_tokens=2048', $spend);
+
+        try {
+            $reader->read('x', 'image/png');
+        } catch (RegistrationDocumentUnreadable) {
+        }
+
+        $this->assertSame([['model' => 'claude-sonnet-5-5?max_tokens=2048', 'promptTokens' => 1, 'completionTokens' => 1]], $spend->records);
     }
 }

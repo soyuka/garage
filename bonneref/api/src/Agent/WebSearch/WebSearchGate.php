@@ -51,6 +51,19 @@ final class WebSearchGate
         ));
     }
 
+    /**
+     * The reference-shaped words of a typed reference turn: 4 to 20 characters holding a digit. The rest of
+     * the instruction must not open the web, or "CT1088 then <anything>" would search <anything>.
+     *
+     * @return list<string>
+     */
+    public static function referenceTokens(string $text): array
+    {
+        preg_match_all('/(?<![\w.\/-])(?=[\w.\/-]*\d)[\w.\/-]{4,20}(?![\w.\/-])/u', $text, $matches);
+
+        return array_values(array_unique($matches[0]));
+    }
+
     public function bindVehicle(?FinderVehicle $vehicle): void
     {
         $words = [];

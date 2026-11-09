@@ -62,4 +62,31 @@ final class TurnCostEstimatorTest extends TestCase
     {
         self::assertNull((new TurnCostEstimator(self::PRICES))->estimate('claude-sonnet-5-5', null, null, null, null));
     }
+
+    public function testATurnCostsItsOwnTokensItsSideCallsAndItsWebSearches(): void
+    {
+        $estimator = new TurnCostEstimator(self::PRICES, webSearchUsd: 0.01);
+
+        self::assertEqualsWithDelta(
+            (1_000 * 2) / 1_000_000 + (10_000 * 0.1 + 1_000 * 0.5) / 1_000_000 + 3 * 0.01,
+            $estimator->estimateUsage([
+                'model' => 'claude-sonnet-5-5?max_tokens=4096',
+                'promptTokens' => 1_000, 'completionTokens' => null, 'cacheReadTokens' => null, 'cacheCreationTokens' => null,
+                'sideCalls' => [
+                    'cheap-model' => ['promptTokens' => 10_000, 'completionTokens' => 1_000, 'cacheReadTokens' => 0, 'cacheCreationTokens' => 0],
+                    'unpriced-model' => ['promptTokens' => 99_000_000, 'completionTokens' => 0, 'cacheReadTokens' => 0, 'cacheCreationTokens' => 0],
+                ],
+                'webSearchRequests' => 3,
+            ]),
+            1e-9,
+        );
+    }
+
+    public function testWebSearchesAloneHaveACost(): void
+    {
+        self::assertEqualsWithDelta(0.02, (new TurnCostEstimator(null, webSearchUsd: 0.01))->estimateUsage([
+            'model' => '', 'promptTokens' => null, 'completionTokens' => null, 'cacheReadTokens' => null, 'cacheCreationTokens' => null,
+            'sideCalls' => [], 'webSearchRequests' => 2,
+        ]), 1e-9);
+    }
 }

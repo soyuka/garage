@@ -145,7 +145,7 @@ final class AgentTurn
         $resource->categoryLabel = $turn->getCategoryLabel();
         $resource->cacheReadTokens = $turn->getCacheReadTokens();
         $resource->cacheCreationTokens = $turn->getCacheCreationTokens();
-        $resource->estimatedCostUsd = $cost?->estimate($turn->getModel(), $turn->getPromptTokens(), $turn->getCompletionTokens(), $turn->getCacheReadTokens(), $turn->getCacheCreationTokens());
+        $resource->estimatedCostUsd = $cost?->estimateUsage($turn->usage());
 
         return $resource;
     }

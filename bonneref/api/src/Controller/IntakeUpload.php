@@ -6,6 +6,7 @@ namespace App\Controller;
 
 use App\Agent\Finder\TurnInputLimits;
 use App\Exception\RateLimitExceededException;
+use App\Security\OwnerDailyBudget;
 use App\Security\OwnerRateLimiter;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
@@ -21,8 +22,10 @@ use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
  */
 final readonly class IntakeUpload
 {
-    public function __construct(private OwnerRateLimiter $quota)
-    {
+    public function __construct(
+        private OwnerRateLimiter $quota,
+        private OwnerDailyBudget $budget,
+    ) {
     }
 
     /**
@@ -53,6 +56,12 @@ final readonly class IntakeUpload
 
         if ('application/pdf' !== $mimeType && $size > TurnInputLimits::MAX_IMAGE_BYTES) {
             throw new HttpException(Response::HTTP_REQUEST_ENTITY_TOO_LARGE, \sprintf('An image is capped at %d bytes.', TurnInputLimits::MAX_IMAGE_BYTES));
+        }
+
+        try {
+            $this->budget->assertWithin();
+        } catch (RateLimitExceededException $e) {
+            throw new TooManyRequestsHttpException($e->retryAfterSeconds(), 'Daily budget reached, retry later.');
         }
 
         try {

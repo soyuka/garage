@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Entity;
 
+use App\Agent\Journal\ModelUsage;
 use App\Agent\TurnSurface;
 use App\Repository\AgentTurnRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -86,6 +87,19 @@ class AgentTurn
 
     #[ODM\Field(type: 'int', nullable: true)]
     private ?int $cacheCreationTokens = null;
+
+    /**
+     * Tokens of the out-of-band model calls the turn made (the web-search side call), by model: billed,
+     * but not the orchestrator's usage, so kept apart from the fields above.
+     *
+     * @var array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>
+     */
+    #[ODM\Field(type: 'hash')]
+    private array $sideCallUsage = [];
+
+    /** Server-side web searches the side calls ran, billed per search on top of their tokens. */
+    #[ODM\Field(type: 'int')]
+    private int $webSearchRequests = 0;
 
     /**
      * Raw LLM call payloads (request/response/usage) for offline analysis. Best-effort: full on the
@@ -361,6 +375,48 @@ class AgentTurn
      * promotes the running total from null to a sum, so a turn with no usage data stays null (unknown)
      * rather than reading a misleading zero.
      */
+    public function addSideCallUsage(string $model, ModelUsage $usage): void
+    {
+        $model = strtok($model, '?') ?: $model;
+        $current = $this->sideCallUsage[$model] ?? ['promptTokens' => 0, 'completionTokens' => 0, 'cacheReadTokens' => 0, 'cacheCreationTokens' => 0];
+        foreach ($usage->tokens() as $bucket => $tokens) {
+            $current[$bucket] += $tokens;
+        }
+        $this->sideCallUsage[$model] = $current;
+        $this->webSearchRequests += $usage->webSearchRequests;
+    }
+
+    /**
+     * @return array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>
+     */
+    public function getSideCallUsage(): array
+    {
+        return $this->sideCallUsage;
+    }
+
+    public function getWebSearchRequests(): int
+    {
+        return $this->webSearchRequests;
+    }
+
+    /**
+     * What {@see \App\Agent\Journal\TurnCostEstimator::estimateUsage()} prices.
+     *
+     * @return array{model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int, sideCalls: array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>, webSearchRequests: int}
+     */
+    public function usage(): array
+    {
+        return [
+            'model' => $this->model,
+            'promptTokens' => $this->promptTokens,
+            'completionTokens' => $this->completionTokens,
+            'cacheReadTokens' => $this->cacheReadTokens,
+            'cacheCreationTokens' => $this->cacheCreationTokens,
+            'sideCalls' => $this->sideCallUsage,
+            'webSearchRequests' => $this->webSearchRequests,
+        ];
+    }
+
     public function addUsage(?int $promptTokens, ?int $completionTokens, ?int $cacheReadTokens = null, ?int $cacheCreationTokens = null): void
     {
         $add = static fn (?int $total, ?int $delta): ?int => null === $delta ? $total : ($total ?? 0) + $delta;

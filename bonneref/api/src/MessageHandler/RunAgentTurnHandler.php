@@ -109,10 +109,10 @@ final readonly class RunAgentTurnHandler
         // ids (which EarlyStepNarrationListener records early) must not suppress this turn's narration.
         $this->stepNarrator->reset();
         // The references the user gave this turn are the only queries web_search runs before a catalogue miss.
-        $this->webSearchGate->reset(array_values(array_filter([
-            FinderIntent::Reference === $message->intent ? $message->instruction : null,
+        $this->webSearchGate->reset([
+            ...(FinderIntent::Reference === $message->intent ? WebSearchGate::referenceTokens($message->instruction) : []),
             ...($message->photoHints->printedReferences ?? []),
-        ], is_string(...))));
+        ]);
         $this->finderTools->bindVehicle($message->vehicle);
         $images = null === $message->imageStash ? [] : $this->imageStash->get($message->imageStash);
         $context = $this->finderContext->build($message);

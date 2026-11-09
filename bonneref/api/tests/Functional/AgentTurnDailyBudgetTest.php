@@ -4,11 +4,14 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Journal\ModelUsage;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
+use App\Entity\OwnerSpend;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use MongoDB\BSON\UTCDateTime;
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 final class AgentTurnDailyBudgetTest extends AppTestCase
 {
@@ -54,11 +57,65 @@ final class AgentTurnDailyBudgetTest extends AppTestCase
         $this->assertResponseStatusCodeSame(202);
     }
 
-    private function seedTurn(string $owner, int $promptTokens, \DateTimeImmutable $startedAt): void
+    public function testTheWebSearchSideCallsCountAgainstTheBudget(): void
+    {
+        $client = static::createClient();
+        static::getContainer()->set('ai.platform.anthropic', new ScriptedStreamPlatform(static fn (): string => 'done'));
+        $this->seedTurn(self::TEST_OWNER, 0, new \DateTimeImmutable('-1 hour'), sideTokens: 12_000_000);
+
+        $this->postTurn($client, 'sess-side');
+
+        $this->assertResponseStatusCodeSame(429);
+    }
+
+    public function testWebSearchRequestsAreChargedPerSearch(): void
+    {
+        $client = static::createClient();
+        static::getContainer()->set('ai.platform.anthropic', new ScriptedStreamPlatform(static fn (): string => 'done'));
+        // AGENT_WEB_SEARCH_USD is $0.01 a search: 101 searches = $1.01, over the $1.00 default.
+        $this->seedTurn(self::TEST_OWNER, 0, new \DateTimeImmutable('-1 hour'), webSearches: 101);
+
+        $this->postTurn($client, 'sess-searches');
+
+        $this->assertResponseStatusCodeSame(429);
+    }
+
+    public function testVisionIntakesShareTheBudget(): void
+    {
+        $client = static::createClient();
+        static::getContainer()->set('ai.platform.anthropic', new ScriptedStreamPlatform(static fn (): string => 'done'));
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $dm->persist(new OwnerSpend(self::TEST_OWNER, 'photo_intake', 'claude-haiku-5-5', new ModelUsage(promptTokens: 12_000_000), new \DateTimeImmutable('-1 hour')));
+        $dm->flush();
+
+        $this->postTurn($client, 'sess-intakes');
+        $this->assertResponseStatusCodeSame(429);
+
+        $path = (string) tempnam(sys_get_temp_dir(), 'ph');
+        file_put_contents($path, (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', true));
+        $client->request('POST', '/photo-intake', [
+            'headers' => self::authHeaders() + ['content-type' => 'multipart/form-data'],
+            'extra' => ['files' => ['file' => new UploadedFile($path, 'photo', 'image/png', null, true)]],
+        ]);
+        $this->assertResponseStatusCodeSame(429, 'an intake over the daily budget never reaches the vision model');
+    }
+
+    private function postTurn(object $client, string $session): void
+    {
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'filtre à huile', 'sessionId' => $session],
+        ]);
+    }
+
+    private function seedTurn(string $owner, int $promptTokens, \DateTimeImmutable $startedAt, int $sideTokens = 0, int $webSearches = 0): void
     {
         $dm = static::getContainer()->get(DocumentManager::class);
         $turn = new AgentTurn($owner, 'sess', 'x', 'ctx', 'anthropic', 'claude-haiku-5-5?max_tokens=8192', true);
         $turn->addUsage($promptTokens, 0);
+        if (0 !== $sideTokens || 0 !== $webSearches) {
+            $turn->addSideCallUsage('claude-haiku-5-5', new ModelUsage(promptTokens: $sideTokens, webSearchRequests: $webSearches));
+        }
         $turn->finish(AgentTurnStatus::Completed, null);
         $dm->persist($turn);
         $dm->flush();

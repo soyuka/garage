@@ -17,6 +17,7 @@ interface WebSearchTracer
 {
     /**
      * @param array<string, mixed> $rawBody the provider's decoded response body
+     * @param string               $model   the configured model, the key its usage is priced by
      */
-    public function recordWebSearchResponse(string $backend, string $query, array $rawBody): void;
+    public function recordWebSearchResponse(string $backend, string $query, array $rawBody, string $model = ''): void;
 }

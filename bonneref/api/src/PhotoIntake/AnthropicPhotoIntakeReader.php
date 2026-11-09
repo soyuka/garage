@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\PhotoIntake;
 
+use App\Agent\Journal\ModelUsage;
 use App\RegistrationDocument\AnthropicRegistrationDocumentReader;
 use App\RegistrationDocument\RegistrationDocumentUnreadable;
 use App\RegistrationDocument\RegistrationWarning;
+use App\Security\SpendRecorder;
 use Symfony\AI\Platform\Exception\ExceptionInterface;
 use Symfony\AI\Platform\Message\Content\Image;
 use Symfony\AI\Platform\Message\Content\Text;
@@ -56,20 +58,24 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
     public function __construct(
         private PlatformInterface $platform,
         private string $model,
+        // One vision call each: charged to the owner's daily budget like an agent turn.
+        private ?SpendRecorder $spend = null,
     ) {
     }
 
     public function read(string $content, string $mimeType): array
     {
         try {
-            $decoded = $this->platform->invoke(
+            $result = $this->platform->invoke(
                 $this->model,
                 new MessageBag(
                     Message::forSystem(self::SYSTEM_PROMPT),
                     Message::ofUser(new Text('Sort this photo and read it.'), new Image($content, $mimeType)),
                 ),
                 ['response_format' => $this->responseFormat()],
-            )->asObject();
+            );
+            $decoded = $result->asObject();
+            $this->spend?->record('photo_intake', $this->model, ModelUsage::fromAnthropic($result->getRawResult()->getData()));
         } catch (ExceptionInterface $e) {
             throw new RegistrationDocumentUnreadable('The photo intake model call failed: '.$e::class, 0, $e);
         }

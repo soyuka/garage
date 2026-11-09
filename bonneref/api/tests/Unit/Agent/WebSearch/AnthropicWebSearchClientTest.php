@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Agent\WebSearch;
 
 use App\Agent\WebSearch\AnthropicWebSearchClient;
+use App\Agent\WebSearch\WebSearchTracer;
 use PHPUnit\Framework\TestCase;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\ModelCatalog\ModelCatalogInterface;
@@ -80,6 +81,20 @@ final class AnthropicWebSearchClientTest extends TestCase
         $this->assertSame('Réponse.', $result->answer);
         $this->assertCount(1, $result->citations);
         $this->assertSame('https://only.example', $result->citations[0]->url);
+    }
+
+    public function testTracesTheRawBodyAndTheConfiguredModelForTheJournal(): void
+    {
+        $captured = [];
+        $body = ['content' => [['type' => 'text', 'text' => 'ok']], 'usage' => ['input_tokens' => 9000, 'output_tokens' => 400, 'server_tool_use' => ['web_search_requests' => 2]]];
+        $platform = $this->platform($body, $captured);
+
+        $tracer = $this->createMock(WebSearchTracer::class);
+        $tracer->expects($this->once())
+            ->method('recordWebSearchResponse')
+            ->with('anthropic', 'q', $body, 'claude-haiku-4-5?max_tokens=2048');
+
+        (new AnthropicWebSearchClient($platform, 'claude-haiku-4-5?max_tokens=2048', tracer: $tracer))->search('q');
     }
 
     public function testBackendErrorBodyIsReportedUnavailableNotEmpty(): void

@@ -47,7 +47,7 @@ final readonly class GeminiWebSearchClient extends AbstractWebSearchClient
 
         // Trace the raw body BEFORE distilling: an empty answer (MAX_TOKENS cut, safety block, no
         // grounding) leaves no trace in the WebSearchResult, so the journal is the only place it survives.
-        $this->tracer?->recordWebSearchResponse('gemini', $query, $data);
+        $this->tracer?->recordWebSearchResponse('gemini', $query, $data, $this->model);
 
         if (null !== ($unavailable = $this->errorEnvelope($data))) {
             return $unavailable;
