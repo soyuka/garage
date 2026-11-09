@@ -32,6 +32,7 @@ final readonly class TurnCostEstimator
         foreach ($prices ?? [] as $model => $entry) {
             $parsed = self::entry($entry);
             if (null !== $parsed) {
+                // @mago-expect analysis:redundant-cast a numeric model name comes back from the array key as int
                 $valid[(string) $model] = $parsed;
             }
         }
@@ -59,12 +60,13 @@ final readonly class TurnCostEstimator
      * A whole turn: its own tokens, its side calls' tokens (an unpriced side model counts as zero) and
      * its web searches. Null only when nothing in it can be priced.
      *
-     * @param array{model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int, sideCalls: array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>, webSearchRequests: int} $usage
+     * @param array{model: string, promptTokens: ?int, completionTokens: ?int, cacheReadTokens: ?int, cacheCreationTokens: ?int, sideCalls: array<string, array{promptTokens: int, completionTokens: int, cacheReadTokens: int, cacheCreationTokens: int}>, webSearchRequests: int, ...} $usage
      */
     public function estimateUsage(array $usage): ?float
     {
         $costs = [$this->estimate($usage['model'], $usage['promptTokens'], $usage['completionTokens'], $usage['cacheReadTokens'], $usage['cacheCreationTokens'])];
         foreach ($usage['sideCalls'] as $model => $tokens) {
+            // @mago-expect analysis:redundant-cast a numeric model name comes back from the array key as int
             $costs[] = $this->estimate((string) $model, $tokens['promptTokens'], $tokens['completionTokens'], $tokens['cacheReadTokens'], $tokens['cacheCreationTokens']);
         }
         if ($usage['webSearchRequests'] > 0) {

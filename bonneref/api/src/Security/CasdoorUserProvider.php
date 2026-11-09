@@ -28,7 +28,7 @@ final readonly class CasdoorUserProvider implements AttributesBasedUserProviderI
     }
 
     /**
-     * @param array<string, mixed> $attributes
+     * @param array<array-key, mixed> $attributes
      */
     public function loadUserByIdentifier(string $identifier, array $attributes = []): User
     {

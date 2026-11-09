@@ -84,7 +84,7 @@ final class Vehicle
     public ?int $tecdocModelId = null;
 
     /**
-     * @param array<string, mixed> $data SIV payload from apiplaqueimmatriculation.com
+     * @param array<array-key, mixed> $data SIV payload from apiplaqueimmatriculation.com
      */
     public static function fromSiv(array $data): self
     {

@@ -22,9 +22,6 @@ final readonly class ArticleCollectionProvider implements ProviderInterface
     ) {
     }
 
-    /**
-     * @return ArrayPaginator<Article>
-     */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ArrayPaginator
     {
         $carType = $operation->getParameters()?->get('carType')?->getValue();
@@ -36,6 +33,6 @@ final readonly class ArticleCollectionProvider implements ProviderInterface
         );
         [, $offset, $limit] = $this->pagination->getPagination($operation, $context);
 
-        return new ArrayPaginator($rows, $offset, $limit);
+        return new ArrayPaginator($rows, (int) $offset, (int) $limit);
     }
 }

@@ -45,6 +45,9 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
         Set legible to false when the image is not a registration certificate or too blurry, cropped or dark to read reliably. Use warnings only with these codes, as many as apply, and nothing else: blurry, cropped, dark, glare (photo quality), plate_doubtful, vin_doubtful, date_doubtful (a field you read but doubt). Never write free text in warnings.
         PROMPT;
 
+    /**
+     * @param non-empty-string $model
+     */
     public function __construct(
         private PlatformInterface $platform,
         private string $model,

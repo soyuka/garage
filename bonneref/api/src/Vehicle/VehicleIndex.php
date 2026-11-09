@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Vehicle;
 
+use App\Agent\Journal\TurnRoute;
 use App\Catalog\CarType;
 use App\Catalog\CatalogDate;
 use App\Entity\AgentTurn;
@@ -25,6 +26,8 @@ use Psr\Log\LoggerInterface;
  *
  * A name from a higher-ranked source is never overwritten by a lower one: the catalogue's own naming
  * beats SIV's, which beats what a page or a model typed.
+ *
+ * @phpstan-import-type JournalVehicle from TurnRoute
  *
  * @phpstan-type IndexedVehicle array{carId: int, carType: string, make: ?string, model: ?string, engine: ?string, fullName: ?string, yearFrom: ?string, yearTo: ?string, source: string, seenAt: ?\DateTimeImmutable}
  */
@@ -109,7 +112,7 @@ final readonly class VehicleIndex
         }
         $row = $this->collection()->findOne(['_id' => self::id($carId, $type)], ['typeMap' => ['root' => 'array', 'document' => 'array']]);
 
-        return null === $row ? null : self::hydrate($row);
+        return \is_array($row) ? self::hydrate($row) : null;
     }
 
     /**
@@ -132,7 +135,10 @@ final readonly class VehicleIndex
 
         $found = [];
         foreach ($this->collection()->find(['_id' => ['$in' => array_keys($ids)]], ['typeMap' => ['root' => 'array', 'document' => 'array']]) as $row) {
-            $found[(string) $row['_id']] = self::hydrate($row);
+            if (!\is_array($row) || !\is_string($row['_id'] ?? null)) {
+                continue;
+            }
+            $found[$row['_id']] = self::hydrate($row);
         }
 
         return $found;
@@ -150,18 +156,18 @@ final readonly class VehicleIndex
      * The journal vehicle with the names it lacks filled from the index. A row that already names its
      * car, or whose car is unknown, comes back untouched.
      *
-     * @param array<string, mixed>|null          $vehicle
+     * @param JournalVehicle|null                $vehicle
      * @param array<string, IndexedVehicle>|null $known   a prefetched {@see findMany()} result
      *
-     * @return array<string, mixed>|null
+     * @return JournalVehicle|null
      */
     public function complete(?array $vehicle, ?array $known = null): ?array
     {
         if (null === $vehicle || !self::lacksNames($vehicle)) {
             return $vehicle;
         }
-        $type = self::type($vehicle['carType'] ?? null);
-        $carId = $vehicle['carId'] ?? null;
+        $type = self::type($vehicle['carType']);
+        $carId = $vehicle['carId'];
         if (!\is_int($carId) || null === $type) {
             return $vehicle;
         }
@@ -216,7 +222,7 @@ final readonly class VehicleIndex
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param array<array-key, mixed> $row
      *
      * @return IndexedVehicle
      */
@@ -225,15 +231,15 @@ final readonly class VehicleIndex
         $seenAt = $row['seenAt'] ?? null;
 
         return [
-            'carId' => (int) $row['carId'],
-            'carType' => (string) $row['carType'],
-            'make' => $row['make'] ?? null,
-            'model' => $row['model'] ?? null,
-            'engine' => $row['engine'] ?? null,
-            'fullName' => $row['fullName'] ?? null,
-            'yearFrom' => $row['yearFrom'] ?? null,
-            'yearTo' => $row['yearTo'] ?? null,
-            'source' => (string) ($row['source'] ?? ''),
+            'carId' => \is_scalar($row['carId'] ?? null) ? (int) $row['carId'] : 0,
+            'carType' => \is_scalar($row['carType'] ?? null) ? (string) $row['carType'] : '',
+            'make' => self::string($row['make'] ?? null),
+            'model' => self::string($row['model'] ?? null),
+            'engine' => self::string($row['engine'] ?? null),
+            'fullName' => self::string($row['fullName'] ?? null),
+            'yearFrom' => self::string($row['yearFrom'] ?? null),
+            'yearTo' => self::string($row['yearTo'] ?? null),
+            'source' => \is_scalar($row['source'] ?? null) ? (string) $row['source'] : '',
             'seenAt' => $seenAt instanceof UTCDateTime ? \DateTimeImmutable::createFromMutable($seenAt->toDateTime()) : null,
         ];
     }
@@ -247,10 +253,15 @@ final readonly class VehicleIndex
         return null === $carType ? CarType::PassengerCar->value : CarType::tryFrom($carType)?->value;
     }
 
-    private static function text(?string $value): ?string
+    private static function text(mixed $value): ?string
     {
-        $value = null === $value ? '' : trim($value);
+        $value = \is_string($value) ? trim($value) : '';
 
         return '' === $value ? null : $value;
+    }
+
+    private static function string(mixed $value): ?string
+    {
+        return \is_string($value) ? $value : null;
     }
 }

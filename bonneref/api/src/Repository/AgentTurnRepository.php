@@ -41,13 +41,14 @@ final class AgentTurnRepository extends ServiceDocumentRepository
             $qb->field('hiddenFromHistory')->notEqual(true);
         }
 
-        return array_values(
-            $qb
-                ->sort('startedAt', 'desc')
-                ->limit($limit)
-                ->getQuery()
-                ->toArray()
-        );
+        $turns = [];
+        foreach ($qb->sort('startedAt', 'desc')->limit($limit)->getQuery()->toArray() as $turn) {
+            if ($turn instanceof AgentTurn) {
+                $turns[] = $turn;
+            }
+        }
+
+        return $turns;
     }
 
     /**
@@ -56,20 +57,24 @@ final class AgentTurnRepository extends ServiceDocumentRepository
      */
     public function findOneForOwner(Ulid $id, string $owner): ?AgentTurn
     {
-        return $this->createQueryBuilder()
+        $turn = $this->createQueryBuilder()
             ->field('id')->equals((string) $id)
             ->field('owner')->equals($owner)
             ->getQuery()
             ->getSingleResult();
+
+        return $turn instanceof AgentTurn ? $turn : null;
     }
 
     public function findOneBySearchId(string $owner, string $searchId): ?AgentTurn
     {
-        return $this->createQueryBuilder()
+        $turn = $this->createQueryBuilder()
             ->field('owner')->equals($owner)
             ->field('searchId')->equals($searchId)
             ->getQuery()
             ->getSingleResult();
+
+        return $turn instanceof AgentTurn ? $turn : null;
     }
 
     /**
@@ -110,6 +115,7 @@ final class AgentTurnRepository extends ServiceDocumentRepository
     {
         $calls = [];
         foreach (\is_array($raw) || $raw instanceof \Traversable ? $raw : [] as $model => $tokens) {
+            // @mago-expect analysis:invalid-type-cast a BSON sub-document can come back as an object; (array) reads its fields
             $tokens = (array) $tokens;
             $calls[(string) $model] = [
                 'promptTokens' => (int) ($tokens['promptTokens'] ?? 0),

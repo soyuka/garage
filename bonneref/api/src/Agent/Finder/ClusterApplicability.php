@@ -6,9 +6,12 @@ namespace App\Agent\Finder;
 
 use App\Catalog\Narrowing\Applicability;
 use App\Catalog\Narrowing\ApplicabilityScope;
+use App\Catalog\Narrowing\NarrowedCluster;
 
 /**
  * The applicability of one narrowed cluster as the show_parts summary words it for the finder agent.
+ *
+ * @phpstan-import-type ClusterArray from NarrowedCluster
  */
 final class ClusterApplicability
 {
@@ -20,19 +23,20 @@ final class ClusterApplicability
     ];
 
     /**
-     * @param array<string, mixed> $cluster a NarrowedCluster as an array
+     * @param ClusterArray $cluster
      */
     public static function line(array $cluster, ApplicabilityScope $scope): string
     {
         $parts = [];
         if (ApplicabilityScope::Vehicle === $scope) {
-            foreach ($cluster['variants'] ?? [] as $variant) {
-                if ([] !== ($variant['applicability'] ?? [])) {
-                    $parts[] = $variant['brand'].' '.$variant['number'].': '.Applicability::describe($variant['applicability']);
+            foreach ($cluster['variants'] as $variant) {
+                $applicability = $variant['applicability'] ?? [];
+                if ([] !== $applicability) {
+                    $parts[] = $variant['brand'].' '.$variant['number'].': '.Applicability::describe($applicability);
                 }
             }
         } else {
-            foreach ($cluster['applicability'] ?? [] as $entry) {
+            foreach ($cluster['applicability'] as $entry) {
                 $values = \array_slice($entry['values'], 0, self::MAX_VALUES);
                 $more = \count($entry['values']) > self::MAX_VALUES ? ', …' : '';
                 $parts[] = $entry['name'].' : '.implode(', ', $values).$more;

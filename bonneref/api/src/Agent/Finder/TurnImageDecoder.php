@@ -31,6 +31,7 @@ final class TurnImageDecoder
 
         $images = [];
         foreach ($raw as $dataUrl) {
+            // @mago-expect analysis:possibly-undefined-variable the throw leaves only paths where preg_match matched and wrote $m
             if (!\is_string($dataUrl) || 1 !== preg_match('#^data:[\w/+.-]+;base64,#', $dataUrl, $m)) {
                 throw new InvalidTurnImage('Each image must be a base64 data URL.', Response::HTTP_BAD_REQUEST);
             }

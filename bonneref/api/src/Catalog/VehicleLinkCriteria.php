@@ -32,8 +32,7 @@ final readonly class VehicleLinkCriteria
         foreach ($this->qualifierSets as $set) {
             foreach ($set as $criterion) {
                 $key = $criterion->id ?? $criterion->name;
-                $merged[$key]['name'] ??= $criterion->name;
-                $merged[$key]['id'] ??= $criterion->id;
+                $merged[$key] ??= ['name' => $criterion->name, 'id' => $criterion->id, 'values' => []];
                 $merged[$key]['values'][$criterion->value] = true;
             }
         }

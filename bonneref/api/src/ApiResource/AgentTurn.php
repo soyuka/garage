@@ -89,7 +89,7 @@ final class AgentTurn
     public ?string $route = null;
     #[ApiProperty(description: 'French TecDoc name of the category the row searched or showed (last show_parts of an agent turn; the cached part-category tree for a search); null when unknown.')]
     public ?string $categoryLabel = null;
-    /** @var array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string}|null */
+    /** @var array{plate: ?string, carId: ?int, carType: ?string, make: ?string, model: ?string, engine: ?string}|null */
     #[ApiProperty(description: 'The vehicle the row was about: the last set_vehicle of an agent turn, else the vehicle the page sent; for a search, what it resolved.')]
     public ?array $vehicle = null;
 

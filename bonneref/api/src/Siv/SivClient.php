@@ -57,7 +57,7 @@ final readonly class SivClient
     }
 
     /**
-     * @return array<string, mixed>|null the SIV `data` payload, or null when the plate is unknown
+     * @return array<array-key, mixed>|null the SIV `data` payload, or null when the plate is unknown
      *
      * @throws InvalidPlateException      before the store, the quota and the paid call
      * @throws MissingApiKeyException
@@ -75,7 +75,7 @@ final readonly class SivClient
         $cached = $this->store->find($plate);
         if (null !== $cached) {
             // A negative hit (unknown plate) is cached as an envelope with no `data` → resolves to null.
-            return $cached['data'] ?? null;
+            return self::data($cached);
         }
 
         if ('' === $this->token) {
@@ -91,10 +91,11 @@ final readonly class SivClient
         $errorCode = (int) ($envelope['code_erreur'] ?? 200);
         $dataError = (string) ($envelope['data']['erreur'] ?? '');
 
-        if (200 === $errorCode && '' === $dataError && \is_array($envelope['data'] ?? null)) {
+        $data = self::data($envelope);
+        if (200 === $errorCode && '' === $dataError && null !== $data) {
             $this->store->save($plate, $envelope);
 
-            return $envelope['data'];
+            return $data;
         }
 
         // Unknown plate: the upstream signals it via data.erreur and/or a 404 error code. Cache a
@@ -107,7 +108,8 @@ final readonly class SivClient
             return null;
         }
 
-        $message = $this->redact(sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, $envelope['message'] ?? ''));
+        $detail = $envelope['message'] ?? '';
+        $message = $this->redact(sprintf('apiplaqueimmatriculation.com error %d: %s', $errorCode, \is_scalar($detail) ? $detail : ''));
 
         throw $errorCode >= 500 ? UpstreamException::transient(self::SOURCE, $message) : UpstreamException::definitive(self::SOURCE, $message);
     }
@@ -121,11 +123,12 @@ final readonly class SivClient
      * max_retries=2. HTTP-status retries are deliberately NOT done here: the scoped client owns
      * those, and doing both would multiply attempts against a per-call billed API.
      *
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
     private function fetch(string $plate): array
     {
-        for ($attempt = 0;; ++$attempt) {
+        $attempt = 0;
+        while (true) {
             try {
                 $response = $this->httpClient->request('POST', self::BASE_URI, [
                     'query' => ['immatriculation' => $plate, 'token' => $this->token, 'pays' => 'FR'],
@@ -141,7 +144,7 @@ final readonly class SivClient
                     throw UpstreamException::transient(self::SOURCE, 'apiplaqueimmatriculation.com: '.$this->redact($e->getMessage()));
                 }
 
-                $this->pause($attempt);
+                $this->pause($attempt++);
 
                 continue;
             }
@@ -167,7 +170,19 @@ final readonly class SivClient
     private function pause(int $attempt): void
     {
         if ($this->retryDelayMs > 0) {
-            usleep($this->retryDelayMs * 2 ** $attempt * 1000);
+            usleep(max(0, $this->retryDelayMs * 2 ** $attempt * 1000));
         }
+    }
+
+    /**
+     * @param array<array-key, mixed> $envelope
+     *
+     * @return array<array-key, mixed>|null
+     */
+    private static function data(array $envelope): ?array
+    {
+        $data = $envelope['data'] ?? null;
+
+        return \is_array($data) ? $data : null;
     }
 }

@@ -37,8 +37,9 @@ final readonly class ModelsProcessor implements ProcessorInterface
             usort($models, fn (Model $a, Model $b): int => $this->rank($a->name, $needle) <=> $this->rank($b->name, $needle));
         }
 
+        // @mago-expect analysis:less-specific-argument get_object_vars of a final DTO: the shape is sealed, mago leaves it open
         return CappedResult::of(
-            array_map(static fn (Model $model): array => (array) $model, $models),
+            array_map(static fn (Model $model): array => get_object_vars($model), $models),
             'models',
             'Narrow with search=<model name without the make> (e.g. "6", "CX-5", "Clio") rather than paging.',
             $data->offset,
@@ -70,9 +71,11 @@ final readonly class ModelsProcessor implements ProcessorInterface
     private function rank(string $name, string $needle): int
     {
         $lower = mb_strtolower($name);
-        $firstToken = preg_split('/[\s(]/', $lower, 2)[0];
+        $tokens = preg_split('/[\s(]/', $lower, 2);
+        $firstToken = false === $tokens ? $lower : $tokens[0];
 
         return match (true) {
+            // @mago-expect lint:no-insecure-comparison $firstToken is the first word of a model name, not a secret
             $lower === $needle, $firstToken === $needle => 0,
             str_starts_with($lower, $needle) => 1,
             default => 2,

@@ -65,7 +65,7 @@ final readonly class FingerprintEntry
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array{label: string, value: string, min?: float, max?: float, unit?: ?string, info?: true}
      */
     public function toArray(): array
     {

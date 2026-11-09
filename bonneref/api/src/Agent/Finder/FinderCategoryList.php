@@ -52,7 +52,7 @@ final readonly class FinderCategoryList
             if (self::TOOLS_BRANCH === $segments[0] || \in_array(end($segments), self::NON_PART_LEAVES, true)) {
                 continue;
             }
-            $name = array_pop($segments);
+            $name = (string) array_pop($segments);
             $byParent[implode(' > ', $segments)][] = [$leaf->id, $name];
         }
         ksort($byParent, \SORT_STRING);

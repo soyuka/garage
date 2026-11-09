@@ -465,7 +465,7 @@ class AgentTurn
         $this->error = $error;
         $this->errorId = $errorId;
         $this->finishedAt = $at ?? Clock::get()->now();
-        $this->durationMs = (int) (($this->finishedAt->format('U.u') - $this->startedAt->format('U.u')) * 1000);
+        $this->durationMs = intdiv(self::elapsedMicroseconds($this->startedAt, $this->finishedAt), 1000);
     }
 
     public function getSurface(): TurnSurface
@@ -539,7 +539,12 @@ class AgentTurn
         $this->categoryLabel = $categoryLabel ?? $this->categoryLabel;
         $this->status = $status;
         $this->finishedAt = $at ?? Clock::get()->now();
-        $this->durationMs = max(0, (int) round(((float) $this->finishedAt->format('U.u') - (float) $this->startedAt->format('U.u')) * 1000));
+        $this->durationMs = max(0, (int) round(self::elapsedMicroseconds($this->startedAt, $this->finishedAt) / 1000));
+    }
+
+    private static function elapsedMicroseconds(\DateTimeImmutable $from, \DateTimeImmutable $to): int
+    {
+        return ($to->getTimestamp() - $from->getTimestamp()) * 1_000_000 + $to->getMicrosecond() - $from->getMicrosecond();
     }
 
     /**

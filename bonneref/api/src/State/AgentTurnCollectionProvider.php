@@ -52,10 +52,14 @@ final readonly class AgentTurnCollectionProvider implements ProviderInterface
             $this->turns->findForOwner($owner, self::LIMIT, $surface, $history),
         );
 
-        $known = $this->vehicles->findMany(array_values(array_map(
-            static fn (AgentTurn $row): array => ['carId' => $row->vehicle['carId'], 'carType' => $row->vehicle['carType'] ?? null],
-            array_filter($rows, static fn (AgentTurn $row): bool => VehicleIndex::lacksNames($row->vehicle)),
-        )));
+        $keys = [];
+        foreach ($rows as $row) {
+            $vehicle = $row->vehicle;
+            if (null !== $vehicle && null !== $vehicle['carId'] && VehicleIndex::lacksNames($vehicle)) {
+                $keys[] = ['carId' => $vehicle['carId'], 'carType' => $vehicle['carType']];
+            }
+        }
+        $known = $this->vehicles->findMany($keys);
         foreach ($rows as $row) {
             $row->vehicle = $this->vehicles->complete($row->vehicle, $known);
         }

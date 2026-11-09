@@ -71,6 +71,7 @@ final class Applicability
 
         $out = [];
         foreach ($union as $name => $values) {
+            // @mago-expect analysis:redundant-cast a numeric-string name comes back from the array key as int
             $out[] = ['name' => (string) $name, 'values' => array_map('strval', array_keys($values))];
         }
 
@@ -94,7 +95,7 @@ final class Applicability
                     continue;
                 }
                 $key = $criterion->id ?? $criterion->name;
-                $conditions[$key]['name'] ??= $criterion->name;
+                $conditions[$key] ??= ['name' => $criterion->name, 'values' => []];
                 $conditions[$key]['values'][$criterion->value] = true;
             }
             $alternatives[] = [

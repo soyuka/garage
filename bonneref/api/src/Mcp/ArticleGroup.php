@@ -27,7 +27,7 @@ final class ArticleGroup
      * @param list<string>  $brands   restrict to these brands; the ranked cap does NOT apply, and any
      *                                asked brand with no fitting article comes back under `missing`
      *
-     * @return array<string, mixed>
+     * @return array{categoryId: int, totalArticles: int, totalBrands: int, truncated: bool, brands: list<array{brand: string, tier: int, articles: list<array{id: int, number: string}>}>, missing?: list<string>}
      */
     public static function of(int $categoryId, array $articles, int $maxBrands = self::MAX_BRANDS, array $brands = []): array
     {

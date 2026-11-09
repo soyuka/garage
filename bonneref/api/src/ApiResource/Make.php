@@ -63,7 +63,7 @@ final class Make
     }
 
     /**
-     * @param array{makeId: int|string, makeName: string} $row verified live 2026-06-12
+     * @param array<string, int|float|string|null> $row
      */
     public static function fromCatalogRow(array $row): self
     {

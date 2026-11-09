@@ -166,7 +166,7 @@ final readonly class FinderSearchJournalListener
             return $data->productGroup['name'];
         }
 
-        return $this->catalog->categoryName($data->carId, $data->categoryId, CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar);
+        return $this->catalog->categoryName($data->carId, $data->categoryId, CarType::tryFrom($request->query->get('carType', '')) ?? CarType::PassengerCar);
     }
 
     /**
@@ -179,7 +179,7 @@ final readonly class FinderSearchJournalListener
             $data instanceof NarrowedParts => self::pageVehicle($request) + [
                 'carId' => $data->carId,
                 // NarrowedParts carries no carType: the route reads it from the query, PC by default.
-                'carType' => (CarType::tryFrom((string) $request->query->get('carType', '')) ?? CarType::PassengerCar)->value,
+                'carType' => (CarType::tryFrom($request->query->get('carType', '')) ?? CarType::PassengerCar)->value,
                 'categoryId' => $data->categoryId,
             ] + ($request->query->has('productGroupId') && null !== $data->productGroup ? ['productGroupId' => $data->productGroup['id']] : []) + [
                 'clusterCount' => \count($data->clusters),

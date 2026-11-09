@@ -72,7 +72,7 @@ final readonly class TurnRoute
 
         $route = null !== $vehicle['plate']
             ? 'p/'.rawurlencode($vehicle['plate'])
-            : 'k/'.$vehicle['carId'].'-'.($vehicle['carType'] ?? 'PC');
+            : 'k/'.(string) $vehicle['carId'].'-'.($vehicle['carType'] ?? 'PC');
 
         if (null !== $categoryId) {
             $route .= '/c/'.$categoryId

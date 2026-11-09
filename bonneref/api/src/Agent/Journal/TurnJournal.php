@@ -123,7 +123,9 @@ final class TurnJournal implements WebSearchTracer
     public function recordWebSearchResponse(string $backend, string $query, array $rawBody, string $model = ''): void
     {
         $usage = 'gemini' === $backend ? ModelUsage::fromGemini($rawBody) : ModelUsage::fromAnthropic($rawBody);
-        $model = '' !== $model ? $model : (\is_string($rawBody['model'] ?? null) ? $rawBody['model'] : $backend);
+        if ('' === $model) {
+            $model = \is_string($rawBody['model'] ?? null) ? $rawBody['model'] : $backend;
+        }
         $this->current?->addSideCallUsage($model, $usage);
 
         $this->current?->addRawCall([

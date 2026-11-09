@@ -48,7 +48,8 @@ final class RepeatedToolFailureGuard
             }
 
             $signature = $this->signature($toolResult);
-            $count = $this->failures[$signature] = ($this->failures[$signature] ?? 0) + 1;
+            $count = ($this->failures[$signature] ?? 0) + 1;
+            $this->failures[$signature] = $count;
 
             if ($count >= $this->maxRepeats) {
                 throw new RepeatedToolFailureException($toolResult->getToolCall()->getName(), $count);
@@ -65,6 +66,6 @@ final class RepeatedToolFailureGuard
     {
         $call = $toolResult->getToolCall();
 
-        return $call->getName().':'.json_encode($call->getArguments());
+        return $call->getName().':'.(string) json_encode($call->getArguments());
     }
 }

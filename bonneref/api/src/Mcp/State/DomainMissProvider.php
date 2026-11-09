@@ -28,6 +28,7 @@ final readonly class DomainMissProvider implements ProviderInterface
     ) {
     }
 
+    // @mago-expect analysis:docblock-type-mismatch the inherited ProviderInterface @return names iterable<T>, which the native object|array|null cannot spell
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): object|array|null
     {
         try {

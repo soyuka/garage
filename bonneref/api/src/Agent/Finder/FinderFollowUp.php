@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Agent\Finder;
 
-use App\ApiResource\NarrowedParts;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Entity\AgentTurn;
@@ -93,7 +92,7 @@ final readonly class FinderFollowUp
         foreach ($turn->getToolCalls() as $call) {
             $a = $call->getArguments();
             if ('show_web_part' === $call->getName() && \is_string($a['reference'] ?? null)) {
-                $finds[] = \sprintf('%s : %s %s (source web, hors catalogue)', $a['categoryLabel'] ?? '', $a['brand'] ?? '', $a['reference']);
+                $finds[] = \sprintf('%s : %s %s (source web, hors catalogue)', self::scalar($a['categoryLabel'] ?? null), self::scalar($a['brand'] ?? null), $a['reference']);
             }
         }
 
@@ -118,11 +117,7 @@ final readonly class FinderFollowUp
             throw new InvalidTurnInput('onScreen.clusterId must be a cluster id such as "c1"');
         }
 
-        $narrowed = get_object_vars(NarrowedParts::from(
-            $vehicle->carId,
-            $categoryId,
-            $this->narrower->narrow($vehicle->carId, $vehicle->carType, $categoryId, $vehicle->make, $productGroupId),
-        ));
+        $narrowed = $this->narrower->narrow($vehicle->carId, $vehicle->carType, $categoryId, $vehicle->make, $productGroupId)->toArray();
         if ($narrowed['groupRequired'] || [] === $narrowed['clusters']) {
             throw new InvalidTurnInput('onScreen is not a catalogue result for this vehicle');
         }
@@ -182,5 +177,10 @@ final readonly class FinderFollowUp
         }
 
         return \sprintf("retenue d'après %s, indication", $selection->basis);
+    }
+
+    private static function scalar(mixed $value): string
+    {
+        return \is_scalar($value) ? (string) $value : '';
     }
 }

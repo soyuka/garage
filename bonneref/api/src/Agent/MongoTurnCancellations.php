@@ -37,12 +37,14 @@ final readonly class MongoTurnCancellations implements TurnCancellations
 
     public function isRequested(string $sessionId): bool
     {
-        return $this->dm->createQueryBuilder(TurnCancellation::class)
+        $count = $this->dm->createQueryBuilder(TurnCancellation::class)
             ->count()
             ->field('id')->equals($this->id($sessionId))
             ->field('expiresAt')->gt($this->clock->now())
             ->getQuery()
-            ->execute() > 0;
+            ->execute();
+
+        return \is_int($count) && $count > 0;
     }
 
     public function clear(string $sessionId): void

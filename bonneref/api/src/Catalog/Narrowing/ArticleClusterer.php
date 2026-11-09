@@ -49,7 +49,7 @@ final class ArticleClusterer
      *
      * @param list<Cluster> $clusters
      *
-     * @return list<array{key: string, label: string, values: list<array<string, mixed>>}>
+     * @return list<array{key: string, label: string, values: list<array{clusterId: string, label: string, value: string, min?: float, max?: float, unit?: ?string, info?: true}>}>
      */
     public function differsOn(array $clusters): array
     {

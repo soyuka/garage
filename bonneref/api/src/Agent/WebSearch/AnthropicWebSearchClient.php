@@ -25,6 +25,9 @@ use Symfony\AI\Platform\PlatformInterface;
  */
 final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
 {
+    /**
+     * @param non-empty-string $model
+     */
     public function __construct(
         private PlatformInterface $platform,
         // Carries `?max_tokens=` like the agent model string; the catalog parses it into request options.
@@ -57,7 +60,6 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
             ['server_tools' => [$tool]],
         );
 
-        /** @var array<string, mixed> $data */
         $data = $result->getRawResult()->getData();
         $this->tracer?->recordWebSearchResponse('anthropic', $query, $data, $this->model);
 
@@ -74,7 +76,7 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
     private function extractAnswer(array $data): string
     {
         $text = '';
-        foreach ($data['content'] ?? [] as $block) {
+        foreach (self::items($data['content'] ?? null) as $block) {
             if ('text' === ($block['type'] ?? null)) {
                 $text .= (string) ($block['text'] ?? '');
             }
@@ -107,11 +109,11 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
      */
     private function sourcesFromText(array $data): iterable
     {
-        foreach ($data['content'] ?? [] as $block) {
+        foreach (self::items($data['content'] ?? null) as $block) {
             if ('text' !== ($block['type'] ?? null)) {
                 continue;
             }
-            foreach ($block['citations'] ?? [] as $citation) {
+            foreach (self::items($block['citations'] ?? null) as $citation) {
                 yield ['url' => (string) ($citation['url'] ?? ''), 'title' => (string) ($citation['title'] ?? '')];
             }
         }
@@ -127,11 +129,11 @@ final readonly class AnthropicWebSearchClient extends AbstractWebSearchClient
      */
     private function sourcesFromResults(array $data): iterable
     {
-        foreach ($data['content'] ?? [] as $block) {
+        foreach (self::items($data['content'] ?? null) as $block) {
             if ('web_search_tool_result' !== ($block['type'] ?? null)) {
                 continue;
             }
-            foreach ($block['content'] ?? [] as $entry) {
+            foreach (self::items($block['content'] ?? null) as $entry) {
                 if ('web_search_result' === ($entry['type'] ?? null)) {
                     yield ['url' => (string) ($entry['url'] ?? ''), 'title' => (string) ($entry['title'] ?? '')];
                 }

@@ -10,6 +10,7 @@ use App\ApiResource\NarrowedParts;
 use App\Catalog\CarType;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\ArticleNarrower;
+use App\Catalog\Narrowing\NarrowingResult;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\InvalidBuildCode;
 use App\Knowledge\MakeName;
@@ -30,6 +31,8 @@ use Webmozart\Assert\Assert;
  *
  * A refusal is a {@see ToolError}, the same shape the MCP tools fail with, so RepeatedToolFailureGuard
  * counts a model retrying it.
+ *
+ * @phpstan-import-type Divergence from NarrowingResult
  */
 #[AsTool('show_parts', 'Show one catalogue part category on the finder sheet, for the vehicle of this turn: the server narrows the category (TecDoc, physically distinct parts, OE numbers, brand variants) and draws it. One call per category, at most 4 shown per turn. A category node can hold several TecDoc product groups (precise generic-article names: « Direction > Rotules » holds « Rotule de barre de connexion », the outer tie rod end, AND « Rotule de direction intérieure, barre de connexion », the inner axial joint): then status choose_group comes back with productGroups [{id, name, articleCount}] and nothing is drawn; pick the group whose name matches what the user asked (function and position) and call again with productGroupId. The title shown is the product group name, never your text. rationale is ONE short impersonal French sentence stating the fact that makes this part fit (cote, OE match, position, criterion, symptom cause), no reference number, never « Je… ». Returns a summary whose productGroup (and each cluster\'s productGroup) is what was drawn: check it against the request before end_turn. If clusters > 1 the finder itself asks the user the dimension question from differsOn, so do NOT ask it again, and each cluster carries its applicability (catalogue breakpoints per ARTICLE, or per variant from its own link to this car under the TecDoc catalogue: see applicabilityCaveat); status empty means the category (or that product group) holds no article for this vehicle and nothing was drawn: try the next most plausible sibling category once, then fall back to web_search + show_web_part. clusterId selects one of several clusters once something the user gave settles it (a decoded code de fabrication against the clusters\' breakpoints): pass the SAME categoryId and productGroupId as the result on screen plus the cluster id from its summary (c1, c2…); the sheet opens that variant marked « retenue d\'après » your rationale, which is then a short noun phrase naming the basis, e.g. « code de fabrication (OPR 09824 ≤ 10310) ». setAside, with clusterId only: a short noun phrase for why the other clusters do not fit this car, printed after « Ne correspond pas : », e.g. « OPR ≥ 10311 ». An id that is not one of that result\'s clusters is refused and nothing is drawn. Redrawing a category already shown this turn does not count against the 4.', 'showParts')]
 #[AsTool('set_build_code', 'Decode the code de fabrication the user gave for THIS turn\'s car (typed, or read off the vignette photo) and pin it on the finder page\'s vehicle, so later turns on this car carry it. Use it instead of decode_build_code for the car\'s own code; decode_build_code stays for decoding a catalogue threshold or a date. Returns the same fields as decode_build_code (status decoded, organisationNumber, date, codeKind…).', 'setBuildCode')]
@@ -109,11 +112,8 @@ final class FinderRenderTools
             return new ToolError('refused', \sprintf('At most %d categories per turn: end the turn now.', self::MAX_CATEGORIES));
         }
 
-        $narrowed = get_object_vars(NarrowedParts::from(
-            $this->vehicle->carId,
-            $categoryId,
-            $this->narrower->narrow($this->vehicle->carId, $this->vehicle->carType, $categoryId, $this->vehicle->make, $productGroupId),
-        ));
+        $result = $this->narrower->narrow($this->vehicle->carId, $this->vehicle->carType, $categoryId, $this->vehicle->make, $productGroupId);
+        $narrowed = $result->toArray();
         if ($narrowed['groupRequired']) {
             return [
                 'status' => 'choose_group',
@@ -156,7 +156,7 @@ final class FinderRenderTools
             'categoryId' => $categoryId,
             'categoryLabel' => $groupName,
             'rationale' => $rationale,
-            'narrowed' => $narrowed,
+            'narrowed' => get_object_vars(NarrowedParts::from($this->vehicle->carId, $categoryId, $result)),
         ] + (null === $selection ? [] : ['selection' => ['id' => $selection->id, 'clusterId' => $clusterId, 'basis' => $selection->basis] + (null === $setAside ? [] : ['setAside' => $setAside])]));
 
         $several = \count($narrowed['clusters']) > 1;
@@ -184,7 +184,7 @@ final class FinderRenderTools
     }
 
     /**
-     * @param array{label: string, values: list<array<string, mixed>>} $divergence
+     * @param Divergence $divergence
      */
     public static function differsLine(array $divergence): string
     {
@@ -192,9 +192,11 @@ final class FinderRenderTools
             if (!isset($v['min'], $v['max'])) {
                 return $v['clusterId'].' '.$v['value'];
             }
-            $range = $v['min'] == $v['max'] ? (string) $v['min'] : $v['min'].'–'.$v['max'];
+            $range = $v['min'] === $v['max'] ? (string) $v['min'] : $v['min'].'–'.$v['max'];
 
-            return $v['clusterId'].' '.$range.(null === $v['unit'] ? '' : ' '.$v['unit']);
+            $unit = $v['unit'] ?? null;
+
+            return $v['clusterId'].' '.$range.(null === $unit ? '' : ' '.$unit);
         }, $divergence['values']);
 
         return $divergence['label'].' : '.implode(', ', $values);

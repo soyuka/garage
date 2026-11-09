@@ -103,6 +103,7 @@ final readonly class FinderContextBuilder
             try {
                 $date = $decoder->decode((string) $vehicle->organisationNumber)->date->format('Y-m-d');
             } catch (InvalidBuildCode) {
+                $date = null;
             }
         }
 

@@ -54,6 +54,10 @@ class User implements UserInterface
 
     public function getUserIdentifier(): string
     {
+        if ('' === $this->externalId) {
+            throw new \LogicException('A user without an external id has no identifier.');
+        }
+
         return $this->externalId;
     }
 

@@ -28,8 +28,9 @@ final readonly class MakesProcessor implements ProcessorInterface
     {
         $makes = $this->catalog->makes(CarTypeResolver::fromString($data->carType), $data->search);
 
+        // @mago-expect analysis:less-specific-argument get_object_vars of a final DTO: the shape is sealed, mago leaves it open
         return CappedResult::of(
-            array_map(static fn (Make $make): array => (array) $make, $makes),
+            array_map(static fn (Make $make): array => get_object_vars($make), $makes),
             'manufacturers',
             'Narrow with search=<brand name> (e.g. "peugeot", "bmw").',
             $data->offset,

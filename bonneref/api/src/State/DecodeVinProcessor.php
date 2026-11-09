@@ -22,6 +22,7 @@ final readonly class DecodeVinProcessor implements ProcessorInterface
 
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): CallToolResult
     {
+        // @mago-expect analysis:less-specific-argument get_object_vars of a final DTO: the shape is sealed, mago leaves it open
         return ToolResult::of(get_object_vars($this->decoder->decode($data->vin)));
     }
 }

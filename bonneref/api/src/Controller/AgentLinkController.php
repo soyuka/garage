@@ -26,7 +26,7 @@ final readonly class AgentLinkController
     #[Route('/agent/link', name: 'agent_link', methods: ['GET'])]
     public function __invoke(Request $request): Response
     {
-        $session = (string) $request->query->get('session', '');
+        $session = $request->query->get('session', '');
         if (!TurnSessionTopic::isValidId($session)) {
             return new JsonResponse(['error' => 'session must be 1 to 64 letters, digits, "-" or "_"'], Response::HTTP_BAD_REQUEST);
         }

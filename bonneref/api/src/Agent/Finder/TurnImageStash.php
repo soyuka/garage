@@ -30,7 +30,7 @@ final readonly class TurnImageStash
      */
     public function put(array $images): string
     {
-        $key = 'turn_images_'.new Ulid();
+        $key = 'turn_images_'.(string) new Ulid();
         $this->write($key, $images, $this->clock->now()->modify(sprintf('+%d seconds', self::TTL)));
 
         return $key;

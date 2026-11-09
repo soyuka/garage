@@ -53,10 +53,11 @@ final readonly class ServerToolUseLogger implements PlatformInterface
     {
         $result = $this->inner->invoke($model, $input, $options);
 
+        // @mago-expect analysis:mixed-operand platform options are untyped; any truthy stream flag streams, as the inner platform reads it
         $stream = (bool) ($options['stream'] ?? false);
         // Record the live model on the debug journal: the active platform/model is a compile-time
         // choice in ai.yaml, so this decorator — in the path of every call — is where it is observable.
-        $this->journal->recordModel('anthropic', $model instanceof Model ? $model->getName() : (string) $model, $stream);
+        $this->journal->recordModel('anthropic', $model instanceof Model ? $model->getName() : $model, $stream);
 
         if ($stream) {
             $this->attachBudgetListener($result);
@@ -97,7 +98,7 @@ final readonly class ServerToolUseLogger implements PlatformInterface
         }
 
         $queries = [];
-        foreach ($data['content'] ?? [] as $block) {
+        foreach (\is_array($data['content'] ?? null) ? $data['content'] : [] as $block) {
             if ('server_tool_use' === ($block['type'] ?? null) && 'web_search' === ($block['name'] ?? null)) {
                 $queries[] = (string) ($block['input']['query'] ?? '');
             }

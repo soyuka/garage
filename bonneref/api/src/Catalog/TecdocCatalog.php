@@ -86,8 +86,8 @@ final class TecdocCatalog implements PartsCatalog
         $rows = CarType::PassengerCar === $carType ? $this->passengerCarRows($makeId, $modelId) : $this->commercialVehicleRows($makeId, $modelId);
         $profile = self::PROFILES[$carType->value];
 
-        $engines = $this->engineCodes($profile['engines'], array_column($rows, 'CAR_ID'));
-        $rows = array_map(static fn (array $row): array => self::carRow($row, $engines[$row['CAR_ID']] ?? []), $rows);
+        $engines = $this->engineCodes($profile['engines'], array_map(intval(...), array_column($rows, 'CAR_ID')));
+        $rows = array_map(static fn (array $row): array => self::carRow($row, $engines[(int) $row['CAR_ID']] ?? []), $rows);
         $this->vehicles?->recordCatalogRows($rows, $carType);
 
         return array_map(Car::fromCatalogRow(...), $rows);
@@ -280,10 +280,11 @@ final class TecdocCatalog implements PartsCatalog
         }
 
         $resolved = [];
-        $lookup = $this->pdo()->prepare('SELECT article_id FROM article WHERE supplier_id = :slot AND article_number = :number ORDER BY article_id LIMIT 1');
+        $lookup = $this->statement('SELECT article_id FROM article WHERE supplier_id = :slot AND article_number = :number ORDER BY article_id LIMIT 1');
         foreach ($rows as $i => $row) {
             foreach ($this->slots((string) $row['brand'], (string) $row['shortName']) as $slot) {
                 $lookup->execute(['slot' => $slot, 'number' => $row['number']]);
+                /** @var int|string|false $found article_id, or false past the last row */
                 $found = $lookup->fetchColumn();
                 if (false !== $found) {
                     $resolved[$i] = (int) $found;
@@ -330,7 +331,7 @@ final class TecdocCatalog implements PartsCatalog
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<string, int|float|string|null>>
      */
     private function passengerCarRows(int $makeId, int $modelId): array
     {
@@ -370,7 +371,7 @@ final class TecdocCatalog implements PartsCatalog
     /**
      * cv_type has no text table and no body, fuel or litre columns, and carries power as a from-to range.
      *
-     * @return list<array<string, mixed>>
+     * @return list<array<string, int|float|string|null>>
      */
     private function commercialVehicleRows(int $makeId, int $modelId): array
     {
@@ -411,19 +412,20 @@ final class TecdocCatalog implements PartsCatalog
         );
 
         $criteria = $this->attributes($artIds);
+        $names = [];
         $unions = [];
         foreach ($qualifiers as $row) {
             $value = self::value($row);
             if (null !== $row['name'] && '' !== $value) {
-                $unions[(int) $row['article_id']][(int) $row['criterion_id']]['name'] = trim((string) $row['name']);
-                $unions[(int) $row['article_id']][(int) $row['criterion_id']]['values'][$value] = true;
+                $names[(int) $row['article_id']][(int) $row['criterion_id']] = trim((string) $row['name']);
+                $unions[(int) $row['article_id']][(int) $row['criterion_id']][$value] = true;
             }
         }
         foreach ($unions as $artId => $byCriterion) {
             foreach ($byCriterion as $criterionId => $union) {
-                $values = array_map('strval', array_keys($union['values']));
+                $values = array_map('strval', array_keys($union));
                 sort($values, \SORT_NATURAL);
-                $criteria[$artId][] = new ArticleCriterion($union['name'], implode('; ', $values), $criterionId);
+                $criteria[$artId][] = new ArticleCriterion($names[$artId][$criterionId], implode('; ', $values), $criterionId);
             }
         }
 
@@ -470,7 +472,7 @@ final class TecdocCatalog implements PartsCatalog
      * @param string                    $links  a SELECT of (article_id, qual_set_id) pairs
      * @param array<string, int|string> $params the parameters of $links
      *
-     * @return list<array<string, mixed>>
+     * @return list<array<string, int|float|string|null>>
      */
     private function qualifierRows(string $links, string $orderBy, array $params = []): array
     {
@@ -508,7 +510,7 @@ final class TecdocCatalog implements PartsCatalog
     }
 
     /**
-     * @param array<string, mixed> $row
+     * @param array<string, int|float|string|null> $row
      */
     private static function value(array $row): string
     {
@@ -620,8 +622,8 @@ final class TecdocCatalog implements PartsCatalog
     }
 
     /**
-     * @param array<string, mixed> $row
-     * @param list<string>         $engines
+     * @param array<string, int|float|string|null> $row
+     * @param list<string>                         $engines
      *
      * @return array<string, mixed> a getCars row, as partsapi serialises it
      */
@@ -637,12 +639,12 @@ final class TecdocCatalog implements PartsCatalog
         return [
             'CAR_ID' => (int) $row['CAR_ID'],
             'CAR_NAME' => $name,
-            'FULL_MODEL_NAME' => $row['MAKE_NAME'].' '.$row['MODEL_NAME'].' '.$name,
+            'FULL_MODEL_NAME' => (string) $row['MAKE_NAME'].' '.(string) $row['MODEL_NAME'].' '.$name,
             'MAKE_NAME' => $row['MAKE_NAME'],
             'MODEL_NAME' => $row['MODEL_NAME'],
             'BODY' => $row['BODY'],
             'ENGINE_TYPE' => $row['ENGINE_TYPE'],
-            'CAPACITY' => null === $ccm ? null : (string) $ccm.(null === $litres ? '' : \sprintf('/%.1f l', $litres / 100)),
+            'CAPACITY' => null === $ccm ? null : (string) $ccm.(null === $litres ? '' : \sprintf('/%.1f l', (float) $litres / 100)),
             'POWER_KW' => $row['POWER_KW'],
             'POWER_PS' => $row['POWER_PS'],
             'YEAR_START' => self::rfc1123($row['year_from'], $row['month_from']),
@@ -651,7 +653,7 @@ final class TecdocCatalog implements PartsCatalog
     }
 
     /**
-     * @param list<int|string> $typeIds
+     * @param array<int> $typeIds
      *
      * @return array<int, list<string>>
      */
@@ -664,7 +666,7 @@ final class TecdocCatalog implements PartsCatalog
         $rows = $this->rows(\sprintf(
             'SELECT pe.type_id, e.engine_code FROM %s pe JOIN engine e ON e.engine_id = pe.engine_id WHERE pe.type_id IN (%s) ORDER BY pe.type_id, e.engine_code',
             $table,
-            implode(',', array_map(intval(...), $typeIds)),
+            implode(',', $typeIds),
         ));
 
         $codes = [];
@@ -677,26 +679,40 @@ final class TecdocCatalog implements PartsCatalog
         return $codes;
     }
 
-    private static function rfc1123(mixed $year, mixed $month): ?string
+    private static function rfc1123(int|float|string|null $year, int|float|string|null $month): ?string
     {
         if (null === $year || '' === $year) {
             return null;
         }
 
-        return gmdate('D, d M Y H:i:s \G\M\T', gmmktime(0, 0, 0, max(1, (int) $month), 1, (int) $year));
+        $timestamp = gmmktime(0, 0, 0, max(1, (int) $month), 1, (int) $year);
+
+        return false === $timestamp ? null : gmdate('D, d M Y H:i:s \G\M\T', $timestamp);
     }
 
     /**
      * @param array<string, int|string> $params
      *
-     * @return list<array<string, mixed>>
+     * @return list<array<string, int|float|string|null>>
      */
     private function rows(string $sql, array $params = []): array
     {
-        $statement = $this->pdo()->prepare($sql);
+        $statement = $this->statement($sql);
         $statement->execute($params);
+        /** @var list<array<string, int|float|string|null>> $rows SQLite only yields scalars and NULL */
+        $rows = $statement->fetchAll(\PDO::FETCH_ASSOC);
 
-        return $statement->fetchAll(\PDO::FETCH_ASSOC);
+        return $rows;
+    }
+
+    private function statement(string $sql): \PDOStatement
+    {
+        $statement = $this->pdo()->prepare($sql);
+        if (false === $statement) {
+            throw new \RuntimeException('The parts catalogue rejected a query.');
+        }
+
+        return $statement;
     }
 
     private function pdo(): \PDO

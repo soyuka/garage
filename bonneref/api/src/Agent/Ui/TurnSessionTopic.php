@@ -20,6 +20,7 @@ final readonly class TurnSessionTopic
         #[Autowire('%env(DEFAULT_URI)%')]
         private string $baseUri,
         #[Autowire('%kernel.secret%')]
+        #[\SensitiveParameter]
         private string $secret,
     ) {
     }

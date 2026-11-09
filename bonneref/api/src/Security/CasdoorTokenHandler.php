@@ -66,7 +66,8 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
             $claims = $this->loadAndVerifyJws($accessToken, $jwkset);
             $this->verifyClaims($claims);
 
-            if (empty($claims[$this->claim]) || !\is_string($claims[$this->claim])) {
+            $owner = $claims[$this->claim] ?? null;
+            if (!\is_string($owner) || '' === $owner || '0' === $owner) {
                 throw new MissingClaimException(\sprintf('"%s" claim not found.', $this->claim));
             }
 
@@ -75,19 +76,19 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
                 throw new BadCredentialsException('The email owner claim is not verified.');
             }
 
-            return new UserBadge($claims[$this->claim], null, $claims);
+            return new UserBadge($owner, null, $claims);
         } catch (\Exception $e) {
             $this->logger?->error('Failed to validate the Casdoor access token.', [
                 'error' => $e->getMessage(),
                 'exception' => $e::class,
             ]);
 
-            throw new BadCredentialsException('Invalid credentials.', $e->getCode(), $e);
+            throw new BadCredentialsException('Invalid credentials.', (int) $e->getCode(), $e);
         }
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<array<array-key, mixed>>
      *
      * @internal public so the cache callback can populate it
      */
@@ -104,13 +105,26 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
 
         $item->expiresAfter(3600);
 
-        return array_values($this->client->request('GET', $jwksUri)->toArray()['keys']);
+        $keys = $this->client->request('GET', $jwksUri)->toArray()['keys'] ?? null;
+        if (!\is_array($keys)) {
+            throw new \RuntimeException('The "keys" are missing from the JWKS document.');
+        }
+
+        $valid = [];
+        foreach ($keys as $key) {
+            if (!\is_array($key)) {
+                throw new \RuntimeException('A JWKS key is not a JSON object.');
+            }
+            $valid[] = $key;
+        }
+
+        return $valid;
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<array-key, mixed>
      */
-    private function loadAndVerifyJws(string $accessToken, JWKSet $jwkset): array
+    private function loadAndVerifyJws(#[\SensitiveParameter] string $accessToken, JWKSet $jwkset): array
     {
         $jws = (new JWSSerializerManager([new CompactSerializer()]))->unserialize($accessToken);
 
@@ -123,11 +137,16 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
             [new JWSTokenSupport()],
         ))->check($jws, 0);
 
-        return json_decode($jws->getPayload() ?? '', true, flags: \JSON_THROW_ON_ERROR);
+        $claims = json_decode($jws->getPayload() ?? '', true, flags: \JSON_THROW_ON_ERROR);
+        if (!\is_array($claims)) {
+            throw new \UnexpectedValueException('The token payload is not a JSON object.');
+        }
+
+        return $claims;
     }
 
     /**
-     * @param array<string, mixed> $claims
+     * @param array<array-key, mixed> $claims
      */
     private function verifyClaims(array $claims): void
     {

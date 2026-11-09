@@ -292,7 +292,7 @@ final readonly class ArticleNarrower
             }
         }
 
-        /** @var list<list<Cluster>> $groups */
+        /** @var list<non-empty-list<Cluster>> $groups */
         $groups = [];
         /** @var list<array<string, true>> $groupOe */
         $groupOe = [];

@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Catalog\Narrowing;
 
+/**
+ * @phpstan-type Variant array{artId: int, brand: string, number: string, tier: int, applicability?: list<array{conditions: list<array{name: string, values: list<string>}>, pairedWith: list<string>}>}
+ * @phpstan-type ClusterArray array{id: string, fingerprint: array<string, array<string, mixed>>, oeNumbers: list<array{brand: string, number: string}>, representative: array{artId: int, brand: string, number: string}, variants: list<Variant>, articleCount: int, applicability: list<array{name: string, values: list<string>}>, productGroup: array{id: int, name: string}|null}
+ */
 final readonly class NarrowedCluster
 {
     /**
@@ -27,7 +31,7 @@ final readonly class NarrowedCluster
     }
 
     /**
-     * @return array<string, mixed>
+     * @return ClusterArray
      */
     public function toArray(): array
     {

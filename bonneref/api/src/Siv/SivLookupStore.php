@@ -10,12 +10,12 @@ namespace App\Siv;
 interface SivLookupStore
 {
     /**
-     * @return array<string, mixed>|null the full upstream envelope
+     * @return array<array-key, mixed>|null the full upstream envelope
      */
     public function find(string $plate): ?array;
 
     /**
-     * @param array<string, mixed> $envelope
+     * @param array<array-key, mixed> $envelope
      */
     public function save(string $plate, array $envelope): void;
 }

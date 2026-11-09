@@ -101,6 +101,7 @@ final class FingerprintBuilder
             if (null !== $key) {
                 $entry = new FingerprintEntry($key, $criterion->name, self::thread($value), null, null);
             } elseif (null !== $unit || self::isDiscrete($slug)) {
+                // @mago-expect analysis:invalid-type-cast the pattern only lets a decimal number through
                 $number = preg_match('/^-?\d+(?:[.,]\d+)?$/', $value) ? (float) str_replace(',', '.', $value) : null;
                 $key = null !== $unit ? (self::SPLITTING_MEASURES[$slug] ?? $slug) : $slug;
                 $entry = new FingerprintEntry(

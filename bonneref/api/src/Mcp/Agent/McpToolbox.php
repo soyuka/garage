@@ -53,17 +53,23 @@ class McpToolbox implements ToolboxInterface
 
         $response = $this->drive(['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/list', 'params' => []]);
 
+        $result = $response['result'] ?? null;
+        $definitions = \is_array($result) && \is_array($result['tools'] ?? null) ? $result['tools'] : [];
+
         $tools = [];
-        foreach ($response['result']['tools'] ?? [] as $definition) {
-            if (!\in_array($definition['name'], $this->only, true)) {
+        foreach ($definitions as $definition) {
+            if (!\is_array($definition) || !\is_string($definition['name'] ?? null) || !\in_array($definition['name'], $this->only, true)) {
                 continue;
             }
+            $description = $definition['description'] ?? '';
+            $inputSchema = $definition['inputSchema'] ?? null;
 
             $tools[] = new Tool(
                 new ExecutionReference(self::class, 'execute'),
                 $definition['name'],
-                $definition['description'] ?? '',
-                $definition['inputSchema'] ?? null,
+                \is_string($description) ? $description : '',
+                // @mago-expect analysis:possibly-invalid-argument the JSON Schema this same server advertises for the tool
+                \is_array($inputSchema) ? $inputSchema : null,
             );
         }
 
@@ -90,20 +96,25 @@ class McpToolbox implements ToolboxInterface
             ],
         ]);
 
-        if (isset($response['error'])) {
+        $error = $response['error'] ?? null;
+        if (null !== $error) {
             // A genuine unknown-tool is METHOD_NOT_FOUND; anything else (INTERNAL_ERROR from a handler
             // that threw — e.g. a catalog upstream 401/timeout) means the tool
             // exists but its execution failed. Surface that as a recoverable ToolExecutionException so
             // FaultTolerantToolbox hands the model an error to recover from, instead of a "tool not
             // found" lie that drops the tool, or a raw exception that aborts the whole turn.
-            if (Error::METHOD_NOT_FOUND === ($response['error']['code'] ?? null)) {
+            if (\is_array($error) && Error::METHOD_NOT_FOUND === ($error['code'] ?? null)) {
                 throw ToolNotFoundException::notFoundForToolCall($toolCall);
             }
+            $message = \is_array($error) && \is_scalar($error['message'] ?? null) ? (string) $error['message'] : 'tool execution failed';
 
-            throw ToolExecutionException::executionFailed($toolCall, new \RuntimeException((string) ($response['error']['message'] ?? 'tool execution failed')));
+            throw ToolExecutionException::executionFailed($toolCall, new \RuntimeException($message));
         }
 
         $result = $response['result'] ?? [];
+        if (!\is_array($result)) {
+            throw ToolExecutionException::executionFailed($toolCall, new \RuntimeException('tools/call answered without a result object'));
+        }
 
         // A tool execution error stays a flagged CallToolResult: the model reads `isError` beside the
         // text, and RepeatedToolFailureGuard counts it.
@@ -112,8 +123,14 @@ class McpToolbox implements ToolboxInterface
         }
 
         // Prefer the structured payload (what the tests rely on); fall back to text.
-        $payload = $result['structuredContent']
-            ?? implode("\n", array_column($result['content'] ?? [], 'text'));
+        $content = $result['content'] ?? [];
+        $texts = [];
+        foreach (\is_array($content) ? $content : [] as $block) {
+            if (\is_array($block) && \is_scalar($block['text'] ?? null)) {
+                $texts[] = (string) $block['text'];
+            }
+        }
+        $payload = $result['structuredContent'] ?? implode("\n", $texts);
 
         return new ToolResult($toolCall, $payload);
     }
@@ -121,9 +138,9 @@ class McpToolbox implements ToolboxInterface
     /**
      * Run the DI MCP server in-process for one request, stamped with the modern-era `_meta` envelope.
      *
-     * @param array<string, mixed> $request
+     * @param array{jsonrpc: string, id: int, method: string, params: array<string, mixed>} $request
      *
-     * @return array<string, mixed> the decoded JSON-RPC response to $request
+     * @return array<array-key, mixed> the decoded JSON-RPC response to $request
      */
     protected function drive(array $request): array
     {

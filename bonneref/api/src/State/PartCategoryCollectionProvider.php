@@ -22,9 +22,6 @@ final readonly class PartCategoryCollectionProvider implements ProviderInterface
     ) {
     }
 
-    /**
-     * @return ArrayPaginator<PartCategory>
-     */
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ArrayPaginator
     {
         $parameters = $operation->getParameters();
@@ -40,6 +37,6 @@ final readonly class PartCategoryCollectionProvider implements ProviderInterface
         );
         [, $offset, $limit] = $this->pagination->getPagination($operation, $context);
 
-        return new ArrayPaginator($rows, $offset, $limit);
+        return new ArrayPaginator($rows, (int) $offset, (int) $limit);
     }
 }
