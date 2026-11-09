@@ -18,8 +18,11 @@ final class ProposeActionInput
     public ?string $taskId = null;
 
     /**
-     * @var list<ProposePartInput>
+     * Nullable because models fill the unused kind with an explicit null, and API Platform 5.0.6
+     * validates tool arguments against this schema before the processor runs.
+     *
+     * @var list<ProposePartInput>|null
      */
-    #[ApiProperty(description: 'Deterministic write: the parts merged onto taskId when the button is clicked.')]
-    public array $parts = [];
+    #[ApiProperty(description: 'Deterministic write: the parts merged onto taskId when the button is clicked. Leave null for an NL follow-up.')]
+    public ?array $parts = null;
 }

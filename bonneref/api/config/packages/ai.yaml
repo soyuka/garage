@@ -1,28 +1,4 @@
 ai:
-    model:
-        anthropic:
-            claude-sonnet-5-5:
-                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
-                capabilities:
-                    - input-messages
-                    - output-text
-                    - output-streaming
-                    - tool-calling
-                    - output-structured
-                    - thinking
-                    - input-image
-                    - input-pdf
-            claude-haiku-5-5:
-                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
-                capabilities:
-                    - input-messages
-                    - output-text
-                    - output-streaming
-                    - tool-calling
-                    - output-structured
-                    - thinking
-                    - input-image
-                    - input-pdf
     platform:
         anthropic:
             api_key: '%env(ANTHROPIC_API_KEY)%'

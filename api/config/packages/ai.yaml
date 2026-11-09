@@ -1,28 +1,4 @@
 ai:
-    model:
-        anthropic:
-            claude-sonnet-5-5:
-                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
-                capabilities:
-                    - input-messages
-                    - output-text
-                    - output-streaming
-                    - tool-calling
-                    - output-structured
-                    - thinking
-                    - input-image
-                    - input-pdf
-            claude-haiku-5-5:
-                class: Symfony\AI\Platform\Bridge\Anthropic\Claude
-                capabilities:
-                    - input-messages
-                    - output-text
-                    - output-streaming
-                    - tool-calling
-                    - output-structured
-                    - thinking
-                    - input-image
-                    - input-pdf
     platform:
         anthropic:
             api_key: '%env(ANTHROPIC_API_KEY)%'
@@ -58,11 +34,9 @@ ai:
             # Raised Haiku → Sonnet: narrate_step and the propose_actions/toast copy are now
             # model-authored prose the user actually reads (and, under the audition, hears spoken),
             # and Haiku's phrasing there was visibly weaker than the pilot path's (which already runs
-            # Sonnet). Now Sonnet 5.5 ($2/$10 per MTok, cheaper than 4.6's $3/$15). The vendored
-            # catalog (vendor/symfony/ai-anthropic-platform/ModelCatalog.php) stops at claude-sonnet-5,
-            # and an id absent from it throws ModelNotFoundException, so claude-sonnet-5-5 is
-            # registered under `ai.model.anthropic` below (merged over the defaults by ModelCatalog),
-            # with the capability list of claude-sonnet-5 — no vendor patch.
+            # Sonnet). Now Sonnet 5.5 ($2/$10 per MTok, cheaper than 4.6's $3/$15). The bridge
+            # catalog ships claude-sonnet-5-5 and claude-haiku-5-5 since symfony/ai 1.0, so no
+            # `model_catalog.models` override is needed.
             #
             # thinking[type]=between_tools: Sonnet 5.5 rejects `thinking: {type: disabled}` (400) and
             # omitting `thinking` turns adaptive thinking ON. between_tools is the closest to the
@@ -349,8 +323,9 @@ ai:
                     <dashboard_tools>
                     Render intents — they drive the UI the user is looking at; they do not persist data.
                     - narrate_step(message) — one clause, first person, present tense, in the turn's
-                      language, BEFORE each slow step (catalogue call, web search). It is the
-                      sentence the workshop says out loud. Never the answer, never a recap.
+                      language, BEFORE a slow step worth saying (catalogue call, web search) — not
+                      before every call: a tool run without it shows only as a silent step chip. It
+                      is the only sentence the workshop says while working. Never the answer, never a recap.
                     - select_vehicle(id) — focus a vehicle by its @id.
                     - toast(message, tone) — a one-line acknowledgement; tone ∈ info|ok|warn|alarm.
                       message is SPOKEN ALOUD by the workshop voice as well as printed
