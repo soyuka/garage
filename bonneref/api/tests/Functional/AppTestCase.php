@@ -78,7 +78,7 @@ abstract class AppTestCase extends ApiTestCase
     /**
      * Authorization header for a write request against the `api` firewall (^/garage, ^/agent/turn).
      * The token is decoded by {@see \App\Tests\Security\FakeOidcTokenHandler}; the firewall,
-     * ZitadelUserProvider and find-or-create all run for real. Merge into a request's headers.
+     * CasdoorUserProvider and find-or-create all run for real. Merge into a request's headers.
      *
      * @return array{Authorization: string}
      */
