@@ -7,6 +7,8 @@ namespace App\Tests\Functional;
 use App\Agent\SelectedVehicleContext;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\Mcp\Agent\McpToolbox;
+use Symfony\AI\Platform\Result\ToolCall;
 
 final class McpGarageTest extends AppTestCase
 {
@@ -105,8 +107,6 @@ final class McpGarageTest extends AppTestCase
     public function testListVehiclesFloatsTheSelectedVehicleFirst(): void
     {
         $client = static::createClient();
-        // Keep one kernel/container across requests so the SelectedVehicleContext set below (which the
-        // worker would bind per turn) survives into the tool-call request.
         $client->disableReboot();
         $sessionId = $this->initialize($client);
 
@@ -118,11 +118,12 @@ final class McpGarageTest extends AppTestCase
         $this->assertSame('IVECO', $list['vehicles'][0]['make'], 'default order is most-recently-touched first');
         $toroIri = $this->vehicleByMake($list['vehicles'], 'TORO')['@id'];
 
-        // With TORO selected on the dashboard, it must lead even though IVECO is more recent.
-        $selected = static::getContainer()->get(SelectedVehicleContext::class);
-        $selected->set($toroIri);
+        // With TORO selected on the dashboard, it must lead even though IVECO is more recent. The
+        // selection is bound for the length of an agent turn, so the call goes through the in-process
+        // toolbox the turn uses: kernel.reset clears the binding before the next HTTP request.
+        static::getContainer()->get(SelectedVehicleContext::class)->set($toroIri);
 
-        $list = $this->outcome($this->call($client, $sessionId, 'tools/call', ['name' => 'list_vehicles', 'arguments' => []], 6));
+        $list = static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('6', 'list_vehicles', []))->getResult();
         $this->assertSame('TORO', $list['vehicles'][0]['make'], 'the selected vehicle is floated to the top');
     }
 
