@@ -41,6 +41,29 @@ final class McpAppsUiTest extends AppTestCase
         $this->assertContains(self::UI_MIME_TYPE, $extensions['io.modelcontextprotocol/ui']['mimeTypes'] ?? []);
     }
 
+    public function testServerDiscoverAdvertisesAppsExtension(): void
+    {
+        $client = static::createClient();
+
+        $response = $client->request('POST', '/mcp', [
+            'headers' => $this->mcpHeaders(['MCP-Protocol-Version' => '2026-07-28', 'Mcp-Method' => 'server/discover']),
+            'json' => [
+                'jsonrpc' => '2.0',
+                'id' => 1,
+                'method' => 'server/discover',
+                'params' => ['_meta' => [
+                    'io.modelcontextprotocol/protocolVersion' => '2026-07-28',
+                    'io.modelcontextprotocol/clientCapabilities' => new \stdClass(),
+                ]],
+            ],
+        ]);
+
+        $json = $this->extractJson($response->getContent());
+
+        $this->assertContains('2026-07-28', $json['result']['supportedVersions'] ?? []);
+        $this->assertContains(self::UI_MIME_TYPE, $json['result']['capabilities']['extensions']['io.modelcontextprotocol/ui']['mimeTypes'] ?? []);
+    }
+
     public function testMaintenanceHistoryToolLinksUiResource(): void
     {
         $client = static::createClient();

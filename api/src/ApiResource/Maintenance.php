@@ -16,7 +16,7 @@ use App\Dto\LogMaintenanceInput;
 use App\Dto\PlanMaintenanceInput;
 use App\Dto\RemovePlannedPartInput;
 use App\Dto\SetMaintenanceScheduleInput;
-use App\Mcp\UiResourceLoader;
+use App\Mcp\MaintenanceHistoryApp;
 use App\State\DismissMaintenanceProcessor;
 use App\State\EditMaintenanceProcessor;
 use App\State\GetMaintenanceHistoryProcessor;
@@ -68,7 +68,7 @@ use App\State\SetMaintenanceScheduleProcessor;
             annotations: ['readOnlyHint' => true],
             // MCP Apps (io.modelcontextprotocol/ui): links the service-history card app.
             // Tool::jsonSerialize() emits this under `_meta`, so the host reads `_meta.ui.resourceUri`.
-            meta: ['ui' => ['resourceUri' => UiResourceLoader::MAINTENANCE_HISTORY_URI]],
+            meta: ['ui' => ['resourceUri' => MaintenanceHistoryApp::URI]],
         ),
         'plan_maintenance' => new McpTool(
             title: 'Plan Maintenance Task',
