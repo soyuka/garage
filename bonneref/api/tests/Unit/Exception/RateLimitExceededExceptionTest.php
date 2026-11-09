@@ -8,12 +8,14 @@ use App\Exception\RateLimitExceededException;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\Clock\Clock;
 use Symfony\Component\Clock\MockClock;
+use Symfony\Component\Clock\NativeClock;
 
 final class RateLimitExceededExceptionTest extends TestCase
 {
     protected function tearDown(): void
     {
-        Clock::set(new Clock());
+        // A bare `new Clock()` as the global clock reads Clock::get(), i.e. itself, and recurses forever.
+        Clock::set(new NativeClock());
     }
 
     public function testRetryAfterIsCountedFromTheClock(): void
