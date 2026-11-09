@@ -75,7 +75,7 @@ Shipped, end to end:
   unused by the UI (kept in `family.ts`, to drop if nothing reads it later). Captures
   `.impeccable/review/verdict-*.png`. DESIGN § Variant table, Sheet, Motion.
 - **Motion pass (2026-10-16, « a pretty demo, full motion »)**: while a search runs the sheet
-  redraws random small Wrench parts under a plotter pen (two clipping planes through the eye), at most
+  redraws random small game parts under a plotter pen (two clipping planes through the eye), at most
   two meshes loaded, disposed on drop; the result hands off through the same sweep and the camera
   eases to it. View transitions dock the composer from the home; title block cells rise in and swap
   per variant; question cards, journal, history rows, chips, toasts and the Acheter menu enter and
@@ -168,7 +168,7 @@ Shipped, end to end:
   bbox centre on both axes, pan, zoom to cursor, double-click reset, idle turntable (1 rev / 40 s,
   stops on first touch, off under reduced motion); cotes fixed to the part with billboarded labels,
   drawn ONLY from the cluster fingerprint (never from the mesh).
-- **Meshes (2026-10-15)**: 89 Wrench web meshes + filter + brakes (batch 3: 29, batch 4: 5, 2026-10-15) in `bonneref/public/parts/`
+- **Meshes (2026-10-15)**: 89 web meshes extracted from a commercial video game + filter + brakes (batch 3: 29, batch 4: 5, 2026-10-15) in `bonneref/public/parts/`
   (inventory, sizes, licence note: `SOURCES.md`). `family.ts` `MESH_RULES` maps TecDoc categories to
   them (133/497 leaves of the Mazda tree, incl. filter + brakes; tested against the real tree); only
   the active mesh loads; approximate matches were captioned "Forme type de la famille, pas la pièce exacte" until 2026-10-16 (caption removed);
@@ -256,7 +256,7 @@ break / 2.0 DI) instead of guessing.
 - Oil caps (HeadAcc_OilCap, OilCap_Type1) have no web build: not shipped.
 - Garage: picker only, no fleet management; several same-model cars are told apart by plate only.
 - Data source: partsapi test keys (50/day/method). Going public = TecAlliance licence (below) AND
-  buying the Wrench meshes from the developer.
+  buying the meshes extracted from the video game from the developer.
 
 ## Data source: partsapi.ru (accepted for the private MVP)
 
@@ -306,10 +306,10 @@ then; since 2026-10-16 it lists the joint length (see State).
 
 ## 3D assets (researched 2026-10-15)
 
-- Shipped meshes are Wrench extracts (92 files, see `SOURCES.md`), user-approved for this private prototype
+- Shipped meshes are extracted from a commercial video game (92 files, see `SOURCES.md`), user-approved for this private prototype
   (`bonneref/public/parts/SOURCES.md`). Only final blueprint GLBs go in the repo.
-- 2026-10-16: owned build123d pipeline (`blueprint-experiment/owned/src/export_all.py`, then webify and a freestyle render check) produces generic family shapes we own; 22 shipped (bulbs, drum brake, lines, cables, pulleys, flywheel, clutch hydraulics, converter, tanks, wiper blade, horn, fog lamp), 10 third-party meshes added from `blueprint-experiment/hunt/`. Licence tiers (user decision 2026-10-16): any licence is fine for the private prototype; owned and CC BY are shippable (CC BY with credit); GrabCAD and Wrench meshes must be replaced before anything public. Next: key the bulb mesh on the article's ECE type (H4 / H7 / P21W / W5W) when the criteria carry it, rather than on the lamp it sits in; owned replacements are ready in `blueprint-experiment/owned` for the Wrench `steering-rack` and `rear-wheel-bearing` and the GrabCAD `water-pump` and `starter-motor`.
-- Not available in Wrench: EGR, A/C compressor and condenser, coolant expansion tank, vacuum pump,
+- 2026-10-16: owned build123d pipeline (`blueprint-experiment/owned/src/export_all.py`, then webify and a freestyle render check) produces generic family shapes we own; 22 shipped (bulbs, drum brake, lines, cables, pulleys, flywheel, clutch hydraulics, converter, tanks, wiper blade, horn, fog lamp), 10 third-party meshes added from `blueprint-experiment/hunt/`. Licence tiers (user decision 2026-10-16): any licence is fine for the private prototype; owned and CC BY are shippable (CC BY with credit); GrabCAD and meshes extracted from a commercial video game must be replaced before anything public. Next: key the bulb mesh on the article's ECE type (H4 / H7 / P21W / W5W) when the criteria carry it, rather than on the lamp it sits in; owned replacements are ready in `blueprint-experiment/owned` for the `steering-rack` and `rear-wheel-bearing` meshes extracted from a commercial video game and the GrabCAD `water-pump` and `starter-motor`.
+- Not available as an extracted mesh: EGR, A/C compressor and condenser, coolant expansion tank, vacuum pump,
   timing chain, clutch slave cylinder, catalytic converter, gearbox body.
 - Legit route if this ever goes public: parametric three.js for solids of revolution (filters, disc,
   plugs, spring, bearing, thermostat, pulley); CC-BY Sketchfab candidates (re-verify author + licence,
