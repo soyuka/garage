@@ -35,7 +35,7 @@ import { pickAcknowledgement } from './noyau/acknowledge';
 import { carteGriseNodes } from './siv';
 import { defaultUsageUnit } from './edit';
 import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from './router';
-import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from './useMercure';
+import { isDomainEvent, reconcileVehicleEvent, removeVehicle, upsertVehicle, useMercure } from './useMercure';
 import { ParcLot, type DepartureOrigin } from './scene/ParcLot';
 import { Departure } from './scene/Departure';
 import { SceneView, type QuickAction } from './scene/SceneView';
@@ -85,6 +85,8 @@ export function Atelier() {
   const path = useHashPath();
   const seg = vehicleSegFromHash(path);
   const [vehicles, setVehicles] = useState<VehicleSummary[]>([]);
+  const vehiclesRef = useRef(vehicles);
+  vehiclesRef.current = vehicles;
   const [bundle, setBundle] = useState<VehicleBundle | null>(null);
   const [loadingParc, setLoadingParc] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -430,8 +432,16 @@ export function Atelier() {
   const expireTimer = useRef<number | null>(null);
 
   // The two on-demand surfaces are mutually exclusive — opening one closes the other.
-  const openFacts = useCallback(() => { setHistoryOpen(false); setFactsDrawerOpen(true); cues.play('panel'); }, [cues.play]);
-  const openHistory = useCallback(() => { setFactsDrawerOpen(false); setHistoryOpen(true); cues.play('panel'); }, [cues.play]);
+  const openFacts = useCallback(() => {
+    setHistoryOpen(false);
+    setFactsDrawerOpen(true);
+    cues.play('panel');
+  }, [cues.play]);
+  const openHistory = useCallback(() => {
+    setFactsDrawerOpen(false);
+    setHistoryOpen(true);
+    cues.play('panel');
+  }, [cues.play]);
 
   /**
    * Apply ONE render intent to the workshop — the choreography map made code. Same
@@ -489,13 +499,6 @@ export function Atelier() {
           setCta(next);
           cues.play('card');
         }
-      } else if (frame.type === 'setVehicles') {
-        setVehicles(frame.vehicles);
-        if (frame.preferredId && frame.preferredId !== selectedIriRef.current) {
-          cues.play('select');
-          cues.cancelOpening();
-          window.location.hash = hashForVehicle(frame.preferredId);
-        }
       }
     },
     [cues.cancelOpening, cues.play, dispatch, openDocument, requestFlare, revealRegion],
@@ -529,7 +532,13 @@ export function Atelier() {
           }
           return;
         }
-        setVehicles((prev) => upsertVehicle(prev, frame.resource));
+        if (reconcileVehicleEvent(vehiclesRef.current, frame.resource).refetch) {
+          getVehicles()
+            .then(setVehicles)
+            .catch(() => undefined);
+          return;
+        }
+        setVehicles((prev) => reconcileVehicleEvent(prev, frame.resource).list);
         if (frame.resource['@id'] === selectedIriRef.current) {
           // INSTANT cascade: merge the fresh scalars/health/facts (health bars + cardinals animate now).
           setBundle((prev) => (prev ? { ...prev, vehicle: { ...prev.vehicle, ...frame.resource } } : prev));
@@ -604,11 +613,7 @@ export function Atelier() {
     cues.cancelOpening();
     // Carry the CTA being replied to as one bounded line (NOT a transcript), so a terse reply lands in
     // context against the question the agent just asked. Capture BEFORE clearing the surfaces.
-    const pendingContext = cta
-      ? [cta.headline, cta.finding, cta.actions.length ? t.atelier.ctaOptions(cta.actions.map((a) => a.label).join(', ')) : '']
-          .filter(Boolean)
-          .join(' — ')
-      : undefined;
+    const pendingContext = cta ? [cta.headline, cta.finding, cta.actions.length ? t.atelier.ctaOptions(cta.actions.map((a) => a.label).join(', ')) : ''].filter(Boolean).join(' — ') : undefined;
     setCta(null);
     setFocus(null);
     dispatch({ type: 'turn', phase: 'start' });
@@ -620,9 +625,7 @@ export function Atelier() {
     dispatch({ type: 'status', message: text, tool: 'acknowledge' });
     armWatchdog();
     const v = heroBundle?.vehicle;
-    const summary = v
-      ? `${v.make} ${v.model}${v.plate ? ` · ${v.plate}` : ''}${v.health ? ` · ${v.health.status}` : ''}`
-      : undefined;
+    const summary = v ? `${v.make} ${v.model}${v.plate ? ` · ${v.plate}` : ''}${v.health ? ` · ${v.health.status}` : ''}` : undefined;
     postTurn(instruction, { sessionId, selectedId: selectedIri ?? undefined, summary, pendingContext }).catch((e) => {
       clearWatchdog();
       // toast BEFORE turn/end so the done filament settles red (worstTone), not a false green.
@@ -850,7 +853,10 @@ export function Atelier() {
   // A Dossier / documentation write: re-read the open bundle now (the vehicle domain frame re-reads it too).
   const afterFileWrite = () => {
     const iri = selectedIriRef.current;
-    if (iri) getVehicleBundle(iri).then((b) => patchCurrentBundle(iri, () => b)).catch(() => undefined);
+    if (iri)
+      getVehicleBundle(iri)
+        .then((b) => patchCurrentBundle(iri, () => b))
+        .catch(() => undefined);
     cues.play('complete');
   };
 
@@ -923,7 +929,9 @@ export function Atelier() {
       .catch((e) => {
         alarm(t.atelier.deleteFailed((e as Error).message));
         if (selectedIriRef.current === iri)
-          getVehicle(iri).then((v) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: v.facts } }))).catch(() => undefined);
+          getVehicle(iri)
+            .then((v) => patchCurrentBundle(iri, (prev) => ({ ...prev, vehicle: { ...prev.vehicle, facts: v.facts } })))
+            .catch(() => undefined);
       });
   };
 
@@ -1025,13 +1033,10 @@ export function Atelier() {
     page = (
       <div className="at-scene">
         <div className="at-scene-top">
-          <a href="#/" className="at-scene-back">{t.atelier.backToParc}</a>
-          <Identity
-            onJournal={() => setJournalOpen(true)}
-            onDossier={heroBundle ? () => setDossierOpen(true) : undefined}
-            voice={voice}
-            onChangeVoice={setVoice}
-          />
+          <a href="#/" className="at-scene-back">
+            {t.atelier.backToParc}
+          </a>
+          <Identity onJournal={() => setJournalOpen(true)} onDossier={heroBundle ? () => setDossierOpen(true) : undefined} voice={voice} onChangeVoice={setVoice} />
           <span style={{ flex: 1 }} />
         </div>
 
@@ -1052,7 +1057,12 @@ export function Atelier() {
 
         {vehicleMissing ? (
           <div className="at-scene-main">
-            <div className="at-scene-empty">{t.atelier.vehicleNotFound}<a href="#/" className="at-scene-back">{t.atelier.backToParcInline}</a></div>
+            <div className="at-scene-empty">
+              {t.atelier.vehicleNotFound}
+              <a href="#/" className="at-scene-back">
+                {t.atelier.backToParcInline}
+              </a>
+            </div>
           </div>
         ) : !heroBundle ? (
           <div className="at-scene-main">
@@ -1114,18 +1124,12 @@ export function Atelier() {
             edit={edit}
             checklist={{
               ...checklist,
-              tasks: showDismissed ? dismissedTasks : heroBundle.vehicle.plannedTasks ?? [],
+              tasks: showDismissed ? dismissedTasks : (heroBundle.vehicle.plannedTasks ?? []),
               defaultUnit: heroBundle.vehicle.usageUnit ?? defaultUsageUnit(heroBundle.vehicle.vehicleType),
             }}
             composerExtras={
               busy(state) && state.driver !== 'pilot' ? (
-                <button
-                  type="button"
-                  className="at-scene-sim"
-                  title={t.atelier.cancelTurn}
-                  aria-label={t.atelier.cancelTurn}
-                  onClick={() => void cancelTurn(sessionId).catch(() => undefined)}
-                >
+                <button type="button" className="at-scene-sim" title={t.atelier.cancelTurn} aria-label={t.atelier.cancelTurn} onClick={() => void cancelTurn(sessionId).catch(() => undefined)}>
                   ✕
                 </button>
               ) : undefined
@@ -1148,11 +1152,7 @@ export function Atelier() {
       <div className="at-parc-page">
         <div className="at-parc-page-top">
           <span style={{ flex: 1 }} />
-          <Identity
-            onJournal={() => setJournalOpen(true)}
-            voice={voice}
-            onChangeVoice={setVoice}
-          />
+          <Identity onJournal={() => setJournalOpen(true)} voice={voice} onChangeVoice={setVoice} />
         </div>
         <JournalPanel open={journalOpen} onClose={() => setJournalOpen(false)} />
         <div className="at-parc-console">
@@ -1175,13 +1175,7 @@ export function Atelier() {
               armMicCue={cues.armMic}
               composerExtras={
                 busy(state) && state.driver !== 'pilot' ? (
-                  <button
-                    type="button"
-                    className="at-scene-sim"
-                    title={t.atelier.cancelTurn}
-                    aria-label={t.atelier.cancelTurn}
-                    onClick={() => void cancelTurn(sessionId).catch(() => undefined)}
-                  >
+                  <button type="button" className="at-scene-sim" title={t.atelier.cancelTurn} aria-label={t.atelier.cancelTurn} onClick={() => void cancelTurn(sessionId).catch(() => undefined)}>
                     ✕
                   </button>
                 ) : undefined
@@ -1253,17 +1247,7 @@ function DepartureEcho({ vehicles, reduced }: { vehicles: VehicleSummary[]; redu
 }
 
 /** The signed-in identity + the dossier (hero only) + the journal + sign-out (top-right chrome). */
-function Identity({
-  onJournal,
-  onDossier,
-  voice,
-  onChangeVoice,
-}: {
-  onJournal: () => void;
-  onDossier?: () => void;
-  voice: string | null;
-  onChangeVoice: (id: string | null) => void;
-}) {
+function Identity({ onJournal, onDossier, voice, onChangeVoice }: { onJournal: () => void; onDossier?: () => void; voice: string | null; onChangeVoice: (id: string | null) => void }) {
   const t = useT();
   const id = getIdentity();
   const [locale] = useLocale();

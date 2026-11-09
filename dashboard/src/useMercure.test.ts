@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildHubUrl, isDomainEvent, parseFrame, removeVehicle, upsertVehicle } from './useMercure';
+import { buildHubUrl, isDomainEvent, parseFrame, reconcileVehicleEvent, removeVehicle, upsertVehicle } from './useMercure';
 import type { DomainEvent, UIAction, VehicleSummary } from './types';
 
 // Pure-core tests for the Mercure transport. The EventSource lifecycle is thin glue; these pin the
@@ -58,5 +58,46 @@ describe('removeVehicle', () => {
   it('drops the member with the given IRI', () => {
     const list = [vehicle('/garage/vehicles/A'), vehicle('/garage/vehicles/B')];
     expect(removeVehicle(list, '/garage/vehicles/A').map((v) => v['@id'])).toEqual(['/garage/vehicles/B']);
+  });
+});
+
+describe('parseFrame — discriminant validation', () => {
+  it.each([
+    ['an unknown UIAction type', { type: 'setVehicles', vehicles: [] }],
+    ['a made-up type', { type: 'runScript', code: 'x' }],
+    ['a non-string type', { type: 42 }],
+    ['no discriminant at all', { hello: 'world' }],
+    ['a JSON array', [{ type: 'toast' }]],
+    ['a JSON scalar', 'toast'],
+    ['null', null],
+    ['a domain event of another kind', { kind: 'user', event: 'updated', iri: '/u/1', resource: {} }],
+    ['a domain event with an unknown verb', { kind: 'vehicle', event: 'hijacked', iri: '/garage/vehicles/01V', resource: { '@id': '/garage/vehicles/01V' } }],
+    ['a domain event without a resource', { kind: 'vehicle', event: 'updated', iri: '/garage/vehicles/01V' }],
+    ['a domain event whose resource has no @id', { kind: 'vehicle', event: 'updated', iri: '/garage/vehicles/01V', resource: {} }],
+  ])('drops %s', (_label, payload) => {
+    expect(parseFrame(JSON.stringify(payload))).toBeNull();
+  });
+
+  it('keeps every known UIAction type and a well-formed domain event', () => {
+    expect(parseFrame('{"type":"selectVehicle","id":"/garage/vehicles/01V"}')).not.toBeNull();
+    expect(parseFrame('{"type":"turn","phase":"start"}')).not.toBeNull();
+    expect(parseFrame('{"type":"documentScan","vehicle":"/garage/vehicles/01V","query":"q","hits":[]}')).not.toBeNull();
+    expect(parseFrame('{"kind":"vehicle","event":"deleted","vehicle":"01V","iri":"/garage/vehicles/01V","resource":{"@id":"/garage/vehicles/01V"}}')).not.toBeNull();
+  });
+});
+
+describe('reconcileVehicleEvent — a pushed vehicle only updates the fleet already loaded', () => {
+  it('replaces a known member in place', () => {
+    const list = [vehicle('/garage/vehicles/1'), vehicle('/garage/vehicles/2')];
+    const out = reconcileVehicleEvent(list, vehicle('/garage/vehicles/2', { model: 'Kangoo' }));
+    expect(out.refetch).toBe(false);
+    expect(out.list.map((v) => v.model)).toEqual(['Clio', 'Kangoo']);
+  });
+
+  it('never appends an unknown @id from the frame; it asks for the owner listing instead', () => {
+    const list = [vehicle('/garage/vehicles/1')];
+    const out = reconcileVehicleEvent(list, vehicle('/garage/vehicles/foreign'));
+    expect(out.list).toBe(list);
+    expect(out.refetch).toBe(true);
   });
 });

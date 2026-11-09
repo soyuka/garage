@@ -17,7 +17,7 @@ import { hashForVehicle, segForIri, useHashPath, vehicleSegFromHash } from '../r
 import { useReducedMotion } from '../scene/useReducedMotion';
 import { DWELL, PILOT_QUIET_MS } from '../tokens/motion';
 import type { Capabilities, CtaAction, Iri, MercureFrame, UIAction, VehicleBundle, VehicleSummary } from '../types';
-import { isDomainEvent, removeVehicle, upsertVehicle, useMercure } from '../useMercure';
+import { isDomainEvent, reconcileVehicleEvent, removeVehicle, upsertVehicle, useMercure } from '../useMercure';
 import { scanIntents } from './docScan';
 import { liveEdits } from './edits';
 import { useCommandStatus, useFlag, useTheme } from './hooks';
@@ -97,6 +97,8 @@ export function Workshop() {
   selectedRef.current = selectedIri;
   const bundlesRef = useRef(bundles);
   bundlesRef.current = bundles;
+  const vehiclesRef = useRef(vehicles);
+  vehiclesRef.current = vehicles;
 
   const busyRef = useRef(false);
   busyRef.current = busy(state);
@@ -203,14 +205,6 @@ export function Workshop() {
         }
         return;
       }
-      if (frame.type === 'setVehicles') {
-        setVehicles(frame.vehicles);
-        if (frame.preferredId && frame.preferredId !== selectedRef.current) {
-          cues.cancelOpening();
-          window.location.hash = hashForVehicle(frame.preferredId);
-        }
-        return;
-      }
       if (frame.type === 'proposeActions') cues.play('card');
       else if (
         frame.type === 'showParts' ||
@@ -257,7 +251,13 @@ export function Workshop() {
           if (frame.iri === selectedRef.current) window.location.hash = '#/';
           return;
         }
-        setVehicles((prev) => upsertVehicle(prev, frame.resource));
+        if (reconcileVehicleEvent(vehiclesRef.current, frame.resource).refetch) {
+          getVehicles()
+            .then(setVehicles)
+            .catch(() => undefined);
+          return;
+        }
+        setVehicles((prev) => reconcileVehicleEvent(prev, frame.resource).list);
         const iri = frame.resource['@id'];
         if (bundlesRef.current[iri]) {
           setBundles((prev) => (prev[iri] ? { ...prev, [iri]: { ...prev[iri], vehicle: { ...prev[iri].vehicle, ...frame.resource } } } : prev));
@@ -378,7 +378,9 @@ export function Workshop() {
         },
         updated: (vehicle) => {
           setVehicles((prev) => upsertVehicle(prev, vehicle));
-          setBundles((prev) => (prev[vehicle['@id']] ? { ...prev, [vehicle['@id']]: { ...prev[vehicle['@id']], vehicle: { ...prev[vehicle['@id']].vehicle, ...vehicle, archivedAt: vehicle.archivedAt ?? null } } } : prev));
+          setBundles((prev) =>
+            prev[vehicle['@id']] ? { ...prev, [vehicle['@id']]: { ...prev[vehicle['@id']], vehicle: { ...prev[vehicle['@id']].vehicle, ...vehicle, archivedAt: vehicle.archivedAt ?? null } } } : prev,
+          );
         },
         failed: (message) => {
           dispatch({ type: 'toast', tone: 'alarm', message: t.workshop.edit.createFailed(message) });

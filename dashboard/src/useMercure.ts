@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import type { Driver } from './pilot';
-import type { DomainEvent, MercureFrame, VehicleSummary } from './types';
+import type { DomainEvent, MercureFrame, UIAction, VehicleSummary } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — the Mercure subscription (Tier-1 transport re-authored
@@ -30,13 +30,50 @@ export function buildHubUrl(hub: string, origin: string, topics: string[]): stri
   return url.toString();
 }
 
-/** Parse a Mercure SSE data line; null on a non-JSON keep-alive (the hub sends `:` heartbeats). */
+// Typed against the union: a new UIAction member fails the build until it is listed here.
+const UI_ACTION_TYPES: Record<UIAction['type'], true> = {
+  selectVehicle: true,
+  showFact: true,
+  focusView: true,
+  proposeActions: true,
+  showParts: true,
+  showHistory: true,
+  focusRegion: true,
+  revealAssembly: true,
+  showDocument: true,
+  documentScan: true,
+  toast: true,
+  status: true,
+  turn: true,
+};
+const DOMAIN_EVENTS: ReadonlySet<string> = new Set<DomainEvent['event']>(['created', 'updated', 'deleted']);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isKnownFrame(value: unknown): value is MercureFrame {
+  if (!isRecord(value)) return false;
+  if ('kind' in value) {
+    const resource = value.resource;
+    return value.kind === 'vehicle' && typeof value.event === 'string' && DOMAIN_EVENTS.has(value.event) && typeof value.iri === 'string' && isRecord(resource) && typeof resource['@id'] === 'string';
+  }
+  return typeof value.type === 'string' && Object.prototype.hasOwnProperty.call(UI_ACTION_TYPES, value.type);
+}
+
+/**
+ * Parse a Mercure SSE data line. Null on a non-JSON keep-alive (the hub sends `:` heartbeats) and on
+ * anything that is not a frame this client knows: the hub accepts anonymous subscribers and the pilot
+ * topic carries model-authored payloads, so an unknown discriminant never reaches a reducer.
+ */
 export function parseFrame(data: string): MercureFrame | null {
+  let parsed: unknown;
   try {
-    return JSON.parse(data) as MercureFrame;
+    parsed = JSON.parse(data);
   } catch {
     return null;
   }
+  return isKnownFrame(parsed) ? parsed : null;
 }
 
 /** A domain event (collection topic) carries `kind`; a session UIAction carries `type`. */
@@ -51,6 +88,17 @@ export function upsertVehicle(list: VehicleSummary[], resource: VehicleSummary):
   const next = list.slice();
   next[i] = resource;
   return next;
+}
+
+/**
+ * Reconcile a vehicle pushed by a domain event. The collection topic is not owner-scoped, so a frame
+ * only ever updates a car already in the owner's listing; an unknown `@id` (a car just created in
+ * another tab — or someone else's) is never appended from the frame: the caller re-reads the owner's
+ * own listing instead.
+ */
+export function reconcileVehicleEvent(list: VehicleSummary[], resource: VehicleSummary): { list: VehicleSummary[]; refetch: boolean } {
+  if (!list.some((v) => v['@id'] === resource['@id'])) return { list, refetch: true };
+  return { list: upsertVehicle(list, resource), refetch: false };
 }
 
 /** Drop the soft-deleted member from the collection. */

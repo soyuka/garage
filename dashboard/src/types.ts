@@ -349,7 +349,6 @@ export interface SpeechVoice {
 }
 
 export type UIAction =
-  | { type: 'setVehicles'; vehicles: VehicleSummary[]; preferredId?: Iri }
   | { type: 'selectVehicle'; id: Iri }
   // `nodes`, when set, ARE the panel content (a fetched surface), bypassing the `keys` filter over the
   // vehicle's stored facts; `keys` still spotlight their car regions, so a projection can light a part.

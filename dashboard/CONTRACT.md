@@ -112,12 +112,15 @@ major-unit euros the client converts.
 
 ## The REAL `UIAction` union (verified — the only members the agent tool surface emits)
 
-`setVehicles` · `selectVehicle` (`.id` = `@id` IRI) · `revealAssembly` `{region, partKeys?}` ·
+`selectVehicle` (`.id` = `@id` IRI) · `revealAssembly` `{region, partKeys?}` ·
 `showFact` `{keys[], title?, nodes?}` ·
 `focusView` `{panel: "specs"|"tasks"|"carnet"|"parts"|"docs", keys?[]}` (raises one panel into the centre slot +
 spotlights the car region for each key) · `proposeActions` `{headline, finding?, actions:
 CtaAction[]}` · `showDocument` `{url, title, contentType, filename, page?, highlight?, pagesUrl?}` ·
 `documentScan` `{vehicle, query, hits[]}` · `toast` `{tone, message}` · `status` `{tool}` | `{message}` · `turn` `{phase}`.
+`parseFrame` drops any frame whose `type` is not one of these (and any malformed domain event)
+before a reducer sees it. A domain event only updates a car already in the owner's listing: an
+unknown `@id` triggers a re-read of `GET /garage/vehicles`, never an append from the frame.
 
 **`documentScan` `{vehicle, query, hits: [{documentId, page, pageLabel, url, title, contentType, filename,
 pagesUrl}]}` (2026-11-09)** — published by `SearchDocumentationProcessor` itself on every
