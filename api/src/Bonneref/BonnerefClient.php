@@ -14,6 +14,8 @@ use App\ApiResource\Vehicle;
 use App\Catalog\CarType;
 use App\Exception\NotConfiguredException;
 use App\Exception\UpstreamException;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
@@ -28,11 +30,17 @@ final readonly class BonnerefClient
 {
     private const string SOURCE = 'the bonneref catalog';
 
+    /** Bounds on following `hydra:next`: bonneref pages its large collections (064a362). */
+    public const int MAX_PAGES = 10;
+
+    public const int MAX_ITEMS = 10000;
+
     public function __construct(
         #[Autowire(service: 'bonneref.client')]
         private HttpClientInterface $http,
         private BonnerefToken $token,
         private RequestStack $requests,
+        private LoggerInterface $logger = new NullLogger(),
     ) {
     }
 
@@ -110,10 +118,49 @@ final readonly class BonnerefClient
      */
     private function members(string $path, array $query): array
     {
-        $data = $this->get($path, $query) ?? [];
-        $members = $data['hydra:member'] ?? $data['member'] ?? [];
+        $all = [];
+        for ($page = 1;; ++$page) {
+            $data = $this->get($path, $query) ?? [];
+            $members = $data['hydra:member'] ?? $data['member'] ?? [];
+            array_push($all, ...array_values(array_filter(\is_array($members) ? $members : [], \is_array(...))));
 
-        return array_values(array_filter(\is_array($members) ? $members : [], \is_array(...)));
+            $next = self::nextQuery($data, $path);
+            if (null === $next) {
+                return $all;
+            }
+            if ($page >= self::MAX_PAGES || \count($all) >= self::MAX_ITEMS) {
+                $this->logger->warning('bonneref {path}: stopped after {pages} pages / {items} items, the collection has more.', ['path' => $path, 'pages' => $page, 'items' => \count($all)]);
+
+                return $all;
+            }
+            $query = $next;
+        }
+    }
+
+    /**
+     * The query of the next page, when the Hydra view links one on this same collection. A link to
+     * another host or path is not followed: the bearer rides every request.
+     *
+     * @param array<string, mixed> $data
+     *
+     * @return array<string, scalar|null>|null
+     */
+    private static function nextQuery(array $data, string $path): ?array
+    {
+        $view = $data['hydra:view'] ?? $data['view'] ?? null;
+        $next = \is_array($view) ? ($view['hydra:next'] ?? $view['next'] ?? null) : null;
+        if (!\is_string($next)) {
+            return null;
+        }
+
+        $parts = parse_url($next);
+        if (false === $parts || isset($parts['host']) || ($parts['path'] ?? '') !== $path) {
+            return null;
+        }
+        parse_str($parts['query'] ?? '', $query);
+
+        /* @var array<string, scalar|null> $query */
+        return $query;
     }
 
     /**

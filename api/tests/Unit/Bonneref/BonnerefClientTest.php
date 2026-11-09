@@ -9,6 +9,7 @@ use App\Bonneref\BonnerefToken;
 use App\Catalog\CarType;
 use App\Exception\UpstreamException;
 use App\Tests\Mock\BonnerefHttpClient;
+use App\Tests\Mock\RecordingLogger;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpClient\Exception\TransportException;
 use Symfony\Component\HttpFoundation\Request;
@@ -86,6 +87,42 @@ final class BonnerefClientTest extends TestCase
         $this->client->makes();
 
         $this->assertArrayNotHasKey('authorization', $this->http->lastRequest()['headers']);
+    }
+
+    public function testACollectionFollowsHydraNextAcrossPages(): void
+    {
+        $this->http->route('/makes', self::page([['id' => 1, 'name' => 'AUDI']], '/makes?carType=PC&page=2'), query: ['carType' => 'PC']);
+        $this->http->route('/makes', self::page([['id' => 2, 'name' => 'BMW']], null), query: ['carType' => 'PC', 'page' => '2']);
+
+        $this->assertSame(['AUDI', 'BMW'], array_map(static fn ($m) => $m->name, $this->client->makes()));
+        $this->assertSame(['carType' => 'PC', 'page' => '2'], $this->http->lastRequest()['query'] ?? null);
+    }
+
+    public function testANextLinkOffTheCollectionIsNotFollowed(): void
+    {
+        $this->http->route('/makes', self::page([['id' => 1, 'name' => 'AUDI']], 'https://elsewhere.example/steal?page=2'));
+
+        $this->assertCount(1, $this->client->makes());
+        $this->assertCount(1, BonnerefHttpClient::$requests);
+    }
+
+    public function testPagingIsBoundedAndSaysSo(): void
+    {
+        $logger = new RecordingLogger();
+        $client = new BonnerefClient($this->http, $this->token, $this->requests, $logger);
+        $this->http->route('/makes', self::page([['id' => 1, 'name' => 'AUDI']], '/makes?carType=PC&page=2'));
+
+        $this->assertCount(BonnerefClient::MAX_PAGES, $client->makes());
+        $this->assertCount(BonnerefClient::MAX_PAGES, BonnerefHttpClient::$requests);
+        $this->assertSame(['warning'], array_column($logger->records, 'level'));
+    }
+
+    /**
+     * @param list<array<string, mixed>> $members
+     */
+    private static function page(array $members, ?string $next): string
+    {
+        return json_encode(['hydra:member' => $members] + (null === $next ? [] : ['hydra:view' => ['hydra:next' => $next]]), \JSON_THROW_ON_ERROR);
     }
 
     public function testAMemberKeyWithoutThePrefixIsAccepted(): void
