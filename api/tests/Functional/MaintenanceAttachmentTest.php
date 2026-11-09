@@ -92,6 +92,8 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $res = $browser->getResponse();
         self::assertSame(200, $res->getStatusCode());
         self::assertSame('application/pdf', $res->headers->get('Content-Type'));
+        self::assertSame('sandbox', $res->headers->get('Content-Security-Policy'), 'an uploaded file must never run script on our origin');
+        self::assertSame('nosniff', $res->headers->get('X-Content-Type-Options'));
         self::assertSame(self::PDF, $browser->getInternalResponse()->getContent());
     }
 

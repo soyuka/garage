@@ -126,6 +126,8 @@ final class VehicleDocumentTest extends AppTestCase
         $browser->request('GET', $doc['url'], [], [], $this->bearer());
         self::assertSame(200, $browser->getResponse()->getStatusCode());
         self::assertSame('application/pdf', $browser->getResponse()->headers->get('Content-Type'));
+        self::assertSame('sandbox', $browser->getResponse()->headers->get('Content-Security-Policy'));
+        self::assertSame('nosniff', $browser->getResponse()->headers->get('X-Content-Type-Options'));
         self::assertStringContainsString('inline', (string) $browser->getResponse()->headers->get('Content-Disposition'));
         self::assertSame($pdf, $browser->getInternalResponse()->getContent());
     }

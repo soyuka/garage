@@ -45,6 +45,10 @@ final readonly class DownloadMaintenanceAttachmentController
         });
         $response->headers->set('Content-Type', $attachment->getContentType());
         $response->headers->set('Content-Length', (string) $attachment->getSize());
+        // The bytes are user-uploaded and served inline on our origin: a sandboxed document cannot run
+        // script or reach our cookies even if a PDF or image turns out to be HTML.
+        $response->headers->set('Content-Security-Policy', 'sandbox');
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
         $response->headers->set('Content-Disposition', HeaderUtils::makeDisposition(
             ResponseHeaderBag::DISPOSITION_INLINE,
             $attachment->getFilename(),
