@@ -31,5 +31,10 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "overrides": {
+    "three-stdlib": {
+      "fflate": "^0.8.3"
+    }
   }
 }
