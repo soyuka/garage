@@ -15,6 +15,7 @@ use App\Agent\Finder\TurnImageDecoder;
 use App\Agent\Finder\TurnImageStash;
 use App\Agent\Finder\TurnInputLimits;
 use App\Agent\TurnSurface;
+use App\Agent\Ui\TurnSessionTopic;
 use App\Exception\RateLimitExceededException;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
@@ -22,7 +23,6 @@ use App\PhotoIntake\IntakeReadings;
 use App\Security\OwnerDailyBudget;
 use App\Security\OwnerRateLimiter;
 use Symfony\Bundle\SecurityBundle\Security;
-use Symfony\Component\DependencyInjection\Attribute\Autowire;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -41,11 +41,10 @@ use Symfony\Component\Uid\Ulid;
  * `previousTurnId` on a follow-up): there is no chat transcript and no action list in the body. The page updates progressively from the render intents the worker streams to the
  * caller's per-session Mercure topic; domain writes fan out on public vehicle topics for free.
  *
- * The session topic is built from the configured public base URL (DEFAULT_URI), the SAME origin
- * {@see \App\Mercure\DomainPublisher} derives the vehicle topics from and the dashboard subscribes
- * to (`${VITE_API_BASE}/agent/sessions/<id>`). NOT the request host: behind the reverse proxy
- * `Request::getSchemeAndHttpHost()` can report the internal scheme/host (e.g. http://php), which
- * would publish render intents to a topic no dashboard listens on.
+ * The session topic is {@see TurnSessionTopic::topic()}: a keyed digest of (owner, sessionId) on the public
+ * base URL (DEFAULT_URI, never the request host, which behind the proxy can be http://php). The browser
+ * picks the session id, so the owner binding is what stops another owner from streaming into, or
+ * watching, this tab's session. The page learns the topic from GET /agent/link?session=<id>.
  */
 final readonly class AgentTurnController
 {
@@ -59,8 +58,7 @@ final readonly class AgentTurnController
         private FinderVehicleResolver $vehicles,
         private FinderFollowUp $followUp,
         private IntakeReadings $readings,
-        #[Autowire('%env(DEFAULT_URI)%')]
-        private string $baseUri,
+        private TurnSessionTopic $sessions,
     ) {
     }
 
@@ -76,7 +74,7 @@ final readonly class AgentTurnController
         if ('' === $instruction || '' === $sessionId) {
             return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
         }
-        if (1 !== preg_match(TurnInputLimits::SESSION_ID_PATTERN, $sessionId)) {
+        if (!TurnSessionTopic::isValidId($sessionId)) {
             return new JsonResponse(['error' => 'sessionId must be 1 to 64 letters, digits, "-" or "_"'], Response::HTTP_BAD_REQUEST);
         }
         if (mb_strlen($instruction) > TurnInputLimits::MAX_INSTRUCTION_LENGTH) {
@@ -136,7 +134,7 @@ final readonly class AgentTurnController
         $turnId = (string) new Ulid();
         $this->turns->dispatch(new RunAgentTurn(
             instruction: $instruction,
-            sessionTopic: rtrim($this->baseUri, '/').'/agent/sessions/'.$sessionId,
+            sessionTopic: $this->sessions->topic($owner, $sessionId),
             owner: $owner,
             summary: $followUp['summary'],
             pendingContext: $followUp['pendingContext'],

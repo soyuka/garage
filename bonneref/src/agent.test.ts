@@ -1,4 +1,4 @@
-import { hubUrl, initialTurn, parseFrame, postTurn, SILENCE_MS, SILENT, silent, sessionTopic, TURN_FAILED, turnBody, TurnRequestError, turnReducer, turnVehicle } from './agent';
+import { fetchSessionTopic, hubUrl, initialTurn, parseFrame, postTurn, SILENCE_MS, SILENT, silent, TURN_FAILED, turnBody, TurnRequestError, turnReducer, turnVehicle } from './agent';
 import narrowed from '../test-fixtures/narrowed.json';
 import type { FinderFrame, TurnState } from './types';
 
@@ -222,8 +222,7 @@ describe('turn state', () => {
 });
 
 describe('transport helpers', () => {
-  it('builds the session topic the API publishes to and the hub subscription URL', () => {
-    expect(sessionTopic('https://localhost/', 'abc')).toBe('https://localhost/agent/sessions/abc');
+  it('builds the hub subscription URL', () => {
     expect(hubUrl('/.well-known/mercure', 'https://localhost', 'https://localhost/agent/sessions/abc')).toBe(
       'https://localhost/.well-known/mercure?match=https%3A%2F%2Flocalhost%2Fagent%2Fsessions%2Fabc',
     );
@@ -259,6 +258,27 @@ describe('transport helpers', () => {
     expect(body).not.toHaveProperty('vehicle');
     expect(body).toMatchObject({ intent: 'photo', images: ['data:image/jpeg;base64,AAAA'] });
     expect(turnBody({ instruction: 'x', sessionId: 's', vehicle: null })).not.toHaveProperty('images');
+  });
+});
+
+describe('fetchSessionTopic', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('takes the owner-bound topic from the server, never builds it from the session id', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionTopic: 'https://localhost/agent/sessions/9f86d081' }), { status: 200 }));
+    vi.stubGlobal('fetch', fetch);
+
+    expect(await fetchSessionTopic('sess-1')).toBe('https://localhost/agent/sessions/9f86d081');
+    expect(String(fetch.mock.calls[0]?.[0])).toContain('/agent/link?session=sess-1');
+  });
+
+  it('has no topic when the server refuses or answers garbage', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
+    expect(await fetchSessionTopic('sess-1')).toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionTopic: 3 }), { status: 200 })));
+    expect(await fetchSessionTopic('sess-1')).toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
+    expect(await fetchSessionTopic('sess-1')).toBeNull();
   });
 });
 

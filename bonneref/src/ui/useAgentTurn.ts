@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, sessionTopic, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
-import { apiOrigin, hubDefault } from '../api-base';
+import { fetchSessionTopic, hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
+import { hubDefault } from '../api-base';
 import { isAuthenticated, login } from '../auth';
 import type { BuildCode, HeldVehicle, OnScreen, TurnIntent, TurnState, Vehicle } from '../types';
 
@@ -58,17 +58,40 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
   const pending = useMemo(() => readPending(ref), [ref]);
   const sessionId = useMemo(() => crypto.randomUUID(), []);
   const lastFrame = useRef(0);
+  // Resolves once the session topic is subscribed (or known to be unavailable), so a turn never starts streaming unheard.
+  const subscribed = useRef<Promise<void> | null>(null);
+  const sourceRef = useRef<EventSource | null>(null);
+  const generation = useRef(0);
+
+  const subscribe = useCallback((): Promise<void> => {
+    const mine = generation.current;
+    subscribed.current ??= fetchSessionTopic(sessionId).then((topic) => {
+      if (mine !== generation.current) return;
+      if (topic === null) {
+        subscribed.current = null;
+        return;
+      }
+      const source = new EventSource(hubUrl(hubDefault(), window.location.origin, topic));
+      source.onmessage = (e: MessageEvent<string>) => {
+        const frame = parseFrame(e.data);
+        if (!frame) return;
+        lastFrame.current = Date.now();
+        dispatch({ type: 'frame', frame });
+      };
+      sourceRef.current = source;
+    });
+    return subscribed.current;
+  }, [sessionId]);
 
   useEffect(() => {
-    const source = new EventSource(hubUrl(hubDefault(), window.location.origin, sessionTopic(apiOrigin(), sessionId)));
-    source.onmessage = (e: MessageEvent<string>) => {
-      const frame = parseFrame(e.data);
-      if (!frame) return;
-      lastFrame.current = Date.now();
-      dispatch({ type: 'frame', frame });
+    if (isAuthenticated()) void subscribe();
+    return () => {
+      generation.current += 1;
+      sourceRef.current?.close();
+      sourceRef.current = null;
+      subscribed.current = null;
     };
-    return () => source.close();
-  }, [sessionId]);
+  }, [subscribe]);
 
   const busy = isBusy(state);
   useEffect(() => {
@@ -104,7 +127,8 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
         images: options.images,
         intakeId: options.intakeId ?? null,
       });
-      postTurn(body)
+      subscribe()
+        .then(() => postTurn(body))
         .then((turnId) => {
           if (turnId) dispatch({ type: 'accepted', turnId });
         })
@@ -117,7 +141,7 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
           dispatch({ type: 'fail', message: e instanceof Error ? e.message : SILENT });
         });
     },
-    [vehicle, buildCode, sessionId],
+    [vehicle, buildCode, sessionId, subscribe],
   );
 
   const cancel = useCallback(() => {

@@ -192,8 +192,16 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
 
 export const isBusy = (s: TurnState): boolean => s.phase === 'sending' || s.phase === 'running';
 
-export function sessionTopic(base: string, sessionId: string): string {
-  return `${base.replace(/\/+$/, '')}/agent/sessions/${sessionId}`;
+// The topic is a server-side digest of (owner, sessionId): another owner reusing the id lands elsewhere.
+export async function fetchSessionTopic(sessionId: string): Promise<string | null> {
+  try {
+    const res = await authFetch(apiUrl(`/agent/link?session=${encodeURIComponent(sessionId)}`));
+    if (!res.ok) return null;
+    const link: unknown = await res.json().catch(() => null);
+    return isObject(link) && filled(link.sessionTopic) ? link.sessionTopic : null;
+  } catch {
+    return null;
+  }
 }
 
 export function hubUrl(hub: string, origin: string, topic: string): string {

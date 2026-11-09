@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Agent\TurnCancellations;
 use App\Agent\TurnSettlement;
+use App\Agent\Ui\TurnSessionTopic;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\Repository\AgentTurnRepository;
@@ -179,9 +180,11 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
      */
     private static function frames(string $session): array
     {
+        // A turn posted over HTTP streams on the owner-bound key; one run through the handler keeps its raw topic.
+        $key = static::getContainer()->get(TurnSessionTopic::class)->key(self::TEST_OWNER, $session);
         $updates = array_filter(
             static::getContainer()->get(RecordingHub::class)->updates,
-            static fn ($u): bool => str_ends_with($u->getTopics()[0] ?? '', '/agent/sessions/'.$session),
+            static fn ($u): bool => \in_array(substr($u->getTopics()[0] ?? '', (int) strrpos($u->getTopics()[0] ?? '', '/') + 1), [$session, $key], true),
         );
 
         return array_values(array_map(static fn ($u): array => json_decode($u->getData(), true), $updates));

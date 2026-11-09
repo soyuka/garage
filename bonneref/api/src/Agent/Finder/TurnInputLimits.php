@@ -21,5 +21,5 @@ final class TurnInputLimits
 
     public const array IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-    public const string SESSION_ID_PATTERN = '/^[A-Za-z0-9_-]{1,64}$/';
+    public const string SESSION_ID_PATTERN = '/^[A-Za-z0-9_-]{1,64}$/D';
 }

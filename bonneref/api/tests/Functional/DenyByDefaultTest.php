@@ -21,6 +21,7 @@ final class DenyByDefaultTest extends AppTestCase
         yield 'articles' => ['/cars/12345/part-categories/1/articles?carType=PC'];
         yield 'makes' => ['/makes'];
         yield 'agent journal' => ['/agent/turns'];
+        yield 'agent session link' => ['/agent/link?session=sess-1'];
         yield 'api docs' => ['/docs.jsonld'];
         yield 'entrypoint' => ['/'];
     }
