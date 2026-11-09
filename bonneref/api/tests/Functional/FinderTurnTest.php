@@ -245,6 +245,23 @@ final class FinderTurnTest extends AppTestCase
         self::assertStringContainsString('plaque XB-301-ZB', $seen['context']);
     }
 
+    public function testAnotherOwnersIntakeIdIs422AndNeverReachesTheModel(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+        $seen = [];
+        $container->set('ai.platform.anthropic', self::script([], $seen));
+        $foreign = $container->get(IntakeReadings::class)->keep('someone-else@example.com', new PhotoIntakeResult(PhotoKind::Part, part: PartPhotoHints::fromPayload(['familyGuess' => 'filtre à huile', 'printedReferences' => ['W 712/73']])));
+
+        $client->request('POST', '/agent/turn', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
+            'json' => ['instruction' => 'cette pièce', 'sessionId' => 'sess-foreign-intake', 'surface' => 'finder', 'intent' => 'photo', 'intakeId' => $foreign],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+        self::assertSame([], $seen, 'the turn never started');
+    }
+
     public function testAProseOnlyFinderTurnTellsTheUserInFinderTerms(): void
     {
         static::createClient();
