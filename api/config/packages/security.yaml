@@ -1,8 +1,8 @@
 security:
     providers:
-        # Provisions users from validated Casdoor access-token claims (find-or-create on `sub`).
-        zitadel:
-            id: App\Security\ZitadelUserProvider
+        # Provisions users from validated Casdoor access-token claims (find-or-create on the owner claim).
+        casdoor:
+            id: App\Security\CasdoorUserProvider
 
     firewalls:
         dev:
@@ -20,7 +20,7 @@ security:
         mcp:
             pattern: ^/mcp
             stateless: true
-            provider: zitadel
+            provider: casdoor
             access_token:
                 token_handler: app.access_token.mcp
 
@@ -33,7 +33,7 @@ security:
         api:
             pattern: ^/
             stateless: true
-            provider: zitadel
+            provider: casdoor
             entry_point: App\Security\BearerEntryPoint
             access_token:
                 token_handler: app.access_token.api

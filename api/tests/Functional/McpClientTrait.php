@@ -21,7 +21,7 @@ trait McpClientTrait
 
     /**
      * The /mcp firewall requires a bearer token; in tests it is decoded by
-     * {@see \App\Tests\Security\FakeOidcTokenHandler} rather than verified against Zitadel.
+     * {@see \App\Tests\Security\FakeOidcTokenHandler} rather than verified against Casdoor.
      *
      * @param array<string, string> $extra
      *

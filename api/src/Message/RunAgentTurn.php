@@ -15,7 +15,7 @@ final readonly class RunAgentTurn
     public function __construct(
         public string $instruction,
         public string $sessionTopic,
-        // The authenticated owner (Casdoor `sub`) the turn runs as. Threaded from the controller
+        // The authenticated owner (the Casdoor email claim, `app.owner_claim`) the turn runs as. Threaded from the controller
         // because the worker has no request and no security token: every garage write the agent
         // makes this turn lands under this owner via OwnerContext, never a client-supplied field.
         public string $owner,

@@ -12,7 +12,7 @@ use Symfony\Component\HttpKernel\KernelEvents;
 /**
  * Adds the RFC 9728 §5.1 WWW-Authenticate challenge to unauthorized /mcp responses,
  * pointing MCP clients at the protected-resource metadata document so they can bootstrap
- * the OAuth flow against Zitadel.
+ * the OAuth flow against Casdoor.
  */
 #[AsEventListener(event: KernelEvents::RESPONSE)]
 final readonly class McpProtectedResourceChallengeListener

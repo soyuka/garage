@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Functional;
 
 /**
- * The /mcp endpoint is protected by the OIDC firewall (Zitadel in production). These
+ * The /mcp endpoint is protected by the OIDC firewall (Casdoor in production). These
  * tests pin the OAuth bootstrap surface an MCP client relies on (RFC 9728): an
  * unauthenticated call is challenged with a pointer to the protected-resource
  * metadata document, and that document is reachable without a token.
@@ -60,7 +60,7 @@ final class McpOAuthTest extends AppTestCase
             'headers' => [
                 'Content-Type' => 'application/json',
                 'Accept' => 'application/json, text/event-stream',
-                'Authorization' => 'Bearer '.FakeOidcToken::for('zitadel-user-1', 'driver@example.com'),
+                'Authorization' => 'Bearer '.FakeOidcToken::for('casdoor-user-1', 'driver@example.com'),
             ],
             'json' => [
                 'jsonrpc' => '2.0',

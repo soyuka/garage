@@ -8,14 +8,14 @@ use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * Carries the current tenant — the authenticated Casdoor `sub` — across the invocation boundaries
- * that do NOT thread identity explicitly: the in-process MCP {@see \App\Mcp\Agent\McpToolbox}
+ * Carries the current tenant — the authenticated Casdoor `email` claim (`app.owner_claim`; Casdoor
+ * re-mints `sub`) — across the invocation boundaries that do NOT thread identity explicitly: the in-process MCP {@see \App\Mcp\Agent\McpToolbox}
  * → API Platform state pipeline, and the async agent worker ({@see \App\MessageHandler\RunAgentTurnHandler}).
  *
  * Precedence is deliberate. On an HTTP request the security token wins: the `api`/`mcp` firewall has
  * already authenticated the bearer and provisioned the {@see \App\Entity\User}, whose identifier IS
- * the `sub`. The agent worker has no request and no token, so {@see self::set()} carries the `sub`
- * from the turn message; it is read only when no token is present. Same pattern as Symfony's own
+ * the owner claim. The agent worker has no request and no token, so {@see self::set()} carries the
+ * owner from the turn message; it is read only when no token is present. Same pattern as Symfony's own
  * TokenStorage — tenancy follows the principal, never a client-supplied field.
  */
 final class OwnerContext implements ResetInterface
@@ -44,7 +44,7 @@ final class OwnerContext implements ResetInterface
         $this->override = null;
     }
 
-    /** The current owner `sub`, or null when neither a token, an explicit binding nor a fallback is present. */
+    /** The current owner (email claim), or null when neither a token, an explicit binding nor a fallback is present. */
     public function current(): ?string
     {
         return $this->security->getUser()?->getUserIdentifier() ?? $this->override ?? $this->fallback;
