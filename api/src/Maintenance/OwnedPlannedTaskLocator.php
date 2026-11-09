@@ -6,7 +6,6 @@ namespace App\Maintenance;
 
 use App\Entity\PlannedMaintenance;
 use App\Repository\PlannedMaintenanceRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -18,17 +17,11 @@ final readonly class OwnedPlannedTaskLocator
 {
     public function __construct(
         private PlannedMaintenanceRepository $tasks,
-        private OwnerContext $owner,
     ) {
     }
 
     public function find(Ulid $id): ?PlannedMaintenance
     {
-        $task = $this->tasks->find($id);
-        if (null === $task || $task->getVehicle()->getOwner() !== $this->owner->current() || $task->getVehicle()->isDeleted()) {
-            return null;
-        }
-
-        return $task;
+        return $this->tasks->findOwned($id);
     }
 }

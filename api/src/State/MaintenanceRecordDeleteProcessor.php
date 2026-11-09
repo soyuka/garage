@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Mercure\DomainPublisher;
 use App\Repository\MaintenanceRecordRepository;
-use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -25,7 +24,6 @@ final readonly class MaintenanceRecordDeleteProcessor implements ProcessorInterf
     public function __construct(
         private MaintenanceRecordRepository $records,
         private DocumentManager $em,
-        private OwnerContext $owner,
         private DomainPublisher $publisher,
     ) {
     }
@@ -33,9 +31,9 @@ final readonly class MaintenanceRecordDeleteProcessor implements ProcessorInterf
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): null
     {
         $id = $uriVariables['id'];
-        $record = $this->records->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $record = $this->records->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $record || $record->getVehicle()->getOwner() !== $this->owner->current() || $record->getVehicle()->isDeleted()) {
+        if (null === $record) {
             throw new NotFoundHttpException('No maintenance record at this IRI.');
         }
 

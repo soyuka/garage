@@ -353,4 +353,40 @@ final class McpDocumentationTest extends AppTestCase
 
         self::assertSame('not_found', $result['error']);
     }
+
+    public function testSearchingAnotherOwnersVehicleIsNotFound(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+        $this->handOver($iri, 'someone-else@example.com');
+
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'search_documentation',
+            'arguments' => ['vehicle' => $iri, 'query' => 'huile'],
+        ], 3));
+
+        self::assertSame('not_found', $result['error'] ?? null);
+    }
+
+    public function testListingAnotherOwnersDocumentsIsNotFound(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+        $this->handOver($iri, 'someone-else@example.com');
+
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_documents',
+            'arguments' => ['vehicle' => $iri],
+        ], 3));
+
+        self::assertSame('not_found', $result['error'] ?? null);
+    }
+
+    private function handOver(string $iri, string $owner): void
+    {
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $dm->createQueryBuilder(Vehicle::class)->updateOne()
+            ->field('id')->equals(substr($iri, (int) strrpos($iri, '/') + 1))
+            ->field('owner')->set($owner)
+            ->getQuery()->execute();
+        $dm->clear();
+    }
 }

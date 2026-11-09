@@ -15,7 +15,6 @@ use App\Entity\Vehicle;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Repository\VehicleDocumentRepository;
-use App\Repository\VehicleRepository;
 use Mcp\Schema\Content\ResourceLink;
 use Mcp\Schema\Result\CallToolResult;
 
@@ -32,7 +31,6 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
     private const int SCAN_HITS = 6;
 
     public function __construct(
-        private VehicleRepository $vehicles,
         private DocumentationSearcher $searcher,
         private VehicleIriResolver $iriResolver,
         private VehicleDocumentRepository $documents,
@@ -55,14 +53,9 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
             }
         }
 
-        $resolved = $this->iriResolver->resolve($data->vehicle);
-        if ($resolved instanceof CallToolResult) {
-            return $resolved;
-        }
-
-        $vehicle = $this->vehicles->find($resolved);
-        if (null === $vehicle) {
-            return $this->iriResolver->notFound($data->vehicle);
+        $vehicle = $this->iriResolver->resolveVehicle($data->vehicle);
+        if ($vehicle instanceof CallToolResult) {
+            return $vehicle;
         }
 
         $hits = $this->searcher->search($vehicle, $data->query, $kind, $data->limit);

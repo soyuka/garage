@@ -21,7 +21,7 @@ use Symfony\Component\Uid\Ulid;
  *
  * @extends ServiceDocumentRepository<Vehicle>
  */
-final class VehicleRepository extends ServiceDocumentRepository
+class VehicleRepository extends ServiceDocumentRepository
 {
     public function __construct(ManagerRegistry $registry, private readonly OwnerContext $owner)
     {

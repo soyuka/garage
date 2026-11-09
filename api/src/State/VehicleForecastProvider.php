@@ -11,7 +11,6 @@ use App\Maintenance\DueMaintenanceCalculator;
 use App\Maintenance\DueMaintenanceView;
 use App\Maintenance\MaintenanceType;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -28,16 +27,15 @@ final readonly class VehicleForecastProvider implements ProviderInterface
         private VehicleRepository $vehicles,
         private DueMaintenanceCalculator $calculator,
         private DueMaintenanceView $view,
-        private OwnerContext $owner,
     ) {
     }
 
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): ?VehicleForecast
     {
         $id = $uriVariables['vehicleId'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $vehicle = $this->vehicles->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
+        if (null === $vehicle) {
             return null;
         }
 

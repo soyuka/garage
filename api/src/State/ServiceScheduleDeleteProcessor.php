@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Mercure\DomainPublisher;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -25,7 +24,6 @@ final readonly class ServiceScheduleDeleteProcessor implements ProcessorInterfac
     public function __construct(
         private VehicleRepository $vehicles,
         private DocumentManager $em,
-        private OwnerContext $owner,
         private DomainPublisher $publisher,
     ) {
     }
@@ -33,9 +31,9 @@ final readonly class ServiceScheduleDeleteProcessor implements ProcessorInterfac
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): null
     {
         $vehicleId = $uriVariables['vehicleId'];
-        $vehicle = $this->vehicles->find($vehicleId instanceof Ulid ? $vehicleId : Ulid::fromString((string) $vehicleId));
+        $vehicle = $this->vehicles->findOwned($vehicleId instanceof Ulid ? $vehicleId : Ulid::fromString((string) $vehicleId));
 
-        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
+        if (null === $vehicle) {
             throw new NotFoundHttpException('No vehicle at this IRI.');
         }
 

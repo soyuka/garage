@@ -9,7 +9,6 @@ use App\Entity\Vehicle;
 use App\Entity\VehicleFact;
 use App\Mercure\DomainPublisher;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
 
@@ -38,7 +37,6 @@ final readonly class VehicleFactWriter
     public function __construct(
         private DocumentManager $em,
         private VehicleRepository $vehicles,
-        private OwnerContext $owner,
         private VehicleFactsProjector $projector,
         private DomainPublisher $publisher,
     ) {
@@ -46,9 +44,7 @@ final readonly class VehicleFactWriter
 
     public function vehicleOf(Ulid $id): ?Vehicle
     {
-        $vehicle = $this->vehicles->find($id);
-
-        return null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted() ? null : $vehicle;
+        return $this->vehicles->findOwned($id);
     }
 
     /**

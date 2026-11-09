@@ -7,6 +7,8 @@ namespace App\Garage;
 use ApiPlatform\Metadata\Exception\ItemNotFoundException;
 use ApiPlatform\Metadata\IriConverterInterface;
 use App\ApiResource\GarageVehicle;
+use App\Entity\Vehicle;
+use App\Repository\VehicleRepository;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -24,7 +26,22 @@ final readonly class VehicleIriResolver
 {
     public function __construct(
         private IriConverterInterface $iriConverter,
+        private VehicleRepository $vehicles,
     ) {
+    }
+
+    /**
+     * The caller's own live vehicle behind a @id, or the tool error to return. The one entity lookup a
+     * tool processor may use after resolving an IRI: the owner and deleted floor is in the query.
+     */
+    public function resolveVehicle(string $iri): Vehicle|ToolError
+    {
+        $resolved = $this->resolve($iri);
+        if ($resolved instanceof ToolError) {
+            return $resolved;
+        }
+
+        return $this->vehicles->findOwned($resolved) ?? $this->notFound($iri);
     }
 
     /**

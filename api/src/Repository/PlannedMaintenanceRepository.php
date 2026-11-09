@@ -9,15 +9,27 @@ use App\Entity\Vehicle;
 use App\Maintenance\PlannedMaintenanceStatus;
 use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * @extends ServiceDocumentRepository<PlannedMaintenance>
  */
 class PlannedMaintenanceRepository extends ServiceDocumentRepository
 {
-    public function __construct(ManagerRegistry $registry)
+    public function __construct(ManagerRegistry $registry, private readonly VehicleRepository $vehicles)
     {
         parent::__construct($registry, PlannedMaintenance::class);
+    }
+
+    /**
+     * The task under this id when its vehicle is the current owner's and not deleted, else null.
+     * The owner lives on the vehicle, so the floor is {@see VehicleRepository::findOwned()}.
+     */
+    public function findOwned(Ulid|string $id): ?PlannedMaintenance
+    {
+        $task = $this->find((string) $id);
+
+        return null !== $task && null !== $this->vehicles->findOwned((string) $task->getVehicle()->getId()) ? $task : null;
     }
 
     /**

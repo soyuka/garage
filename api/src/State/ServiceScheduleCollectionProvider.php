@@ -9,7 +9,6 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\ServiceScheduleItem;
 use App\Entity\ServiceInterval;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -23,7 +22,6 @@ final readonly class ServiceScheduleCollectionProvider implements ProviderInterf
 {
     public function __construct(
         private VehicleRepository $vehicles,
-        private OwnerContext $owner,
     ) {
     }
 
@@ -33,9 +31,9 @@ final readonly class ServiceScheduleCollectionProvider implements ProviderInterf
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
         $id = $uriVariables['vehicleId'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $vehicle = $this->vehicles->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
+        if (null === $vehicle) {
             return [];
         }
 

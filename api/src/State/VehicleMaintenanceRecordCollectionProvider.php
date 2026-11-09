@@ -9,7 +9,6 @@ use ApiPlatform\State\ProviderInterface;
 use App\ApiResource\GarageMaintenanceRecord;
 use App\Repository\MaintenanceRecordRepository;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -24,7 +23,6 @@ final readonly class VehicleMaintenanceRecordCollectionProvider implements Provi
     public function __construct(
         private VehicleRepository $vehicles,
         private MaintenanceRecordRepository $records,
-        private OwnerContext $owner,
     ) {
     }
 
@@ -34,9 +32,9 @@ final readonly class VehicleMaintenanceRecordCollectionProvider implements Provi
     public function provide(Operation $operation, array $uriVariables = [], array $context = []): array
     {
         $id = $uriVariables['vehicleId'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $vehicle = $this->vehicles->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
+        if (null === $vehicle) {
             return [];
         }
 

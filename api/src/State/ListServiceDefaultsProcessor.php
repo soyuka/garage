@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Dto\ListServiceDefaultsInput;
 use App\Entity\Vehicle;
-use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Maintenance\Defaults\ServiceBaseline;
@@ -43,7 +42,6 @@ final readonly class ListServiceDefaultsProcessor implements ProcessorInterface
         private ServiceDefaultsResolver $resolver,
         private ServiceDefaultsView $view,
         private VehicleIriResolver $iriResolver,
-        private GarageResolver $garage,
     ) {
     }
 
@@ -108,11 +106,6 @@ final readonly class ListServiceDefaultsProcessor implements ProcessorInterface
      */
     private function resolveVehicle(string $iri): Vehicle|CallToolResult
     {
-        $resolved = $this->iriResolver->resolve($iri);
-        if ($resolved instanceof CallToolResult) {
-            return $resolved;
-        }
-
-        return $this->garage->resolveById($resolved) ?? $this->iriResolver->notFound($iri);
+        return $this->iriResolver->resolveVehicle($iri);
     }
 }

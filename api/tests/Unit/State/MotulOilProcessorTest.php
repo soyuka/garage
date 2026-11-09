@@ -17,6 +17,7 @@ use App\Garage\VehicleType;
 use App\Motul\MotulClient;
 use App\Motul\MotulOilAdvisor;
 use App\Motul\MotulRecommendationParser;
+use App\Repository\VehicleRepository;
 use App\State\MotulOilProcessor;
 use App\Tests\Mock\BonnerefHttpClient;
 use App\Tests\Support\InMemoryMotulResponseStore;
@@ -65,7 +66,7 @@ final class MotulOilProcessorTest extends TestCase
         $iriConverter = $this->createStub(IriConverterInterface::class);
         $iriConverter->method('getResourceFromIri')->willReturn(GarageVehicle::fromEntity($vehicle));
 
-        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter), $resolver, $bonneref);
+        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref);
 
         $input = new MotulOilInput();
         $input->vehicle = '/garage/vehicles/'.$vehicle->getId();
@@ -97,7 +98,7 @@ final class MotulOilProcessorTest extends TestCase
 
         $processor = new MotulOilProcessor(
             $advisor,
-            new VehicleIriResolver($this->createStub(IriConverterInterface::class)),
+            new VehicleIriResolver($this->createStub(IriConverterInterface::class), $this->createStub(VehicleRepository::class)),
             $this->createStub(GarageResolver::class),
             $bonneref,
         );
@@ -137,7 +138,7 @@ final class MotulOilProcessorTest extends TestCase
         $iriConverter = $this->createStub(IriConverterInterface::class);
         $iriConverter->method('getResourceFromIri')->willReturn(GarageVehicle::fromEntity($vehicle));
 
-        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter), $resolver, $bonneref);
+        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref);
 
         $input = new MotulOilInput();
         $input->vehicle = '/garage/vehicles/'.$vehicle->getId();

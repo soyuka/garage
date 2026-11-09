@@ -6,7 +6,6 @@ namespace App\Maintenance;
 
 use App\Entity\MaintenanceRecord;
 use App\Repository\MaintenanceRecordRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
@@ -18,15 +17,14 @@ final readonly class OwnedRecordLocator
 {
     public function __construct(
         private MaintenanceRecordRepository $records,
-        private OwnerContext $owner,
     ) {
     }
 
     public function require(string $id): MaintenanceRecord
     {
-        $record = $this->records->find($id);
+        $record = $this->records->findOwned($id);
 
-        if (null === $record || $record->getVehicle()->getOwner() !== $this->owner->current() || $record->getVehicle()->isDeleted()) {
+        if (null === $record) {
             throw new NotFoundHttpException('No maintenance record at this IRI.');
         }
 

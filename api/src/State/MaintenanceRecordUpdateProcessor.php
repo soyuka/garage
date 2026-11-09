@@ -13,7 +13,6 @@ use App\Maintenance\MaintenanceRecorder;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
 use App\Repository\MaintenanceRecordRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\Uid\Ulid;
@@ -32,7 +31,6 @@ final readonly class MaintenanceRecordUpdateProcessor implements ProcessorInterf
     public function __construct(
         private MaintenanceRecordRepository $records,
         private MaintenanceRecorder $recorder,
-        private OwnerContext $owner,
         private DomainPublisher $publisher,
     ) {
     }
@@ -40,9 +38,9 @@ final readonly class MaintenanceRecordUpdateProcessor implements ProcessorInterf
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): GarageMaintenanceRecord
     {
         $id = $uriVariables['id'];
-        $record = $this->records->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $record = $this->records->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $record || $record->getVehicle()->getOwner() !== $this->owner->current() || $record->getVehicle()->isDeleted()) {
+        if (null === $record) {
             throw new NotFoundHttpException('No maintenance record at this IRI.');
         }
 

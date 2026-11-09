@@ -8,7 +8,6 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Maintenance\VehicleFactWriter;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
 
@@ -22,7 +21,6 @@ final readonly class GarageVehicleFactDeleteProcessor implements ProcessorInterf
 {
     public function __construct(
         private VehicleRepository $vehicles,
-        private OwnerContext $owner,
         private VehicleFactWriter $writer,
     ) {
     }
@@ -30,9 +28,9 @@ final readonly class GarageVehicleFactDeleteProcessor implements ProcessorInterf
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): null
     {
         $id = $uriVariables['id'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $vehicle = $this->vehicles->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
+        if (null === $vehicle) {
             throw new NotFoundHttpException('No vehicle at this IRI.');
         }
 

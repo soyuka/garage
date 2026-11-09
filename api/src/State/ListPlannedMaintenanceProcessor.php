@@ -49,14 +49,9 @@ final readonly class ListPlannedMaintenanceProcessor implements ProcessorInterfa
         // Addressed by @id (e.g. the dashboard's selected vehicle): dereference the handle straight
         // to its row, so make/model are optional.
         if (null !== $data->vehicle) {
-            $resolved = $this->iriResolver->resolve($data->vehicle);
-            if ($resolved instanceof CallToolResult) {
-                return $resolved;
-            }
-
-            $vehicle = $this->vehicles->find($resolved);
-            if (null === $vehicle) {
-                return $this->iriResolver->notFound($data->vehicle);
+            $vehicle = $this->iriResolver->resolveVehicle($data->vehicle);
+            if ($vehicle instanceof CallToolResult) {
+                return $vehicle;
             }
 
             return $this->okResult($vehicle);

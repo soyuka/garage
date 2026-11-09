@@ -82,14 +82,9 @@ final readonly class GetVehicleFactsProcessor implements ProcessorInterface
      */
     private function factsByIri(string $iri, array $keys): CallToolResult
     {
-        $resolved = $this->iriResolver->resolve($iri);
-        if ($resolved instanceof CallToolResult) {
-            return $resolved;
-        }
-
-        $vehicle = $this->resolver->resolveById($resolved);
-        if (null === $vehicle) {
-            return $this->iriResolver->notFound($iri);
+        $vehicle = $this->iriResolver->resolveVehicle($iri);
+        if ($vehicle instanceof CallToolResult) {
+            return $vehicle;
         }
 
         return $this->okResult($vehicle, $keys, [

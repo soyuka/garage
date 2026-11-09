@@ -10,7 +10,6 @@ use App\Dto\ArchiveTasksOutput;
 use App\Maintenance\MaintenanceRecorder;
 use App\Mercure\DomainPublisher;
 use App\Repository\VehicleRepository;
-use App\Security\OwnerContext;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Uid\Ulid;
 
@@ -28,7 +27,6 @@ final readonly class ArchiveCompletedTasksProcessor implements ProcessorInterfac
     public function __construct(
         private VehicleRepository $vehicles,
         private MaintenanceRecorder $recorder,
-        private OwnerContext $owner,
         private DomainPublisher $publisher,
     ) {
     }
@@ -36,9 +34,9 @@ final readonly class ArchiveCompletedTasksProcessor implements ProcessorInterfac
     public function process(mixed $data, Operation $operation, array $uriVariables = [], array $context = []): ArchiveTasksOutput
     {
         $id = $uriVariables['vehicleId'];
-        $vehicle = $this->vehicles->find($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
+        $vehicle = $this->vehicles->findOwned($id instanceof Ulid ? $id : Ulid::fromString((string) $id));
 
-        if (null === $vehicle || $vehicle->getOwner() !== $this->owner->current() || $vehicle->isDeleted()) {
+        if (null === $vehicle) {
             throw new NotFoundHttpException('No vehicle at this IRI.');
         }
 

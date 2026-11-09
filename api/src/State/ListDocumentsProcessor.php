@@ -11,7 +11,6 @@ use App\Dto\ListDocumentsInput;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Repository\VehicleDocumentRepository;
-use App\Repository\VehicleRepository;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -20,7 +19,6 @@ use Mcp\Schema\Result\CallToolResult;
 final readonly class ListDocumentsProcessor implements ProcessorInterface
 {
     public function __construct(
-        private VehicleRepository $vehicles,
         private VehicleDocumentRepository $documents,
         private VehicleDocumentView $view,
         private VehicleIriResolver $iriResolver,
@@ -33,14 +31,9 @@ final readonly class ListDocumentsProcessor implements ProcessorInterface
             return ToolResult::error('invalid_input', 'Provide the vehicle @id (IRI) from list_vehicles.');
         }
 
-        $resolved = $this->iriResolver->resolve($data->vehicle);
-        if ($resolved instanceof CallToolResult) {
-            return $resolved;
-        }
-
-        $vehicle = $this->vehicles->find($resolved);
-        if (null === $vehicle) {
-            return $this->iriResolver->notFound($data->vehicle);
+        $vehicle = $this->iriResolver->resolveVehicle($data->vehicle);
+        if ($vehicle instanceof CallToolResult) {
+            return $vehicle;
         }
 
         return ToolResult::of([

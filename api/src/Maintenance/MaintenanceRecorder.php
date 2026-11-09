@@ -245,7 +245,7 @@ final readonly class MaintenanceRecorder
         ?int $limit = null,
     ): ?array {
         $vehicle = null !== $vehicleId
-            ? $this->vehicles->find($vehicleId)
+            ? $this->vehicles->findOwned($vehicleId)
             : $this->vehicles->findByIdentity($make, $model, $vehicleType, $year);
         if (null === $vehicle) {
             return null;

@@ -16,7 +16,6 @@ use App\Maintenance\RecordView;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
 use App\Repository\MaintenanceRecordRepository;
-use App\Security\OwnerContext;
 use Mcp\Schema\Result\CallToolResult;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -36,7 +35,6 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
         private MaintenanceRecordRepository $records,
         private MaintenanceRecorder $recorder,
         private IriConverterInterface $iriConverter,
-        private OwnerContext $owner,
         private RecordView $recordView,
         private DomainPublisher $publisher,
     ) {
@@ -57,8 +55,8 @@ final readonly class EditMaintenanceProcessor implements ProcessorInterface
             return ToolResult::error('invalid_input', \sprintf('"%s" is not a valid maintenance-record @id. Use an @id from get_maintenance_history.', $data->record));
         }
 
-        $record = $this->records->find($recordId);
-        if (null === $record || $record->getVehicle()->getOwner() !== $this->owner->current() || $record->getVehicle()->isDeleted()) {
+        $record = $this->records->findOwned($recordId);
+        if (null === $record) {
             return ToolResult::error('not_found', \sprintf('No maintenance record at %s.', $data->record));
         }
 
