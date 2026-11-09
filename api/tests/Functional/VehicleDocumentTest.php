@@ -9,6 +9,7 @@ use App\Entity\Vehicle;
 use App\Entity\VehicleDocument;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Doctrine\ODM\MongoDB\Events;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -157,6 +158,30 @@ final class VehicleDocumentTest extends AppTestCase
 
         $browser->request('GET', $base.'/unknown/pages', [], [], $this->bearer());
         self::assertSame(404, $browser->getResponse()->getStatusCode());
+    }
+
+    public function testAFailedDeleteKeepsTheDocumentBytes(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $browser->disableReboot();
+        $vehicle = $this->seedVehicle();
+        $doc = $this->upload($browser, $vehicle, $this->tmpUpload(PdfFixture::renaultManual(), 'mr361.pdf', 'application/pdf'));
+
+        $events = static::getContainer()->get(DocumentManager::class)->getEventManager();
+        $failing = new class {
+            public function onFlush(): void
+            {
+                throw new \RuntimeException('the database went away');
+            }
+        };
+        $events->addEventListener(Events::onFlush, $failing);
+        $browser->request('DELETE', '/garage/vehicles/'.$vehicle->getId().'/documents/'.$doc['id'], [], [], $this->bearer());
+        self::assertSame(500, $browser->getResponse()->getStatusCode());
+        $events->removeEventListener(Events::onFlush, $failing);
+
+        $browser->request('GET', $doc['url'], [], [], $this->bearer());
+        self::assertSame(200, $browser->getResponse()->getStatusCode());
     }
 
     public function testDeleteRemovesTheDocument(): void

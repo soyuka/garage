@@ -101,9 +101,10 @@ final readonly class VehicleDocumentRecorder
 
     public function remove(VehicleDocument $document): void
     {
-        $this->storage->delete($document->getStorageKey());
+        // Metadata first, as for bills: a failed flush must not leave a listed document without bytes.
         $this->em->remove($document);
         $this->em->flush();
+        $this->storage->delete($document->getStorageKey());
         $this->publisher->publishVehicle($document->getVehicle());
     }
 }

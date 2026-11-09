@@ -36,9 +36,12 @@ final readonly class DeleteMaintenanceAttachmentController
             throw new NotFoundHttpException('No attachment at this IRI.');
         }
 
-        $this->storage->delete($attachment->getStorageKey());
+        // Metadata first: a failed flush must leave a record whose bill still downloads. The reverse
+        // failure (flushed, blob delete failed) only leaves an orphan blob.
+        $key = $attachment->getStorageKey();
         $record->removeAttachment($attachmentId);
         $this->em->flush();
+        $this->storage->delete($key);
         $this->publisher->publishVehicle($record->getVehicle());
 
         return new Response(status: Response::HTTP_NO_CONTENT);

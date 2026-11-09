@@ -7,6 +7,7 @@ namespace App\Tests\Functional;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Doctrine\ODM\MongoDB\Events;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
 /**
@@ -107,6 +108,33 @@ final class MaintenanceAttachmentTest extends AppTestCase
 
         $record = $client->request('GET', $recordIri, ['headers' => ['Accept' => 'application/ld+json']])->toArray();
         self::assertCount(2, $record['attachments']);
+    }
+
+    public function testAFailedDeleteKeepsTheBill(): void
+    {
+        $recordIri = $this->seedRecordIri();
+        $browser = static::getClient();
+        self::assertNotNull($browser);
+        $browser->disableReboot();
+        $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
+        $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $auth);
+        $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
+
+        $events = static::getContainer()->get(DocumentManager::class)->getEventManager();
+        $failing = new class {
+            public function onFlush(): void
+            {
+                throw new \RuntimeException('the database went away');
+            }
+        };
+        $events->addEventListener(Events::onFlush, $failing);
+        $browser->catchExceptions(true);
+        $browser->request('DELETE', $url, [], [], $auth);
+        self::assertSame(500, $browser->getResponse()->getStatusCode());
+        $events->removeEventListener(Events::onFlush, $failing);
+
+        $browser->request('GET', $url, [], [], $auth);
+        self::assertSame(200, $browser->getResponse()->getStatusCode(), 'the record still lists the bill, so its bytes must still be there');
     }
 
     public function testDeleteRemovesOneBill(): void
