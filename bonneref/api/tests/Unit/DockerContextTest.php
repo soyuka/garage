@@ -35,6 +35,15 @@ final class DockerContextTest extends TestCase
         self::assertFalse(self::ignored($path), \sprintf('api/.dockerignore drops "%s", which the config reads at runtime.', $path));
     }
 
+    public function testSecretsAndLocalStateStayOutOfTheBuildContext(): void
+    {
+        self::assertTrue(self::ignored('.env.stage'), '.env.stage');
+        self::assertTrue(self::ignored('.env.dev'), '.env.dev');
+        self::assertTrue(self::ignored('.env.local'), '.env.local');
+        self::assertTrue(self::ignored('config/foo.local'), 'config/foo.local');
+        self::assertTrue(self::ignored('var/storage/x.jpg'), 'var/storage/x.jpg');
+    }
+
     public function testMatcherFollowsDockerSemantics(): void
     {
         self::assertTrue(self::ignored('README.md'));

@@ -32,3 +32,9 @@ vendor/
 .env.local
 .env.local.php
 .env.test
+# Never in an image: per-machine secrets and state. The prod kernel reads .env (+ dump-env) only.
+.env.dev
+.env.stage
+**/*.local
+docker/cloudflared/
+tondeuse/

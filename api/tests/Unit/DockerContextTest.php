@@ -10,6 +10,17 @@ final class DockerContextTest extends TestCase
 {
     private const string ROOT = __DIR__.'/../..';
 
+    public function testSecretsAndLocalStateStayOutOfTheBuildContext(): void
+    {
+        self::assertTrue(self::ignored('.env.stage'), '.env.stage');
+        self::assertTrue(self::ignored('.env.dev'), '.env.dev');
+        self::assertTrue(self::ignored('.env.elevenlabs.local'), '.env.elevenlabs.local');
+        self::assertTrue(self::ignored('config/foo.local'), 'config/foo.local');
+        self::assertTrue(self::ignored('tondeuse/bill.pdf'), 'tondeuse/bill.pdf');
+        self::assertTrue(self::ignored('docker/cloudflared/config.yml'), 'docker/cloudflared/config.yml');
+        self::assertTrue(self::ignored('var/storage/bills/x.pdf'), 'var/storage/bills/x.pdf');
+    }
+
     public function testMatcherFollowsDockerSemantics(): void
     {
         self::assertTrue(self::ignored('README.md'));
