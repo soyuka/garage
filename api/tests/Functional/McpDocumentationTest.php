@@ -76,6 +76,38 @@ final class McpDocumentationTest extends AppTestCase
         self::assertArrayHasKey('documentId', $hit);
     }
 
+    public function testSearchLinksEachHitDocumentAsAResource(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+
+        $response = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'search_documentation',
+            'arguments' => ['vehicle' => $iri, 'query' => 'huile'],
+        ], 3);
+        $documentId = $this->outcome($response)['hits'][0]['documentId'];
+
+        $links = array_values(array_filter($response['result']['content'], static fn (array $c): bool => 'resource_link' === $c['type']));
+        self::assertSame('text', $response['result']['content'][0]['type']);
+        self::assertCount(1, $links, 'one link per document hit, not per page');
+        self::assertMatchesRegularExpression('#^https?://[^/]+'.preg_quote($iri, '#').'/documents/'.$documentId.'/file$#', $links[0]['uri']);
+        self::assertSame('mr361.pdf', $links[0]['name']);
+        self::assertSame('MR 361', $links[0]['title']);
+        self::assertSame('application/pdf', $links[0]['mimeType']);
+        self::assertGreaterThan(0, $links[0]['size']);
+    }
+
+    public function testNoMatchCarriesNoResourceLink(): void
+    {
+        [$client, $sessionId, $iri] = $this->seedManual();
+
+        $response = $this->call($client, $sessionId, 'tools/call', [
+            'name' => 'search_documentation',
+            'arguments' => ['vehicle' => $iri, 'query' => 'zzzzqqq'],
+        ], 3);
+
+        self::assertSame(['text'], array_column($response['result']['content'], 'type'));
+    }
+
     public function testSearchRanksByTermsMatched(): void
     {
         [$client, $sessionId, $iri] = $this->seedManual();

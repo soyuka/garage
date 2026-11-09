@@ -16,9 +16,12 @@ use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Repository\VehicleDocumentRepository;
 use App\Repository\VehicleRepository;
+use Mcp\Schema\Content\ResourceLink;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
+ * Each document hit is also linked as a `resource_link` to its download route.
+ *
  * Also plays the search on the Atelier: a `documentScan` frame (on no_match too) on the same channel
  * as the render intents, so both drivers get it without the model spending a call.
  *
@@ -68,7 +71,27 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
             return ToolResult::of(['status' => 'no_match', 'query' => $data->query]);
         }
 
-        return ToolResult::of(['status' => 'ok', 'query' => $data->query, 'hits' => $hits]);
+        $result = ToolResult::of(['status' => 'ok', 'query' => $data->query, 'hits' => $hits]);
+
+        return new CallToolResult([...$result->content, ...$this->links($vehicle, $hits)], false, $result->structuredContent);
+    }
+
+    /**
+     * @param list<array{documentId: string}> $hits
+     *
+     * @return list<ResourceLink>
+     */
+    private function links(Vehicle $vehicle, array $hits): array
+    {
+        $links = [];
+        foreach (array_unique(array_column($hits, 'documentId')) as $id) {
+            $document = $this->documents->findOneForVehicle($vehicle, $id);
+            if (null !== $document) {
+                $links[] = $this->view->resourceLink($document);
+            }
+        }
+
+        return $links;
     }
 
     /**

@@ -5,9 +5,15 @@ declare(strict_types=1);
 namespace App\Documentation;
 
 use App\Entity\VehicleDocument;
+use Mcp\Schema\Content\ResourceLink;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 
 final readonly class VehicleDocumentView
 {
+    public function __construct(private UrlGeneratorInterface $urls)
+    {
+    }
+
     /**
      * @return array<string, mixed>
      */
@@ -33,6 +39,20 @@ final readonly class VehicleDocumentView
     public function url(VehicleDocument $document): string
     {
         return \sprintf('/garage/vehicles/%s/documents/%s/file', $document->getVehicle()->getId(), $document->getId());
+    }
+
+    /**
+     * The binary itself, absolute so an MCP client can fetch it with the bearer it already holds.
+     */
+    public function resourceLink(VehicleDocument $document): ResourceLink
+    {
+        return new ResourceLink(
+            uri: $this->urls->generate('vehicle_document_download', ['id' => $document->getVehicle()->getId(), 'documentId' => $document->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            name: $document->getFilename(),
+            title: $document->getTitle(),
+            mimeType: $document->getContentType(),
+            size: $document->getSize(),
+        );
     }
 
     public function pagesUrl(VehicleDocument $document): string
