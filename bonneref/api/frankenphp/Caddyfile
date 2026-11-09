@@ -38,6 +38,15 @@
 	# route {} enforces strict first-match-wins in file order (Caddy's default directive order runs
 	# rewrite before reverse_proxy).
 	route {
+		# Symfony's debug surfaces (profiler, toolbar, error previews) expose phpinfo, every env secret and
+		# the bearer tokens stored in profiles. Only a loopback Host reaches them: a tunnel or LAN request
+		# carries its public hostname and gets a 404 even if APP_ENV=dev slips through.
+		@debugSurface {
+			path /_profiler* /_wdt* /_error*
+			not host localhost 127.0.0.1
+		}
+		respond @debugSurface 404
+
 		# The hub itself lives on the internal site below, declared exactly once. Browser subscribers
 		# arrive here, so this address forwards to it; Caddy streams an SSE response through
 		# reverse_proxy without buffering.

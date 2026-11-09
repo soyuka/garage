@@ -12,6 +12,14 @@
 services:
   php:
     environment:
+      # The tunnel publishes this stack, so it never runs the dev kernel: APP_ENV=dev mounts the
+      # profiler, whose /_profiler/phpinfo prints every API key, APP_SECRET and the Mercure secret, and
+      # whose stored profiles keep the bearer tokens. The dev image and bind mount stay (the Vite
+      # server is the Atelier); only the kernel changes. .env.dev is not read under prod: the two
+      # values it carries (APP_SECRET, MCP_RESOURCE_ALIASES) are container env below.
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      XDEBUG_MODE: "off"
       # Symfony's Dotenv does not overwrite a variable that is already set in the environment, so a
       # value living only in .env.stage would lose to the `.env` bind-mounted at /app/.env. These
       # three must therefore be injected as container environment to actually win.
@@ -26,9 +34,17 @@ services:
       # /mcp accepts only tokens whose `aud` is one of its resource URIs; the tunnel host is an alias of
       # DEFAULT_URI (https://localhost). Same container-env reasoning as above.
       MCP_RESOURCE_ALIASES: ${MCP_RESOURCE_ALIASES}
+    # A prod kernel never checks its compiled container for freshness, and compose keeps the anonymous
+    # /app/var volume across recreates, so a stale var/cache/prod would serve old code forever. tmpfs
+    # makes every restart start cold; the entrypoint's `bin/console -V` warms it before Caddy starts.
+    tmpfs: &stage_cache
+      - /app/var/cache
 
   worker:
+    tmpfs: *stage_cache
     environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
       # The worker derives the same pilot topic and verifies the same tokens — if APP_SECRET differs
       # between php and worker, the two publish to DIFFERENT topics and half the frames vanish with
       # no error anywhere. Keep these in lockstep with php above.

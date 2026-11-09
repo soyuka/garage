@@ -63,9 +63,9 @@ if [ "$TARGET" = public ]; then
 fi
 
 # --- 1. the stack ------------------------------------------------------------------------------
-# minio_init is a one-shot that exits after seeding the bucket, so it can never appear in the
-# running set — checking for it would make us restart a perfectly healthy stack on every launch.
-REQUIRED_SERVICES=(database mongodb php worker dashboard minio)
+# No minio: bills and documents sit on the local Flysystem volume since 2f59ddd, and listing a
+# service compose no longer defines made this wait 60 s and abort on every launch.
+REQUIRED_SERVICES=(database mongodb php worker dashboard)
 
 missing_services() {
   local running missing=()
@@ -76,19 +76,19 @@ missing_services() {
   printf '%s\n' "${missing[@]:-}"
 }
 
-missing="$(missing_services)"
+# Always `up`, even when every service is running: a dev stack (`docker compose up -d`, no stage
+# overlay) runs APP_ENV=dev, and tunnelling it would publish the profiler. `up` is idempotent and
+# recreates only the containers whose configuration differs from the stage overlay.
+say "docker compose up (stage overlay)"
+compose up -d
+for _ in $(seq 1 60); do
+  missing="$(missing_services)"
+  [ -z "${missing// /}" ] && break
+  sleep 1
+done
 if [ -n "${missing// /}" ]; then
-  say "stack down (${missing//$'\n'/ }) — docker compose up"
-  compose up -d
-  for _ in $(seq 1 60); do
-    missing="$(missing_services)"
-    [ -z "${missing// /}" ] && break
-    sleep 1
-  done
-  if [ -n "${missing// /}" ]; then
-    echo "atelier: services never came up: ${missing//$'\n'/ }" >&2
-    exit 1
-  fi
+  echo "atelier: services never came up: ${missing//$'\n'/ }" >&2
+  exit 1
 fi
 say "stack up"
 

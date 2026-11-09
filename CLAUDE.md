@@ -28,6 +28,9 @@ existing session.
 
 Dev-only (no tunnel, no stage overlay): `cd api && docker compose up -d`.
 
+The stage overlay runs the Symfony kernel in `prod` (no profiler: the tunnel publishes the stack) with
+`var/cache` on tmpfs, so after a code change `docker compose restart php worker` is enough there.
+
 The three compose files layer, never replace: dropping `compose.override.yaml` from a stage launch
 yields a stack that boots but serves localhost-only `MCP_ALLOWED_HOSTS` / `CASDOOR_ISSUER`, which
 reads exactly like an OAuth failure.
