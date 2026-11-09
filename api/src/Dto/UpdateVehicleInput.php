@@ -5,31 +5,38 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class UpdateVehicleInput
 {
     #[ApiProperty(description: 'Target an existing vehicle by its @id (the IRI from list_vehicles, e.g. "/garage/vehicles/01J…") — the way to resolve an ambiguous_match: the update is applied straight to that row. When set, make/model are ignored.')]
+    #[Assert\Length(max: 200)]
     public ?string $vehicle = null;
 
     #[ApiProperty(description: 'Vehicle make, e.g. "TORO". Case-insensitive. Required unless vehicle is given.')]
+    #[Assert\Length(max: 100)]
     public ?string $make = null;
 
     #[ApiProperty(description: 'Vehicle model, e.g. "246-H". Case-insensitive. Required unless vehicle is given.')]
+    #[Assert\Length(max: 100)]
     public ?string $model = null;
 
     #[ApiProperty(description: 'Model year. Doubles as an identity hint AND, when set, is applied to the resolved vehicle.')]
     public ?int $year = null;
 
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['car', 'moto', 'cv', 'groundscare'], 'description' => 'Vehicle segment. Defaults to "car".'])]
+    #[Assert\Length(max: 100)]
     public string $vehicleType = 'car';
 
     #[ApiProperty(description: 'TecDoc kType (carId) of the vehicle, when known. Used to recognise the same vehicle stored under another model label.')]
     public ?int $carId = null;
 
     #[ApiProperty(description: 'Registration plate. Doubles as an identity hint AND, when set, is applied to the resolved vehicle.')]
+    #[Assert\Length(max: 32)]
     public ?string $plate = null;
 
     #[ApiProperty(description: 'VIN. Doubles as an identity hint AND, when set, is applied to the resolved vehicle.')]
+    #[Assert\Length(max: 32)]
     public ?string $vin = null;
 
     #[ApiProperty(description: 'Set true to create a NEW vehicle even though candidates were surfaced — i.e. you have judged it is genuinely a different vehicle. Defaults to false.')]
@@ -45,5 +52,6 @@ final class UpdateVehicleInput
     public ?bool $archived = null;
 
     #[ApiProperty(description: 'Engine/trim variant label, e.g. "2.0 16V Coupé", "1.9 TDI", "35S14" — the motorisation that pins the oil-grade variant. NEVER a fluid/oil grade.')]
+    #[Assert\Length(max: 200)]
     public ?string $engineVariant = null;
 }

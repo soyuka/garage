@@ -17,6 +17,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class EditMaintenanceInput
 {
     #[ApiProperty(description: 'REQUIRED. The @id of the maintenance record to edit — the IRI surfaced by get_maintenance_history (e.g. "/garage/maintenance-records/01J…"). The visit at that IRI is mutated in place; its identity (@id) is preserved.')]
+    #[Assert\Length(max: 200)]
     public ?string $record = null;
 
     /**
@@ -35,9 +36,11 @@ final class EditMaintenanceInput
         ],
         'description' => 'Replace the visit\'s line-items wholesale (one entry per service, each {type, optional parts}). Omit to keep the current items — supplying an empty array does NOT clear them.',
     ])]
+    #[Assert\Count(max: 30)]
     public array $items = [];
 
     #[ApiProperty(description: 'New visit label, e.g. "révision annuelle". Omit to leave unchanged.')]
+    #[Assert\Length(max: 200)]
     public ?string $label = null;
 
     #[ApiProperty(description: 'New service date, ISO 8601 (e.g. "2026-06-15"). Omit to leave unchanged.')]
@@ -51,14 +54,18 @@ final class EditMaintenanceInput
     public ?string $usageUnit = null;
 
     #[ApiProperty(description: 'New free-text notes. Omit to leave unchanged.')]
+    #[Assert\Length(max: 2000)]
     public ?string $notes = null;
 
     #[ApiProperty(description: 'New cost as a decimal string, e.g. "149.90". Pair with currency. Omit to leave unchanged.')]
+    #[Assert\Length(max: 32)]
     public ?string $cost = null;
 
     #[ApiProperty(description: 'ISO 4217 currency for cost, e.g. "EUR". Defaults to EUR when a cost is given.')]
+    #[Assert\Length(max: 32)]
     public ?string $currency = null;
 
     #[ApiProperty(description: 'Who did the work: "self" or the garage name. Omit to leave unchanged.')]
+    #[Assert\Length(max: 200)]
     public ?string $performedBy = null;
 }

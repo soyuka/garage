@@ -13,6 +13,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class VehicleSaveInput
 {
     #[ApiProperty(description: 'An existing vehicle @id (e.g. "/garage/vehicles/01J…"): that row is returned, its missing plate/carId/vin filled in. Resolves an ambiguous_match.')]
+    #[Assert\Length(max: 200)]
     public ?string $vehicle = null;
 
     #[ApiProperty(description: 'Vehicle make, e.g. "PEUGEOT". Required unless vehicle is given.')]

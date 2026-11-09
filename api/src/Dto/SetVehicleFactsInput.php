@@ -6,10 +6,12 @@ namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
 use App\Maintenance\VehicleFactWriter;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class SetVehicleFactsInput
 {
     #[ApiProperty(required: true, description: 'The vehicle @id (the IRI from list_vehicles, e.g. "/garage/vehicles/01J…").')]
+    #[Assert\Length(max: 200)]
     public string $vehicle;
 
     /**
@@ -31,5 +33,6 @@ final class SetVehicleFactsInput
         ],
         'description' => 'The facts to record. Each is {key, value, unit?, source, url?}. A key already on the vehicle is replaced; `verified` is derived from the source, never supplied.',
     ])]
+    #[Assert\Count(max: 100)]
     public array $facts;
 }

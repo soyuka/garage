@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Dashboard;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class RevealAssemblyInput
 {
@@ -15,5 +16,6 @@ final class RevealAssemblyInput
      * @var list<string>
      */
     #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Service-type keys to CALL OUT inside the diagram (e.g. ["fuel_filter"]) — they are drawn in the operator colour. They never filter the diagram: the whole circuit is always drawn, because "where does this part sit" is answered by what surrounds it. Omit to raise the diagram with nothing called out.'])]
+    #[Assert\Count(max: 50)]
     public array $partKeys = [];
 }

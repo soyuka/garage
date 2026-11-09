@@ -17,6 +17,7 @@ final class ServiceScheduleInput
 {
     #[Assert\NotBlank]
     #[ApiProperty(description: 'Service, snake_case: oil_change, oil_filter, air_filter, spark_plug, brakes, coolant, tires, inspection…')]
+    #[Assert\Length(max: 100)]
     public string $type = '';
 
     #[Assert\NotBlank]
@@ -25,6 +26,7 @@ final class ServiceScheduleInput
     public string $action = '';
 
     #[ApiProperty(description: 'Sub-part when one type splits, e.g. air filter "foam element" vs "paper cartridge". Part of the dedup key.')]
+    #[Assert\Length(max: 200)]
     public ?string $component = null;
 
     #[ApiProperty(description: 'Recur every N usage units (e.g. 50 for "every 50 h"). Pair with everyUsageUnit.')]
@@ -41,5 +43,6 @@ final class ServiceScheduleInput
     public ?int $firstUsageValue = null;
 
     #[ApiProperty(description: 'Source URL when the cadence came from a manual / web lookup.')]
+    #[Assert\Length(max: 2000)]
     public ?string $url = null;
 }

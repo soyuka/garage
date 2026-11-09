@@ -16,9 +16,11 @@ final class PlannedTaskInput
 {
     #[Assert\NotBlank]
     #[ApiProperty(description: 'Free-form service label (snake_case), e.g. "oil_change", "brakes", "timing_belt".')]
+    #[Assert\Length(max: 100)]
     public string $type = '';
 
     #[ApiProperty(description: 'Optional human label distinguishing two tasks of the same type, e.g. "plaquettes avant".')]
+    #[Assert\Length(max: 200)]
     public ?string $label = null;
 
     /** @var array{value: int, unit?: string|null}|null */
@@ -33,5 +35,6 @@ final class PlannedTaskInput
      * @var list<array{ref: string, label?: string, brand?: string, qty?: int}>
      */
     #[ApiProperty(description: 'Parts/fluids the task needs — the shopping list.')]
+    #[Assert\Count(max: 50)]
     public array $parts = [];
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 /**
  * The (optional) body of POST /garage/vehicles. The dashboard's "+ Ajouter" sends an empty object;
@@ -14,11 +15,14 @@ use ApiPlatform\Metadata\ApiProperty;
 final class VehicleCreateInput
 {
     #[ApiProperty(description: 'Optional make to pre-fill; defaults to a placeholder the user edits.')]
+    #[Assert\Length(max: 100)]
     public ?string $make = null;
 
     #[ApiProperty(description: 'Optional model to pre-fill.')]
+    #[Assert\Length(max: 100)]
     public ?string $model = null;
 
     #[ApiProperty(description: 'Vehicle segment: "car", "motorcycle", "cv" or "groundscare". Defaults to "car".')]
+    #[Assert\Length(max: 100)]
     public ?string $vehicleType = null;
 }

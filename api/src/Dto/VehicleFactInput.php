@@ -17,12 +17,15 @@ final class VehicleFactInput
 {
     #[Assert\NotBlank]
     #[ApiProperty(description: 'Fact key, e.g. "oil_capacity", "oil_type", "coolant".')]
+    #[Assert\Length(max: 100)]
     public string $key = '';
 
     #[Assert\NotBlank]
     #[ApiProperty(description: 'The value, e.g. "4.3" or "ACEA A5/B5".')]
+    #[Assert\Length(max: 2000)]
     public string $value = '';
 
     #[ApiProperty(description: 'Optional unit for a quantity, e.g. "L". Omit for a spec string.')]
+    #[Assert\Length(max: 100)]
     public ?string $unit = null;
 }

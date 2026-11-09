@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class NarrowPartsInput
 {
@@ -18,6 +19,7 @@ final class NarrowPartsInput
     public string $carType = 'PC';
 
     #[ApiProperty(description: 'The car\'s make as spelled by lookup_plate (e.g. "MAZDA"). Optional: it lets the car\'s own OE numbers be recognised even when the makes list spells the brand differently.')]
+    #[Assert\Length(max: 100)]
     public ?string $make = null;
 
     #[ApiProperty(description: 'TecDoc product group id from productGroups, when a previous call answered groupRequired: true')]

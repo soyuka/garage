@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto\Dashboard;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class FocusViewInput
 {
@@ -15,5 +16,6 @@ final class FocusViewInput
      * @var list<string>
      */
     #[ApiProperty(schema: ['type' => 'array', 'items' => ['type' => 'string'], 'description' => 'Service-type or fact keys to spotlight (e.g. ["oil_change"]); each lights its body region on the car. Omit to just raise the panel.'])]
+    #[Assert\Count(max: 50)]
     public array $keys = [];
 }

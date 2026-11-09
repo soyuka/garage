@@ -37,15 +37,18 @@ final class MaintenanceRecordInput
         ],
         'description' => 'The services covered by this visit, each {type, optional parts}. Preferred over the single "type" field.',
     ])]
+    #[Assert\Count(max: 30)]
     public array $items = [];
 
     #[ApiProperty(description: 'Legacy single-service shorthand (snake_case type) — use "items" for a multi-service visit.')]
+    #[Assert\Length(max: 100)]
     public ?string $type = null;
 
     /**
      * @var list<array{ref?: string, brand?: string, label?: string, qty?: int}>
      */
     #[ApiProperty(description: 'Legacy: parts/fluids used, paired with the single "type" field.')]
+    #[Assert\Count(max: 50)]
     public array $partsUsed = [];
 
     #[ApiProperty(description: 'Date the service was performed (YYYY-MM-DD). Required on create; on edit, omit to keep the current date.')]
@@ -53,6 +56,7 @@ final class MaintenanceRecordInput
     public string $performedAt = '';
 
     #[ApiProperty(description: 'Optional human label, e.g. "vidange annuelle".')]
+    #[Assert\Length(max: 200)]
     public ?string $label = null;
 
     #[ApiProperty(description: 'Odometer/engine-hours reading at service time.')]
@@ -62,15 +66,18 @@ final class MaintenanceRecordInput
     public ?string $usageUnit = null;
 
     #[ApiProperty(description: 'Free-text notes about the work.')]
+    #[Assert\Length(max: 2000)]
     public ?string $notes = null;
 
     #[ApiProperty(description: 'Cost in major units (e.g. 89.90 for €89.90).')]
     public ?float $cost = null;
 
     #[ApiProperty(description: 'ISO currency of the cost, e.g. "EUR". Defaults to EUR when a cost is given.')]
+    #[Assert\Length(max: 32)]
     public ?string $currency = null;
 
     #[ApiProperty(description: 'Who performed the work (garage name, "moi-même"…).')]
+    #[Assert\Length(max: 200)]
     public ?string $performedBy = null;
 
     /**

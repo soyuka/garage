@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class ServicePartsInput
 {
@@ -18,5 +19,6 @@ final class ServicePartsInput
         description: 'The maintenance service to bundle parts for.',
         schema: ['type' => 'string', 'enum' => ['oil_change', 'filters', 'brakes', 'spark_plugs']],
     )]
+    #[Assert\Length(max: 100)]
     public string $service;
 }

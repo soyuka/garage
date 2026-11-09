@@ -10,27 +10,33 @@ use Symfony\Component\Validator\Constraints as Assert;
 final class LogMaintenanceInput
 {
     #[ApiProperty(description: 'Target an existing vehicle by its @id (the IRI from list_vehicles, e.g. "/garage/vehicles/01J…") — the way to resolve an ambiguous_match: the record is appended to that row. When set, make/model are ignored.')]
+    #[Assert\Length(max: 200)]
     public ?string $vehicle = null;
 
     #[ApiProperty(description: 'Vehicle make, e.g. "TORO", "IVECO". Case-insensitive. Required unless vehicle is given.')]
+    #[Assert\Length(max: 100)]
     public ?string $make = null;
 
     #[ApiProperty(description: 'Vehicle model, e.g. "246-H", "DAILY". Case-insensitive. Required unless vehicle is given.')]
+    #[Assert\Length(max: 100)]
     public ?string $model = null;
 
     #[ApiProperty(description: 'Model year, when known.')]
     public ?int $year = null;
 
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['car', 'moto', 'cv', 'groundscare'], 'description' => 'Vehicle segment. Defaults to "car".'])]
+    #[Assert\Length(max: 100)]
     public string $vehicleType = 'car';
 
     #[ApiProperty(description: 'TecDoc kType (carId) of the vehicle, when known. Stored on the vehicle and used to recognise the same vehicle stored under another model label.')]
     public ?int $carId = null;
 
     #[ApiProperty(description: 'Registration plate, when known. Stored on the vehicle and used to recognise the same vehicle.')]
+    #[Assert\Length(max: 32)]
     public ?string $plate = null;
 
     #[ApiProperty(description: 'VIN, when known. Stored on the vehicle and used to recognise the same vehicle.')]
+    #[Assert\Length(max: 32)]
     public ?string $vin = null;
 
     #[ApiProperty(description: 'Set true to log against a NEW vehicle even though candidates were surfaced — i.e. you have judged it is genuinely a different vehicle. Defaults to false.')]
@@ -53,9 +59,11 @@ final class LogMaintenanceInput
         ],
         'description' => 'REQUIRED. The services covered by ONE visit, in the field named exactly "items" (NOT partsUsed/parts/services) — one entry per service, each {type, optional parts}. A vidange that changed oil AND the oil filter is a SINGLE call with TWO items ([{"type":"oil_change"},{"type":"oil_filter","parts":[{"ref":"W 712/73"}]}]), never two calls. A service with no recorded part is still an item, e.g. [{"type":"air_filter"}].',
     ])]
+    #[Assert\Count(max: 30)]
     public array $items = [];
 
     #[ApiProperty(description: 'Optional label for the whole visit, e.g. "révision annuelle".')]
+    #[Assert\Length(max: 200)]
     public ?string $label = null;
 
     #[ApiProperty(description: 'Date the work was performed, ISO 8601 (e.g. "2026-06-15"). Optional — omit it for work just done ("je viens de faire la vidange") and it defaults to today.')]
@@ -69,20 +77,25 @@ final class LogMaintenanceInput
     public ?string $usageUnit = null;
 
     #[ApiProperty(description: 'Free-text notes about the service.')]
+    #[Assert\Length(max: 2000)]
     public ?string $notes = null;
 
     #[ApiProperty(description: 'Cost of the work as a decimal string, e.g. "89.90". Pair with currency.')]
+    #[Assert\Length(max: 32)]
     public ?string $cost = null;
 
     #[ApiProperty(description: 'ISO 4217 currency code for cost, e.g. "EUR".')]
+    #[Assert\Length(max: 32)]
     public ?string $currency = null;
 
     #[ApiProperty(description: 'Who did the work: "self" or the name of the garage that performed it.')]
+    #[Assert\Length(max: 200)]
     public ?string $performedBy = null;
 
     #[ApiProperty(schema: ['type' => 'string', 'enum' => ['user', 'llm', 'web'], 'description' => 'Where the record came from. Defaults to "user" (the owner did/knows it — ground truth).'])]
     public string $source = 'user';
 
     #[ApiProperty(description: 'Who/what added the record (optional attribution).')]
+    #[Assert\Length(max: 200)]
     public ?string $addedBy = null;
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use Symfony\Component\Validator\Constraints as Assert;
 
 final class CarsInput
 {
@@ -27,5 +28,6 @@ final class CarsInput
     public ?string $fuel = null;
 
     #[ApiProperty(description: 'Case-insensitive substring match on the version name or full model name, e.g. "GGES", "Sedan".')]
+    #[Assert\Length(max: 200)]
     public ?string $search = null;
 }
