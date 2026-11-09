@@ -29,6 +29,11 @@ framework:
                     # worker's first frame IS the operator's feedback, so bound the miss at 2 s; the
                     # cost is one indexed SELECT every 2 s on an idle worker.
                     check_delayed_interval: 2000
+                # A turn is never replayed: a retry would repeat its garage writes and its LLM spend.
+                # The handler already throws UnrecoverableMessageHandlingException; this also covers a
+                # failure outside it. Dead letters still land on `failed`.
+                retry_strategy:
+                    max_retries: 0
             failed: '%env(MESSENGER_FAILED_TRANSPORT_DSN)%'
             # AGENT_TURN_DISPATCH=terminate runs the turn on this transport (TransportNamesStamp), in
             # kernel.terminate of the request: no queue, no worker.

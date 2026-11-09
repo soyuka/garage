@@ -37,8 +37,8 @@ use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
  *
  * The turn streams (`stream: true`). A non-stream Anthropic call holds the connection until the
  * whole message is built, so a long turn (web_search + Motul + plan_maintenance) overruns Symfony
- * HttpClient's idle timeout (default_socket_timeout, 60s) — the request is killed, the turn retried
- * three times and dead-lettered, and the dashboard never gets a render intent. Streaming keeps bytes
+ * HttpClient's idle timeout (default_socket_timeout, 60s) — the request is killed, the turn
+ * dead-lettered, and the dashboard never gets a render intent. Streaming keeps bytes
  * flowing (token deltas + pings), so the idle timer never trips regardless of turn length.
  *
  * A StreamResult is lazy: the tool loop and the render-intent Mercure publishes only run as the
@@ -139,16 +139,16 @@ final readonly class RunAgentTurnHandler
 
             throw new UnrecoverableMessageHandlingException('Garage turn did not converge.', previous: $e);
         } catch (\Throwable $e) {
-            // Any other failure inside the loop: record it on the journal, then let it propagate so
-            // Messenger applies its retry policy unchanged.
+            // Any other failure: journal it and dead-letter it without a retry, as the terminate mode
+            // does. A replay would repeat the turn's garage writes and its LLM spend.
             $status = AgentTurnStatus::Failed;
             $error = $e;
 
-            throw $e;
+            throw new UnrecoverableMessageHandlingException('Garage turn failed.', previous: $e);
         } finally {
             $this->bonnerefToken->reset();
-            // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike,
-            // even if Messenger is about to retry — or the UI would stay stuck in the busy state.
+            // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike —
+            // or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);
             // Unbind now rather than on kernel.reset: nothing else this thread runs after the turn
             // (a second deferred turn, a terminate listener) may publish or write as this owner.
