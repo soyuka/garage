@@ -5,6 +5,8 @@
 #   storage  — bill and document binaries referenced by Mongo records (local adapter, /app/var/storage)
 # Logical dumps, not a volume tar: portable across engine versions and inspectable.
 set -euo pipefail
+# The dumps hold every owner's garage, bills and the Messenger queue (bearer tokens included): owner-only.
+umask 077
 
 cd "$(dirname "$0")/.."
 

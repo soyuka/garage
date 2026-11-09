@@ -40,3 +40,11 @@ prompt.md
 /blueprint-experiment/
 /.impeccable/
 /bonneref/src/.impeccable/
+
+# Data dumps and local databases, wherever they land (api/bin/backup writes outside the repo by
+# default; this catches an MPA_BACKUP_DIR pointed inside it, or a stray mongodump).
+*.sqlite
+*.bson
+*.archive.gz
+dumps/
+backups/
