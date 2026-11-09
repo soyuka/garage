@@ -54,7 +54,7 @@ final class BonnerefForwardingTest extends AppTestCase
         $container->set('ai.platform.anthropic', $this->callingListPartCategories());
 
         $client->request('POST', '/agent/turn', [
-            'headers' => self::authHeaders(),
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/json'],
             'json' => ['instruction' => 'Quelles catégories de pièces ?', 'sessionId' => 'sess-posted-token'],
         ]);
 

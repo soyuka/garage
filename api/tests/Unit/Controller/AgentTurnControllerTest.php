@@ -9,6 +9,7 @@ use App\Agent\Ui\DashboardChannel;
 use App\Agent\WebSearch\WebSearchBackend;
 use App\Capability\Capabilities;
 use App\Controller\AgentTurnController;
+use App\Dto\AgentTurnInput;
 use App\Message\RunAgentTurn;
 use App\Security\OwnerContext;
 use PHPUnit\Framework\TestCase;
@@ -27,6 +28,8 @@ use Symfony\Component\Security\Core\User\UserInterface;
  */
 final class AgentTurnControllerTest extends TestCase
 {
+    private const array TURN = ['instruction' => 'Quoi prévoir ?', 'sessionId' => 'sess-1'];
+
     /** @var list<RunAgentTurn> */
     private array $dispatched = [];
 
@@ -36,13 +39,13 @@ final class AgentTurnControllerTest extends TestCase
         // request host (unreliable behind the proxy), and is bound to the owner. Trailing slash is
         // normalised.
         $controller = $this->controller('owner-sub', baseUri: 'https://app.example/');
-        $response = $controller($this->request([
+        $response = $this->send($controller, [
             'instruction' => 'Quoi prévoir pour mon entretien ?',
             'sessionId' => 'sess-1',
             'selectedId' => '/garage/vehicles/01J',
             'summary' => 'Mazda6 à 250000 km',
             'pendingContext' => 'Reco huile — quel moteur ?',
-        ]));
+        ]);
 
         $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
         $this->assertCount(1, $this->dispatched);
@@ -57,20 +60,12 @@ final class AgentTurnControllerTest extends TestCase
         $this->assertSame('Reco huile — quel moteur ?', $dispatched->pendingContext);
     }
 
-    public function testRejectsMissingFieldsWithoutDispatching(): void
-    {
-        $response = $this->controller('owner-sub')($this->request(['instruction' => '']));
-
-        $this->assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
-        $this->assertSame([], $this->dispatched);
-    }
-
     public function testRefusesATurnOverTheOwnersLimitWithoutDispatching(): void
     {
         $limiter = $this->limiter(1);
 
-        $this->assertSame(Response::HTTP_ACCEPTED, $this->controller('owner-sub', $limiter)($this->turn())->getStatusCode());
-        $response = $this->controller('owner-sub', $limiter)($this->turn());
+        $this->assertSame(Response::HTTP_ACCEPTED, $this->send($this->controller('owner-sub', $limiter), self::TURN)->getStatusCode());
+        $response = $this->send($this->controller('owner-sub', $limiter), self::TURN);
 
         $this->assertSame(Response::HTTP_TOO_MANY_REQUESTS, $response->getStatusCode());
         $retryAfter = $response->headers->get('Retry-After');
@@ -84,21 +79,11 @@ final class AgentTurnControllerTest extends TestCase
     {
         $limiter = $this->limiter(1);
 
-        $this->controller('first@example.com', $limiter)($this->turn());
-        $response = $this->controller('second@example.com', $limiter)($this->turn());
+        $this->send($this->controller('first@example.com', $limiter), self::TURN);
+        $response = $this->send($this->controller('second@example.com', $limiter), self::TURN);
 
         $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
         $this->assertCount(2, $this->dispatched);
-    }
-
-    public function testAnInvalidRequestDoesNotSpendTheBudget(): void
-    {
-        $limiter = $this->limiter(1);
-
-        $this->controller('owner-sub', $limiter)($this->request(['instruction' => '']));
-        $response = $this->controller('owner-sub', $limiter)($this->turn());
-
-        $this->assertSame(Response::HTTP_ACCEPTED, $response->getStatusCode());
     }
 
     private function controller(string $owner, ?RateLimiterFactoryInterface $limiter = null, string $baseUri = 'https://app.example'): AgentTurnController
@@ -141,21 +126,11 @@ final class AgentTurnControllerTest extends TestCase
         return $security;
     }
 
-    private function turn(): Request
-    {
-        return $this->request(['instruction' => 'Quoi prévoir ?', 'sessionId' => 'sess-1']);
-    }
-
     /**
-     * @param array<string, mixed> $payload
+     * @param array<string, string> $payload
      */
-    private function request(array $payload): Request
+    private function send(AgentTurnController $controller, array $payload): Response
     {
-        return Request::create(
-            '/agent/turn',
-            'POST',
-            server: ['HTTP_HOST' => 'localhost'],
-            content: json_encode($payload, \JSON_THROW_ON_ERROR),
-        );
+        return $controller(Request::create('/agent/turn', 'POST', server: ['HTTP_HOST' => 'localhost']), new AgentTurnInput(...$payload));
     }
 }

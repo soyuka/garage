@@ -9,12 +9,14 @@ use App\Agent\Ui\DashboardChannel;
 use App\Bonneref\BonnerefToken;
 use App\Capability\Capabilities;
 use App\Capability\Capability;
+use App\Dto\AgentTurnInput;
 use App\I18n\Locale;
 use App\Message\RunAgentTurn;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Attribute\MapRequestPayload;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
@@ -49,24 +51,14 @@ final readonly class AgentTurnController
     }
 
     #[Route('/agent/turn', name: 'agent_turn', methods: ['POST'])]
-    public function __invoke(Request $request): Response
-    {
+    public function __invoke(
+        Request $request,
+        #[MapRequestPayload(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
+        AgentTurnInput $input,
+    ): Response {
         // No Anthropic key: nothing would run the turn. Refused before the rate limiter spends a slot.
         if (!$this->capabilities->has(Capability::Agent)) {
             return new JsonResponse(['error' => 'agent not configured'], Response::HTTP_SERVICE_UNAVAILABLE);
-        }
-
-        $payload = json_decode($request->getContent() ?: '{}', true);
-        $payload = \is_array($payload) ? $payload : [];
-
-        $instruction = trim((string) ($payload['instruction'] ?? ''));
-        $sessionId = trim((string) ($payload['sessionId'] ?? ''));
-
-        if ('' === $instruction || '' === $sessionId) {
-            return new JsonResponse(['error' => 'instruction and sessionId are required'], Response::HTTP_BAD_REQUEST);
-        }
-        if (1 !== preg_match(DashboardChannel::SESSION_ID_PATTERN, $sessionId)) {
-            return new JsonResponse(['error' => 'sessionId must be 1-128 of [A-Za-z0-9_-]'], Response::HTTP_BAD_REQUEST);
         }
 
         // The firewall (access_control ^/agent/turn) guarantees an authenticated user here, so the
@@ -86,12 +78,12 @@ final readonly class AgentTurnController
         }
 
         $this->turns->dispatch(new RunAgentTurn(
-            instruction: $instruction,
-            sessionTopic: $this->channel->sessionTopic($owner, $sessionId),
+            instruction: trim($input->instruction),
+            sessionTopic: $this->channel->sessionTopic($owner, $input->sessionId),
             owner: $owner,
-            selectedId: trim((string) ($payload['selectedId'] ?? '')),
-            summary: trim((string) ($payload['summary'] ?? '')),
-            pendingContext: trim((string) ($payload['pendingContext'] ?? '')),
+            selectedId: trim($input->selectedId ?? ''),
+            summary: trim($input->summary ?? ''),
+            pendingContext: trim($input->pendingContext ?? ''),
             // Not a payload field: the browser already announces its language on the request, so the
             // dashboard's choice arrives for free (framework.yaml `set_locale_from_accept_language`).
             locale: Locale::resolve($request->getLocale())->value,

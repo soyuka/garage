@@ -86,7 +86,7 @@ final class CapabilitiesTest extends AppTestCase
         $this->assertFalse($client->getResponse()->toArray()['capabilities']['agent']);
 
         $client->request('POST', '/agent/turn', [
-            'headers' => static::authHeaders(),
+            'headers' => static::authHeaders() + ['Content-Type' => 'application/json'],
             'json' => ['instruction' => 'Liste mes véhicules', 'sessionId' => 'sess-no-key'],
         ]);
 
