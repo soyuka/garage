@@ -20,6 +20,7 @@ use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Result\ToolCallResult;
+use Symfony\Component\HttpClient\Exception\TransportException;
 
 /**
  * A turn is otherwise stateless — nothing about it survives the worker. The journal persists one
@@ -70,6 +71,49 @@ final class AgentTurnJournalTest extends AppTestCase
         self::assertCount(1, $toolCalls, 'the toast tool call must be journalled');
         self::assertSame('toast', $toolCalls[0]->getName());
         self::assertSame('Viscosité 5W-30.', $toolCalls[0]->getArguments()['message']);
+    }
+
+    public function testAFailedToolCallJournalsItsPublicErrorTextNeverTheRawCause(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+        $leak = 'connect to http://bonneref:8444 with Bearer s3cr3t-token';
+        static::bonneref()->route('/vehicles/TT000TT', new TransportException($leak));
+
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static function ($model, $input): ToolCallResult|string {
+            $executed = 0;
+            foreach ($input instanceof MessageBag ? $input->getMessages() : [] as $message) {
+                if ($message instanceof ToolCallMessage) {
+                    ++$executed;
+                }
+            }
+
+            return match ($executed) {
+                0 => new ToolCallResult([
+                    new ToolCall('c1', 'lookup_plate', ['plate' => 'TT-000-TT']),
+                    new ToolCall('c2', 'focus_view', ['panel' => 's3cr3t-panel']),
+                ]),
+                default => 'Fait.',
+            };
+        }));
+
+        $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+            instruction: 'Cherche la plaque TT-000-TT',
+            sessionTopic: 'https://localhost/agent/sessions/sess-tool-fail',
+            owner: self::TEST_OWNER,
+        ));
+
+        $results = [];
+        foreach ($container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10)[0]->getToolCalls() as $call) {
+            $results[$call->getName()] = $call->getResult();
+        }
+        self::assertStringStartsWith('upstream_unavailable', (string) json_decode($results['lookup_plate'], true)['content'][0]['text']);
+        self::assertSame('An error occurred while executing tool "focus_view".', $results['focus_view']);
+
+        $body = $client->request('GET', '/agent/turns', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->getContent();
+        foreach (['s3cr3t', 'bonneref:8444', 'Bearer'] as $secret) {
+            self::assertStringNotContainsString($secret, str_replace('s3cr3t-panel', '', $body));
+        }
     }
 
     public function testAFailedTurnJournalsAPublicMessageAndLogsTheCauseUnderItsId(): void

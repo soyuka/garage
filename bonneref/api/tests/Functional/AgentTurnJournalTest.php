@@ -13,6 +13,7 @@ use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\MessageHandler\RunAgentTurnHandler;
 use App\Repository\AgentTurnRepository;
+use App\Tests\Mock\FixtureHttpClient;
 use App\Tests\Mock\RecordingLogger;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -71,6 +72,48 @@ final class AgentTurnJournalTest extends AppTestCase
         self::assertCount(1, $toolCalls, 'the show_parts tool call must be journalled');
         self::assertSame('show_parts', $toolCalls[0]->getName());
         self::assertSame(100259, $toolCalls[0]->getArguments()['categoryId']);
+    }
+
+    public function testAFailedToolCallJournalsItsPublicErrorTextNeverTheRawCause(): void
+    {
+        $client = static::createClient();
+        $container = static::getContainer();
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static function ($model, $input): ToolCallResult|string {
+            $executed = 0;
+            foreach ($input instanceof MessageBag ? $input->getMessages() : [] as $message) {
+                if ($message instanceof ToolCallMessage) {
+                    ++$executed;
+                }
+            }
+
+            return match ($executed) {
+                0 => new ToolCallResult([
+                    new ToolCall('c1', 'lookup_plate', ['plate' => FixtureHttpClient::TIMEOUT_PLATE]),
+                    new ToolCall('c2', 'show_parts', ['categoryId' => 's3cr3t', 'categoryLabel' => 'x', 'rationale' => 'x']),
+                ]),
+                default => 'Fait.',
+            };
+        }));
+
+        $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+            instruction: 'Cherche la plaque',
+            sessionTopic: 'https://localhost/agent/sessions/sess-tool-fail',
+            owner: self::TEST_OWNER,
+            vehicle: new FinderVehicle(19107),
+        ));
+
+        $results = [];
+        foreach ($container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10)[0]->getToolCalls() as $call) {
+            $results[$call->getName()] = $call->getResult();
+        }
+        self::assertStringStartsWith('upstream_unavailable', (string) json_decode($results['lookup_plate'], true)['content'][0]['text']);
+        self::assertStringStartsWith('Invalid value for parameter "categoryId"', $results['show_parts']);
+        self::assertStringNotContainsString('s3cr3t', $results['show_parts']);
+
+        $body = $client->request('GET', '/agent/turns', ['headers' => self::authHeaders() + ['Accept' => 'application/ld+json']])->getContent();
+        foreach (['Idle timeout', '/plaque', 'must be of type'] as $secret) {
+            self::assertStringNotContainsString($secret, $body);
+        }
     }
 
     public function testAFailedTurnJournalsAPublicMessageAndLogsTheCauseUnderItsId(): void
