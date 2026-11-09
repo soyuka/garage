@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent;
 
+use Symfony\Contracts\Service\ResetInterface;
+
 /**
  * Carries the vehicle the dashboard currently has SELECTED into the in-process MCP tool pipeline,
  * which does not thread it explicitly. The agent already sees the selected @id in its turn context,
@@ -14,13 +16,18 @@ namespace App\Agent;
  * Singleton in the consume worker, so {@see set()} (the selected @id from the turn message) is bound
  * per turn by {@see \App\MessageHandler\RunAgentTurnHandler}; null when no vehicle is selected.
  */
-final class SelectedVehicleContext
+final class SelectedVehicleContext implements ResetInterface
 {
     private ?string $iri = null;
 
     public function set(?string $iri): void
     {
         $this->iri = '' !== $iri ? $iri : null;
+    }
+
+    public function reset(): void
+    {
+        $this->iri = null;
     }
 
     public function current(): ?string

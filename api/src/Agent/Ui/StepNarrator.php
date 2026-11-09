@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use Symfony\Contracts\Service\ResetInterface;
+
 /**
  * Tells the dashboard which tool the agent is running, so its step chip, running action and orb can
  * key on it. It publishes the tool key alone, never a sentence: the ticker carries only what the model
@@ -16,7 +18,7 @@ namespace App\Agent\Ui;
  * checks {@see wasAnnounced()} so the execute-time path signals only a call the stream never announced
  * (a bridge that emits no `ToolCallStart`), and an already-published `narrate_step` is not run twice.
  */
-final class StepNarrator
+final class StepNarrator implements ResetInterface
 {
     /**
      * The tools that raise a step chip — the dashboard's `CHIP` table (`dashboard/src/noyau/state.ts`)
@@ -78,7 +80,6 @@ final class StepNarrator
         return isset($this->announced[$toolCallId]);
     }
 
-    /** Called once per turn by {@see \App\MessageHandler\RunAgentTurnHandler}: a long-lived singleton in the worker. */
     public function reset(): void
     {
         $this->announced = [];

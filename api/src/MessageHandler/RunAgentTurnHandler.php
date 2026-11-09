@@ -11,10 +11,7 @@ use App\Agent\TurnCancellations;
 use App\Agent\TurnContextBuilder;
 use App\Agent\TurnSettlement;
 use App\Agent\Ui\RenderIntentTools;
-use App\Agent\Ui\RepeatedToolFailureGuard;
-use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
-use App\Agent\WebSearchBudget;
 use App\Bonneref\BonnerefToken;
 use App\Entity\AgentTurnStatus;
 use App\I18n\AgentMessages;
@@ -56,10 +53,7 @@ final readonly class RunAgentTurnHandler
     public function __construct(
         private AgentInterface $garage,
         private RenderIntentTools $renderTools,
-        private WebSearchBudget $webSearchBudget,
-        private RepeatedToolFailureGuard $repeatedToolFailureGuard,
         private TurnActivityTracker $activityTracker,
-        private StepNarrator $stepNarrator,
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
@@ -87,8 +81,7 @@ final readonly class RunAgentTurnHandler
         $locale = Locale::resolve($message->locale);
         $this->locale->set($locale);
         $messages = AgentMessages::for($locale);
-        // Carry the dashboard's selected vehicle so list_vehicles floats it first (singleton in the
-        // worker — bound each turn, empty when nothing is selected).
+        // Carry the dashboard's selected vehicle so list_vehicles floats it first.
         $this->selectedVehicle->set($message->selectedId);
         $this->renderTools->bindSession($message->sessionTopic);
         // Drop any stale cancel flag before the turn starts: a cancel that arrived after the previous
@@ -97,18 +90,9 @@ final readonly class RunAgentTurnHandler
         if (null !== ($sessionId = $this->renderTools->sessionId())) {
             $this->cancellations->clear($sessionId);
         }
-        // Fresh per-turn web_search allowance — the budget service is a long-lived singleton in the
-        // worker, so a prior turn's spend must not leak into this one.
-        $this->webSearchBudget->reset();
-        // Fresh per-turn loop-failure tally — singleton in the worker, so a prior turn's stuck calls
-        // must not count against this one.
-        $this->repeatedToolFailureGuard->reset();
-        // Reset the per-turn activity tracker so a no-op turn (prose exit, nothing rendered/written) is
-        // detected against THIS turn only.
-        $this->activityTracker->reset();
-        // Fresh per-turn announced-id memory — singleton in the worker, so a prior turn's tool-call
-        // ids (which EarlyStepNarrationListener records early) must not suppress this turn's step frames.
-        $this->stepNarrator->reset();
+        // Every other per-turn holder (web_search budget, failure guard, activity tracker, narrator,
+        // journal) is a ResetInterface service: kernel.reset clears it after each worker message and
+        // before each request, so a turn run in kernel.terminate starts clean too.
         $context = $this->contextBuilder->build($message);
         // Open the debug journal for this turn. The context handed to the LLM is captured verbatim, so
         // the journal records exactly what the model saw (instruction + inlined facts/tasks).
@@ -166,6 +150,12 @@ final readonly class RunAgentTurnHandler
             // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike,
             // even if Messenger is about to retry — or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);
+            // Unbind now rather than on kernel.reset: nothing else this thread runs after the turn
+            // (a second deferred turn, a terminate listener) may publish or write as this owner.
+            $this->renderTools->bindSession(null);
+            $this->owner->set(null);
+            $this->locale->set(null);
+            $this->selectedVehicle->set(null);
         }
     }
 }

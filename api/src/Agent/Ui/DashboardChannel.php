@@ -6,6 +6,7 @@ namespace App\Agent\Ui;
 
 use App\Security\OwnerContext;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Resolves WHERE a render intent is published — the one seam that knows the dashboard has two
@@ -23,7 +24,7 @@ use Symfony\Component\DependencyInjection\Attribute\Autowire;
  * owner's render intents off somebody else's EventSource. Derived (not stored) so the worker, the
  * HTTP layer and the MCP endpoint all agree without a lookup.
  */
-final class DashboardChannel
+final class DashboardChannel implements ResetInterface
 {
     /** A browser-chosen session id: no separator, no path segment, bounded. */
     public const string SESSION_ID_PATTERN = '/^[A-Za-z0-9_-]{1,128}$/D';
@@ -43,6 +44,11 @@ final class DashboardChannel
     public function bindSession(?string $sessionTopic): void
     {
         $this->sessionTopic = $sessionTopic;
+    }
+
+    public function reset(): void
+    {
+        $this->sessionTopic = null;
     }
 
     /**

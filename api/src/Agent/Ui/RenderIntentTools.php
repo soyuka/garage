@@ -10,6 +10,7 @@ use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Contracts\Service\ResetInterface;
 use Webmozart\Assert\Assert;
 
 /**
@@ -31,7 +32,7 @@ use Webmozart\Assert\Assert;
 #[AsTool('narrate_step', "Say what you are ABOUT to do, in ONE clause of at most 100 characters, first person, present tense, in the turn's language: 'Je relis le carnet…', 'Je compare les marques…'. Call it BEFORE a step worth saying (a catalogue search, a web search that will take a while), never after it, and not before every call: a quick read needs no line. It writes the live line on the orb, and when the operator has the audition on that line is SPOKEN — so it is where you choose the words the workshop says out loud. It is the ONLY sentence the ticker shows while you work: a tool you run without it shows as a silent step chip, with no generic line. It is NOT a toast: it does not outlive the step and it never carries the answer.", 'narrateStep')]
 #[AsTool('reveal_assembly', 'Look INSIDE the car: ghost the shell to a wireframe and raise that region\'s schematic assembly under it, camera descending over the part. Use it when the answer is about a component the closed body hides — "quelle piece je commande ?", "ou est le filtre a carburant ?" — where a spec panel names the part but never shows where it lives. region is "hood" (the engine: oil, plugs, coolant), "bay" (around it: air/fuel filters, battery), "windshield" (cabin front: wipers, cabin filter), "frontAxle"/"rearAxle" (that axle\'s brakes and wheel). partKeys CALL OUT parts of the diagram in the operator colour (e.g. ["fuel_filter"]) — they never filter it: the whole circuit is always drawn, because what surrounds a part is how the operator finds it. It is a DIAGRAM of that kind of assembly, not a scan of this car, so never claim it depicts their specific engine. Releasing the camera ("vue libre", Escape) puts the shell back.', 'revealAssembly')]
 #[AsTool('propose_actions', 'Render a call-to-action card: headline is a short title for the card (≤ 6 words) — never a sentence, never a restatement of finding. finding is an optional spoken answer (e.g. "Trouvé en ligne, une vidange et une courroie.") — two short sentences max, ≤200 characters, it is read aloud; summarise, never paste a paragraph. It is SPOKEN ALOUD instead of headline, same plain-sentence rule as toast (full text in the agent system prompt) — when a turn ends here, the answer lives in finding and must NOT also be toasted. Then a few next-step buttons. Each button is ONE of two kinds. (1) NL follow-up: set "instruction" — clicking re-runs you with that text. (2) Deterministic write: set "taskId" (an open task id from the turn context) + "parts" [{ref, brand, label}] — clicking merges those parts onto that task via a direct PATCH, NO new turn, and the shopping list re-renders. ALWAYS prefer kind (2) for "add this reference" choices, and include one button that adds the recommended refs at once. Never offer a dead-end "see all options" button.', 'proposeActions')]
-final class RenderIntentTools
+final class RenderIntentTools implements ResetInterface
 {
     /**
      * The car regions the client can point inside of — the single server-side copy of the vocabulary in
@@ -53,13 +54,19 @@ final class RenderIntentTools
     }
 
     /**
-     * Binds the per-turn session topic. Called by {@see \App\MessageHandler\RunAgentTurnHandler}
-     * before the agent runs; a turn is one message, so there is no cross-turn bleed. Unbound (an MCP
-     * pilot call), the intents go to the owner's pilot topic — see {@see DashboardChannel}.
+     * Binds the per-turn session topic for the length of a turn; null unbinds. The worker and the
+     * terminate-mode request thread outlive the turn, so the handler unbinds in `finally` and
+     * kernel.reset clears what is left. Unbound (an MCP pilot call), the intents go to the owner's
+     * pilot topic — see {@see DashboardChannel}.
      */
-    public function bindSession(string $sessionTopic): void
+    public function bindSession(?string $sessionTopic): void
     {
         $this->channel->bindSession($sessionTopic);
+    }
+
+    public function reset(): void
+    {
+        $this->pendingToast = null;
     }
 
     /** @see DashboardChannel::sessionId() */

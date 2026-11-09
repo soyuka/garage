@@ -9,6 +9,7 @@ use Mcp\Schema\Result\CallToolResult;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Aborts a turn when the agent retries the SAME failing tool call too many times — the targeted
@@ -21,11 +22,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * CallToolResult itself). A different argument set, or a success, resets nothing but counts under its
  * own signature, so only true repetition accumulates.
  *
- * Singleton in the consume worker, so {@see reset()} is called per turn by
- * {@see \App\MessageHandler\RunAgentTurnHandler} — otherwise counts would leak across turns.
+ * Singleton in the consume worker: kernel.reset clears it between turns, or counts would leak across them.
  */
 #[AsEventListener(event: ToolCallsExecuted::class)]
-final class RepeatedToolFailureGuard
+final class RepeatedToolFailureGuard implements ResetInterface
 {
     /** @var array<string, int> signature => consecutive identical-failure count this turn */
     private array $failures = [];

@@ -6,6 +6,7 @@ namespace App\Agent\Ui;
 
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Records whether a turn did anything the user can see or that persisted state. The garage agent acts
@@ -20,10 +21,10 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * ({@see RepeatedToolFailureGuard}, the `max_tool_calls` cap) by
  * catching the opposite failure: a turn that stops too early and does nothing.
  *
- * Singleton in the consume worker, so {@see reset()} is called per turn by the handler.
+ * Singleton in the consume worker: kernel.reset clears it between turns.
  */
 #[AsEventListener(event: ToolCallsExecuted::class)]
-final class TurnActivityTracker
+final class TurnActivityTracker implements ResetInterface
 {
     /** Tools that make a turn count: a write, a render intent, or a terminal stop. */
     public const array PRODUCTIVE_TOOLS = [

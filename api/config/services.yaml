@@ -287,6 +287,7 @@ when@test:
         # the tests seed under (App\Tests\Functional\AppTestCase::TEST_OWNER). Prod leaves this null.
         App\Security\OwnerContext:
             autowire: true
+            autoconfigure: true
             arguments:
                 # Must equal AppTestCase::TEST_OWNER. Since 55bf873 the owner IS the email claim,
                 # so it is an address, not the sub.

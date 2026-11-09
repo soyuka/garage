@@ -11,6 +11,7 @@ use App\Entity\AgentTurnToolCall;
 use App\Message\RunAgentTurn;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Accumulates the debug journal of the turn in flight and persists it on settle. A turn-scoped
@@ -27,7 +28,7 @@ use Psr\Log\LoggerInterface;
  * a turn-killing error. Recording before {@see self::begin()} (or after {@see self::finish()}) is a
  * no-op — the seams fire on their own schedule and must not assume a turn is open.
  */
-final class TurnJournal implements WebSearchTracer
+final class TurnJournal implements WebSearchTracer, ResetInterface
 {
     private ?AgentTurn $current = null;
     private int $toolSeq = 0;
@@ -55,6 +56,12 @@ final class TurnJournal implements WebSearchTracer
             summary: '' !== $message->summary ? $message->summary : null,
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
         );
+    }
+
+    public function reset(): void
+    {
+        $this->current = null;
+        $this->toolSeq = 0;
     }
 
     public function currentTurnId(): ?string

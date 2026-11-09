@@ -9,6 +9,7 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Ends every handled turn exactly once, on the journal and with a `turn end` frame, whatever killed
@@ -20,7 +21,7 @@ use Psr\Log\LoggerInterface;
  * id; the cause (an exception message can carry a path, a DSN, an upstream's error text) only reaches
  * the log, under that id.
  */
-final class TurnSettlement
+final class TurnSettlement implements ResetInterface
 {
     public const string PUBLIC_ERROR = 'The turn failed.';
 
@@ -93,6 +94,13 @@ final class TurnSettlement
     public function close(): void
     {
         $this->open = null;
+    }
+
+    /** The shutdown hook stays registered: it is once per process, and reads `open` when it fires. */
+    public function reset(): void
+    {
+        $this->open = null;
+        $this->settled = true;
     }
 
     /**
