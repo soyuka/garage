@@ -11,11 +11,12 @@ use Doctrine\Bundle\MongoDBBundle\ManagerRegistry;
 use Doctrine\Bundle\MongoDBBundle\Repository\ServiceDocumentRepository;
 use Doctrine\ODM\MongoDB\Query\Builder;
 use MongoDB\BSON\Regex;
+use Symfony\Component\Uid\Ulid;
 
 /**
  * Every query is scoped to the current tenant via {@see OwnerContext}: `owner` leads each lookup
  * (and each index — see {@see Vehicle}), so one user's garage is never visible to another. The
- * owner is the authenticated Casdoor `sub`, resolved from the security token on an HTTP request or
+ * owner is the authenticated Casdoor `email` claim, resolved from the security token on an HTTP request or
  * bound explicitly by the agent worker for the turn it is running.
  *
  * @extends ServiceDocumentRepository<Vehicle>
@@ -186,9 +187,15 @@ final class VehicleRepository extends ServiceDocumentRepository
     }
 
     /**
-     * The tenancy floor every lookup shares: scoped to the current owner and excluding soft-deleted
-     * rows. Callers layer their own fields/sort/limit on top.
+     * The current owner's live vehicle under this id, or null — a foreign or soft-deleted row reads
+     * exactly like a missing one. The only by-id lookup a request or a turn may use: a raw find()
+     * would hand back another tenant's car to whoever guesses its ULID.
      */
+    public function findOwned(Ulid|string $id): ?Vehicle
+    {
+        return $this->baseQuery()->field('id')->equals((string) $id)->getQuery()->getSingleResult();
+    }
+
     /**
      * The current owner's vehicle registered under this plate, compared without case, spaces or
      * dashes ("xb 301 zb" is "XB-301-ZB"): plates are stored as typed, so the comparison is done here
@@ -216,6 +223,10 @@ final class VehicleRepository extends ServiceDocumentRepository
         return strtoupper((string) preg_replace('/[\s\-]+/u', '', $plate));
     }
 
+    /**
+     * The tenancy floor every lookup shares: scoped to the current owner and excluding soft-deleted
+     * rows. Callers layer their own fields/sort/limit on top.
+     */
     private function baseQuery(): Builder
     {
         return $this->createQueryBuilder()

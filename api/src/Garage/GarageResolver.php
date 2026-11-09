@@ -27,11 +27,12 @@ class GarageResolver
     /**
      * Resolve a vehicle straight from its ULID — the read counterpart of addressing a write by @id.
      * Used when the caller already holds the dereferenceable handle (e.g. the dashboard's selected
-     * vehicle) and need not re-match on make/model. Returns null when no such row exists.
+     * vehicle) and need not re-match on make/model. Returns null unless the current owner holds a
+     * live row under that id.
      */
     public function resolveById(Ulid $id): ?Vehicle
     {
-        return $this->vehicles->find($id);
+        return $this->vehicles->findOwned($id);
     }
 
     /**
