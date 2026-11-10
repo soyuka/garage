@@ -8,6 +8,7 @@ import {
   highlightTerms,
   labelForPage,
   layoutPages,
+  keptScrollTop,
   outputScale,
   pageAt,
   pagesToRender,
@@ -212,5 +213,25 @@ describe('imageFitScale', () => {
   it('fits whichever side gives the larger legible size in the legible mode, never past natural size', () => {
     expect(imageFitScale({ width: 2000, height: 3000 }, { width: 1032, height: 532 }, 32, 'legible')).toBeCloseTo(1000 / 2000);
     expect(imageFitScale({ width: 400, height: 300 }, { width: 1032, height: 532 }, 32, 'legible')).toBe(1);
+  });
+});
+
+describe('keptScrollTop', () => {
+  const page = { width: 600, height: 800 };
+  const manual = layoutPages(Array.from({ length: 168 }, () => page), 1, 12);
+
+  it('leaves the first real layout alone, so the landing on the cited page holds', () => {
+    // The loading stack (no pages yet) is 12px tall: rescaling page 23's offset by that ratio pinned
+    // the viewer to the end of the manual.
+    expect(keptScrollTop(manual.tops[22] - 12, layoutPages([], 1, 12), manual)).toBeNull();
+  });
+
+  it('keeps the reader at the same relative position across a zoom', () => {
+    const zoomed = layoutPages(Array.from({ length: 168 }, () => page), 2, 12);
+    expect(keptScrollTop(1000, manual, zoomed)).toBeCloseTo((1000 / manual.total) * zoomed.total);
+  });
+
+  it('does nothing when the height did not change', () => {
+    expect(keptScrollTop(1000, manual, manual)).toBeNull();
   });
 });

@@ -179,6 +179,16 @@ export function layoutPages(sizes: readonly PageSize[], scale: number, gap: numb
   return { tops, heights, widths, total: y };
 }
 
+/**
+ * The scroll offset that keeps the reader at the same relative position when the stack's height
+ * changes (zoom, a page measuring to its real size); null when there is nothing to keep. A stack with no
+ * pages yet is not a position: re-anchoring from it multiplied the landing offset by thousands.
+ */
+export function keptScrollTop(scrollTop: number, from: PageLayout, to: PageLayout): number | null {
+  if (from.tops.length === 0 || to.tops.length === 0 || from.total === to.total) return null;
+  return (scrollTop / from.total) * to.total;
+}
+
 /** The 1-based page under the upper third of the viewport — what « p. N » reads. */
 export function pageAt(layout: PageLayout, scrollTop: number, viewportHeight: number): number {
   const probe = scrollTop + viewportHeight / 3;

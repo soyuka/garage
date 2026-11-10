@@ -11,6 +11,7 @@ import {
   fitWidthScale,
   highlightTerms,
   imageFitScale,
+  keptScrollTop,
   labelForPage,
   layoutPages,
   type Match,
@@ -232,14 +233,13 @@ export function PdfPane({
   }, [hop, numPages, box.width, scrollToPage]);
 
   // A zoom keeps the reader where they were: same relative position in the stack.
-  const lastTotal = useRef(0);
+  const lastLayout = useRef(layout);
   useLayoutEffect(() => {
     const el = scroller.current;
-    if (el && lastTotal.current > 0 && lastTotal.current !== layout.total) {
-      el.scrollTop = (el.scrollTop / lastTotal.current) * layout.total;
-    }
-    lastTotal.current = layout.total;
-  }, [layout.total]);
+    const kept = el ? keptScrollTop(el.scrollTop, lastLayout.current, layout) : null;
+    if (el && kept !== null) el.scrollTop = kept;
+    lastLayout.current = layout;
+  }, [layout]);
 
   const terms = useMemo(() => highlightTerms(query), [query]);
   // A 1 000-page manual is indexed in batches; each page is folded once per query, not once per batch.
