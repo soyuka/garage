@@ -37,7 +37,7 @@ reads exactly like an OAuth failure.
 
 ## Surfaces
 
-Five, and a task rarely touches only one:
+Four, and a task rarely touches only one:
 
 | surface | what it is | read first |
 | --- | --- | --- |
@@ -45,7 +45,6 @@ Five, and a task rarely touches only one:
 | `dashboard/` | The Atelier — React + react-three-fiber 3D workshop. Served same-origin behind Caddy (Vite runs *in* the compose network as the `dashboard` service). | `dashboard/CONTRACT.md`, `PRODUCT.md` |
 | `stage/` | The pilot harness — **current workstream**. Its own `CLAUDE.md` is the operator protocol (not repo guidance), `.mcp.json` points the session at the public MCP server, `bin/atelier` is the launcher. | `stage/CLAUDE.md`, `docs/pilot.md`, `CONFERENCE.md` |
 | `bonneref/` | The parts finder: React front + its own Symfony app in `bonneref/api` (TecDoc catalog, SIV plate lookup, finder agent, catalog MCP server). Deployed on bonneref.fr; mpa consumes it over HTTP only. | `bonneref/api/README.md`, `docs/bonneref-extraction.md` |
-| `admin/` | Vite SPA, largely dormant. | — |
 
 Further entry docs by topic: `api/` maintenance domain → `FUTURE.md` § GMAO core (the anti-rebuild
 section: it lists what already ships);

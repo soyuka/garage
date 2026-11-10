@@ -336,8 +336,7 @@ translation key.
 **Scope:** `stage/CLAUDE.md:21,50,60-64,75-93` and `stage/.claude/output-styles/atelier.md:11` mandate
 French presenter copy and French narration — an English demo needs an `en` output style and an English
 beat sheet. Casdoor's login page is now the hosted `auth.bonneref.fr` (its language is that instance's setting,
-no longer a file in this repo). `admin/` has zero French strings and
-needs nothing. `dashboard/src/scene/shopping.ts:68-70` links Mister-Auto and Auto-Doc, French
+no longer a file in this repo). `dashboard/src/scene/shopping.ts:68-70` links Mister-Auto and Auto-Doc, French
 storefronts — a real choice, not a string.
 
 **Partly closed 2026-11-02.** The presenter side ships: `stage/.claude/output-styles/atelier-en.md`
