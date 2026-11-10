@@ -80,6 +80,11 @@ final class VerbalizerTest extends TestCase
             "Contrôle : une heure d'immobilisation, une minute de diagnostic",
         ];
 
+        yield 'torque in every spelling the workshop manuals use' => [
+            'Serrer à 25 N.m, puis 30 N·m, 40 Nm et 2,5 daN.m',
+            'Serrer à vingt-cinq newton-mètres, puis trente newton-mètres, quarante newton-mètres et deux virgule cinq décanewton-mètres',
+        ];
+
         /* Zero and one euro stay grammatically singular; two and up take the plural. */
         yield 'currency edge values: zero and one euro' => [
             'Reste 1 € sur la carte, 0 € en espèces, 2 € en jetons',
