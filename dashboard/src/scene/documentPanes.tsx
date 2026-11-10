@@ -4,7 +4,7 @@ import { useT } from '../i18n/LocaleProvider';
 import { fetchDocumentPages } from '../garage';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, FitScreen, FitWidth, Minus, Plus } from '../workshop/Icons';
 import { isEditableTarget } from './editableTarget';
-import { loadPdfJs } from './pdfjs';
+import { documentParams, loadPdfJs } from './pdfjs';
 import {
   clampPage,
   findMatches,
@@ -119,7 +119,7 @@ export function PdfPane({
       const lib = await loadPdfJs();
       const data = new Uint8Array(await blob.arrayBuffer());
       if (cancelled) return;
-      const loading = lib.getDocument({ data });
+      const loading = lib.getDocument(documentParams(data));
       task = loading;
       opened = await loading.promise;
       const first = await opened.getPage(1);

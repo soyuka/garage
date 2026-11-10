@@ -1,5 +1,35 @@
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
+import { cpSync, createReadStream, existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { createRequire } from 'node:module';
+import type { Plugin } from 'vite';
+
+const PDFJS_DIRS = ['wasm', 'standard_fonts', 'iccs', 'cmaps'];
+
+function pdfjsAssets(): Plugin {
+  const root = dirname(createRequire(import.meta.url).resolve('pdfjs-dist/package.json'));
+  let outDir = 'dist';
+  return {
+    name: 'pdfjs-assets',
+    configResolved: (config) => {
+      outDir = join(config.root, config.build.outDir);
+    },
+    configureServer(server) {
+      server.middlewares.use('/pdfjs', (req, res, next) => {
+        const rel = decodeURIComponent((req.url ?? '').split('?')[0]).replace(/^\/+/, '');
+        const [dir] = rel.split('/');
+        const file = join(root, rel);
+        if (!PDFJS_DIRS.includes(dir) || rel.includes('..') || !existsSync(file)) return next();
+        if (file.endsWith('.wasm')) res.setHeader('Content-Type', 'application/wasm');
+        createReadStream(file).pipe(res);
+      });
+    },
+    writeBundle() {
+      for (const dir of PDFJS_DIRS) cpSync(join(root, dir), join(outDir, 'pdfjs', dir), { recursive: true });
+    },
+  };
+}
 
 // The Atelier dashboard is served SAME-ORIGIN behind Caddy at https://localhost — it is Caddy's
 // `@frontend` upstream (FRONTEND_UPSTREAM=dashboard:5173 in api/compose.override.yaml). The browser
@@ -10,7 +40,7 @@ import react from '@vitejs/plugin-react';
 // HMR must phone home over wss on :443 (Caddy's TLS) on a dedicated path so the Caddyfile @frontend
 // matcher forwards the upgrade instead of letting it fall through to PHP.
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), pdfjsAssets()],
   server: {
     host: true,
     port: 5173,

@@ -15,3 +15,17 @@ export function loadPdfJs(): Promise<PdfJs> {
     });
   return loading;
 }
+
+export const PDFJS_ASSET_DIRS = ['wasm', 'standard_fonts', 'iccs', 'cmaps'] as const;
+
+export function documentParams(data: Uint8Array, base: string = import.meta.env.BASE_URL) {
+  const dir = (name: (typeof PDFJS_ASSET_DIRS)[number]) => `${base}pdfjs/${name}/`;
+  return {
+    data,
+    wasmUrl: dir('wasm'),
+    standardFontDataUrl: dir('standard_fonts'),
+    iccUrl: dir('iccs'),
+    cMapUrl: dir('cmaps'),
+    cMapPacked: true,
+  };
+}
