@@ -34,6 +34,19 @@ root is served (hashed `/assets/*` cached immutable); everything else goes to `l
 `/.well-known/oauth-protected-resource`, `/.well-known/mercure`, `/garage/*`, `/agent/*`, `/vehicles/*`). Responses
 on `/.well-known/mercure*` are not compressed.
 
+Both sites import the `(bonneref_security)` snippet (2026-11-10, backup `bonneref.fr.caddy.pre-headers-20261110`):
+HSTS, nosniff, Referrer-Policy and a floor CSP (`frame-ancestors 'none'; object-src 'none'; base-uri 'self'`).
+garage.bonneref.fr overrides it with the Atelier's full CSP, i.e. `api/frankenphp/Caddyfile` `@frontend` minus
+the Vite preamble hash. A new external origin in the Atelier build needs adding there too.
+
+## Casdoor (org `bonneref`), set 2026-11-10
+
+- Token format `JWT-Empty` on every app and as the org `defaultTokenFormat` (DCR apps copy it): the `JWT`
+  format shipped the password hash and salt. Claims kept: `email`, `email_verified`, `aud`, `sub`, `tokenType`, `displayName`.
+- "Mon Parc Auto": grants `authorization_code,refresh_token` only; redirect URIs include `https://localhost/`
+  and `https://garage.bonneref.fr/` for the post-logout redirect (Casdoor 4.20 matches scheme, host and path exactly).
+- Accounts must have `emailVerified=true`, both apps refuse the email owner claim otherwise.
+
 ## Rebuilding
 
 ```bash
