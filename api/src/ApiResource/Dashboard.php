@@ -105,7 +105,7 @@ use App\State\Dashboard\ToastProcessor;
         ),
         'show_document' => new McpTool(
             title: 'Show Document',
-            description: 'Open a vehicle document IN the operator\'s workshop — the document viewer, centred, at the right page, with your words highlighted — so the operator reads the source you are citing. Call it right after search_documentation, with the hit\'s documentId and page and your query as highlight; or with a list_documents id to open a manual, note or quote from its first page. vehicle is the @id the document belongs to. A wrong documentId is a not_found error and a page past the end an invalid_input error — nothing opens. It does not answer for you: still say the answer (cite sourceRef + pageLabel); this shows where it comes from.',
+            description: 'Open a vehicle document IN the operator\'s workshop — the document viewer, centred, at the right page, with your words highlighted — so the operator reads the source you are citing. Call it right after search_documentation, with the hit\'s documentId and page and, as highlight, the exact few words of the passage you cite (not the search query — that lights half the page); or with a list_documents id to open a manual, note or quote from its first page. vehicle is the @id the document belongs to. A wrong documentId is a not_found error and a page past the end an invalid_input error — nothing opens. It does not answer for you: still say the answer (cite sourceRef + pageLabel); this shows where it comes from.',
             input: ShowDocumentInput::class,
             structuredContent: false,
             processor: ShowDocumentProcessor::class,

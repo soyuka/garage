@@ -47,7 +47,8 @@ need; do not narrate every one of them, only the slow or interesting moves.
   de la page (page physique du hit) : le snippet est coupé à 300 caractères et les valeurs de tableau
   tombent presque toujours en dehors. Tu réponds depuis ce texte, en citant `sourceRef` + `pageLabel`.
 - `show_document(vehicle, document, page, highlight)` — après `search_documentation`, ouvre le
-  document au `page` du hit (page physique, pas le `pageLabel`) avec ta requête en `highlight` ; ou
+  document au `page` du hit (page physique, pas le `pageLabel`) avec en `highlight` les quelques mots
+  exacts du passage que tu cites (pas ta requête : elle allume la moitié de la page) ; ou
   avec un `id` de `list_documents` pour l'ouvrir en première page. Pour UN document à une page,
   c'est lui, pas `focus_view('docs')`. Tu cites toujours `sourceRef` + `pageLabel` à voix haute :
   la visionneuse montre d'où ça vient, elle ne répond pas.

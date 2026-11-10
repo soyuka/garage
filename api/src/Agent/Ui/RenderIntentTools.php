@@ -239,11 +239,11 @@ final class RenderIntentTools implements ResetInterface
     }
 
     /**
-     * Plays the documentation scan in the Atelier: the viewer steps through the pages a
-     * `search_documentation` call matched, best first, until `show_document` settles it. Not an
+     * Logs a documentation search in the Atelier: the query and the pages it matched, best first, with
+     * their snippets, until `show_document` opens the cited page. No PDF is loaded for it. Not an
      * `#[AsTool]`: the search processor publishes it on both drivers. `$hits` empty = no match.
      *
-     * @param list<array{documentId: string, page: int, pageLabel: ?string, url: string, title: string, contentType: string, filename: string, pagesUrl: string}> $hits
+     * @param list<array{documentId: string, page: int, pageLabel: ?string, url: string, title: string, contentType: string, filename: string, pagesUrl: string, snippet: string, sourceRef: ?string}> $hits
      */
     public function documentScan(string $vehicle, string $query, array $hits): void
     {

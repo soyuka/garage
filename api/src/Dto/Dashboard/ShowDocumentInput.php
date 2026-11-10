@@ -20,7 +20,7 @@ final class ShowDocumentInput
     #[ApiProperty(description: 'Optional. The 1-based PHYSICAL page to open at — the `page` of a search_documentation hit, NOT its pageLabel. Omit to open at the first page.')]
     public ?int $page = null;
 
-    #[ApiProperty(description: 'Optional. Words to highlight in the document, typically your search_documentation query. Matched like the search: case- and accent-insensitive.')]
+    #[ApiProperty(description: 'Optional. The exact few words of the passage you cite, to highlight in the document (not your search_documentation query). Matched like the search: case- and accent-insensitive.')]
     #[Assert\Length(max: 200)]
     public ?string $highlight = null;
 }

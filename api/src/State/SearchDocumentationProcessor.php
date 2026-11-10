@@ -89,9 +89,9 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
     }
 
     /**
-     * @param list<array{documentId: string, page: int, pageLabel: ?string, ...}> $hits
+     * @param list<array{documentId: string, page: int, pageLabel: ?string, snippet: string, sourceRef: ?string, ...}> $hits
      *
-     * @return list<array{documentId: string, page: int, pageLabel: ?string, url: string, title: string, contentType: string, filename: string, pagesUrl: string}>
+     * @return list<array{documentId: string, page: int, pageLabel: ?string, url: string, title: string, contentType: string, filename: string, pagesUrl: string, snippet: string, sourceRef: ?string}>
      */
     private function scanHits(Vehicle $vehicle, array $hits): array
     {
@@ -113,6 +113,8 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
                 'contentType' => $document->getContentType(),
                 'filename' => $document->getFilename(),
                 'pagesUrl' => $this->view->pagesUrl($document),
+                'snippet' => $hit['snippet'],
+                'sourceRef' => $hit['sourceRef'],
             ];
         }
 

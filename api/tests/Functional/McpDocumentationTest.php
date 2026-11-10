@@ -190,6 +190,8 @@ final class McpDocumentationTest extends AppTestCase
             'contentType' => 'application/pdf',
             'filename' => 'mr361.pdf',
             'pagesUrl' => $iri.'/documents/'.$documentId.'/pages',
+            'snippet' => $result['hits'][0]['snippet'],
+            'sourceRef' => 'MR 361 — Transmission',
         ], $frame['hits'][0]);
     }
 
