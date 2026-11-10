@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repository;
 
 use App\Documentation\CorpusDocument;
+use App\Documentation\DocumentMeta;
 use App\Documentation\VehicleDocumentKind;
 use App\Entity\Vehicle;
 use App\Entity\VehicleDocument;
@@ -92,6 +93,43 @@ final class VehicleDocumentRepository extends ServiceDocumentRepository
                 pages: $pages,
             );
         }
+    }
+
+    /**
+     * @param list<string> $ids
+     *
+     * @return array<string, DocumentMeta>
+     */
+    public function findMetaForVehicle(Vehicle $vehicle, array $ids): array
+    {
+        if ([] === $ids) {
+            return [];
+        }
+
+        $cursor = $this->forVehicle($vehicle)
+            ->hydrate(false)
+            ->select('title', 'filename', 'contentType', 'size')
+            ->field('id')->in($ids)
+            ->getQuery()->execute();
+        if (!is_iterable($cursor)) {
+            throw new \UnexpectedValueException('The document metadata query did not return a cursor.');
+        }
+
+        $metas = [];
+        foreach ($cursor as $raw) {
+            if (!\is_array($raw) || !\is_string($raw['_id'] ?? null)) {
+                continue;
+            }
+            $metas[$raw['_id']] = new DocumentMeta(
+                id: $raw['_id'],
+                title: \is_string($raw['title'] ?? null) ? $raw['title'] : '',
+                filename: \is_string($raw['filename'] ?? null) ? $raw['filename'] : '',
+                contentType: \is_string($raw['contentType'] ?? null) ? $raw['contentType'] : '',
+                size: \is_int($raw['size'] ?? null) ? $raw['size'] : 0,
+            );
+        }
+
+        return $metas;
     }
 
     public function findOneForVehicle(Vehicle $vehicle, string $id): ?VehicleDocument

@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\Operation;
 use ApiPlatform\State\ProcessorInterface;
 use App\Agent\Ui\RenderIntentTools;
 use App\Documentation\DocumentationSearcher;
+use App\Documentation\DocumentMeta;
 use App\Documentation\VehicleDocumentKind;
 use App\Documentation\VehicleDocumentView;
 use App\Dto\SearchDocumentationInput;
@@ -60,28 +61,29 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
         }
 
         $hits = $this->searcher->search($vehicle, $query, $kind, $data->limit);
-        $this->render->documentScan(\sprintf('/garage/vehicles/%s', $vehicle->getId()), trim($query), $this->scanHits($vehicle, $hits));
+        $metas = $this->documents->findMetaForVehicle($vehicle, array_values(array_unique(array_column($hits, 'documentId'))));
+        $this->render->documentScan(\sprintf('/garage/vehicles/%s', $vehicle->getId()), trim($query), $this->scanHits($vehicle, $hits, $metas));
         if ([] === $hits) {
             return ToolResult::of(['status' => 'no_match', 'query' => $query]);
         }
 
         $result = ToolResult::of(['status' => 'ok', 'query' => $query, 'hits' => $hits]);
 
-        return new CallToolResult([...$result->content, ...$this->links($vehicle, $hits)], false, $result->structuredContent);
+        return new CallToolResult([...$result->content, ...$this->links($vehicle, $hits, $metas)], false, $result->structuredContent);
     }
 
     /**
      * @param list<array{documentId: string, ...}> $hits
+     * @param array<string, DocumentMeta>          $metas
      *
      * @return list<ResourceLink>
      */
-    private function links(Vehicle $vehicle, array $hits): array
+    private function links(Vehicle $vehicle, array $hits, array $metas): array
     {
         $links = [];
         foreach (array_unique(array_column($hits, 'documentId')) as $id) {
-            $document = $this->documents->findOneForVehicle($vehicle, $id);
-            if (null !== $document) {
-                $links[] = $this->view->resourceLink($document);
+            if (isset($metas[$id])) {
+                $links[] = $this->view->resourceLinkFor($vehicle, $metas[$id]);
             }
         }
 
@@ -90,29 +92,28 @@ final readonly class SearchDocumentationProcessor implements ProcessorInterface
 
     /**
      * @param list<array{documentId: string, page: int, pageLabel: ?string, snippet: string, sourceRef: ?string, ...}> $hits
+     * @param array<string, DocumentMeta>                                                                              $metas
      *
      * @return list<array{documentId: string, page: int, pageLabel: ?string, url: string, title: string, contentType: string, filename: string, pagesUrl: string, snippet: string, sourceRef: ?string}>
      */
-    private function scanHits(Vehicle $vehicle, array $hits): array
+    private function scanHits(Vehicle $vehicle, array $hits, array $metas): array
     {
-        $documents = [];
         $out = [];
         foreach (\array_slice($hits, 0, self::SCAN_HITS) as $hit) {
             $id = $hit['documentId'];
-            $documents[$id] ??= $this->documents->findOneForVehicle($vehicle, $id);
-            $document = $documents[$id];
-            if (null === $document) {
+            $meta = $metas[$id] ?? null;
+            if (null === $meta) {
                 continue;
             }
             $out[] = [
                 'documentId' => $id,
                 'page' => $hit['page'],
                 'pageLabel' => $hit['pageLabel'],
-                'url' => $this->view->url($document),
-                'title' => $document->getTitle(),
-                'contentType' => $document->getContentType(),
-                'filename' => $document->getFilename(),
-                'pagesUrl' => $this->view->pagesUrl($document),
+                'url' => $this->view->urlFor($vehicle, $id),
+                'title' => $meta->title,
+                'contentType' => $meta->contentType,
+                'filename' => $meta->filename,
+                'pagesUrl' => $this->view->pagesUrlFor($vehicle, $id),
                 'snippet' => $hit['snippet'],
                 'sourceRef' => $hit['sourceRef'],
             ];

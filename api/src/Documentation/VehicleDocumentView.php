@@ -52,17 +52,33 @@ final readonly class VehicleDocumentView
      */
     public function resourceLink(VehicleDocument $document): ResourceLink
     {
+        return $this->resourceLinkFor($document->getVehicle(), new DocumentMeta(
+            $document->getId(),
+            $document->getTitle(),
+            $document->getFilename(),
+            $document->getContentType(),
+            $document->getSize(),
+        ));
+    }
+
+    public function resourceLinkFor(Vehicle $vehicle, DocumentMeta $meta): ResourceLink
+    {
         return new ResourceLink(
-            uri: $this->urls->generate('vehicle_document_download', ['id' => $document->getVehicle()->getId(), 'documentId' => $document->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
-            name: $document->getFilename(),
-            title: $document->getTitle(),
-            mimeType: $document->getContentType(),
-            size: $document->getSize(),
+            uri: $this->urls->generate('vehicle_document_download', ['id' => $vehicle->getId(), 'documentId' => $meta->id], UrlGeneratorInterface::ABSOLUTE_URL),
+            name: $meta->filename,
+            title: $meta->title,
+            mimeType: $meta->contentType,
+            size: $meta->size,
         );
     }
 
     public function pagesUrl(VehicleDocument $document): string
     {
-        return \sprintf('/garage/vehicles/%s/documents/%s/pages', $document->getVehicle()->getId(), $document->getId());
+        return $this->pagesUrlFor($document->getVehicle(), $document->getId());
+    }
+
+    public function pagesUrlFor(Vehicle $vehicle, string $documentId): string
+    {
+        return \sprintf('/garage/vehicles/%s/documents/%s/pages', $vehicle->getId(), $documentId);
     }
 }

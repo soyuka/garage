@@ -91,6 +91,17 @@ final class McpDocumentationTest extends AppTestCase
         $this->assertArrayNotHasKey(VehicleDocument::class, $dm->getUnitOfWork()->getIdentityMap());
     }
 
+    public function testTheSearchToolLeavesNoDocumentManaged(): void
+    {
+        [, , $iri] = $this->seedManual();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $dm->clear();
+
+        static::getContainer()->get(McpToolbox::class)->execute(new ToolCall('1', 'search_documentation', ['vehicle' => $iri, 'query' => 'CAPACITE huile']));
+
+        $this->assertArrayNotHasKey(VehicleDocument::class, $dm->getUnitOfWork()->getIdentityMap());
+    }
+
     public function testSearchLinksEachHitDocumentAsAResource(): void
     {
         [$client, $sessionId, $iri] = $this->seedManual();
