@@ -6,7 +6,9 @@ namespace App\Tests\Functional;
 
 use ApiPlatform\Test\Client;
 use App\Agent\Ui\RenderIntentTools;
+use App\Documentation\DocumentationSearcher;
 use App\Entity\Vehicle;
+use App\Entity\VehicleDocument;
 use App\Garage\VehicleType;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\RecordingHub;
@@ -74,6 +76,19 @@ final class McpDocumentationTest extends AppTestCase
         $this->assertStringContainsString('Capacité en huile', $hit['snippet']);
         $this->assertStringEndsWith('/file', $hit['url']);
         $this->assertArrayHasKey('documentId', $hit);
+    }
+
+    public function testSearchDoesNotManageTheScannedDocuments(): void
+    {
+        [, , $iri] = $this->seedManual();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $dm->clear();
+        $vehicle = $dm->find(Vehicle::class, basename($iri));
+
+        $hits = static::getContainer()->get(DocumentationSearcher::class)->search($vehicle, 'CAPACITE huile');
+
+        $this->assertCount(1, $hits);
+        $this->assertArrayNotHasKey(VehicleDocument::class, $dm->getUnitOfWork()->getIdentityMap());
     }
 
     public function testSearchLinksEachHitDocumentAsAResource(): void

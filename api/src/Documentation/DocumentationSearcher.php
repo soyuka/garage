@@ -47,9 +47,9 @@ final class DocumentationSearcher
         $foldedQuery = trim((string) preg_replace('/\s+/u', ' ', $this->fold($query)));
 
         $hits = [];
-        foreach ($this->documents->findForVehicle($vehicle, $kind) as $document) {
-            foreach ($document->getPages() as $page) {
-                $text = trim((string) preg_replace('/\s+/u', ' ', (string) \Normalizer::normalize($page->getText(), \Normalizer::FORM_C)));
+        foreach ($this->documents->searchCorpus($vehicle, $kind) as $document) {
+            foreach ($document->pages as $page) {
+                $text = trim((string) preg_replace('/\s+/u', ' ', (string) \Normalizer::normalize($page['text'], \Normalizer::FORM_C)));
                 $haystack = $this->fold($text);
 
                 $matched = 0;
@@ -75,17 +75,17 @@ final class DocumentationSearcher
 
                 $hits[] = [
                     'score' => $score,
-                    'addedAt' => $document->getAddedAt()->getTimestamp(),
-                    'number' => $page->getNumber(),
+                    'addedAt' => $document->addedAt->getTimestamp(),
+                    'number' => $page['number'],
                     'hit' => [
-                        'documentId' => $document->getId(),
-                        'title' => $document->getTitle(),
-                        'kind' => $document->getKind()->value,
-                        'sourceRef' => $document->getSourceRef(),
-                        'page' => $page->getNumber(),
-                        'pageLabel' => $page->getLabel(),
+                        'documentId' => $document->id,
+                        'title' => $document->title,
+                        'kind' => $document->kind->value,
+                        'sourceRef' => $document->sourceRef,
+                        'page' => $page['number'],
+                        'pageLabel' => $page['label'],
                         'snippet' => $this->snippet($text, $phrase ?? (int) $first),
-                        'url' => $this->view->url($document),
+                        'url' => $this->view->urlFor($vehicle, $document->id),
                     ],
                 ];
             }

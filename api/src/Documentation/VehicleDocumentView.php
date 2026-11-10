@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Documentation;
 
+use App\Entity\Vehicle;
 use App\Entity\VehicleDocument;
 use Mcp\Schema\Content\ResourceLink;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
@@ -38,7 +39,12 @@ final readonly class VehicleDocumentView
 
     public function url(VehicleDocument $document): string
     {
-        return \sprintf('/garage/vehicles/%s/documents/%s/file', $document->getVehicle()->getId(), $document->getId());
+        return $this->urlFor($document->getVehicle(), $document->getId());
+    }
+
+    public function urlFor(Vehicle $vehicle, string $documentId): string
+    {
+        return \sprintf('/garage/vehicles/%s/documents/%s/file', $vehicle->getId(), $documentId);
     }
 
     /**
