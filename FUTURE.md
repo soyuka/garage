@@ -893,9 +893,11 @@ From the api/ hardening review (items 1-17 shipped 2026-11-10, see `git log`):
   list (`MaintenanceType`, `UsageUnit`, `VehicleType`, tones, panels). Typing the property as the enum lets
   API Platform's `SchemaFactory` derive the list and removes the drift risk; each switch changes the
   denormalised type the processor receives, so it is one tool at a time with its test.
-- **`DocumentationSearcher` scaling.** It loads every page of every document of the vehicle into PHP and scores
-  in memory (`api/src/Documentation/DocumentationSearcher.php`). Fine for a few manuals, linear in pages for a
-  full Dialogys set. A Mongo text index (or Atlas Search) on `VehicleDocumentPage` is the long-term answer.
+- **`DocumentationSearcher` scaling.** It still reads every page of every document of the vehicle and scores in
+  PHP, now streamed one raw document at a time (30a67d1, 4ab6923). Before that it hydrated the whole corpus and
+  OOMed the worker at 128M on 20 documents / 4048 pages (2026-11-10). Memory is bounded by the largest manual,
+  time stays linear in pages. Pages in their own collection with a Mongo text index (or Atlas Search) is the
+  long-term answer.
 - **Rate limiter store.** Every limiter (`agent_turn`, `agent_turn_global`, `speech`, `transcription`,
   `upload`) sits on `cache.rate_limiter` → `cache.app`, a filesystem pool local to each container. Several php
   replicas would each count their own window. A shared store (Redis, or a Mongo-backed PSR-6 pool) before
