@@ -3112,68 +3112,279 @@ body {
   background: color-mix(in srgb, var(--w-blue) 45%, transparent);
   outline: 2px solid var(--w-blue);
 }
-/* The documentation scan (DESIGN.md § Motion): a 1px blue line sweeps the hit page top to bottom and
-   the hits on it are revealed behind it. Same duration and ease on both, so the reveal edge rides the
-   line. 700ms = SCAN.sweepMs in docScan.ts. */
-.w-doc-sweep {
+/* The documentation search log (DESIGN.md § Motion): stands in for the viewer while a turn searches.
+   Left, the box page types the query, sweeps once and lights a box per hit; right, the turn's log. */
+.w-slog {
+  display: flex;
+  flex: 1 1 auto;
+  width: min(1100px, 100%);
+  min-height: 0;
+  outline: 1px solid var(--w-rule);
+  background: var(--w-module);
+}
+.w-slog-frame {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  max-width: 44%;
+  aspect-ratio: 210 / 297;
+  padding: 16px;
+  border-right: 1px solid var(--w-rule);
+}
+.w-slog-field {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--w-rule);
+  background: var(--w-ground);
+  font-family: var(--w-font-data);
+  font-size: 12.5px;
+}
+.w-slog-prompt {
+  color: var(--w-blue);
+}
+.w-slog-typed {
+  min-width: 0;
+  overflow: hidden;
+  white-space: pre;
+}
+.w-slog-caret {
+  flex: none;
+  width: 7px;
+  height: 14px;
+  background: var(--w-blue);
+  animation: w-slog-blink 1s steps(1) infinite;
+}
+.w-slog-none {
+  margin: 8px 0 0;
+  color: var(--w-ink-2);
+  font-family: var(--w-font-data);
+  font-size: 12px;
+  animation: w-slog-in var(--w-dur-fade) var(--w-ease-out) var(--at) both;
+}
+.w-slog-page {
+  position: relative;
+  flex: 1 1 0;
+  min-height: 0;
+  margin-top: 12px;
+  overflow: hidden;
+  border: 1px solid var(--w-rule);
+}
+.w-slog-box {
+  position: absolute;
+  background: var(--w-plate);
+}
+.w-slog-box--title {
+  background: var(--w-plate-lit);
+}
+.w-slog-box--figure {
+  outline: 1px solid var(--w-rule);
+  background:
+    linear-gradient(to top right, transparent calc(50% - 0.5px), var(--w-rule) 50%, transparent calc(50% + 0.5px)),
+    var(--w-plate);
+}
+.w-slog-box--table {
+  outline: 1px solid var(--w-rule);
+  background:
+    repeating-linear-gradient(to bottom, transparent 0 calc(25% - 1px), var(--w-rule) calc(25% - 1px) 25%),
+    repeating-linear-gradient(to right, transparent 0 calc(33.333% - 1px), var(--w-rule) calc(33.333% - 1px) 33.333%),
+    var(--w-plate);
+}
+.w-slog-frame.is-none .w-slog-box {
+  animation: w-slog-dim var(--w-dur-fade) var(--w-ease-out) calc(var(--sweep-at) + var(--w-dur-doc-scan)) both;
+}
+.w-slog-sweep {
   position: absolute;
   inset: 0;
   z-index: 2;
   overflow: hidden;
   pointer-events: none;
 }
-.w-doc-sweepline {
+.w-slog-sweepline {
   display: block;
   height: 100%;
   border-bottom: 1px solid var(--w-blue);
   transform: translateY(-100%);
   animation:
-    w-doc-sweep 700ms var(--w-ease-out) forwards,
-    w-doc-sweep-out 150ms linear 700ms forwards;
+    w-slog-sweep var(--w-dur-doc-scan) var(--w-ease-out) var(--sweep-at) forwards,
+    w-slog-out var(--w-dur-fade) linear calc(var(--sweep-at) + var(--w-dur-doc-scan)) forwards;
 }
-.w-doc-page-sheet.is-sweeping .w-doc-text {
-  animation: w-doc-reveal var(--w-dur-doc-scan) var(--w-ease-out) both;
+.w-slog-hit {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  min-height: 14px;
+  padding: 0 4px;
+  overflow: hidden;
+  outline: 1px solid var(--w-blue);
+  background: color-mix(in srgb, var(--w-blue) 15%, var(--w-module));
+  color: var(--w-ink);
+  font-family: var(--w-font-data);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
+  animation: w-slog-in var(--w-dur-fade) var(--w-ease-out) var(--at) both;
 }
-@keyframes w-doc-sweep {
+.w-slog-hit.is-picked {
+  background: color-mix(in srgb, var(--w-blue) 32%, var(--w-module));
+}
+.w-slog-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.w-slog-mark {
+  background: color-mix(in srgb, var(--w-blue) 28%, transparent);
+  color: inherit;
+}
+.w-slog-hit .w-slog-mark {
+  background: none;
+  color: var(--w-blue);
+  font-weight: 700;
+}
+.w-slog-log {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  padding: 16px;
+  overflow-y: auto;
+}
+.w-slog-block {
+  color: var(--w-ink-2);
+}
+.w-slog-block.is-current {
+  color: var(--w-ink);
+}
+.w-slog-q {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 6px;
+  font-family: var(--w-font-data);
+  font-size: 12.5px;
+}
+.w-slog-qtext {
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-slog-count {
+  flex: none;
+  color: var(--w-ink-2);
+  animation: w-slog-in var(--w-dur-fade) var(--w-ease-out) var(--at) both;
+}
+.w-slog-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-slog-li {
+  animation: w-slog-row var(--w-dur-swap) var(--w-ease-out) var(--at) both;
+}
+.w-slog-row {
+  display: grid;
+  grid-template-columns: minmax(0, 11rem) 4.5rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--w-dur-hover) var(--w-ease-out),
+    background-color var(--w-dur-hover) var(--w-ease-out);
+}
+.w-slog-row:hover {
+  border-color: var(--w-rule);
+  background: var(--w-plate);
+}
+.w-slog-row.is-picked {
+  border-color: var(--w-blue);
+  background: color-mix(in srgb, var(--w-blue) 12%, transparent);
+}
+.w-slog-src {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-slog-row.is-picked .w-slog-src {
+  color: var(--w-blue);
+}
+.w-slog-pg {
+  font-family: var(--w-font-data);
+  white-space: nowrap;
+}
+.w-slog-snip {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--w-ink-2);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.w-slog-block.is-current .w-slog-snip {
+  color: var(--w-ink);
+}
+@keyframes w-slog-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes w-slog-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes w-slog-row {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+@keyframes w-slog-dim {
+  to {
+    opacity: 0.5;
+  }
+}
+@keyframes w-slog-sweep {
   to {
     transform: translateY(0);
   }
 }
-@keyframes w-doc-sweep-out {
+@keyframes w-slog-out {
   to {
     opacity: 0;
   }
 }
-@keyframes w-doc-reveal {
-  from {
-    clip-path: inset(0 0 100% 0);
-  }
-  to {
-    clip-path: inset(0);
-  }
+.w-slog.is-still .w-slog-caret,
+.w-slog.is-still .w-slog-none,
+.w-slog.is-still .w-slog-hit,
+.w-slog.is-still .w-slog-count,
+.w-slog.is-still .w-slog-li {
+  animation: none;
 }
-@media (prefers-reduced-motion: reduce) {
-  .w-doc-sweep {
-    display: none;
-  }
-  .w-doc-page-sheet.is-sweeping .w-doc-text {
-    animation: none;
-  }
+.w-slog.is-still .w-slog-frame.is-none .w-slog-box {
+  animation: none;
+  opacity: 0.5;
 }
-.w-doc-scancap {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin: 0;
-  overflow: hidden;
-  color: var(--w-ink-2);
-  font-family: var(--w-font-data);
-  font-size: 12px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.w-docs-page > .w-doc-scancap {
-  width: min(1100px, 100%);
-  padding: 8px 0;
+.w-slog.is-still .w-slog-row {
+  transition: none;
 }
 .w-doc-state {
   margin: 16px;
@@ -3350,6 +3561,34 @@ body {
   }
   .w-docstage {
     height: 70vh;
+  }
+  .w-slog {
+    flex-direction: column;
+    height: 70vh;
+  }
+  .w-slog-frame {
+    max-width: none;
+    height: 132px;
+    aspect-ratio: auto;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--w-rule);
+  }
+  .w-slog-page {
+    margin-top: 8px;
+  }
+  .w-slog-hit {
+    min-height: 0;
+  }
+  .w-slog-hit .w-slog-text {
+    display: none;
+  }
+  .w-slog-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 12px;
+  }
+  .w-slog-snip {
+    grid-column: 1 / -1;
   }
   .w-strip {
     padding: 10px 16px 12px;

@@ -15,7 +15,7 @@ import { View } from '@react-three/drei';
 import { useT } from '../i18n/LocaleProvider';
 import type { Notice, NoyauPhase } from '../noyau/state';
 import { regionForType } from '../scene/anchors';
-import type { Capabilities, CtaAction, DocumentSpec, Iri, VehicleBundle, VehicleSummary } from '../types';
+import type { Capabilities, CtaAction, DocScanHit, DocumentSpec, Iri, VehicleBundle, VehicleSummary } from '../types';
 import { CtaTray } from './CtaTray';
 import { Dock } from './Dock';
 import { NARRATION_ID } from '../noyau/voice';
@@ -26,6 +26,7 @@ import { isArchived } from './archive';
 import { deriveModules, type DocRow, type JobItem } from './modules';
 import { ParcMosaic } from './ParcMosaic';
 import { CaracteristiquesPlane, EntretienPlane } from './Planes';
+import { SEARCH_LOG, specForHit } from './docScan';
 import { DocStage, DocumentsPlane, rowToSpec } from './Documents';
 import { OpenEditor } from './Editors';
 import { EditContext, type EditHost, type EditorTarget, type WorkshopEdits } from './edits';
@@ -155,6 +156,13 @@ export function WorkshopView(props: WorkshopViewProps) {
   }, [view.projection, view.document, view.projectionKey]);
   useEffect(() => setViewer(null), [selectedIri]);
   const openRow = useCallback((row: DocRow) => openDocument(rowToSpec(row)), [openDocument]);
+  const openHit = useCallback((hit: DocScanHit, query: string) => openDocument(specForHit(hit, query)), [openDocument]);
+  // The log holds on the row showDocument picked, then hands the stage to the viewer it already set.
+  useEffect(() => {
+    if (!view.settled) return;
+    const id = window.setTimeout(() => onView({ type: 'endScan' }), SEARCH_LOG.settleMs);
+    return () => window.clearTimeout(id);
+  }, [view.settled, onView]);
 
   const selectTick = useCallback(
     (tick: Tick) => {
@@ -253,7 +261,7 @@ export function WorkshopView(props: WorkshopViewProps) {
                       editor={editorNode}
                     />
                   )}
-                  {s === 'documents' && <DocumentsPlane bundle={bundle} modules={modules} viewer={front ? viewer : null} active={front} scan={view.scan} reduced={props.reduced} onOpenRow={openRow} />}
+                  {s === 'documents' && <DocumentsPlane bundle={bundle} modules={modules} viewer={front ? viewer : null} active={front} searches={view.searches} settled={view.settled} reduced={props.reduced} onOpenRow={openRow} onOpenHit={openHit} />}
                   {s === 'caracteristiques' && <CaracteristiquesPlane {...planeProps} />}
                 </PartsLive.Provider>
               </section>

@@ -289,6 +289,7 @@ export function Workshop() {
       }
       if (frame.type === 'turn') {
         dispatch({ type: 'turn', phase: frame.phase, driver });
+        dispatchView(frame);
         if (frame.phase === 'end') {
           closeRun();
           cues.play(frame.outcome === 'failed' ? 'blocked' : 'complete');
@@ -319,6 +320,7 @@ export function Workshop() {
       const pendingContext = p ? [p.headline, p.finding, p.actions.length ? t.atelier.ctaOptions(p.actions.map((a) => a.label).join(', ')) : ''].filter(Boolean).join(' — ') : undefined;
       dispatchView({ type: 'clearProposal' });
       dispatch({ type: 'turn', phase: 'start' });
+      dispatchView({ type: 'turn', phase: 'start' });
       const { index, text } = pickAcknowledgement(t.atelier.acknowledgedPool, lastAck.current, Math.random);
       lastAck.current = index;
       dispatch({ type: 'status', message: text, tool: 'acknowledge' });

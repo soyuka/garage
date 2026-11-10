@@ -891,12 +891,11 @@ export const fr = {
       all: 'Tous',
       pages: (n: number) => `${n}${NBSP}p.`,
       open: 'ouvert',
-      /** The documentation scan's caption on the viewer: « Recherche · « huile » · 2/4 ». */
-      scan: {
-        search: 'Recherche',
-        query: (q: string) => `«${NBSP}${q}${NBSP}»`,
-        none: (q: string) => `Aucun résultat pour «${NBSP}${q}${NBSP}»`,
-        results: (n: number): string => (n === 1 ? 'résultat' : 'résultats'),
+      /** The documentation search log on the Documents stage (DESIGN.md § Motion). */
+      log: {
+        label: 'Recherches dans la documentation',
+        results: (n: number): string => (n === 0 ? 'Aucun résultat' : `${n}${NBSP}résultat${n === 1 ? '' : 's'}`),
+        page: (n: number) => `p.${NBSP}${n}`,
       },
     },
     datasheet: {

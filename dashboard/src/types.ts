@@ -376,9 +376,9 @@ export type UIAction =
   // (fetch with the Bearer); `page` is the 1-based physical page; `highlight` is free text folded like
   // the API searcher. Also built locally by « Ouvrir » / a bill chip — same surface, no frame.
   | { type: 'showDocument'; url: string; title: string; contentType: string; filename: string; page?: number; highlight?: string; pagesUrl?: string }
-  // A `search_documentation` call, played on the viewer (CONTRACT.md § documentScan): the ranked hits
-  // (≤ 6, best first), each self-contained enough to open; `hits: []` is a no_match. Published by the
-  // search processor itself, so both drivers send it. A later `showDocument` settles it.
+  // A `search_documentation` call, logged on the Documents stage (CONTRACT.md § documentScan): the ranked
+  // hits (≤ 6, best first), each self-contained enough to open; `hits: []` is a no_match. Published by the
+  // search processor itself, so both drivers send it. No PDF loads for it; a later `showDocument` opens one.
   | { type: 'documentScan'; vehicle: Iri; query: string; hits: DocScanHit[] }
   | { type: 'toast'; tone: Tone; message: string }
   // Transient step cue (CONTRACT.md § status). Two shapes, never both fields from the server:
@@ -400,6 +400,10 @@ export interface DocScanHit {
   contentType: string;
   filename: string;
   pagesUrl: string;
+  /** the searcher's excerpt around the match, ≤ 300 characters, `…`-cut */
+  snippet: string;
+  /** the citation label (« MR 361 — Transmission »), null when the document has none */
+  sourceRef: string | null;
 }
 
 /** What the document viewer opens — a `showDocument` frame's payload, or one built from a row/bill. */

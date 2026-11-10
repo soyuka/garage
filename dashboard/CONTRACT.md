@@ -130,16 +130,20 @@ before a reducer sees it. A domain event only updates a car already in the owner
 unknown `@id` triggers a re-read of `GET /garage/vehicles`, never an append from the frame.
 
 **`documentScan` `{vehicle, query, hits: [{documentId, page, pageLabel, url, title, contentType, filename,
-pagesUrl}]}` (2026-11-09)** — published by `SearchDocumentationProcessor` itself on every
+pagesUrl, snippet, sourceRef}]}` (2026-11-09; `snippet` + `sourceRef` 2026-11-10)** — published by `SearchDocumentationProcessor` itself on every
 `search_documentation` that resolves its vehicle (`ok` **and** `no_match`, then `hits: []`; nothing on
 `invalid_input` / `not_found`), through `RenderIntentTools::documentScan()`, so the same `DashboardChannel`
 routing as `showDocument` applies to both drivers and the model spends no call on it. `vehicle` is the
 canonical `/garage/vehicles/{id}` IRI; `hits` are the ranked search hits, best first, at most 6, each
-carrying what the viewer needs to open it without a lookup (`url`/`pagesUrl` as in `showDocument`).
-The client drives that car in if another is on screen (a synthetic `selectVehicle`, then the scan is
-held by the staging gate like any per-vehicle surface), opens Documents on the best hit with `query`
-highlighted, and plays the scan (`workshop/docScan.ts`). A later `showDocument` settles it: the scan
-stops and the viewer lands on the agent's pick.
+carrying what the viewer needs to open it without a lookup (`url`/`pagesUrl` as in `showDocument`) and
+what the log row shows: the searcher's `snippet` (≤ 300 chars, `…`-cut) and the document's `sourceRef`
+(citation label, `null` when it has none).
+The client drives that car in if another is on screen (a synthetic `selectVehicle`, then the frame is
+held by the staging gate like any per-vehicle surface), opens Documents and appends the search to the
+turn's **search log** (`ViewState.searches`, `workshop/docScan.ts`, `SearchLog.tsx`): no PDF is loaded.
+The log clears on a new turn (`turn` `start`) or when the operator opens a document. A later
+`showDocument` ends it: on a logged hit (same `url` + `page`) that row is ticked, then the viewer opens
+once on that page after 400ms; on anything else the viewer opens at once.
 
 **`showDocument` `{url, title, contentType, filename, page?, highlight?, pagesUrl?}` (2026-10-05)** — opens the
 in-Atelier **document viewer** on one vehicle document. A REAL server emission: the MCP tool
@@ -246,4 +250,4 @@ project the ladder, the server enum is the only thing in the way.
 `selectVehicle` → drive-forward · `showFact` → focus-panel / etch-in (stored facts OR projected
 `nodes`) · `focusView {panel:'carnet'}` → carnet projection · `proposeActions` → CTA rises
 from cradle (incl. `patchTask` deterministic path) · `toast` → retained notice card · `status` →
-Noyau pulse · `documentScan` → Documents opens, the viewer scans the hits · `turn` → busy state.
+Noyau pulse · `documentScan` → Documents opens, the search log types the query and lights the hits · `turn` → busy state.

@@ -49,6 +49,11 @@
   --w-dur-proj-rise: 380ms;
   --w-dur-proj-scan: 520ms;
   --w-dur-doc-scan: 700ms;
+  --w-dur-search-type-char: 30ms;
+  --w-dur-search-stagger: 60ms;
+  --w-dur-search-decode: 350ms;
+  --w-dur-search-settle: 400ms;
+  --w-dur-search-type-max: 900ms;
   --w-dur-orb-settle: 700ms;
   --w-dur-draw-on: 900ms;
   --w-top: 48px;

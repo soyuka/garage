@@ -126,10 +126,12 @@ const BUNDLES: VehicleBundle[] = Object.values(FIXTURES)
   .filter((b): b is VehicleBundle => b !== null)
   .map(enrich);
 
-const MR_HIT = (page: number, pageLabel: string): DocScanHit => ({
+const MR_HIT = (page: number, pageLabel: string | null, snippet: string): DocScanHit => ({
   documentId: '01DOCMR',
   page,
   pageLabel,
+  snippet,
+  sourceRef: 'MR 361 — Mécanique moteur',
   url: '/garage/vehicles/01OVERDUEESPACE/documents/01DOCMR/file',
   title: 'MR 361 · Mécanique moteur R9M',
   contentType: 'application/pdf',
@@ -142,15 +144,27 @@ const SHOW_DOC: UIAction = {
   title: 'MR 361 · Mécanique moteur R9M',
   contentType: 'application/pdf',
   filename: 'mr361-moteur.pdf',
-  page: 84,
-  highlight: 'courroie de distribution',
+  page: 91,
+  highlight: 'tension de la courroie',
 };
-const SCAN_FRAME: UIAction = {
-  type: 'documentScan',
-  vehicle: '/garage/vehicles/01OVERDUEESPACE',
-  query: 'courroie de distribution',
-  hits: [MR_HIT(84, '11A-3'), MR_HIT(86, '11A-5'), MR_HIT(91, '11A-10'), MR_HIT(12, '10A-4'), MR_HIT(140, '19A-2')],
-};
+const SCAN = (query: string, hits: DocScanHit[]): UIAction => ({ type: 'documentScan', vehicle: '/garage/vehicles/01OVERDUEESPACE', query, hits });
+const SEARCHES: UIAction[] = [
+  SCAN('courroie', [
+    MR_HIT(84, '11A-3', '…Dépose de la courroie de distribution : déposer le carter supérieur, bloquer le vilebrequin au point mort haut…'),
+    MR_HIT(86, '11A-5', 'Repose de la courroie de distribution. Mettre en place le galet tendeur neuf, tension de pose 3,5 Hz…'),
+    MR_HIT(12, '10A-4', '…courroie d’accessoires : contrôler l’usure et le vitrage avant toute dépose…'),
+    MR_HIT(140, '19A-2', '…pompe à eau entraînée par la courroie de distribution, remplacer à chaque changement…'),
+  ]),
+  SCAN('courroie distribution tension', [
+    MR_HIT(86, '11A-5', 'Repose de la courroie de distribution. Mettre en place le galet tendeur neuf, tension de pose 3,5 Hz…'),
+    MR_HIT(91, '11A-10', '…contrôle de la tension de la courroie de distribution au fréquencemètre Mot. 1505 : 112 ± 5 Hz…'),
+    MR_HIT(84, '11A-3', '…Dépose de la courroie de distribution : déposer le carter supérieur…'),
+    MR_HIT(92, null, 'Tension de la courroie de distribution moteur chaud : 107 Hz après deux tours vilebrequin…'),
+    MR_HIT(140, '19A-2', '…pompe à eau entraînée par la courroie de distribution…'),
+    MR_HIT(13, '10A-5', '…courroie d’accessoires, tension automatique par galet…'),
+  ]),
+];
+const NO_MATCH = SCAN('turbocompresseur', []);
 
 const FRAMES: Array<{ label: string; frames: UIAction[] }> = [
   { label: 'showFact (huile)', frames: [{ type: 'showFact', keys: ['oil_viscosity', 'oil_capacity'], title: 'Huile moteur' }] },
@@ -261,20 +275,37 @@ export function WorkshopFixture() {
                 {f.label}
               </button>
             ))}
-            <button type="button" className="w-button" onClick={() => dispatchView(SCAN_FRAME)}>
+            <button
+              type="button"
+              className="w-button"
+              onClick={() => {
+                dispatchView({ type: 'turn', phase: 'start' });
+                dispatchView(SEARCHES[0]);
+              }}
+            >
               documentScan (courroie)
             </button>
             <button
               type="button"
               className="w-button"
               onClick={() => {
-                dispatchView(SCAN_FRAME);
-                later(3000, () => dispatchView(SHOW_DOC));
+                dispatchView({ type: 'turn', phase: 'start' });
+                dispatchView(SEARCHES[0]);
+                later(2500, () => dispatchView(NO_MATCH));
+                later(4500, () => dispatchView(SEARCHES[1]));
+                later(7500, () => dispatchView(SHOW_DOC));
               }}
             >
-              documentScan → showDocument (3 s)
+              documentScan ×3 → showDocument (7,5 s)
             </button>
-            <button type="button" className="w-button" onClick={() => dispatchView({ type: 'documentScan', vehicle: '/garage/vehicles/01OVERDUEESPACE', query: 'turbocompresseur', hits: [] })}>
+            <button
+              type="button"
+              className="w-button"
+              onClick={() => {
+                dispatchView({ type: 'turn', phase: 'start' });
+                dispatchView(NO_MATCH);
+              }}
+            >
               documentScan (aucun résultat)
             </button>
             <button type="button" className="w-button" onClick={() => runTurn('app')}>

@@ -848,11 +848,10 @@ export const en: Messages = {
       all: 'All',
       pages: (n: number) => `${n}${NBSP}pp.`,
       open: 'open',
-      scan: {
-        search: 'Search',
-        query: (q: string) => `“${q}”`,
-        none: (q: string) => `No results for “${q}”`,
-        results: (n: number) => (n === 1 ? 'result' : 'results'),
+      log: {
+        label: 'Documentation searches',
+        results: (n: number) => (n === 0 ? 'No results' : `${n}${NBSP}result${n === 1 ? '' : 's'}`),
+        page: (n: number) => `p.${NBSP}${n}`,
       },
     },
     datasheet: {

@@ -1,17 +1,16 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatDate } from '../format';
-import { Failure, ImagePane, PdfPane, type DocSkin, type PdfScanHop } from '../scene/documentPanes';
+import { Failure, ImagePane, PdfPane, type DocSkin } from '../scene/documentPanes';
 import { viewerKind } from '../scene/documentViewer';
 import { loadPdfJs } from '../scene/pdfjs';
-import type { DocumentSpec, VehicleBundle } from '../types';
+import type { DocScanHit, DocumentSpec, VehicleBundle } from '../types';
 import { docBlob, docPreview } from './docBlob';
-import type { ScanCaption } from './docScan';
 import { docKinds, openRowId, previewTitle, stripRows, type DocKind } from './docs';
 import { Close, FileDoc } from './Icons';
 import { documentRows, type DocRow, type Modules } from './modules';
-import { useDocScan } from './useDocScan';
-import type { DocScan } from './view';
+import { SearchLog } from './SearchLog';
+import type { DocSearch } from './view';
 
 const SKIN: DocSkin = { prefix: 'w-doc', button: 'w-button' };
 const PREVIEW_W = 112;
@@ -60,26 +59,30 @@ export function DocumentsPlane({
   modules,
   viewer,
   active,
-  scan,
+  searches,
+  settled,
   reduced,
   onOpenRow,
+  onOpenHit,
 }: {
   bundle: VehicleBundle;
   modules: Modules;
   viewer: { doc: DocumentSpec; key: number } | null;
   active: boolean;
-  scan: DocScan | null;
+  searches: DocSearch[];
+  settled: { key: number; hit: number } | null;
   reduced: boolean;
   onOpenRow: (row: DocRow) => void;
+  onOpenHit: (hit: DocScanHit, query: string) => void;
 }) {
   const t = useT();
   const rows = documentRows(bundle);
   const [kind, setKind] = useState<DocKind | null>(null);
   const shown = stripRows(rows, kind);
-  const play = useDocScan(scan, reduced);
-  const open = play?.doc ?? viewer?.doc ?? (rows[0] ? rowToSpec(rows[0]) : null);
-  const caption = play ? <ScanCaptionLine caption={play.caption} /> : null;
-  const stageKey = play?.doc && scan ? `scan:${scan.key}:${play.doc.url}` : viewer ? `${viewer.key}` : (open?.url ?? '');
+  const open = viewer?.doc ?? (rows[0] ? rowToSpec(rows[0]) : null);
+  const logging = active && searches.length > 0;
+  const log = logging ? <SearchLog searches={searches} settled={settled} reduced={reduced} onOpenHit={onOpenHit} /> : null;
+  const stageKey = viewer ? `${viewer.key}` : (open?.url ?? '');
   const openId = openRowId(rows, open);
   const kinds = docKinds(rows);
   const strip = useRef<HTMLDivElement>(null);
@@ -97,7 +100,7 @@ export function DocumentsPlane({
   if (rows.length === 0) {
     return (
       <div className="w-docs-page">
-        {caption}
+        {log}
         <p className="w-muted w-docs-empty">{modules.documentsUnavailable ? t.workshop.empty.documentsUnavailable : t.workshop.empty.documents}</p>
       </div>
     );
@@ -105,7 +108,7 @@ export function DocumentsPlane({
 
   return (
     <div className="w-docs-page">
-      {open && active && <DocStage key={stageKey} doc={open} kind={rows.find((r) => r.id === openId)?.kind ?? null} hop={play?.hop ?? null} caption={caption} />}
+      {log ?? (open && active && <DocStage key={stageKey} doc={open} kind={rows.find((r) => r.id === openId)?.kind ?? null} />)}
       <section className="w-strip" aria-label={t.workshop.documents.strip}>
         {kinds.length > 1 && (
           <div className="w-strip-kinds" role="group" aria-label={t.workshop.documents.kinds}>
@@ -165,25 +168,7 @@ function PreviewCard({ row, open, live, onOpen }: { row: DocRow; open: boolean; 
   );
 }
 
-/** « Recherche · « huile » · 2/4 »: muted, the figures in mono. */
-function ScanCaptionLine({ caption }: { caption: ScanCaption }) {
-  const t = useT().workshop.documents.scan;
-  if (caption.kind === 'none') return <p className="w-doc-scancap">{t.none(caption.query)}</p>;
-  return (
-    <p className="w-doc-scancap">
-      {`${t.search} · ${t.query(caption.query)} · `}
-      {caption.kind === 'position' ? (
-        <span className="w-data">{`${caption.position}/${caption.total}`}</span>
-      ) : (
-        <>
-          <span className="w-data">{caption.count}</span> {t.results(caption.count)}
-        </>
-      )}
-    </p>
-  );
-}
-
-export function DocStage({ doc, kind, hop, caption, onClose }: { doc: DocumentSpec; kind: DocKind | null; hop?: PdfScanHop | null; caption?: ReactNode; onClose?: () => void }) {
+export function DocStage({ doc, kind, onClose }: { doc: DocumentSpec; kind: DocKind | null; onClose?: () => void }) {
   const t = useT();
   const [attempt, setAttempt] = useState(0);
   const [load, setLoad] = useState<Load>({ status: 'loading' });
@@ -210,7 +195,6 @@ export function DocStage({ doc, kind, hop, caption, onClose }: { doc: DocumentSp
         <h2 className="w-docstage-title" title={doc.filename}>
           {doc.title}
         </h2>
-        {caption}
         {kind && <span className="w-row-dim">{t.workshop.docKind[kind]}</span>}
         <button type="button" className="w-button" onClick={download} disabled={load.status !== 'ready'} aria-label={t.viewer.downloadAria(doc.filename)}>
           {t.viewer.download}
@@ -228,7 +212,7 @@ export function DocStage({ doc, kind, hop, caption, onClose }: { doc: DocumentSp
       )}
       {load.status === 'error' && <Failure message={load.message} onRetry={() => setAttempt((n) => n + 1)} skin={SKIN} />}
       {load.status === 'ready' && type === 'pdf' && (
-        <PdfPane key={attempt} blob={load.blob} initialPage={doc.page} highlight={doc.highlight} pagesUrl={doc.pagesUrl} hop={hop} onRetry={() => setAttempt((n) => n + 1)} skin={SKIN} />
+        <PdfPane key={attempt} blob={load.blob} initialPage={doc.page} highlight={doc.highlight} pagesUrl={doc.pagesUrl} onRetry={() => setAttempt((n) => n + 1)} skin={SKIN} />
       )}
       {load.status === 'ready' && type === 'image' && <ImagePane blob={load.blob} alt={t.viewer.imageAlt(doc.title)} skin={SKIN} fitMode="legible" />}
       {load.status === 'ready' && type === 'other' && (

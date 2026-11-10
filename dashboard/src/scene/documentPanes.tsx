@@ -68,19 +68,11 @@ function itemStrings(items: readonly unknown[]): string[] {
   return out;
 }
 
-/** A hop of the documentation scan: jump to `page` (once per `seq`) and, when `sweep`, play the scan line over it. */
-export interface PdfScanHop {
-  page: number;
-  seq: number;
-  sweep: boolean;
-}
-
 export function PdfPane({
   blob,
   initialPage,
   highlight,
   pagesUrl,
-  hop,
   onRetry,
   skin,
 }: {
@@ -88,7 +80,6 @@ export function PdfPane({
   initialPage?: number;
   highlight?: string;
   pagesUrl?: string;
-  hop?: PdfScanHop | null;
   onRetry: () => void;
   skin: DocSkin;
 }) {
@@ -223,14 +214,6 @@ export function PdfPane({
     landed.current = true;
     scrollToPage(startPage);
   }, [numPages, box.width, scrollToPage, startPage]);
-
-  // A scan hop inside the same document: an instant jump to the hit page.
-  const hopSeq = useRef(hop?.seq ?? null);
-  useLayoutEffect(() => {
-    if (!hop || hopSeq.current === hop.seq || numPages === 0 || box.width === 0) return;
-    hopSeq.current = hop.seq;
-    scrollToPage(hop.page);
-  }, [hop, numPages, box.width, scrollToPage]);
 
   // A zoom keeps the reader where they were: same relative position in the stack.
   const lastLayout = useRef(layout);
@@ -455,7 +438,6 @@ export function PdfPane({
                   matches={matchesByPage.get(n)}
                   currentLocal={current?.page === n ? current.local : -1}
                   reveal={current?.page === n ? reveal : 0}
-                  sweep={hop?.sweep && hop.page === n ? hop.seq + 1 : 0}
                   label={t.viewer.pageAria(n)}
                   skin={skin}
                   onSize={(size) =>
@@ -483,7 +465,6 @@ function PdfPage({
   matches,
   currentLocal,
   reveal,
-  sweep,
   label,
   onSize,
   skin,
@@ -499,8 +480,6 @@ function PdfPage({
   matches: Match[] | undefined;
   currentLocal: number;
   reveal: number;
-  /** non-zero while the scan line sweeps this page; a new value replays it */
-  sweep: number;
   label: string;
   onSize: (size: PageSize) => void;
   skin: DocSkin;
@@ -599,17 +578,12 @@ function PdfPage({
   }, [layer, matches, currentLocal, reveal, skin.prefix]);
 
   return (
-    <div className={`${skin.prefix}-page-sheet${sweep ? ' is-sweeping' : ''}`} style={{ top, left, width, height }} role="img" aria-label={label} data-page={number}>
+    <div className={`${skin.prefix}-page-sheet`} style={{ top, left, width, height }} role="img" aria-label={label} data-page={number}>
       {live && (
         <>
           <canvas ref={canvas} className={`${skin.prefix}-canvas`} aria-hidden="true" />
           <div ref={textHost} className={`textLayer ${skin.prefix}-text`} />
         </>
-      )}
-      {sweep > 0 && (
-        <div key={sweep} className={`${skin.prefix}-sweep`} aria-hidden="true">
-          <span className={`${skin.prefix}-sweepline`} />
-        </div>
       )}
     </div>
   );

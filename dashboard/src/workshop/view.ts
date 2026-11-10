@@ -1,5 +1,5 @@
 import { regionForFrame, type BodyRegion } from '../scene/anchors';
-import { specForHit } from './docScan';
+import { findLoggedHit } from './docScan';
 import { topicForService, topicForText, type FocusTopic } from './focusTopic';
 import type { CtaAction, DocScanHit, DocumentSpec, Iri, PanelKind, PlannedPart, SpecNode, UIAction } from '../types';
 
@@ -15,8 +15,8 @@ export interface CtaState {
 
 export type DocRef = DocumentSpec;
 
-/** A documentation search being played on the viewer; `key` is new per run. `hits: []` = no match. */
-export interface DocScan {
+/** One documentation search in the log; `key` is new per run. `hits: []` = no match. */
+export interface DocSearch {
   query: string;
   hits: DocScanHit[];
   key: number;
@@ -45,9 +45,11 @@ export interface ViewState {
   document: DocRef | null;
   /** Bumped each time the ring is aimed somewhere new: the car stage points once per value. Never reset. */
   focusSeq: number;
-  /** The documentation scan on the viewer, until `showDocument` settles it or the operator opens another. */
-  scan: DocScan | null;
-  /** Source of `scan.key`. Never reset. */
+  /** This turn's documentation searches, oldest first, until a new turn, the operator opening a document, or a settle. */
+  searches: DocSearch[];
+  /** The logged hit a `showDocument` picked: the log ticks it, then the viewer opens (`endScan`). */
+  settled: { key: number; hit: number } | null;
+  /** Source of `DocSearch.key`, counted by the turn cues. Never reset. */
   scanSeq: number;
 }
 
@@ -69,7 +71,8 @@ export const initialView: ViewState = {
   proposal: null,
   document: null,
   focusSeq: 0,
-  scan: null,
+  searches: [],
+  settled: null,
   scanSeq: 0,
 };
 
@@ -111,7 +114,10 @@ function reduce(state: ViewState, action: ViewAction): ViewState {
       return { ...initialView, projectionKey: state.projectionKey, proposal: state.proposal, focusSeq: state.focusSeq, scanSeq: state.scanSeq };
 
     case 'endScan':
-      return state.scan ? { ...state, scan: null } : state;
+      return state.searches.length > 0 || state.settled ? { ...state, searches: [], settled: null } : state;
+
+    case 'turn':
+      return action.phase === 'start' && (state.searches.length > 0 || state.settled) ? { ...state, searches: [], settled: null } : state;
 
     case 'dismissProjection':
       return { ...state, projection: null };
@@ -156,14 +162,14 @@ function reduce(state: ViewState, action: ViewAction): ViewState {
 
     case 'showDocument': {
       const { type: _type, ...doc } = action;
-      return project(state, { kind: 'document' }, { section: 'documents', document: doc, scan: null });
+      const settled = state.settled ? null : findLoggedHit(state.searches, doc.url, doc.page);
+      return project(state, { kind: 'document' }, { section: 'documents', document: doc, settled, searches: settled ? state.searches : [] });
     }
 
     case 'documentScan': {
-      const scan: DocScan = { query: action.query, hits: action.hits, key: state.scanSeq + 1 };
-      const best = action.hits[0];
-      if (!best) return { ...state, section: 'documents', scan, scanSeq: scan.key };
-      return project(state, { kind: 'document' }, { section: 'documents', document: specForHit(best, action.query), scan, scanSeq: scan.key });
+      const search: DocSearch = { query: action.query, hits: action.hits, key: state.scanSeq + 1 };
+      const searches = state.settled ? [search] : [...state.searches, search];
+      return { ...state, section: 'documents', searches, settled: null, scanSeq: search.key };
     }
 
     case 'proposeActions': {

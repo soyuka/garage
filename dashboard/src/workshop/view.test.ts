@@ -21,7 +21,8 @@ describe('reduceView', () => {
       proposal: null,
       document: null,
       focusSeq: 0,
-      scan: null,
+      searches: [],
+      settled: null,
       scanSeq: 0,
     });
   });
@@ -96,7 +97,7 @@ describe('reduceView', () => {
     expect(next.projection).toEqual({ kind: 'document' });
   });
 
-  describe('documentScan', () => {
+  describe('documentScan: the search log', () => {
     const hit = (page: number) => ({
       documentId: '01D',
       page,
@@ -106,43 +107,79 @@ describe('reduceView', () => {
       contentType: doc.contentType,
       filename: doc.filename,
       pagesUrl: '/garage/vehicles/01X/documents/01D/pages',
+      snippet: 'Capacité en huile',
+      sourceRef: null,
     });
-    const scan = { type: 'documentScan' as const, vehicle: '/garage/vehicles/01X', query: 'huile', hits: [hit(4), hit(9)] };
+    const scan = { type: 'documentScan' as const, vehicle: '/garage/vehicles/01X', query: 'huile', hits: [hit(4), hit(2)] };
+    const refined = { ...scan, query: 'huile boite', hits: [hit(9)] };
 
-    it('opens Documents on the best hit, with the query highlighted, and keeps the scan', () => {
-      const next = reduceView(initialView, scan);
-      expect(next.section).toBe('documents');
-      expect(next.projection).toEqual({ kind: 'document' });
-      expect(next.document).toMatchObject({ url: doc.url, page: 4, highlight: 'huile' });
-      expect(next.scan).toEqual({ query: 'huile', hits: scan.hits, key: next.scanSeq });
-    });
-
-    it('each scan is a new run, even with the same hits', () => {
-      const once = reduceView(initialView, scan);
-      expect(reduceView(once, scan).scan?.key).not.toBe(once.scan?.key);
-    });
-
-    it('no match opens Documents with the caption only: the open document stays', () => {
-      const start: ViewState = { ...initialView, document: doc, projection: { kind: 'document' }, projectionKey: 5 };
-      const next = reduceView(start, { ...scan, hits: [] });
+    it('opens Documents and logs the search: no document, no projection', () => {
+      const start: ViewState = { ...initialView, document: doc, projection: { kind: 'history' }, projectionKey: 5 };
+      const next = reduceView(start, scan);
       expect(next.section).toBe('documents');
       expect(next.document).toBe(doc);
+      expect(next.projection).toEqual({ kind: 'history' });
       expect(next.projectionKey).toBe(5);
-      expect(next.scan).toMatchObject({ query: 'huile', hits: [] });
+      expect(next.searches).toEqual([{ query: 'huile', hits: scan.hits, key: next.scanSeq }]);
     });
 
-    it('showDocument settles the scan on the document the agent picked', () => {
-      const next = reduceView(reduceView(initialView, scan), { type: 'showDocument', ...doc });
-      expect(next.scan).toBeNull();
-      expect(next.document).toEqual(doc);
+    it('a refined query appends a block under the previous one, each a new run', () => {
+      const once = reduceView(initialView, scan);
+      const twice = reduceView(once, refined);
+      expect(twice.searches.map((s) => s.query)).toEqual(['huile', 'huile boite']);
+      expect(twice.searches[1].key).toBeGreaterThan(twice.searches[0].key);
+      expect(reduceView(twice, scan).searches).toHaveLength(3);
     });
 
-    it('endScan (the operator opened something else) drops it', () => {
-      expect(reduceView(reduceView(initialView, scan), { type: 'endScan' }).scan).toBeNull();
+    it('a no match is logged too', () => {
+      expect(reduceView(initialView, { ...scan, hits: [] }).searches).toEqual([{ query: 'huile', hits: [], key: 1 }]);
     });
 
-    it('reset (another vehicle) drops it', () => {
-      expect(reduceView(reduceView(initialView, scan), { type: 'reset' }).scan).toBeNull();
+    it('a new turn clears the log', () => {
+      const logged = reduceView(reduceView(initialView, scan), refined);
+      expect(reduceView(logged, { type: 'turn', phase: 'start' }).searches).toEqual([]);
+      expect(reduceView(logged, { type: 'turn', phase: 'end' }).searches).toHaveLength(2);
+    });
+
+    it('endScan (the operator opened a document) clears the log', () => {
+      const next = reduceView(reduceView(initialView, scan), { type: 'endScan' });
+      expect(next.searches).toEqual([]);
+      expect(next.settled).toBeNull();
+    });
+
+    it('showDocument on a logged hit settles on that row and keeps the log while it ticks', () => {
+      const logged = reduceView(reduceView(initialView, scan), refined);
+      const next = reduceView(logged, { type: 'showDocument', ...doc, page: 2 });
+      expect(next.settled).toEqual({ key: logged.searches[0].key, hit: 1 });
+      expect(next.searches).toBe(logged.searches);
+      expect(next.document).toEqual({ ...doc, page: 2 });
+      expect(next.projection).toEqual({ kind: 'document' });
+    });
+
+    it('the newest block wins when two searches hit the same page', () => {
+      const logged = reduceView(reduceView(initialView, scan), { ...refined, hits: [hit(4)] });
+      expect(reduceView(logged, { type: 'showDocument', ...doc, page: 4 }).settled).toEqual({ key: logged.searches[1].key, hit: 0 });
+    });
+
+    it('showDocument on a page the log does not hold switches at once', () => {
+      const next = reduceView(reduceView(initialView, scan), { type: 'showDocument', ...doc, page: 77 });
+      expect(next.searches).toEqual([]);
+      expect(next.settled).toBeNull();
+      expect(next.document).toEqual({ ...doc, page: 77 });
+    });
+
+    it('a search after the log settled starts a new log', () => {
+      const settled = reduceView(reduceView(initialView, scan), { type: 'showDocument', ...doc, page: 4 });
+      const next = reduceView(settled, refined);
+      expect(next.searches.map((s) => s.query)).toEqual(['huile boite']);
+      expect(next.settled).toBeNull();
+    });
+
+    it('reset (another vehicle) drops it and keeps the run counter', () => {
+      const logged = reduceView(initialView, scan);
+      const next = reduceView(logged, { type: 'reset' });
+      expect(next.searches).toEqual([]);
+      expect(next.scanSeq).toBe(logged.scanSeq);
     });
   });
 
