@@ -29,7 +29,9 @@ export type Route =
 
 export type VehicleRef = { kind: 'plate'; plate: string } | { kind: 'car'; carId: number; carType: CarType };
 
-const CAR = /^k([1-9]\d*)-(PC|CV)$/;
+const CAR = /^k([1-9]\d*)-(PC|CV|MC)$/;
+
+export const asCarType = (v: unknown): CarType | null => (v === 'PC' || v === 'CV' || v === 'MC' ? v : null);
 
 export const carRef = (carId: number, carType: CarType): string => `k${carId}-${carType}`;
 

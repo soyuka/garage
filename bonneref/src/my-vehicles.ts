@@ -1,6 +1,6 @@
 import { garageUrl } from './api-base';
 import { authFetch } from './auth';
-import { vehicleShortName } from './garage';
+import { garageCarType, vehicleShortName } from './garage';
 import { carRef } from './route';
 import type { AgentVehicle, CarType } from './types';
 
@@ -34,7 +34,7 @@ export function mapMyVehicles(raw: unknown): MyVehicle[] {
     const model = str(j.model);
     const engine = [str(j.engineVariant), str(j.engineCode)].filter(Boolean).join(' · ') || null;
     const name = vehicleShortName({ plate, make, model, modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId, carType: 'PC' });
-    return [{ iri, plate, name, carId, carType: j.vehicleType === 'cv' ? 'CV' : 'PC', make, model, engine }];
+    return [{ iri, plate, name, carId, carType: garageCarType(j.carType, j.vehicleType), make, model, engine }];
   });
 }
 

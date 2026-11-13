@@ -74,5 +74,8 @@ describe('route', () => {
     expect(parseRef('XB-301-ZB')).toEqual({ kind: 'plate', plate: 'XB-301-ZB' });
     expect(parseRef('k19107-CV')).toEqual({ kind: 'car', carId: 19107, carType: 'CV' });
     expect(carRef(19107, 'PC')).toBe('k19107-PC');
+    expect(parseRef('k4242-MC')).toEqual({ kind: 'car', carId: 4242, carType: 'MC' });
+    expect(carRef(4242, 'MC')).toBe('k4242-MC');
+    expect(parseRef('k4242-XX')).toBeNull();
   });
 });

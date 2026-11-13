@@ -25,6 +25,23 @@ describe('mapMyVehicles', () => {
   });
 });
 
+describe('mapMyVehicles car type', () => {
+  const one = (over: Record<string, unknown>) => mapMyVehicles({ member: [{ ...mazda, ...over }] })[0]!.carType;
+
+  it('trusts the payload carType, a motorbike included', () => {
+    expect(one({ vehicleType: 'moto', carType: 'MC' })).toBe('MC');
+    expect(one({ vehicleType: 'car', carType: 'CV' })).toBe('CV');
+  });
+
+  it('falls back on the vehicle type for older payloads', () => {
+    expect(one({ vehicleType: 'moto' })).toBe('MC');
+    expect(one({ vehicleType: 'cv' })).toBe('CV');
+    expect(one({ vehicleType: 'commercial' })).toBe('CV');
+    expect(one({ vehicleType: 'car' })).toBe('PC');
+    expect(one({ vehicleType: 'car', carType: null })).toBe('PC');
+  });
+});
+
 describe('pickTarget', () => {
   it('opens a car by its plate, else by its kType with the identity kept for the tab', () => {
     const [withPlate, withoutPlate] = mapMyVehicles({ member: [mazda, { ...mazda, '@id': '/garage/vehicles/01B', plate: null }] });

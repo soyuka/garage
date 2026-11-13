@@ -21,7 +21,7 @@ import { useToast } from './Toast';
 
 type GarageRoute = Extract<Route, { view: 'garage' | 'garageVehicle' }>;
 
-const KIND: Record<string, string> = { car: 'Voiture', motorcycle: 'Moto', cv: 'Utilitaire', groundscare: 'Motoculture' };
+const KIND: Record<string, string> = { car: 'Voiture', moto: 'Moto', cv: 'Utilitaire', groundscare: 'Motoculture' };
 
 const engineOf = (v: GarageRow): string | null => [v.engineVariant, v.engineCode].filter(Boolean).join(' · ') || null;
 const usageOf = (v: GarageRow): string | null => (v.usage ? formatMeasure(String(v.usage.value), v.usage.unit) : null);

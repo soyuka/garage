@@ -1,7 +1,7 @@
 import { formatPlateInput, isPlate } from './format';
 import { vehicleShortName } from './garage';
 import { outcomeOf, type JournalRow } from './journal';
-import { parseRoute, routeToHash } from './route';
+import { asCarType, parseRoute, routeToHash } from './route';
 import type { Vehicle } from './types';
 
 const MAX = 10;
@@ -21,7 +21,7 @@ export interface HistoryEntry {
 function vehicleName(row: JournalRow): string | null {
   const v = row.vehicle;
   if (!v) return null;
-  const shape: Vehicle = { plate: v.plate, make: v.make, model: v.model, modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId: v.carId, carType: v.carType === 'CV' ? 'CV' : 'PC' };
+  const shape: Vehicle = { plate: v.plate, make: v.make, model: v.model, modelEn: null, version: null, engineCode: null, powerHp: null, firstRegistration: null, energy: null, vin: null, carId: v.carId, carType: asCarType(v.carType) ?? 'PC' };
   const name = vehicleShortName(shape) ?? v.model ?? (v.plate === null && v.carId !== null ? `kType ${v.carId}` : null);
   return name === null ? null : [name, v.engine].filter(Boolean).join(' ');
 }

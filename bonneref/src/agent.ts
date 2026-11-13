@@ -2,7 +2,7 @@ import { mapNarrowing } from './api';
 import { apiUrl } from './api-base';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
-import { SELECTION_ID } from './route';
+import { asCarType, SELECTION_ID } from './route';
 import type { AgentPart, AgentSelection, BuildCode, FinderFrame, HeldVehicle, OnScreen, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
 type Json = Record<string, unknown>;
@@ -76,12 +76,13 @@ export function parseFrame(data: string): FinderFrame | null {
         : null;
     case 'setVehicle': {
       const nullable = (v: unknown): string | null => (filled(v) ? v.trim() : null);
-      if (typeof j.carId !== 'number' || !Number.isInteger(j.carId) || j.carId <= 0 || (j.carType !== 'PC' && j.carType !== 'CV')) return null;
+      const carType = asCarType(j.carType);
+      if (typeof j.carId !== 'number' || !Number.isInteger(j.carId) || j.carId <= 0 || carType === null) return null;
       const plate = nullable(j.plate);
       return {
         type: 'setVehicle',
         carId: j.carId,
-        carType: j.carType,
+        carType,
         make: nullable(j.make),
         model: nullable(j.model),
         engine: nullable(j.engine),

@@ -1,7 +1,7 @@
 import { garageUrl } from './api-base';
 import { authFetch } from './auth';
-import { parseRoute, routeToHash } from './route';
-import type { Category, Family, Reference, Vehicle } from './types';
+import { asCarType, parseRoute, routeToHash } from './route';
+import type { CarType, Category, Family, Reference, Vehicle } from './types';
 
 const title = (s: string): string => s.charAt(0) + s.slice(1).toLowerCase();
 
@@ -186,3 +186,8 @@ export async function saveVehicle(body: SaveBody): Promise<SavedVehicle> {
   if (!json['@id']) throw new PlanError('failed');
   return { vehicle: json['@id'], created: res.status === 201 };
 }
+
+const TYPE_TO_CAR: Record<string, CarType> = { moto: 'MC', motorcycle: 'MC', cv: 'CV', commercial: 'CV' };
+
+export const garageCarType = (carType: unknown, vehicleType: unknown): CarType =>
+  asCarType(carType) ?? (typeof vehicleType === 'string' ? TYPE_TO_CAR[vehicleType] : undefined) ?? 'PC';

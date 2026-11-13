@@ -70,6 +70,20 @@ const TASKS = {
   ],
 };
 
+describe('mapGarageVehicles car type', () => {
+  const row = (over: Record<string, unknown>) => mapGarageVehicles({ member: [{ '@id': '/garage/vehicles/01A', kType: 4242, ...over }] })[0]!.carType;
+
+  it('uses the payload carType, a motorbike included', () => {
+    expect(row({ vehicleType: 'moto', carType: 'MC' })).toBe('MC');
+  });
+
+  it('falls back on the vehicle type for older payloads', () => {
+    expect(row({ vehicleType: 'moto' })).toBe('MC');
+    expect(row({ vehicleType: 'cv' })).toBe('CV');
+    expect(row({ vehicleType: 'car' })).toBe('PC');
+  });
+});
+
 describe('mapGarageVehicles', () => {
   it('lists every garage vehicle, a lawn tractor without plate or kType included', () => {
     const rows = mapGarageVehicles(COLLECTION);

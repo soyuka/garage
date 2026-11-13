@@ -1,5 +1,5 @@
 import { normalisePlate } from './format';
-import { SELECTION_ID } from './route';
+import { asCarType, SELECTION_ID } from './route';
 import type {
   AgentVehicle,
   Applicability,
@@ -65,7 +65,7 @@ export function mapSelection(raw: unknown): StoredSelection {
   return {
     id,
     carId,
-    carType: j.carType === 'CV' ? 'CV' : 'PC',
+    carType: asCarType(j.carType) ?? 'PC',
     categoryId,
     productGroupId: num(j.productGroupId),
     clusterId,
@@ -98,7 +98,7 @@ export const mapKnownCar = (raw: unknown, carId: number, type: CarType): AgentVe
   return { carId, carType: type, make: str(j.make), model: str(j.model), engine: str(j.engine), plate: null };
 };
 
-const carType = (v: unknown): CarType => (v === 'CV' ? 'CV' : 'PC');
+const carType = (v: unknown): CarType => asCarType(v) ?? 'PC';
 
 export function mapVin(raw: unknown): VinDecode {
   const j = obj(raw);

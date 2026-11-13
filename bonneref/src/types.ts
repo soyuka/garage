@@ -1,6 +1,6 @@
 import type { MeshId } from './meshes';
 
-export type CarType = 'PC' | 'CV';
+export type CarType = 'PC' | 'CV' | 'MC';
 
 export interface Vehicle {
   plate: string | null;
@@ -300,5 +300,5 @@ export interface TurnState {
 
 export interface HeldVehicle {
   carId: number;
-  carType: 'PC' | 'CV';
+  carType: CarType;
 }

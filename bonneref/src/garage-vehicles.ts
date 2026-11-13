@@ -1,6 +1,7 @@
 import { ApiError, classifyStatus } from './api';
 import { garageUrl } from './api-base';
 import { authFetch } from './auth';
+import { garageCarType } from './garage';
 import { formatDate, formatMeasure, formatValue } from './format';
 import { factLabel, sentence, serviceLabel, sourceLabel, unitLabel } from './garage-labels';
 import type { MyVehicle } from './my-vehicles';
@@ -93,7 +94,7 @@ function mapRow(raw: unknown): GarageRow | null {
     engineCode: str(j.engineCode),
     vehicleType: str(j.vehicleType),
     carId: int(j.kType),
-    carType: j.vehicleType === 'cv' ? 'CV' : 'PC',
+    carType: garageCarType(j.carType, j.vehicleType),
     usage: usageValue !== null && usageUnit !== null ? { value: usageValue, unit: usageUnit } : null,
     addedAt: str(j.addedAt),
   };
