@@ -8,14 +8,13 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
 use App\Agent\WebSearchBudgetStreamListener;
-use App\I18n\LocaleContext;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Support\Locales;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -35,7 +34,7 @@ final class WebSearchBudgetStreamListenerTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new WebSearchBudgetStreamListener($budget, new StepNarrator($tools, new LocaleContext(new RequestStack())));
+        return new WebSearchBudgetStreamListener($budget, new StepNarrator($tools, Locales::context()));
     }
 
     private function deltaOf(TokenUsage $usage): DeltaEvent

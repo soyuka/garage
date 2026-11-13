@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { busy, classifyStep, initialNoyau, NOTICE_CAP, reduceNoyau } from './state';
+import { busy, classifyStep, initialNoyau, NOTICE_CAP, reduceNoyau, type NoyauEvent, type NoyauState } from './state';
 
-const R = reduceNoyau;
+// The interface defaults to English; these tests assert the French copy, so they say so.
+const R = (state: NoyauState, ev: NoyauEvent, at: number) => reduceNoyau(state, ev, at, 'fr');
+const inFrench = (message: string | undefined, tool?: string) => classifyStep(message, tool, 'fr');
 
 describe('Le Noyau frame→state machine', () => {
   it('starts idle (veille)', () => {
@@ -212,18 +214,18 @@ describe('classifyStep — narration sentence → {tool, short verb} (fallback)'
     ['Je cherche en ligne…', 'web_search', 'recherche web…'],
   ];
   it.each(cases)('maps %s', (message, tool, label) => {
-    expect(classifyStep(message)).toEqual({ tool, label });
+    expect(inFrench(message)).toEqual({ tool, label });
   });
 
   it('also classifies the mock-script variants (keyword-matched, not exact)', () => {
-    expect(classifyStep('Recherche des pièces · TecDoc…').tool).toBe('get_service_parts');
-    expect(classifyStep('Comparaison des références…').tool).toBe('get_service_parts');
-    expect(classifyStep('Calcul des échéances…').tool).toBe('list_due_maintenance');
-    expect(classifyStep("Viscosité d'huile…").tool).toBe('get_motul_oil');
+    expect(inFrench('Recherche des pièces · TecDoc…').tool).toBe('get_service_parts');
+    expect(inFrench('Comparaison des références…').tool).toBe('get_service_parts');
+    expect(inFrench('Calcul des échéances…').tool).toBe('list_due_maintenance');
+    expect(inFrench("Viscosité d'huile…").tool).toBe('get_motul_oil');
   });
 
   it('an unmatched sentence → tool "unknown", label = the message itself (humanized fallback)', () => {
-    expect(classifyStep('Quelque chose de nouveau…')).toEqual({ tool: 'unknown', label: 'Quelque chose de nouveau…' });
+    expect(inFrench('Quelque chose de nouveau…')).toEqual({ tool: 'unknown', label: 'Quelque chose de nouveau…' });
   });
 });
 
@@ -232,29 +234,29 @@ describe('classifyStep — narration sentence → {tool, short verb} (fallback)'
 // in any language without the chips degrading.
 describe('classifyStep — the tool name on the frame wins over the prose', () => {
   it('classifies from the tool name, ignoring the sentence entirely', () => {
-    expect(classifyStep('n’importe quoi', 'get_service_parts')).toEqual({
+    expect(inFrench('n’importe quoi', 'get_service_parts')).toEqual({
       tool: 'get_service_parts',
       label: 'recherche pièces…',
     });
   });
 
   it('an English narration still lands the right chip when the tool name rides along', () => {
-    expect(classifyStep('Checking the parts catalogue…', 'get_service_parts').tool).toBe('get_service_parts');
-    expect(classifyStep('Reading the plate…', 'lookup_plate').tool).toBe('lookup_plate');
+    expect(inFrench('Checking the parts catalogue…', 'get_service_parts').tool).toBe('get_service_parts');
+    expect(inFrench('Reading the plate…', 'lookup_plate').tool).toBe('lookup_plate');
   });
 
   it('folds both backend history tools onto the one carnet chip', () => {
-    expect(classifyStep('', 'get_maintenance_history')).toEqual({ tool: 'get_history', label: 'lecture carnet…' });
-    expect(classifyStep('', 'get_vehicle_facts')).toEqual({ tool: 'get_history', label: 'lecture carnet…' });
+    expect(inFrench('', 'get_maintenance_history')).toEqual({ tool: 'get_history', label: 'lecture carnet…' });
+    expect(inFrench('', 'get_vehicle_facts')).toEqual({ tool: 'get_history', label: 'lecture carnet…' });
   });
 
   it('an UNKNOWN tool name falls back to the prose, not to "unknown"', () => {
     // A newly added server tool: the sentence is still the best evidence we have.
-    expect(classifyStep('Je lis la plaque…', 'some_new_tool').tool).toBe('lookup_plate');
+    expect(inFrench('Je lis la plaque…', 'some_new_tool').tool).toBe('lookup_plate');
   });
 
   it('no tool name → the keyword table, exactly as before', () => {
-    expect(classifyStep('Je lis la plaque…').tool).toBe('lookup_plate');
+    expect(inFrench('Je lis la plaque…').tool).toBe('lookup_plate');
   });
 
   it('the chip verb follows the interface language', () => {
@@ -390,7 +392,7 @@ describe('Le Noyau — current-turn tool-step chips', () => {
     });
 
     it('list_part_categories is a catalogue step', () => {
-      expect(classifyStep(undefined, 'list_part_categories').tool).toBe('get_service_parts');
+      expect(inFrench(undefined, 'list_part_categories').tool).toBe('get_service_parts');
     });
   });
 });

@@ -9,9 +9,9 @@ use App\Agent\ServerToolUseLogger;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\WebSearchBudget;
-use App\I18n\LocaleContext;
 use App\Tests\Mock\CountingRawResult;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Support\Locales;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
@@ -23,7 +23,6 @@ use Symfony\AI\Platform\Result\RawResultInterface;
 use Symfony\AI\Platform\Result\StreamResult;
 use Symfony\AI\Platform\ResultConverterInterface;
 use Symfony\AI\Platform\TokenUsage\TokenUsage;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -123,7 +122,7 @@ final class ServerToolUseLoggerTest extends TestCase
 
         $journal = new TurnJournal($this->createStub(DocumentManager::class), $this->createStub(LoggerInterface::class));
 
-        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, new LocaleContext(new RequestStack())), $journal);
+        return new ServerToolUseLogger($inner, $logger, $budget ?? new WebSearchBudget(1), new StepNarrator($tools, Locales::context()), $journal);
     }
 
     /**
