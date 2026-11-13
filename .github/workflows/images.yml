@@ -1,0 +1,78 @@
+name: Images
+
+# Publishes the offline-demo images (compose.demo.yaml) to GHCR once CI is green on main. workflow_run, not a
+# bare push trigger, so a red main never ships an image; workflow_dispatch republishes the current main by hand.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    env:
+      # workflow_run's github.sha is the tip of the default branch, not the commit CI just validated.
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: mon-parc-auto-api
+            context: ./api
+            target: frankenphp_prod
+            build-args: ''
+          - image: mon-parc-auto-bonneref
+            context: ./bonneref/api
+            target: frankenphp_prod
+            build-args: ''
+          # Same value as compose.demo.yaml's default AUTH_PORT: bin/demo rebuilds the Atelier locally
+          # when AUTH_PORT differs, the issuer is compiled into the bundle.
+          - image: mon-parc-auto-atelier
+            context: ./dashboard
+            target: ''
+            build-args: |
+              VITE_CASDOOR_ISSUER=http://localhost:8482
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ env.SOURCE_SHA }}
+          persist-credentials: false
+      - name: Short SHA
+        id: sha
+        run: echo "short=${SOURCE_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550 # v4.8.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          target: ${{ matrix.target }}
+          build-args: ${{ matrix.build-args }}
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:main
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ steps.sha.outputs.short }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.SOURCE_SHA }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max

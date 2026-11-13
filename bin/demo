@@ -1,11 +1,15 @@
 #!/usr/bin/env bash
 # Offline demo (compose.demo.yaml): bin/demo [up|down|reset|info]
-#   up     build, start, seed the demo garage on first boot, print URLs and login (default)
+#   up     get the images, start, seed the demo garage on first boot, print URLs and login (default)
+#          images: pulled from ghcr.io, built from this checkout when the pull fails; `up --build` (or
+#          DEMO_BUILD=1) builds all three locally
 #   down   stop the stack, data kept (bin/demo down -v also deletes it)
 #   reset  reload the demo garage from api/fixtures/demo, discarding changes
 #   info   print URLs and login
+# Catalogue: data/catalog-demo.sqlite, or DEMO_CATALOG_PATH=<a catalog.sqlite> in the environment.
 # Secrets are generated once into .demo/env (git-ignored). Ports: DEMO_PORT, BONNEREF_PORT, AUTH_PORT
-# on the first run, or edit .demo/env afterwards (the Atelier bakes AUTH_PORT in, so `up` rebuilds it).
+# on the first run, or edit .demo/env afterwards (the Atelier bakes AUTH_PORT in: the published image only
+# matches the default 8482, any other value builds the Atelier locally).
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -33,7 +37,6 @@ init_env() {
 			DEMO_PORT=${DEMO_PORT:-8480}
 			BONNEREF_PORT=${BONNEREF_PORT:-8481}
 			AUTH_PORT=${AUTH_PORT:-8482}
-			DEMO_CATALOG_PATH=${DEMO_CATALOG_PATH:-./data/catalog-demo.sqlite}
 			DEMO_EMAIL=demo@bonneref.fr
 			DEMO_PASSWORD=demo-$(secret 12)
 			MPA_APP_SECRET=$(secret 32)
@@ -44,10 +47,12 @@ init_env() {
 		EOF
 		echo "Generated $ENV_FILE"
 	fi
+	local catalog_override=${DEMO_CATALOG_PATH:-}
 	set -a
 	# shellcheck source=/dev/null
 	. "./$ENV_FILE"
 	set +a
+	export DEMO_CATALOG_PATH=${catalog_override:-${DEMO_CATALOG_PATH:-./data/catalog-demo.sqlite}}
 }
 
 render_casdoor_seed() {
@@ -61,10 +66,45 @@ render_casdoor_seed() {
 	chmod 644 "$STATE/casdoor-init.json"
 }
 
+# Services whose image compose.demo.yaml names on ghcr.io and also knows how to build (the worker shares php's).
+BUILDABLE=(php bonneref atelier)
+PUBLISHED_AUTH_PORT=8482
+
+image_of() {
+	case "$1" in
+	php) echo ghcr.io/soyuka/mon-parc-auto-api:main ;;
+	bonneref) echo ghcr.io/soyuka/mon-parc-auto-bonneref:main ;;
+	atelier) echo ghcr.io/soyuka/mon-parc-auto-atelier:main ;;
+	esac
+}
+
+# Compose versions differ on whether `up` pulls an absent image before building it, so the pull is explicit.
+prepare_images() {
+	local service
+	if [ "${DEMO_BUILD:-0}" = 1 ]; then
+		echo "Images: building php, bonneref and atelier from this checkout (--build)."
+		compose build "${BUILDABLE[@]}"
+		return
+	fi
+	for service in "${BUILDABLE[@]}"; do
+		if [ "$service" = atelier ] && [ "$AUTH_PORT" != "$PUBLISHED_AUTH_PORT" ]; then
+			echo "Images: atelier built from this checkout (AUTH_PORT=$AUTH_PORT is compiled in, the published image has $PUBLISHED_AUTH_PORT)."
+			compose build "$service"
+		elif compose pull --quiet "$service" 2>/dev/null; then
+			echo "Images: $service pulled from ghcr.io."
+		elif docker image inspect "$(image_of "$service")" >/dev/null 2>&1; then
+			echo "Images: $service not pullable (private package or offline), using the local copy."
+		else
+			echo "Images: $service not pullable (private package or offline), building from this checkout."
+			compose build "$service"
+		fi
+	done
+}
+
 check_catalog() {
 	if [ ! -f "$DEMO_CATALOG_PATH" ]; then
-		echo "No TecDoc catalogue at $DEMO_CATALOG_PATH." >&2
-		echo "Set DEMO_CATALOG_PATH in $ENV_FILE to a catalog.sqlite built by bonneref (docs/tecdoc-sqlite.md)." >&2
+		# Docker would bind-mount a fresh empty directory in its place.
+		echo "No TecDoc catalogue at DEMO_CATALOG_PATH=$DEMO_CATALOG_PATH (the default is the committed data/catalog-demo.sqlite)." >&2
 		exit 1
 	fi
 }
@@ -96,15 +136,29 @@ info() {
 	EOF
 }
 
-command=${1:-up}
-[ $# -gt 0 ] && shift
+command=up
+if [ $# -gt 0 ] && [ "${1#-}" = "$1" ]; then
+	command=$1
+	shift
+fi
+
+args=()
+for arg in "$@"; do
+	if [ "$arg" = --build ]; then
+		DEMO_BUILD=1
+	else
+		args+=("$arg")
+	fi
+done
+set -- ${args[@]+"${args[@]}"}
 
 case "$command" in
 up)
 	init_env
 	render_casdoor_seed
 	check_catalog
-	compose up -d --build --wait --wait-timeout 600 "$@"
+	prepare_images
+	compose up -d --wait --wait-timeout 600 "$@"
 	if garage_is_empty; then
 		load_garage
 	fi

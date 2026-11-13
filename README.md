@@ -121,6 +121,12 @@ filled (a Mazda6, a Renault Espace IV with its workshop manuals, a TORO ride-on 
 - the two MCP servers, `http://localhost:8480/mcp` (garage) and `http://localhost:8481/mcp` (catalogue), with
   the `claude mcp add --transport http …` lines. Run `/mcp` in Claude Code to log in: it registers itself.
 
+`bin/demo` pulls the three app images from GHCR (`ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main`, built by
+CI on every green `main`) and falls back to building them from the checkout when the pull fails, printing which path
+it took per image. Those packages are public only once the repository is: until then the pull is refused and the
+first run builds locally (a few minutes). `bin/demo --build` forces the local build. A non-default `AUTH_PORT`
+also builds the Atelier locally, the issuer URL is compiled into its bundle.
+
 `bin/demo down` stops it (data kept), `bin/demo reset` reloads the demo garage, `bin/demo info` prints the URLs
 again. No key is needed: your MCP client does the reasoning. `ANTHROPIC_API_KEY` in the environment turns the
 in-app agent on.
@@ -140,6 +146,23 @@ docker compose exec -T php php -d memory_limit=1G bin/console app:demo:export \
 It rewrites plates and VINs through the mapping, drops bills, quotes and the owner's email, merges the vehicles
 of [`api/fixtures/demo/extras.json`](api/fixtures/demo/extras.json), and refuses to write if a real plate, VIN or
 mapped value is left in the JSON or in a document's text, or if the documents exceed 50 MB.
+
+The catalogue is [`data/catalog-demo.sqlite`](data/catalog-demo.sqlite) (46 MB), a slice of the licensed TecDoc
+2020 extract cut to the demo garage. Parts, part categories and narrowing answer for its three catalogued
+vehicles only: the Mazda6 (kType 19107), the Espace IV (18679) and the F 800 GS Adventure (motorbike 101222); the
+TORO has no TecDoc type. `list_makes` and `list_models` show the whole 2020 catalogue, but `list_cars` lists types
+only for MAZDA, RENAULT and BMW MOTORCYCLES: any other make stops at the model.
+`DEMO_CATALOG_PATH=<path to a full catalog.sqlite> bin/demo` mounts another catalogue instead. The slice is
+regenerated on the server holding the full catalogue (source opened read-only, output never overwritten):
+
+```bash
+scp bonneref/api/bin/build-demo-catalog <server>:src/bdf2sql/catalog/demo-tool/
+ssh <server> 'cd src/bdf2sql/catalog && python3 -I demo-tool/build-demo-catalog "$PWD/catalog.sqlite" \
+  "$PWD/catalog-demo.sqlite" --types PC:19107 PC:18679 MC:101222 --languages 1,4,6'
+scp <server>:src/bdf2sql/catalog/catalog-demo.sqlite data/catalog-demo.sqlite
+```
+
+What it keeps and drops: [`docs/tecdoc-sqlite.md`](docs/tecdoc-sqlite.md) § "Demo slice".
 
 ## Run it locally
 

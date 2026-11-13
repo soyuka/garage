@@ -14,8 +14,9 @@
 # listener is mpa's, which also pins anonymous DCR to the `bonneref` organization like the hosted
 # auth.bonneref.fr does (api/docs/AUTH.md § DCR lands in the bonneref organization).
 #
-# Images are built from this checkout; each `build:` can be swapped for the `image:` named next to it once
-# CI publishes them.
+# Images: each buildable service names its published image (.github/workflows/images.yml) and keeps a `build:`
+# for this checkout. Compose alone builds when the image is absent locally and never pulls it, so bin/demo
+# pulls first and builds only what the pull could not provide; `bin/demo --build` builds everything.
 
 name: mpa-demo
 
@@ -61,8 +62,7 @@ x-mpa-environment: &mpa_environment
 
 services:
   php:
-    # image: ghcr.io/soyuka/mon-parc-auto-api:main
-    image: mpa-demo/api
+    image: ghcr.io/soyuka/mon-parc-auto-api:main
     build:
       context: ./api
       target: frankenphp_prod
@@ -85,7 +85,7 @@ services:
         condition: service_started
 
   worker:
-    image: mpa-demo/api
+    image: ghcr.io/soyuka/mon-parc-auto-api:main
     restart: unless-stopped
     environment: *mpa_environment
     command: ["php", "bin/console", "messenger:consume", "async", "failed", "--time-limit=3600"]
@@ -102,8 +102,7 @@ services:
         condition: service_healthy
 
   atelier:
-    # image: ghcr.io/soyuka/mon-parc-auto-atelier:main
-    image: mpa-demo/atelier
+    image: ghcr.io/soyuka/mon-parc-auto-atelier:main
     build:
       context: ./dashboard
       args:
@@ -159,8 +158,7 @@ services:
       - ./.demo/casdoor-init.json:/init_data.json:ro
 
   bonneref:
-    # image: ghcr.io/soyuka/mon-parc-auto-bonneref:main
-    image: mpa-demo/bonneref
+    image: ghcr.io/soyuka/mon-parc-auto-bonneref:main
     build:
       context: ./bonneref/api
       target: frankenphp_prod
