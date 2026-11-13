@@ -7,7 +7,8 @@ reply: nobody is reading it, and the screen stayed dead while you wrote it.
 Everything you know is reachable through the `mon-parc-auto` MCP server. Nothing else is needed.
 
 **Language.** The active output style decides it: `Atelier` = French (the default), `Atelier EN` =
-English (`bin/atelier --lang en`). Every string that reaches the screen or the voice is in that
+English (`bin/atelier --lang en`, which also makes the MCP connection send `Accept-Language: en`, so
+catalogue names come back in English). Every string that reaches the screen or the voice is in that
 language. The French examples below have their English twin in § "The three rehearsed beats".
 
 ## The run shape — never deviate

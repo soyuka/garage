@@ -11,16 +11,26 @@
 #   --public    Drive the public deployment (garage.bonneref.fr, docs/deploy-garage.md) instead of
 #               this laptop: no docker, no tunnel, MCP from stage/mcp.public.json. Env:
 #               ATELIER_TARGET=public.
+#   --print-mcp-config
+#               Print the MCP config the session would get (URL + Accept-Language) and exit.
+#
+# The language also rides the MCP connection: Claude Code sends no Accept-Language on MCP, and the
+# garage server forwards the caller's locale to bonneref, which names catalogue categories in it
+# (fr default, en supported). The launcher therefore generates stage/var/mcp.<target>.<lang>.json
+# from the tracked .mcp.json / mcp.public.json plus an `Accept-Language` header. Never an
+# Authorization header: the OAuth flow stays Claude Code's own.
 set -euo pipefail
 
 LANG_CHOICE="${ATELIER_LANG:-fr}"
 TARGET="${ATELIER_TARGET:-local}"
 CLAUDE_ARGS=()
+PRINT_MCP=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --lang) LANG_CHOICE="${2:-}"; shift 2 ;;
     --lang=*) LANG_CHOICE="${1#--lang=}"; shift ;;
     --public) TARGET=public; shift ;;
+    --print-mcp-config) PRINT_MCP=1; shift ;;
     *) CLAUDE_ARGS+=("$1"); shift ;;
   esac
 done
@@ -50,16 +60,33 @@ compose() {
     -f compose.yaml -f compose.override.yaml -f compose.stage.yaml "$@")
 }
 
+# Same server name as the tracked files, so the `mcp__mon-parc-auto` permission and the protocol's
+# wording hold. Passed with --strict-mcp-config, which also drops the auto-discovered stage/.mcp.json.
+mcp_config() {
+  local src="$STAGE_DIR/.mcp.json" out
+  [ "$TARGET" = public ] && src="$STAGE_DIR/mcp.public.json"
+  mkdir -p "$STAGE_DIR/var"
+  out="$STAGE_DIR/var/mcp.$TARGET.$LANG_CHOICE.json"
+  jq --arg lang "$LANG_CHOICE" \
+    '.mcpServers["mon-parc-auto"].headers = {"Accept-Language": $lang}' "$src" >"$out"
+  printf '%s' "$out"
+}
+
 say() { printf '\033[2matelier:\033[0m %s\n' "$1" >&2; }
 
+command -v jq >/dev/null || { echo "atelier: jq not installed" >&2; exit 1; }
+MCP_CONFIG="$(mcp_config)"
+if [ "$PRINT_MCP" = 1 ]; then
+  cat "$MCP_CONFIG"
+  exit 0
+fi
+
 if [ "$TARGET" = public ]; then
-  # --strict-mcp-config drops stage/.mcp.json (the laptop tunnel). Same server name, so the
-  # `mcp__mon-parc-auto` permission and the protocol's wording hold unchanged.
   code="$(curl -s -o /dev/null -m 5 -w '%{http_code}' https://garage.bonneref.fr/mcp || echo 000)"
   [ "$code" = 401 ] || { echo "atelier: garage.bonneref.fr/mcp answered $code, expected 401" >&2; exit 1; }
   say "public MCP up — Atelier: https://garage.bonneref.fr/?lang=$LANG_CHOICE (log in as the same account as Claude)"
   cd "$STAGE_DIR"
-  exec claude --mcp-config "$STAGE_DIR/mcp.public.json" --strict-mcp-config ${CLAUDE_ARGS[@]+"${CLAUDE_ARGS[@]}"}
+  exec claude --mcp-config "$MCP_CONFIG" --strict-mcp-config ${CLAUDE_ARGS[@]+"${CLAUDE_ARGS[@]}"}
 fi
 
 # --- 1. the stack ------------------------------------------------------------------------------
@@ -137,4 +164,4 @@ fi
 # Not `exec` — the shell has to survive Claude so the trap can close the tunnel behind us.
 say "Atelier: https://localhost/?lang=$LANG_CHOICE"
 cd "$STAGE_DIR"
-claude ${CLAUDE_ARGS[@]+"${CLAUDE_ARGS[@]}"}
+claude --mcp-config "$MCP_CONFIG" --strict-mcp-config ${CLAUDE_ARGS[@]+"${CLAUDE_ARGS[@]}"}
