@@ -98,3 +98,13 @@ curl -s -m 2 -o /dev/null -w '%{http_code}\n' 'https://garage.bonneref.fr/.well-
 Everything changed on 2026-10-31 has a `pre-garage-20261031` copy: `~/bonneref/garage.env`, `~/bonneref.compose.yml`
 (unchanged), `/etc/caddy/bonneref.fr.caddy`, `/etc/caddy/Caddyfile` (unchanged), `~/bonneref/dumps/garage-pre-garage-20261031`
 (mongodump of db `garage`), `~/backups/casdoor-app-user-pre-garage-20261031.sql` (Casdoor `application` + `user` tables).
+
+## 2026-11-13 deploy: catalogue with bikes + EN, API Platform 5.0.7
+
+Deployed `89e7e36` (bonneref-api, bonneref-garage, both fronts). The catalogue file mounted by bonneref-api
+(`~/src/bdf2sql/catalog/catalog.sqlite`) is now the former `catalog-full.sqlite`: the 2026-10-30 file plus motorbike
+tables (`derived_mc`) and English texts (`derived_en`), 24,055,025,664 B. The previous file is
+`catalog-20261030.sqlite` (rollback: swap the two names back and `up -d --no-deps bonneref-api`); `catalog-prev.sqlite`
+is the 2026-10-21 one. Its `PRAGMA quick_check` was still running at deploy time (`enqc.log`). Swapping the file
+needs the container recreated (`up -d`), the bind mount pins the inode. `bonneref.fr/mcp` is not routed by the host
+Caddy (405); the container answers it on `127.0.0.1:5382`.
