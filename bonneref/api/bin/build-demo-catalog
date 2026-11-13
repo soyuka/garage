@@ -1,0 +1,233 @@
+#!/usr/bin/env python3
+"""Build the committed TecDoc slice of the offline demo (data/catalog-demo.sqlite) from a derived catalog.sqlite.
+
+  python3 -I bin/build-demo-catalog SOURCE OUTPUT --types PC:19107 PC:18679 MC:101222 --languages 1,4,6
+
+SOURCE is opened `mode=ro&immutable=1` and never written: on the server it is the file the running bonneref container
+serves. OUTPUT must not exist. Every source table needs a rule below, so a table added to the derived catalogue later
+stops the build instead of being silently copied whole or dropped. Same DDL, primary keys, WITHOUT ROWID and indexes
+as the source; rows inserted in key order, then ANALYZE and VACUUM, so the same inputs give the same bytes.
+"""
+import argparse
+import os
+import sqlite3
+import sys
+
+KINDS = {'PC': 'pc', 'CV': 'cv', 'MC': 'mc'}
+
+# Dictionaries, copied whole. manufacturer and vehicle_model stay complete: article_oe_number names its makers
+# through manufacturer, and list_makes / list_models stay the real catalogue.
+FULL = {
+    'meta_info', 'language', 'manufacturer', 'vehicle_model', 'driver_cab',
+    'key_value', 'criterion', 'generic_article',
+    'search_tree', 'search_tree_node', 'search_tree_node_genart',
+    'supplier', 'supplier_dlnr', 'brand', 'supplier_default_logo',
+}
+TEXTS = {
+    'vehicle_model_text', 'driver_cab_text', 'key_value_text', 'criterion_text', 'generic_article_text',
+    'search_tree_node_text',
+}
+# Nothing reads the supplier logos (15 MB for the slice's suppliers): kept as an empty table.
+EMPTY = {'supplier_logo'}
+SLICE_MODELS = 'model_id IN (SELECT model_id FROM temp.slice_model)'
+ARTICLES = 'article_id IN (SELECT article_id FROM temp.slice_article)'
+# Vehicle types: every type of the slice's makes, so the demo makes list their real models and types; parts only
+# for the slice types. Rules reading main.* run after the tables they read (stage).
+SLICED = {
+    'pc_type': (0, SLICE_MODELS),
+    'cv_type': (0, SLICE_MODELS),
+    'mc_type': (0, SLICE_MODELS),
+    'article_pc_type': (0, "type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = 'pc')"),
+    'article_cv_type': (0, "type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = 'cv')"),
+    'article_mc_type': (0, "type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = 'mc')"),
+    'pc_type_genart': (0, "type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = 'pc')"),
+    'cv_type_genart': (0, "type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = 'cv')"),
+    'mc_type_genart': (0, "type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = 'mc')"),
+    'article': (0, ARTICLES),
+    'article_product': (0, ARTICLES),
+    'article_attribute': (0, ARTICLES),
+    'article_oe_number': (0, ARTICLES),
+    'article_link_qualifier': (0, '(vehicle_kind, vehicle_id) IN (SELECT kind, type_id FROM temp.slice_type)'),
+    'pc_type_text': (1, 'type_id IN (SELECT type_id FROM main.pc_type) AND {languages}'),
+    'pc_type_engine': (1, 'type_id IN (SELECT type_id FROM main.pc_type)'),
+    'mc_type_text': (1, 'type_id IN (SELECT type_id FROM main.mc_type) AND {languages}'),
+    'mc_type_kba': (1, 'type_id IN (SELECT type_id FROM main.mc_type)'),
+    'cv_type_engine': (1, 'type_id IN (SELECT type_id FROM main.cv_type)'),
+    'cv_type_axle': (1, 'type_id IN (SELECT type_id FROM main.cv_type)'),
+    'cv_type_cab': (1, 'type_id IN (SELECT type_id FROM main.cv_type)'),
+    'cv_type_wheelbase': (1, 'type_id IN (SELECT type_id FROM main.cv_type)'),
+    'cv_type_subtype': (1, 'type_id IN (SELECT type_id FROM main.cv_type)'),
+    'cv_type_suspension': (1, 'type_id IN (SELECT type_id FROM main.cv_type)'),
+    'link_qualifier_set': (1, 'qual_set_id IN (SELECT qual_set_id FROM main.article_link_qualifier)'),
+    'link_qualifier_item': (1, 'qual_set_id IN (SELECT qual_set_id FROM main.article_link_qualifier)'),
+    'engine': (2, """engine_id IN (SELECT engine_id FROM main.pc_type_engine
+                                  UNION SELECT engine_id FROM main.cv_type_engine)"""),
+}
+LINKS = {'pc': 'article_pc_type', 'cv': 'article_cv_type', 'mc': 'article_mc_type'}
+TYPES = {'pc': 'pc_type', 'cv': 'cv_type', 'mc': 'mc_type'}
+
+
+def log(message):
+    print(message, file=sys.stderr, flush=True)
+
+
+def parse_type(value):
+    kind, _, type_id = value.partition(':')
+    if kind not in KINDS or not type_id.isdigit():
+        raise argparse.ArgumentTypeError(f'{value}: expected PC:<kType>, CV:<id> or MC:<id>')
+    return KINDS[kind], int(type_id)
+
+
+def parse_languages(value):
+    try:
+        return sorted({int(v) for v in value.split(',')})
+    except ValueError:
+        raise argparse.ArgumentTypeError(f'{value}: expected language ids, e.g. 1,4,6')
+
+
+def key_order(con, table):
+    pk = sorted((c for c in con.execute(f'PRAGMA src.table_info("{table}")') if c[5]), key=lambda c: c[5])
+    return ', '.join(f'"{c[1]}"' for c in pk) or 'rowid'
+
+
+def source_schema(con, schema):
+    return con.execute(f"""SELECT type, name, tbl_name, sql FROM {schema}.sqlite_master
+                           WHERE name NOT LIKE 'sqlite_%' ORDER BY type, name""").fetchall()
+
+
+def build(con, source, types, languages):
+    con.execute('ATTACH ? AS src', (f'file:{source}?mode=ro&immutable=1',))
+    objects = con.execute("""SELECT type, name, tbl_name, sql FROM src.sqlite_master
+                             WHERE name NOT LIKE 'sqlite_%' ORDER BY rowid""").fetchall()
+    tables = [name for kind, name, _, _ in objects if kind == 'table']
+    unruled = [t for t in tables if t not in FULL | TEXTS | EMPTY | set(SLICED)]
+    if unruled:
+        raise SystemExit(f'ABORT: no slicing rule for source table(s) {", ".join(unruled)}')
+
+    for kind, type_id in types:
+        if TYPES[kind] not in tables or not con.execute(
+                f'SELECT 1 FROM src.{TYPES[kind]} WHERE type_id = ?', (type_id,)).fetchone():
+            raise SystemExit(f'ABORT: {kind.upper()}:{type_id} is not in {TYPES[kind]}')
+
+    con.execute('CREATE TEMP TABLE slice_type (kind TEXT, type_id INTEGER, PRIMARY KEY (kind, type_id))')
+    con.executemany('INSERT INTO temp.slice_type VALUES (?, ?)', types)
+    con.execute('CREATE TEMP TABLE slice_model (model_id INTEGER PRIMARY KEY)')
+    for kind, type_id in types:
+        con.execute(f"""INSERT OR IGNORE INTO temp.slice_model SELECT model_id FROM src.vehicle_model
+                        WHERE manufacturer_id = (SELECT m.manufacturer_id FROM src.{TYPES[kind]} t
+                                                 JOIN src.vehicle_model m ON m.model_id = t.model_id
+                                                 WHERE t.type_id = ?)""", (type_id,))
+    con.execute('CREATE TEMP TABLE slice_article (article_id INTEGER PRIMARY KEY)')
+    for kind in sorted({kind for kind, _ in types}):
+        con.execute(f"""INSERT OR IGNORE INTO temp.slice_article SELECT article_id FROM src.{LINKS[kind]}
+                        WHERE type_id IN (SELECT type_id FROM temp.slice_type WHERE kind = ?)""", (kind,))
+
+    for kind, _, _, sql in objects:
+        if kind == 'table':
+            con.execute(sql)
+
+    language_list = ','.join(map(str, languages))
+    languages_where = f'language_id IN ({language_list})'
+    order = sorted(tables, key=lambda t: (SLICED.get(t, (0,))[0], tables.index(t)))
+    con.execute('BEGIN')
+    for table in order:
+        if table in FULL:
+            where = '1'
+        elif table in TEXTS:
+            where = languages_where
+        elif table in EMPTY:
+            continue
+        else:
+            where = SLICED[table][1].format(languages=languages_where)
+        con.execute(f'INSERT INTO main."{table}" SELECT * FROM src."{table}" WHERE {where} '
+                    f'ORDER BY {key_order(con, table)}')
+    if 'meta_info' in tables:
+        slice_ = ' '.join(f'{kind.upper()}:{type_id}' for kind, type_id in types)
+        con.execute("INSERT INTO main.meta_info (key, value) VALUES ('derived_demo_slice', ?)",
+                    (f'{slice_}; languages {language_list}',))
+    con.execute('COMMIT')
+
+    for kind, _, _, sql in objects:
+        if kind != 'table' and sql:
+            con.execute(sql)
+
+    check(con, tables, objects)
+    con.execute('DETACH src')
+    con.execute('ANALYZE')
+    return tables
+
+
+def check(con, tables, objects):
+    if source_schema(con, 'main') != source_schema(con, 'src'):
+        raise SystemExit('ABORT: output schema differs from the source')
+    problems = []
+
+    def expect_none(label, sql):
+        if any(t not in tables for t in label.split()[0].split('/')):
+            return
+        n = con.execute(sql).fetchone()[0]
+        if n:
+            problems.append(f'{label}: {n}')
+
+    expect_none('article missing rows', """SELECT count(*) FROM temp.slice_article s
+                WHERE NOT EXISTS (SELECT 1 FROM main.article a WHERE a.article_id = s.article_id)""")
+    expect_none('link_qualifier_set missing sets', """SELECT count(*) FROM (SELECT DISTINCT qual_set_id
+                FROM main.article_link_qualifier) q WHERE NOT EXISTS
+                (SELECT 1 FROM main.link_qualifier_set s WHERE s.qual_set_id = q.qual_set_id)""")
+    expect_none('article_link_qualifier rows outside the slice articles', """SELECT count(*)
+                FROM main.article_link_qualifier WHERE article_id NOT IN (SELECT article_id FROM main.article)""")
+    expect_none('supplier missing article suppliers', """SELECT count(*) FROM main.article a
+                WHERE NOT EXISTS (SELECT 1 FROM main.supplier s WHERE s.supplier_id = a.supplier_id)""")
+    expect_none('criterion missing attribute criteria', """SELECT count(*) FROM main.article_attribute a
+                WHERE NOT EXISTS (SELECT 1 FROM main.criterion c WHERE c.criterion_id = a.criterion_id)""")
+    expect_none('manufacturer missing OE makers', """SELECT count(*) FROM main.article_oe_number o
+                WHERE NOT EXISTS (SELECT 1 FROM main.manufacturer m WHERE m.manufacturer_id = o.manufacturer_id)""")
+    if problems:
+        raise SystemExit('ABORT: ' + '; '.join(problems))
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument('source')
+    parser.add_argument('output')
+    parser.add_argument('--types', nargs='+', type=parse_type, required=True, metavar='KIND:ID')
+    parser.add_argument('--languages', type=parse_languages, required=True, metavar='1,4,6')
+    args = parser.parse_args()
+    types = sorted(set(args.types))
+
+    if os.path.lexists(args.output):
+        raise SystemExit(f'ABORT: {args.output} exists, refusing to overwrite')
+    partial = args.output + '.partial'
+    if os.path.lexists(partial):
+        raise SystemExit(f'ABORT: {partial} exists (an earlier run died?), remove it first')
+    before = os.stat(args.source)
+
+    try:
+        con = sqlite3.connect(partial, isolation_level=None)
+        con.execute('PRAGMA journal_mode = OFF')
+        con.execute('PRAGMA page_size = 4096')
+        tables = build(con, args.source, types, args.languages)
+        con.execute('VACUUM')
+        integrity = con.execute('PRAGMA integrity_check').fetchall()
+        if integrity != [('ok',)]:
+            raise SystemExit(f'ABORT: integrity_check {integrity[:5]}')
+        counts = [(t, con.execute(f'SELECT count(*) FROM "{t}"').fetchone()[0]) for t in tables]
+        con.close()
+    except BaseException:
+        if os.path.exists(partial):
+            os.remove(partial)
+        raise
+
+    after = os.stat(args.source)
+    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+        os.remove(partial)
+        raise SystemExit('ABORT: the source changed during the build')
+    os.rename(partial, args.output)
+
+    for table, n in counts:
+        print(f'{table:28} {n:>10,}')
+    print(f'{args.output}: {os.path.getsize(args.output):,} bytes, integrity_check ok')
+
+
+if __name__ == '__main__':
+    main()
