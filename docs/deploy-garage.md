@@ -84,6 +84,25 @@ rsync -a --delete $F/bonneref/dist/ ~/sites/bonneref.fr/
   `demo-reset.sh --snapshot` re-captures the snapshot from the current demo docs. Never pipe its output into
   `head`: SIGPIPE kills it between the delete and the restore.
 
+## Offline fixture
+
+The offline demo (`bin/demo`) loads `api/fixtures/demo/` with `app:demo:load`. That fixture is exported from the
+owner's live garage by a command, never edited by hand:
+
+```bash
+# in api/, against the dev stack; the mapping file holds the real plates/VINs and stays out of the repo
+docker compose exec -T php php -d memory_limit=1G bin/console app:demo:export \
+  --owner=<owner email> --mapping=php://stdin \
+  --vehicle=01KVKMEFM6V36AWETKE7A9QCJ8 --vehicle=01KW7CFJP6Y0ARF5287B7Y9CAY --vehicle=01KVFEQA72XQMWSS3HPBD93ASR \
+  --skip-document=01M6NJ7C6D8MJKMJE1F216FGFJ --skip-document=01M3Z4RDF4XETN3TXNH9YZ3P3D \
+  < ../../rewrite-mapping.txt
+```
+
+It rewrites plates and VINs through the mapping, drops bills, quotes and the owner's email, merges the vehicles
+of `api/fixtures/demo/extras.json` (the BMW F 800 GS Adventure), and refuses to write if a real plate, VIN or
+mapped value is left in the JSON or in a document's text, or if the documents exceed 50 MB. The hosted demo is a
+separate snapshot (above) and does not contain the `extras.json` vehicles.
+
 ## Verifying
 
 ```bash

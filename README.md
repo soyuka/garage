@@ -2,108 +2,48 @@
 
 [![CI](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml/badge.svg)](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml)
 
-A garage and maintenance tracker you run by talking to an AI. Your vehicles, their service history, planned work
-and a usage-driven forecast of what is due are exposed as an MCP server, so Claude (or any MCP client) reads and
-writes your garage with owner-scoped tools. When a client drives it, the **Atelier**, a 3D workshop in the
-browser, reacts live: the car drives in, the part is revealed with its real catalogue reference, and logging a
-visit closes the planned task. Parts come from **bonneref**, a second Symfony app in this repo that serves the parts
-catalogue and plate lookup as its own MCP server and runs a parts-finder agent.
+A garage and maintenance tracker exposed as an MCP server, with a 3D workshop in the browser (the **Atelier**)
+that any MCP client can drive. You ask Claude what is due on your car; Claude calls the garage tools, and the
+Atelier reacts live: the car drives in, the task list opens, the part is shown inside the engine bay with its
+catalogue reference, and logging the visit closes the planned task. The Atelier has no privileged channel: it
+renders the same frames whether Claude Code, Claude Desktop or the app's own Symfony AI agent made the call.
+Parts come from **bonneref**, a second Symfony app in this repository that serves a TecDoc parts catalogue as its
+own MCP server.
 
-Built with Symfony 7, API Platform 5 (`api-platform/mcp`), `symfony/mcp-bundle`, Symfony AI, Mercure and
-React / react-three-fiber. This is a pet project for testing MCP with API Platform. Entry for the Symfony AI & MCP hackathon.
+Symfony 7, API Platform 5 (`api-platform/mcp`), `symfony/mcp-bundle` and the PHP MCP SDK, Symfony AI, Mercure,
+React / react-three-fiber. Entry for the Symfony AI & MCP hackathon.
 
-## Try it in 2 minutes
+## Try it hosted (2 minutes)
 
-MCP endpoint: **`https://garage.bonneref.fr/mcp`** (Streamable HTTP, OAuth). Atelier: **https://garage.bonneref.fr**.
-
-Demo login on `auth.bonneref.fr`: `demo` / `demo-MpiFkZmAPfu2`. The demo garage is shared
-between judges and reset nightly.
-
-Add the server:
+MCP endpoint **`https://garage.bonneref.fr/mcp`** (Streamable HTTP, OAuth). Atelier **https://garage.bonneref.fr**.
+Login on `auth.bonneref.fr`: `demo` / `demo-MpiFkZmAPfu2`. The demo garage is shared between jurors and reset
+nightly.
 
 - **Claude Code**: `claude mcp add --transport http garage https://garage.bonneref.fr/mcp`, then `/mcp` to log in.
-- **claude.ai / Claude Desktop**: Settings → Connectors → Add custom connector → URL
-  `https://garage.bonneref.fr/mcp`. No client id is needed: the client registers itself (dynamic client
-  registration) and opens the login page.
+- **claude.ai / Claude Desktop**: Settings → Connectors → Add custom connector → `https://garage.bonneref.fr/mcp`.
 
-Open https://garage.bonneref.fr in a browser logged in with the same account to watch the Atelier react, then
-paste these in order. The tools in brackets are what the client is expected to call.
+No client id to copy: the client registers itself (dynamic client registration) and opens the login page. Open the
+Atelier in a browser logged in as the same `demo` user, then paste these in order (tools in brackets are what the
+client is expected to call):
 
 1. `What's due on the Mazda?`
-   (`open_vehicle` drives the car into the Atelier and returns its forecast and open tasks; `focus_view` raises
-   the task list)
+   (`open_vehicle` drives the car in and returns its forecast and open tasks; `focus_view` raises the task list)
 2. `Which oil filter should I order for the Mazda? Narrow it down to the physically different parts and compare brands.`
-   (`get_service_parts`, `narrow_parts`, `compare_brands`; the catalogue is served by bonneref)
+   (`get_service_parts`, `narrow_parts`, `compare_brands`, served by bonneref)
 3. `When did I last change the oil on the Mazda? Show me the logbook.`
-   (`get_maintenance_history`, then `focus_view` on the `carnet` panel filtered to `oil_change`, and a `toast`
-   with the date)
+   (`get_maintenance_history`, `focus_view` on the `carnet` panel filtered to `oil_change`, a `toast`)
 4. `Show me where the fuel filter sits on the Mazda.`
-   (`reveal_assembly` on the `bay` region: the body turns to wireframe and the fuel circuit is drawn under it)
+   (`reveal_assembly` on the `bay` region: the body turns to wireframe, the fuel circuit is drawn under it)
 5. `I've just replaced the fuel filter on the Mazda, at 252 524 km. Log it.`
    (`log_maintenance`: the visit closes the open fuel filter task and the forecast moves)
 
-Prompt 5 writes to the shared garage. If someone already logged it today, the task is gone until the nightly
-reset.
-
-The full tool list is advertised by `tools/list`. Garage tools are declared as `McpTool` operations on API
-Platform resources in [`api/src/ApiResource/`](api/src/ApiResource/), for example
-[`Garage.php`](api/src/ApiResource/Garage.php), [`Maintenance.php`](api/src/ApiResource/Maintenance.php) and
-[`Dashboard.php`](api/src/ApiResource/Dashboard.php) for the render intents.
-
-## What Symfony AI and the MCP SDK unlocked
-
-**One tool declaration, two callers.** Garage tools are `McpTool` operations on API Platform resources
-(`api-platform/mcp` on `symfony/mcp-bundle` and the PHP MCP SDK). The in-app Symfony AI agent does not redeclare
-them: [`McpToolbox`](api/src/Mcp/Agent/McpToolbox.php) implements Symfony AI's `ToolboxInterface` by calling the
-same `Mcp\Server` instance in process, so schemas, validation and dedup results are identical for both. Its
-denylist hides the pilot-only tools from the agent.
-
-**The UI is an MCP client's output device.** An MCP tool call renders nothing in the host, so the tools in
-[`Dashboard.php`](api/src/ApiResource/Dashboard.php) (`open_vehicle`, `focus_view`, `reveal_assembly`,
-`show_document`, `propose_actions`…) publish a Mercure frame instead, through processors in
-[`api/src/State/Dashboard/`](api/src/State/Dashboard/). The in-app agent has the same intents as `#[AsTool]`
-methods in [`RenderIntentTools.php`](api/src/Agent/Ui/RenderIntentTools.php), on the same publisher.
-[`DashboardChannel.php`](api/src/Agent/Ui/DashboardChannel.php) picks the topic: the turn's session for the
-in-app agent, or the owner's pilot topic (an HMAC of the owner identity) for an external client. The Atelier
-subscribes to both ([`agent.ts`](dashboard/src/agent.ts),
-[`Workshop.tsx`](dashboard/src/workshop/Workshop.tsx)). Claude Code or Claude Desktop can therefore drive the
-browser with no chat UI of ours in between.
-
-**A remote MCP server with no client id to hand out.**
-[`ProtectedResourceMetadataController`](api/src/Controller/Mcp/ProtectedResourceMetadataController.php) serves
-RFC 9728 metadata, [`McpProtectedResourceChallengeListener`](api/src/EventListener/McpProtectedResourceChallengeListener.php)
-adds the `WWW-Authenticate` challenge, and [`CasdoorTokenHandler`](api/src/Security/CasdoorTokenHandler.php) is a
-Symfony `AccessTokenHandlerInterface` validating the bearer. The issuer accepts anonymous RFC 7591 dynamic client
-registration, so stock clients register themselves ([`api/docs/AUTH.md`](api/docs/AUTH.md)). Every tool is then
-scoped to the caller by [`OwnerContext`](api/src/Security/OwnerContext.php).
-
-**Agent turns off the request.** `POST /agent/turn` dispatches a
-[`RunAgentTurn`](api/src/Message/RunAgentTurn.php) Messenger message; the
-[handler](api/src/MessageHandler/RunAgentTurnHandler.php) runs the Symfony AI agent in the worker under the CLI
-SAPI, with no request time limit. Without a worker,
-[`DeferredTurnDispatcher`](api/src/Agent/Dispatch/DeferredTurnDispatcher.php) runs it in `kernel.terminate`
-after the 202 is sent.
-
-**A tool loop that stops.** [`CompositeToolbox`](api/src/Agent/Toolbox/CompositeToolbox.php) merges the render
-intents and the MCP tools inside the bundle's `FaultTolerantToolbox`, so a malformed call becomes an error tool
-result instead of a 500 ([`services.yaml`](api/config/services.yaml)). Listeners on Symfony AI's
-`ToolCallsExecuted` event end the turn on an explicit [`end_turn`](api/src/Agent/Ui/EndTurnTool.php) tool
-([`TerminalToolListener`](api/src/Agent/Ui/TerminalToolListener.php)) or on the same failing call repeated
-([`RepeatedToolFailureGuard`](api/src/Agent/Ui/RepeatedToolFailureGuard.php)); `max_tool_calls: 25` in
-[`ai.yaml`](api/config/packages/ai.yaml) is the backstop. The same event feeds the turn journal
-([`ToolCallJournalListener`](api/src/Agent/Journal/ToolCallJournalListener.php)), and
-[`TurnCostEstimator`](api/src/Agent/Journal/TurnCostEstimator.php) prices each turn's token counts.
-
-**A second server, a second agent.** bonneref is its own Symfony app exposing the parts catalogue as a read-only
-MCP server ([`bonneref/api/src/ApiResource/`](bonneref/api/src/ApiResource/)) and running a parts-finder agent
-([`bonneref/api/src/Agent/Finder/`](bonneref/api/src/Agent/Finder/)). mpa calls it over HTTP with the caller's
-bearer ([`BonnerefClient.php`](api/src/Bonneref/BonnerefClient.php)).
-
-What broke on the way is listed in [What we found broken upstream](#what-we-found-broken-upstream).
+Prompt 5 writes to the shared garage: if someone already logged it today, the task is gone until the nightly reset.
+Catalogue names are English by default. MCP answers follow the request's `Accept-Language` (for French:
+`claude mcp add … --header "Accept-Language: fr"`); the Atelier has its own EN/FR switch.
 
 ## Run it offline
 
-Requirements: Docker with Compose, ports 8480-8482 free on loopback (or set `DEMO_PORT`, `BONNEREF_PORT`,
+Requirements: Docker with Compose, ports 8480–8482 free on loopback (or set `DEMO_PORT`, `BONNEREF_PORT`,
 `AUTH_PORT` before the first run).
 
 ```bash
@@ -112,158 +52,108 @@ cd mon-parc-auto.fr
 bin/demo
 ```
 
-One stack ([`compose.demo.yaml`](compose.demo.yaml)), nothing hosted: the Atelier, mpa's MCP server, bonneref's
-catalogue API and MCP server on a small TecDoc slice, and a Casdoor with a `demo` user whose garage is already
-filled (a Mazda6, a Renault Espace IV with its workshop manuals, a TORO ride-on mower, a BMW F 800 GS Adventure).
-`bin/demo` generates the secrets and the demo password into `.demo/env` on the first run, then prints:
+[`compose.demo.yaml`](compose.demo.yaml) brings up everything with nothing hosted: the Atelier, mpa's MCP server
+and worker, bonneref's catalogue API and MCP server, MongoDB, Postgres, and a Casdoor with a `demo` user. On the
+first run `bin/demo` generates the secrets and the demo password into `.demo/env`, seeds the garage, then prints:
 
-- the Atelier, `http://localhost:8480`, and the login;
-- the two MCP servers, `http://localhost:8480/mcp` (garage) and `http://localhost:8481/mcp` (catalogue), with
-  the `claude mcp add --transport http …` lines. Run `/mcp` in Claude Code to log in: it registers itself.
-
-`bin/demo` pulls the three app images from GHCR (`ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main`, built by
-CI on every green `main`) and falls back to building them from the checkout when the pull fails, printing which path
-it took per image. Those packages are public only once the repository is: until then the pull is refused and the
-first run builds locally (a few minutes). `bin/demo --build` forces the local build. A non-default `AUTH_PORT`
-also builds the Atelier locally, the issuer URL is compiled into its bundle.
-
-`bin/demo down` stops it (data kept), `bin/demo reset` reloads the demo garage, `bin/demo info` prints the URLs
-again. No key is needed: your MCP client does the reasoning. `ANTHROPIC_API_KEY` in the environment turns the
-in-app agent on.
-
-The demo garage is [`api/fixtures/demo/`](api/fixtures/demo/), loaded by `app:demo:load`. It is exported from the
-owner's live garage by a command, never edited by hand:
-
-```bash
-# in api/, against the dev stack; the mapping file holds the real plates/VINs and stays out of the repo
-docker compose exec -T php php -d memory_limit=1G bin/console app:demo:export \
-  --owner=<owner email> --mapping=php://stdin \
-  --vehicle=01KVKMEFM6V36AWETKE7A9QCJ8 --vehicle=01KW7CFJP6Y0ARF5287B7Y9CAY --vehicle=01KVFEQA72XQMWSS3HPBD93ASR \
-  --skip-document=01M6NJ7C6D8MJKMJE1F216FGFJ --skip-document=01M3Z4RDF4XETN3TXNH9YZ3P3D \
-  < ../../rewrite-mapping.txt
+```
+  Atelier              http://localhost:8480
+  mpa MCP server       http://localhost:8480/mcp
+  bonneref MCP server  http://localhost:8481/mcp
+  Casdoor (issuer)     http://localhost:8482
+  Login                demo / <generated>
+  claude mcp add --transport http garage http://localhost:8480/mcp
+  claude mcp add --transport http bonneref http://localhost:8481/mcp
 ```
 
-It rewrites plates and VINs through the mapping, drops bills, quotes and the owner's email, merges the vehicles
-of [`api/fixtures/demo/extras.json`](api/fixtures/demo/extras.json), and refuses to write if a real plate, VIN or
-mapped value is left in the JSON or in a document's text, or if the documents exceed 50 MB.
+Run `/mcp` in Claude Code to log in. The same five prompts work; the offline garage also holds a BMW
+F 800 GS Adventure whose parts are in the catalogue slice (`Which oil filter fits the BMW?`).
 
-The catalogue is [`data/catalog-demo.sqlite`](data/catalog-demo.sqlite) (46 MB), a slice of the licensed TecDoc
-2020 extract cut to the demo garage. Parts, part categories and narrowing answer for its three catalogued
-vehicles only: the Mazda6 (kType 19107), the Espace IV (18679) and the F 800 GS Adventure (motorbike 101222); the
-TORO has no TecDoc type. `list_makes` and `list_models` show the whole 2020 catalogue, but `list_cars` lists types
-only for MAZDA, RENAULT and BMW MOTORCYCLES: any other make stops at the model.
-`DEMO_CATALOG_PATH=<path to a full catalog.sqlite> bin/demo` mounts another catalogue instead. The slice is
-regenerated on the server holding the full catalogue (source opened read-only, output never overwritten):
+- **Images.** `bin/demo` pulls `ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main` (published by CI after a
+  green `main`) and builds from the checkout when a pull fails, printing which path it took per image. Measured:
+  about 24–45 s to a running stack with the images, 2 min 50 s on a cold local build. `bin/demo --build` forces the
+  build; a non-default `AUTH_PORT` rebuilds the Atelier, which compiles the issuer URL in.
+- **Keys.** None needed: your MCP client does the reasoning. `ANTHROPIC_API_KEY` in the environment turns on the
+  in-app agent and the bonneref finder.
+- **Data.** The garage is [`api/fixtures/demo/`](api/fixtures/demo/) (a Mazda6, a Renault Espace IV with its
+  workshop manuals, a TORO ride-on mower, the BMW), exported from the owner's garage with plates and VINs replaced
+  ([how](docs/deploy-garage.md#offline-fixture)). The catalogue is [`data/catalog-demo.sqlite`](data/catalog-demo.sqlite),
+  a 46 MB slice of a TecDoc 2020 extract: parts and narrowing answer for the Mazda6, the Espace IV and the
+  F 800 GS only ([what it keeps](docs/tecdoc-sqlite.md#demo-slice-datacatalog-demosqlite-2026-11-13)).
+- `bin/demo down` stops it (data kept), `bin/demo reset` reloads the garage, `bin/demo info` prints the URLs again.
 
-```bash
-scp bonneref/api/bin/build-demo-catalog <server>:src/bdf2sql/catalog/demo-tool/
-ssh <server> 'cd src/bdf2sql/catalog && python3 -I demo-tool/build-demo-catalog "$PWD/catalog.sqlite" \
-  "$PWD/catalog-demo.sqlite" --types PC:19107 PC:18679 MC:101222 --languages 1,4,6'
-scp <server>:src/bdf2sql/catalog/catalog-demo.sqlite data/catalog-demo.sqlite
-```
+The development stack (`cd api && docker compose up -d`, hosted auth, Vite dev servers) is described in
+[`CLAUDE.md`](CLAUDE.md) and [`api/docs/AUTH.md`](api/docs/AUTH.md).
 
-What it keeps and drops: [`docs/tecdoc-sqlite.md`](docs/tecdoc-sqlite.md) § "Demo slice".
+## Where to read the code
 
-## Run it locally
-
-Requirements: Docker with Compose. Ports 443/80 free, or set `HTTPS_PORT`/`HTTP_PORT`.
-
-```bash
-git clone https://github.com/soyuka/mon-parc-auto.fr.git
-cd mon-parc-auto.fr/api
-docker compose up -d
-```
-
-This starts php (FrankenPHP with Caddy and Mercure), the Messenger worker, MongoDB, Postgres and the Vite dev
-servers for the Atelier and bonneref.
-
-A fresh clone runs with an empty `api/.env.local`: every value in `api/.env` has a working default for the
-compose stack. Paid keys are optional, and a missing key turns its feature off instead of breaking it:
-
-- `ANTHROPIC_API_KEY`: the in-app agent (or the key of whichever platform `api/config/packages/ai.yaml` gives
-  it). MCP clients bring their own model and need no key.
-- `GEMINI_API_KEY`: the agent's `web_search` tool. Gemini is the web-search backend on purpose.
-- `ELEVENLABS_API_KEY`: voice and dictation. ElevenLabs is the only voice backend.
-
-Tools whose key is missing are not listed by `tools/list` (see [`api/src/Capability/`](api/src/Capability/)).
-
-- Atelier: https://localhost (self-signed certificate). MCP: https://localhost/mcp. A local garage starts
-  empty: add a car from the Atelier or by asking your MCP client.
-- Auth uses the hosted Casdoor at `https://auth.bonneref.fr` (`CASDOOR_ISSUER` in `api/.env`); there is no local
-  identity server.
-- The catalogue and plate lookup are fetched from bonneref over HTTP: `BONNEREF_API_URL` defaults to
-  `https://bonneref.fr`, so parts work without the licensed TecDoc data. Running `bonneref/api` yourself is
-  optional and needs that data (see [`bonneref/api/README.md`](bonneref/api/README.md)).
-- The MCP path spends nothing on our side: your own client does the reasoning. The in-app agent turn needs an
-  `ANTHROPIC_API_KEY` in `api/.env.local`.
-- Tests: `docker compose exec php php -d memory_limit=1G vendor/bin/phpunit <file>`;
-  dashboard: `cd dashboard && npm install && npm test`.
-
-### Switching the model
-
-The in-app agent's provider is set in [`api/config/packages/ai.yaml`](api/config/packages/ai.yaml): one
-platform/model pair is uncommented. Anthropic is the default; Qwen, through the generic OpenAI-compatible
-bridge, is the alternative. Walkthrough: [`api/docs/AGENT_PROVIDER.md`](api/docs/AGENT_PROVIDER.md).
-
-<!-- TODO: confirm that a localhost redirect URI is registered for the dashboard app on auth.bonneref.fr,
-     otherwise the local Atelier login fails. -->
-
-## What's inside
-
-| feature | code |
+| file | what it carries |
 | --- | --- |
-| MCP over HTTP, tools declared on API Platform resources | [`api/config/packages/mcp.yaml`](api/config/packages/mcp.yaml), [`api/src/ApiResource/`](api/src/ApiResource/) |
-| OAuth for MCP: protected-resource metadata (RFC 9728), `WWW-Authenticate` challenge, Casdoor bearer validation; Casdoor chosen because it accepts anonymous dynamic client registration (RFC 7591), so stock clients self-register | [`ProtectedResourceMetadataController.php`](api/src/Controller/Mcp/ProtectedResourceMetadataController.php), [`McpProtectedResourceChallengeListener.php`](api/src/EventListener/McpProtectedResourceChallengeListener.php), [`CasdoorTokenHandler.php`](api/src/Security/CasdoorTokenHandler.php), [`api/docs/AUTH.md`](api/docs/AUTH.md) |
-| Owner-scoped garage: every read and write is filtered by the caller's identity (Casdoor `email` claim) | [`OwnerContext.php`](api/src/Security/OwnerContext.php) |
-| Maintenance domain: a record is a visit with `items[]`; recurring intervals + usage give a forecast and a health figure; logging a service closes its planned task | [`api/src/Maintenance/`](api/src/Maintenance/), [`api/src/Garage/`](api/src/Garage/) (`VehicleWriteResolver` dedups vehicles across labels) |
-| Archiving: a sold or scrapped car leaves `list_vehicles` and `list_due_maintenance` but keeps its history (`update_vehicle` with `archived: true`) | [`Garage.php`](api/src/ApiResource/Garage.php), [`GarageVehicleArchiveTest.php`](api/tests/Functional/GarageVehicleArchiveTest.php) |
-| Render intents over Mercure, one pipeline with two drivers: an MCP client (pilot) or the in-app agent call the same `Dashboard` tools; `DashboardChannel` picks the agent-turn topic or the owner's HMAC-derived pilot topic | [`Dashboard.php`](api/src/ApiResource/Dashboard.php), [`RenderIntentTools.php`](api/src/Agent/Ui/RenderIntentTools.php), [`DashboardChannel.php`](api/src/Agent/Ui/DashboardChannel.php), [`dashboard/src/agent.ts`](dashboard/src/agent.ts) |
-| Symfony AI agent loop, async on Messenger (worker under CLI, no request time limit) or in `kernel.terminate` | [`RunAgentTurn.php`](api/src/Message/RunAgentTurn.php), [`RunAgentTurnHandler.php`](api/src/MessageHandler/RunAgentTurnHandler.php), [`api/src/Agent/Dispatch/`](api/src/Agent/Dispatch/), [`api/config/packages/ai.yaml`](api/config/packages/ai.yaml) |
-| Turn journal, token and cost tracking | [`api/src/Agent/Journal/`](api/src/Agent/Journal/) (`TurnJournal`, `ToolCallJournalListener`, `TurnCostEstimator`) |
-| Runaway guardrails: an explicit `end_turn` tool, terminal-tool listener, repeated-failure guard, `max_tool_calls: 25` | [`EndTurnTool.php`](api/src/Agent/Ui/EndTurnTool.php), [`TerminalToolListener.php`](api/src/Agent/Ui/TerminalToolListener.php), [`RepeatedToolFailureGuard.php`](api/src/Agent/Ui/RepeatedToolFailureGuard.php), [`ai.yaml`](api/config/packages/ai.yaml) |
-| The in-app agent reuses the MCP tools through a toolbox (pilot-only tools excluded) | [`McpToolbox.php`](api/src/Mcp/Agent/McpToolbox.php), [`CompositeToolbox.php`](api/src/Agent/Toolbox/CompositeToolbox.php) |
-| bonneref: second MCP server (read-only catalogue: plate, VIN, makes/models, categories, articles, narrowing, brand comparison) | [`bonneref/api/src/ApiResource/`](bonneref/api/src/ApiResource/), [`bonneref/api/config/packages/mcp.yaml`](bonneref/api/config/packages/mcp.yaml) |
-| bonneref finder: a second agent that asks questions and renders parts | [`bonneref/api/src/Agent/Finder/`](bonneref/api/src/Agent/Finder/) |
-| mpa talks to bonneref over HTTP, forwarding the caller's bearer | [`BonnerefClient.php`](api/src/Bonneref/BonnerefClient.php) |
-| The Atelier (React + react-three-fiber) | [`dashboard/`](dashboard/), [`dashboard/CONTRACT.md`](dashboard/CONTRACT.md) |
+| [`api/src/ApiResource/Dashboard.php`](api/src/ApiResource/Dashboard.php) | the render intents (`open_vehicle`, `focus_view`, `reveal_assembly`, `propose_actions`…) declared as `McpTool` operations |
+| [`api/src/Agent/Ui/DashboardChannel.php`](api/src/Agent/Ui/DashboardChannel.php) | picks the Mercure topic: the agent turn's session, or the owner's pilot topic (an HMAC of the owner identity) |
+| [`dashboard/src/agent.ts`](dashboard/src/agent.ts) | the Atelier's subscriptions, one EventSource per driver, resolved through `GET /agent/link` |
+| [`api/src/Security/CasdoorTokenHandler.php`](api/src/Security/CasdoorTokenHandler.php) | a Symfony `AccessTokenHandlerInterface` validating the OAuth bearer on `/mcp` |
+| [`Maintenance.php`](api/src/ApiResource/Maintenance.php) → [`LogMaintenanceInput`](api/src/Dto/LogMaintenanceInput.php) → [`LogMaintenanceProcessor`](api/src/State/LogMaintenanceProcessor.php) | the pattern every tool follows: an `McpTool` operation, a validated input DTO, a state processor |
+| [`api/src/Mcp/Agent/McpToolbox.php`](api/src/Mcp/Agent/McpToolbox.php) | Symfony AI `ToolboxInterface` over the in-process `Mcp\Server`: the agent calls the MCP tools without redeclaring them |
+| [`bonneref/api/src/Catalog/Narrowing/ArticleNarrower.php`](bonneref/api/src/Catalog/Narrowing/ArticleNarrower.php) | `narrow_parts`: turns hundreds of fitting articles into the few physically distinct parts |
 
-## What we found broken upstream
+Skip: `stage/` (the live-talk harness), `theming/` (design references), `docs/archive/`. The four surfaces are
+`api/` (mpa, Symfony), `dashboard/` (the Atelier, React), `bonneref/api/` (catalogue, Symfony) and `bonneref/`
+(its React front).
 
-Only items with a trace in this repo are listed.
+## What it unlocked
 
-- **API Platform: JSON-LD dropped read-only properties.** Issue filed:
-  [api-platform/core#8332](https://github.com/api-platform/core/issues/8332)
-  (`api/docs/resolved/jsonld-readonly-props-dropped.md:119`).
-- **MCP SDK DNS-rebinding guard was localhost-only with no config hook.** On a public hostname every
-  authenticated `/mcp` call answered `403 Invalid Host header` while unauthenticated ones still got 401, which
-  reads as an OAuth failure (`CONFERENCE.md:162-170`, `api/tests/Functional/McpAllowedHostsTest.php`).
-  `symfony/mcp-bundle` 0.14 exposes `http.allowed_hosts`. <!-- TODO: link the upstream PR/issue if ours. -->
-- **mcp/sdk `InitializeHandler` echoes the server's protocol version** instead of negotiating the client's
-  (`CONFERENCE.md:116-118`). <!-- TODO: upstream issue/PR link, or drop. -->
-- **mcp/sdk 0.5 `Implementation::fromArray` rejected client version `"0"`** (`empty()` check)
-  (`api/docs/PLAN.md:82-83`). <!-- TODO: upstream link, or drop. -->
-- **MCP Apps (`io.modelcontextprotocol/ui`)** adopted from php-sdk PR #281 via local forks of mcp-bundle and
-  api-platform/mcp before release (`api/docs/TODO_UI.md:12-20`). <!-- TODO: say whether we authored it. -->
-- **Symfony AI Anthropic bridge cannot declare provider server tools** (`web_search_20250305`): `Tool`,
-  `AgentProcessor`, `ToolNormalizer` and `ModelClient` only carry function tools (`docs/archive/next_plan.md:39-56`).
-  We shipped a provider-agnostic `web_search` tool instead
-  ([`WebSearchTool.php`](api/src/Agent/WebSearch/WebSearchTool.php)). <!-- TODO: upstream issue/PR link. -->
-- **Casdoor DCR registers apps with an empty signing cert**, so JWT tokens cannot be minted for self-registered
-  clients (`CONFERENCE.md:155-161`). <!-- TODO: upstream issue link. -->
-- <!-- TODO: Qwen streaming tool-call with empty `id` crashing the generic bridge ("Undefined array key name");
-  the fix lived in a local Symfony AI fork and has no trace in this repo. Add the upstream PR link or drop. -->
+**One render pipeline, two drivers.** An MCP tool call renders nothing in the host, so the tools in `Dashboard.php`
+publish a Mercure frame through processors in [`api/src/State/Dashboard/`](api/src/State/Dashboard/). The in-app
+agent has the same intents as `#[AsTool]` methods ([`RenderIntentTools.php`](api/src/Agent/Ui/RenderIntentTools.php))
+on the same publisher. Either way the Atelier receives the same frame; for an external client the topic is the
+owner's HMAC digest, which is the access control on an anonymous-subscribe hub.
 
-## Repository layout
+**A remote MCP server with no client id to hand out.**
+[`ProtectedResourceMetadataController`](api/src/Controller/Mcp/ProtectedResourceMetadataController.php) serves RFC 9728
+metadata, [`McpProtectedResourceChallengeListener`](api/src/EventListener/McpProtectedResourceChallengeListener.php)
+adds the `WWW-Authenticate` challenge, and Casdoor accepts anonymous RFC 7591 registration, so stock clients
+register and log in by themselves ([`api/docs/AUTH.md`](api/docs/AUTH.md)). Every tool is scoped to the caller by
+[`OwnerContext`](api/src/Security/OwnerContext.php).
 
-| path | what |
-| --- | --- |
-| `api/` | mpa: garage domain, MCP server, in-app agent (Symfony / API Platform, MongoDB ODM) |
-| `dashboard/` | the Atelier (React, react-three-fiber) |
-| `bonneref/` | parts finder front; `bonneref/api` is its Symfony app (catalogue MCP server, finder agent) |
-| `stage/` | the live-demo harness used for the talk ([`CONFERENCE.md`](CONFERENCE.md)) |
-| `docs/` | design notes and investigations |
+**Two MCP servers, and an agent that is a client of one of them.** bonneref exposes the catalogue as a read-only MCP
+server ([`bonneref/api/src/ApiResource/`](bonneref/api/src/ApiResource/)); its finder agent drives that same server
+in process through an allowlisted toolbox (`app.finder.mcp_toolbox` on `mcp.server.catalog`,
+[`services.yaml`](bonneref/api/config/services.yaml)). mpa reaches bonneref over HTTP with the caller's bearer
+([`BonnerefClient.php`](api/src/Bonneref/BonnerefClient.php)).
+
+**Schemas written once.** Tool input schemas come from the input DTOs through API Platform's JSON Schema factory
+(`api-platform/mcp`); for those tools the in-app agent reuses the schema the server advertises instead of a second
+description.
+
+**Agent turns off the request, and a loop that stops.** `POST /agent/turn` dispatches
+[`RunAgentTurn`](api/src/Message/RunAgentTurn.php) on Messenger; the worker runs it under the CLI SAPI with no request
+time limit ([`DeferredTurnDispatcher`](api/src/Agent/Dispatch/DeferredTurnDispatcher.php) runs it in
+`kernel.terminate` when there is no worker). Listeners on Symfony AI's `ToolCallsExecuted` end the turn on an
+explicit [`end_turn`](api/src/Agent/Ui/EndTurnTool.php) or on a repeated failing call
+([`RepeatedToolFailureGuard`](api/src/Agent/Ui/RepeatedToolFailureGuard.php)), `max_tool_calls: 25` in
+[`ai.yaml`](api/config/packages/ai.yaml) is the backstop, and every call lands in a turn journal with its token cost
+([`api/src/Agent/Journal/`](api/src/Agent/Journal/)).
+
+## Fixed upstream on the way
+
+- [api-platform/core#8845](https://github.com/api-platform/core/pull/8845) (merged, in 5.0.7): nullable object
+  collections lost `null` in the generated JSON Schema, so MCP clients had tool arguments rejected.
+- [symfony/ai#2220](https://github.com/symfony/ai/pull/2220) (merged): the generic platform bridge crashed when a
+  provider (Qwen) streamed an empty-string tool-call id on continuation deltas.
+- [symfony/ai#2196](https://github.com/symfony/ai/pull/2196) (merged): Anthropic server-side tools through a
+  `server_tools` option, used by the agent's web search
+  ([`AnthropicWebSearchClient.php`](api/src/Agent/WebSearch/AnthropicWebSearchClient.php)).
+- [api-platform/core#8332](https://github.com/api-platform/core/issues/8332) (issue, closed): a property added to an
+  existing resource stayed missing from the output until `var/cache` was deleted.
+
+## Quality
+
+CI ([`ci.yml`](.github/workflows/ci.yml)) runs, for both Symfony apps, php-cs-fixer (`@Symfony`, plus `@Symfony:risky`
+on mpa), Mago analyzer and linter with no baseline, and PHPUnit; for both fronts, vitest and a production build.
 
 ## License
 
-[MIT](LICENSE), code only. Third-party assets (3D meshes, catalogue excerpts) keep their own terms; see
-[`docs/public-audit.md`](docs/public-audit.md). <!-- TODO: revisit once licensed assets are removed. -->
+[MIT](LICENSE), for the code. The TecDoc catalogue slice, the vehicle documents in the demo garage and some
+third-party 3D assets are included for the demo only and keep their own terms
+([`docs/public-audit.md`](docs/public-audit.md)).
