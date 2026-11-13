@@ -9,6 +9,8 @@ use App\ApiResource\Car;
 use App\ApiResource\Make;
 use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Vehicle\VehicleIndex;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -20,7 +22,10 @@ use Psr\Log\NullLogger;
  */
 final class TecdocCatalog implements PartsCatalog
 {
-    private const int FALLBACK_LANGUAGE = 1;
+    /** TecDoc language ids, in the extract's own id space. */
+    private const int LANGUAGE_DE = 1;
+    private const int LANGUAGE_EN = 4;
+    private const int LANGUAGE_FR = 6;
     private const int BODY_TYPE_TABLE = 86;
     private const int ENGINE_TYPE_TABLE = 80;
     /** Tree 1 root of the motorbike nodes. */
@@ -41,14 +46,16 @@ final class TecdocCatalog implements PartsCatalog
 
     private ?\PDO $pdo = null;
 
+    private ?Locale $pinned = null;
+
     /** @var array<string, list<int>>|null normalised supplier name => DVD slots */
     private ?array $slotsByName = null;
 
     public function __construct(
         private readonly string $path,
-        private readonly int $lang = 6,
         private readonly ?VehicleIndex $vehicles = null,
         private readonly LoggerInterface $logger = new NullLogger(),
+        private readonly ?LocaleContext $locale = null,
     ) {
     }
 
@@ -74,14 +81,14 @@ final class TecdocCatalog implements PartsCatalog
         $notBike = CarType::Motorbike === $carType ? '' : 'AND m.is_motorbike = 0';
         $rows = $this->rows(
             <<<SQL
-                SELECT m.model_id AS modelId, coalesce(fr.name, m.name) AS modelName,
+                SELECT m.model_id AS modelId, {$this->first('mt', 'name', 'm.name')} AS modelName,
                        m.year_from, m.month_from, m.year_to, m.month_to
                 FROM vehicle_model m
-                LEFT JOIN vehicle_model_text fr ON fr.model_id = m.model_id AND fr.language_id = :lang
+                {$this->joins('vehicle_model_text', 'mt', '{a}.model_id = m.model_id')}
                 WHERE m.manufacturer_id = :makeId AND m.{$column} = 1 {$notBike}
                 ORDER BY m.model_id
                 SQL,
-            ['lang' => $this->lang, 'makeId' => $makeId],
+            ['makeId' => $makeId],
         );
 
         return array_map(
@@ -123,15 +130,15 @@ final class TecdocCatalog implements PartsCatalog
     public function carIdentity(int $carId, CarType $carType): ?array
     {
         $engine = CarType::PassengerCar === $carType
-            ? 'coalesce(tt.description, t.description) AS engine FROM pc_type t LEFT JOIN pc_type_text tt ON tt.type_id = t.type_id AND tt.language_id = :lang'
+            ? "{$this->first('tt', 'description', 't.description')} AS engine FROM pc_type t {$this->joins('pc_type_text', 'tt', '{a}.type_id = t.type_id')}"
             : \sprintf('t.description AS engine FROM %s t', self::profile($carType)['type']);
         $row = $this->rows(
-            "SELECT mf.name AS make, coalesce(mt.name, m.name) AS model, {$engine}
+            "SELECT mf.name AS make, {$this->first('mt', 'name', 'm.name')} AS model, {$engine}
                 JOIN vehicle_model m ON m.model_id = t.model_id
                 JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
-                LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
+                {$this->joins('vehicle_model_text', 'mt', '{a}.model_id = m.model_id')}
                 WHERE t.type_id = :carId",
-            ['carId' => $carId, 'lang' => $this->lang],
+            ['carId' => $carId],
         )[0] ?? null;
 
         if (null === $row || !\is_string($row['make']) || '' === $row['make']) {
@@ -153,10 +160,9 @@ final class TecdocCatalog implements PartsCatalog
                   SELECT n.node_id FROM search_tree_node n JOIN hidden h ON n.parent_node_id = h.node_id WHERE n.tree_id = :tree
                 ),
                 named(node_id, parent_id, sort_idx, name) AS (
-                  SELECT n.node_id, n.parent_node_id, n.sort_idx, coalesce(fr.text, de.text)
+                  SELECT n.node_id, n.parent_node_id, n.sort_idx, {$this->first('nt', 'text')}
                   FROM search_tree_node n
-                  LEFT JOIN search_tree_node_text fr ON fr.tree_id = n.tree_id AND fr.node_id = n.node_id AND fr.language_id = :lang
-                  LEFT JOIN search_tree_node_text de ON de.tree_id = n.tree_id AND de.node_id = n.node_id AND de.language_id = :fallback
+                  {$this->joins('search_tree_node_text', 'nt', '{a}.tree_id = n.tree_id AND {a}.node_id = n.node_id')}
                   WHERE n.tree_id = :tree
                 ),
                 up(node_id) AS (
@@ -185,7 +191,7 @@ final class TecdocCatalog implements PartsCatalog
                 FROM up JOIN named USING (node_id) JOIN path USING (node_id)
                 ORDER BY named.sort_idx
                 SQL,
-            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'hiddenRoot' => $profile['hidden'], 'carId' => $carId],
+            ['tree' => $profile['tree'], 'hiddenRoot' => $profile['hidden'], 'carId' => $carId],
         );
 
         return PartCategory::fromCatalogTree($nodes, $leafOnly, $search);
@@ -202,10 +208,9 @@ final class TecdocCatalog implements PartsCatalog
                   UNION
                   SELECT n.node_id FROM search_tree_node n JOIN down ON n.parent_node_id = down.node_id WHERE n.tree_id = :tree
                 )
-                SELECT coalesce(fr.text, de.text) AS name
+                SELECT {$this->first('nt', 'text')} AS name
                 FROM search_tree_node n
-                LEFT JOIN search_tree_node_text fr ON fr.tree_id = n.tree_id AND fr.node_id = n.node_id AND fr.language_id = :lang
-                LEFT JOIN search_tree_node_text de ON de.tree_id = n.tree_id AND de.node_id = n.node_id AND de.language_id = :fallback
+                {$this->joins('search_tree_node_text', 'nt', '{a}.tree_id = n.tree_id AND {a}.node_id = n.node_id')}
                 WHERE n.tree_id = :tree AND n.node_id = :strId
                   AND EXISTS (
                     SELECT 1 FROM search_tree_node_genart g
@@ -213,7 +218,7 @@ final class TecdocCatalog implements PartsCatalog
                     WHERE g.tree_id = :tree AND g.node_id IN (SELECT node_id FROM down)
                   )
                 SQL,
-            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'carId' => $carId, 'strId' => $categoryId],
+            ['tree' => $profile['tree'], 'carId' => $carId, 'strId' => $categoryId],
         )[0] ?? null;
         $name = trim((string) ($row['name'] ?? ''));
 
@@ -229,37 +234,46 @@ final class TecdocCatalog implements PartsCatalog
             <<<SQL
                 SELECT a.article_id AS ART_ID, a.article_number AS ART_ARTICLE_NR,
                        coalesce(d.dlnr, 0) AS SUP_ID, coalesce(b.name, s.name, '') AS ART_SUP_BRAND,
-                       ap.genart_id AS PT_ID, coalesce(fr.name, de.name, '') AS "PRODUCT GROUP"
+                       ap.genart_id AS PT_ID, coalesce({$this->first('gat', 'name')}, '') AS "PRODUCT GROUP"
                 FROM {$profile['links']} l
                 CROSS JOIN article_product ap ON ap.article_id = l.article_id
                 CROSS JOIN article a ON a.article_id = l.article_id
                 LEFT JOIN supplier s ON s.supplier_id = a.supplier_id
                 LEFT JOIN supplier_dlnr d ON d.supplier_id = a.supplier_id
                 LEFT JOIN brand b ON b.dlnr = d.dlnr
-                LEFT JOIN generic_article_text fr ON fr.genart_id = ap.genart_id AND fr.language_id = :lang
-                LEFT JOIN generic_article_text de ON de.genart_id = ap.genart_id AND de.language_id = :fallback
+                {$this->joins('generic_article_text', 'gat', '{a}.genart_id = ap.genart_id')}
                 WHERE l.type_id = :carId
                   AND ap.genart_id IN (SELECT genart_id FROM search_tree_node_genart WHERE tree_id = :tree AND node_id = :strId)
                 GROUP BY a.article_id, ap.genart_id
                 ORDER BY ART_SUP_BRAND COLLATE NOCASE, a.article_number, a.article_id
                 SQL,
-            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'carId' => $carId, 'strId' => $categoryId],
+            ['tree' => $profile['tree'], 'carId' => $carId, 'strId' => $categoryId],
         );
 
         return array_map(Article::fromCatalogRow(...), $rows);
     }
 
-    public function articleCriteria(int $artId): array
+    public function articleCriteria(int $artId, ?Locale $language = null): array
     {
-        return $this->criteria([$artId])[$artId] ?? [];
+        return $this->inLanguage($language, fn (): array => $this->criteria([$artId])[$artId] ?? []);
     }
 
-    public function articleCriteriaByIds(array $artIds): array
+    public function articleCriteriaByIds(array $artIds, ?Locale $language = null): array
     {
-        return $this->criteria($artIds);
+        return $this->inLanguage($language, fn (): array => $this->criteria($artIds));
     }
 
-    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null): array
+    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null, ?Locale $language = null): array
+    {
+        return $this->inLanguage($language, fn (): array => $this->linkCriteria($carId, $carType, $artIds, $productGroupId));
+    }
+
+    /**
+     * @param list<int> $artIds
+     *
+     * @return array<int, VehicleLinkCriteria>
+     */
+    private function linkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId): array
     {
         $artIds = array_values(array_unique(array_map(intval(...), $artIds)));
         if ([] === $artIds) {
@@ -282,7 +296,7 @@ final class TecdocCatalog implements PartsCatalog
 
         $sets = [];
         foreach ($rows as $row) {
-            $value = self::value($row);
+            $value = $this->value($row);
             if (null !== $row['name'] && '' !== $value) {
                 $sets[(int) $row['article_id']][(string) $row['qual_set_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
             }
@@ -364,30 +378,26 @@ final class TecdocCatalog implements PartsCatalog
     private function passengerCarRows(int $makeId, int $modelId): array
     {
         return $this->rows(
-            <<<'SQL'
+            <<<SQL
                 SELECT t.type_id AS CAR_ID,
-                       coalesce(tt.description, t.description) AS description,
-                       mf.name AS MAKE_NAME, coalesce(mt.name, m.name) AS MODEL_NAME,
-                       coalesce(body_fr.text, body_de.text) AS BODY,
-                       coalesce(eng_fr.text, eng_de.text) AS ENGINE_TYPE,
+                       {$this->first('tt', 'description', 't.description')} AS description,
+                       mf.name AS MAKE_NAME, {$this->first('mt', 'name', 'm.name')} AS MODEL_NAME,
+                       {$this->first('body', 'text')} AS BODY,
+                       {$this->first('eng', 'text')} AS ENGINE_TYPE,
                        t.capacity_tech_ccm, t.capacity_litre100,
                        t.power_kw AS POWER_KW, t.power_ps AS POWER_PS,
                        t.year_from, t.month_from, t.year_to, t.month_to
                 FROM pc_type t
                 JOIN vehicle_model m ON m.model_id = t.model_id
                 JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
-                LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
-                LEFT JOIN pc_type_text tt ON tt.type_id = t.type_id AND tt.language_id = :lang
-                LEFT JOIN key_value_text body_fr ON body_fr.tab_nr = :bodyTable AND body_fr.key_code = CAST(t.body_type AS TEXT) AND body_fr.language_id = :lang
-                LEFT JOIN key_value_text body_de ON body_de.tab_nr = :bodyTable AND body_de.key_code = CAST(t.body_type AS TEXT) AND body_de.language_id = :fallback
-                LEFT JOIN key_value_text eng_fr ON eng_fr.tab_nr = :engineTable AND eng_fr.key_code = CAST(t.engine_type AS TEXT) AND eng_fr.language_id = :lang
-                LEFT JOIN key_value_text eng_de ON eng_de.tab_nr = :engineTable AND eng_de.key_code = CAST(t.engine_type AS TEXT) AND eng_de.language_id = :fallback
+                {$this->joins('vehicle_model_text', 'mt', '{a}.model_id = m.model_id')}
+                {$this->joins('pc_type_text', 'tt', '{a}.type_id = t.type_id')}
+                {$this->joins('key_value_text', 'body', '{a}.tab_nr = :bodyTable AND {a}.key_code = CAST(t.body_type AS TEXT)')}
+                {$this->joins('key_value_text', 'eng', '{a}.tab_nr = :engineTable AND {a}.key_code = CAST(t.engine_type AS TEXT)')}
                 WHERE t.model_id = :modelId AND m.manufacturer_id = :makeId
                 ORDER BY t.type_id
                 SQL,
             [
-                'lang' => $this->lang,
-                'fallback' => self::FALLBACK_LANGUAGE,
                 'bodyTable' => self::BODY_TYPE_TABLE,
                 'engineTable' => self::ENGINE_TYPE_TABLE,
                 'modelId' => $modelId,
@@ -404,9 +414,9 @@ final class TecdocCatalog implements PartsCatalog
     private function commercialVehicleRows(int $makeId, int $modelId): array
     {
         return $this->rows(
-            <<<'SQL'
+            <<<SQL
                 SELECT t.type_id AS CAR_ID, t.description,
-                       mf.name AS MAKE_NAME, coalesce(mt.name, m.name) AS MODEL_NAME,
+                       mf.name AS MAKE_NAME, {$this->first('mt', 'name', 'm.name')} AS MODEL_NAME,
                        NULL AS BODY, NULL AS ENGINE_TYPE,
                        t.capacity_tech_ccm, NULL AS capacity_litre100,
                        t.power_kw_from AS POWER_KW, t.power_ps_from AS POWER_PS,
@@ -414,11 +424,11 @@ final class TecdocCatalog implements PartsCatalog
                 FROM cv_type t
                 JOIN vehicle_model m ON m.model_id = t.model_id
                 JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
-                LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
+                {$this->joins('vehicle_model_text', 'mt', '{a}.model_id = m.model_id')}
                 WHERE t.model_id = :modelId AND m.manufacturer_id = :makeId
                 ORDER BY t.type_id
                 SQL,
-            ['lang' => $this->lang, 'modelId' => $modelId, 'makeId' => $makeId],
+            ['modelId' => $modelId, 'makeId' => $makeId],
         );
     }
 
@@ -430,9 +440,9 @@ final class TecdocCatalog implements PartsCatalog
     private function motorbikeRows(int $makeId, int $modelId): array
     {
         return $this->rows(
-            <<<'SQL'
+            <<<SQL
                 SELECT t.type_id AS CAR_ID, t.description,
-                       mf.name AS MAKE_NAME, coalesce(mt.name, m.name) AS MODEL_NAME,
+                       mf.name AS MAKE_NAME, {$this->first('mt', 'name', 'm.name')} AS MODEL_NAME,
                        NULL AS BODY, NULL AS ENGINE_TYPE,
                        t.capacity_tech_ccm, t.capacity_litre100,
                        t.power_kw AS POWER_KW, t.power_ps AS POWER_PS,
@@ -440,11 +450,11 @@ final class TecdocCatalog implements PartsCatalog
                 FROM mc_type t
                 JOIN vehicle_model m ON m.model_id = t.model_id
                 JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
-                LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
+                {$this->joins('vehicle_model_text', 'mt', '{a}.model_id = m.model_id')}
                 WHERE t.model_id = :modelId AND m.manufacturer_id = :makeId
                 ORDER BY t.type_id
                 SQL,
-            ['lang' => $this->lang, 'modelId' => $modelId, 'makeId' => $makeId],
+            ['modelId' => $modelId, 'makeId' => $makeId],
         );
     }
 
@@ -469,7 +479,7 @@ final class TecdocCatalog implements PartsCatalog
         $names = [];
         $unions = [];
         foreach ($qualifiers as $row) {
-            $value = self::value($row);
+            $value = $this->value($row);
             if (null !== $row['name'] && '' !== $value) {
                 $names[(int) $row['article_id']][(int) $row['criterion_id']] = trim((string) $row['name']);
                 $unions[(int) $row['article_id']][(int) $row['criterion_id']][$value] = true;
@@ -496,8 +506,8 @@ final class TecdocCatalog implements PartsCatalog
         $rows = $this->rows(
             \sprintf(
                 <<<'SQL'
-                    SELECT aa.article_id, c.criterion_id, coalesce(fr.name, de.name) AS name,
-                           aa.value_num, aa.value_text, aa.key_code, coalesce(kfr.text, kde.text) AS key_text,
+                    SELECT aa.article_id, c.criterion_id, %s AS name,
+                           aa.value_num, aa.value_text, aa.key_code, %s AS key_text,
                            NULL AS date_year, NULL AS date_month
                     FROM article_attribute aa
                     JOIN criterion c ON c.criterion_id = aa.criterion_id
@@ -505,15 +515,16 @@ final class TecdocCatalog implements PartsCatalog
                     WHERE aa.article_id IN (%s)
                     ORDER BY aa.article_id, aa.seq
                     SQL,
-                self::criterionTexts('aa'),
+                $this->first('ct', 'name'),
+                $this->first('kv', 'text'),
+                $this->criterionTexts('aa'),
                 implode(',', $artIds),
             ),
-            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE],
         );
 
         $attributes = array_fill_keys($artIds, []);
         foreach ($rows as $row) {
-            $value = self::value($row);
+            $value = $this->value($row);
             if (null !== $row['name'] && '' !== $value) {
                 $attributes[(int) $row['article_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
             }
@@ -533,8 +544,8 @@ final class TecdocCatalog implements PartsCatalog
         return $this->rows(
             \sprintf(
                 <<<'SQL'
-                    SELECT q.article_id, q.qual_set_id, c.criterion_id, coalesce(fr.name, de.name) AS name,
-                           i.value_num, i.value_text, i.key_code, coalesce(kfr.text, kde.text) AS key_text,
+                    SELECT q.article_id, q.qual_set_id, c.criterion_id, %s AS name,
+                           i.value_num, i.value_text, i.key_code, %s AS key_text,
                            i.date_year, i.date_month
                     FROM (%s) q
                     JOIN link_qualifier_item i ON i.qual_set_id = q.qual_set_id
@@ -542,31 +553,26 @@ final class TecdocCatalog implements PartsCatalog
                     %s
                     ORDER BY %s
                     SQL,
+                $this->first('ct', 'name'),
+                $this->first('kv', 'text'),
                 $links,
-                self::criterionTexts('i'),
+                $this->criterionTexts('i'),
                 $orderBy,
             ),
-            $params + ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE],
+            $params,
         );
     }
 
-    private static function criterionTexts(string $alias): string
+    private function criterionTexts(string $alias): string
     {
-        return \sprintf(
-            <<<'SQL'
-                LEFT JOIN criterion_text fr ON fr.criterion_id = c.criterion_id AND fr.language_id = :lang
-                LEFT JOIN criterion_text de ON de.criterion_id = c.criterion_id AND de.language_id = :fallback
-                LEFT JOIN key_value_text kfr ON kfr.tab_nr = c.key_table_nr AND kfr.key_code = %1$s.key_code AND kfr.language_id = :lang
-                LEFT JOIN key_value_text kde ON kde.tab_nr = c.key_table_nr AND kde.key_code = %1$s.key_code AND kde.language_id = :fallback
-                SQL,
-            $alias,
-        );
+        return $this->joins('criterion_text', 'ct', '{a}.criterion_id = c.criterion_id')
+            .' '.$this->joins('key_value_text', 'kv', \sprintf('{a}.tab_nr = c.key_table_nr AND {a}.key_code = %s.key_code', $alias));
     }
 
     /**
      * @param array<string, int|float|string|null> $row
      */
-    private static function value(array $row): string
+    private function value(array $row): string
     {
         if (null !== $row['key_text']) {
             return trim((string) $row['key_text']);
@@ -578,7 +584,9 @@ final class TecdocCatalog implements PartsCatalog
             return \sprintf('%04d%02d', $row['date_year'], $row['date_month'] ?? 0);
         }
         if (null !== $row['value_num']) {
-            return rtrim(rtrim(number_format((float) $row['value_num'], 4, ',', ''), '0'), ',');
+            $separator = Locale::En === $this->language() ? '.' : ',';
+
+            return rtrim(rtrim(number_format((float) $row['value_num'], 4, $separator, ''), '0'), $separator);
         }
 
         return null === $row['key_code'] ? '' : trim((string) $row['key_code']);
@@ -655,16 +663,16 @@ final class TecdocCatalog implements PartsCatalog
         $rows = $this->rows(
             \sprintf(
                 <<<'SQL'
-                    SELECT ap.article_id, coalesce(fr.name, de.name) AS name
+                    SELECT ap.article_id, %s AS name
                     FROM article_product ap
-                    LEFT JOIN generic_article_text fr ON fr.genart_id = ap.genart_id AND fr.language_id = :lang
-                    LEFT JOIN generic_article_text de ON de.genart_id = ap.genart_id AND de.language_id = :fallback
+                    %s
                     WHERE ap.article_id IN (%s)
                     ORDER BY ap.article_id, ap.pos
                     SQL,
+                $this->first('gat', 'name'),
+                $this->joins('generic_article_text', 'gat', '{a}.genart_id = ap.genart_id'),
                 implode(',', $artIds),
             ),
-            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE],
         );
 
         $names = [];
@@ -745,6 +753,68 @@ final class TecdocCatalog implements PartsCatalog
         $timestamp = gmmktime(0, 0, 0, max(1, (int) $month), 1, (int) $year);
 
         return false === $timestamp ? null : gmdate('D, d M Y H:i:s \G\M\T', $timestamp);
+    }
+
+    private function language(): Locale
+    {
+        return $this->pinned ?? $this->locale?->current() ?? Locale::DEFAULT;
+    }
+
+    /**
+     * @template T
+     *
+     * @param \Closure(): T $read
+     *
+     * @return T
+     */
+    private function inLanguage(?Locale $language, \Closure $read): mixed
+    {
+        $previous = $this->pinned;
+        $this->pinned = $language ?? $previous;
+        try {
+            return $read();
+        } finally {
+            $this->pinned = $previous;
+        }
+    }
+
+    /**
+     * The language ids to read a text in, best first: the caller's, then French, English and German, whatever the
+     * extract holds for the row (vehicle_model_text and pc_type_text have no German, English vehicle names are partial).
+     *
+     * @return non-empty-list<int>
+     */
+    private function chain(): array
+    {
+        $requested = Locale::En === $this->language() ? self::LANGUAGE_EN : self::LANGUAGE_FR;
+
+        return array_values(array_unique([$requested, self::LANGUAGE_FR, self::LANGUAGE_EN, self::LANGUAGE_DE]));
+    }
+
+    /**
+     * One LEFT JOIN of a text table per language of the chain, aliased `{alias}0`, `{alias}1`... ; `{a}` stands for
+     * the alias in $on. Language ids are integers from {@see self::chain()}, never caller input.
+     */
+    private function joins(string $table, string $alias, string $on): string
+    {
+        $joins = [];
+        foreach ($this->chain() as $i => $language) {
+            $a = $alias.$i;
+            $joins[] = \sprintf('LEFT JOIN %s %s ON %s AND %s.language_id = %d', $table, $a, str_replace('{a}', $a, $on), $a, $language);
+        }
+
+        return implode(' ', $joins);
+    }
+
+    /** The first non-null text of the joins {@see self::joins()} made under $alias, then the optional base column. */
+    private function first(string $alias, string $column, ?string $base = null): string
+    {
+        $columns = array_map(static fn (int $i): string => \sprintf('%s%d.%s', $alias, $i, $column), array_keys($this->chain()));
+        if (null !== $base) {
+            $columns[] = $base;
+        }
+
+        return 'coalesce('.implode(', ', $columns).')';
     }
 
     /**

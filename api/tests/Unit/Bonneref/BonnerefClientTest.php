@@ -8,6 +8,8 @@ use App\Bonneref\BonnerefClient;
 use App\Bonneref\BonnerefToken;
 use App\Catalog\CarType;
 use App\Exception\UpstreamException;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Tests\Mock\BonnerefHttpClient;
 use App\Tests\Mock\RecordingLogger;
 use PHPUnit\Framework\TestCase;
@@ -20,6 +22,7 @@ final class BonnerefClientTest extends TestCase
     private BonnerefHttpClient $http;
     private BonnerefToken $token;
     private RequestStack $requests;
+    private LocaleContext $locale;
     private BonnerefClient $client;
 
     protected function setUp(): void
@@ -28,7 +31,8 @@ final class BonnerefClientTest extends TestCase
         $this->http = new BonnerefHttpClient();
         $this->token = new BonnerefToken();
         $this->requests = new RequestStack();
-        $this->client = new BonnerefClient($this->http, $this->token, $this->requests);
+        $this->locale = new LocaleContext($this->requests);
+        $this->client = new BonnerefClient($this->http, $this->token, $this->requests, locale: $this->locale);
     }
 
     public function testMakesAreReadFromTheHydraMemberAndSentWithTheCurrentRequestsBearer(): void
@@ -46,6 +50,42 @@ final class BonnerefClientTest extends TestCase
         $this->assertSame(['carType' => 'CV', 'search' => 'iv'], $sent['query']);
         $this->assertSame('Bearer caller-token', $sent['headers']['authorization']);
         $this->assertSame('application/ld+json', $sent['headers']['accept']);
+    }
+
+    public function testTheCallersLanguageIsForwardedAndFrenchIsTheDefault(): void
+    {
+        $this->http->fixture('/makes', 'makes');
+
+        $this->client->makes();
+        $this->assertSame('fr', $this->http->lastRequest()['headers']['accept-language']);
+
+        $request = Request::create('/mcp');
+        $request->setLocale('en');
+        $this->requests->push($request);
+        $this->client->makes();
+        $this->assertSame('en', $this->http->lastRequest()['headers']['accept-language']);
+    }
+
+    public function testAWorkerTurnForwardsTheTurnsInterfaceLanguage(): void
+    {
+        $this->http->fixture('/makes', 'makes');
+        $this->locale->set(Locale::En);
+
+        $this->client->makes();
+
+        $this->assertSame('en', $this->http->lastRequest()['headers']['accept-language']);
+    }
+
+    public function testEveryPageOfACollectionCarriesTheLanguage(): void
+    {
+        $this->locale->set(Locale::En);
+        $this->http->route('/makes', self::page([['id' => 1, 'name' => 'AUDI']], '/makes?carType=PC&page=2'), query: ['carType' => 'PC']);
+        $this->http->route('/makes', self::page([['id' => 2, 'name' => 'BMW']], null), query: ['carType' => 'PC', 'page' => '2']);
+
+        $this->client->makes();
+
+        $this->assertCount(2, BonnerefHttpClient::$requests);
+        $this->assertSame(['en', 'en'], array_column(array_column(BonnerefHttpClient::$requests, 'headers'), 'accept-language'));
     }
 
     public function testTheTurnsTokenWinsOverARequestBearer(): void

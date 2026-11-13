@@ -9,6 +9,7 @@ use App\ApiResource\Car;
 use App\ApiResource\Make;
 use App\ApiResource\Model;
 use App\ApiResource\PartCategory;
+use App\I18n\Locale;
 
 interface PartsCatalog
 {
@@ -58,9 +59,11 @@ interface PartsCatalog
      * The article's attributes, then its link qualifiers merged over EVERY vehicle it fits: the shape partsapi
      * answers with, for when no vehicle is in scope. With a vehicle, prefer {@see self::vehicleLinkCriteria()}.
      *
+     * The criteria names are in $language, the caller's when null: the narrowing reads them by their French names.
+     *
      * @return list<ArticleCriterion>
      */
-    public function articleCriteria(int $artId): array;
+    public function articleCriteria(int $artId, ?Locale $language = null): array;
 
     /**
      * {@see self::articleCriteria()} for several articles in one query.
@@ -69,7 +72,7 @@ interface PartsCatalog
      *
      * @return array<int, list<ArticleCriterion>> by article id, articles without criteria left out
      */
-    public function articleCriteriaByIds(array $artIds): array;
+    public function articleCriteriaByIds(array $artIds, ?Locale $language = null): array;
 
     /**
      * The criteria of those articles on one vehicle's link (qualifiers of that link only, restricted to the product
@@ -80,7 +83,7 @@ interface PartsCatalog
      *
      * @return array<int, VehicleLinkCriteria>|null by article id, every asked id included
      */
-    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null): ?array;
+    public function vehicleLinkCriteria(int $carId, CarType $carType, array $artIds, ?int $productGroupId = null, ?Locale $language = null): ?array;
 
     /**
      * @return list<ArticleCross>

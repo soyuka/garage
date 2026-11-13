@@ -14,6 +14,8 @@ use App\ApiResource\Vehicle;
 use App\Catalog\CarType;
 use App\Exception\NotConfiguredException;
 use App\Exception\UpstreamException;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
@@ -24,7 +26,8 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 /**
  * The parts catalogue and the plate registry live in bonneref; this is the one door to them. The
  * caller's Casdoor bearer is forwarded as is: the one the running turn holds ({@see BonnerefToken}) or,
- * outside a turn, the one on the request being served (HTTP and MCP both carry it).
+ * outside a turn, the one on the request being served (HTTP and MCP both carry it). The catalogue answers in the
+ * caller's language, sent as `Accept-Language`: the request's, or the turn's interface language in the worker.
  */
 final readonly class BonnerefClient
 {
@@ -42,6 +45,7 @@ final readonly class BonnerefClient
         private BonnerefToken $token,
         private RequestStack $requests,
         private LoggerInterface $logger = new NullLogger(),
+        private ?LocaleContext $locale = null,
     ) {
     }
 
@@ -190,7 +194,7 @@ final readonly class BonnerefClient
             false => 'false',
             default => (string) $v,
         }, array_filter($query, static fn (mixed $v): bool => null !== $v));
-        $headers = ['Accept' => 'application/ld+json'];
+        $headers = ['Accept' => 'application/ld+json', 'Accept-Language' => ($this->locale?->current() ?? Locale::DEFAULT)->value];
         if (null !== $bearer = $this->token->get() ?? BonnerefToken::fromRequest($this->requests->getMainRequest())) {
             $headers['Authorization'] = 'Bearer '.$bearer;
         }

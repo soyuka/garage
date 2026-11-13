@@ -18,6 +18,9 @@ abstract class AppTestCase extends ApiTestCase
      */
     public const string TEST_OWNER = 'dashboard@example.com';
 
+    /** Symfony's request factory defaults a test request to `en-us`; the app's own default is French. */
+    private const array DEFAULT_LANGUAGE_HEADERS = ['Accept-Language' => 'fr'];
+
     protected static ?bool $alwaysBootKernel = true;
 
     /**
@@ -59,7 +62,7 @@ abstract class AppTestCase extends ApiTestCase
      */
     protected static function createClient(array $kernelOptions = [], array $defaultOptions = []): ApiClient
     {
-        $defaultOptions['headers'] = ($defaultOptions['headers'] ?? []) + self::authHeaders();
+        $defaultOptions['headers'] = ($defaultOptions['headers'] ?? []) + self::authHeaders() + self::DEFAULT_LANGUAGE_HEADERS;
 
         return parent::createClient($kernelOptions, $defaultOptions);
     }
@@ -72,7 +75,7 @@ abstract class AppTestCase extends ApiTestCase
      */
     protected static function createAnonymousClient(array $kernelOptions = []): ApiClient
     {
-        return parent::createClient($kernelOptions);
+        return parent::createClient($kernelOptions, ['headers' => self::DEFAULT_LANGUAGE_HEADERS]);
     }
 
     /**

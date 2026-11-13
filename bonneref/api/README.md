@@ -59,7 +59,7 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | `MCP_ALLOWED_HOSTS` | hosts `/mcp` answers on (the SDK's DNS-rebinding guard 403s any other with "Invalid Host header") |
 | `CORS_ALLOW_ORIGIN` | regex of the front origins |
 | `API_PLAQUE_TOKEN` | apiplaqueimmatriculation.com, the paid SIV plate lookup |
-| `TECDOC_CATALOG_PATH`, `CATALOG_LANG` | the derived TecDoc SQLite and the language id of its names (6 = French) |
+| `TECDOC_CATALOG_PATH` | the derived TecDoc SQLite. The language of its names is the caller's (`Accept-Language`: `fr` default, `en`), falling back per text to fr, en, de |
 | `ANTHROPIC_API_KEY` | finder agent (Haiku 5.5), photo intake and carte grise reader (Sonnet 5.5), Anthropic web search |
 | `WEB_SEARCH_BACKEND`, `WEB_SEARCH_MODEL`, `GEMINI_API_KEY`, `GEMINI_WEB_SEARCH_MODEL` | the out-of-band `web_search` side call |
 | `WEB_SEARCH_ALLOWED_DOMAINS` | comma-separated `allowed_domains` for the Anthropic web search (empty: the whole web; Gemini ignores it) |

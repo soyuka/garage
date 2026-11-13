@@ -60,7 +60,6 @@ services:
     App\Catalog\TecdocCatalog:
         arguments:
             $path: '%env(resolve:TECDOC_CATALOG_PATH)%'
-            $lang: '%env(int:CATALOG_LANG)%'
 
     App\Catalog\PartsCatalog: '@App\Catalog\TecdocCatalog'
 

@@ -28,6 +28,42 @@ final class BonnerefForwardingTest extends AppTestCase
         $this->assertSame($this->mcpHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
     }
 
+    public function testAnMcpCatalogueToolForwardsTheLanguageOfTheMcpRequest(): void
+    {
+        $client = static::createClient();
+        static::catalogue();
+        $sessionId = $this->initialize($client);
+
+        foreach (['en-GB,en;q=0.9' => 'en', 'fr-FR,fr;q=0.9' => 'fr', 'de-DE,de;q=0.9' => 'fr'] as $accept => $expected) {
+            $client->request('POST', '/mcp', [
+                'headers' => $this->mcpHeaders(['Mcp-Session-Id' => $sessionId, 'Accept-Language' => $accept]),
+                'json' => ['jsonrpc' => '2.0', 'id' => 2, 'method' => 'tools/call', 'params' => ['name' => 'list_makes', 'arguments' => ['search' => 'maz']]],
+            ]);
+
+            $this->assertResponseIsSuccessful();
+            $this->assertSame($expected, static::bonneref()->lastRequest()['headers']['accept-language'], $accept);
+        }
+    }
+
+    public function testAQueuedTurnForwardsItsInterfaceLanguageToTheCatalogueTools(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        static::catalogue();
+        $container->set('ai.platform.anthropic', $this->callingListPartCategories());
+
+        $container->get(MessageBusInterface::class)->dispatch(new RunAgentTurn(
+            instruction: 'Which part categories?',
+            sessionTopic: 'https://localhost/agent/sessions/sess-worker-language',
+            owner: self::TEST_OWNER,
+            locale: 'en',
+            // @mago-expect lint:no-literal-password test fixture
+            accessToken: 'queued-token',
+        ));
+
+        $this->assertSame('en', static::bonneref()->lastRequest()['headers']['accept-language']);
+    }
+
     public function testAQueuedTurnForwardsTheTokenItCarriesToTheCatalogueTools(): void
     {
         static::createClient();

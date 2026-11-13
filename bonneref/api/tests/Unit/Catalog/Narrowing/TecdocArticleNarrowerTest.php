@@ -7,8 +7,11 @@ namespace App\Tests\Unit\Catalog\Narrowing;
 use App\Catalog\CarType;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Catalog\TecdocCatalog;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class TecdocArticleNarrowerTest extends TestCase
 {
@@ -40,6 +43,20 @@ final class TecdocArticleNarrowerTest extends TestCase
         $this->assertLessThanOrEqual(25, $result->unclassifiedCount);
         $this->assertCount(2, $result->clusters);
         $this->assertSame(116, array_sum(array_map(static fn ($c): int => $c->articleCount, $result->clusters)) + $result->unclassifiedCount);
+    }
+
+    public function testTheAnalysisDoesNotDependOnTheCallersLanguage(): void
+    {
+        $english = new LocaleContext(new RequestStack());
+        $english->set(Locale::En);
+
+        $inFrench = (new ArticleNarrower(new TecdocCatalog($this->dir.'/catalog.sqlite')))->narrow(19107, CarType::PassengerCar, 100259, 'MAZDA');
+        $inEnglish = (new ArticleNarrower(new TecdocCatalog($this->dir.'/catalog.sqlite', locale: $english)))->narrow(19107, CarType::PassengerCar, 100259, 'MAZDA');
+
+        $this->assertSame($inFrench->unclassifiedCount, $inEnglish->unclassifiedCount, 'fingerprints read the French criterion names');
+        $this->assertSame(array_map(static fn ($c): int => $c->articleCount, $inFrench->clusters), array_map(static fn ($c): int => $c->articleCount, $inEnglish->clusters));
+        $this->assertSame(array_column($inFrench->differsOn, 'key'), array_column($inEnglish->differsOn, 'key'));
+        $this->assertSame('Oil Filter', $inEnglish->productGroup['name'] ?? null, 'the product group a user reads stays in their language');
     }
 
     public function testTheCarmakerComesFromTheCatalogueWhenTheCallerGivesNone(): void
