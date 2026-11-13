@@ -7,9 +7,9 @@
         "php": ">=8.4",
         "ext-ctype": "*",
         "ext-iconv": "*",
-        "api-platform/doctrine-odm": "^5.0.6",
-        "api-platform/mcp": "^5.0.6",
-        "api-platform/symfony": "^5.0.6",
+        "api-platform/doctrine-odm": "^5.0.7",
+        "api-platform/mcp": "^5.0.7",
+        "api-platform/symfony": "^5.0.7",
         "doctrine/doctrine-bundle": "^3.3.4",
         "doctrine/mongodb-odm-bundle": "^5.6.1",
         "mcp/sdk": "^0.9",
@@ -101,7 +101,7 @@
         }
     },
     "require-dev": {
-        "api-platform/test": "^5.0.6",
+        "api-platform/test": "^5.0.7",
         "carthage-software/mago": "^1.59",
         "friendsofphp/php-cs-fixer": "^3.95.30",
         "opis/json-schema": "^2.6.1",
