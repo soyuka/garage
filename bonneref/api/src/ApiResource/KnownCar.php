@@ -8,6 +8,7 @@ use ApiPlatform\Metadata\ApiProperty;
 use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\QueryParameter;
+use App\Catalog\CarType;
 use App\State\KnownCarProvider;
 use Symfony\Component\Validator\Constraints as Assert;
 
@@ -23,9 +24,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             provider: KnownCarProvider::class,
             parameters: [
                 'carType' => new QueryParameter(
-                    description: 'TecDoc vehicle type of the carId: PC (default) or CV',
-                    schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC'],
-                    constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
+                    description: 'TecDoc vehicle type of the carId: PC (default), CV or MC',
+                    schema: ['type' => 'string', 'enum' => CarType::VALUES, 'default' => 'PC'],
+                    constraints: [new Assert\Choice(choices: CarType::VALUES)],
                 ),
             ],
         ),

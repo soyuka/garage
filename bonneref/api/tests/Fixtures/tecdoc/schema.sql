@@ -321,3 +321,32 @@ CREATE TABLE link_qualifier_item (
   countries TEXT,
   PRIMARY KEY (qual_set_id, seq)
 ) WITHOUT ROWID;
+CREATE TABLE mc_type (
+  type_id INTEGER PRIMARY KEY,
+  model_id INTEGER NOT NULL,
+  description TEXT,
+  year_from INTEGER,
+  month_from INTEGER,
+  year_to INTEGER,
+  month_to INTEGER,
+  power_kw INTEGER,
+  power_ps INTEGER,
+  fuel_type INTEGER,
+  capacity_tax_ccm INTEGER,
+  capacity_tech_ccm INTEGER,
+  valves INTEGER,
+  capacity_litre100 INTEGER,
+  cylinders INTEGER,
+  engine_type INTEGER,
+  fuel_mixture INTEGER,
+  drive_type INTEGER,
+  has_link INTEGER NOT NULL,
+  entry_idx INTEGER NOT NULL,
+  UNIQUE (entry_idx)
+);
+CREATE TABLE mc_type_genart (type_id INTEGER, genart_id INTEGER, PRIMARY KEY (type_id, genart_id)) WITHOUT ROWID;
+CREATE TABLE article_mc_type (
+  article_id INTEGER NOT NULL,
+  type_id INTEGER NOT NULL,
+  PRIMARY KEY (type_id, article_id)
+) WITHOUT ROWID;

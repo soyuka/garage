@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
+use App\Catalog\CarType;
 use App\Catalog\CatalogDate;
 use App\Dto\CarsInput;
 use App\State\CarCollectionProvider;
@@ -32,9 +33,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             provider: CarCollectionProvider::class,
             parameters: [
                 'carType' => new QueryParameter(
-                    description: 'TecDoc vehicle type: PC (default) or CV',
-                    schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC'],
-                    constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
+                    description: 'TecDoc vehicle type: PC (default), CV or MC',
+                    schema: ['type' => 'string', 'enum' => CarType::VALUES, 'default' => 'PC'],
+                    constraints: [new Assert\Choice(choices: CarType::VALUES)],
                 ),
                 'year' => new QueryParameter(
                     description: 'Keep versions produced in this year (open-ended versions are still produced)',

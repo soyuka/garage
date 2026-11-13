@@ -230,7 +230,7 @@ final class FinderRenderTools
     {
         $type = CarType::tryFrom($carType);
         if ($carId <= 0 || null === $type) {
-            return new ToolError('refused', 'carId must be a positive TecDoc kType and carType PC or CV.');
+            return new ToolError('refused', 'carId must be a positive TecDoc kType and carType PC, CV or MC.');
         }
         try {
             $plate = FinderVehicleResolver::plate($plate);

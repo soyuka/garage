@@ -18,6 +18,6 @@ final class CarTypeResolver
         }
 
         return CarType::tryFrom($value)
-            ?? throw new \InvalidArgumentException(sprintf('Invalid carType "%s", expected "PC" or "CV".', $value));
+            ?? throw new \InvalidArgumentException(sprintf('Invalid carType "%s", expected "PC", "CV" or "MC".', $value));
     }
 }

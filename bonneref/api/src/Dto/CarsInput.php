@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
+use App\Catalog\CarType;
 use Symfony\Component\Validator\Constraints as Assert;
 
 final class CarsInput
@@ -15,7 +16,7 @@ final class CarsInput
     #[ApiProperty(description: 'TecDoc model id from list_models')]
     public int $modelId;
 
-    #[ApiProperty(schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC', 'description' => 'TecDoc vehicle type: PC (passenger car) or CV (commercial vehicle)'])]
+    #[ApiProperty(schema: ['type' => 'string', 'enum' => CarType::VALUES, 'default' => 'PC', 'description' => 'TecDoc vehicle type: PC (passenger car), CV (commercial vehicle) or MC (motorbike)'])]
     public string $carType = 'PC';
 
     #[ApiProperty(description: 'Keep versions produced in this year (YEAR_START <= year <= YEAR_END; a version without an end is still produced).')]

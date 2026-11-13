@@ -14,7 +14,7 @@ namespace App\Tests\Support;
  */
 final class TecdocFixtureDatabase
 {
-    public static function create(string $path, bool $withCategoryArticles = false, bool $withEspaceFlywheels = false, bool $withSteeringJoints = false): void
+    public static function create(string $path, bool $withCategoryArticles = false, bool $withEspaceFlywheels = false, bool $withSteeringJoints = false, bool $withMotorbikeQualifiers = false, bool $withMotoSubtree = false): void
     {
         $pdo = new \PDO('sqlite:'.$path);
         $pdo->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
@@ -30,6 +30,49 @@ final class TecdocFixtureDatabase
             INSERT INTO cv_type_genart VALUES (1446, 7);
             INSERT INTO article_cv_type VALUES (78351, 1446);
             SQL);
+
+        // The dev slice carries no motorbike rows either: the BMW F 800 GS Adventure (kType 101222, real mc_type rows)
+        // is derived here, linked to the MANN oil filter of the fixture.
+        $pdo->exec(<<<'SQL'
+            INSERT INTO manufacturer VALUES (4081, 512, 'BMW MOTORC', 'BMW MOTORCYCLES', 0, 0, 1, 1, 0, 0, 0);
+            INSERT INTO vehicle_model VALUES (12108, 4081, 'F', 1993, 1, NULL, NULL, 1, 0, 1, 0, 0, 0, 0, 12108);
+            INSERT INTO vehicle_model VALUES (12112, 4081, 'S', 2009, 1, NULL, NULL, 1, 0, 1, 0, 0, 0, 0, 12112);
+            INSERT INTO mc_type VALUES (101222, 12108, 'F 800 GS Adventure (K75)', 2012, 5, NULL, NULL, 63, 86, 1, 800, 798, 4, 80, 2, 1, 26, 8, 0, 831);
+            INSERT INTO mc_type VALUES (101223, 12108, 'F 800 GS Adventure (K75)', 2012, 5, NULL, NULL, 35, 48, 1, 800, 798, 4, 80, 2, 1, 26, 8, 0, 835);
+            INSERT INTO mc_type_genart VALUES (101222, 7);
+            INSERT INTO article_mc_type VALUES (78351, 101222);
+            SQL);
+
+        if ($withMotoSubtree) {
+            // Tree 1 carries a `Moto` root (103671): its oil filter node repeats a generic article (7) that the car nodes
+            // already list, its chain kit node (genart 5478, linked to the bike below) exists only there.
+            $pdo->exec(<<<'SQL'
+                INSERT INTO search_tree_node VALUES (1, 103671, NULL, 9001, 0, 0);
+                INSERT INTO search_tree_node VALUES (1, 103672, 103671, 9002, 1, 0);
+                INSERT INTO search_tree_node VALUES (1, 103673, 103672, 9003, 1, 0);
+                INSERT INTO search_tree_node VALUES (1, 103674, 103671, 9004, 1, 0);
+                INSERT INTO search_tree_node_text VALUES (1, 103671, 1, 'Motorrad');
+                INSERT INTO search_tree_node_text VALUES (1, 103671, 6, 'Moto');
+                INSERT INTO search_tree_node_text VALUES (1, 103672, 1, 'Filter');
+                INSERT INTO search_tree_node_text VALUES (1, 103672, 6, 'Filtre');
+                INSERT INTO search_tree_node_text VALUES (1, 103673, 1, 'Ölfilter');
+                INSERT INTO search_tree_node_text VALUES (1, 103673, 6, 'Filtre à huile');
+                INSERT INTO search_tree_node_text VALUES (1, 103674, 1, 'Kettensatz');
+                INSERT INTO search_tree_node_text VALUES (1, 103674, 6, 'Kit chaîne');
+                INSERT INTO search_tree_node_genart VALUES (1, 103673, 0, 4, 7);
+                INSERT INTO search_tree_node_genart VALUES (1, 103674, 0, 4, 5478);
+                INSERT INTO mc_type_genart VALUES (101222, 5478);
+                SQL);
+        }
+
+        if ($withMotorbikeQualifiers) {
+            // Kept out of the default fixture: the criteria of an article are the union over every vehicle it links.
+            $pdo->exec(<<<'SQL'
+                INSERT INTO article_link_qualifier VALUES (78351, 'mc', 101222, 7, 4, 900101);
+                INSERT INTO link_qualifier_set VALUES (900101, NULL);
+                INSERT INTO link_qualifier_item VALUES (900101, 0, 20, NULL, NULL, NULL, 2012, 5, NULL);
+                SQL);
+        }
 
         if ($withCategoryArticles) {
             $pdo->exec((string) file_get_contents(__DIR__.'/../Fixtures/tecdoc/narrowing.sql'));

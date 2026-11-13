@@ -15,18 +15,28 @@ use Psr\Log\NullLogger;
 
 /**
  * The whole catalogue from the derived read-only TecDoc extract (docs/tecdoc-sqlite.md): vehicles, the
- * part-category tree and articles, for passenger cars (tree 1, pc_* tables) and commercial vehicles (tree 2,
- * cv_* tables). Article ids are the extract's own, never partsapi's ART_ID.
+ * part-category tree and articles, for passenger cars (tree 1, pc_* tables), commercial vehicles (tree 2,
+ * cv_* tables) and motorbikes (tree 1 too, mc_* tables). Article ids are the extract's own, never partsapi's ART_ID.
  */
 final class TecdocCatalog implements PartsCatalog
 {
     private const int FALLBACK_LANGUAGE = 1;
     private const int BODY_TYPE_TABLE = 86;
     private const int ENGINE_TYPE_TABLE = 80;
+    /** Tree 1 root of the motorbike nodes. */
+    private const int MOTO_ROOT = 103671;
 
+    /**
+     * Motorbikes have no engine table; their makes/models are flagged in manufacturer and vehicle_model. They use the
+     * passenger tree (1): tree 3 is engine-only (13 of kType 101222's 88 generic articles, no brakes, no battery),
+     * tree 1 reaches 55 of them, brake pads and starter battery included (verified 2026-11-13 on the dev slice).
+     * Its `Moto` subtree repeats generic articles the car nodes already list, so a bike hides those entries ('hidden'
+     * root) and keeps the Moto nodes carrying a generic article found nowhere else (chain kit, clutch, fork...).
+     */
     private const array PROFILES = [
-        'PC' => ['tree' => 1, 'type' => 'pc_type', 'engines' => 'pc_type_engine', 'genarts' => 'pc_type_genart', 'links' => 'article_pc_type', 'kind' => 'pc'],
-        'CV' => ['tree' => 2, 'type' => 'cv_type', 'engines' => 'cv_type_engine', 'genarts' => 'cv_type_genart', 'links' => 'article_cv_type', 'kind' => 'cv'],
+        'PC' => ['tree' => 1, 'type' => 'pc_type', 'engines' => 'pc_type_engine', 'genarts' => 'pc_type_genart', 'links' => 'article_pc_type', 'kind' => 'pc', 'hidden' => 0, 'make' => 'has_passenger_car', 'model' => 'is_passenger_car'],
+        'CV' => ['tree' => 2, 'type' => 'cv_type', 'engines' => 'cv_type_engine', 'genarts' => 'cv_type_genart', 'links' => 'article_cv_type', 'kind' => 'cv', 'hidden' => 0, 'make' => 'has_commercial_vehicle', 'model' => 'is_commercial_vehicle'],
+        'MC' => ['tree' => 1, 'type' => 'mc_type', 'engines' => null, 'genarts' => 'mc_type_genart', 'links' => 'article_mc_type', 'kind' => 'mc', 'hidden' => self::MOTO_ROOT, 'make' => 'has_motorbike', 'model' => 'is_motorbike'],
     ];
 
     private ?\PDO $pdo = null;
@@ -44,7 +54,7 @@ final class TecdocCatalog implements PartsCatalog
 
     public function makes(CarType $carType, ?string $search = null): array
     {
-        $column = CarType::PassengerCar === $carType ? 'has_passenger_car' : 'has_commercial_vehicle';
+        $column = self::profile($carType)['make'];
         $makes = array_map(
             Make::fromCatalogRow(...),
             $this->rows(\sprintf('SELECT manufacturer_id AS makeId, name AS makeName FROM manufacturer WHERE %s = 1 ORDER BY name', $column)),
@@ -59,14 +69,16 @@ final class TecdocCatalog implements PartsCatalog
 
     public function models(int $makeId, CarType $carType): array
     {
-        $column = CarType::PassengerCar === $carType ? 'is_passenger_car' : 'is_commercial_vehicle';
+        $column = self::profile($carType)['model'];
+        // The extract flags every bike model as a passenger model too.
+        $notBike = CarType::Motorbike === $carType ? '' : 'AND m.is_motorbike = 0';
         $rows = $this->rows(
             <<<SQL
                 SELECT m.model_id AS modelId, coalesce(fr.name, m.name) AS modelName,
                        m.year_from, m.month_from, m.year_to, m.month_to
                 FROM vehicle_model m
                 LEFT JOIN vehicle_model_text fr ON fr.model_id = m.model_id AND fr.language_id = :lang
-                WHERE m.manufacturer_id = :makeId AND m.{$column} = 1
+                WHERE m.manufacturer_id = :makeId AND m.{$column} = 1 {$notBike}
                 ORDER BY m.model_id
                 SQL,
             ['lang' => $this->lang, 'makeId' => $makeId],
@@ -83,11 +95,15 @@ final class TecdocCatalog implements PartsCatalog
 
     public function cars(int $makeId, int $modelId, CarType $carType): array
     {
-        $rows = CarType::PassengerCar === $carType ? $this->passengerCarRows($makeId, $modelId) : $this->commercialVehicleRows($makeId, $modelId);
-        $profile = self::PROFILES[$carType->value];
+        $rows = match ($carType) {
+            CarType::PassengerCar => $this->passengerCarRows($makeId, $modelId),
+            CarType::CommercialVehicle => $this->commercialVehicleRows($makeId, $modelId),
+            CarType::Motorbike => $this->motorbikeRows($makeId, $modelId),
+        };
+        $profile = self::profile($carType);
 
-        $engines = $this->engineCodes($profile['engines'], array_map(intval(...), array_column($rows, 'CAR_ID')));
-        $rows = array_map(static fn (array $row): array => self::carRow($row, $engines[(int) $row['CAR_ID']] ?? []), $rows);
+        $engines = null === $profile['engines'] ? [] : $this->engineCodes($profile['engines'], array_map(intval(...), array_column($rows, 'CAR_ID')));
+        $rows = array_map(static fn (array $row): array => self::carRow($row, $engines[(int) $row['CAR_ID']] ?? [], CarType::Motorbike === $carType), $rows);
         $this->vehicles?->recordCatalogRows($rows, $carType);
 
         return array_map(Car::fromCatalogRow(...), $rows);
@@ -95,7 +111,7 @@ final class TecdocCatalog implements PartsCatalog
 
     public function carMake(int $carId, CarType $carType): ?string
     {
-        $table = CarType::PassengerCar === $carType ? 'pc_type' : 'cv_type';
+        $table = self::profile($carType)['type'];
         $make = $this->rows(
             "SELECT mf.name FROM {$table} t JOIN vehicle_model m ON m.model_id = t.model_id JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id WHERE t.type_id = :carId",
             ['carId' => $carId],
@@ -108,7 +124,7 @@ final class TecdocCatalog implements PartsCatalog
     {
         $engine = CarType::PassengerCar === $carType
             ? 'coalesce(tt.description, t.description) AS engine FROM pc_type t LEFT JOIN pc_type_text tt ON tt.type_id = t.type_id AND tt.language_id = :lang'
-            : 't.description AS engine FROM cv_type t';
+            : \sprintf('t.description AS engine FROM %s t', self::profile($carType)['type']);
         $row = $this->rows(
             "SELECT mf.name AS make, coalesce(mt.name, m.name) AS model, {$engine}
                 JOIN vehicle_model m ON m.model_id = t.model_id
@@ -131,6 +147,11 @@ final class TecdocCatalog implements PartsCatalog
         $nodes = $this->rows(
             <<<SQL
                 WITH RECURSIVE
+                hidden(node_id) AS (
+                  SELECT node_id FROM search_tree_node WHERE tree_id = :tree AND node_id = :hiddenRoot
+                  UNION
+                  SELECT n.node_id FROM search_tree_node n JOIN hidden h ON n.parent_node_id = h.node_id WHERE n.tree_id = :tree
+                ),
                 named(node_id, parent_id, sort_idx, name) AS (
                   SELECT n.node_id, n.parent_node_id, n.sort_idx, coalesce(fr.text, de.text)
                   FROM search_tree_node n
@@ -143,6 +164,13 @@ final class TecdocCatalog implements PartsCatalog
                   FROM search_tree_node_genart g
                   JOIN {$profile['genarts']} pg ON pg.genart_id = g.genart_id AND pg.type_id = :carId
                   WHERE g.tree_id = :tree
+                    AND NOT (
+                      g.node_id IN (SELECT node_id FROM hidden)
+                      AND EXISTS (
+                        SELECT 1 FROM search_tree_node_genart o
+                        WHERE o.tree_id = :tree AND o.genart_id = g.genart_id AND o.node_id NOT IN (SELECT node_id FROM hidden)
+                      )
+                    )
                   UNION
                   SELECT named.parent_id FROM named JOIN up USING (node_id) WHERE named.parent_id IS NOT NULL
                 ),
@@ -157,7 +185,7 @@ final class TecdocCatalog implements PartsCatalog
                 FROM up JOIN named USING (node_id) JOIN path USING (node_id)
                 ORDER BY named.sort_idx
                 SQL,
-            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'carId' => $carId],
+            ['lang' => $this->lang, 'fallback' => self::FALLBACK_LANGUAGE, 'tree' => $profile['tree'], 'hiddenRoot' => $profile['hidden'], 'carId' => $carId],
         );
 
         return PartCategory::fromCatalogTree($nodes, $leafOnly, $search);
@@ -323,7 +351,7 @@ final class TecdocCatalog implements PartsCatalog
     }
 
     /**
-     * @return array{tree: int, type: string, engines: string, genarts: string, links: string, kind: string}
+     * @return array{tree: int, type: string, engines: string|null, genarts: string, links: string, kind: string, hidden: int, make: string, model: string}
      */
     private static function profile(CarType $carType): array
     {
@@ -384,6 +412,32 @@ final class TecdocCatalog implements PartsCatalog
                        t.power_kw_from AS POWER_KW, t.power_ps_from AS POWER_PS,
                        t.year_from, t.month_from, t.year_to, t.month_to
                 FROM cv_type t
+                JOIN vehicle_model m ON m.model_id = t.model_id
+                JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
+                LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
+                WHERE t.model_id = :modelId AND m.manufacturer_id = :makeId
+                ORDER BY t.type_id
+                SQL,
+            ['lang' => $this->lang, 'modelId' => $modelId, 'makeId' => $makeId],
+        );
+    }
+
+    /**
+     * mc_type has no text table and no body column; the bike's own name is its description.
+     *
+     * @return list<array<string, int|float|string|null>>
+     */
+    private function motorbikeRows(int $makeId, int $modelId): array
+    {
+        return $this->rows(
+            <<<'SQL'
+                SELECT t.type_id AS CAR_ID, t.description,
+                       mf.name AS MAKE_NAME, coalesce(mt.name, m.name) AS MODEL_NAME,
+                       NULL AS BODY, NULL AS ENGINE_TYPE,
+                       t.capacity_tech_ccm, t.capacity_litre100,
+                       t.power_kw AS POWER_KW, t.power_ps AS POWER_PS,
+                       t.year_from, t.month_from, t.year_to, t.month_to
+                FROM mc_type t
                 JOIN vehicle_model m ON m.model_id = t.model_id
                 JOIN manufacturer mf ON mf.manufacturer_id = m.manufacturer_id
                 LEFT JOIN vehicle_model_text mt ON mt.model_id = m.model_id AND mt.language_id = :lang
@@ -627,7 +681,7 @@ final class TecdocCatalog implements PartsCatalog
      *
      * @return array<string, mixed> a getCars row, as partsapi serialises it
      */
-    private static function carRow(array $row, array $engines): array
+    private static function carRow(array $row, array $engines, bool $nameStartsWithModel = false): array
     {
         $name = trim((string) $row['description']);
         if ([] !== $engines) {
@@ -635,11 +689,14 @@ final class TecdocCatalog implements PartsCatalog
         }
         $ccm = $row['capacity_tech_ccm'];
         $litres = $row['capacity_litre100'];
+        $make = (string) $row['MAKE_NAME'];
+        $model = (string) $row['MODEL_NAME'];
+        $fullName = $nameStartsWithModel && str_starts_with(mb_strtolower($name), mb_strtolower($model)) ? $make.' '.$name : $make.' '.$model.' '.$name;
 
         return [
             'CAR_ID' => (int) $row['CAR_ID'],
             'CAR_NAME' => $name,
-            'FULL_MODEL_NAME' => (string) $row['MAKE_NAME'].' '.(string) $row['MODEL_NAME'].' '.$name,
+            'FULL_MODEL_NAME' => $fullName,
             'MAKE_NAME' => $row['MAKE_NAME'],
             'MODEL_NAME' => $row['MODEL_NAME'],
             'BODY' => $row['BODY'],

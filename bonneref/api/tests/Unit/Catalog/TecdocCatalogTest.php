@@ -198,6 +198,88 @@ final class TecdocCatalogTest extends TestCase
         $this->assertSame([], $this->catalog->articles(19107, 100259, CarType::CommercialVehicle));
     }
 
+    public function testMotorbikeMakesAreTheOnesWithMotorbikeTypes(): void
+    {
+        $this->assertEquals([new Make(4081, 'BMW MOTORCYCLES')], $this->catalog->makes(CarType::Motorbike));
+        $this->assertEquals([], $this->catalog->makes(CarType::Motorbike, 'mazda'));
+        $this->assertNotContains(4081, array_map(static fn (Make $make): int => $make->id, $this->catalog->makes(CarType::PassengerCar)));
+    }
+
+    public function testMotorbikeModelsAreTheMotorbikeOnes(): void
+    {
+        $this->assertEquals(
+            [new Model(12108, 'F', '1993-01', null), new Model(12112, 'S', '2009-01', null)],
+            $this->catalog->models(4081, CarType::Motorbike),
+        );
+        $this->assertSame([], $this->catalog->models(4081, CarType::PassengerCar), 'the bike models also carry the passenger flag in the extract');
+    }
+
+    public function testMotorbikeCarsComeFromMcType(): void
+    {
+        $cars = $this->catalog->cars(4081, 12108, CarType::Motorbike);
+
+        $this->assertSame([101222, 101223], array_map(static fn (Car $car): int => $car->id, $cars));
+        $this->assertEquals(
+            new Car(101222, 'F 800 GS Adventure (K75)', 'BMW MOTORCYCLES F 800 GS Adventure (K75)', null, null, 798, 63, 86, '2012-05', null),
+            $cars[0],
+        );
+    }
+
+    public function testAMotorbikeIsIdentifiedByItsMakeAndName(): void
+    {
+        $this->assertSame('BMW MOTORCYCLES', $this->catalog->carMake(101222, CarType::Motorbike));
+        $this->assertSame(
+            ['make' => 'BMW MOTORCYCLES', 'model' => 'F', 'engine' => 'F 800 GS Adventure (K75)'],
+            $this->catalog->carIdentity(101222, CarType::Motorbike),
+        );
+        $this->assertNull($this->catalog->carMake(101222, CarType::PassengerCar));
+    }
+
+    public function testMotorbikeCategoriesComeFromThePassengerTreeThroughMcTypeGenart(): void
+    {
+        $this->assertEquals(
+            [
+                new PartCategory(100005, null, 1, 'Filtre', 'Filtre', false),
+                new PartCategory(100259, 100005, 2, 'Filtre à huile', 'Filtre > Filtre à huile', true),
+            ],
+            $this->catalog->partCategories(101222, CarType::Motorbike, false),
+        );
+        $this->assertSame('Filtre à huile', $this->catalog->categoryName(101222, 100259, CarType::Motorbike));
+        $this->assertNull($this->catalog->categoryName(101222, 200136, CarType::Motorbike), 'a node of the commercial tree is not the bike\'s');
+        $this->assertSame([], $this->catalog->partCategories(101223, CarType::Motorbike, false), 'a bike without links has no categories');
+    }
+
+    public function testMotorbikeCategoriesHideTheMotoNodesThePassengerNodesAlreadyCover(): void
+    {
+        TecdocFixtureDatabase::create($this->dir.'/moto.sqlite', withMotoSubtree: true);
+        $catalog = new TecdocCatalog($this->dir.'/moto.sqlite');
+
+        $this->assertSame(
+            ['Filtre', 'Filtre > Filtre à huile', 'Moto', 'Moto > Kit chaîne'],
+            array_map(static fn (PartCategory $c): string => $c->path, $catalog->partCategories(101222, CarType::Motorbike, false)),
+            'the oil filter is listed once; the Moto node with a generic article found nowhere else stays',
+        );
+        $this->assertSame(
+            ['Filtre > Filtre à huile', 'Moto > Kit chaîne'],
+            array_map(static fn (PartCategory $c): string => $c->path, $catalog->partCategories(101222, CarType::Motorbike)),
+        );
+        $this->assertContains(
+            'Moto > Filtre > Filtre à huile',
+            array_map(static fn (PartCategory $c): string => $c->path, $catalog->partCategories(19107, CarType::PassengerCar)),
+            'passenger cars keep the whole tree',
+        );
+    }
+
+    public function testMotorbikeArticlesComeFromArticleMcType(): void
+    {
+        $articles = $this->catalog->articles(101222, 100259, CarType::Motorbike);
+
+        $this->assertSame([78351], array_map(static fn (Article $article): int => $article->id, $articles));
+        $this->assertSame('MANN-FILTER', $articles[0]->brand);
+        $this->assertSame([], $this->catalog->articles(101223, 100259, CarType::Motorbike));
+        $this->assertSame([], $this->catalog->articles(101222, 100259, CarType::PassengerCar), 'a bike id is only looked up among the bike types');
+    }
+
     public function testArticlesOfACarAndACategoryCarryTheConsumedFields(): void
     {
         $articles = $this->catalog->articles(19107, 100259, CarType::PassengerCar);

@@ -26,7 +26,7 @@ final readonly class FinderVehicleResolver
         $carId = \is_array($payload) ? ($payload['carId'] ?? null) : null;
         $carType = CarType::tryFrom(\is_array($payload) && \is_string($payload['carType'] ?? null) ? $payload['carType'] : CarType::PassengerCar->value);
         if (!\is_int($carId) || $carId <= 0 || null === $carType) {
-            throw new InvalidTurnInput('vehicle needs a carId (and a PC/CV carType); omit it to let the agent identify the car');
+            throw new InvalidTurnInput('vehicle needs a carId (and a PC/CV/MC carType); omit it to let the agent identify the car');
         }
 
         return $this->forCar($carId, $carType, self::plate($payload['plate'] ?? null), self::organisationNumber($payload['buildCode'] ?? null));

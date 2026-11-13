@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
+use App\Catalog\CarType;
 use App\Dto\MakesInput;
 use App\State\MakeCollectionProvider;
 use App\State\MakesProcessor;
@@ -29,9 +30,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             provider: MakeCollectionProvider::class,
             parameters: [
                 'carType' => new QueryParameter(
-                    description: 'TecDoc vehicle type: PC (passenger car, default) or CV (commercial vehicle)',
-                    schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC'],
-                    constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
+                    description: 'TecDoc vehicle type: PC (passenger car, default), CV (commercial vehicle) or MC (motorbike)',
+                    schema: ['type' => 'string', 'enum' => CarType::VALUES, 'default' => 'PC'],
+                    constraints: [new Assert\Choice(choices: CarType::VALUES)],
                 ),
                 'search' => new QueryParameter(
                     description: 'Case-insensitive substring filter on the manufacturer name, e.g. "peugeot".',

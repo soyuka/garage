@@ -26,7 +26,7 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
     {
         $this->dir = sys_get_temp_dir().'/tecdoc-link-'.bin2hex(random_bytes(4));
         mkdir($this->dir);
-        TecdocFixtureDatabase::create($this->dir.'/catalog.sqlite', withEspaceFlywheels: true);
+        TecdocFixtureDatabase::create($this->dir.'/catalog.sqlite', withEspaceFlywheels: true, withMotorbikeQualifiers: true);
 
         $this->catalog = new TecdocCatalog($this->dir.'/catalog.sqlite');
     }
@@ -101,5 +101,13 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
     public function testACommercialVehicleReadsTheCvLinks(): void
     {
         $this->assertSame([], $this->catalog->vehicleLinkCriteria(self::ESPACE, CarType::CommercialVehicle, [self::LUK], self::FLYWHEEL)[self::LUK]->qualifierSets);
+    }
+
+    public function testMotorbikeLinkCriteriaReadTheMcQualifiers(): void
+    {
+        $links = $this->catalog->vehicleLinkCriteria(101222, CarType::Motorbike, [78351]);
+
+        $this->assertCount(1, $links[78351]->qualifierSets);
+        $this->assertSame([], $this->catalog->vehicleLinkCriteria(101222, CarType::PassengerCar, [78351])[78351]->qualifierSets);
     }
 }

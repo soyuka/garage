@@ -97,4 +97,13 @@ final class PartsResourceTest extends AppTestCase
 
         $this->assertResponseStatusCodeSame(422);
     }
+
+    public function testMotorbikeArticlesAreServedThroughTheCarTypeParameter(): void
+    {
+        $client = static::createClient();
+        $response = $client->request('GET', '/cars/101222/part-categories/100259/articles?carType=MC');
+
+        $this->assertResponseIsSuccessful();
+        $this->assertSame([78351], array_column($response->toArray()['hydra:member'], 'id'));
+    }
 }

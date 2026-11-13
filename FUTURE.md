@@ -903,3 +903,8 @@ From the api/ hardening review (items 1-17 shipped 2026-11-10, see `git log`):
   replicas would each count their own window. A shared store (Redis, or a Mongo-backed PSR-6 pool) before
   scaling out.
 - Token passthrough mpa → bonneref: see "Token passthrough mpa → bonneref — DEBT" above.
+
+## bonneref `get_service_parts` without `service` is a -32603 (found 2026-11-13, not fixed)
+
+Calling the catalogue MCP tool `get_service_parts` with no `service` argument answers JSON-RPC -32603 "Internal
+server error" instead of an `invalid_input` tool error. Found during the motorbike (`CarType::Motorbike`, 'MC') work.
