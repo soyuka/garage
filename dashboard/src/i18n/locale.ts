@@ -2,14 +2,15 @@
 // at the edge — the same shape as tokens/stage.ts, and for the same reason: everything that decides
 // anything is testable in a node environment.
 //
-// French is the default and stays the default: this app was built French-first (PRODUCT.md § "the
-// room"), and `en` is a second catalog beside it, never a replacement.
+// English is the last-resort default (owner decision 2026-11-13, docs/jury-release.md § 4): a first
+// visit with no `?lang=`, no stored choice and no recognised browser language lands in English. French
+// stays fully supported and wins from any of those three sources.
 
 export type Locale = 'fr' | 'en';
 
 export const LOCALES = ['fr', 'en'] as const satisfies readonly Locale[];
 
-export const DEFAULT_LOCALE: Locale = 'fr';
+export const DEFAULT_LOCALE: Locale = 'en';
 
 /** Reserved beside `mpa.stage`, `mpa.recency` and `mpa.audition` — one namespace for the operator's kit. */
 export const LOCALE_KEY = 'mpa.locale';

@@ -76,6 +76,15 @@ export function formatDate(iso: string | null | undefined, locale: Locale): stri
   return `${Number(day)}${NBSP}${MONTHS[locale][Number(month) - 1]}${NBSP}${year}`;
 }
 
+/** A moment on the local wall clock: "13 nov. 2026 15:05:09" / "13 Nov 2026 15:05:09". Unparseable input is returned as is. */
+export function formatDateTime(iso: string, locale: Locale): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const pad = (n: number): string => String(n).padStart(2, '0');
+  const day = `${d.getDate()}${NBSP}${MONTHS[locale][d.getMonth()]}${NBSP}${d.getFullYear()}`;
+  return `${day} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 /** Round a health score to the nearest 5 (no false precision). Locale-free. */
 export function roundHealth(score: number): number {
   return Math.round(score / 5) * 5;

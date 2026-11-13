@@ -509,6 +509,11 @@ export const fr = {
     noCalls: 'Aucune requête capturée (stream).',
     finalAnswer: 'Réponse finale',
     rawData: (n: number) => `Données brutes (${n})`,
+    toolCount: (n: number) => `${n} outil${n > 1 ? 's' : ''}`,
+    emptyInstruction: '(vide)',
+    unknown: 'inconnu',
+    toolCalls: (n: number) => `Appels d'outils (${n})`,
+    webSearch: (n: number) => `Recherche web (${n})`,
   },
 
   age: {

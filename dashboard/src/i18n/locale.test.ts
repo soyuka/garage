@@ -10,9 +10,9 @@ import {
 } from './locale';
 
 describe('the supported locales', () => {
-  it('is fr + en, and French is the default', () => {
+  it('is fr + en, and English is the default', () => {
     expect(LOCALES).toEqual(['fr', 'en']);
-    expect(DEFAULT_LOCALE).toBe('fr');
+    expect(DEFAULT_LOCALE).toBe('en');
   });
 
   it('recognises only the two it can actually render', () => {
@@ -26,8 +26,8 @@ describe('the supported locales', () => {
 });
 
 describe('resolveLocale — URL, then the stored choice, then the browser', () => {
-  it('falls back to French when nothing says otherwise', () => {
-    expect(resolveLocale('', null, [])).toBe('fr');
+  it('falls back to English when nothing says otherwise', () => {
+    expect(resolveLocale('', null, [])).toBe('en');
   });
 
   it('honours a stored choice over the browser', () => {
@@ -47,13 +47,13 @@ describe('resolveLocale — URL, then the stored choice, then the browser', () =
 
   it('skips browser languages it cannot render and keeps looking', () => {
     expect(resolveLocale('', null, ['de-DE', 'es', 'en-GB'])).toBe('en');
-    expect(resolveLocale('', null, ['de-DE', 'es'])).toBe('fr');
+    expect(resolveLocale('', null, ['de-DE', 'es'])).toBe('en');
   });
 
   it('ignores a stored value that is not a locale we support', () => {
     // A hand-edited or stale storage entry must not brick the UI into a blank catalog.
     expect(resolveLocale('', 'klingon', ['en-GB'])).toBe('en');
-    expect(resolveLocale('', 'klingon', [])).toBe('fr');
+    expect(resolveLocale('', 'klingon', [])).toBe('en');
   });
 
   // Same argument as `?stage=` in tokens/stage.ts: one keystroke to check the other language during a
@@ -65,6 +65,14 @@ describe('resolveLocale — URL, then the stored choice, then the browser', () =
 
   it('ignores an unsupported ?lang= rather than blanking the UI', () => {
     expect(resolveLocale('?lang=klingon', 'en', [])).toBe('en');
+    expect(resolveLocale('?lang=klingon', 'fr', [])).toBe('fr');
+  });
+
+  // English is only the last resort: a French browser or a stored French choice must still land in French.
+  it('keeps French reachable from every source above the default', () => {
+    expect(resolveLocale('?lang=fr', null, [])).toBe('fr');
+    expect(resolveLocale('', 'fr', [])).toBe('fr');
+    expect(resolveLocale('', null, ['fr-CA', 'en-US'])).toBe('fr');
   });
 });
 

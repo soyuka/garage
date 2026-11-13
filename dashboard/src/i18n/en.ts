@@ -471,6 +471,11 @@ export const en: Messages = {
     noCalls: 'No request captured (stream).',
     finalAnswer: 'Final answer',
     rawData: (n: number) => `Raw data (${n})`,
+    toolCount: (n: number) => `${n} tool${1 === n ? '' : 's'}`,
+    emptyInstruction: '(empty)',
+    unknown: 'unknown',
+    toolCalls: (n: number) => `Tool calls (${n})`,
+    webSearch: (n: number) => `Web search (${n})`,
   },
 
   age: {

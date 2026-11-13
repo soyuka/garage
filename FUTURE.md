@@ -343,7 +343,7 @@ storefronts — a real choice, not a string.
 (`Atelier EN`), `stage/CLAUDE.md` takes its language from the output style (French stays the
 default), `stage/bin/atelier --lang en [--public]`, and the English beat sheet in `CONFERENCE.md`
 § "The act in English". No api/ change was needed: pilot tool descriptions already say "in the
-interface language", and the voice follows the tab's `Accept-Language`. Still open: the storefront
+interface language", and the voice follows the tab's `Accept-Language`. Storefronts decided 2026-11-13: the French links stay in every locale (not worth it for the contest). Unverified: the auto-doc.fr link uses `/search?keyword=`, a path that 404s on autodoc.co.uk (whose form posts to `/spares-search?keyword=`), so the .fr link may be stale; mister-auto has no English storefront (.co.uk 410). Still open (rest of this list): the storefront
 links (proposal: `partShopLinks(part, locale)`, `en` → Autodoc's international storefront, search URL
 format to be checked live before writing it), the login page language on `auth.bonneref.fr`, and the
 catalogue's French category and part labels (§11), which an English take shows as they are.

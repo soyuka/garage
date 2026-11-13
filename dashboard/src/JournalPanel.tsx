@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
-import { useT } from './i18n/LocaleProvider';
+import { formatDateTime } from './format';
+import { useLocale, useT } from './i18n/LocaleProvider';
 import './journal.css';
 import { failureRef, getTurn, getTurns, type TurnDetail, type TurnSummary } from './journal';
 
@@ -16,6 +17,7 @@ const STATUS_TONE: Record<TurnSummary['status'], 'ok' | 'warn' | 'alarm'> = {
 
 export function JournalPanel({ open, onClose }: { open: boolean; onClose: () => void }) {
   const t = useT();
+  const [locale] = useLocale();
   const [turns, setTurns] = useState<TurnSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -86,9 +88,9 @@ export function JournalPanel({ open, onClose }: { open: boolean; onClose: () => 
             <li key={turn.id}>
               <button type="button" className={`at-journal-row${selectedId === turn.id ? ' at-journal-row--on' : ''}`} onClick={() => toggle(turn.id)} aria-expanded={selectedId === turn.id}>
                 <span className={`at-journal-status at-journal-status--${STATUS_TONE[turn.status]}`}>{turn.status}</span>
-                <span className="at-journal-instruction">{turn.instruction || '(vide)'}</span>
+                <span className="at-journal-instruction">{turn.instruction || t.journal.emptyInstruction}</span>
                 <span className="at-journal-meta">
-                  {fmtTime(turn.startedAt)} · {turn.toolCallCount} outil{turn.toolCallCount > 1 ? 's' : ''}
+                  {formatDateTime(turn.startedAt, locale)} · {t.journal.toolCount(turn.toolCallCount)}
                   {turn.webSearchCount > 0 ? ` · 🌐${turn.webSearchCount}` : ''}
                   {turn.durationMs != null ? ` · ${fmtDuration(turn.durationMs)}` : ''}
                 </span>
@@ -109,7 +111,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
   return (
     <div className="at-journal-detail">
       <Section title="Prompt">
-        <pre className="at-journal-pre">{detail.instruction || '(vide)'}</pre>
+        <pre className="at-journal-pre">{detail.instruction || t.journal.emptyInstruction}</pre>
       </Section>
 
       <dl className="at-journal-facts">
@@ -118,7 +120,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
           {detail.provider || '?'} / {detail.model || '?'} {detail.stream ? '(stream)' : ''}
         </dd>
         <dt>Tokens</dt>
-        <dd>{detail.totalTokens != null ? `${detail.totalTokens} (in ${detail.promptTokens ?? '?'} / out ${detail.completionTokens ?? '?'})` : 'inconnu'}</dd>
+        <dd>{detail.totalTokens != null ? `${detail.totalTokens} (in ${detail.promptTokens ?? '?'} / out ${detail.completionTokens ?? '?'})` : t.journal.unknown}</dd>
         {detail.selectedId && (
           <>
             <dt>{t.journal.vehicle}</dt>
@@ -145,7 +147,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
         </Section>
       )}
 
-      <Section title={`Appels d'outils (${detail.toolCalls.length})`}>
+      <Section title={t.journal.toolCalls(detail.toolCalls.length)}>
         {detail.toolCalls.length === 0 ? (
           <p className="at-journal-muted">{t.journal.none}</p>
         ) : (
@@ -165,7 +167,7 @@ function TurnDetailView({ detail }: { detail: TurnDetail | null }) {
       </Section>
 
       {detail.webSearchCount > 0 && (
-        <Section title={`Recherche web (${detail.webSearchCount})`}>
+        <Section title={t.journal.webSearch(detail.webSearchCount)}>
           {detail.webSearchQueries.length === 0 ? (
             <p className="at-journal-muted">{t.journal.noCalls}</p>
           ) : (
@@ -203,11 +205,6 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       {children}
     </section>
   );
-}
-
-function fmtTime(iso: string): string {
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' });
 }
 
 function fmtDuration(ms: number): string {

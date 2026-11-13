@@ -4,6 +4,7 @@ import {
   formatAmount,
   formatBytes,
   formatDate,
+  formatDateTime,
   formatEuros,
   formatHealthPct,
   formatHorizon,
@@ -61,6 +62,19 @@ describe('formatReading', () => {
   it('omits the unit when absent', () => {
     expect(formatReading(142000, null, 'fr')).toBe(`142${THIN}000`);
     expect(formatReading(142000, null, 'en')).toBe('142,000');
+  });
+});
+
+// The journal's turn timestamps. A turn is a moment, not a day: the seconds are what tells two retries
+// apart. Local wall clock, read from an offset-less ISO string so the test does not depend on the TZ.
+describe('formatDateTime', () => {
+  it('prints the day then the local time to the second', () => {
+    expect(formatDateTime('2026-11-13T15:05:09', 'fr')).toBe(`13${NBSP}nov.${NBSP}2026 15:05:09`);
+    expect(formatDateTime('2026-11-13T15:05:09', 'en')).toBe(`13${NBSP}Nov${NBSP}2026 15:05:09`);
+  });
+
+  it('hands back what it cannot parse rather than printing Invalid Date', () => {
+    expect(formatDateTime('not a date', 'en')).toBe('not a date');
   });
 });
 
