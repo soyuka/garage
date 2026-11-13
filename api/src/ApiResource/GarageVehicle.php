@@ -105,6 +105,8 @@ final class GarageVehicle
     public string $source;
     #[ApiProperty(description: 'TecDoc kType, when known.')]
     public ?int $kType = null;
+    #[ApiProperty(writable: false, description: 'TecDoc vehicle type to pass as carType with kType: PC, CV or MC (motorbike). Null for a segment the catalogue does not cover.')]
+    public ?string $carType = null;
     public ?string $plate = null;
     #[ApiProperty(writable: false)]
     public ?string $vin = null;
@@ -165,6 +167,7 @@ final class GarageVehicle
         $resource->vehicleType = $vehicle->getVehicleType()->value;
         $resource->source = $vehicle->getSource();
         $resource->kType = $vehicle->getKType();
+        $resource->carType = $vehicle->getVehicleType()->carType()?->value;
         $resource->plate = $vehicle->getPlate();
         $resource->vin = $vehicle->getVin();
         $resource->usageValue = $vehicle->getUsageValue();

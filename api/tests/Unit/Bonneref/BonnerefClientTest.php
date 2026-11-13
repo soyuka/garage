@@ -174,6 +174,18 @@ final class BonnerefClientTest extends TestCase
         );
     }
 
+    public function testAMotorbikeCatalogueCallSendsMc(): void
+    {
+        $this->http->fixture('/cars/101222/part-categories', 'categories_34247_all');
+
+        $this->client->partCategories(101222, CarType::Motorbike, true, 'oil');
+
+        $this->assertSame(
+            ['carType' => 'MC', 'leafOnly' => 'true', 'search' => 'oil'],
+            $this->http->lastRequest()['query'],
+        );
+    }
+
     public function testArticlesAreMapped(): void
     {
         $this->http->fixture('/cars/34247/part-categories/200158/articles', 'articles_34247_200158');

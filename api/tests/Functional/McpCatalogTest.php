@@ -192,6 +192,21 @@ final class McpCatalogTest extends AppTestCase
         $this->assertArrayNotHasKey('fluids', $content);
     }
 
+    public function testAMotorbikeCarTypeIsAcceptedAndForwardedToBonneref(): void
+    {
+        $client = static::createClient();
+        static::bonneref()->fixture('/cars/101222/part-categories', 'categories_34247_leaf', ['carType' => 'MC']);
+        $sessionId = $this->initialize($client);
+
+        $content = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'list_part_categories',
+            'arguments' => ['carId' => 101222, 'carType' => 'MC'],
+        ], 2));
+
+        $this->assertSame('ok', $content['status']);
+        $this->assertSame('MC', static::bonneref()->lastRequest()['query']['carType']);
+    }
+
     public function testGetServicePartsGroupsFilterCategoriesWithArticles(): void
     {
         $client = static::createClient();

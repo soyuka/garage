@@ -141,6 +141,18 @@ final class TurnContextBuilderTest extends TestCase
         $this->assertStringContainsString('kType 18679', $context);
     }
 
+    public function testInlinesTheCarTypeSoAMotorbikeIsQueriedAsMc(): void
+    {
+        $vehicle = new Vehicle('BMW', 'F 800 GS Adventure', VehicleType::Moto, 'manual', year: 2014);
+        $vehicle->setKType(101222);
+
+        $builder = new TurnContextBuilder($this->resolver($vehicle), new VehicleFactsProjector(), $this->repository([]));
+        $context = $builder->build(new RunAgentTurn('bonjour', 'https://localhost/agent/sessions/abc', 'test-user', selectedId: '/garage/vehicles/'.(string) $vehicle->getId()));
+
+        $this->assertStringContainsString('kType 101222', $context);
+        $this->assertStringContainsString('carType MC', $context);
+    }
+
     private function resolver(?Vehicle $vehicle): GarageResolver
     {
         $resolver = $this->createStub(GarageResolver::class);

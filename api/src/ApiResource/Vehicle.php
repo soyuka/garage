@@ -68,7 +68,7 @@ final class Vehicle
     #[ApiProperty(description: 'TecDoc kType — the vehicle modification id. Key for list_part_categories and list_articles.')]
     public ?int $carId = null;
 
-    #[ApiProperty(description: 'TecDoc vehicle type: PC (passenger car) or CV (commercial vehicle). Required alongside carId by the parts tools.')]
+    #[ApiProperty(description: 'TecDoc vehicle type: PC (passenger car), CV (commercial vehicle) or MC (motorbike). Required alongside carId by the parts tools.')]
     public ?string $carType = null;
 
     #[ApiProperty(description: 'TecDoc manufacturer id')]

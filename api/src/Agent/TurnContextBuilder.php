@@ -129,6 +129,10 @@ final readonly class TurnContextBuilder
         $kType = $vehicle->getKType();
         if (null !== $kType) {
             $parts[] = 'kType '.$kType;
+            $carType = $vehicle->getVehicleType()->carType();
+            if (null !== $carType) {
+                $parts[] = 'carType '.$carType->value;
+            }
         }
 
         return "\nVéhicule : ".implode(', ', $parts);

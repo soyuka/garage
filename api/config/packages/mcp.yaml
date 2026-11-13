@@ -9,7 +9,7 @@ mcp:
                 This server has two sides: a read-only TecDoc catalog, and a writable personal garage.
 
                 CATALOG (read): start with lookup_plate to resolve a French registration plate into
-                vehicle information including its TecDoc carId (kType) and carType (PC or CV). Then use
+                vehicle information including its TecDoc carId (kType) and carType (PC, CV or MC for a motorbike). Then use
                 list_part_categories and list_articles with that carId. Alternatively
                 browse by brand with list_makes, list_models and list_cars.
 

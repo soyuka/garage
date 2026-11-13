@@ -28,4 +28,10 @@ final class PlannedPartTest extends TestCase
         $this->assertSame('OC90', $array['ref']);
         $this->assertArrayNotHasKey('qty', $array, 'an unset optional field is omitted, not fatal');
     }
+
+    public function testAMotorbikeFinderRouteIsKept(): void
+    {
+        $this->assertTrue(PlannedPart::isValidFindRoute('/k/101222-MC/c/100538'));
+        $this->assertFalse(PlannedPart::isValidFindRoute('/k/101222-XX/c/100538'));
+    }
 }

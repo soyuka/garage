@@ -67,6 +67,10 @@ final readonly class ServicePartsProcessor implements ProcessorInterface
         // agent (or a CTA loop) having to re-attach them. Catalog-only calls (carId not in the
         // garage) just skip — the tool stays a pure read for them.
         foreach ($this->vehicles->findByKType($data->carId) as $vehicle) {
+            // a kType is only unique within its TecDoc vehicle type: a car and a motorbike can share one
+            if ($vehicle->getVehicleType()->carType() !== $carType) {
+                continue;
+            }
             if ($this->backfiller->backfill($vehicle, $categories) > 0) {
                 $this->publisher->publishVehicle($vehicle);
             }

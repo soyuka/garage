@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Link;
 use ApiPlatform\Metadata\McpToolCollection;
 use ApiPlatform\Metadata\QueryParameter;
+use App\Catalog\CarType;
 use App\Dto\ArticlesInput;
 use App\State\ArticleCollectionProvider;
 use App\State\ArticlesProcessor;
@@ -29,9 +30,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             provider: ArticleCollectionProvider::class,
             parameters: [
                 'carType' => new QueryParameter(
-                    description: 'TecDoc vehicle type of the carId: PC (default) or CV',
-                    schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC'],
-                    constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
+                    description: 'TecDoc vehicle type of the carId: PC (default), CV or MC (motorbike)',
+                    schema: ['type' => 'string', 'enum' => CarType::VALUES, 'default' => 'PC'],
+                    constraints: [new Assert\Choice(choices: CarType::VALUES)],
                 ),
             ],
         ),

@@ -47,7 +47,7 @@ class PlannedPart
     #[ODM\Field(type: 'string', nullable: true)]
     private ?string $findRoute = null;
 
-    private const FIND_ROUTE_PATTERN = '~^/(p/[A-Z0-9-]{1,20}|k/[1-9][0-9]*-(PC|CV))/c/[0-9]+(/g/[1-9][0-9]*)?(/[kvr]/[A-Za-z0-9_-]{1,32}(/[0-9A-HJKMNP-TV-Z]{26})?){0,2}$~D';
+    private const FIND_ROUTE_PATTERN = '~^/(p/[A-Z0-9-]{1,20}|k/[1-9][0-9]*-(PC|CV|MC))/c/[0-9]+(/g/[1-9][0-9]*)?(/[kvr]/[A-Za-z0-9_-]{1,32}(/[0-9A-HJKMNP-TV-Z]{26})?){0,2}$~D';
 
     public function __construct(
         string $ref = '',

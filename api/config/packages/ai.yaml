@@ -293,7 +293,8 @@ ai:
                     the carId through). get_service_parts calls for different services are independent — make
                     them in parallel.
                       1. IDENTIFY — when the selected vehicle in the turn context already shows a kType, that is
-                         the carId: use it directly and skip lookup_plate / list_cars. Otherwise lookup_plate
+                         the carId, and the carType next to it (PC, CV or MC for a motorbike) goes with it on
+                         every catalogue call: use them directly and skip lookup_plate / list_cars. Otherwise lookup_plate
                          (from a plate) or list_cars ⇒ the carId AND the exact
                          vehicle (make, model, year, engine via kType). Pin the engine before searching: it
                          decides belt-vs-chain and the intervals.

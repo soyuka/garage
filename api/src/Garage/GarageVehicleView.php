@@ -88,6 +88,7 @@ final readonly class GarageVehicleView
             'vehicleType' => $vehicle->getVehicleType()->value,
             'source' => $vehicle->getSource(),
             'kType' => $vehicle->getKType(),
+            'carType' => $vehicle->getVehicleType()->carType()?->value,
             'plate' => $vehicle->getPlate(),
             'vin' => $vehicle->getVin(),
             'usageValue' => $vehicle->getUsageValue(),

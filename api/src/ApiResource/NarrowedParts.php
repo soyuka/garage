@@ -9,6 +9,7 @@ use ApiPlatform\Metadata\ApiResource;
 use ApiPlatform\Metadata\Get;
 use ApiPlatform\Metadata\McpTool;
 use ApiPlatform\Metadata\QueryParameter;
+use App\Catalog\CarType;
 use App\Dto\NarrowPartsInput;
 use App\State\NarrowedPartsProvider;
 use App\State\NarrowPartsProcessor;
@@ -26,9 +27,9 @@ use Symfony\Component\Validator\Constraints as Assert;
             provider: NarrowedPartsProvider::class,
             parameters: [
                 'carType' => new QueryParameter(
-                    description: 'TecDoc vehicle type of the carId: PC (default) or CV',
-                    schema: ['type' => 'string', 'enum' => ['PC', 'CV'], 'default' => 'PC'],
-                    constraints: [new Assert\Choice(choices: ['PC', 'CV'])],
+                    description: 'TecDoc vehicle type of the carId: PC (default), CV or MC (motorbike)',
+                    schema: ['type' => 'string', 'enum' => CarType::VALUES, 'default' => 'PC'],
+                    constraints: [new Assert\Choice(choices: CarType::VALUES)],
                 ),
                 'make' => new QueryParameter(
                     description: 'Deprecated, ignored when the server knows the car: the make is resolved from carId (vehicle index)',
