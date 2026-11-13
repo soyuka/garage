@@ -1,0 +1,4220 @@
+{
+    "documents": [
+        {
+            "file": "documents/01M3YRW441X5WBJHZWYNR6BQNV.pdf",
+            "filename": "MR-361-Espace-IV-Transmission.pdf",
+            "id": "01M3YRW441X5WBJHZWYNR6BQNV",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Transmission",
+            "title": "Manuel de réparation Espace IV — Transmission (20A/21A/23A/29A)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M3YRW4J36FM537A204EHXN65.pdf",
+            "filename": "3791A.pdf",
+            "id": "01M3YRW4J36FM537A204EHXN65",
+            "kind": "technical_note",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "NT 3791A",
+            "title": "Contrôle du niveau d'huile BV PK/PF/PA (PK6 Espace IV : 2,4 L)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M3YRW4ZC08DJ3ND2BC8X70MD.pdf",
+            "filename": "6511A.pdf",
+            "id": "01M3YRW4ZC08DJ3ND2BC8X70MD",
+            "kind": "technical_note",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "NT 6511A",
+            "title": "Diagnostic des boîtes de vitesses manuelles",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M3YRW5CH1B7V3EW9H7W6AW4P.pdf",
+            "filename": "5088A.pdf",
+            "id": "01M3YRW5CH1B7V3EW9H7W6AW4P",
+            "kind": "technical_note",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "NT 5088A",
+            "title": "Diagnostic des vibrations liées à la vitesse",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M3YRW5VGJMYP38AB3CDT0SYD.pdf",
+            "filename": "5164A.pdf",
+            "id": "01M3YRW5VGJMYP38AB3CDT0SYD",
+            "kind": "technical_note",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "NT 5164A",
+            "title": "Diagnostic des bruits",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M43B8ZR0A4JA28M1A7DY4VJR.pdf",
+            "filename": "1730-1E-02C.pdf",
+            "id": "01M43B8ZR0A4JA28M1A7DY4VJR",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "upload",
+            "sourceRef": "https://www.osaczony.pl/mazda/1730-1E-02C.pdf",
+            "title": "Manuel d'atelier Mazda6 GG (1730-1E-02C)",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "file": "documents/01M5ZSRE7A1ZA5S0GDSXMACZP0.pdf",
+            "filename": "MR-361-Espace-IV-Generalites.pdf",
+            "id": "01M5ZSRE7A1ZA5S0GDSXMACZP0",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Généralités véhicule",
+            "title": "Manuel de réparation Espace IV — Généralités véhicule (01A-07B)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRF2EFMKAPBST35VK1EXX.pdf",
+            "filename": "MR-361-Espace-IV-Moteur.pdf",
+            "id": "01M5ZSRF2EFMKAPBST35VK1EXX",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Moteur",
+            "title": "Manuel de réparation Espace IV — Moteur et périphériques (10A-12B)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRG066JE0A7Q7GAQ53B9K.pdf",
+            "filename": "MR-361-Espace-IV-Moteur-bis.pdf",
+            "id": "01M5ZSRG066JE0A7Q7GAQ53B9K",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Moteur (bis)",
+            "title": "Manuel de réparation Espace IV — Moteur et périphériques : alimentation, injection, refroidissement (13A-19D)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRGT47H7GPRHF88R67STT.pdf",
+            "filename": "MR-361-Espace-IV-Chassis.pdf",
+            "id": "01M5ZSRGT47H7GPRHF88R67STT",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Châssis",
+            "title": "Manuel de réparation Espace IV — Châssis : freins, suspension, direction (30A-38C)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRHHZF0ZHCW1XW8JBK0S5.pdf",
+            "filename": "MR-361-Espace-IV-Climatisation.pdf",
+            "id": "01M5ZSRHHZF0ZHCW1XW8JBK0S5",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Climatisation",
+            "title": "Manuel de réparation Espace IV — Chauffage et climatisation (61A-62A)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRJJ9F87WRX1S9ECJEXRD.pdf",
+            "filename": "MR-361-Espace-IV-Equipement-electrique.pdf",
+            "id": "01M5ZSRJJ9F87WRX1S9ECJEXRD",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 361 — Équipement électrique",
+            "title": "Manuel de réparation Espace IV — Équipement électrique, airbags (80A-88D)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRK9KZ1DPAY3VG12B67R8.pdf",
+            "filename": "MR-362-Espace-IV-Generalites-carrosserie.pdf",
+            "id": "01M5ZSRK9KZ1DPAY3VG12B67R8",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 362 — Généralités carrosserie",
+            "title": "Manuel de réparation Espace IV carrosserie — Généralités (01C-05B)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRM3Z9F2J8JVGA9DS6YW0.pdf",
+            "filename": "MR-362-Espace-IV-Tolerie.pdf",
+            "id": "01M5ZSRM3Z9F2J8JVGA9DS6YW0",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 362 — Tôlerie",
+            "title": "Manuel de réparation Espace IV carrosserie — Tôlerie (40A-48A)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRMV0KBVH66SMPDSKSMCJ.pdf",
+            "filename": "MR-362-Espace-IV-Mecanismes-accessoires.pdf",
+            "id": "01M5ZSRMV0KBVH66SMPDSKSMCJ",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 362 — Mécanismes et accessoires",
+            "title": "Manuel de réparation Espace IV carrosserie — Mécanismes et accessoires, planche de bord (51A-59A)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRNGSZDWHWME1Z0EBGK3D.pdf",
+            "filename": "MR-362-Espace-IV-Etancheite.pdf",
+            "id": "01M5ZSRNGSZDWHWME1Z0EBGK3D",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 362 — Étanchéité",
+            "title": "Manuel de réparation Espace IV carrosserie — Étanchéité et insonorisation (65A-66A)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "file": "documents/01M5ZSRP665DYEF7WGDXVJG5YN.pdf",
+            "filename": "MR-362-Espace-IV-Garnissage-sellerie.pdf",
+            "id": "01M5ZSRP665DYEF7WGDXVJG5YN",
+            "kind": "manual",
+            "plannedTaskId": null,
+            "source": "dialogys",
+            "sourceRef": "MR 362 — Garnissage et sellerie",
+            "title": "Manuel de réparation Espace IV carrosserie — Garnissage et sellerie (71A-79A)",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        }
+    ],
+    "maintenanceRecords": [
+        {
+            "_id": "01KVPZA364Q9YQCSSR4DF8S4NZ",
+            "addedAt": {
+                "$date": "2026-06-22T06:12:00.324Z"
+            },
+            "addedBy": null,
+            "attachments": [],
+            "costCents": 28049,
+            "currency": "EUR",
+            "items": [
+                {
+                    "parts": [
+                        {
+                            "brand": "IGOL",
+                            "label": "Huile moteur Profil 4T SAE 30 2L",
+                            "ref": "FIL4TSAE30-2L"
+                        }
+                    ],
+                    "type": "oil_change"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Filtre à huile",
+                            "ref": "842921"
+                        }
+                    ],
+                    "type": "oil_filter"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Filtre à air bicylindre Vanguard 16cv",
+                            "ref": "394018-392642"
+                        },
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Mousse de filtre à air 004111",
+                            "ref": "271271-272490"
+                        }
+                    ],
+                    "type": "air_filter"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Filtre de carburant",
+                            "ref": "394358-S"
+                        }
+                    ],
+                    "type": "fuel_filter"
+                },
+                {
+                    "parts": [],
+                    "type": "spark_plug"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Journey Tyre",
+                            "label": "Pneu 4PR NHS",
+                            "qty": 2,
+                            "ref": "P332 23X9.5-12 91A3"
+                        },
+                        {
+                            "label": "Chambre à air 23x9.50x12 valve droite",
+                            "qty": 2,
+                            "ref": "CA 23x1050x12 VD"
+                        }
+                    ],
+                    "type": "tires"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Durite essence renforcée (50cm)",
+                            "qty": 2,
+                            "ref": "395051"
+                        },
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Collier de durite d'essence",
+                            "qty": 4,
+                            "ref": "791850"
+                        }
+                    ],
+                    "type": "fuel_line"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Robinet à essence",
+                            "ref": "494769"
+                        },
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Robinet à essence métallique tuyau 6,35mm",
+                            "ref": "RobUni02"
+                        },
+                        {
+                            "brand": "Briggs & Stratton",
+                            "label": "Joint caoutchouc universel",
+                            "qty": 3,
+                            "ref": "JoinUNI-BS"
+                        }
+                    ],
+                    "type": "fuel_tap"
+                },
+                {
+                    "parts": [
+                        {
+                            "label": "Kit de fixation batterie 200mm-6mm",
+                            "ref": "Kit-fixation-bat-200mm-6mm"
+                        },
+                        {
+                            "label": "Kit de maintien batterie",
+                            "ref": "Kit-maintient-bat"
+                        },
+                        {
+                            "label": "Cosse batterie borne plate 9,52mm",
+                            "qty": 2,
+                            "ref": "Cosse-bat-borne-plate-9.52mm"
+                        },
+                        {
+                            "label": "Cosse batterie borne plate cuivre",
+                            "qty": 2,
+                            "ref": "Cosse-bat-borne-plate-cuivre"
+                        },
+                        {
+                            "label": "Cosse de batterie universelle",
+                            "qty": 2,
+                            "ref": "FGP012057"
+                        }
+                    ],
+                    "type": "battery"
+                },
+                {
+                    "label": "Housse de siège",
+                    "parts": [
+                        {
+                            "label": "Housse de siège universelle",
+                            "ref": "26900050554220"
+                        }
+                    ],
+                    "type": "other"
+                }
+            ],
+            "label": "Entretien complet (pièces facturées)",
+            "notes": "Pièces réparties sur 5 factures Autoportée Discount: FA0000000 (10/05), FA0000000 (15/05), FA0000000 (07/06), FA0000000 (16/06) + commande pneus 00000000 (23/04). Total 280,49€ TTC.",
+            "performedAt": {
+                "$date": "2026-06-21T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "hours",
+            "usageValue": 0,
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVV6VY3TJSTVEQV8CZHEK58T",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:02.714Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "front discs + pads + bleed",
+                    "parts": [
+                        {
+                            "brand": "TRW",
+                            "ref": "front discs+pads"
+                        },
+                        {
+                            "brand": "Valeo",
+                            "ref": "front discs+pads"
+                        }
+                    ],
+                    "type": "brakes"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Total Quartz",
+                            "label": "~4.5L",
+                            "ref": "5W-30 9000 NFC"
+                        },
+                        {
+                            "ref": "drain plug seal D14"
+                        }
+                    ],
+                    "type": "oil_change"
+                },
+                {
+                    "parts": [],
+                    "type": "oil_filter"
+                },
+                {
+                    "parts": [],
+                    "type": "air_filter"
+                }
+            ],
+            "label": null,
+            "notes": "Check frein avant gauche+droite marque ABE. Disque+plaquettes avant TRW/Valeo + purge frein. Vidange ~4.5L Total Quartz 5W-30 9000 NFC + joint vidange D14.",
+            "performedAt": {
+                "$date": "2023-03-26T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 205731,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6W5R9ZDRCC7D5P40S32QN",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:10.536Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "EGR valve cleaning",
+                    "parts": [],
+                    "type": "egr_cleaning"
+                },
+                {
+                    "label": "MAF/debimetre cleaning",
+                    "parts": [],
+                    "type": "maf_cleaning"
+                },
+                {
+                    "label": "throttle body cleaning",
+                    "parts": [],
+                    "type": "throttle_body_cleaning"
+                }
+            ],
+            "label": null,
+            "notes": "Nettoyage vanne EGR + debimetre + boitier papillon (un seul cote non demonte completement).",
+            "performedAt": {
+                "$date": "2023-04-01T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6WC81P12QJCXZE6M1367E",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:17.185Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "calorstat",
+                    "parts": [],
+                    "type": "thermostat"
+                },
+                {
+                    "parts": [],
+                    "type": "coolant"
+                },
+                {
+                    "label": "filtre pollens",
+                    "parts": [],
+                    "type": "cabin_filter"
+                }
+            ],
+            "label": null,
+            "notes": "Changement calorstat + liquide de refroidissement + filtre pollens.",
+            "performedAt": {
+                "$date": "2023-04-23T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 206810,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6WKDS0ZDTG3G884ST8YSR",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:24.537Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "calorstat 82C",
+                    "parts": [
+                        {
+                            "brand": "QH",
+                            "ref": "Q TH794K"
+                        }
+                    ],
+                    "type": "thermostat"
+                },
+                {
+                    "parts": [],
+                    "type": "coolant"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "Delphi",
+                            "ref": "TS 10287"
+                        }
+                    ],
+                    "type": "temperature_sensor"
+                }
+            ],
+            "label": null,
+            "notes": "Re-changement calorstat (82C) + liquide + sonde temperature. Thermostat QH ref Q TH794K (remise a zero avec la valise apres installation). Sonde Delphi TS 10287. ATTENTION: galet tendeur tres grippe, a remplacer par la suite.",
+            "performedAt": {
+                "$date": "2023-04-30T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6WRPA3GJ25TNWBTFA8Z8E",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:29.930Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "support moteur cote passager",
+                    "parts": [],
+                    "type": "engine_mount"
+                }
+            ],
+            "label": null,
+            "notes": "Changement support moteur cote passager.",
+            "performedAt": {
+                "$date": "2023-06-18T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6WY5WVCFYKKADRJD2CDG0",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:35.548Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "2 autres supports moteur",
+                    "parts": [],
+                    "type": "engine_mount"
+                }
+            ],
+            "label": null,
+            "notes": "Changement des 2 autres supports moteur. Commande Part-Auto.",
+            "performedAt": {
+                "$date": "2023-10-07T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6X4STV14P40WY0QJYXV56",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:42.330Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "parts": [],
+                    "type": "oil_change"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "BOLK",
+                            "ref": "air filter"
+                        }
+                    ],
+                    "type": "air_filter"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "BOLK",
+                            "ref": "fuel filter"
+                        }
+                    ],
+                    "type": "fuel_filter"
+                }
+            ],
+            "label": null,
+            "notes": "Vidange + filtre a air + filtre a essence. Marque BOLK.",
+            "performedAt": {
+                "$date": "2024-02-18T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 218896,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6XBAKRX5AT1M3C2G3PJXD",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:49.011Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "disques + plaquettes",
+                    "parts": [
+                        {
+                            "brand": "Ferodo",
+                            "ref": "disques+plaquettes frein"
+                        }
+                    ],
+                    "type": "brakes"
+                }
+            ],
+            "label": null,
+            "notes": "Disque + plaquette de frein Ferodo. Voir a changer etrier frein (commande rotor cash).",
+            "performedAt": {
+                "$date": "2024-02-25T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 219156,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6XM6PTEEWG7XSRCVQ8HCW",
+            "addedAt": {
+                "$date": "2026-06-23T21:41:58.102Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "colonnettes frein arriere",
+                    "parts": [],
+                    "type": "brakes"
+                }
+            ],
+            "label": null,
+            "notes": "Changement des colonnettes frein arriere (grippage, voir si changement etrier si necessaire).",
+            "performedAt": {
+                "$date": "2024-03-16T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6XVJP7A8N8S415V2DBY64",
+            "addedAt": {
+                "$date": "2026-06-23T21:42:05.654Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "etrier arriere",
+                    "parts": [
+                        {
+                            "brand": "ABS",
+                            "ref": "etrier arriere"
+                        }
+                    ],
+                    "type": "brakes"
+                }
+            ],
+            "label": null,
+            "notes": "Etrier arriere marque ABS.",
+            "performedAt": {
+                "$date": "2024-03-24T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 219694,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6Y2TP54VYKAY6Z5MHXND1",
+            "addedAt": {
+                "$date": "2026-06-23T21:42:13.078Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "parts": [
+                        {
+                            "brand": "Hutchinson",
+                            "ref": "WP442"
+                        }
+                    ],
+                    "type": "water_pump"
+                },
+                {
+                    "parts": [
+                        {
+                            "ref": "thermostat Hutch+Buss"
+                        }
+                    ],
+                    "type": "thermostat"
+                },
+                {
+                    "label": "galet tendeur",
+                    "parts": [
+                        {
+                            "brand": "SNR",
+                            "label": "occasion",
+                            "ref": "G9370.02"
+                        }
+                    ],
+                    "type": "tensioner_pulley"
+                }
+            ],
+            "label": null,
+            "notes": "Pompe a eau Hutchinson WP442 + thermostat (Hutch+Buss, Part-Auto). L'ancien thermostat QH joint mort au bout d'1 an. Galet tendeur SNR G9370.02 (occasion).",
+            "performedAt": {
+                "$date": "2024-04-26T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6YACY63568B2KM8MDNT76",
+            "addedAt": {
+                "$date": "2026-06-23T21:42:20.830Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "parts": [],
+                    "type": "oil_change"
+                },
+                {
+                    "parts": [],
+                    "type": "oil_filter"
+                },
+                {
+                    "parts": [],
+                    "type": "air_filter"
+                }
+            ],
+            "label": null,
+            "notes": "Vidange + filtre a huile + filtre a air.",
+            "performedAt": {
+                "$date": "2025-03-08T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 236548,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV6YGJ2E1JMGNCK795ZNSXK",
+            "addedAt": {
+                "$date": "2026-06-23T21:42:27.138Z"
+            },
+            "addedBy": null,
+            "attachments": [],
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "bougie allumage",
+                    "parts": [],
+                    "type": "spark_plug"
+                },
+                {
+                    "label": "1 bobine (cylindre n4)",
+                    "parts": [],
+                    "type": "ignition_coil"
+                },
+                {
+                    "label": "injecteur",
+                    "parts": [],
+                    "type": "injector"
+                }
+            ],
+            "label": null,
+            "notes": "Bougie allumage + 1 bobine (cylindre n4) + injecteur. Injecteur commande sur Amazon par un ami.",
+            "performedAt": {
+                "$date": "2025-06-08T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 240697,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVV7F3PKH8MGP3AFZPKYH27Y",
+            "addedAt": {
+                "$date": "2026-06-23T21:51:31.027Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "controle technique",
+                    "parts": [],
+                    "type": "inspection"
+                }
+            ],
+            "label": null,
+            "notes": "Controle technique.",
+            "performedAt": {
+                "$date": "2025-03-21T00:00:00Z"
+            },
+            "performedBy": null,
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KWVM4XMYC33R9RNGR8CKRX2W",
+            "addedAt": {
+                "$date": "2026-07-06T11:48:50.462Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "parts": [
+                        {
+                            "brand": "MANNOL",
+                            "label": "Energy 5W-30 5L",
+                            "priceCents": 2590,
+                            "qty": 1,
+                            "ref": "MN7511-5"
+                        }
+                    ],
+                    "type": "oil_change"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "HERTH+BUSS JAKOPARTS",
+                            "priceCents": 750,
+                            "qty": 1,
+                            "ref": "J1323055"
+                        }
+                    ],
+                    "type": "air_filter"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "HERTH+BUSS JAKOPARTS",
+                            "priceCents": 1390,
+                            "qty": 1,
+                            "ref": "J1343010BF"
+                        }
+                    ],
+                    "type": "cabin_filter"
+                },
+                {
+                    "parts": [
+                        {
+                            "brand": "HERTH+BUSS JAKOPARTS",
+                            "priceCents": 590,
+                            "qty": 1,
+                            "ref": "J1313021"
+                        }
+                    ],
+                    "type": "oil_filter"
+                }
+            ],
+            "label": null,
+            "notes": null,
+            "performedAt": {
+                "$date": "2026-07-06T11:48:50.460Z"
+            },
+            "performedBy": null,
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 250347,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KXZ3EPRQWEYB8ZWHE79XRW3C",
+            "addedAt": {
+                "$date": "2026-07-20T06:29:44.855Z"
+            },
+            "addedBy": null,
+            "costCents": 0,
+            "currency": "EUR",
+            "items": [
+                {
+                    "label": "Retour fournisseur (aucune pièce montée)",
+                    "parts": [],
+                    "type": "other"
+                }
+            ],
+            "label": "Commande retournée — mauvaise taille",
+            "notes": "Commande A-0000-000000-00 (69,55 €) intégralement retournée — bordereau 0000000, tracking 00000000. 2x pneu gazon 15x600-6 réf 110106 + 2x chambre à air 15x600-6 valve droite réf 110313, motif « problème de taille », remboursés sur carte. L'avant du 246-H est en 16 pouces, pas en 15.",
+            "performedAt": {
+                "$date": "2024-07-26T00:00:00Z"
+            },
+            "performedBy": "GLS - À domicile",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01M1SS4AJSGD30RNS9YXVGPGPE",
+            "addedAt": {
+                "$date": "2026-09-05T21:55:54.073Z"
+            },
+            "addedBy": null,
+            "costCents": 4000,
+            "currency": "EUR",
+            "items": [
+                {
+                    "label": "Achat de la tondeuse",
+                    "parts": [],
+                    "type": "other"
+                }
+            ],
+            "label": "Achat de la tondeuse",
+            "notes": null,
+            "performedAt": {
+                "$date": "2026-09-05T21:55:54.073Z"
+            },
+            "performedBy": "user",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01M3C6D2B15CQSFH7ZGZ8BMAF0",
+            "addedAt": {
+                "$date": "2026-09-25T11:49:53.633Z"
+            },
+            "addedBy": null,
+            "costCents": 17841,
+            "currency": "EUR",
+            "items": [
+                {
+                    "label": "Calorstat / thermostat d'eau",
+                    "parts": [
+                        {
+                            "brand": "Vernet",
+                            "label": "Thermostat d'eau",
+                            "priceCents": 4900,
+                            "ref": "TH7164.82J"
+                        }
+                    ],
+                    "type": "thermostat"
+                },
+                {
+                    "label": "Sonde de température liquide de refroidissement",
+                    "parts": [
+                        {
+                            "brand": "Hella",
+                            "label": "Sonde température liquide de refroidissement (facturée « température d'huile »)",
+                            "priceCents": 1673,
+                            "ref": "6PT 009 309-561"
+                        }
+                    ],
+                    "type": "temperature_sensor"
+                },
+                {
+                    "label": "Supports moteur",
+                    "parts": [
+                        {
+                            "brand": "FEBEST",
+                            "label": "Support moteur arrière",
+                            "priceCents": 4208,
+                            "ref": "MZM-014"
+                        },
+                        {
+                            "brand": "FEBEST",
+                            "label": "Support moteur gauche",
+                            "priceCents": 5831,
+                            "ref": "MZM-012"
+                        }
+                    ],
+                    "type": "engine_mount"
+                }
+            ],
+            "label": "Calorstat, sonde de température et supports moteur",
+            "notes": null,
+            "performedAt": {
+                "$date": "2026-09-25T11:49:53.633Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M43NDGZQNJ73CEXTW2KDJRWJ",
+            "addedAt": {
+                "$date": "2026-10-04T14:34:49.207Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "Courroie accessoire remplacée",
+                    "parts": [
+                        {
+                            "brand": "BOSCH",
+                            "label": "Courroie trapézoïdale à nervures 6PK2260",
+                            "ref": "1 987 945 981"
+                        }
+                    ],
+                    "type": "accessory_belt"
+                },
+                {
+                    "label": "Purge du circuit de refroidissement (procédure manuel E-4), appoint",
+                    "parts": [],
+                    "type": "coolant_bleed"
+                }
+            ],
+            "label": "Surchauffe : courroie accessoire + purge circuit",
+            "notes": "Surchauffe causée par une grosse poche d air dans le circuit (après changement du thermostat le 2026-09-25). Purge selon manuel E-4 = résolu. La pompe à eau (Hutchinson WP442, 2024-04-26) a été contrôlée, elle est saine : la poulie qui tournait librement était l embrayage du compresseur de clim, ce qui est normal.",
+            "performedAt": {
+                "$date": "2026-10-04T14:34:49.207Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M60ZT84TPPSW635JYJV9EMM8",
+            "addedAt": {
+                "$date": "2026-10-28T10:10:12.248Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "Nettoyage connecteur jaune 6 voies airbag frontal passager (sous grille tweeter droit)",
+                    "parts": [
+                        {
+                            "label": "Nettoyant contact",
+                            "ref": "nettoyant contact sec"
+                        }
+                    ],
+                    "type": "airbag_connector_cleaning"
+                },
+                {
+                    "label": "Verrouillage / déverrouillage calculateur ACU3 + effacement défauts (vLinker FS, K-line)",
+                    "parts": [],
+                    "type": "airbag_diag_clear"
+                }
+            ],
+            "label": "Airbag : DF074 réparé (connecteur intermédiaire airbag passager)",
+            "notes": "Défaut : DF074 circuit 2 airbag frontal passager CO (DTC 9006), témoin airbag allumé. Calculateur ACU3 MK3 J81 phase 2 (Code APV 0x2D, réf 8200687758). Impédance étage 2 passager 7,64 Ω avant -> 2,41 Ω après nettoyage du connecteur intermédiaire (contacts visuellement OK). Procédure MR 361 88C : verrouillage 3B D0 avant intervention, contact coupé, nettoyage, relecture, déverrouillage 3B E0, effacement 14 FF 00. Résultat : 0 défaut, témoin éteint. DTC 9042 (alimentation calculateur, mémorisé) dû à batterie à plat après longue immobilisation, batterie rechargée le même jour, effacé. Tension 11,5-11,6 V contact mis : à surveiller. À relire après quelques jours de roulage pour vérifier que DF074 ne revient pas. Logs : ~/projects/diag/logs/20261028-*.",
+            "performedAt": {
+                "$date": "2026-10-28T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": null,
+            "usageValue": null,
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "_id": "01M6435H4E88P8BEDHFW115CRA",
+            "addedAt": {
+                "$date": "2026-10-29T15:06:30.926Z"
+            },
+            "addedBy": null,
+            "costCents": null,
+            "currency": null,
+            "items": [
+                {
+                    "label": "Calorstat / thermostat d’eau",
+                    "parts": [
+                        {
+                            "brand": "Vernet",
+                            "label": "Thermostat d’eau",
+                            "priceCents": 4900,
+                            "qty": 1,
+                            "ref": "TH7164.82J"
+                        }
+                    ],
+                    "type": "thermostat"
+                },
+                {
+                    "label": "Pompe à eau (joint neuf posé à sec, manuel E-8)",
+                    "parts": [
+                        {
+                            "brand": "AISIN",
+                            "label": "Pompe à eau",
+                            "priceCents": 3503,
+                            "qty": 1,
+                            "ref": "WPZ-033V"
+                        }
+                    ],
+                    "type": "water_pump"
+                },
+                {
+                    "label": "Liquide de refroidissement vert sans amine ni silicate, concentré dilué 50/50 eau déminéralisée",
+                    "parts": [],
+                    "type": "coolant"
+                }
+            ],
+            "label": "Circuit de refroidissement : calorstat, pompe à eau, liquide",
+            "notes": null,
+            "performedAt": {
+                "$date": "2026-10-29T00:00:00Z"
+            },
+            "performedBy": "self",
+            "source": "user",
+            "usageUnit": "km",
+            "usageValue": 252524,
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        }
+    ],
+    "plannedMaintenance": [
+        {
+            "_id": "01KVFEQADF7DKT0HBCWS7S390Z",
+            "addedBy": null,
+            "attributes": {
+                "ac_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "ac_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ATMOS GU10",
+                    "verified": true
+                },
+                "ac_refrigerant_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "ac_refrigerant_capacity",
+                    "source": "partsapi",
+                    "unit": "gramme",
+                    "url": null,
+                    "value": "470",
+                    "verified": true
+                },
+                "ac_refrigerant_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "ac_refrigerant_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "R134a",
+                    "verified": true
+                },
+                "brake_fluid_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "brake_fluid_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "1.25",
+                    "verified": true
+                },
+                "brake_fluid_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "brake_fluid_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "DOT 4",
+                    "verified": true
+                },
+                "coolant_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "coolant_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "7.5",
+                    "verified": true
+                },
+                "coolant_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": {
+                        "$date": "2026-09-14T12:07:22.814Z"
+                    },
+                    "key": "coolant_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "Оригинальный антифриз",
+                    "verified": true
+                },
+                "gearbox_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "gearbox_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "2.95",
+                    "verified": true
+                },
+                "gearbox_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "gearbox_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "API GL4 SAE 75W-90|API GL5 SAE 75W-90",
+                    "verified": true
+                },
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "4.3",
+                    "verified": true
+                },
+                "oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ACEA A3/B3|ACEA A5/B5",
+                    "verified": true
+                },
+                "power_steering_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "power_steering_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "0.87 | 0.8",
+                    "verified": true
+                },
+                "power_steering_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:26.895Z"
+                    },
+                    "addedBy": null,
+                    "key": "power_steering_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ATF M-III|ATF Dexron II",
+                    "verified": true
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-06-19T08:07:26.895Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [],
+            "source": "partsapi",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "catalog_specs",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVFEQV7KZFSH5563Q62CNQRJ",
+            "addedBy": null,
+            "attributes": {
+                "ac_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "ac_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ATMOS GU10",
+                    "verified": true
+                },
+                "ac_refrigerant_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "ac_refrigerant_capacity",
+                    "source": "partsapi",
+                    "unit": "gramme",
+                    "url": null,
+                    "value": "470",
+                    "verified": true
+                },
+                "ac_refrigerant_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "ac_refrigerant_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "R134a",
+                    "verified": true
+                },
+                "brake_fluid_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "brake_fluid_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "1.25",
+                    "verified": true
+                },
+                "brake_fluid_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "brake_fluid_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "DOT 4",
+                    "verified": true
+                },
+                "coolant_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "coolant_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "7.5",
+                    "verified": true
+                },
+                "coolant_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": {
+                        "$date": "2026-09-14T12:07:22.815Z"
+                    },
+                    "key": "coolant_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "Оригинальный антифриз",
+                    "verified": true
+                },
+                "gearbox_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "gearbox_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "2.95",
+                    "verified": true
+                },
+                "gearbox_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "gearbox_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "API GL4 SAE 75W-90|API GL5 SAE 75W-90",
+                    "verified": true
+                },
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "4.3",
+                    "verified": true
+                },
+                "oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ACEA A3/B3|ACEA A5/B5",
+                    "verified": true
+                },
+                "power_steering_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "power_steering_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "0.87 | 0.8",
+                    "verified": true
+                },
+                "power_steering_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.115Z"
+                    },
+                    "addedBy": null,
+                    "key": "power_steering_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ATF M-III|ATF Dexron II",
+                    "verified": true
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-06-19T08:07:44.115Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [],
+            "source": "partsapi",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "catalog_specs",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVFEQV7Q5WYCF54FW2BFP8Z5",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-07-06T11:48:50.460Z"
+            },
+            "attributes": {
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-23T13:45:17.811Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_capacity",
+                    "source": "user",
+                    "unit": "L",
+                    "url": null,
+                    "value": "4.3",
+                    "verified": false
+                },
+                "oil_change_ref": {
+                    "addedAt": {
+                        "$date": "2026-06-24T14:31:55.363Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_change_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "MANNOL Energy 5W-30 5L — MN7511-5",
+                    "verified": false
+                },
+                "oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-19T08:07:44.119Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_type",
+                    "source": "catalog",
+                    "unit": null,
+                    "url": null,
+                    "value": "ACEA A3/B3 ou ACEA A5/B5",
+                    "verified": false
+                },
+                "oil_viscosity": {
+                    "addedAt": {
+                        "$date": "2026-06-23T14:32:03.014Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_viscosity",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://oil-change.info",
+                    "value": "5W-30",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2025-01-08T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-19T08:07:44.119Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "MANNOL",
+                    "id": "01KVV5X84QRE2ZJY8J2H3589DR",
+                    "label": "Energy 5W-30 5L",
+                    "priceCents": 2590,
+                    "qty": 1,
+                    "ref": "MN7511-5"
+                },
+                {
+                    "brand": "HERTH+BUSS JAKOPARTS",
+                    "id": "01KW9Y80E8MVKVW0QNDTGKCK95",
+                    "label": "Filtre à huile",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "J1313021"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 250000,
+            "type": "oil_change",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVFEQWXS661J7CVVZ5GXFCDR",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-07-06T11:48:50.460Z"
+            },
+            "attributes": {
+                "air_filter_ref": {
+                    "addedAt": {
+                        "$date": "2026-06-24T14:32:07.233Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "air_filter_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "HERTH+BUSS JAKOPARTS J1323055",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2025-01-08T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-19T08:07:45.849Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "HERTH+BUSS JAKOPARTS",
+                    "id": "01KVV5X84SH42Z26VQ5N34Y15C",
+                    "label": "Filtre à air",
+                    "priceCents": 750,
+                    "qty": 1,
+                    "ref": "J1323055"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 250000,
+            "type": "air_filter",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVFEQYM7X1J6G7N91XE2PCYR",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-07-06T11:48:50.460Z"
+            },
+            "attributes": {
+                "cabin_filter_note": {
+                    "addedAt": {
+                        "$date": "2026-06-24T14:32:09.268Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "cabin_filter_note",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "J1343010 (6,90 €): filtre standard pollen/poussieres, barriere mecanique simple. J1343010BF (13,90 €): gamme Biofunctional charbon actif - absorbe gaz d'echappement et odeurs exterieures, traitement antibacterien/anti-allergene renforce. BF monte.",
+                    "verified": false
+                },
+                "cabin_filter_ref": {
+                    "addedAt": {
+                        "$date": "2026-06-24T14:32:09.268Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "cabin_filter_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "HERTH+BUSS JAKOPARTS J1343010BF",
+                    "verified": false
+                },
+                "cabin_filter_ref_alt": {
+                    "addedAt": {
+                        "$date": "2026-06-24T14:32:09.268Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "cabin_filter_ref_alt",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "HERTH+BUSS JAKOPARTS J1343010",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2025-01-08T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-19T08:07:47.591Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "HERTH+BUSS JAKOPARTS",
+                    "id": "01KVV5X84SH42Z26VQ5N34Y15D",
+                    "label": "Filtre d'habitacle",
+                    "priceCents": 1390,
+                    "qty": 1,
+                    "ref": "J1343010BF"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 250000,
+            "type": "cabin_filter",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVFER0M4MZ7TN38SZKSHJG26",
+            "addedBy": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-06-19T08:07:49.636Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "PURFLUX",
+                    "id": "01KVV5X84TTFVTRM6CH7FYRC8S",
+                    "label": "Filtre à carburant",
+                    "ref": "LFTPFX"
+                }
+            ],
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 250000,
+            "type": "fuel_filter",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KVMKPGD0MENT3G9TCB3520CX",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-06-21T16:19:49.892Z"
+            },
+            "attributes": {
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-21T08:10:35.295Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_capacity",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.toro.com/getpub/18891",
+                    "value": "2.0",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2025-01-10T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-21T08:10:35.296Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "oil_change",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVNFD56NBGN4255SCSVZYBW7",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-06-21T16:19:49.892Z"
+            },
+            "completedAt": {
+                "$date": "2026-06-21T16:19:35.765Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-21T16:14:49.045Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "TORO",
+                    "id": "01KVV5X84TTFVTRM6CH7FYRC8T",
+                    "label": "Filtre à huile",
+                    "ref": "TORO-120-4276"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "oil_filter",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVNFD6ST2SPAZCM300YRSYTV",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-06-21T16:19:49.892Z"
+            },
+            "completedAt": {
+                "$date": "2026-06-21T16:19:35.048Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-21T16:14:50.682Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "TORO",
+                    "id": "01KVV5X84VH4HFW3RTRSCC7VJX",
+                    "label": "Filtre à air",
+                    "ref": "TORO-108-3811"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "air_filter",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVNFD8A0Z9KB78T1MJC5CB7Z",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-06-21T16:19:49.892Z"
+            },
+            "completedAt": {
+                "$date": "2026-06-21T16:19:34.045Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-21T16:14:52.224Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "TORO",
+                    "id": "01KVV5X84VH4HFW3RTRSCC7VJY",
+                    "label": "Filtre à carburant",
+                    "ref": "TORO-126-5538"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "fuel_filter",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVNFD9EV2P2GXAT3BRD2DQKT",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-06-23T05:51:16.881Z"
+            },
+            "attributes": {
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-21T16:14:53.402Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_capacity",
+                    "source": "user",
+                    "unit": "L",
+                    "url": null,
+                    "value": "1.7",
+                    "verified": false
+                },
+                "oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-21T16:14:53.402Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_type",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "SAE 30",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2026-06-21T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-21T16:14:53.403Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "oil_change",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVQAQWQADFKJQFR095W6VAW6",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-06-23T05:51:16.881Z"
+            },
+            "attributes": {
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:15.472Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_capacity",
+                    "source": "user",
+                    "unit": "L",
+                    "url": null,
+                    "value": "1.7",
+                    "verified": false
+                },
+                "oil_change_interval": {
+                    "addedAt": {
+                        "$date": "2026-06-22T09:31:46.793Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_change_interval",
+                    "source": "web",
+                    "unit": "h",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGLJjRMoHQOBtBa9y86bDohxst2fpZfNgF-uj-jJKdKqzskAg30ZP0Bhw_2Y-XxqhqpNtVJAQbn_BjTBSKEzG4yKAdvOanWEy6_zyTbLTbdmgGUJHQy4aVnd-yY",
+                    "value": "50",
+                    "verified": false
+                },
+                "oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:15.472Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_type",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "SAE 30",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2026-06-23T05:51:08.470Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-22T09:31:46.794Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [],
+            "source": "web",
+            "status": "done",
+            "targetUsageUnit": "h",
+            "targetUsageValue": 50,
+            "type": "oil_change",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01KVWZ9YA3M3HSPQEB2QV5MW8V",
+            "addedBy": null,
+            "archivedAt": {
+                "$date": "2026-07-06T11:48:50.460Z"
+            },
+            "attributes": {
+                "oil_filter_ref": {
+                    "addedAt": {
+                        "$date": "2026-06-24T14:32:03.459Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_filter_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "HERTH+BUSS JAKOPARTS J1313021",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2025-01-08T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-06-24T14:07:21.923Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "HERTH+BUSS JAKOPARTS",
+                    "id": "01KVWZ9YA3M3HSPQEB2QV5MW8W",
+                    "label": "Filtre à huile",
+                    "priceCents": 590,
+                    "qty": 1,
+                    "ref": "J1313021"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 250000,
+            "type": "oil_filter",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KW7CFMQANAMT758N493TW1TF",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "ac_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "ac_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "cm³",
+                    "url": null,
+                    "value": "190",
+                    "verified": true
+                },
+                "ac_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "ac_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "SP 10",
+                    "verified": true
+                },
+                "ac_refrigerant_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "ac_refrigerant_capacity",
+                    "source": "partsapi",
+                    "unit": "gramme",
+                    "url": null,
+                    "value": "965",
+                    "verified": true
+                },
+                "ac_refrigerant_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "ac_refrigerant_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "R134a",
+                    "verified": true
+                },
+                "auto_gearbox_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": {
+                        "$date": "2026-11-11T19:04:28.867Z"
+                    },
+                    "key": "auto_gearbox_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "7.6",
+                    "verified": true
+                },
+                "auto_gearbox_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": {
+                        "$date": "2026-11-11T19:04:28.867Z"
+                    },
+                    "key": "auto_gearbox_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ATF Dexron III",
+                    "verified": true
+                },
+                "brake_fluid_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "brake_fluid_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "1",
+                    "verified": true
+                },
+                "brake_fluid_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "brake_fluid_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "DOT 4",
+                    "verified": true
+                },
+                "coolant_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "coolant_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "9.3",
+                    "verified": true
+                },
+                "coolant_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "coolant_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "Glaceol RX Typ D",
+                    "verified": true
+                },
+                "fuel_tank_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "fuel_tank_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "80",
+                    "verified": true
+                },
+                "gearbox_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "gearbox_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "2.2",
+                    "verified": true
+                },
+                "gearbox_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "gearbox_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "SAE 75W-80",
+                    "verified": true
+                },
+                "oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "5.4",
+                    "verified": true
+                },
+                "oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ACEA A3/B3|ACEA A5/B5",
+                    "verified": true
+                },
+                "power_steering_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "power_steering_oil_capacity",
+                    "source": "partsapi",
+                    "unit": "liter",
+                    "url": null,
+                    "value": "1.1",
+                    "verified": true
+                },
+                "power_steering_oil_type": {
+                    "addedAt": {
+                        "$date": "2026-06-28T15:10:04.522Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "power_steering_oil_type",
+                    "source": "partsapi",
+                    "unit": null,
+                    "url": null,
+                    "value": "ATF Dexron II D",
+                    "verified": true
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-06-28T15:10:04.522Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "source": "partsapi",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "catalog_specs",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "_id": "01KWA7FDJVY6QG3HWSPT9AX55G",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-06-29T17:40:17.627Z"
+            },
+            "dueDate": {
+                "$date": "2027-03-21T00:00:00Z"
+            },
+            "label": null,
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "inspection",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KWEPBJ9K5K7M4XJY3STTF142",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-07-01T11:17:17.747Z"
+            },
+            "dueDate": {
+                "$date": "2027-03-21T00:00:00Z"
+            },
+            "label": null,
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "inspection",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KWFRPVS6F9326KJX3B3ZJKBV",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-07-01T21:17:39.494Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 360697,
+            "type": "spark_plug",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KWS2RHWWVEQN18FN0EC6GGEW",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-07-05T12:06:30.556Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [
+                {
+                    "brand": "MANN-FILTER",
+                    "findRoute": null,
+                    "id": "01M6DQP9H2VH1ER96W9WP6P370",
+                    "label": "Filtre à carburant",
+                    "priceCents": null,
+                    "qty": null,
+                    "ref": "Life-Time Filter",
+                    "supplier": null
+                },
+                {
+                    "brand": "MAHLE",
+                    "findRoute": null,
+                    "id": "01M6DQP9H2VH1ER96W9WP6P371",
+                    "label": "Filtre à carburant",
+                    "priceCents": null,
+                    "qty": null,
+                    "ref": "LIFE-TIME-FILTER",
+                    "supplier": null
+                },
+                {
+                    "brand": "PURFLUX",
+                    "findRoute": null,
+                    "id": "01M6DQP9H2VH1ER96W9WP6P372",
+                    "label": "Filtre à carburant",
+                    "priceCents": null,
+                    "qty": null,
+                    "ref": "LFT",
+                    "supplier": null
+                }
+            ],
+            "source": "user",
+            "status": "open",
+            "targetUsageUnit": "km",
+            "targetUsageValue": 258896,
+            "type": "fuel_filter",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01KXZ33J0PR6TMDSXGK2Q37ME0",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "tires_front_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-07-20T06:23:39.540Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "tires_front_dimensions",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "15x600-6",
+                    "verified": false
+                },
+                "tube_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-07-20T06:23:39.540Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "tube_dimensions",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "15 x 600 x 6",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2024-07-26T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-07-20T06:23:39.542Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "tires",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01M00HP96GWAAAWXAT8163C7TB",
+            "addedBy": "claude-code",
+            "archivedAt": null,
+            "attributes": {
+                "engine_mount_rear_ashika_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.594Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_rear_ashika_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "GOM-3051",
+                    "verified": false
+                },
+                "engine_mount_rear_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-08-16T08:51:24.767Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_rear_dimensions",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.mister-auto.com",
+                    "value": "L 167 mm × l 66,5 mm × H 76 mm, Ø int. 13 / 12 mm, côté d'assemblage arrière",
+                    "verified": false
+                },
+                "engine_mount_rear_japanparts_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.594Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_rear_japanparts_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "RU-3051",
+                    "verified": false
+                },
+                "engine_mount_rear_oe_alt": {
+                    "addedAt": {
+                        "$date": "2026-08-14T16:29:11.247Z"
+                    },
+                    "addedBy": "claude-code",
+                    "deletedAt": null,
+                    "key": "engine_mount_rear_oe_alt",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://spare-parts.co.nz/mzm-014-rear-engine-mount.html",
+                    "value": "GJ6A-39-040B / GR1A-39-040 / GR1E-39-040",
+                    "verified": false
+                },
+                "engine_mount_rear_position": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.594Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_rear_position",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "Rear engine mount (lower torque strut under chassis)",
+                    "verified": false
+                },
+                "engine_mount_rear_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-14T16:29:11.247Z"
+                    },
+                    "addedBy": "claude-code",
+                    "deletedAt": null,
+                    "key": "engine_mount_rear_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://tmitatsumi.com/assets/uploads/content/downloads/tatsumi-full.pdf",
+                    "value": "GJ6A-39-040A",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-14T16:29:11.248Z"
+            },
+            "dueDate": null,
+            "label": "support moteur arrière (derrière le moteur)",
+            "parts": [],
+            "source": "web",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "engine_mount",
+            "updatedAt": {
+                "$date": "2026-09-12T13:45:54.500Z"
+            },
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M00HP99JJ8SG83K6M08Z59PW",
+            "addedBy": "claude-code",
+            "archivedAt": null,
+            "attributes": {
+                "engine_mount_left_ashika_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.550Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_left_ashika_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "GOM-3053",
+                    "verified": false
+                },
+                "engine_mount_left_japanparts_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.550Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_left_japanparts_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "RU-3053",
+                    "verified": false
+                },
+                "engine_mount_left_oe_alt": {
+                    "addedAt": {
+                        "$date": "2026-08-14T16:29:11.345Z"
+                    },
+                    "addedBy": "claude-code",
+                    "deletedAt": null,
+                    "key": "engine_mount_left_oe_alt",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://febest.com.au/mzm-012-febest-left-engine-mount.html",
+                    "value": "GJ6G-39-070B / GJY1-39-070 / GJ5A-39-070",
+                    "verified": false
+                },
+                "engine_mount_left_oe_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.550Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_left_oe_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "GJ6A-39-070 / GJ6A-39-070C / GJ6A-39-070D",
+                    "verified": false
+                },
+                "engine_mount_left_position": {
+                    "addedAt": {
+                        "$date": "2026-08-28T13:59:07.550Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_left_position",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "Left engine mount (transmission side, under battery/air box)",
+                    "verified": false
+                },
+                "engine_mount_left_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-14T16:29:11.345Z"
+                    },
+                    "addedBy": "claude-code",
+                    "deletedAt": null,
+                    "key": "engine_mount_left_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://tmitatsumi.com/assets/uploads/content/downloads/tatsumi-full.pdf",
+                    "value": "GR9S-39-070",
+                    "verified": false
+                },
+                "engine_mount_left_ref_caveat": {
+                    "addedAt": {
+                        "$date": "2026-08-16T08:51:41.061Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_mount_left_ref_caveat",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "GOM-3053 / RU-3053 : position non confirmée par la fiche technique (seule GOM-3051 indique explicitement « côté d'assemblage : arrière ») — vérifier avant commande",
+                    "verified": false
+                },
+                "engine_mount_right_ref": {
+                    "addedAt": {
+                        "$date": "2026-08-14T16:29:11.345Z"
+                    },
+                    "addedBy": "claude-code",
+                    "deletedAt": null,
+                    "key": "engine_mount_right_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://tmitatsumi.com/assets/uploads/content/downloads/tatsumi-full.pdf",
+                    "value": "GJ6G-39-060E (non concerné pour l instant — TATSUMI TEG1112)",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-14T16:29:11.346Z"
+            },
+            "dueDate": null,
+            "label": "support moteur gauche (côté boîte de vitesses)",
+            "parts": [],
+            "source": "web",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "engine_mount",
+            "updatedAt": {
+                "$date": "2026-09-12T13:45:54.500Z"
+            },
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M00KF47A1BHKB9Y8WQXAMBP4",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "distribution_type": {
+                    "addedAt": {
+                        "$date": "2026-08-14T17:00:13.929Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "distribution_type",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "chaîne",
+                    "verified": false
+                },
+                "fuel_type": {
+                    "addedAt": {
+                        "$date": "2026-08-14T17:00:13.929Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "fuel_type",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "essence",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-14T17:00:13.930Z"
+            },
+            "dueDate": null,
+            "label": "distribution par chaîne (pas de courroie)",
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "distribution",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M012YFME1FZP9A2GENB5TJB8",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "spark_plug_material": {
+                    "addedAt": {
+                        "$date": "2026-08-14T21:30:45.773Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "spark_plug_material",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "nickel",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-14T21:30:45.774Z"
+            },
+            "dueDate": null,
+            "label": "matière électrode bougies (présumé, à confirmer)",
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "spark_plug_spec",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M04SVPA9X7CTSVZPRYT3S918",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "tires_front_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-08-16T08:08:54.856Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "tires_front_dimensions",
+                    "source": "user",
+                    "unit": "pouces",
+                    "url": null,
+                    "value": "16",
+                    "verified": false
+                },
+                "tube_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-08-16T08:08:54.856Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "tube_dimensions",
+                    "source": "user",
+                    "unit": "pouces",
+                    "url": null,
+                    "value": "16",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-16T08:08:54.857Z"
+            },
+            "dueDate": null,
+            "label": "Chambres à air avant (16 pouces)",
+            "source": "user",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "tube",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01M04X6VTNPWV5Y2GW34CV9RSV",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-16T09:07:26.677Z"
+            },
+            "dueDate": null,
+            "label": "support moteur arri\\u00e8re (derri\\u00e8re le moteur)",
+            "parts": [
+                {
+                    "brand": "JAPANPARTS",
+                    "id": "01M04X6VTNPWV5Y2GW34CV9RSW",
+                    "label": "Support moteur arrière",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "RU-3051"
+                }
+            ],
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "engine_mount",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M04X6VVWDH4MRPYPJGMZ1EX3",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-16T09:07:26.716Z"
+            },
+            "dueDate": null,
+            "label": "support moteur gauche (c\\u00f4t\\u00e9 bo\\u00eete de vitesses)",
+            "parts": [
+                {
+                    "brand": "JAPANPARTS",
+                    "id": "01M04X6VVWDH4MRPYPJGMZ1EX4",
+                    "label": "Support moteur gauche",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "RU-3053"
+                }
+            ],
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "engine_mount",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M05PMZ0TBS8NZ2HNE6X7BV19",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "tires_front_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-08-16T16:32:03.097Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "tires_front_dimensions",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHBu5ABoN4O2Dx3zZ-rpvGCnae6l0h8P7MgGYeA8zzoNVAcyL1THvixja9D1_LK1m02LvAbpyn1xt7zHI2fUmPngLsHKtZ73Bgl6Fm4cFEE1tgGHb8kinNGuVrOcOHaJMa_cTahTlSxBERkASpBrETq3boFkkqN0eHXXOfeDw25MIIeLvmL6Us=",
+                    "value": "16x6.50-8",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-16T16:32:03.098Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "source": "user",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "tires_front",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01M07AVFS39HE1FCM76F783HXY",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "tires_front_dimensions": {
+                    "addedAt": {
+                        "$date": "2026-08-17T11:47:22Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "tires_front_dimensions",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEGDyCfSArfwjqhM49S_UvPpNOd7U1ANDxkf50rV6OiEYNAq8MGeNAC-5n9ItBXrQum07yhfSWf7cLIzmasEghS9oTjNZ_GIKsNIuGo0ISowq44Zz2YZlESIY6LXyZqe1YgEY4Nd3QZQ11XmRQUO8U2A-xK5f4WWUq1cYwM4zlC2Leyxl9zMg==",
+                    "value": "16x6.50-8",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-08-17T07:44:22.819Z"
+            },
+            "dueDate": null,
+            "label": "front tires",
+            "parts": [
+                {
+                    "brand": "BESTGREEN",
+                    "id": "01M07AVFS39HE1FCM76F783HXZ",
+                    "label": "Front lawn tire 16x650-8 4-ply",
+                    "priceCents": null,
+                    "qty": null,
+                    "ref": "PNEU 16x650-8 (4 Plis)"
+                }
+            ],
+            "source": "user",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "tires",
+            "vehicle": "01KVKMEFM6V36AWETKE7A9QCJ8"
+        },
+        {
+            "_id": "01M1KQZ5WNHWF9T9P318ZYQWZP",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "oil_filter_oe_ref": {
+                    "addedAt": {
+                        "$date": "2026-09-03T13:40:10.259Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "oil_filter_oe_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH8PfXMK8JCHvgWZQXZPPEpqP-zvSbOlWqBoHFKuYVuvomGhs2WfNWhCP46Thhx2CyyM1JYHBMIAEVhQ1mUeD9L9d4DEEO8qLjDD4dI7A72yPqNlsYIYWxas8=",
+                    "value": "L321-14-302A-9U",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-09-03T13:40:10.261Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "parts": [],
+            "source": "user",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "oil_filter",
+            "updatedAt": {
+                "$date": "2026-09-12T13:45:54.500Z"
+            },
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M2A4G1KYRVN5JE1ES1YM5BKC",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-09-12T06:22:23.358Z"
+            },
+            "dueDate": null,
+            "label": "Filtre à huile",
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "oil_filter",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "_id": "01M2AX92JFWW86XTNQ76P5232V",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "temperature_sensor_oe_ref": {
+                    "addedAt": {
+                        "$date": "2026-09-12T13:35:29.358Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "temperature_sensor_oe_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEJZbEBOIEaBHsqVyKx5TyyDoEED8UDetZRxq9TvYEyDIlzoltgoRzNcznkQL1psS1IR4OTMvRAre1bzGZLcLSRYxh5fJzGeNIApW2baHyPDENoXS02jMCqWmJKcn9_khH0jPXUl6iqw_BHaR1aTAcXQdG7pyM9PYgNLx5o2sye4DZgCobfp4vIwVINKHWBVEdP",
+                    "value": "B593-18-840A",
+                    "verified": false
+                },
+                "temperature_sensor_oe_ref_alt": {
+                    "addedAt": {
+                        "$date": "2026-09-12T13:35:29.358Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "temperature_sensor_oe_ref_alt",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEJZbEBOIEaBHsqVyKx5TyyDoEED8UDetZRxq9TvYEyDIlzoltgoRzNcznkQL1psS1IR4OTMvRAre1bzGZLcLSRYxh5fJzGeNIApW2baHyPDENoXS02jMCqWmJKcn9_khH0jPXUl6iqw_BHaR1aTAcXQdG7pyM9PYgNLx5o2sye4DZgCobfp4vIwVINKHWBVEdP",
+                    "value": "L35G-18-840",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2026-09-14T11:22:31.644Z"
+            },
+            "createdAt": {
+                "$date": "2026-09-12T13:35:29.359Z"
+            },
+            "dueDate": null,
+            "label": "sonde de température liquide de refroidissement",
+            "parts": [],
+            "source": "web",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "temperature_sensor",
+            "updatedAt": {
+                "$date": "2026-09-12T13:45:54.500Z"
+            },
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M2B01WKRQHSKPBNFG4KJKHFK",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "temperature_sensor_aftermarket_delphi": {
+                    "addedAt": {
+                        "$date": "2026-09-12T14:23:59.606Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "temperature_sensor_aftermarket_delphi",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFkdrzRJ3IGjco2z2O_O0aV1usvqFeXCfbKN8PsIdLjehIik3eGlWtNnqf9qg1GdGO9o-GE_Xzx4YeUgvp_UnCfGlTCJYHZxfu-d7mecsFu2Cd50oUa2VIOTnnrSwFAOJ2ppz6sdv0E",
+                    "value": "Delphi 65723MP — Mazda6 GG 2.0 2006-2013",
+                    "verified": false
+                },
+                "temperature_sensor_aftermarket_febi": {
+                    "addedAt": {
+                        "$date": "2026-09-12T14:23:59.606Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "temperature_sensor_aftermarket_febi",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFkdrzRJ3IGjco2z2O_O0aV1usvqFeXCfbKN8PsIdLjehIik3eGlWtNnqf9qg1GdGO9o-GE_Xzx4YeUgvp_UnCfGlTCJYHZxfu-d7mecsFu2Cd50oUa2VIOTnnrSwFAOJ2ppz6sdv0E",
+                    "value": "Febi Bilstein 28381 — Mazda6 GG 2.0",
+                    "verified": false
+                },
+                "temperature_sensor_engine": {
+                    "addedAt": {
+                        "$date": "2026-09-12T14:23:59.606Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "temperature_sensor_engine",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "2.0 MZR essence (LFF7)",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2026-10-29T00:00:00Z"
+            },
+            "createdAt": {
+                "$date": "2026-09-12T14:23:59.608Z"
+            },
+            "dueDate": null,
+            "label": "capteur température",
+            "source": "web",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "other",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M2B1B91FYH1FR13PQR4XZFGX",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": {
+                "$date": "2026-09-14T11:22:31.644Z"
+            },
+            "createdAt": {
+                "$date": "2026-09-12T14:46:35.823Z"
+            },
+            "dueDate": null,
+            "label": "Capteur température liquide de refroidissement",
+            "parts": [
+                {
+                    "brand": "Delphi",
+                    "id": "01M2B1B91FYH1FR13PQR4XZFGY",
+                    "label": "Capteur température liquide de refroidissement",
+                    "priceCents": null,
+                    "qty": null,
+                    "ref": "TS 10287"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "temperature_sensor",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M3KFY846R3Q81267T1HKGC50",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "accessory_belt_drives": {
+                    "addedAt": {
+                        "$date": "2026-09-28T07:51:14.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "accessory_belt_drives",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.osaczony.pl/mazda/1730-1E-02C.pdf",
+                    "value": "alternateur + pompe à eau + pompe de direction assistée + compresseur de clim — une seule courroie avant à tendeur automatique",
+                    "verified": false
+                },
+                "accessory_belt_profile": {
+                    "addedAt": {
+                        "$date": "2026-09-28T07:51:14.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "accessory_belt_profile",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "6PK2260 — 6 nervures, 2260 mm",
+                    "verified": false
+                },
+                "accessory_belt_ref": {
+                    "addedAt": {
+                        "$date": "2026-09-28T07:51:14.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "accessory_belt_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "BOSCH 1 987 945 981",
+                    "verified": false
+                },
+                "accessory_belt_tension_check": {
+                    "addedAt": {
+                        "$date": "2026-09-28T07:51:14.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "accessory_belt_tension_check",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.osaczony.pl/mazda/1730-1E-02C.pdf",
+                    "value": "tendeur automatique : vérifier que le repère ne dépasse pas la limite après montage (manuel d'atelier B-3)",
+                    "verified": false
+                },
+                "power_steering_type": {
+                    "addedAt": {
+                        "$date": "2026-09-28T07:51:14.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "power_steering_type",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.osaczony.pl/mazda/1730-1E-02C.pdf",
+                    "value": "hydraulique à entraînement courroie (Engine Speed Sensing Power Steering) — pas d'EHPAS, pas de voyant DA sur la GG",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2026-10-04T14:34:49.207Z"
+            },
+            "createdAt": {
+                "$date": "2026-09-28T07:51:14.822Z"
+            },
+            "dueDate": null,
+            "label": "Courroie accessoire 6PK2260",
+            "parts": [
+                {
+                    "brand": "BOSCH",
+                    "id": "01M3KFY846R3Q81267T1HKGC51",
+                    "label": "Courroie trapézoïdale à nervures 6PK2260",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "1 987 945 981"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "accessory_belt",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M3YJZCW8ZYZ6ST6HV0KQK7VQ",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "engine_code": {
+                    "addedAt": {
+                        "$date": "2026-10-02T15:15:56.935Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "engine_code",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "F4R turbo (F4R 896/897)",
+                    "verified": false
+                },
+                "gearbox_code": {
+                    "addedAt": {
+                        "$date": "2026-10-02T15:15:56.935Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "gearbox_code",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "PK6-013",
+                    "verified": false
+                }
+            },
+            "completedAt": {
+                "$date": "2026-10-06T12:19:04.700Z"
+            },
+            "createdAt": {
+                "$date": "2026-10-02T15:15:56.936Z"
+            },
+            "dueDate": null,
+            "label": "embrayage + volant bimasse (dépose BV PK6, MR 361 21A-5 / 20A)",
+            "parts": [
+                {
+                    "brand": "LUK",
+                    "id": "01M3YJZCW9A38VA6VQ1119V0BH",
+                    "label": "Kit embrayage LuK 623 3150 33 (SAC + récepteur concentrique), réf. montée par Renault sur le devis ; ~174 € Oscaro / 199 € Autodoc. PAS le 623 3150 34 (sans récepteur concentrique, Vel Satis F4R 76x)",
+                    "priceCents": 17400,
+                    "qty": 1,
+                    "ref": "623315033"
+                },
+                {
+                    "brand": "CORTECO",
+                    "id": "01M3YJZCW9A38VA6VQ1119V0BK",
+                    "label": "Joint spi de sortie de boîte droite (différentiel) 30x52 FPM, F4R 896 / PK6, OE Renault 7701474122 — 11,50 € Mister-Auto ; remplacement systématique (MR 21A-3 / 21A-29)",
+                    "priceCents": 1150,
+                    "qty": 1,
+                    "ref": "12017115B"
+                },
+                {
+                    "brand": null,
+                    "id": "01M3YJZCW9A38VA6VQ1119V0BN",
+                    "label": "Liquide de frein DOT4 1 L ~10 € (purge circuit d'embrayage)",
+                    "priceCents": 1000,
+                    "qty": 1,
+                    "ref": "DOT 4"
+                },
+                {
+                    "brand": null,
+                    "id": "01M3YJZCW9A38VA6VQ1119V0BP",
+                    "label": "ATF Dexron II D — appoint/purge direction assistée, la procédure débranche les tuyaux DA sur la crémaillère",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "ATF Dexron II D"
+                },
+                {
+                    "brand": "RENAULT",
+                    "id": "01M3YJZCW9A38VA6VQ1119V0BQ",
+                    "label": "Molykote BR2 — cannelures du planétaire droit (MR 21A-3), équiv. BR2 Plus ~7-26 €",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "7701421145"
+                },
+                {
+                    "brand": "RENAULT",
+                    "id": "01M3YJZCW9A38VA6VQ1119V0BR",
+                    "label": "Rhodorseal 5661 — bouchons filetés et contacteurs (MR 21A-3), comptoir Renault",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "7701404452"
+                },
+                {
+                    "brand": "LUK",
+                    "id": "01M3YZ260G1XS6HE343D0SM7J5",
+                    "label": "Volant moteur bimasse LuK 415 0463 10 — 427,90 € Mister-Auto ; appairé LuK avec le kit 623 3150 33 pour Espace IV 2.0 Turbo (alt. Valeo 836538 ~328 €)",
+                    "priceCents": 42790,
+                    "qty": 1,
+                    "ref": "415046310"
+                },
+                {
+                    "brand": "ELF",
+                    "id": "01M3YZ260G1XS6HE343D0SM7J6",
+                    "label": "Huile BV 75W-80 GL-4, bidon 5 L ~44 € — PK6 = 2,4 L ± 0,15 après vidange, contrôle à la jauge B.Vi.1675 (MR 21A-2, NT 3791A)",
+                    "priceCents": 4400,
+                    "qty": 1,
+                    "ref": "TRANSELF-NFJ-75W80-5L"
+                },
+                {
+                    "brand": "LOCTITE",
+                    "id": "01M3YZ260G1XS6HE343D0SM7J7",
+                    "label": "Frein filet moyen 5 ml ~8 € — vis de volant moteur, serrage 6 daN.m (MR 20A-12, moteurs F) (LOCTITE-243)",
+                    "priceCents": 800,
+                    "qty": 1,
+                    "ref": "frein-filet moyen"
+                },
+                {
+                    "brand": null,
+                    "id": "01M3YZ260G1XS6HE343D0SM7J8",
+                    "label": "Vis du bac batterie/calculateur : vis normales même dimension à la place des vis d'inviolabilité (tête cassante) ; les anciennes se déposent par fente Dremel ou perçage + extracteur (MR 21A-6)",
+                    "priceCents": null,
+                    "qty": 3,
+                    "ref": "VIS-BAC-STANDARD"
+                },
+                {
+                    "brand": null,
+                    "id": "01M3Z6DC789V7D9ZCEDX7R1BRK",
+                    "label": "OPTIONNEL — joint torique du planétaire droit, enlevé pour sortir le joint de sortie (MR 21A-29), pas à remplacement systématique : réutiliser s'il est sain ; réf. Renault à demander au comptoir avec le VIN, sinon même taille en assortiment",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "A-CONFIRMER-JOINT-TORIQUE"
+                },
+                {
+                    "brand": "CORTECO",
+                    "id": "01M3Z6GJVBD63CH72E5XQQCY6S",
+                    "label": "Joint spi d'arbre d'embrayage (entrée de boîte) 25x42x6 ACM, F4R 896 / PK6 — 5,50 € Mister-Auto ; sous le récepteur, remplacement systématique quand déposé (MR 21A-27)",
+                    "priceCents": 550,
+                    "qty": 1,
+                    "ref": "19036867B"
+                },
+                {
+                    "brand": "LOCTITE",
+                    "id": "01M3Z7FC64KCBN5XDFY4BVQWK3",
+                    "label": "Frein filet fort (équiv. Loctite FRENBLOC Renault) — vis de fixation d'étrier de frein, déposés pendant la dépose BV (MR 21A-28) (LOCTITE-270)",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "frein-filet fort"
+                },
+                {
+                    "brand": null,
+                    "id": "01M3Z7FC85GJH1YQS75ZNAM2CF",
+                    "label": "Nettoyant frein / dégraissant — face de friction et face d'appui du volant, filetages vilebrequin (MR 20A-8 / 20A-12)",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "NETTOYANT-FREIN"
+                }
+            ],
+            "source": "user",
+            "status": "done",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "clutch",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "_id": "01M43A37K8T91MAJ7TVZQNSFFK",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "water_pump_bolt_torque": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.822Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_bolt_torque",
+                    "source": "user",
+                    "unit": "N·m",
+                    "url": "/garage/vehicles/01KVFEQA72XQMWSS3HPBD93ASR/documents/01M43B8ZR0A4JA28M1A7DY4VJR/file",
+                    "value": "8.0–11.5",
+                    "verified": false
+                },
+                "water_pump_compatible_refs": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_compatible_refs",
+                    "source": "web",
+                    "unit": null,
+                    "url": null,
+                    "value": "AISIN WPZ-033V, SKF VKPC 84622, GATES WP0165, DOLZ F150, CONTINENTAL CTAM WPS3151, DAYCO DP273, JAPANPARTS PQ-338, ASHIKA 35-03-338, METELLI 24-0903, GRAF PA903, HEPU P251, HUTCHINSON WP112, NIPPARTS J1513054, MAHLE CP 141 000S, VALEO 539023 / 506694, FEBI 22251, BLUE PRINT ADM59135, MEYLE 713 220 0005 — catalogue TecDoc kType 19107",
+                    "verified": false
+                },
+                "water_pump_gasket": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.822Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_gasket",
+                    "source": "user",
+                    "unit": null,
+                    "url": "/garage/vehicles/01KVFEQA72XQMWSS3HPBD93ASR/documents/01M43B8ZR0A4JA28M1A7DY4VJR/file",
+                    "value": "joint pompe/bloc à remplacer (R) — manuel atelier 1730-1E-02C, E-8",
+                    "verified": false
+                },
+                "water_pump_pulley_bolt_ref": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_pulley_bolt_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.mazda-parts.com/oem-parts/mazda-engine-water-pump-pulley-bolt-9xf002217l",
+                    "value": "Mazda 9XF0-02-217L",
+                    "verified": false
+                },
+                "water_pump_pulley_fixing": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.822Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_pulley_fixing",
+                    "source": "user",
+                    "unit": null,
+                    "url": "/garage/vehicles/01KVFEQA72XQMWSS3HPBD93ASR/documents/01M43B8ZR0A4JA28M1A7DY4VJR/file",
+                    "value": "poulie vissée sur la pompe, 20–30 N·m (manuel atelier 1730-1E-02C, E-8)",
+                    "verified": false
+                },
+                "water_pump_pulley_ref": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_pulley_ref",
+                    "source": "web",
+                    "unit": null,
+                    "url": "https://www.tascaparts.com/oem-parts/mazda-pulley-lf5015131",
+                    "value": "Mazda LF50-15-131 (remplace LF01-15-131) — pas d'adaptable poulie seule trouvé, réutiliser si saine",
+                    "verified": false
+                },
+                "water_pump_pulley_torque": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_pulley_torque",
+                    "source": "user",
+                    "unit": "N·m",
+                    "url": "/garage/vehicles/01KVFEQA72XQMWSS3HPBD93ASR/documents/01M43B8ZR0A4JA28M1A7DY4VJR/file",
+                    "value": "20–30",
+                    "verified": false
+                },
+                "water_pump_ref_mismatch": {
+                    "addedAt": {
+                        "$date": "2026-10-04T11:38:18.821Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "water_pump_ref_mismatch",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "Pompe montée le 2024-04-26 = Hutchinson WP442, mais TecDoc donne WP112 pour ce kType — comparer à la dépose",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-10-04T11:16:57.576Z"
+            },
+            "dueDate": null,
+            "label": "Remplacement pompe à eau (roulement HS, poulie voilée, surchauffe)",
+            "parts": [
+                {
+                    "brand": "AISIN",
+                    "id": "01M43A37K8T91MAJ7TVZQNSFFM",
+                    "label": "Pompe à eau, livrée sans poulie (alternative : SKF VKPC 84622)",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "WPZ-033V"
+                },
+                {
+                    "brand": null,
+                    "id": "01M43BA2PMHGEF05SE24C9KJZN",
+                    "label": "Joint pompe/bloc (à remplacer, souvent livré avec la pompe)",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "joint pompe à eau"
+                }
+            ],
+            "source": "user",
+            "status": "dismissed",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "water_pump",
+            "vehicle": "01KVFEQA72XQMWSS3HPBD93ASR"
+        },
+        {
+            "_id": "01M4D8R97311BQ0S9NSPR7PC4N",
+            "addedBy": null,
+            "archivedAt": null,
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-10-08T08:05:54.531Z"
+            },
+            "dueDate": null,
+            "label": "embrayage",
+            "parts": [
+                {
+                    "brand": "LuK",
+                    "id": "01M4X5CK4YKZ69NZKHCWVPWWMS",
+                    "label": "Kit d'embrayage",
+                    "priceCents": 18107,
+                    "qty": 1,
+                    "ref": "623 3150 33",
+                    "supplier": "trodo.fr"
+                },
+                {
+                    "brand": "LuK",
+                    "id": "01M4X5CK4YKZ69NZKHCWVPWWMT",
+                    "label": "Volant moteur",
+                    "priceCents": 37902,
+                    "qty": 1,
+                    "ref": "415 0463 10",
+                    "supplier": "trodo.fr"
+                },
+                {
+                    "brand": "CORTECO",
+                    "id": "01M4X5CK4YKZ69NZKHCWVPWWMV",
+                    "label": "Bague d'étanchéité, différentiel",
+                    "priceCents": 709,
+                    "qty": 1,
+                    "ref": "12017115B",
+                    "supplier": "trodo.fr"
+                },
+                {
+                    "brand": "CORTECO",
+                    "id": "01M4X5CK4YKZ69NZKHCWVPWWMW",
+                    "label": "Bague d'étanchéité, boîte de vitesse manuelle",
+                    "priceCents": 276,
+                    "qty": 1,
+                    "ref": "19036867B",
+                    "supplier": "trodo.fr"
+                },
+                {
+                    "brand": null,
+                    "id": "01M4XTSCEC64NT3V1KDT34CEZC",
+                    "label": "Huile boîte PK6 — 2,4 ± 0,15 L (MR 361 21A-2), en stock",
+                    "priceCents": null,
+                    "qty": 3,
+                    "ref": "SAE 75W-80",
+                    "supplier": null
+                },
+                {
+                    "brand": null,
+                    "id": "01M4XTSCEC64NT3V1KDT34CEZD",
+                    "label": "Liquide de frein — purge embrayage (MR 361 21A-12), en stock",
+                    "priceCents": null,
+                    "qty": 1,
+                    "ref": "DOT 4",
+                    "supplier": null
+                },
+                {
+                    "brand": "MANNOL",
+                    "id": "01M4XYBNQ8W9RFA2G2WSTZ2EEH",
+                    "label": "Multi-MoS2 Grease EP2 Ester 100 ml 8028-01 — cannelures planétaire droit (MR 361 21A-3)",
+                    "priceCents": 279,
+                    "qty": 1,
+                    "ref": "graisse Li-MoS2 NLGI 2",
+                    "supplier": "trodo.fr"
+                },
+                {
+                    "brand": "LOCTITE",
+                    "id": "01M4XYBNQ8W9RFA2G2WSTZ2EEJ",
+                    "label": "2701 5 ml — vis d'étrier de frein, Frenbloc (MR 361 21A-28)",
+                    "priceCents": 1089,
+                    "qty": 1,
+                    "ref": "frein-filet fort",
+                    "supplier": "trodo.fr"
+                },
+                {
+                    "brand": "LOCTITE",
+                    "id": "01M4XYBNQ8W9RFA2G2WSTZ2EEK",
+                    "label": "243 5 ml — vis de volant, Frenetanch (MR 361 20A-12)",
+                    "priceCents": 1028,
+                    "qty": 1,
+                    "ref": "frein-filet moyen",
+                    "supplier": "trodo.fr"
+                }
+            ],
+            "source": "llm",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "clutch",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        },
+        {
+            "_id": "01M64KES91GQ8TX60KJW9ZY4PK",
+            "addedBy": null,
+            "archivedAt": null,
+            "attributes": {
+                "clutch_kit_ref": {
+                    "addedAt": {
+                        "$date": "2026-10-29T19:51:11.384Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "clutch_kit_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "LuK 623 3150 33 (RepSet Pro, 230 mm, avec butée hydraulique) — monté par Renault, devis OR 88780 ligne 8100043444",
+                    "verified": false
+                },
+                "crankshaft_rear_seal_ref": {
+                    "addedAt": {
+                        "$date": "2026-10-29T19:51:11.384Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "crankshaft_rear_seal_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "Corteco 20018246B (85x105, côté boîte, OE 7703087224) — absent du devis Renault OR 88780",
+                    "verified": false
+                },
+                "differential_seal_ref": {
+                    "addedAt": {
+                        "$date": "2026-10-29T19:51:11.384Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "differential_seal_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "OE 7701474122 (30x52) = Corteco 12017115B, côté droit PK6 — devis OR 88780",
+                    "verified": false
+                },
+                "dual_mass_flywheel_ref": {
+                    "addedAt": {
+                        "$date": "2026-10-29T19:56:41.957Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "dual_mass_flywheel_ref",
+                    "source": "user",
+                    "unit": null,
+                    "url": null,
+                    "value": "LuK 415 0463 10 (OE 7701479180) — lien TecDoc kType 18679 sans limite de date, qualificatif 'uniquement en connexion avec 623 3150 ##' (= kit LuK 623 3150 33 du devis Renault OR 88780). Les Sachs 2294 501 158/196 sont limités ≤02/2006 sur ce type. Source : article_link_qualifier, tecdoc_full.sqlite 2020Q1 (serveur bonneref). Ligne devis 'PPAD' sans réf.",
+                    "verified": false
+                },
+                "gearbox_oil_capacity": {
+                    "addedAt": {
+                        "$date": "2026-10-29T19:51:11.384Z"
+                    },
+                    "addedBy": null,
+                    "deletedAt": null,
+                    "key": "gearbox_oil_capacity",
+                    "source": "user",
+                    "unit": "L",
+                    "url": null,
+                    "value": "2.4",
+                    "verified": false
+                }
+            },
+            "completedAt": null,
+            "createdAt": {
+                "$date": "2026-10-29T19:51:11.393Z"
+            },
+            "dueDate": null,
+            "label": null,
+            "source": "user",
+            "status": "open",
+            "targetUsageUnit": null,
+            "targetUsageValue": null,
+            "type": "user_facts",
+            "vehicle": "01KW7CFJP6Y0ARF5287B7Y9CAY"
+        }
+    ],
+    "vehicles": [
+        {
+            "_id": "01KVFEQA72XQMWSS3HPBD93ASR",
+            "addedAt": {
+                "$date": "2026-06-19T08:07:26.690Z"
+            },
+            "engineCode": "2.0 MZR147 LFF7",
+            "engineVariant": "GG",
+            "kType": 19107,
+            "make": "MAZDA",
+            "model": "MAZDA6",
+            "plate": "XB-301-ZB",
+            "serviceSchedule": {
+                "air_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 40000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK91",
+                    "source": "web",
+                    "type": "air_filter",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "brake_fluid:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": null,
+                    "everyUsageValue": null,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK98",
+                    "source": "web",
+                    "type": "brake_fluid",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "cabin_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 40000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK92",
+                    "source": "web",
+                    "type": "cabin_filter",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "coolant:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 60,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 168000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK95",
+                    "source": "web",
+                    "type": "coolant",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "fuel_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 40000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK93",
+                    "source": "web",
+                    "type": "fuel_filter",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "inspection:inspect": {
+                    "action": "inspect",
+                    "addedAt": {
+                        "$date": "2026-06-24T08:53:54.816Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 24,
+                    "everyUsageUnit": null,
+                    "everyUsageValue": null,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK97",
+                    "source": "user",
+                    "type": "inspection",
+                    "url": null,
+                    "verified": false
+                },
+                "oil_change:change": {
+                    "action": "change",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 20000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK8Z",
+                    "source": "web",
+                    "type": "oil_change",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "oil_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 20000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK90",
+                    "source": "web",
+                    "type": "oil_filter",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "spark_plug:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-08-14T21:30:37.787Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 60000,
+                    "firstUsageValue": null,
+                    "id": "01M012Y7TV7Y2V9QRF3N309VEV",
+                    "source": "user",
+                    "type": "spark_plug",
+                    "url": null,
+                    "verified": false
+                },
+                "timing_belt:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T13:15:49.485Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": {
+                        "$date": "2026-08-14T16:59:58.589Z"
+                    },
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 120000,
+                    "firstUsageValue": null,
+                    "id": "01KVT9YVBD855HKT6K3G8GPK96",
+                    "source": "web",
+                    "type": "timing_belt",
+                    "url": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHqVNoQ7e_qPY751VJY83UYV6wE_bN1OoRVnKGGEgpyh5TCGbRYMD2Vwp0xmD8jE8TmscR2ElugDOC9ZLjisYKdVKgyeNYPvaQdHtI0FMDk-zf-aeQgCai6u1k0N3Ja8RzlnKRgIEApP57hMBTtUX9P_DBvYF8u1yoRLCTPpqa8kJdyZBt17-5I_PgR_F_yWMw=",
+                    "verified": false
+                },
+                "tyres:change": {
+                    "action": "change",
+                    "addedAt": {
+                        "$date": "2026-06-29T17:59:10.118Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": {
+                        "$date": "2026-06-29T18:00:08.086Z"
+                    },
+                    "everyMonths": 6,
+                    "everyUsageUnit": null,
+                    "everyUsageValue": null,
+                    "firstUsageValue": null,
+                    "id": "01KWA8HZH6BX0XYAPDCDY059A4",
+                    "source": "user",
+                    "type": "tyres",
+                    "url": null,
+                    "verified": false
+                }
+            },
+            "source": "user",
+            "suppressedFactKeys": {},
+            "updatedAt": {
+                "$date": "2026-10-29T15:06:30.926Z"
+            },
+            "usageUnit": "km",
+            "usageValue": 252524,
+            "vehicleType": "car",
+            "vin": "JMZGG14F671528417",
+            "year": 2007
+        },
+        {
+            "_id": "01KVKMEFM6V36AWETKE7A9QCJ8",
+            "addedAt": {
+                "$date": "2026-06-20T23:04:26.502Z"
+            },
+            "deletedAt": null,
+            "engineCode": null,
+            "engineVariant": "Briggs & Stratton",
+            "kType": null,
+            "make": "TORO",
+            "model": "Wheel Horse 246-H",
+            "plate": null,
+            "serviceSchedule": {
+                "air_filter:clean:foam element": {
+                    "action": "clean",
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:09.846Z"
+                    },
+                    "addedBy": null,
+                    "component": "foam element",
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": "hours",
+                    "everyUsageValue": 25,
+                    "firstUsageValue": null,
+                    "id": "01KVSGETDPA6K6ZN7666PCV2BY",
+                    "source": "user",
+                    "type": "air_filter",
+                    "url": null,
+                    "verified": false
+                },
+                "air_filter:replace:paper cartridge": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:09.846Z"
+                    },
+                    "addedBy": null,
+                    "component": "paper cartridge",
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": "hours",
+                    "everyUsageValue": 100,
+                    "firstUsageValue": null,
+                    "id": "01KVSGETDPA6K6ZN7666PCV2BZ",
+                    "source": "user",
+                    "type": "air_filter",
+                    "url": null,
+                    "verified": false
+                },
+                "oil_change:change": {
+                    "action": "change",
+                    "addedAt": {
+                        "$date": "2026-06-23T09:04:33.871Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "hours",
+                    "everyUsageValue": 50,
+                    "firstUsageValue": 5,
+                    "id": "01KVSGETDPA6K6ZN7666PCV2BW",
+                    "source": "user",
+                    "type": "oil_change",
+                    "url": null,
+                    "verified": false
+                },
+                "oil_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:09.846Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "hours",
+                    "everyUsageValue": 200,
+                    "firstUsageValue": null,
+                    "id": "01KVSGETDPA6K6ZN7666PCV2BX",
+                    "source": "user",
+                    "type": "oil_filter",
+                    "url": null,
+                    "verified": false
+                },
+                "spark_plug:inspect": {
+                    "action": "inspect",
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:09.846Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "hours",
+                    "everyUsageValue": 25,
+                    "firstUsageValue": null,
+                    "id": "01KVSGETDPA6K6ZN7666PCV2C0",
+                    "source": "user",
+                    "type": "spark_plug",
+                    "url": null,
+                    "verified": false
+                },
+                "spark_plug:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-23T05:50:09.846Z"
+                    },
+                    "addedBy": null,
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "hours",
+                    "everyUsageValue": 100,
+                    "firstUsageValue": null,
+                    "id": "01KVSGETDPA6K6ZN7666PCV2C1",
+                    "source": "user",
+                    "type": "spark_plug",
+                    "url": null,
+                    "verified": false
+                }
+            },
+            "source": "user",
+            "suppressedFactKeys": {
+                "battery_ref": "2026-06-22T08:33:28+00:00"
+            },
+            "updatedAt": {
+                "$date": "2026-09-11T20:01:28.871Z"
+            },
+            "usageUnit": "h",
+            "usageValue": 3,
+            "vehicleType": "groundscare",
+            "vin": null,
+            "year": 1992
+        },
+        {
+            "_id": "01KW7CFJP6Y0ARF5287B7Y9CAY",
+            "addedAt": {
+                "$date": "2026-06-28T15:10:02.438Z"
+            },
+            "deletedAt": null,
+            "engineCode": null,
+            "engineVariant": "2.0 16V 170 ch",
+            "kType": 18679,
+            "make": "RENAULT",
+            "model": "ESPACE IV",
+            "plate": "XG-306-ZG",
+            "serviceSchedule": {
+                "air_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 30000,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3C6",
+                    "source": "web",
+                    "type": "air_filter",
+                    "url": null,
+                    "verified": false
+                },
+                "brake_fluid:change": {
+                    "action": "change",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 24,
+                    "everyUsageUnit": null,
+                    "everyUsageValue": null,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3C9",
+                    "source": "web",
+                    "type": "brake_fluid",
+                    "url": null,
+                    "verified": false
+                },
+                "cabin_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 15000,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3C7",
+                    "source": "web",
+                    "type": "cabin_filter",
+                    "url": null,
+                    "verified": false
+                },
+                "coolant:change": {
+                    "action": "change",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 60,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 90000,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3CA",
+                    "source": "web",
+                    "type": "coolant",
+                    "url": null,
+                    "verified": false
+                },
+                "oil_change:change": {
+                    "action": "change",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 15000,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3C4",
+                    "source": "web",
+                    "type": "oil_change",
+                    "url": null,
+                    "verified": false
+                },
+                "oil_filter:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": 12,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 15000,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3C5",
+                    "source": "web",
+                    "type": "oil_filter",
+                    "url": null,
+                    "verified": false
+                },
+                "spark_plug:replace": {
+                    "action": "replace",
+                    "addedAt": {
+                        "$date": "2026-06-28T15:11:04.365Z"
+                    },
+                    "addedBy": "web",
+                    "component": null,
+                    "deletedAt": null,
+                    "everyMonths": null,
+                    "everyUsageUnit": "km",
+                    "everyUsageValue": 50000,
+                    "firstUsageValue": null,
+                    "id": "01KW7CHF5DC3GARWYMBB73X3C8",
+                    "source": "web",
+                    "type": "spark_plug",
+                    "url": null,
+                    "verified": false
+                }
+            },
+            "source": "user",
+            "suppressedFactKeys": {},
+            "updatedAt": {
+                "$date": "2026-10-28T10:10:12.246Z"
+            },
+            "usageUnit": "km",
+            "usageValue": 247388,
+            "vehicleType": "car",
+            "vin": "VF1JK0AB636726405",
+            "year": 2006
+        },
+        {
+            "_id": "01M7938E006QJKA7T3A9C2RH0F",
+            "addedAt": {
+                "$date": "2026-11-13T00:00:00Z"
+            },
+            "deletedAt": null,
+            "engineCode": null,
+            "engineVariant": "K75, 798 cc, 63 kW",
+            "kType": 101222,
+            "make": "BMW",
+            "model": "F 800 GS Adventure",
+            "plate": "XH-307-ZH",
+            "serviceSchedule": {},
+            "source": "user",
+            "suppressedFactKeys": {},
+            "usageUnit": "km",
+            "usageValue": null,
+            "vehicleType": "moto",
+            "vin": null,
+            "year": 2014
+        }
+    ]
+}

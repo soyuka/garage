@@ -143,6 +143,18 @@ write + `/agent/turn` via `authFetch`. A 401 drops the token and bounces back to
 the 401 challenge and protected-resource metadata to `auth.bonneref.fr`, registers by DCR and opens a browser
 for login. There is no static bearer or token-minting script. See `MCP_CLAUDE.md`.
 
+## The offline demo's Casdoor
+
+`compose.demo.yaml` (run by `bin/demo`) is the one stack with its own Casdoor (4.20.0, sqlite, seeded from
+`docker/demo/casdoor-init.json.dist`: org `bonneref` with DCR open, the Atelier app under the hosted client id,
+user `demo`). Its issuer is `http://localhost:${AUTH_PORT}` for the browser, Claude Code and both php containers:
+Casdoor's `origin` pins the `iss`, and each php container's Caddy listens on that port (`CADDY_EXTRA_CONFIG`) and
+proxies to Casdoor, since `localhost` inside a container is the container. The host-facing listener is mpa's, and
+it applies the same `organization=bonneref` rewrite on `POST /api/oauth/register` as the hosted auth host.
+
+The 2026-10 local setup (`50d99a0^`) used `http://casdoor:8000` instead, which needed `127.0.0.1 casdoor` in the
+host's `/etc/hosts`; a `*.localhost` name does not work either, curl resolves those to loopback itself.
+
 ## Environment variables
 
 | Var | Purpose | Default |

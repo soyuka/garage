@@ -1,0 +1,60 @@
+{
+  "organizations": [
+    {
+      "owner": "admin",
+      "name": "bonneref",
+      "displayName": "bonneref (offline demo)",
+      "websiteUrl": "http://localhost:@DEMO_PORT@",
+      "passwordType": "bcrypt",
+      "passwordOptions": ["AtLeast6"],
+      "countryCodes": ["FR"],
+      "languages": ["en", "fr"],
+      "defaultApplication": "mon-parc-auto",
+      "defaultTokenFormat": "JWT-Empty",
+      "dcrPolicy": "open",
+      "initScore": 0,
+      "enableSoftDeletion": false,
+      "isProfilePublic": false
+    }
+  ],
+  "applications": [
+    {
+      "owner": "admin",
+      "name": "mon-parc-auto",
+      "displayName": "Mon Parc Auto",
+      "homepageUrl": "http://localhost:@DEMO_PORT@",
+      "description": "The Atelier (dashboard): public PKCE client.",
+      "organization": "bonneref",
+      "enablePassword": true,
+      "enableSignUp": false,
+      "enableSigninSession": false,
+      "clientId": "671b8c86d75444f3f4c4",
+      "clientSecret": "@CASDOOR_CLIENT_SECRET@",
+      "redirectUris": [
+        "http://localhost:@DEMO_PORT@/callback",
+        "http://localhost:@DEMO_PORT@/"
+      ],
+      "grantTypes": ["authorization_code", "refresh_token"],
+      "tokenFormat": "JWT-Empty",
+      "expireInHours": 168,
+      "refreshExpireInHours": 168,
+      "signinMethods": [
+        { "name": "Password", "displayName": "Password", "rule": "All" }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "owner": "bonneref",
+      "name": "demo",
+      "type": "normal-user",
+      "tag": "dcr",
+      "displayName": "Demo",
+      "email": "@DEMO_EMAIL@",
+      "emailVerified": true,
+      "password": "@DEMO_PASSWORD@",
+      "signupApplication": "mon-parc-auto",
+      "isAdmin": false
+    }
+  ]
+}

@@ -48,3 +48,8 @@ prompt.md
 *.archive.gz
 dumps/
 backups/
+
+# Offline demo state (bin/demo): generated secrets, the rendered Casdoor seed.
+/.demo/
+# The committed TecDoc slice the offline demo mounts (compose.demo.yaml, DEMO_CATALOG_PATH).
+!/data/catalog-demo.sqlite

@@ -1,0 +1,23 @@
+{
+    "vehicles": [
+        {
+            "_id": "01M7938E006QJKA7T3A9C2RH0F",
+            "addedAt": {"$date": "2026-11-13T00:00:00Z"},
+            "deletedAt": null,
+            "engineCode": null,
+            "engineVariant": "K75, 798 cc, 63 kW",
+            "kType": 101222,
+            "make": "BMW",
+            "model": "F 800 GS Adventure",
+            "plate": "XH-307-ZH",
+            "serviceSchedule": {},
+            "source": "user",
+            "suppressedFactKeys": {},
+            "usageUnit": "km",
+            "usageValue": null,
+            "vehicleType": "moto",
+            "vin": null,
+            "year": 2014
+        }
+    ]
+}

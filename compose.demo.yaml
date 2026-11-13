@@ -1,0 +1,228 @@
+# Offline demo: the Atelier, mpa's MCP server, bonneref's catalogue (API + MCP) and a Casdoor, nothing
+# hosted. Run it through `bin/demo`, which generates the secrets into .demo/env and the Casdoor seed into
+# .demo/casdoor-init.json, then loads the demo garage. Everything is published on loopback only.
+#
+#   http://localhost:${DEMO_PORT}      Atelier + mpa (/mcp, /garage, Mercure)
+#   http://localhost:${BONNEREF_PORT}  bonneref API + catalogue MCP (/mcp)
+#   http://localhost:${AUTH_PORT}      Casdoor, the OIDC issuer
+#
+# One issuer URL for everyone. A token's `iss` must equal CASDOOR_ISSUER character for character, and both
+# php containers fetch $CASDOOR_ISSUER/.well-known/openid-configuration and the JWKS server-side. The
+# browser and Claude Code reach http://localhost:${AUTH_PORT} on the host; inside the php containers
+# `localhost` is the container itself, so each one's Caddy listens on the same port (CADDY_EXTRA_CONFIG)
+# and proxies to Casdoor. Casdoor's `origin` pins the issuer whatever Host it is reached on. The host-facing
+# listener is mpa's, which also pins anonymous DCR to the `bonneref` organization like the hosted
+# auth.bonneref.fr does (api/docs/AUTH.md § DCR lands in the bonneref organization).
+#
+# Images are built from this checkout; each `build:` can be swapped for the `image:` named next to it once
+# CI publishes them.
+
+name: mpa-demo
+
+x-mpa-environment: &mpa_environment
+  APP_ENV: prod
+  APP_DEBUG: "0"
+  APP_SECRET: ${MPA_APP_SECRET:?run bin/demo}
+  SERVER_NAME: ":80"
+  DEFAULT_URI: http://localhost:${DEMO_PORT:-8480}
+  CASDOOR_ISSUER: http://localhost:${AUTH_PORT:-8482}
+  OAUTH_CLIENT_AUDIENCES: 671b8c86d75444f3f4c4
+  MCP_ALLOWED_HOSTS: localhost,127.0.0.1,[::1]
+  MCP_RESOURCE_ALIASES: ""
+  BONNEREF_API_URL: http://bonneref
+  MONGODB_URL: mongodb://mongodb:27017
+  MONGODB_DB: app
+  DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?run bin/demo}@database:5432/app?serverVersion=16&charset=utf8
+  MERCURE_URL: http://php/.well-known/mercure
+  MERCURE_PUBLIC_URL: http://localhost:${DEMO_PORT:-8480}/.well-known/mercure
+  MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:?run bin/demo}
+  MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:?run bin/demo}
+  MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:?run bin/demo}
+  STORAGE_ADAPTER: local
+  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+  ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+  FRONTEND_UPSTREAM: atelier:80
+  # The Atelier bundle's hashed assets and pdf.js data are not on the Vite paths @frontend proxies.
+  CADDY_SERVER_EXTRA_DIRECTIVES: |
+    @atelierStatic path /assets/* /pdfjs/*
+    handle @atelierStatic {
+      reverse_proxy atelier:80
+    }
+  CADDY_EXTRA_CONFIG: |
+    http://:${AUTH_PORT:-8482} {
+      @anonymousRegistration {
+        method POST
+        path /api/oauth/register
+        not query organization=*
+      }
+      rewrite @anonymousRegistration ?{query}&organization=bonneref
+      reverse_proxy casdoor:8000
+    }
+
+services:
+  php:
+    # image: ghcr.io/soyuka/mon-parc-auto-api:main
+    image: mpa-demo/api
+    build:
+      context: ./api
+      target: frankenphp_prod
+    restart: unless-stopped
+    environment: *mpa_environment
+    volumes:
+      - storage_data:/app/var/storage
+      - ./api/fixtures/demo:/app/fixtures/demo:ro
+    ports:
+      - "127.0.0.1:${DEMO_PORT:-8480}:80"
+      - "127.0.0.1:${AUTH_PORT:-8482}:${AUTH_PORT:-8482}"
+    depends_on:
+      database:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+      casdoor:
+        condition: service_healthy
+      atelier:
+        condition: service_started
+
+  worker:
+    image: mpa-demo/api
+    restart: unless-stopped
+    environment: *mpa_environment
+    command: ["php", "bin/console", "messenger:consume", "async", "failed", "--time-limit=3600"]
+    volumes:
+      - storage_data:/app/var/storage
+    healthcheck:
+      test: ["CMD-SHELL", "grep -aqs messenger:consume /proc/[0-9]*/cmdline || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      php:
+        condition: service_healthy
+
+  atelier:
+    # image: ghcr.io/soyuka/mon-parc-auto-atelier:main
+    image: mpa-demo/atelier
+    build:
+      context: ./dashboard
+      args:
+        VITE_CASDOOR_ISSUER: http://localhost:${AUTH_PORT:-8482}
+    restart: unless-stopped
+
+  database:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?run bin/demo}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-d", "app", "-U", "app"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - mongodb_data:/data/db
+
+  casdoor:
+    image: casbin/casdoor:4.20.0
+    restart: unless-stopped
+    environment:
+      driverName: sqlite
+      dataSourceName: file:/home/casdoor/casdoor.db?cache=shared
+      dbName: casdoor
+      origin: http://localhost:${AUTH_PORT:-8482}
+      initDataFile: /init_data.json
+      initDataNewOnly: "true"
+      socks5Proxy: ""
+      ldapServerPort: "10389"
+      ldapsServerPort: "10636"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8000/api/health > /dev/null || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+    volumes:
+      - casdoor_data:/home/casdoor
+      - ./.demo/casdoor-init.json:/init_data.json:ro
+
+  bonneref:
+    # image: ghcr.io/soyuka/mon-parc-auto-bonneref:main
+    image: mpa-demo/bonneref
+    build:
+      context: ./bonneref/api
+      target: frankenphp_prod
+    restart: unless-stopped
+    environment:
+      APP_ENV: prod
+      APP_DEBUG: "0"
+      APP_SECRET: ${BONNEREF_APP_SECRET:?run bin/demo}
+      SERVER_NAME: ":80"
+      DEFAULT_URI: http://localhost:${BONNEREF_PORT:-8481}
+      CASDOOR_ISSUER: http://localhost:${AUTH_PORT:-8482}
+      OAUTH_CLIENT_AUDIENCES: ""
+      # mpa forwards its caller's bearer: the Atelier's client id and mpa's MCP resource.
+      CATALOGUE_PASSTHROUGH_AUDIENCES: 671b8c86d75444f3f4c4,http://localhost:${DEMO_PORT:-8480}/mcp
+      MCP_ALLOWED_HOSTS: localhost,127.0.0.1,[::1]
+      MCP_RESOURCE_ALIASES: ""
+      MONGODB_URL: mongodb://bonneref-mongodb:27017
+      MONGODB_DB: bonneref
+      TECDOC_CATALOG_PATH: /srv/tecdoc/catalog.sqlite
+      AGENT_TURN_DISPATCH: terminate
+      MESSENGER_TRANSPORT_DSN: in-memory://
+      MESSENGER_FAILED_TRANSPORT_DSN: in-memory://
+      SKIP_DATABASE_WAIT: "1"
+      # The hub is the image Caddyfile's `http://php:80` site; `php` is mpa on this network, hence the
+      # extra_hosts entry pointing it back at this container.
+      MERCURE_URL: http://php/.well-known/mercure
+      MERCURE_PUBLIC_URL: http://localhost:${BONNEREF_PORT:-8481}/.well-known/mercure
+      MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:?run bin/demo}
+      MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:?run bin/demo}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:?run bin/demo}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      API_PLAQUE_TOKEN: ""
+      CADDY_EXTRA_CONFIG: |
+        http://:${AUTH_PORT:-8482} {
+          reverse_proxy casdoor:8000
+        }
+    extra_hosts:
+      - php:127.0.0.1
+    volumes:
+      - ${DEMO_CATALOG_PATH:-./data/catalog-demo.sqlite}:/srv/tecdoc/catalog.sqlite:ro
+    ports:
+      - "127.0.0.1:${BONNEREF_PORT:-8481}:80"
+    depends_on:
+      bonneref-mongodb:
+        condition: service_healthy
+      casdoor:
+        condition: service_healthy
+
+  bonneref-mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - bonneref_mongodb_data:/data/db
+
+volumes:
+  storage_data:
+  database_data:
+  mongodb_data:
+  casdoor_data:
+  bonneref_mongodb_data:

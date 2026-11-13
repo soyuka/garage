@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# Offline demo (compose.demo.yaml): bin/demo [up|down|reset|info]
+#   up     build, start, seed the demo garage on first boot, print URLs and login (default)
+#   down   stop the stack, data kept (bin/demo down -v also deletes it)
+#   reset  reload the demo garage from api/fixtures/demo, discarding changes
+#   info   print URLs and login
+# Secrets are generated once into .demo/env (git-ignored). Ports: DEMO_PORT, BONNEREF_PORT, AUTH_PORT
+# on the first run, or edit .demo/env afterwards (the Atelier bakes AUTH_PORT in, so `up` rebuilds it).
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+STATE=.demo
+ENV_FILE=$STATE/env
+
+compose() {
+	docker compose -p "${DEMO_PROJECT:-mpa-demo}" --env-file "$ENV_FILE" -f compose.demo.yaml "$@"
+}
+
+secret() {
+	local value=''
+	while [ "${#value}" -lt "$1" ]; do
+		value+=$(head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9')
+	done
+	printf '%s' "${value:0:$1}"
+}
+
+init_env() {
+	mkdir -p "$STATE"
+	chmod 700 "$STATE"
+	if [ ! -f "$ENV_FILE" ]; then
+		umask 077
+		cat >"$ENV_FILE" <<-EOF
+			DEMO_PORT=${DEMO_PORT:-8480}
+			BONNEREF_PORT=${BONNEREF_PORT:-8481}
+			AUTH_PORT=${AUTH_PORT:-8482}
+			DEMO_CATALOG_PATH=${DEMO_CATALOG_PATH:-./data/catalog-demo.sqlite}
+			DEMO_EMAIL=demo@bonneref.fr
+			DEMO_PASSWORD=demo-$(secret 12)
+			MPA_APP_SECRET=$(secret 32)
+			BONNEREF_APP_SECRET=$(secret 32)
+			MERCURE_JWT_SECRET=$(secret 48)
+			POSTGRES_PASSWORD=$(secret 24)
+			CASDOOR_CLIENT_SECRET=$(secret 40)
+		EOF
+		echo "Generated $ENV_FILE"
+	fi
+	set -a
+	# shellcheck source=/dev/null
+	. "./$ENV_FILE"
+	set +a
+}
+
+render_casdoor_seed() {
+	sed \
+		-e "s|@DEMO_PORT@|$DEMO_PORT|g" \
+		-e "s|@DEMO_EMAIL@|$DEMO_EMAIL|g" \
+		-e "s|@DEMO_PASSWORD@|$DEMO_PASSWORD|g" \
+		-e "s|@CASDOOR_CLIENT_SECRET@|$CASDOOR_CLIENT_SECRET|g" \
+		docker/demo/casdoor-init.json.dist >"$STATE/casdoor-init.json"
+	# Read by the Casdoor container's own user; the 700 directory keeps it from other host users.
+	chmod 644 "$STATE/casdoor-init.json"
+}
+
+check_catalog() {
+	if [ ! -f "$DEMO_CATALOG_PATH" ]; then
+		echo "No TecDoc catalogue at $DEMO_CATALOG_PATH." >&2
+		echo "Set DEMO_CATALOG_PATH in $ENV_FILE to a catalog.sqlite built by bonneref (docs/tecdoc-sqlite.md)." >&2
+		exit 1
+	fi
+}
+
+load_garage() {
+	compose exec -T php php -d memory_limit=1G bin/console app:demo:load --owner="$DEMO_EMAIL" --no-interaction
+}
+
+garage_is_empty() {
+	local count
+	count=$(compose exec -T mongodb mongosh app --quiet --eval "db.vehicles.countDocuments({owner: '$DEMO_EMAIL'})" | tr -dc '0-9')
+	[ "${count:-0}" = 0 ]
+}
+
+info() {
+	cat <<-EOF
+
+		  Atelier              http://localhost:$DEMO_PORT
+		  mpa MCP server       http://localhost:$DEMO_PORT/mcp
+		  bonneref MCP server  http://localhost:$BONNEREF_PORT/mcp
+		  Casdoor (issuer)     http://localhost:$AUTH_PORT
+
+		  Login                demo / $DEMO_PASSWORD   ($DEMO_EMAIL)
+
+		  claude mcp add --transport http garage http://localhost:$DEMO_PORT/mcp
+		  claude mcp add --transport http bonneref http://localhost:$BONNEREF_PORT/mcp
+		  then /mcp in Claude Code to log in (the client registers itself).
+
+	EOF
+}
+
+command=${1:-up}
+[ $# -gt 0 ] && shift
+
+case "$command" in
+up)
+	init_env
+	render_casdoor_seed
+	check_catalog
+	compose up -d --build --wait --wait-timeout 600 "$@"
+	if garage_is_empty; then
+		load_garage
+	fi
+	info
+	;;
+down)
+	init_env
+	compose down "$@"
+	;;
+reset)
+	init_env
+	load_garage
+	;;
+info)
+	init_env
+	info
+	;;
+*)
+	sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
+	exit 1
+	;;
+esac

@@ -101,6 +101,46 @@ bearer ([`BonnerefClient.php`](api/src/Bonneref/BonnerefClient.php)).
 
 What broke on the way is listed in [What we found broken upstream](#what-we-found-broken-upstream).
 
+## Run it offline
+
+Requirements: Docker with Compose, ports 8480-8482 free on loopback (or set `DEMO_PORT`, `BONNEREF_PORT`,
+`AUTH_PORT` before the first run).
+
+```bash
+git clone https://github.com/soyuka/mon-parc-auto.fr.git
+cd mon-parc-auto.fr
+bin/demo
+```
+
+One stack ([`compose.demo.yaml`](compose.demo.yaml)), nothing hosted: the Atelier, mpa's MCP server, bonneref's
+catalogue API and MCP server on a small TecDoc slice, and a Casdoor with a `demo` user whose garage is already
+filled (a Mazda6, a Renault Espace IV with its workshop manuals, a TORO ride-on mower, a BMW F 800 GS Adventure).
+`bin/demo` generates the secrets and the demo password into `.demo/env` on the first run, then prints:
+
+- the Atelier, `http://localhost:8480`, and the login;
+- the two MCP servers, `http://localhost:8480/mcp` (garage) and `http://localhost:8481/mcp` (catalogue), with
+  the `claude mcp add --transport http …` lines. Run `/mcp` in Claude Code to log in: it registers itself.
+
+`bin/demo down` stops it (data kept), `bin/demo reset` reloads the demo garage, `bin/demo info` prints the URLs
+again. No key is needed: your MCP client does the reasoning. `ANTHROPIC_API_KEY` in the environment turns the
+in-app agent on.
+
+The demo garage is [`api/fixtures/demo/`](api/fixtures/demo/), loaded by `app:demo:load`. It is exported from the
+owner's live garage by a command, never edited by hand:
+
+```bash
+# in api/, against the dev stack; the mapping file holds the real plates/VINs and stays out of the repo
+docker compose exec -T php php -d memory_limit=1G bin/console app:demo:export \
+  --owner=<owner email> --mapping=php://stdin \
+  --vehicle=01KVKMEFM6V36AWETKE7A9QCJ8 --vehicle=01KW7CFJP6Y0ARF5287B7Y9CAY --vehicle=01KVFEQA72XQMWSS3HPBD93ASR \
+  --skip-document=01M6NJ7C6D8MJKMJE1F216FGFJ --skip-document=01M3Z4RDF4XETN3TXNH9YZ3P3D \
+  < ../../rewrite-mapping.txt
+```
+
+It rewrites plates and VINs through the mapping, drops bills, quotes and the owner's email, merges the vehicles
+of [`api/fixtures/demo/extras.json`](api/fixtures/demo/extras.json), and refuses to write if a real plate, VIN or
+mapped value is left in the JSON or in a document's text, or if the documents exceed 50 MB.
+
 ## Run it locally
 
 Requirements: Docker with Compose. Ports 443/80 free, or set `HTTPS_PORT`/`HTTP_PORT`.

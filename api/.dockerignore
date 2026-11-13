@@ -38,3 +38,5 @@ vendor/
 **/*.local
 docker/cloudflared/
 tondeuse/
+# The demo garage (app:demo:load) is mounted from the checkout by compose.demo.yaml, not baked in.
+fixtures/
