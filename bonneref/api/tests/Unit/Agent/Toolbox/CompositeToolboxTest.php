@@ -7,9 +7,9 @@ namespace App\Tests\Unit\Agent\Toolbox;
 use App\Agent\Toolbox\CompositeToolbox;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
-use App\I18n\LocaleContext;
 use App\Mcp\Agent\McpToolbox;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Support\Locales;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\Toolbox\ToolboxInterface;
@@ -17,7 +17,6 @@ use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\AI\Platform\Result\ToolCall;
 use Symfony\AI\Platform\Tool\ExecutionReference;
 use Symfony\AI\Platform\Tool\Tool;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -43,7 +42,7 @@ final class CompositeToolboxTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        return new CompositeToolbox($render, $mcp, new StepNarrator($tools, new LocaleContext(new RequestStack())));
+        return new CompositeToolbox($render, $mcp, new StepNarrator($tools, Locales::context()));
     }
 
     private function mcpToolboxExposing(string $name): McpToolbox
@@ -91,7 +90,7 @@ final class CompositeToolboxTest extends TestCase
     {
         /** @var \ArrayObject<int, array<string, mixed>> $published */
         $published = new \ArrayObject();
-        $narrator = new StepNarrator($this->renderTools($published), new LocaleContext(new RequestStack()));
+        $narrator = new StepNarrator($this->renderTools($published), Locales::context());
         $toolbox = new CompositeToolbox($this->renderToolboxStub(), $this->mcpToolboxExposing('get_service_parts'), $narrator);
         // Simulate what EarlyStepNarrationListener would already have done from the stream.
         $narrator->announce('id-3', 'get_service_parts');

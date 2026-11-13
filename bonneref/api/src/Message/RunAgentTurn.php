@@ -9,6 +9,7 @@ use App\Agent\Finder\FinderIntent;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\Finder\PartPhotoHints;
 use App\Agent\TurnSurface;
+use App\I18n\Locale;
 
 /**
  * One agent turn, queued for the async worker. Carries the user instruction plus the page
@@ -33,7 +34,7 @@ final readonly class RunAgentTurn
         // The interface language, resolved from Accept-Language in the controller. Threaded for the
         // same reason `owner` is: the worker has no request to read it from, and everything the agent
         // says this turn — the heartbeat, the failure toasts, the answers themselves — follows it.
-        public string $locale = 'fr',
+        public string $locale = Locale::DEFAULT->value,
         public TurnSurface $surface = TurnSurface::Finder,
         // The car the page already resolved, if any.
         public ?FinderVehicle $vehicle = null,

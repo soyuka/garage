@@ -10,11 +10,14 @@ use App\Agent\Finder\FinderContextBuilder;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\TurnSurface;
 use App\Catalog\TecdocCatalog;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\PsaBuildCodeDecoder;
 use App\Message\RunAgentTurn;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\RequestStack;
 
 final class FinderContextBuilderTest extends TestCase
 {
@@ -146,9 +149,30 @@ final class FinderContextBuilderTest extends TestCase
         $this->assertStringNotContainsString('Rotules', $context);
     }
 
-    private function builder(): FinderContextBuilder
+    public function testTheTurnOpensWithTheLanguageTheAgentMustWriteIn(): void
     {
-        return new FinderContextBuilder(new FinderCategoryList(new TecdocCatalog($this->dir.'/catalog.sqlite')), new BuildCodeDecoders([new PsaBuildCodeDecoder()]));
+        $english = $this->builder(Locale::En)->build($this->turn());
+        $french = $this->builder()->build($this->turn());
+
+        $this->assertStringStartsWith('Write every user-facing string this turn in English', $english);
+        $this->assertStringContainsString('rationale', $english);
+        $this->assertStringNotContainsString('in French', $english);
+        $this->assertStringStartsWith('Write every user-facing string this turn in French', $french);
+    }
+
+    public function testEnglishIsTheLanguageWhenNothingWasNegotiated(): void
+    {
+        $builder = new FinderContextBuilder(new FinderCategoryList(new TecdocCatalog($this->dir.'/catalog.sqlite')), new BuildCodeDecoders([new PsaBuildCodeDecoder()]), new LocaleContext(new RequestStack()));
+
+        $this->assertStringStartsWith('Write every user-facing string this turn in English', $builder->build($this->turn()));
+    }
+
+    private function builder(Locale $locale = Locale::Fr): FinderContextBuilder
+    {
+        $context = new LocaleContext(new RequestStack());
+        $context->set($locale);
+
+        return new FinderContextBuilder(new FinderCategoryList(new TecdocCatalog($this->dir.'/catalog.sqlite', locale: $context)), new BuildCodeDecoders([new PsaBuildCodeDecoder()]), $context);
     }
 
     private function turn(

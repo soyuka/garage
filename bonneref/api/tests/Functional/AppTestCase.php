@@ -68,6 +68,17 @@ abstract class AppTestCase extends ApiTestCase
     }
 
     /**
+     * Authenticated like {@see createClient()} but announcing no language at all, the way an MCP host
+     * such as Claude Desktop does: what the app answers then is the app's own default.
+     *
+     * @param array<mixed> $kernelOptions
+     */
+    protected static function createClientWithoutLanguage(array $kernelOptions = []): ApiClient
+    {
+        return parent::createClient($kernelOptions, ['headers' => self::authHeaders()]);
+    }
+
+    /**
      * A client with no default credentials: the explicit opt-out for tests that assert what an
      * unauthenticated caller gets.
      *

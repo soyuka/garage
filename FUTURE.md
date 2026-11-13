@@ -293,6 +293,13 @@ the audition toggle · `Accept-Language` on `authFetch` and `/tts` ·
 sending `language_code` · `status {tool}` on the wire so the step chips no longer keyword-match
 French prose · the per-turn output-language directive and the `NO_RESULTS` token family.
 
+**Default flipped to English (2026-11-13).** `Locale::DEFAULT` = `En` in `api/` and `bonneref/api/`,
+`framework.yaml` `enabled_locales: ['en', 'fr']` (first entry is what Symfony's Accept-Language negotiation
+falls back to), `RunAgentTurn.locale` defaults to `Locale::DEFAULT`. `Accept-Language: fr` still gives French.
+The finder's `FinderContextBuilder` now opens each turn with the output-language directive (mpa already did).
+`MaintenanceTypeNormalizer` gained English aliases (French untouched). Still French when `en`: see the report of that change
+(`Nouveau véhicule`, `MOTUL_LOCALE=fr-FR`, French-only model-facing context strings in `FinderContextBuilder`/`FinderFollowUp`).
+
 ### Closed (shipped 2026-08-17) — the agent answers in the interface language
 
 `ai.yaml:82` no longer names a language: it defers to a per-turn directive built by

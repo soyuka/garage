@@ -7,15 +7,14 @@ namespace App\Tests\Unit\Agent\Ui;
 use App\Agent\Ui\EarlyStepNarrationListener;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
-use App\I18n\LocaleContext;
 use App\Tests\Mock\TestDashboardChannel;
+use App\Tests\Support\Locales;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Platform\Result\Stream\Delta\DeltaInterface;
 use Symfony\AI\Platform\Result\Stream\Delta\ToolCallStart;
 use Symfony\AI\Platform\Result\Stream\DeltaEvent;
 use Symfony\AI\Platform\Result\StreamResult;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
 
@@ -35,7 +34,7 @@ final class EarlyStepNarrationListenerTest extends TestCase
         $tools = new RenderIntentTools($hub, $this->createStub(LoggerInterface::class), TestDashboardChannel::create());
         $tools->bindSession('https://localhost/agent/sessions/abc');
 
-        $narrator = new StepNarrator($tools, new LocaleContext(new RequestStack()));
+        $narrator = new StepNarrator($tools, Locales::context());
 
         return new EarlyStepNarrationListener($narrator);
     }

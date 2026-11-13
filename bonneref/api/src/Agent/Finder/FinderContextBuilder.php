@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent\Finder;
 
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\InvalidBuildCode;
 use App\Knowledge\MakeName;
@@ -23,16 +25,18 @@ final readonly class FinderContextBuilder
     public function __construct(
         private FinderCategoryList $categories,
         private BuildCodeDecoders $decoders,
+        private LocaleContext $locale,
     ) {
     }
 
     public function build(RunAgentTurn $turn): string
     {
         $vehicle = $turn->vehicle;
+        $context = self::outputLanguage($this->locale->current());
 
         if (null !== $vehicle) {
             $identity = array_filter([$vehicle->make, $vehicle->model, $vehicle->engine]);
-            $context = \sprintf(
+            $context .= \sprintf(
                 "Véhicule (déjà identifié, ne le redemande pas) : %s — %scarId %d, carType %s.\n\n",
                 [] === $identity ? 'inconnu' : implode(' ', $identity),
                 null === $vehicle->plate ? '' : 'plaque '.$vehicle->plate.', ',
@@ -43,7 +47,7 @@ final readonly class FinderContextBuilder
                 $context = substr($context, 0, -1).$this->buildCodeLine($vehicle)."\n\n";
             }
         } else {
-            $context = "Aucun véhicule identifié : identifie-le d'abord depuis la demande (plaque, marque, modèle, motorisation), "
+            $context .= "Aucun véhicule identifié : identifie-le d'abord depuis la demande (plaque, marque, modèle, motorisation), "
                 ."puis appelle set_vehicle avant show_parts. S'il manque de quoi le trouver, demande la plaque avec ask_question.\n\n";
         }
 
@@ -93,6 +97,19 @@ final readonly class FinderContextBuilder
         }
 
         return $context.'Demande : '.$turn->instruction;
+    }
+
+    /**
+     * The language the agent writes on screen in (rationale, question, option labels): the interface
+     * language of the turn. First line of the context, and per turn, because the system prompt is
+     * static config; the prompt's own instructions and the rest of this context stay model-facing.
+     */
+    private static function outputLanguage(Locale $locale): string
+    {
+        return \sprintf(
+            "Write every user-facing string this turn in %s: rationale, question and option labels. This is the language of the interface the user is looking at; the user's request may be in another one. Tool names, ids and part references stay exactly as the tools return them.\n\n",
+            Locale::Fr === $locale ? 'French' : 'English',
+        );
     }
 
     private function buildCodeLine(FinderVehicle $vehicle): string

@@ -792,6 +792,7 @@ final class FinderTurnTest extends AppTestCase
             sessionTopic: 'https://localhost/agent/sessions/'.$session,
             owner: self::TEST_OWNER,
             pendingContext: $pendingContext,
+            locale: 'fr',
             surface: TurnSurface::Finder,
             vehicle: null === $vehicle ? null : FinderVehicle::fromPayload($vehicle),
         ));

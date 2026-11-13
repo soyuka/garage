@@ -49,6 +49,62 @@ final class MaintenanceTypeNormalizerTest extends TestCase
         yield 'contrôle technique' => ['Contrôle technique', 'inspection'];
     }
 
+    /**
+     * English input parses to the same keys as its French counterpart, whatever the interface
+     * language: both vocabularies stay live side by side.
+     *
+     * @return iterable<string, array{string, string}>
+     */
+    public static function englishAliases(): iterable
+    {
+        yield 'oil service' => ['Oil service', 'oil_change'];
+        yield 'engine oil change' => ['engine oil change', 'oil_change'];
+        yield 'motor oil' => ['Motor oil', 'oil_change'];
+        yield 'oil filter' => ['Oil filter', 'oil_filter'];
+        yield 'air cleaner' => ['air cleaner', 'air_filter'];
+        yield 'pre-filter' => ['pre-filter', 'air_filter'];
+        yield 'petrol filter' => ['Petrol filter', 'fuel_filter'];
+        yield 'diesel filter' => ['diesel filter', 'fuel_filter'];
+        yield 'cabin air filter' => ['Cabin air filter', 'cabin_filter'];
+        yield 'pollen filter' => ['pollen filter', 'cabin_filter'];
+        yield 'ignition plugs' => ['Ignition plugs', 'spark_plug'];
+        yield 'spark plugs' => ['Spark plugs', 'spark_plug'];
+        yield 'brake pads' => ['Brake pads', 'brakes'];
+        yield 'brake pad' => ['brake pad', 'brakes'];
+        yield 'brake discs' => ['Brake discs', 'brakes'];
+        yield 'brake disks' => ['brake disks', 'brakes'];
+        yield 'brake service' => ['brake service', 'brakes'];
+        yield 'antifreeze' => ['Antifreeze', 'coolant'];
+        yield 'engine coolant' => ['engine coolant', 'coolant'];
+        yield 'brake liquid' => ['brake liquid', 'brake_fluid'];
+        yield 'cambelt' => ['Cambelt', 'timing_belt'];
+        yield 'cam belt' => ['cam belt', 'timing_belt'];
+        yield 'transmission oil' => ['Transmission oil', 'gearbox_oil'];
+        yield 'gear oil' => ['gear oil', 'gearbox_oil'];
+        yield 'transmission fluid' => ['transmission fluid', 'gearbox_oil'];
+        yield 'car battery' => ['Car battery', 'battery'];
+        yield 'MOT' => ['MOT', 'inspection'];
+        yield 'MOT test' => ['MOT test', 'inspection'];
+        yield 'technical inspection' => ['Technical inspection', 'inspection'];
+        yield 'vehicle inspection' => ['vehicle inspection', 'inspection'];
+        yield 'repairs' => ['Repairs', 'repair'];
+    }
+
+    #[DataProvider('englishAliases')]
+    public function testMapsEnglishAliasToCanonicalType(string $input, string $expected): void
+    {
+        $this->assertSame($expected, $this->normalizer->canonical($input));
+    }
+
+    public function testFrenchAliasesStillParseAlongsideTheEnglishOnes(): void
+    {
+        $this->assertSame('cabin_filter', $this->normalizer->canonical('Filtre pollen'));
+        $this->assertSame('brakes', $this->normalizer->canonical('Plaquettes de frein'));
+        $this->assertSame('gearbox_oil', $this->normalizer->canonical('Huile de boîte'));
+        $this->assertSame('timing_belt', $this->normalizer->canonical('Courroie de distribution'));
+        $this->assertSame('inspection', $this->normalizer->canonical('Contrôle technique'));
+    }
+
     public function testAlreadyCanonicalPassesThrough(): void
     {
         $this->assertSame('oil_change', $this->normalizer->canonical('oil_change'));

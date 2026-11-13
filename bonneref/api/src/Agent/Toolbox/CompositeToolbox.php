@@ -21,7 +21,7 @@ use Symfony\AI\Platform\Result\ToolCall;
  *
  * This is also the one seam that sees every catalogue tool the agent runs — the MCP bridge bypasses the
  * bundle Toolbox that dispatches ToolCallRequested — so it is where the running narration is emitted:
- * before delegating an MCP call, {@see StepNarrator} publishes its French step sentence to the
+ * before delegating an MCP call, {@see StepNarrator} publishes its step sentence (in the turn language) to the
  * page's status line. Finder tool calls are NOT narrated here (they ARE the UI, not a work step).
  *
  * Narration here is now the FALLBACK: {@see \App\Agent\Ui\EarlyStepNarrationListener} announces most

@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Catalog;
 use App\Catalog\ArticleCriterion;
 use App\Catalog\CarType;
 use App\Catalog\TecdocCatalog;
+use App\Tests\Support\Locales;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
 
@@ -28,7 +29,7 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
         mkdir($this->dir);
         TecdocFixtureDatabase::create($this->dir.'/catalog.sqlite', withEspaceFlywheels: true, withMotorbikeQualifiers: true);
 
-        $this->catalog = new TecdocCatalog($this->dir.'/catalog.sqlite');
+        $this->catalog = new TecdocCatalog($this->dir.'/catalog.sqlite', locale: Locales::context());
     }
 
     protected function tearDown(): void

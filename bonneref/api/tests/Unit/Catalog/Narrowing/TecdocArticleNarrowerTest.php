@@ -10,6 +10,7 @@ use App\Catalog\Narrowing\NarrowingResult;
 use App\Catalog\TecdocCatalog;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
+use App\Tests\Support\Locales;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -33,7 +34,7 @@ final class TecdocArticleNarrowerTest extends TestCase
 
     public function testTheMazdaOilFilterClassifiesMostOfTheCategoryFromLocalOeNumbers(): void
     {
-        $result = (new ArticleNarrower(new TecdocCatalog($this->dir.'/catalog.sqlite')))
+        $result = (new ArticleNarrower(new TecdocCatalog($this->dir.'/catalog.sqlite', locale: Locales::context())))
             ->narrow(19107, CarType::PassengerCar, 100259, 'MAZDA');
 
         $this->assertTrue($result->narrowed);
@@ -81,7 +82,7 @@ final class TecdocArticleNarrowerTest extends TestCase
 
     public function testTheCarmakerComesFromTheCatalogueWhenTheCallerGivesNone(): void
     {
-        $catalog = new TecdocCatalog($this->dir.'/catalog.sqlite');
+        $catalog = new TecdocCatalog($this->dir.'/catalog.sqlite', locale: Locales::context());
 
         $withoutMake = (new ArticleNarrower($catalog))->narrow(19107, CarType::PassengerCar, 100259);
         $withMake = (new ArticleNarrower($catalog))->narrow(19107, CarType::PassengerCar, 100259, 'MAZDA');
@@ -96,7 +97,7 @@ final class TecdocArticleNarrowerTest extends TestCase
     {
         TecdocFixtureDatabase::create($this->dir.'/espace.sqlite', withEspaceFlywheels: true);
 
-        $result = (new ArticleNarrower(new TecdocCatalog($this->dir.'/espace.sqlite')))
+        $result = (new ArticleNarrower(new TecdocCatalog($this->dir.'/espace.sqlite', locale: Locales::context())))
             ->narrow(18679, CarType::PassengerCar, 100057, 'RENAULT');
 
         $this->assertSame('vehicle', $result->toArray()['applicabilityScope']);

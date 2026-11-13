@@ -212,6 +212,7 @@ final class TurnContextBuilderTest extends TestCase
             locale: 'de',
         ));
 
-        $this->assertStringContainsString('French', $context);
+        $this->assertStringContainsString('English', $context);
+        $this->assertStringNotContainsString('French', $context);
     }
 }

@@ -10,9 +10,9 @@ use PHPUnit\Framework\TestCase;
 
 final class LocaleTest extends TestCase
 {
-    public function testFrenchIsTheDefault(): void
+    public function testEnglishIsTheDefault(): void
     {
-        $this->assertSame(Locale::Fr, Locale::resolve(null));
+        $this->assertSame(Locale::En, Locale::resolve(null));
     }
 
     #[DataProvider('tags')]
@@ -30,9 +30,9 @@ final class LocaleTest extends TestCase
         yield 'uppercase region' => ['FR-CA', Locale::Fr];
 
         // Total by design: a voice endpoint is garnish and must never be what 500s a turn.
-        yield 'unsupported language' => ['de-DE', Locale::Fr];
-        yield 'empty' => ['', Locale::Fr];
-        yield 'null' => [null, Locale::Fr];
-        yield 'nonsense' => ['not a language tag', Locale::Fr];
+        yield 'unsupported language' => ['de-DE', Locale::En];
+        yield 'empty' => ['', Locale::En];
+        yield 'null' => [null, Locale::En];
+        yield 'nonsense' => ['not a language tag', Locale::En];
     }
 }

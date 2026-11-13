@@ -5,8 +5,9 @@ declare(strict_types=1);
 namespace App\I18n;
 
 /**
- * The languages the app speaks. French is the default and stays the default — this is a French
- * garage (PRODUCT.md § "the room") and English is a second catalog beside it, never a replacement.
+ * The languages the app speaks. English is the default — a caller that announces no usable language
+ * (an MCP host such as Claude Desktop sends no Accept-Language) is answered in English — and French
+ * is a full second catalog beside it, chosen by an `Accept-Language: fr` request.
  *
  * The value is the primary subtag, which is deliberately the same token three different consumers
  * want: Symfony's `$request->getLocale()`, the dashboard's `mpa.locale`, and ElevenLabs'
@@ -17,7 +18,7 @@ enum Locale: string
     case Fr = 'fr';
     case En = 'en';
 
-    public const Locale DEFAULT = self::Fr;
+    public const Locale DEFAULT = self::En;
 
     /**
      * Fold anything request-shaped onto a supported locale.

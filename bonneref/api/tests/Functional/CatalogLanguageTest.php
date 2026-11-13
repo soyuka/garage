@@ -18,14 +18,21 @@ final class CatalogLanguageTest extends AppTestCase
         $this->assertContains('Filtre > Filtre à huile', array_column($french->toArray()['hydra:member'], 'path'));
     }
 
-    public function testFrenchIsTheDefaultAndAnUnsupportedLanguageFoldsOntoIt(): void
+    public function testEnglishIsTheDefaultAndAnUnsupportedLanguageFoldsOntoIt(): void
     {
-        $client = static::createClient();
+        $client = static::createClientWithoutLanguage();
 
         foreach ([[], ['Accept-Language' => 'de-DE,de;q=0.9']] as $headers) {
             $response = $client->request('GET', '/cars/19107/part-categories?carType=PC', ['headers' => $headers]);
-            $this->assertContains('Filtre > Filtre à huile', array_column($response->toArray()['hydra:member'], 'path'));
+            $this->assertContains('Filters > Oil Filter', array_column($response->toArray()['hydra:member'], 'path'));
         }
+    }
+
+    public function testFrenchIsStillServedWhenAsked(): void
+    {
+        $response = static::createClientWithoutLanguage()->request('GET', '/cars/19107/part-categories?carType=PC', ['headers' => ['Accept-Language' => 'fr']]);
+
+        $this->assertContains('Filtre > Filtre à huile', array_column($response->toArray()['hydra:member'], 'path'));
     }
 
     public function testArticlesCarryTheEnglishProductGroup(): void

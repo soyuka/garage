@@ -52,18 +52,18 @@ final class BonnerefClientTest extends TestCase
         $this->assertSame('application/ld+json', $sent['headers']['accept']);
     }
 
-    public function testTheCallersLanguageIsForwardedAndFrenchIsTheDefault(): void
+    public function testTheCallersLanguageIsForwardedAndEnglishIsTheDefault(): void
     {
         $this->http->fixture('/makes', 'makes');
 
         $this->client->makes();
-        $this->assertSame('fr', $this->http->lastRequest()['headers']['accept-language']);
+        $this->assertSame('en', $this->http->lastRequest()['headers']['accept-language']);
 
         $request = Request::create('/mcp');
-        $request->setLocale('en');
+        $request->setLocale('fr');
         $this->requests->push($request);
         $this->client->makes();
-        $this->assertSame('en', $this->http->lastRequest()['headers']['accept-language']);
+        $this->assertSame('fr', $this->http->lastRequest()['headers']['accept-language']);
     }
 
     public function testAWorkerTurnForwardsTheTurnsInterfaceLanguage(): void

@@ -42,8 +42,11 @@ final class TecdocCatalogLanguageTest extends TestCase
         rmdir($this->dir);
     }
 
-    public function testFrenchIsTheDefaultWithoutARequestOrABoundLocale(): void
+    public function testEnglishIsTheDefaultWithoutARequestOrABoundLocale(): void
     {
+        $this->assertSame('Oil Filter', $this->catalog->categoryName(19107, 100259, CarType::PassengerCar));
+
+        $this->locale->set(Locale::Fr);
         $this->assertSame('Filtre à huile', $this->catalog->categoryName(19107, 100259, CarType::PassengerCar));
     }
 

@@ -13,6 +13,7 @@ use App\Catalog\ArticleCriterion;
 use App\Catalog\ArticleCross;
 use App\Catalog\CarType;
 use App\Catalog\TecdocCatalog;
+use App\Tests\Support\Locales;
 use App\Tests\Support\RecordingLogger;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -29,7 +30,7 @@ final class TecdocCatalogTest extends TestCase
         mkdir($this->dir);
         TecdocFixtureDatabase::create($this->dir.'/catalog.sqlite');
 
-        $this->catalog = new TecdocCatalog($this->dir.'/catalog.sqlite');
+        $this->catalog = new TecdocCatalog($this->dir.'/catalog.sqlite', locale: Locales::context());
     }
 
     protected function tearDown(): void
@@ -44,7 +45,7 @@ final class TecdocCatalogTest extends TestCase
         $logger = new RecordingLogger();
 
         try {
-            (new TecdocCatalog($path, logger: $logger))->makes(CarType::PassengerCar);
+            (new TecdocCatalog($path, logger: $logger, locale: Locales::context()))->makes(CarType::PassengerCar);
             $this->fail('An unreadable catalogue must throw.');
         } catch (\RuntimeException $e) {
             $this->assertStringNotContainsString('TECDOC_CATALOG_PATH', $e->getMessage(), 'the message can reach a client');
@@ -252,7 +253,7 @@ final class TecdocCatalogTest extends TestCase
     public function testMotorbikeCategoriesHideTheMotoNodesThePassengerNodesAlreadyCover(): void
     {
         TecdocFixtureDatabase::create($this->dir.'/moto.sqlite', withMotoSubtree: true);
-        $catalog = new TecdocCatalog($this->dir.'/moto.sqlite');
+        $catalog = new TecdocCatalog($this->dir.'/moto.sqlite', locale: Locales::context());
 
         $this->assertSame(
             ['Filtre', 'Filtre > Filtre à huile', 'Moto', 'Moto > Kit chaîne'],
@@ -316,13 +317,13 @@ final class TecdocCatalogTest extends TestCase
     {
         $this->assertEquals(
             [
-                new ArticleCriterion("Référence de l'outil spécialisé recommandé", 'LS 7', 1361),
-                new ArticleCriterion('Hauteur [mm]', '93', 209),
-                new ArticleCriterion('Filetage', '3/4-16 UNF', 289),
-                new ArticleCriterion('Diamètre extérieur [mm]', '76', 497),
-                new ArticleCriterion('Diamètre extérieur 2 [mm]', '71', 979),
-                new ArticleCriterion('Diamètre intérieur 2 [mm]', '62', 996),
-                new ArticleCriterion("Pression d'ouverture clapet de dérivation [bar]", '1', 1069),
+                new ArticleCriterion("Référence de l'outil spécialisé recommandé", 'LS 7', 1361, canonicalName: "Référence de l'outil spécialisé recommandé", code: 'LS 7'),
+                new ArticleCriterion('Hauteur [mm]', '93', 209, unit: 'mm', canonicalName: 'Hauteur [mm]', code: '93'),
+                new ArticleCriterion('Filetage', '3/4-16 UNF', 289, canonicalName: 'Filetage', code: '3/4-16 UNF'),
+                new ArticleCriterion('Diamètre extérieur [mm]', '76', 497, unit: 'mm', canonicalName: 'Diamètre extérieur [mm]', code: '76'),
+                new ArticleCriterion('Diamètre extérieur 2 [mm]', '71', 979, unit: 'mm', canonicalName: 'Diamètre extérieur 2 [mm]', code: '71'),
+                new ArticleCriterion('Diamètre intérieur 2 [mm]', '62', 996, unit: 'mm', canonicalName: 'Diamètre intérieur 2 [mm]', code: '62'),
+                new ArticleCriterion("Pression d'ouverture clapet de dérivation [bar]", '1', 1069, unit: 'bar', canonicalName: "Pression d'ouverture clapet de dérivation [bar]", code: '1'),
             ],
             $this->catalog->articleCriteria(78351),
         );
@@ -343,9 +344,9 @@ final class TecdocCatalogTest extends TestCase
     {
         $criteria = $this->catalog->articleCriteria(407986);
 
-        $this->assertContainsEquals(new ArticleCriterion('Nº de châssis à partir de', '176451', 25), $criteria);
-        $this->assertContainsEquals(new ArticleCriterion('Code moteur', 'LF', 33), $criteria);
-        $this->assertContainsEquals(new ArticleCriterion('Année à partir de', '200504', 20), $this->catalog->articleCriteria(259479));
+        $this->assertContainsEquals(new ArticleCriterion('Nº de châssis à partir de', '176451', 25, canonicalName: 'Nº de châssis à partir de', code: '176451'), $criteria);
+        $this->assertContainsEquals(new ArticleCriterion('Code moteur', 'LF', 33, canonicalName: 'Code moteur', code: 'LF'), $criteria);
+        $this->assertContainsEquals(new ArticleCriterion('Année à partir de', '200504', 20, canonicalName: 'Année à partir de', code: '200504'), $this->catalog->articleCriteria(259479));
     }
 
     public function testArticleCriteriaByIdsBatchesByArticleId(): void
@@ -392,7 +393,7 @@ final class TecdocCatalogTest extends TestCase
         $pdo->exec("INSERT INTO article_oe_number VALUES (78351, 9999, 99990, 'OC 1182', 0, NULL, NULL)");
         $pdo = null;
 
-        $crosses = (new TecdocCatalog($this->dir.'/catalog.sqlite'))->articleCrosses(78351);
+        $crosses = (new TecdocCatalog($this->dir.'/catalog.sqlite', locale: Locales::context()))->articleCrosses(78351);
 
         $this->assertContainsEquals(new ArticleCross('MAHLE FILTER', 'OC 1182', 3160312, 'Filtre à huile'), $crosses);
     }

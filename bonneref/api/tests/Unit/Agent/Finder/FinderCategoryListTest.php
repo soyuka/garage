@@ -10,6 +10,7 @@ use App\Catalog\CarType;
 use App\Catalog\PartsCatalog;
 use App\Catalog\TecdocCatalog;
 use App\Exception\UpstreamException;
+use App\Tests\Support\Locales;
 use App\Tests\Support\TecdocFixtureDatabase;
 use PHPUnit\Framework\TestCase;
 
@@ -62,6 +63,6 @@ final class FinderCategoryListTest extends TestCase
 
     private function list(): FinderCategoryList
     {
-        return new FinderCategoryList(new TecdocCatalog($this->dir.'/catalog.sqlite'));
+        return new FinderCategoryList(new TecdocCatalog($this->dir.'/catalog.sqlite', locale: Locales::context()));
     }
 }

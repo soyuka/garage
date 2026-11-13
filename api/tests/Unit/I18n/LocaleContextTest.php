@@ -16,9 +16,9 @@ use Symfony\Component\HttpFoundation\RequestStack;
  */
 final class LocaleContextTest extends TestCase
 {
-    public function testFallsBackToFrenchWithNeitherRequestNorBinding(): void
+    public function testFallsBackToEnglishWithNeitherRequestNorBinding(): void
     {
-        $this->assertSame(Locale::Fr, (new LocaleContext(new RequestStack()))->current());
+        $this->assertSame(Locale::En, (new LocaleContext(new RequestStack()))->current());
     }
 
     public function testAnHttpRequestAnswersForItself(): void
@@ -63,6 +63,6 @@ final class LocaleContextTest extends TestCase
         $request->setLocale('de');
         $stack->push($request);
 
-        $this->assertSame(Locale::Fr, (new LocaleContext($stack))->current());
+        $this->assertSame(Locale::En, (new LocaleContext($stack))->current());
     }
 }

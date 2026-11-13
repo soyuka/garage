@@ -9,6 +9,8 @@ use App\Agent\Finder\FinderRenderTools;
 use App\Agent\Finder\FinderVehicle;
 use App\Agent\Ui\DashboardChannel;
 use App\Agent\Ui\RepeatedToolFailureGuard;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Mcp\ToolError;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Agent\Toolbox\ToolboxInterface;
@@ -22,6 +24,7 @@ final class FinderToolsTest extends AppTestCase
     {
         static::bootKernel();
         static::getContainer()->get(DashboardChannel::class)->bindSession('https://localhost/agent/sessions/sess-tools');
+        static::getContainer()->get(LocaleContext::class)->set(Locale::Fr);
 
         $result = static::getContainer()->get(FinderRenderTools::class)->setVehicle(19107, 'PC', 'MAZDA', '6', '2.0');
 
@@ -48,6 +51,7 @@ final class FinderToolsTest extends AppTestCase
     {
         static::bootKernel();
         static::getContainer()->get(DashboardChannel::class)->bindSession('https://localhost/agent/sessions/sess-tools');
+        static::getContainer()->get(LocaleContext::class)->set(Locale::Fr);
         $tools = static::getContainer()->get(FinderRenderTools::class);
         $tools->bindVehicle(new FinderVehicle(19107, make: 'MAZDA', model: '6'));
 

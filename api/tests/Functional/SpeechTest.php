@@ -117,7 +117,7 @@ final class SpeechTest extends AppTestCase
         yield 'english' => ['en-GB,en;q=0.9', 'en'];
         yield 'french' => ['fr-FR,fr;q=0.9', 'fr'];
         // An unsupported language must not reach the vendor as-is: it falls back to the app default.
-        yield 'unsupported falls back to French' => ['de-DE', 'fr'];
+        yield 'unsupported falls back to English' => ['de-DE', 'en'];
     }
 
     // The header-less case is deliberately NOT tested here: Symfony's Request::create() injects a
