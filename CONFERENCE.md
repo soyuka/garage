@@ -160,9 +160,9 @@ localhost one, and rewrites the auth story. Good news: most of it already exists
    tool call succeeds, returns cleanly, and renders **nothing**. The preflight in workstream B must
    assert both sides derive the same topic, not merely that both are logged in.
 
-Sub-note: `vendor/mcp/sdk/.../InitializeHandler.php:57` echoes the server's own protocol version
-instead of the client's. Harmless so far, but it is a spec violation on the exact handshake Claude
-Desktop performs — fix it in the local fork while you are in here.
+Sub-note (resolved upstream): the SDK's `InitializeHandler` used to echo the server's own protocol
+version instead of the client's. `mcp/sdk` v0.9.0 negotiates it (`InitializeHandler::negotiate()`
+answers the requested version when supported, else the latest), verified 2026-11-13.
 
 ### Verified (transport) — 2026-08-15
 
