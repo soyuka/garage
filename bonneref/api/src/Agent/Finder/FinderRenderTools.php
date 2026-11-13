@@ -11,6 +11,7 @@ use App\Catalog\CarType;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Catalog\Narrowing\NarrowingResult;
+use App\I18n\LocaleContext;
 use App\Knowledge\BuildCode\BuildCodeDecoders;
 use App\Knowledge\BuildCode\InvalidBuildCode;
 use App\Knowledge\MakeName;
@@ -83,6 +84,7 @@ final class FinderRenderTools
         private readonly FinderSelections $selections,
         private readonly WebSearchGate $webSearch,
         private readonly FinderVehicleResolver $vehicles,
+        private readonly LocaleContext $locale,
     ) {
     }
 
@@ -161,6 +163,7 @@ final class FinderRenderTools
 
         $several = \count($narrowed['clusters']) > 1;
         $scope = ApplicabilityScope::from($narrowed['applicabilityScope']);
+        $locale = $this->locale->current();
         $summary = [
             'status' => 'shown',
             'categoryLabel' => $groupName,
@@ -173,11 +176,11 @@ final class FinderRenderTools
                 'productGroup' => $c['productGroup']['name'] ?? $groupName,
                 'representative' => $c['representative']['brand'].' '.$c['representative']['number'],
                 'oe' => array_map(static fn (array $r): string => $r['brand'].' '.$r['number'], \array_slice($c['oeNumbers'], 0, 2)),
-            ] + ($several ? ['applicability' => ClusterApplicability::line($c, $scope)] : []), $narrowed['clusters']),
+            ] + ($several ? ['applicability' => ClusterApplicability::line($c, $scope, $locale)] : []), $narrowed['clusters']),
             'differsOn' => array_map(self::differsLine(...), $narrowed['differsOn']),
         ] + (null === $selection ? [] : ['selected' => $clusterId, 'selectionId' => $selection->id]);
         if ($several) {
-            $summary['applicabilityCaveat'] = ClusterApplicability::caveat($scope);
+            $summary['applicabilityCaveat'] = ClusterApplicability::caveat($scope, $locale);
         }
 
         return $summary;

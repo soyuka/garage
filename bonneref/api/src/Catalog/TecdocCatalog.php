@@ -296,9 +296,9 @@ final class TecdocCatalog implements PartsCatalog
 
         $sets = [];
         foreach ($rows as $row) {
-            $value = $this->value($row);
-            if (null !== $row['name'] && '' !== $value) {
-                $sets[(int) $row['article_id']][(string) $row['qual_set_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
+            $criterion = $this->criterion($row);
+            if (null !== $criterion) {
+                $sets[(int) $row['article_id']][(string) $row['qual_set_id']][] = $criterion;
             }
         }
 
@@ -476,20 +476,16 @@ final class TecdocCatalog implements PartsCatalog
         );
 
         $criteria = $this->attributes($artIds);
-        $names = [];
-        $unions = [];
+        $same = [];
         foreach ($qualifiers as $row) {
-            $value = $this->value($row);
-            if (null !== $row['name'] && '' !== $value) {
-                $names[(int) $row['article_id']][(int) $row['criterion_id']] = trim((string) $row['name']);
-                $unions[(int) $row['article_id']][(int) $row['criterion_id']][$value] = true;
+            $criterion = $this->criterion($row);
+            if (null !== $criterion) {
+                $same[(int) $row['article_id']][(int) $row['criterion_id']][] = $criterion;
             }
         }
-        foreach ($unions as $artId => $byCriterion) {
-            foreach ($byCriterion as $criterionId => $union) {
-                $values = array_map('strval', array_keys($union));
-                sort($values, \SORT_NATURAL);
-                $criteria[$artId][] = new ArticleCriterion($names[$artId][$criterionId], implode('; ', $values), $criterionId);
+        foreach ($same as $artId => $byCriterion) {
+            foreach ($byCriterion as $criteriaOfOne) {
+                $criteria[$artId][] = ArticleCriterion::merge($criteriaOfOne);
             }
         }
 
@@ -506,7 +502,7 @@ final class TecdocCatalog implements PartsCatalog
         $rows = $this->rows(
             \sprintf(
                 <<<'SQL'
-                    SELECT aa.article_id, c.criterion_id, %s AS name,
+                    SELECT aa.article_id, c.criterion_id, %s AS name, %s AS unit, cf.name AS canonical_name,
                            aa.value_num, aa.value_text, aa.key_code, %s AS key_text,
                            NULL AS date_year, NULL AS date_month
                     FROM article_attribute aa
@@ -516,6 +512,7 @@ final class TecdocCatalog implements PartsCatalog
                     ORDER BY aa.article_id, aa.seq
                     SQL,
                 $this->first('ct', 'name'),
+                $this->first('ct', 'unit'),
                 $this->first('kv', 'text'),
                 $this->criterionTexts('aa'),
                 implode(',', $artIds),
@@ -524,9 +521,9 @@ final class TecdocCatalog implements PartsCatalog
 
         $attributes = array_fill_keys($artIds, []);
         foreach ($rows as $row) {
-            $value = $this->value($row);
-            if (null !== $row['name'] && '' !== $value) {
-                $attributes[(int) $row['article_id']][] = new ArticleCriterion(trim((string) $row['name']), $value, (int) $row['criterion_id']);
+            $criterion = $this->criterion($row);
+            if (null !== $criterion) {
+                $attributes[(int) $row['article_id']][] = $criterion;
             }
         }
 
@@ -544,7 +541,7 @@ final class TecdocCatalog implements PartsCatalog
         return $this->rows(
             \sprintf(
                 <<<'SQL'
-                    SELECT q.article_id, q.qual_set_id, c.criterion_id, %s AS name,
+                    SELECT q.article_id, q.qual_set_id, c.criterion_id, %s AS name, %s AS unit, cf.name AS canonical_name,
                            i.value_num, i.value_text, i.key_code, %s AS key_text,
                            i.date_year, i.date_month
                     FROM (%s) q
@@ -554,6 +551,7 @@ final class TecdocCatalog implements PartsCatalog
                     ORDER BY %s
                     SQL,
                 $this->first('ct', 'name'),
+                $this->first('ct', 'unit'),
                 $this->first('kv', 'text'),
                 $links,
                 $this->criterionTexts('i'),
@@ -566,15 +564,39 @@ final class TecdocCatalog implements PartsCatalog
     private function criterionTexts(string $alias): string
     {
         return $this->joins('criterion_text', 'ct', '{a}.criterion_id = c.criterion_id')
-            .' '.$this->joins('key_value_text', 'kv', \sprintf('{a}.tab_nr = c.key_table_nr AND {a}.key_code = %s.key_code', $alias));
+            .\sprintf(' LEFT JOIN criterion_text cf ON cf.criterion_id = c.criterion_id AND cf.language_id = %d ', self::LANGUAGE_FR)
+            .$this->joins('key_value_text', 'kv', \sprintf('{a}.tab_nr = c.key_table_nr AND {a}.key_code = %s.key_code', $alias));
     }
 
     /**
+     * @param array<string, int|float|string|null> $row a criterion row of {@see self::attributes()} or {@see self::qualifierRows()}
+     */
+    private function criterion(array $row): ?ArticleCriterion
+    {
+        $value = $this->value($row);
+        if (null === $row['name'] || '' === $value) {
+            return null;
+        }
+
+        return new ArticleCriterion(
+            trim((string) $row['name']),
+            $value,
+            (int) $row['criterion_id'],
+            \is_string($row['unit']) && '' !== trim($row['unit']) ? trim($row['unit']) : null,
+            \is_string($row['canonical_name']) ? trim($row['canonical_name']) : null,
+            $this->value($row, raw: true),
+        );
+    }
+
+    /**
+     * The value as the caller reads it, or with $raw as stored (key code rather than its text, a dot for decimals):
+     * the same whatever the caller's language, for what decides rather than what is shown.
+     *
      * @param array<string, int|float|string|null> $row
      */
-    private function value(array $row): string
+    private function value(array $row, bool $raw = false): string
     {
-        if (null !== $row['key_text']) {
+        if (!$raw && null !== $row['key_text']) {
             return trim((string) $row['key_text']);
         }
         if (null !== $row['value_text'] && '' !== trim((string) $row['value_text'])) {
@@ -584,7 +606,7 @@ final class TecdocCatalog implements PartsCatalog
             return \sprintf('%04d%02d', $row['date_year'], $row['date_month'] ?? 0);
         }
         if (null !== $row['value_num']) {
-            $separator = Locale::En === $this->language() ? '.' : ',';
+            $separator = !$raw && Locale::Fr === $this->language() ? ',' : '.';
 
             return rtrim(rtrim(number_format((float) $row['value_num'], 4, $separator, ''), '0'), $separator);
         }

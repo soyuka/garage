@@ -908,3 +908,12 @@ From the api/ hardening review (items 1-17 shipped 2026-11-10, see `git log`):
 
 Calling the catalogue MCP tool `get_service_parts` with no `service` argument answers JSON-RPC -32603 "Internal
 server error" instead of an `invalid_input` tool error. Found during the motorbike (`CarType::Motorbike`, 'MC') work.
+
+## Narrowing: `Applicability::shared()` still groups by displayed name (found 2026-11-13)
+
+Narrowing classifies by TecDoc criterion id since 2026-11-13 (`bonneref/api/src/Catalog/Narrowing/NarrowingCriteria.php`,
+id table in `docs/tecdoc-sqlite.md` § Narrowing criterion ids). `Applicability::shared()` still groups conditions by
+their displayed name: ids 20/21 (construction year) and 1320/1321 (model year) share a French name but not an English
+one, so a cluster's `applicability` list can show one condition in fr and two in en. Membership is unaffected. Keying
+it by id changes the output shape. The French output was not diffed before/after the id switch on the dev slice; the
+French fixture tests pass with unchanged assertions.

@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Catalog\Narrowing;
 
 use App\Catalog\ArticleCriterion;
 use App\Catalog\Narrowing\FingerprintBuilder;
+use App\Tests\Support\TecdocCriteria;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -37,36 +38,69 @@ final class FingerprintBuilderTest extends TestCase
     public function testTheTecdoc2020SealDiametersKeyOnTheirCriterionIdNotTheirRenamedLabel(): void
     {
         $fingerprint = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Hauteur [mm]', '93', 209),
-            new ArticleCriterion('Diamètre extérieur [mm]', '76', 497),
-            new ArticleCriterion('Diamètre extérieur 2 [mm]', '71', 979),
-            new ArticleCriterion('Diamètre intérieur 2 [mm]', '62', 996),
-            new ArticleCriterion('Filetage', '3/4-16 UNF', 289),
-            new ArticleCriterion('Diamètre extérieur 3 [mm]', '50', 3000),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of('Diamètre extérieur [mm]', '76'),
+            TecdocCriteria::of('Diamètre extérieur 2 [mm]', '71'),
+            TecdocCriteria::of('Diamètre intérieur 2 [mm]', '62'),
+            TecdocCriteria::of('Filetage', '3/4-16 UNF'),
+            TecdocCriteria::of('Diamètre 3 [mm]', '50'),
         ]);
 
         $this->assertEqualsCanonicalizing(
-            ['hauteur', 'diametre_exterieur', 'diametre_exterieur_de_la_bague_d_etancheite', 'diametre_interieur_de_la_bague_d_etancheite', 'thread', 'diametre_exterieur_3'],
+            ['hauteur', 'diametre_exterieur', 'diametre_exterieur_de_la_bague_d_etancheite', 'diametre_interieur_de_la_bague_d_etancheite', 'thread', 'diametre_3'],
             array_keys($fingerprint->entries),
         );
         $this->assertFalse($fingerprint->entries['diametre_exterieur_de_la_bague_d_etancheite']->info);
         $this->assertSame('Diamètre extérieur 2 [mm]', $fingerprint->entries['diametre_exterieur_de_la_bague_d_etancheite']->label);
-        $this->assertTrue($fingerprint->entries['diametre_exterieur_3']->info);
+        $this->assertTrue($fingerprint->entries['diametre_3']->info);
     }
 
-    public function testWithoutACriterionIdTheNameStillDecides(): void
+    public function testACriterionWithoutAnIdIsNeverClassified(): void
     {
-        $fingerprint = FingerprintBuilder::fromCriteria([new ArticleCriterion('Diamètre extérieur 2 [mm]', '71')]);
+        $fingerprint = FingerprintBuilder::fromCriteria([new ArticleCriterion('Hauteur [mm]', '93')]);
 
-        $this->assertTrue($fingerprint->entries['diametre_exterieur_2']->info);
+        $this->assertTrue($fingerprint->isEmpty());
+    }
+
+    public function testAnEnglishCriterionClassifiesLikeItsFrenchTwinAndOnlyItsLabelIsEnglish(): void
+    {
+        $french = FingerprintBuilder::fromCriteria([
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of('Diamètre extérieur 2 [mm]', '71'),
+            TecdocCriteria::of('Diamètre 3 [mm]', '50'),
+            TecdocCriteria::of('Filetage', '3/4-16 UNF'),
+            new ArticleCriterion('Type de filtre', 'Filtre vissé', 826, null, 'Type de filtre', '1'),
+            TecdocCriteria::of('Code moteur', 'F4R'),
+        ]);
+        $english = FingerprintBuilder::fromCriteria([
+            new ArticleCriterion('Height [mm]', '93', 209, 'mm', 'Hauteur [mm]', '93'),
+            new ArticleCriterion('Outer diameter 2 [mm]', '71', 979, 'mm', 'Diamètre extérieur 2 [mm]', '71'),
+            new ArticleCriterion('Diameter 3 [mm]', '50', 343, 'mm', 'Diamètre 3 [mm]', '50'),
+            new ArticleCriterion('Thread Size', '3/4-16 UNF', 289, null, 'Filetage', '3/4-16 UNF'),
+            new ArticleCriterion('Filter type', 'Screw-on Filter', 826, null, 'Type de filtre', '1'),
+            new ArticleCriterion('Engine Code', 'F4R', 33, null, 'Code moteur', 'F4R'),
+        ]);
+
+        $this->assertSame(array_keys($french->entries), array_keys($english->entries));
+        $this->assertSame(['Height [mm]', 'Outer diameter 2 [mm]', 'Diameter 3 [mm]', 'Thread Size', 'Filter type'], array_values(array_map(static fn ($e): string => $e->label, $english->entries)));
+        $this->assertSame('Screw-on Filter', $english->entries['type_de_filtre']->value);
+        $this->assertTrue($french->agreesWith($english));
+    }
+
+    public function testADiscreteKeyIsComparedOnItsStoredCodeNotItsTranslatedText(): void
+    {
+        $left = FingerprintBuilder::fromCriteria([new ArticleCriterion('Fitting Position', 'Front', 100, null, "Côté d'assemblage", 'A')]);
+        $right = FingerprintBuilder::fromCriteria([new ArticleCriterion('Fitting Position', 'Front', 100, null, "Côté d'assemblage", 'B')]);
+
+        $this->assertFalse($left->agreesWith($right), 'two keys translated to the same English text are still two keys');
     }
 
     public function testTheTecdoc2020ChassisAndSerialSpellingsNeverSplit(): void
     {
         $fingerprint = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Nº de châssis à partir de', '176451; 130831'),
-            new ArticleCriterion('Nº de série', 'GG; GY'),
-            new ArticleCriterion('Année à partir de', '200406; 200907'),
+            TecdocCriteria::of('Nº de châssis à partir de', '176451; 130831'),
+            TecdocCriteria::of('Nº de série', 'GG; GY'),
+            TecdocCriteria::of('Année à partir de', '200406; 200907'),
         ]);
 
         $this->assertTrue($fingerprint->isEmpty());
@@ -93,7 +127,7 @@ final class FingerprintBuilderTest extends TestCase
     #[DataProvider('threadSpellings')]
     public function testThreadSpellingsCanonicalise(string $raw, string $expected): void
     {
-        $fingerprint = FingerprintBuilder::fromCriteria([new ArticleCriterion('Filetage', $raw)]);
+        $fingerprint = FingerprintBuilder::fromCriteria([TecdocCriteria::of('Filetage', $raw)]);
 
         $this->assertSame($expected, $fingerprint->entries['thread']->value);
     }
@@ -101,11 +135,11 @@ final class FingerprintBuilderTest extends TestCase
     public function testBareDiameterIsTheOuterDiameterAndSealSpellingsCollapse(): void
     {
         $mahle = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Diamètre [mm]', '76,2'),
-            new ArticleCriterion('Diamètre de la bague détanchéité [mm]', '62,0'),
+            TecdocCriteria::of('Diamètre [mm]', '76,2'),
+            TecdocCriteria::of('Diamètre de la bague détanchéité [mm]', '62,0'),
         ]);
         $mann = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion("Diamètre intérieur de la bague d'étanchéité [", '62'),
+            TecdocCriteria::of('Diamètre intérieur 2 [mm]', '62'),
         ]);
 
         $this->assertSame(76.2, $mahle->entries['diametre_exterieur']->number);
@@ -118,20 +152,19 @@ final class FingerprintBuilderTest extends TestCase
     public function testNumberedDiametersAndMeasuredSupplierFiguresAreInfoOnly(): void
     {
         $fingerprint = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Diamètre 3 [mm]', '62'),
-            new ArticleCriterion('Diamètre intérieur 2 [mm]', '62'),
-            new ArticleCriterion('Diamètre intérieur [mm]', '62,5'),
-            new ArticleCriterion("Hauteur de l'emballage [cm]", '10,00'),
-            new ArticleCriterion('Poids net [g]', '294'),
-            new ArticleCriterion('Couple de serrage [Nm]', '20'),
-            new ArticleCriterion("Pression d'ouverture clapet de dérivation [ba", '2,4'),
-            new ArticleCriterion('Hauteur [mm]', '85'),
+            TecdocCriteria::of('Diamètre 3 [mm]', '62'),
+            TecdocCriteria::of('Diamètre intérieur [mm]', '62,5'),
+            TecdocCriteria::of("Hauteur de l'emballage [cm]", '10,00'),
+            TecdocCriteria::of('Poids net [g]', '294'),
+            TecdocCriteria::of('Couple de serrage [Nm]', '20'),
+            TecdocCriteria::of("Pression d'ouverture clapet de dérivation [bar]", '2,4'),
+            TecdocCriteria::of('Hauteur [mm]', '85'),
         ]);
 
         foreach ($fingerprint->entries as $key => $entry) {
             $this->assertSame('hauteur' !== $key, $entry->info, $key);
         }
-        $this->assertCount(8, $fingerprint->entries);
+        $this->assertCount(7, $fingerprint->entries);
     }
 
     public function testThreadSpellingsCollapseToTheSameValue(): void
@@ -147,17 +180,14 @@ final class FingerprintBuilderTest extends TestCase
     public function testApplicationLevelCriteriaAreNeverPhysical(): void
     {
         $fingerprint = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Année à partir de', '200304'),
-            new ArticleCriterion("Année jusqu'à", '200502'),
-            new ArticleCriterion('Code moteur', 'L501'),
-            new ArticleCriterion('Nº de série', 'GG'),
-            new ArticleCriterion('Numéro de châssis (VIN) à partir de', '130831'),
-            new ArticleCriterion('numéro TECDOC du moteur', '18205'),
-            new ArticleCriterion('pour le modèle de la série de modèles', '3'),
-            new ArticleCriterion('Type de véhicule', '3'),
-            new ArticleCriterion('Règlement européen sur la sécurité des produi', 'x'),
-            new ArticleCriterion("Référence de l'outil spécialisé recommandé", 'LS 7'),
-            new ArticleCriterion('Hauteur [mm]', '85'),
+            TecdocCriteria::of('Année à partir de', '200304'),
+            TecdocCriteria::of("Année jusqu'à", '200502'),
+            TecdocCriteria::of('Code moteur', 'L501'),
+            TecdocCriteria::of('Nº de série', 'GG'),
+            TecdocCriteria::of('Nº de châssis à partir de', '130831'),
+            TecdocCriteria::of('numéro TECDOC du moteur', '18205'),
+            TecdocCriteria::of("Référence de l'outil spécialisé recommandé", 'LS 7'),
+            TecdocCriteria::of('Hauteur [mm]', '85'),
         ]);
 
         $this->assertSame(['hauteur'], array_keys($fingerprint->entries));
@@ -166,8 +196,8 @@ final class FingerprintBuilderTest extends TestCase
     public function testMultiValuedCriteriaAreApplicationLevelEvenWithAUnit(): void
     {
         $fingerprint = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Hauteur [mm]', '85; 93'),
-            new ArticleCriterion('Diamètre extérieur [mm]', '76'),
+            TecdocCriteria::of('Hauteur [mm]', '85; 93'),
+            TecdocCriteria::of('Diamètre extérieur [mm]', '76'),
         ]);
 
         $this->assertSame(['diametre_exterieur'], array_keys($fingerprint->entries));
@@ -176,8 +206,8 @@ final class FingerprintBuilderTest extends TestCase
     public function testCommaDecimalsAndQuotedThreadsAreNormalised(): void
     {
         $fingerprint = FingerprintBuilder::fromCriteria([
-            new ArticleCriterion('Hauteur [mm]', '93,5'),
-            new ArticleCriterion('Filetage', '3/4"-16 UNF'),
+            TecdocCriteria::of('Hauteur [mm]', '93,5'),
+            TecdocCriteria::of('Filetage', '3/4"-16 UNF'),
         ]);
 
         $this->assertSame(93.5, $fingerprint->entries['hauteur']->number);
@@ -186,7 +216,7 @@ final class FingerprintBuilderTest extends TestCase
 
     public function testUnknownUnitlessCriteriaAreIgnored(): void
     {
-        $fingerprint = FingerprintBuilder::fromCriteria([new ArticleCriterion('Couleur', 'noir')]);
+        $fingerprint = FingerprintBuilder::fromCriteria([TecdocCriteria::of('Couleur', 'noir')]);
 
         $this->assertTrue($fingerprint->isEmpty());
     }
@@ -200,6 +230,6 @@ final class FingerprintBuilderTest extends TestCase
 
         self::assertIsArray($rows);
 
-        return array_values(array_map(ArticleCriterion::fromCatalogRow(...), $rows));
+        return TecdocCriteria::fromPartsapiRows($rows);
     }
 }

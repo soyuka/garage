@@ -12,7 +12,6 @@ use App\Catalog\CarType;
 use App\Catalog\PartsCatalog;
 use App\Catalog\VehicleLinkCriteria;
 use App\Exception\UpstreamException;
-use App\I18n\Locale;
 use App\Mcp\ArticleGroup;
 
 /**
@@ -72,8 +71,7 @@ final readonly class ArticleNarrower
         }
         $articles = null === $productGroup ? [] : array_values(array_filter($articles, static fn (Article $a): bool => $a->productTypeId === $productGroup['id']));
         $degraded = [];
-        // FingerprintBuilder and Applicability match the French criterion names: the analysis reads them in French whoever asks.
-        $links = $this->catalog->vehicleLinkCriteria($carId, $carType, array_map(static fn (Article $a): int => $a->id, $articles), $productGroup['id'] ?? null, Locale::Fr);
+        $links = $this->catalog->vehicleLinkCriteria($carId, $carType, array_map(static fn (Article $a): int => $a->id, $articles), $productGroup['id'] ?? null);
         $scope = null === $links ? ApplicabilityScope::Article : ApplicabilityScope::Vehicle;
 
         $representatives = $this->fingerprint($this->pickRepresentatives($articles), $links, $degraded);
@@ -151,7 +149,7 @@ final readonly class ArticleNarrower
         $sets = array_map(static fn (Representative $m): array => $m->applicability, $cluster->members);
         $members = array_flip(array_map(static fn (Representative $m): int => $m->artId, $cluster->members));
         $others = array_values(array_filter(array_column($variants, 'artId'), static fn (int $id): bool => !isset($members[$id])));
-        foreach ($this->catalog->articleCriteriaByIds($others, Locale::Fr) as $criteria) {
+        foreach ($this->catalog->articleCriteriaByIds($others) as $criteria) {
             $sets[] = Applicability::fromCriteria($criteria);
         }
 
@@ -239,7 +237,7 @@ final readonly class ArticleNarrower
     private function criteria(int $artId, ?array $links): array
     {
         if (null === $links) {
-            return $this->catalog->articleCriteria($artId, Locale::Fr);
+            return $this->catalog->articleCriteria($artId);
         }
 
         return ($links[$artId] ?? new VehicleLinkCriteria())->criteria();

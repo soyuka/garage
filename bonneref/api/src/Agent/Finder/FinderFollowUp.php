@@ -8,6 +8,7 @@ use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\ArticleNarrower;
 use App\Entity\AgentTurn;
 use App\Entity\FinderSelection;
+use App\I18n\LocaleContext;
 use App\Repository\AgentTurnRepository;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Uid\Ulid;
@@ -36,6 +37,7 @@ final readonly class FinderFollowUp
         private AgentTurnRepository $turns,
         private ArticleNarrower $narrower,
         private DocumentManager $dm,
+        private LocaleContext $locale,
     ) {
     }
 
@@ -148,7 +150,7 @@ final readonly class FinderFollowUp
                 $parts[] = 'OE '.implode(', ', $oe);
             }
             if ($several) {
-                $parts[] = 'applicabilité : '.ClusterApplicability::line($c, $scope);
+                $parts[] = 'applicabilité : '.ClusterApplicability::line($c, $scope, $this->locale->current());
             }
             $text .= ' '.implode(' — ', $parts).'.';
         }

@@ -136,4 +136,38 @@ final class TecdocCatalogLanguageTest extends TestCase
         $this->assertSame('Essence', $cars[19107]->engineType);
         $this->assertSame('93,5', array_column(array_map(static fn (ArticleCriterion $c): array => ['n' => $c->name, 'v' => $c->value], $this->catalog->articleCriteria(407986)), 'v', 'n')['Hauteur [mm]']);
     }
+
+    public function testACriterionCarriesWhatDecidesApartFromWhatIsShown(): void
+    {
+        $this->locale->set(Locale::En);
+        $english = self::byId($this->catalog->articleCriteria(407986));
+        $this->locale->set(Locale::Fr);
+        $french = self::byId($this->catalog->articleCriteria(407986));
+
+        $this->assertSame('Height [mm]', $english[209]->name);
+        $this->assertSame('93.5', $english[209]->value);
+        $this->assertSame('93,5', $french[209]->value);
+        foreach ([$english, $french] as $criteria) {
+            $this->assertSame('mm', $criteria[209]->unit);
+            $this->assertSame('Hauteur [mm]', $criteria[209]->canonicalName);
+            $this->assertSame('93.5', $criteria[209]->code);
+        }
+        $this->assertSame($french[826]->code, $english[826]->code, 'a key is stored as its code, whatever text the caller reads');
+        $this->assertNotSame($french[826]->value, $english[826]->value);
+    }
+
+    /**
+     * @param list<ArticleCriterion> $criteria
+     *
+     * @return array<int, ArticleCriterion>
+     */
+    private static function byId(array $criteria): array
+    {
+        $byId = [];
+        foreach ($criteria as $criterion) {
+            $byId[$criterion->id ?? 0] = $criterion;
+        }
+
+        return $byId;
+    }
 }

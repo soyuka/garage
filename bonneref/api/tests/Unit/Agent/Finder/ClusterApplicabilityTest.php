@@ -7,6 +7,7 @@ namespace App\Tests\Unit\Agent\Finder;
 use App\Agent\Finder\ClusterApplicability;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\NarrowedCluster;
+use App\I18n\Locale;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -19,9 +20,9 @@ final class ClusterApplicabilityTest extends TestCase
     {
         $cluster = self::cluster(applicability: [['name' => 'Année à partir de', 'values' => ['200406', '200907']]]);
 
-        $this->assertSame('Année à partir de : 200406, 200907', ClusterApplicability::line($cluster, ApplicabilityScope::Article));
-        $this->assertSame('none listed', ClusterApplicability::line(self::cluster(), ApplicabilityScope::Article));
-        $this->assertStringContainsString('per ARTICLE', ClusterApplicability::caveat(ApplicabilityScope::Article));
+        $this->assertSame('Année à partir de : 200406, 200907', ClusterApplicability::line($cluster, ApplicabilityScope::Article, Locale::Fr));
+        $this->assertSame('aucune', ClusterApplicability::line(self::cluster(), ApplicabilityScope::Article, Locale::Fr));
+        $this->assertStringContainsString('per ARTICLE', ClusterApplicability::caveat(ApplicabilityScope::Article, Locale::En));
     }
 
     public function testUnderTheVehicleScopeEachVariantSpeaksForItselfOnly(): void
@@ -33,11 +34,16 @@ final class ClusterApplicabilityTest extends TestCase
         ]);
 
         $this->assertSame(
-            "LuK 415 0463 10: only with 623 3150 ## | SACHS 2294 501 196: Année jusqu'à : 200602, only with 3000 951 220",
-            ClusterApplicability::line($cluster, ApplicabilityScope::Vehicle),
+            "LuK 415 0463 10: uniquement avec 623 3150 ## | SACHS 2294 501 196: Année jusqu'à : 200602, uniquement avec 3000 951 220",
+            ClusterApplicability::line($cluster, ApplicabilityScope::Vehicle, Locale::Fr),
         );
-        $this->assertSame('none listed', ClusterApplicability::line(self::cluster(variants: [['artId' => 3, 'tier' => 1, 'brand' => 'FEBI', 'number' => '1', 'applicability' => []]]), ApplicabilityScope::Vehicle));
-        $this->assertStringContainsString('this car', ClusterApplicability::caveat(ApplicabilityScope::Vehicle));
+        $this->assertSame(
+            "LuK 415 0463 10: only with 623 3150 ## | SACHS 2294 501 196: Année jusqu'à: 200602, only with 3000 951 220",
+            ClusterApplicability::line($cluster, ApplicabilityScope::Vehicle, Locale::En),
+        );
+        $this->assertSame('none listed', ClusterApplicability::line(self::cluster(variants: [['artId' => 3, 'tier' => 1, 'brand' => 'FEBI', 'number' => '1', 'applicability' => []]]), ApplicabilityScope::Vehicle, Locale::En));
+        $this->assertStringContainsString('"uniquement avec"', ClusterApplicability::caveat(ApplicabilityScope::Vehicle, Locale::Fr));
+        $this->assertStringContainsString('this car', ClusterApplicability::caveat(ApplicabilityScope::Vehicle, Locale::En));
     }
 
     /**

@@ -7,38 +7,53 @@ namespace App\Tests\Unit\Catalog\Narrowing;
 use App\Catalog\ArticleCriterion;
 use App\Catalog\Narrowing\Applicability;
 use App\Catalog\VehicleLinkCriteria;
+use App\I18n\Locale;
+use App\Tests\Support\TecdocCriteria;
 use PHPUnit\Framework\TestCase;
 
 final class ApplicabilityTest extends TestCase
 {
-    public function testKeepsTheOprBreakpointPsaSuppliersSpellWithoutOrganisation(): void
+    public function testKeepsTheOrganisationNumberBreakpointsPsaSuppliersCallOpr(): void
     {
         $applicability = Applicability::fromCriteria([
-            new ArticleCriterion('pour numéro OPR jusqu’à', '10310'),
-            new ArticleCriterion('pour numéro OPR à partir de', '10311'),
-            new ArticleCriterion('Longueur [mm]', '340'),
+            TecdocCriteria::of("Nº d'organisation jusqu'à", '10310'),
+            TecdocCriteria::of("Nº d'organisation à partir de", '10311'),
+            TecdocCriteria::of('Longueur [mm]', '340'),
         ]);
 
         $this->assertSame([
-            'pour numéro OPR jusqu’à' => ['10310'],
-            'pour numéro OPR à partir de' => ['10311'],
+            "Nº d'organisation jusqu'à" => ['10310'],
+            "Nº d'organisation à partir de" => ['10311'],
         ], $applicability);
     }
 
     public function testKeepsTheTecdoc2020ChassisAndSerialSpellings(): void
     {
         $applicability = Applicability::fromCriteria([
-            new ArticleCriterion('Nº de châssis à partir de', '130831; 176451'),
-            new ArticleCriterion('Nº de série', 'GG; GY'),
-            new ArticleCriterion('Nº d\'organisation à partir de', '07665'),
-            new ArticleCriterion('Code moteur', 'LF'),
+            TecdocCriteria::of('Nº de châssis à partir de', '130831; 176451'),
+            TecdocCriteria::of('Nº de série', 'GG; GY'),
+            TecdocCriteria::of("Nº d'organisation à partir de", '07665'),
+            TecdocCriteria::of('Code moteur', 'LF'),
         ]);
 
         $this->assertSame([
             'Nº de châssis à partir de' => ['130831', '176451'],
             'Nº de série' => ['GG', 'GY'],
-            'Nº d\'organisation à partir de' => ['07665'],
+            "Nº d'organisation à partir de" => ['07665'],
         ], $applicability);
+    }
+
+    public function testTheBreakpointsAreKeptUnderTheirEnglishNamesAndNeverWithoutAnId(): void
+    {
+        $applicability = Applicability::fromCriteria([
+            new ArticleCriterion('Chassis number from', '130831', 25),
+            new ArticleCriterion('Serial Number', 'GG', 749),
+            new ArticleCriterion('RPO number from', '07665', 45),
+            new ArticleCriterion('Engine Code', 'LF', 33),
+            new ArticleCriterion('Chassis number to', '176451'),
+        ]);
+
+        $this->assertSame(['Chassis number from' => ['130831'], 'Serial Number' => ['GG'], 'RPO number from' => ['07665']], $applicability);
     }
 
     public function testALinkKeepsEveryQualifierPerSetAndTakesThePairingApartById(): void
@@ -55,8 +70,10 @@ final class ApplicabilityTest extends TestCase
             ],
             ['conditions' => [['name' => "Côté d'assemblage", 'values' => ['VL', 'VR']]], 'pairedWith' => []],
         ], $alternatives);
-        $this->assertSame("Année jusqu'à : 200602, Code moteur : F4R 797/897, only with 3000 951 220 OR Côté d'assemblage : VL, VR", Applicability::describe($alternatives));
-        $this->assertSame('no condition', Applicability::describe(Applicability::ofLink(new VehicleLinkCriteria())));
+        $this->assertSame("Année jusqu'à : 200602, Code moteur : F4R 797/897, uniquement avec 3000 951 220 OU Côté d'assemblage : VL, VR", Applicability::describe($alternatives, Locale::Fr));
+        $this->assertSame("Année jusqu'à: 200602, Code moteur: F4R 797/897, only with 3000 951 220 OR Côté d'assemblage: VL, VR", Applicability::describe($alternatives, Locale::En));
+        $this->assertSame('aucune condition', Applicability::describe(Applicability::ofLink(new VehicleLinkCriteria()), Locale::Fr));
+        $this->assertSame('no condition', Applicability::describe(Applicability::ofLink(new VehicleLinkCriteria()), Locale::En));
     }
 
     public function testAClusterSharesOnlyTheConditionsEveryVariantHoldsInEveryAlternative(): void

@@ -6,6 +6,7 @@ namespace App\Catalog\Narrowing;
 
 use App\Catalog\ArticleCriterion;
 use App\Catalog\VehicleLinkCriteria;
+use App\I18n\Locale;
 
 /**
  * Where an article applies, kept verbatim. Never splits a cluster ({@see FingerprintBuilder} denies the breakpoints);
@@ -18,28 +19,20 @@ use App\Catalog\VehicleLinkCriteria;
  */
 final class Applicability
 {
-    /** TecDoc "nur in Verbindung mit" / « uniquement en connexion avec »: the part it must be fitted with. */
+    /** TecDoc "nur in Verbindung mit" / "only in connection with": the part it must be fitted with. */
     public const int PAIRING_CRITERION = 427;
-
-    private const array KEYS = [
-        '/^ann[ée]e /u',
-        '/^(?:n[°º]? ?|num[ée]ro )de ch[âa]ssis/u',
-        "/^(?:n[°º]?|№|num[ée]ro) ?d['’]organisation/u",
-        '/^(?:pour )?(?:n[°º]?|№|num[ée]ro) ?opr/u',
-        '/^(?:n[°º]? ?|№ ?|num[ée]ro )de s[ée]rie/u',
-    ];
 
     /**
      * @param list<ArticleCriterion> $criteria
      *
-     * @return array<string, list<string>> verbatim criterion name => verbatim values
+     * @return array<string, list<string>> criterion name in the caller's language => verbatim values
      */
     public static function fromCriteria(array $criteria): array
     {
         $found = [];
         foreach ($criteria as $criterion) {
             $name = trim($criterion->name);
-            if ('' === $name || !self::isApplicationKey(mb_strtolower($name))) {
+            if ('' === $name || null === $criterion->id || !\in_array($criterion->id, NarrowingCriteria::BREAKPOINTS, true)) {
                 continue;
             }
             foreach (explode(';', $criterion->value) as $value) {
@@ -144,28 +137,18 @@ final class Applicability
     /**
      * @param list<array{conditions: list<array{name: string, values: list<string>}>, pairedWith: list<string>}> $alternatives see {@see self::ofLink()}
      */
-    public static function describe(array $alternatives): string
+    public static function describe(array $alternatives, Locale $locale): string
     {
+        $words = NarrowingWording::for($locale);
         $lines = [];
         foreach ($alternatives as $alternative) {
-            $parts = array_map(static fn (array $c): string => $c['name'].' : '.implode(', ', $c['values']), $alternative['conditions']);
+            $parts = array_map(static fn (array $c): string => $c['name'].$words->separator.implode(', ', $c['values']), $alternative['conditions']);
             if ([] !== $alternative['pairedWith']) {
-                $parts[] = 'only with '.implode(', ', $alternative['pairedWith']);
+                $parts[] = $words->onlyWith.' '.implode(', ', $alternative['pairedWith']);
             }
-            $lines[] = [] === $parts ? 'no condition' : implode(', ', $parts);
+            $lines[] = [] === $parts ? $words->noCondition : implode(', ', $parts);
         }
 
-        return [] === $lines ? 'no condition' : implode(' OR ', $lines);
-    }
-
-    private static function isApplicationKey(string $lowerName): bool
-    {
-        foreach (self::KEYS as $pattern) {
-            if (1 === preg_match($pattern, $lowerName)) {
-                return true;
-            }
-        }
-
-        return false;
+        return [] === $lines ? $words->noCondition : implode($words->or, $lines);
     }
 }

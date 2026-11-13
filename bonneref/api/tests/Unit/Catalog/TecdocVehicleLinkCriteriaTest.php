@@ -41,24 +41,24 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
     {
         $links = $this->catalog->vehicleLinkCriteria(self::ESPACE, CarType::PassengerCar, [self::LUK, self::SACHS_DATED, self::KAWE], self::FLYWHEEL);
 
-        $this->assertEquals(
-            [[new ArticleCriterion('uniquement en connexion avec', '623 3150 ##', 427)]],
-            $links[self::LUK]->qualifierSets,
+        $this->assertSame(
+            [[['uniquement en connexion avec', '623 3150 ##', 427]]],
+            self::plainSets($links[self::LUK]->qualifierSets),
         );
-        $this->assertEquals(
+        $this->assertSame(
             [[
-                new ArticleCriterion("Année jusqu'à", '200602', 21),
-                new ArticleCriterion('uniquement en connexion avec', '3000 951 220', 427),
-                new ArticleCriterion("Type d'entraînement", 'Boîte de vitesses manuelle à 6 vitesses', 40),
+                ["Année jusqu'à", '200602', 21],
+                ['uniquement en connexion avec', '3000 951 220', 427],
+                ["Type d'entraînement", 'Boîte de vitesses manuelle à 6 vitesses', 40],
             ]],
-            $links[self::SACHS_DATED]->qualifierSets,
+            self::plainSets($links[self::SACHS_DATED]->qualifierSets),
         );
-        $this->assertEquals(
+        $this->assertSame(
             [[
-                new ArticleCriterion('Code moteur', 'F4R 797/897', 33),
-                new ArticleCriterion('uniquement en connexion avec', '962318', 427),
+                ['Code moteur', 'F4R 797/897', 33],
+                ['uniquement en connexion avec', '962318', 427],
             ]],
-            $links[self::KAWE]->qualifierSets,
+            self::plainSets($links[self::KAWE]->qualifierSets),
         );
     }
 
@@ -66,26 +66,26 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
     {
         $links = $this->catalog->vehicleLinkCriteria(self::ESPACE_TURBO, CarType::PassengerCar, [self::LUK], self::FLYWHEEL);
 
-        $this->assertEquals([[new ArticleCriterion('Année à partir de', '200603', 20)]], $links[self::LUK]->qualifierSets);
+        $this->assertSame([[['Année à partir de', '200603', 20]]], self::plainSets($links[self::LUK]->qualifierSets));
     }
 
     public function testTheUnionWithoutACarStillMergesEveryVehicle(): void
     {
-        $this->assertContainsEquals(new ArticleCriterion('Année à partir de', '200603', 20), $this->catalog->articleCriteria(self::LUK));
+        $this->assertContains(['Année à partir de', '200603', 20], self::plain($this->catalog->articleCriteria(self::LUK)));
     }
 
     public function testTheFingerprintCriteriaAreTheAttributesThenThisLinksQualifiers(): void
     {
         $criteria = $this->catalog->vehicleLinkCriteria(self::ESPACE, CarType::PassengerCar, [self::SACHS_DATED], self::FLYWHEEL)[self::SACHS_DATED]->criteria();
 
-        $this->assertEquals(
+        $this->assertSame(
             [
-                new ArticleCriterion('Diamètre [mm]', '230', 200),
-                new ArticleCriterion("Année jusqu'à", '200602', 21),
-                new ArticleCriterion('uniquement en connexion avec', '3000 951 220', 427),
-                new ArticleCriterion("Type d'entraînement", 'Boîte de vitesses manuelle à 6 vitesses', 40),
+                ['Diamètre [mm]', '230', 200],
+                ["Année jusqu'à", '200602', 21],
+                ['uniquement en connexion avec', '3000 951 220', 427],
+                ["Type d'entraînement", 'Boîte de vitesses manuelle à 6 vitesses', 40],
             ],
-            $criteria,
+            self::plain($criteria),
         );
     }
 
@@ -109,5 +109,25 @@ final class TecdocVehicleLinkCriteriaTest extends TestCase
 
         $this->assertCount(1, $links[78351]->qualifierSets);
         $this->assertSame([], $this->catalog->vehicleLinkCriteria(101222, CarType::PassengerCar, [78351])[78351]->qualifierSets);
+    }
+
+    /**
+     * @param list<ArticleCriterion> $criteria
+     *
+     * @return list<array{string, string, ?int}>
+     */
+    private static function plain(array $criteria): array
+    {
+        return array_map(static fn (ArticleCriterion $c): array => [$c->name, $c->value, $c->id], $criteria);
+    }
+
+    /**
+     * @param list<list<ArticleCriterion>> $sets
+     *
+     * @return list<list<array{string, string, ?int}>>
+     */
+    private static function plainSets(array $sets): array
+    {
+        return array_map(self::plain(...), $sets);
     }
 }

@@ -45,7 +45,8 @@ final class ArticleClusterer
     /**
      * The splitting criteria the clusters disagree on, then the millimetre info measures (never splitting,
      * suppliers disagree on them) that still tell clusters apart once something else split them: the 307
-     * axial joints split on carmaker OE alone and differ by 20 mm in length.
+     * axial joints split on carmaker OE alone and differ by 20 mm in length. The packaging measures are all in
+     * centimetres, so the millimetre filter leaves them out.
      *
      * @param list<Cluster> $clusters
      *
@@ -57,7 +58,7 @@ final class ArticleClusterer
         $byKey = [];
         foreach ($clusters as $cluster) {
             foreach ($cluster->merged()->entries as $key => $entry) {
-                if ($entry->info && ('mm' !== $entry->unit || str_contains($key, 'emballage'))) {
+                if ($entry->info && 'mm' !== $entry->unit) {
                     continue;
                 }
                 $byKey[$key][] = ['cluster' => $cluster, 'entry' => $entry];

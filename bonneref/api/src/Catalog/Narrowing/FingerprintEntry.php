@@ -10,9 +10,10 @@ final readonly class FingerprintEntry
     private const MM_RATIO = 0.025;
 
     /**
-     * @param ?float $min  lowest value among the parts merged into this entry (the value itself for one part)
-     * @param ?float $max  highest value, likewise
-     * @param bool   $info displayed but never used to split or tell parts apart: suppliers disagree on it
+     * @param ?float  $min      lowest value among the parts merged into this entry (the value itself for one part)
+     * @param ?float  $max      highest value, likewise
+     * @param bool    $info     displayed but never used to split or tell parts apart: suppliers disagree on it
+     * @param ?string $identity the value as stored, whatever the caller's language: what two non-numeric values are compared on
      */
     public function __construct(
         public string $key,
@@ -23,6 +24,7 @@ final readonly class FingerprintEntry
         public ?float $min = null,
         public ?float $max = null,
         public bool $info = false,
+        public ?string $identity = null,
     ) {
     }
 
@@ -43,7 +45,7 @@ final readonly class FingerprintEntry
             return $gap <= max(self::MM_FLOOR, self::MM_RATIO * $larger) + 1e-9;
         }
 
-        return mb_strtolower($this->value) === mb_strtolower($other->value);
+        return mb_strtolower($this->identity ?? $this->value) === mb_strtolower($other->identity ?? $other->value);
     }
 
     public function widenedBy(self $other): self
@@ -61,6 +63,7 @@ final readonly class FingerprintEntry
             min($this->min ?? $this->number, $other->min ?? $other->number),
             max($this->max ?? $this->number, $other->max ?? $other->number),
             $this->info,
+            $this->identity,
         );
     }
 

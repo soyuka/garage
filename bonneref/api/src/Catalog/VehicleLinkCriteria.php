@@ -31,17 +31,13 @@ final readonly class VehicleLinkCriteria
         $merged = [];
         foreach ($this->qualifierSets as $set) {
             foreach ($set as $criterion) {
-                $key = $criterion->id ?? $criterion->name;
-                $merged[$key] ??= ['name' => $criterion->name, 'id' => $criterion->id, 'values' => []];
-                $merged[$key]['values'][$criterion->value] = true;
+                $merged[$criterion->id ?? $criterion->name][] = $criterion;
             }
         }
 
         $criteria = $this->attributes;
-        foreach ($merged as $entry) {
-            $values = array_map('strval', array_keys($entry['values']));
-            sort($values, \SORT_NATURAL);
-            $criteria[] = new ArticleCriterion($entry['name'], implode('; ', $values), $entry['id']);
+        foreach ($merged as $same) {
+            $criteria[] = ArticleCriterion::merge($same);
         }
 
         return $criteria;

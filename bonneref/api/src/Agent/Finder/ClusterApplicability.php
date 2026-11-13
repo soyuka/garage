@@ -7,6 +7,8 @@ namespace App\Agent\Finder;
 use App\Catalog\Narrowing\Applicability;
 use App\Catalog\Narrowing\ApplicabilityScope;
 use App\Catalog\Narrowing\NarrowedCluster;
+use App\Catalog\Narrowing\NarrowingWording;
+use App\I18n\Locale;
 
 /**
  * The applicability of one narrowed cluster as the show_parts summary words it for the finder agent.
@@ -19,35 +21,38 @@ final class ClusterApplicability
 
     private const array CAVEATS = [
         'article' => 'applicability is per ARTICLE (the union over every vehicle the article fits), not per car: use it only to choose between clusters that already differ, never as proof, never to split or discard one.',
-        'vehicle' => 'applicability is per variant, read from that article\'s own link to this car (variants not listed carry no condition): alternatives are joined by OR, "only with" names the part it must be fitted with. Use it to choose between clusters that already differ and to pair parts, never to split or discard a cluster.',
+        'vehicle' => 'applicability is per variant, read from that article\'s own link to this car (variants not listed carry no condition): alternatives are joined by %1$s, "%2$s" names the part it must be fitted with. Use it to choose between clusters that already differ and to pair parts, never to split or discard a cluster.',
     ];
 
     /**
      * @param ClusterArray $cluster
      */
-    public static function line(array $cluster, ApplicabilityScope $scope): string
+    public static function line(array $cluster, ApplicabilityScope $scope, Locale $locale): string
     {
+        $words = NarrowingWording::for($locale);
         $parts = [];
         if (ApplicabilityScope::Vehicle === $scope) {
             foreach ($cluster['variants'] as $variant) {
                 $applicability = $variant['applicability'] ?? [];
                 if ([] !== $applicability) {
-                    $parts[] = $variant['brand'].' '.$variant['number'].': '.Applicability::describe($applicability);
+                    $parts[] = $variant['brand'].' '.$variant['number'].': '.Applicability::describe($applicability, $locale);
                 }
             }
         } else {
             foreach ($cluster['applicability'] as $entry) {
                 $values = \array_slice($entry['values'], 0, self::MAX_VALUES);
                 $more = \count($entry['values']) > self::MAX_VALUES ? ', …' : '';
-                $parts[] = $entry['name'].' : '.implode(', ', $values).$more;
+                $parts[] = $entry['name'].$words->separator.implode(', ', $values).$more;
             }
         }
 
-        return [] === $parts ? 'none listed' : implode(' | ', $parts);
+        return [] === $parts ? $words->noneListed : implode(' | ', $parts);
     }
 
-    public static function caveat(ApplicabilityScope $scope): string
+    public static function caveat(ApplicabilityScope $scope, Locale $locale): string
     {
-        return self::CAVEATS[$scope->value];
+        $words = NarrowingWording::for($locale);
+
+        return \sprintf(self::CAVEATS[$scope->value], trim($words->or), $words->onlyWith);
     }
 }

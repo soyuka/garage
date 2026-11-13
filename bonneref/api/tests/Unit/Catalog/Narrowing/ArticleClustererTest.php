@@ -8,6 +8,7 @@ use App\Catalog\ArticleCriterion;
 use App\Catalog\Narrowing\ArticleClusterer;
 use App\Catalog\Narrowing\FingerprintBuilder;
 use App\Catalog\Narrowing\Representative;
+use App\Tests\Support\TecdocCriteria;
 use PHPUnit\Framework\TestCase;
 
 final class ArticleClustererTest extends TestCase
@@ -34,9 +35,9 @@ final class ArticleClustererTest extends TestCase
     public function testSameDimensionsJoinTheExistingCluster(): void
     {
         $synthetic = self::representative(1, 'ACME', 'A1', 5000, [
-            new ArticleCriterion('Diamètre extérieur [mm]', '76'),
-            new ArticleCriterion('Hauteur [mm]', '93'),
-            new ArticleCriterion('Filetage', '3/4"-16'),
+            TecdocCriteria::of('Diamètre extérieur [mm]', '76'),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of('Filetage', '3/4"-16'),
         ]);
 
         $clusters = (new ArticleClusterer())->cluster([self::mann(), self::purflux(), $synthetic]);
@@ -47,10 +48,10 @@ final class ArticleClustererTest extends TestCase
 
     public function testToleranceIsTwoMillimetresOrTwoAndAHalfPercentOnMmCriteria(): void
     {
-        $near = self::representative(2, 'ACME', 'A2', 5000, [new ArticleCriterion('Hauteur [mm]', '95')]);
-        $far = self::representative(3, 'ACME', 'A3', 5000, [new ArticleCriterion('Hauteur [mm]', '96')]);
-        $tall = self::representative(4, 'ACME', 'A4', 5001, [new ArticleCriterion('Hauteur [mm]', '200')]);
-        $tallNear = self::representative(5, 'ACME', 'A5', 5002, [new ArticleCriterion('Hauteur [mm]', '204,5')]);
+        $near = self::representative(2, 'ACME', 'A2', 5000, [TecdocCriteria::of('Hauteur [mm]', '95')]);
+        $far = self::representative(3, 'ACME', 'A3', 5000, [TecdocCriteria::of('Hauteur [mm]', '96')]);
+        $tall = self::representative(4, 'ACME', 'A4', 5001, [TecdocCriteria::of('Hauteur [mm]', '200')]);
+        $tallNear = self::representative(5, 'ACME', 'A5', 5002, [TecdocCriteria::of('Hauteur [mm]', '204,5')]);
 
         $this->assertCount(1, (new ArticleClusterer())->cluster([$tall, $tallNear]));
 
@@ -61,14 +62,14 @@ final class ArticleClustererTest extends TestCase
     public function testInfoOnlyCriteriaNeverSplitAndNeverDiffer(): void
     {
         $a = self::representative(1, 'ACME', 'A1', 1000, [
-            new ArticleCriterion('Hauteur [mm]', '93'),
-            new ArticleCriterion("Pression d'ouverture clapet de dérivation [ba", '1'),
-            new ArticleCriterion('Diamètre 3 [mm]', '62'),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of("Pression d'ouverture clapet de dérivation [bar]", '1'),
+            TecdocCriteria::of('Diamètre 3 [mm]', '62'),
         ]);
         $b = self::representative(2, 'ACME', 'A2', 1001, [
-            new ArticleCriterion('Hauteur [mm]', '93'),
-            new ArticleCriterion("Pression d'ouverture clapet de dérivation [ba", '2,4'),
-            new ArticleCriterion('Diamètre 3 [mm]', '72'),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of("Pression d'ouverture clapet de dérivation [bar]", '2,4'),
+            TecdocCriteria::of('Diamètre 3 [mm]', '72'),
         ]);
 
         $clusters = (new ArticleClusterer())->cluster([$a, $b]);
@@ -80,18 +81,18 @@ final class ArticleClustererTest extends TestCase
     public function testClustersAlreadyApartAlsoReportTheMillimetreInfoMeasuresTheyDisagreeOn(): void
     {
         $short = self::representative(1, 'ACME', 'A1', 1000, [
-            new ArticleCriterion('Hauteur [mm]', '93'),
-            new ArticleCriterion('Longueur [mm]', '340'),
-            new ArticleCriterion('Largeur [mm]', '36'),
-            new ArticleCriterion('Poids [kg]', '0,55'),
-            new ArticleCriterion("Longueur de l'emballage [mm]", '80'),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of('Longueur [mm]', '340'),
+            TecdocCriteria::of('Largeur [mm]', '36'),
+            TecdocCriteria::of('Poids [kg]', '0,55'),
+            TecdocCriteria::of("Longueur de l'emballage [cm]", '8'),
         ]);
         $long = self::representative(2, 'ACME', 'A2', 1001, [
-            new ArticleCriterion('Hauteur [mm]', '120'),
-            new ArticleCriterion('Longueur [mm]', '359'),
-            new ArticleCriterion('Largeur [mm]', '37'),
-            new ArticleCriterion('Poids [kg]', '0,61'),
-            new ArticleCriterion("Longueur de l'emballage [mm]", '95'),
+            TecdocCriteria::of('Hauteur [mm]', '120'),
+            TecdocCriteria::of('Longueur [mm]', '359'),
+            TecdocCriteria::of('Largeur [mm]', '37'),
+            TecdocCriteria::of('Poids [kg]', '0,61'),
+            TecdocCriteria::of("Longueur de l'emballage [cm]", '9'),
         ]);
 
         $clusters = (new ArticleClusterer())->cluster([$short, $long]);
@@ -104,16 +105,16 @@ final class ArticleClustererTest extends TestCase
 
     public function testAnInfoMeasureNeverSplits(): void
     {
-        $short = self::representative(1, 'ACME', 'A1', 1000, [new ArticleCriterion('Hauteur [mm]', '93'), new ArticleCriterion('Longueur [mm]', '340')]);
-        $long = self::representative(2, 'ACME', 'A2', 1001, [new ArticleCriterion('Hauteur [mm]', '93'), new ArticleCriterion('Longueur [mm]', '359')]);
+        $short = self::representative(1, 'ACME', 'A1', 1000, [TecdocCriteria::of('Hauteur [mm]', '93'), TecdocCriteria::of('Longueur [mm]', '340')]);
+        $long = self::representative(2, 'ACME', 'A2', 1001, [TecdocCriteria::of('Hauteur [mm]', '93'), TecdocCriteria::of('Longueur [mm]', '359')]);
 
         $this->assertCount(1, (new ArticleClusterer())->cluster([$short, $long]));
     }
 
     public function testClusterFingerprintReportsTheRangeOfItsMembers(): void
     {
-        $a = self::representative(1, 'ACME', 'A1', 1000, [new ArticleCriterion('Hauteur [mm]', '93')]);
-        $b = self::representative(2, 'ACME', 'A2', 1001, [new ArticleCriterion('Hauteur [mm]', '94,5')]);
+        $a = self::representative(1, 'ACME', 'A1', 1000, [TecdocCriteria::of('Hauteur [mm]', '93')]);
+        $b = self::representative(2, 'ACME', 'A2', 1001, [TecdocCriteria::of('Hauteur [mm]', '94,5')]);
 
         $entry = (new ArticleClusterer())->cluster([$a, $b])[0]->merged()->entries['hauteur'];
 
@@ -129,14 +130,14 @@ final class ArticleClustererTest extends TestCase
     public function testApplicationLevelCriteriaNeverSplit(): void
     {
         $a = self::representative(4, 'ACME', 'A4', 5000, [
-            new ArticleCriterion('Hauteur [mm]', '93'),
-            new ArticleCriterion('Code moteur', 'L501'),
-            new ArticleCriterion('Année à partir de', '200304'),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of('Code moteur', 'L501'),
+            TecdocCriteria::of('Année à partir de', '200304'),
         ]);
         $b = self::representative(5, 'ACME', 'A5', 5001, [
-            new ArticleCriterion('Hauteur [mm]', '93'),
-            new ArticleCriterion('Code moteur', 'Perkins 404D-22'),
-            new ArticleCriterion('Année à partir de', '201006; 201101'),
+            TecdocCriteria::of('Hauteur [mm]', '93'),
+            TecdocCriteria::of('Code moteur', 'Perkins 404D-22'),
+            TecdocCriteria::of('Année à partir de', '201006; 201101'),
         ]);
 
         $this->assertCount(1, (new ArticleClusterer())->cluster([$a, $b]));
@@ -144,7 +145,7 @@ final class ArticleClustererTest extends TestCase
 
     public function testAKeyMissingOnOneSideDoesNotSplit(): void
     {
-        $bare = self::representative(6, 'ACME', 'A6', 5000, [new ArticleCriterion('Hauteur [mm]', '93')]);
+        $bare = self::representative(6, 'ACME', 'A6', 5000, [TecdocCriteria::of('Hauteur [mm]', '93')]);
 
         $this->assertCount(1, (new ArticleClusterer())->cluster([self::mann(), $bare]));
     }
@@ -161,8 +162,8 @@ final class ArticleClustererTest extends TestCase
         $reps = [
             self::mann(),
             self::purflux(),
-            self::representative(1, 'ACME', 'A1', 5000, [new ArticleCriterion('Hauteur [mm]', '93')]),
-            self::representative(2, 'OTHER', 'B1', 5000, [new ArticleCriterion('Hauteur [mm]', '85')]),
+            self::representative(1, 'ACME', 'A1', 5000, [TecdocCriteria::of('Hauteur [mm]', '93')]),
+            self::representative(2, 'OTHER', 'B1', 5000, [TecdocCriteria::of('Hauteur [mm]', '85')]),
         ];
 
         $forward = self::shape((new ArticleClusterer())->cluster($reps));
@@ -173,9 +174,9 @@ final class ArticleClustererTest extends TestCase
 
     public function testClustersNeverChainThroughAMissingKey(): void
     {
-        $tall = self::representative(1, 'ACME', 'A1', 1000, [new ArticleCriterion('Hauteur [mm]', '93')]);
-        $short = self::representative(2, 'ACME', 'A2', 1001, [new ArticleCriterion('Hauteur [mm]', '85')]);
-        $bridge = self::representative(3, 'ACME', 'A3', 1002, [new ArticleCriterion('Diamètre extérieur [mm]', '76')]);
+        $tall = self::representative(1, 'ACME', 'A1', 1000, [TecdocCriteria::of('Hauteur [mm]', '93')]);
+        $short = self::representative(2, 'ACME', 'A2', 1001, [TecdocCriteria::of('Hauteur [mm]', '85')]);
+        $bridge = self::representative(3, 'ACME', 'A3', 1002, [TecdocCriteria::of('Diamètre extérieur [mm]', '76')]);
 
         $clusters = (new ArticleClusterer())->cluster([$tall, $short, $bridge]);
 
@@ -215,7 +216,7 @@ final class ArticleClustererTest extends TestCase
 
         self::assertIsArray($rows);
 
-        return self::representative($artId, $brand, $number, $rank, array_values(array_map(ArticleCriterion::fromCatalogRow(...), $rows)));
+        return self::representative($artId, $brand, $number, $rank, TecdocCriteria::fromPartsapiRows($rows));
     }
 
     /**

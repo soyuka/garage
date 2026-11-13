@@ -23,6 +23,7 @@ final class TecdocFixtureDatabase
 
         $pdo->exec((string) file_get_contents(__DIR__.'/../Fixtures/tecdoc/schema.sql'));
         $pdo->exec((string) file_get_contents(__DIR__.'/../Fixtures/tecdoc/data.sql'));
+        $pdo->exec((string) file_get_contents(__DIR__.'/../Fixtures/tecdoc/narrowing_en.sql'));
 
         // The dev slice holds no CV article links nor CV engines (its CV tables are empty), so one is derived here.
         $pdo->exec(<<<'SQL'

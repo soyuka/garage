@@ -8,64 +8,15 @@ use App\Catalog\ArticleCriterion;
 use Symfony\Component\String\Slugger\AsciiSlugger;
 
 /**
- * partsapi criteria are per ARTICLE: the union over every vehicle it fits (engine codes, year and VIN
- * breakpoints of all applications). Only what describes the part itself can tell two parts apart for
- * one car, so application-level criteria are denied and everything else must be a measurement (a
- * unit in the name) or a known discrete physical key.
+ * A part's criteria are per ARTICLE: the union over every vehicle it fits (engine codes, year and VIN breakpoints of
+ * all applications). Only what describes the part itself can tell two parts apart for one car, so application-level
+ * criteria are denied and everything else must be a measurement (a unit) or a known discrete physical key.
+ *
+ * Criteria are classified by TecDoc criterion id ({@see NarrowingCriteria}), never by name: the name is the caller's
+ * language and only labels the entry.
  */
 final class FingerprintBuilder
 {
-    private const DENY = [
-        '/^ann[ée]e /u',
-        '/^code moteur/u',
-        '/^(?:n[°º]? ?|num[ée]ro )de s[ée]rie/u',
-        '/^(?:n[°º]? ?|num[ée]ro )de ch[âa]ssis/u',
-        '/^num[ée]ro tecdoc du moteur/u',
-        '/^pour le mod[èe]le/u',
-        '/^type de v[ée]hicule/u',
-        '/^r[èe]glement europ[ée]en/u',
-        "/^r[ée]f[ée]rence de l['’]outil/u",
-    ];
-
-    private const DISCRETE = [
-        '/^type_de_filtre$/',
-        '/^version$/',
-        '/^cote_d_assemblage$/',
-        '/^position(_|$)/',
-        '/^type_de_disque$/',
-        '/^ventile$/',
-        '/^nombre_de_pistons$/',
-    ];
-
-    /**
-     * The criteria that decide, by TecDoc criterion id, spelled with the slug the partsapi names produce. The
-     * 2020 extract renamed the seal diameters ("Diamètre extérieur 2 [mm]" for "…de la bague d'étanchéité"), so
-     * the label cannot be trusted where the id is known.
-     */
-    private const ID_SLUGS = [
-        209 => 'hauteur',
-        497 => 'diametre_exterieur',
-        979 => 'diametre_exterieur_de_la_bague_d_etancheite',
-        996 => 'diametre_interieur_de_la_bague_d_etancheite',
-        289 => 'filetage',
-    ];
-
-    private const THREAD = '/^(?:taraudage_)?filetage(?:_(\d+))?$/';
-
-    /**
-     * The only measured keys that tell two parts apart, by the slug partsapi spells them with. Any other
-     * measured key ("diametre_3", "diametre_interieur_2", packaging, weight, torque, valve pressure…) is
-     * numbered or filled by each supplier by its own convention, so it is shown but never decides.
-     */
-    private const SPLITTING_MEASURES = [
-        'hauteur' => 'hauteur',
-        'diametre_exterieur' => 'diametre_exterieur',
-        'diametre' => 'diametre_exterieur',
-        'diametre_exterieur_de_la_bague_d_etancheite' => 'diametre_exterieur_de_la_bague_d_etancheite',
-        'diametre_interieur_de_la_bague_d_etancheite' => 'diametre_interieur_de_la_bague_d_etancheite',
-        'diametre_de_la_bague_detancheite' => 'diametre_interieur_de_la_bague_d_etancheite',
-    ];
-
     /**
      * @param list<ArticleCriterion> $criteria
      */
@@ -75,44 +26,31 @@ final class FingerprintBuilder
         $entries = [];
 
         foreach ($criteria as $criterion) {
-            $name = mb_strtolower(trim($criterion->name));
+            $id = $criterion->id;
             $value = trim($criterion->value);
-            if ('' === $name || '' === $value || str_contains($value, ';') || self::denied($name)) {
+            $code = $criterion->code ?? $value;
+            if (null === $id || '' === $value || str_contains($code, ';') || \in_array($id, NarrowingCriteria::APPLICATION_ONLY, true)) {
                 continue;
             }
 
-            $unit = null;
-            $base = $criterion->name;
-            if (false !== $bracket = mb_strpos($criterion->name, '[')) {
-                $base = trim(mb_substr($criterion->name, 0, $bracket));
-                $unit = mb_strtolower(trim(rtrim(mb_substr($criterion->name, $bracket + 1), ']')));
-                // Upstream cuts names at ~45 chars, sometimes right at the bracket: a length with no unit left is mm.
-                if ('' === $unit && 1 === preg_match('/^(?:diam|haut|long|larg|[ée]paiss)/iu', $base)) {
-                    $unit = 'mm';
-                }
-            }
+            $unit = null === $criterion->unit ? null : mb_strtolower($criterion->unit);
 
-            $slug = (null === $criterion->id ? null : self::ID_SLUGS[$criterion->id] ?? null) ?? mb_strtolower($slugger->slug($base, '_')->toString());
-            if ('' === $slug) {
-                continue;
-            }
-
-            $key = self::threadKey($slug);
-            if (null !== $key) {
-                $entry = new FingerprintEntry($key, $criterion->name, self::thread($value), null, null);
-            } elseif (null !== $unit || self::isDiscrete($slug)) {
+            if (isset(NarrowingCriteria::THREADS[$id])) {
+                $index = NarrowingCriteria::THREADS[$id];
+                $entry = new FingerprintEntry($index > 1 ? 'thread_'.$index : 'thread', $criterion->name, self::thread($value), null, null);
+            } elseif (null !== $unit || \in_array($id, NarrowingCriteria::DISCRETE, true)) {
                 // @mago-expect analysis:invalid-type-cast the pattern only lets a decimal number through
                 $number = preg_match('/^-?\d+(?:[.,]\d+)?$/', $value) ? (float) str_replace(',', '.', $value) : null;
-                $key = null !== $unit ? (self::SPLITTING_MEASURES[$slug] ?? $slug) : $slug;
                 $entry = new FingerprintEntry(
-                    $key,
+                    NarrowingCriteria::MEASURES[$id] ?? self::key($criterion, $slugger),
                     $criterion->name,
                     null === $number ? $value : self::formatNumber($number),
                     $number,
-                    '' === $unit ? null : $unit,
+                    $unit,
                     $number,
                     $number,
-                    null !== $unit && !isset(self::SPLITTING_MEASURES[$slug]),
+                    null !== $unit && !isset(NarrowingCriteria::MEASURES[$id]),
+                    $code,
                 );
             } else {
                 continue;
@@ -124,37 +62,13 @@ final class FingerprintBuilder
         return new Fingerprint($entries);
     }
 
-    private static function denied(string $lowerName): bool
+    /** The slug of the French name before its unit, the same for every caller: what the clients key a dimension on. */
+    private static function key(ArticleCriterion $criterion, AsciiSlugger $slugger): string
     {
-        foreach (self::DENY as $pattern) {
-            if (1 === preg_match($pattern, $lowerName)) {
-                return true;
-            }
-        }
+        $name = $criterion->canonicalName ?? $criterion->name;
+        $bracket = mb_strpos($name, '[');
 
-        return false;
-    }
-
-    private static function isDiscrete(string $slug): bool
-    {
-        foreach (self::DISCRETE as $pattern) {
-            if (1 === preg_match($pattern, $slug)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static function threadKey(string $slug): ?string
-    {
-        if (1 !== preg_match(self::THREAD, $slug, $m)) {
-            return null;
-        }
-
-        $index = (int) ($m[1] ?? 1);
-
-        return $index > 1 ? 'thread_'.$index : 'thread';
+        return mb_strtolower($slugger->slug(trim(false === $bracket ? $name : mb_substr($name, 0, $bracket)), '_')->toString());
     }
 
     private static function thread(string $value): string
