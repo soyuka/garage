@@ -197,7 +197,12 @@ final class TecdocCatalog implements PartsCatalog
         return PartCategory::fromCatalogTree($nodes, $leafOnly, $search);
     }
 
-    public function categoryName(int $carId, int $categoryId, CarType $carType): ?string
+    public function categoryName(int $carId, int $categoryId, CarType $carType, ?Locale $language = null): ?string
+    {
+        return $this->inLanguage($language, fn (): ?string => $this->readCategoryName($carId, $categoryId, $carType));
+    }
+
+    private function readCategoryName(int $carId, int $categoryId, CarType $carType): ?string
     {
         $profile = self::profile($carType);
         // The node is the car's when it, or a node below it, carries a generic article linked to the car.

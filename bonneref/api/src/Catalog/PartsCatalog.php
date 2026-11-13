@@ -48,7 +48,7 @@ interface PartsCatalog
     /**
      * The category's name in the car's part-category tree; null when the tree has no such category.
      */
-    public function categoryName(int $carId, int $categoryId, CarType $carType): ?string;
+    public function categoryName(int $carId, int $categoryId, CarType $carType, ?Locale $language = null): ?string;
 
     /**
      * @return list<Article>

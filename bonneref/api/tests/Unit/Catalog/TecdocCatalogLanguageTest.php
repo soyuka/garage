@@ -76,6 +76,12 @@ final class TecdocCatalogLanguageTest extends TestCase
         $this->assertSame('Oil Filter', $this->catalog->categoryName(19107, 100259, CarType::PassengerCar));
     }
 
+    public function testAnExplicitLanguageWinsOverTheRequestOrTheDefault(): void
+    {
+        $this->assertSame('Filtre à huile', $this->catalog->categoryName(19107, 100259, CarType::PassengerCar, Locale::Fr));
+        $this->assertSame('Oil Filter', $this->catalog->categoryName(19107, 100259, CarType::PassengerCar));
+    }
+
     public function testArticlesCarryTheEnglishProductGroup(): void
     {
         $this->locale->set(Locale::En);

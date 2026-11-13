@@ -11,6 +11,7 @@ use App\Catalog\CarType;
 use App\Catalog\PartsCatalog;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
+use App\I18n\Locale;
 use App\Repository\AgentTurnRepository;
 use App\Vehicle\VehicleIndex;
 use Doctrine\ODM\MongoDB\DocumentManager;
@@ -166,7 +167,7 @@ final readonly class FinderSearchJournalListener
             return $data->productGroup['name'];
         }
 
-        return $this->catalog->categoryName($data->carId, $data->categoryId, CarType::tryFrom($request->query->get('carType', '')) ?? CarType::PassengerCar);
+        return $this->catalog->categoryName($data->carId, $data->categoryId, CarType::tryFrom($request->query->get('carType', '')) ?? CarType::PassengerCar, Locale::resolve($request->getLocale()));
     }
 
     /**
