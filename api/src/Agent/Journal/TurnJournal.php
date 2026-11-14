@@ -6,6 +6,7 @@ namespace App\Agent\Journal;
 
 use App\Agent\WebSearch\WebSearchTracer;
 use App\Entity\AgentTurn;
+use App\Entity\AgentTurnAttachment;
 use App\Entity\AgentTurnStatus;
 use App\Entity\AgentTurnToolCall;
 use App\Message\RunAgentTurn;
@@ -56,6 +57,14 @@ final class TurnJournal implements WebSearchTracer, ResetInterface
             summary: '' !== $message->summary ? $message->summary : null,
             pendingContext: '' !== $message->pendingContext ? $message->pendingContext : null,
         );
+        foreach ($message->attachments as $ref) {
+            $this->current->addAttachment(new AgentTurnAttachment($ref->id, $ref->name, $ref->mime, $ref->size));
+        }
+    }
+
+    public function recordAttachmentFiled(string $attachmentId, string $as): void
+    {
+        $this->current?->markAttachmentFiled($attachmentId, $as);
     }
 
     public function reset(): void

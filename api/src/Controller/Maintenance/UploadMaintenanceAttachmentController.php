@@ -5,12 +5,10 @@ declare(strict_types=1);
 namespace App\Controller\Maintenance;
 
 use App\ApiResource\GarageMaintenanceRecord;
-use App\Entity\MaintenanceAttachment;
+use App\Maintenance\MaintenanceAttachmentRecorder;
 use App\Maintenance\OwnedRecordLocator;
-use App\Mercure\DomainPublisher;
 use App\Security\OwnerRateLimit;
-use App\Storage\MaintenanceAttachmentStorage;
-use Doctrine\ODM\MongoDB\DocumentManager;
+use App\Storage\AcceptedUpload;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,7 +16,6 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
-use Symfony\Component\Uid\Ulid;
 
 /**
  * POST /garage/maintenance-records/{id}/attachments — attach one bill (PDF/JPEG/PNG) to a logged
@@ -30,17 +27,9 @@ use Symfony\Component\Uid\Ulid;
  */
 final readonly class UploadMaintenanceAttachmentController
 {
-    /** 10 MiB — a scanned multi-page invoice fits comfortably; anything larger is likely a mistake. */
-    private const int MAX_BYTES = 10 * 1024 * 1024;
-
-    /** @var list<string> */
-    private const array ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
-
     public function __construct(
         private OwnedRecordLocator $locator,
-        private MaintenanceAttachmentStorage $storage,
-        private DocumentManager $em,
-        private DomainPublisher $publisher,
+        private MaintenanceAttachmentRecorder $recorder,
         private OwnerRateLimit $rateLimit,
         private RateLimiterFactoryInterface $uploadLimiter,
     ) {
@@ -60,26 +49,19 @@ final readonly class UploadMaintenanceAttachmentController
         }
 
         $size = (int) $file->getSize();
-        if ($size > self::MAX_BYTES) {
-            throw new UnprocessableEntityHttpException(\sprintf('File too large (%d bytes); the limit is %d bytes.', $size, self::MAX_BYTES));
+        if ($size > AcceptedUpload::MAX_BYTES) {
+            throw new UnprocessableEntityHttpException(\sprintf('File too large (%d bytes); the limit is %d bytes.', $size, AcceptedUpload::MAX_BYTES));
         }
 
-        $mime = (string) $file->getMimeType();
-        if (!\in_array($mime, self::ALLOWED_TYPES, true)) {
-            throw new UnprocessableEntityHttpException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
+        $mime = AcceptedUpload::sniff($file->getPathname());
+        if (null === $mime) {
+            throw new UnprocessableEntityHttpException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', (string) $file->getMimeType()));
         }
 
         $this->rateLimit->consume($this->uploadLimiter, 'Upload');
 
-        $recordId = (string) $record->getId();
-        $attachmentId = (string) new Ulid();
-        $key = $this->storage->store($recordId, $attachmentId, (string) file_get_contents($file->getPathname()));
+        $attachment = $this->recorder->attach($record, $file->getClientOriginalName(), $mime, (string) file_get_contents($file->getPathname()));
 
-        $attachment = new MaintenanceAttachment($attachmentId, $file->getClientOriginalName(), $mime, $size, $key);
-        $record->addAttachment($attachment);
-        $this->em->flush();
-        $this->publisher->publishVehicle($record->getVehicle());
-
-        return new JsonResponse(GarageMaintenanceRecord::attachmentView($attachment, $recordId), Response::HTTP_CREATED);
+        return new JsonResponse(GarageMaintenanceRecord::attachmentView($attachment, (string) $record->getId()), Response::HTTP_CREATED);
     }
 }

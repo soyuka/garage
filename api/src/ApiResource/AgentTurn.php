@@ -72,6 +72,9 @@ final class AgentTurn
     /** @var list<array{seq: int, name: string, arguments: array<string, mixed>, result: string, at: string, serverSide: bool}> */
     #[ApiProperty(description: 'Ordered tool calls the agent made (item read only).')]
     public array $toolCalls = [];
+    /** @var list<array{id: string, name: string, contentType: string, size: int, filedAs: ?string}> */
+    #[ApiProperty(description: 'Files attached to the turn: metadata only, never the binary (item read only).')]
+    public array $attachments = [];
     /** @var list<array<string, mixed>> */
     #[ApiProperty(description: 'Raw LLM call payloads for offline analysis (item read only, best-effort).')]
     public array $rawCalls = [];
@@ -126,6 +129,13 @@ final class AgentTurn
             'at' => $call->getAt()->format(\DateTimeInterface::ATOM),
             'serverSide' => $call->isServerSide(),
         ], $turn->getToolCalls());
+        $resource->attachments = array_map(static fn ($attachment): array => [
+            'id' => $attachment->getId(),
+            'name' => $attachment->getName(),
+            'contentType' => $attachment->getContentType(),
+            'size' => $attachment->getSize(),
+            'filedAs' => $attachment->getFiledAs(),
+        ], $turn->getAttachments());
         $resource->rawCalls = $turn->getRawCalls();
 
         return $resource;

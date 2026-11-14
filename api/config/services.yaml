@@ -198,6 +198,10 @@ services:
         arguments:
             $filesystem: '@vehicle_documents.storage'
 
+    App\Storage\TurnAttachmentStorage:
+        arguments:
+            $filesystem: '@turn_attachments.storage'
+
     # Signature, issuer, expiry, token type of a Casdoor JWT. JWKS discovered from CASDOOR_ISSUER, cached in
     # cache.app. The audience is the per-firewall AudienceTokenHandler's job, below.
     # Discovery and JWKS run inside the request that presents the token: bounded, so a slow Casdoor

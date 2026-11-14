@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\MessageHandler;
 
+use App\Agent\Attachment\AttachmentUserMessage;
+use App\Agent\Attachment\TurnAttachmentScope;
 use App\Agent\Exception\RepeatedToolFailureException;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\SelectedVehicleContext;
@@ -22,8 +24,6 @@ use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
 use Symfony\AI\Agent\AgentInterface;
 use Symfony\AI\Agent\Exception\MaxIterationsExceededException;
-use Symfony\AI\Platform\Message\Content\Text;
-use Symfony\AI\Platform\Message\Message;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\Component\Messenger\Attribute\AsMessageHandler;
 use Symfony\Component\Messenger\Exception\UnrecoverableMessageHandlingException;
@@ -63,6 +63,8 @@ final readonly class RunAgentTurnHandler
         private SelectedVehicleContext $selectedVehicle,
         private TurnCancellations $cancellations,
         private TurnSettlement $settlement,
+        private AttachmentUserMessage $userMessage,
+        private TurnAttachmentScope $attachmentScope,
         private LoggerInterface $logger,
     ) {
     }
@@ -85,6 +87,8 @@ final readonly class RunAgentTurnHandler
         // Carry the dashboard's selected vehicle so list_vehicles floats it first.
         $this->selectedVehicle->set($message->selectedId);
         $this->renderTools->bindSession($message->sessionTopic);
+        // file_attachment may only file what THIS turn carries.
+        $this->attachmentScope->bind($message->attachments);
         // Drop any stale cancel flag before the turn starts: a cancel that arrived after the previous
         // turn on this session already finished must not abort this fresh one. From here on, only a
         // cancel raised DURING this turn trips CancelTurnListener.
@@ -104,7 +108,7 @@ final readonly class RunAgentTurnHandler
         $error = null;
         try {
             $result = $this->garage->call(
-                new MessageBag(Message::ofUser(new Text($context))),
+                new MessageBag($this->userMessage->build($context, $message->attachments, $message->owner)),
                 ['stream' => true],
             );
 
@@ -158,6 +162,7 @@ final readonly class RunAgentTurnHandler
             $this->owner->set(null);
             $this->locale->set(null);
             $this->selectedVehicle->set(null);
+            $this->attachmentScope->reset();
         }
     }
 }

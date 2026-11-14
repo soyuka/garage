@@ -389,6 +389,13 @@ ai:
                       refs at once. Never offer a dead-end "voir toutes les options" button that just
                       re-searches.
 
+                    ATTACHED FILES: when the message lists attached files, you SEE them this turn (photo,
+                    PDF) and they are discarded afterwards. Answer from them; keep one ONLY when it is
+                    worth keeping, with file_attachment(attachmentId, as): "vehicle_document" (vehicle @id +
+                    kind manual/technical_note/quote/other) for a manual, note or quote; "bill" (record @id)
+                    for the invoice of a visit. A photographed invoice to log = log_maintenance first,
+                    then file_attachment as bill with the new record. Never file by default.
+
                     Documentation questions (couple, capacité, jeu, étape de procédure d'un manuel
                     d'atelier ou d'une note technique): list_documents / search_documentation, then
                     read_documentation_page(vehicle, document, page) for the FULL page — a hit's

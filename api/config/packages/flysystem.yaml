@@ -33,6 +33,22 @@ flysystem:
             options:
                 source: 'vehicle_documents.%env(STORAGE_ADAPTER)%'
 
+        # Turn attachments: temporary, swept by `app:turn-attachments:prune` (and opportunistically on upload).
+        turn_attachments.local:
+            adapter: 'local'
+            options:
+                directory: '%kernel.project_dir%/var/storage/turn-attachments'
+        turn_attachments.s3:
+            adapter: 'asyncaws'
+            options:
+                client: 'maintenance.s3_client'
+                bucket: '%env(S3_BUCKET)%'
+                prefix: 'turn-attachments'
+        turn_attachments.storage:
+            adapter: 'lazy'
+            options:
+                source: 'turn_attachments.%env(STORAGE_ADAPTER)%'
+
 # The suite writes under the cache dir, which is disposable, so stored test bytes never leak
 # between runs or into var/storage.
 when@test:
@@ -46,3 +62,7 @@ when@test:
                 adapter: 'local'
                 options:
                     directory: '%kernel.cache_dir%/vehicle-documents-storage'
+            turn_attachments.local:
+                adapter: 'local'
+                options:
+                    directory: '%kernel.cache_dir%/turn-attachments-storage'

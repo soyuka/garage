@@ -10,6 +10,7 @@ use App\Entity\VehicleDocument;
 use App\Entity\VehicleDocumentPage;
 use App\Mercure\DomainPublisher;
 use App\Repository\VehicleDocumentRepository;
+use App\Storage\AcceptedUpload;
 use App\Storage\VehicleDocumentStorage;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\Mime\MimeTypes;
@@ -23,8 +24,6 @@ use Symfony\Component\Uid\Ulid;
 final readonly class VehicleDocumentRecorder
 {
     public const int MAX_BYTES = 50 * 1024 * 1024;
-
-    private const array ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'];
 
     public function __construct(
         private VehicleDocumentStorage $storage,
@@ -50,9 +49,9 @@ final readonly class VehicleDocumentRecorder
             throw new InvalidVehicleDocumentException(\sprintf('File too large (%d bytes); the limit is %d bytes.', $size, self::MAX_BYTES));
         }
 
-        $mime = (string) MimeTypes::getDefault()->guessMimeType($path);
-        if (!\in_array($mime, self::ALLOWED_TYPES, true)) {
-            throw new InvalidVehicleDocumentException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', $mime));
+        $mime = AcceptedUpload::sniff($path);
+        if (null === $mime) {
+            throw new InvalidVehicleDocumentException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', (string) MimeTypes::getDefault()->guessMimeType($path)));
         }
 
         if (null !== $plannedTaskId) {

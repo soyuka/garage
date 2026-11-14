@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Unit\Controller;
 
+use App\Agent\Attachment\TurnAttachments;
 use App\Agent\Dispatch\TurnDispatcher;
 use App\Agent\Ui\DashboardChannel;
 use App\Agent\WebSearch\WebSearchBackend;
@@ -12,8 +13,13 @@ use App\Controller\AgentTurnController;
 use App\Dto\AgentTurnInput;
 use App\Message\RunAgentTurn;
 use App\Security\OwnerContext;
+use App\Security\OwnerRateLimit;
+use App\Storage\TurnAttachmentStorage;
+use Doctrine\ODM\MongoDB\DocumentManager;
+use League\Flysystem\FilesystemOperator;
 use PHPUnit\Framework\TestCase;
 use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Clock\MockClock;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
@@ -99,7 +105,7 @@ final class AgentTurnControllerTest extends TestCase
             }
         };
 
-        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $this->limiter(1000), new DashboardChannel(new OwnerContext($this->securityFor($owner)), $baseUri, 'test-secret'), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'));
+        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $this->limiter(1000), new DashboardChannel(new OwnerContext($this->securityFor($owner)), $baseUri, 'test-secret'), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'), new TurnAttachments($this->createStub(DocumentManager::class), new TurnAttachmentStorage($this->createStub(FilesystemOperator::class)), new MockClock()), new OwnerRateLimit(new OwnerContext($this->securityFor($owner))), $this->limiter(1000));
     }
 
     private function dispatched(RunAgentTurn $turn): void

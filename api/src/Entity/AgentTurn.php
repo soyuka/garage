@@ -53,6 +53,10 @@ class AgentTurn
     #[ODM\EmbedMany(targetDocument: AgentTurnToolCall::class)]
     private Collection $toolCalls;
 
+    /** @var Collection<int, AgentTurnAttachment> */
+    #[ODM\EmbedMany(targetDocument: AgentTurnAttachment::class)]
+    private Collection $attachments;
+
     #[ODM\Field(type: 'int')]
     private int $webSearchCount = 0;
 
@@ -115,6 +119,7 @@ class AgentTurn
         $this->id = (string) new Ulid();
         $this->startedAt = new \DateTimeImmutable();
         $this->toolCalls = new ArrayCollection();
+        $this->attachments = new ArrayCollection();
     }
 
     public function getId(): Ulid
@@ -227,6 +232,28 @@ class AgentTurn
     public function addToolCall(AgentTurnToolCall $toolCall): void
     {
         $this->toolCalls->add($toolCall);
+    }
+
+    /**
+     * @return list<AgentTurnAttachment>
+     */
+    public function getAttachments(): array
+    {
+        return array_values($this->attachments->toArray());
+    }
+
+    public function addAttachment(AgentTurnAttachment $attachment): void
+    {
+        $this->attachments->add($attachment);
+    }
+
+    public function markAttachmentFiled(string $id, string $as): void
+    {
+        foreach ($this->attachments as $attachment) {
+            if ($attachment->getId() === $id) {
+                $attachment->markFiled($as);
+            }
+        }
     }
 
     public function getWebSearchCount(): int

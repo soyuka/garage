@@ -37,6 +37,10 @@ final readonly class RunAgentTurn
         // since the worker has no request to read the header from and bonneref authenticates the same token.
         #[\SensitiveParameter]
         public string $accessToken = '',
+        // The files the user attached, already persisted by the controller (the worker cannot read the
+        // request body). References only: the bytes are fetched from the turn-attachment store.
+        /** @var list<TurnAttachmentRef> */
+        public array $attachments = [],
     ) {
     }
 }

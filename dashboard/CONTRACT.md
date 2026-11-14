@@ -78,6 +78,17 @@ major-unit euros the client converts.
 - `POST /agent/turn` body `{instruction, sessionId, selectedId?, summary?, pendingContext?}`
   (`summary` = compact on-screen state; `pendingContext` = the card being replied to; both optional,
   one bounded line — not a transcript). Acks **202**; the response has **no action list**.
+- **Attachments** (since 2026-11-14): the same endpoint also takes **multipart/form-data** — the JSON
+  fields above as form fields (`instruction`, `sessionId`, `selectedId?`, `summary?`, `pendingContext?`)
+  plus up to **5** `files[]` (PDF/JPEG/PNG, type sniffed from the bytes, ≤ **10 MiB** each). JSON bodies
+  are unchanged. The model sees the files for that turn only (JPEG/PNG as vision, PDF as a document;
+  a non-Claude model gets a text note instead) and the agent may FILE one (`file_attachment`) as a vehicle
+  document or the bill of a visit — otherwise it is deleted (unfiled temp files expire after 24 h). A
+  filed file reaches the UI through the usual fleet-topic vehicle frame, no new frame. Still **202**, no
+  body. `instruction` stays required (non-blank) with files. Refusals, nothing enqueued and no turn budget
+  spent: **422** (more than 5 files, or an unreadable upload), **413** (a file over 10 MiB), **415** (not
+  PDF/JPEG/PNG), **429** + `Retry-After` (per-owner upload budget, one slot per file; or the turn budget as
+  before). Error bodies are the framework's problem+json, `detail` is human-readable.
 - `POST /agent/turn/cancel` `{sessionId}` — cooperative; busy clears on the streamed `turn` end, not
   on this ack.
 - **Hidden chat: never render a transcript.** The reply IS the state mutations below.
