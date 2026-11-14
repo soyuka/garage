@@ -79,6 +79,19 @@ final readonly class RunAgentTurnHandler
 
     public function __invoke(RunAgentTurn $message): void
     {
+        try {
+            $this->run($message);
+        } finally {
+            // Unbind now rather than on kernel.reset, however early the turn failed: nothing else this
+            // thread runs after it (a terminate listener, the next deferred turn) may act as this owner.
+            $this->renderTools->bindSession(null);
+            $this->owner->set(null);
+            $this->locale->set(null);
+        }
+    }
+
+    private function run(RunAgentTurn $message): void
+    {
         // Bind the tenant for this turn: the worker has no security token, so the
         // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
         // because the handler is a long-lived singleton in the consume worker.
@@ -176,7 +189,6 @@ final readonly class RunAgentTurnHandler
             // Journal the turn and settle the dashboard's heartbeat, completed, capped or failed alike
             // — or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);
-            $this->owner->set(null);
         }
     }
 }

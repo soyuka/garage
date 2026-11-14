@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Agent;
 
+use Symfony\Contracts\Service\ResetInterface;
+
 /**
  * Per-turn cap on web search — the costliest move (each cited result is re-sent on every subsequent
  * loop pass, bloating context past max_tokens and starving the persist/plan steps). Default 2 per turn:
@@ -18,7 +20,7 @@ namespace App\Agent;
  *    the platform decorator that reads the raw response ({@see ServerToolUseLogger}), and the processor
  *    withdraws the tool once spent.
  */
-final class WebSearchBudget
+final class WebSearchBudget implements ResetInterface
 {
     private int $used = 0;
 

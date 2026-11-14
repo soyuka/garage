@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Agent\Ui;
 
+use Symfony\Contracts\Service\ResetInterface;
+
 /**
  * Resolves WHERE a render frame is published: the per-tab session topic
  * (`…/agent/sessions/<uuid>`) the turn bound before its loop ran, so only the tab that asked reacts.
  * Nowhere when no turn is bound.
  */
-final class DashboardChannel
+final class DashboardChannel implements ResetInterface
 {
     private ?string $sessionTopic = null;
 
@@ -23,6 +25,11 @@ final class DashboardChannel
      * cancel flag is stored under, so {@see CancelTurnListener} can tell whether THIS turn was asked
      * to stop.
      */
+    public function reset(): void
+    {
+        $this->sessionTopic = null;
+    }
+
     public function sessionId(): ?string
     {
         if (null === $this->sessionTopic) {

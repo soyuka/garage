@@ -9,6 +9,7 @@ use Mcp\Schema\Result\CallToolResult;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
 use Symfony\AI\Agent\Toolbox\ToolResult;
 use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Aborts a turn when the agent retries the SAME failing tool call too many times — the targeted
@@ -25,7 +26,7 @@ use Symfony\Component\EventDispatcher\Attribute\AsEventListener;
  * {@see \App\MessageHandler\RunAgentTurnHandler} — otherwise counts would leak across turns.
  */
 #[AsEventListener(event: ToolCallsExecuted::class)]
-final class RepeatedToolFailureGuard
+final class RepeatedToolFailureGuard implements ResetInterface
 {
     /** @var array<string, int> signature => consecutive identical-failure count this turn */
     private array $failures = [];

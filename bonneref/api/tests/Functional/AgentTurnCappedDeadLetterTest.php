@@ -4,6 +4,10 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\TurnCancellations;
+use App\Agent\Ui\DashboardChannel;
+use App\I18n\Locale;
+use App\I18n\LocaleContext;
 use App\Message\RunAgentTurn;
 use App\MessageHandler\RunAgentTurnHandler;
 use App\Security\OwnerContext;
@@ -68,5 +72,42 @@ final class AgentTurnCappedDeadLetterTest extends AppTestCase
         ));
 
         $this->assertNotSame('someone-else@example.com', $container->get(OwnerContext::class)->current());
+    }
+
+    public function testNoBindingOutlivesATurnThatFailsBeforeTheAgentRuns(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $container->set(TurnCancellations::class, new class implements TurnCancellations {
+            public function request(string $sessionId): void
+            {
+            }
+
+            public function isRequested(string $sessionId): bool
+            {
+                return false;
+            }
+
+            public function clear(string $sessionId): void
+            {
+                throw new \RuntimeException('store down');
+            }
+        });
+
+        try {
+            $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+                instruction: 'filtre à huile',
+                sessionTopic: 'https://localhost/agent/sessions/sess-early-failure',
+                owner: 'someone-else@example.com',
+                locale: Locale::Fr->value,
+            ));
+            $this->fail('the store failure must surface');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('store down', $e->getMessage());
+        }
+
+        $this->assertNotSame('someone-else@example.com', $container->get(OwnerContext::class)->current());
+        $this->assertNull($container->get(DashboardChannel::class)->sessionId());
+        $this->assertSame(Locale::DEFAULT, $container->get(LocaleContext::class)->current());
     }
 }

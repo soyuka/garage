@@ -6,6 +6,7 @@ namespace App\Agent\Ui;
 
 use App\I18n\AgentMessages;
 use App\I18n\LocaleContext;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Turns the agent's tool calls into the one-line status the page shows while the loop runs
@@ -27,7 +28,7 @@ use App\I18n\LocaleContext;
  * {@see \App\Agent\Toolbox\CompositeToolbox} checks {@see wasAnnounced()} so the execute-time path
  * narrates only a call the stream never announced (a bridge that emits no `ToolCallStart`).
  */
-final class StepNarrator
+final class StepNarrator implements ResetInterface
 {
     /**
      * The tools that narrate. Declared here so a catalog can be checked against it — a tool that

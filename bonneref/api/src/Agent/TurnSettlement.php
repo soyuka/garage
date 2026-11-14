@@ -72,11 +72,15 @@ final class TurnSettlement
 
         // Frame first: after a timeout fatal, PHP only grants the shutdown path its hard_timeout (2 s).
         $this->renderTools->bindSession($turn->sessionTopic);
-        $this->renderTools->signalTurnPhase('end', true);
-        if (null === $this->journal->currentTurnId()) {
-            $this->journal->begin($turn, '');
+        try {
+            $this->renderTools->signalTurnPhase('end', true);
+            if (null === $this->journal->currentTurnId()) {
+                $this->journal->begin($turn, '');
+            }
+            $this->journal->finish(AgentTurnStatus::Failed, self::PUBLIC_ERROR, $this->report($cause));
+        } finally {
+            $this->renderTools->bindSession(null);
         }
-        $this->journal->finish(AgentTurnStatus::Failed, self::PUBLIC_ERROR, $this->report($cause));
     }
 
     private function report(\Throwable|string $cause): string

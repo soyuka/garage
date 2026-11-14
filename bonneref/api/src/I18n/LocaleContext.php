@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\I18n;
 
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Carries the interface language across the invocation boundaries that do NOT thread it explicitly —
@@ -20,7 +21,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * Total, never throwing: an unsupported language folds onto {@see Locale::DEFAULT} rather than
  * failing a turn over a header.
  */
-final class LocaleContext
+final class LocaleContext implements ResetInterface
 {
     private ?Locale $override = null;
 
@@ -32,6 +33,11 @@ final class LocaleContext
     public function set(?Locale $locale): void
     {
         $this->override = $locale;
+    }
+
+    public function reset(): void
+    {
+        $this->override = null;
     }
 
     public function current(): Locale

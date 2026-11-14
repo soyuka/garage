@@ -19,6 +19,7 @@ use App\Mcp\ToolError;
 use App\Vehicle\VehicleIndex;
 use Symfony\AI\Agent\Toolbox\Attribute\AsTool;
 use Symfony\AI\Platform\Contract\JsonSchema\Attribute\Schema;
+use Symfony\Contracts\Service\ResetInterface;
 use Webmozart\Assert\Assert;
 
 /**
@@ -40,7 +41,7 @@ use Webmozart\Assert\Assert;
 #[AsTool('show_web_part', 'Show a part reference found on the WEB (never the TecDoc catalogue) when the catalogue category is missing or empty. reference and brand exactly as the cited source writes them, sourceUrl/sourceTitle from the web_search citation you rely on. Never invent a reference: no citation, no call. rationale is ONE short impersonal sentence, in the interface language, stating what the source says that makes it fit this vehicle, never « Je… ».', 'showWebPart')]
 #[AsTool('set_vehicle', 'Hand the vehicle you identified to the finder page, when the turn message says no vehicle is identified yet. carId/carType come from lookup_plate (plate) or list_cars (make/model browse); make, model and engine as the catalogue names them, plate only if the user gave one. Call it ONCE, before show_parts: show_parts narrows against this vehicle. Returns the vehicle\'s catalogue categories.', 'setVehicle')]
 #[AsTool('ask_question', 'Ask the user ONE short question, in the interface language,, answerable in one tap, when the request is ambiguous before you can pick a category (which axle, which side, which of two parts). 2 to 6 concrete options, each {label shown on the button: a value such as « Avant », not a sentence; value sent back}. Never drop a matching candidate: offer all of them when there are 6 or fewer, otherwise ask a question that splits them first. The finder adds its own « Donner la plaque » button, or « Photo de la vignette » when the question names the code de fabrication: never offer either yourself, and every option must answer the question as asked. context is a short note to yourself restating what was asked and why, including the remaining candidate carIds; it comes back with the answer on the next turn. This ENDS the turn: call nothing after it.', 'askQuestion')]
-final class FinderRenderTools
+final class FinderRenderTools implements ResetInterface
 {
     public const MAX_CATEGORIES = 4;
 
@@ -86,6 +87,13 @@ final class FinderRenderTools
         private readonly FinderVehicleResolver $vehicles,
         private readonly LocaleContext $locale,
     ) {
+    }
+
+    public function reset(): void
+    {
+        $this->vehicle = null;
+        $this->organisationNumber = null;
+        $this->shown = [];
     }
 
     /** Bound once per finder turn by the handler — the worker is long-lived, so this also resets the per-turn count. */

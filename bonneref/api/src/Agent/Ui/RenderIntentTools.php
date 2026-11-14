@@ -7,6 +7,7 @@ namespace App\Agent\Ui;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Mercure\HubInterface;
 use Symfony\Component\Mercure\Update;
+use Symfony\Contracts\Service\ResetInterface;
 use Webmozart\Assert\Assert;
 
 /**
@@ -14,7 +15,7 @@ use Webmozart\Assert\Assert;
  * {@see \App\Agent\Finder\FinderRenderTools}) to the per-session Mercure topic bound for the turn,
  * so only the requesting tab reacts. Not tools: the LLM never calls these directly.
  */
-final class RenderIntentTools
+final class RenderIntentTools implements ResetInterface
 {
     /** @var array{type: 'toast', tone: string, message: string}|null */
     private ?array $pendingToast = null;
@@ -30,9 +31,14 @@ final class RenderIntentTools
      * Binds the per-turn session topic. Called by {@see \App\MessageHandler\RunAgentTurnHandler}
      * before the agent runs; a turn is one message, so there is no cross-turn bleed.
      */
-    public function bindSession(string $sessionTopic): void
+    public function bindSession(?string $sessionTopic): void
     {
         $this->channel->bindSession($sessionTopic);
+    }
+
+    public function reset(): void
+    {
+        $this->pendingToast = null;
     }
 
     /** @see DashboardChannel::sessionId() */

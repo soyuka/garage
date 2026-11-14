@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Agent\WebSearch;
 
 use App\Agent\Finder\FinderVehicle;
+use Symfony\Contracts\Service\ResetInterface;
 
 /**
  * Server-side rule for the finder's `web_search`, so the tool cannot be used as a free search proxy:
@@ -13,7 +14,7 @@ use App\Agent\Finder\FinderVehicle;
  * returned is kept so `show_web_part` can only draw a reference a cited source of this turn carries.
  * Turn-scoped singleton in the worker: {@see self::reset()} per turn.
  */
-final class WebSearchGate
+final class WebSearchGate implements ResetInterface
 {
     public const string NOT_ALLOWED = 'SEARCH_NOT_ALLOWED';
 

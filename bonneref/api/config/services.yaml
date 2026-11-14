@@ -71,6 +71,7 @@ services:
     # never picks them up; the finder lists this service explicitly instead.
     App\Agent\Finder\FinderRenderTools:
         autoconfigure: false
+        tags: [{ name: 'kernel.reset', method: 'reset' }]
 
     # Which paid providers this deployment has a key for (App\Capability\Capability).
     App\Capability\Capabilities:

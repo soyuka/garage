@@ -924,10 +924,3 @@ their displayed name: ids 20/21 (construction year) and 1320/1321 (model year) s
 one, so a cluster's `applicability` list can show one condition in fr and two in en. Membership is unaffected. Keying
 it by id changes the output shape. The French output was not diffed before/after the id switch on the dev slice; the
 French fixture tests pass with unchanged assertions.
-
-## bonneref `LocaleContext` is never reset (found 2026-11-13)
-
-`RunAgentTurnHandler` binds the turn language with `LocaleContext::set()` and nothing clears it. mpa's
-`App\I18n\LocaleContext` implements `ResetInterface` (`reset()` on kernel.reset); bonneref's does not. A live request
-always wins in `current()`, so requests are safe; a later post-response reader with no explicit language (like the
-journal listener before 4a0d2c1) would inherit the last turn's locale in worker mode. Mirror mpa's `reset()`.
