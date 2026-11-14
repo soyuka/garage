@@ -73,7 +73,7 @@ services:
   worker:
     restart: unless-stopped
     environment: *php_environment
-    command: ["php", "bin/console", "messenger:consume", "async", "failed", "-vvv", "--time-limit=3600"]
+    command: ["php", "bin/console", "messenger:consume", "async", "failed", "scheduler_default", "-vvv", "--time-limit=3600"]
     volumes:
       - storage_data:/app/var/storage
     # The php image's HEALTHCHECK probes FrankenPHP's :2019/metrics, but this container only consumes

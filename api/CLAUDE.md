@@ -22,7 +22,7 @@ Persistence is split on purpose:
   cache pools' `cache_items` table is only read by `app:cache:migrate-to-mongo` (2026-10-16). Never the
   domain model.
 - **Flysystem storage** — maintenance bill and vehicle document binaries; metadata stays on the Mongo record. `STORAGE_ADAPTER=local` (default; files in the `storage_data` volume at `/app/var/storage`, shared by php and worker) or `s3` (prod: any S3-compatible bucket, needs the `S3_*` env). No MinIO in the dev compose since Docker Hub stopped serving its images (2026-10-31).
-- **Turn attachments** — files attached to an in-app turn sit on their own Flysystem store (`turn_attachments.storage`) + a `turn_attachments` Mongo row (owner, 24 h `expiresAt`, plain index, no TTL index: it would orphan the blob). The agent's `file_attachment` tool files one (vehicle document / bill) or it is pruned (`app:turn-attachments:prune`, plus a bounded sweep on each upload).
+- **Turn attachments** — files attached to an in-app turn sit on their own Flysystem store (`turn_attachments.storage`) + a `turn_attachments` Mongo row (owner, 24 h `expiresAt`, plain index, no TTL index: it would orphan the blob). The agent's `file_attachment` tool files one (vehicle document / bill) or it is pruned (`app:turn-attachments:prune`, hourly on the Scheduler `default` schedule, consumed by the worker as `scheduler_default`, plus a bounded sweep on each upload).
 - **Mercure** — render frames to the dashboard.
 
 The FrankenPHP binary is **rebuilt** (`Dockerfile` builder stage): stock modules with the Mercure

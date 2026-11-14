@@ -10,11 +10,14 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
+use Symfony\Component\Scheduler\Attribute\AsPeriodicTask;
 
 /**
  * Frees the files attached to agent turns that were never filed and have passed their 24 h life.
- * Uploads already prune a bounded batch, so this is the backstop for a quiet period: run it from cron.
+ * Uploads already prune a bounded batch, so this is the backstop for a quiet period, run hourly by the
+ * `default` schedule (a worker consuming `scheduler_default`).
  */
+#[AsPeriodicTask('1 hour')]
 #[AsCommand(
     name: 'app:turn-attachments:prune',
     description: 'Delete expired, unfiled turn attachments (rows and stored files).',

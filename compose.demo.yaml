@@ -88,7 +88,7 @@ services:
     image: ghcr.io/soyuka/mon-parc-auto-api:main
     restart: unless-stopped
     environment: *mpa_environment
-    command: ["php", "bin/console", "messenger:consume", "async", "failed", "--time-limit=3600"]
+    command: ["php", "bin/console", "messenger:consume", "async", "failed", "scheduler_default", "--time-limit=3600"]
     volumes:
       - storage_data:/app/var/storage
     healthcheck:
