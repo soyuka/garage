@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Agent\Attachment\TurnAttachmentScope;
 use App\Agent\Journal\TurnJournal;
 use App\Agent\SelectedVehicleContext;
+use App\Agent\TurnCancellations;
 use App\Agent\TurnSettlement;
 use App\Agent\Ui\DashboardChannel;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
 use App\Agent\WebSearchBudget;
+use App\Bonneref\BonnerefToken;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
 use App\Message\RunAgentTurn;
+use App\Message\TurnAttachmentRef;
+use App\MessageHandler\RunAgentTurnHandler;
 use App\Security\OwnerContext;
 use App\Tests\Mock\RecordingHub;
 use Symfony\AI\Agent\Toolbox\Event\ToolCallsExecuted;
@@ -83,5 +88,61 @@ final class TurnStateResetTest extends AppTestCase
         $settlement->onShutdown(null);
 
         $this->assertSame([], $hub->updates);
+    }
+
+    public function testNoBindingOutlivesATurnThatFailsBeforeTheAgentRuns(): void
+    {
+        static::bootKernel();
+        $container = static::getContainer();
+        $container->set(TurnCancellations::class, new class implements TurnCancellations {
+            public function request(string $sessionId): void
+            {
+            }
+
+            public function isRequested(string $sessionId): bool
+            {
+                return false;
+            }
+
+            public function clear(string $sessionId): void
+            {
+                throw new \RuntimeException('store down');
+            }
+        });
+
+        try {
+            $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+                'x',
+                'https://localhost/agent/sessions/sess-early-failure',
+                owner: self::FOREIGN_OWNER,
+                selectedId: '/garage/vehicles/01JFOREIGN',
+                locale: Locale::Fr->value,
+                accessToken: bin2hex(random_bytes(8)),
+                attachments: [new TurnAttachmentRef('01JATTACH', 'bill.pdf', 'application/pdf', 10)],
+            ));
+            $this->fail('the store failure must surface');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('store down', $e->getMessage());
+        }
+
+        $this->assertNotSame(self::FOREIGN_OWNER, $container->get(OwnerContext::class)->current());
+        $this->assertNull($container->get(DashboardChannel::class)->sessionId());
+        $this->assertSame(Locale::DEFAULT, $container->get(LocaleContext::class)->current());
+        $this->assertNull($container->get(SelectedVehicleContext::class)->current());
+        $this->assertNull($container->get(BonnerefToken::class)->get());
+        $this->assertFalse($container->get(TurnAttachmentScope::class)->has('01JATTACH'));
+    }
+
+    public function testAFailedSettlementLeavesNoSessionBound(): void
+    {
+        static::bootKernel();
+        $container = static::getContainer();
+        $settlement = $container->get(TurnSettlement::class);
+        $turn = new RunAgentTurn('x', 'https://localhost/agent/sessions/sess-settle', owner: self::FOREIGN_OWNER);
+
+        $settlement->open($turn);
+        $settlement->fail($turn, 'worker died');
+
+        $this->assertNull($container->get(DashboardChannel::class)->sessionId());
     }
 }

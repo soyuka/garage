@@ -924,3 +924,9 @@ their displayed name: ids 20/21 (construction year) and 1320/1321 (model year) s
 one, so a cluster's `applicability` list can show one condition in fr and two in en. Membership is unaffected. Keying
 it by id changes the output shape. The French output was not diffed before/after the id switch on the dev slice; the
 French fixture tests pass with unchanged assertions.
+
+## mcp/sdk `Protocol::$droppedAwaitedRequestIds` grows in long-lived workers (found 2026-11-14)
+
+`vendor/mcp/sdk/src/Server/Protocol.php:110,1019`: an id is only removed when its late reply arrives (`:755`), and
+`Protocol` has no reset. If the in-process server is a worker-lifetime singleton, elicitation replies that never come
+keep their id forever. Likely negligible (we do not elicit), not measured. Upstream fix: bound or reset the set.

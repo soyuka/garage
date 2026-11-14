@@ -71,6 +71,23 @@ final readonly class RunAgentTurnHandler
 
     public function __invoke(RunAgentTurn $message): void
     {
+        try {
+            $this->run($message);
+        } finally {
+            // Unbind now rather than on kernel.reset, however early the turn failed: nothing else this
+            // thread runs after it (a second deferred turn, a terminate listener) may publish or write as
+            // this owner.
+            $this->bonnerefToken->reset();
+            $this->renderTools->bindSession(null);
+            $this->owner->set(null);
+            $this->locale->set(null);
+            $this->selectedVehicle->set(null);
+            $this->attachmentScope->reset();
+        }
+    }
+
+    private function run(RunAgentTurn $message): void
+    {
         // Bind the tenant for this turn: the worker has no security token, so every garage write the
         // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
         // because the handler is a long-lived singleton in the consume worker.
@@ -152,17 +169,9 @@ final readonly class RunAgentTurnHandler
 
             throw new UnrecoverableMessageHandlingException('Garage turn failed.', previous: $e);
         } finally {
-            $this->bonnerefToken->reset();
             // Journal the turn and settle the dashboard's heartbeat — completed, capped or failed alike —
             // or the UI would stay stuck in the busy state.
             $this->settlement->settle($status, $error);
-            // Unbind now rather than on kernel.reset: nothing else this thread runs after the turn
-            // (a second deferred turn, a terminate listener) may publish or write as this owner.
-            $this->renderTools->bindSession(null);
-            $this->owner->set(null);
-            $this->locale->set(null);
-            $this->selectedVehicle->set(null);
-            $this->attachmentScope->reset();
         }
     }
 }
