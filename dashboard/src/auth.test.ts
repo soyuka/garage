@@ -7,10 +7,12 @@ import {
   createTokenStore,
   decodeJwtClaims,
   endSessionUrl,
+  isRecentLoginAttempt,
   isTokenFresh,
   pkceChallenge,
   refreshDueIn,
   sanitizeReturnHash,
+  shouldAutoLogin,
   singleFlight,
   tokenExpiryMs,
   tokenSetFromResponse,
@@ -533,5 +535,41 @@ describe('logout', () => {
     expect(target.origin + target.pathname).toBe('https://auth.bonneref.fr/api/logout');
     expect(target.searchParams.get('id_token_hint')).toBe('id-1');
     expect(target.searchParams.get('post_logout_redirect_uri')).toBe('https://localhost/');
+  });
+});
+
+describe('shouldAutoLogin', () => {
+  const fresh = { signedIn: false, onCallback: false, error: false, recentAttempt: false, justLoggedOut: false };
+
+  it('redirects a fresh signed-out visit straight to the login', () => {
+    expect(shouldAutoLogin(fresh)).toBe(true);
+  });
+
+  it.each([
+    ['signed in', { signedIn: true }],
+    ['a callback is being handled', { onCallback: true }],
+    ['the last round-trip ended in an error', { error: true }],
+    ['a redirect was already attempted moments ago', { recentAttempt: true }],
+    ['the visitor just logged out on purpose', { justLoggedOut: true }],
+  ])('does not redirect when %s', (_label, override) => {
+    expect(shouldAutoLogin({ ...fresh, ...override })).toBe(false);
+  });
+});
+
+describe('isRecentLoginAttempt', () => {
+  const now = 1_000_000;
+
+  it('is false without a stamp or with garbage', () => {
+    expect(isRecentLoginAttempt(null, now)).toBe(false);
+    expect(isRecentLoginAttempt('nope', now)).toBe(false);
+  });
+
+  it('is true inside the window and false once it has elapsed', () => {
+    expect(isRecentLoginAttempt(String(now - 5_000), now)).toBe(true);
+    expect(isRecentLoginAttempt(String(now - 31_000), now)).toBe(false);
+  });
+
+  it('treats a stamp from the future (clock change) as recent, never as a free pass', () => {
+    expect(isRecentLoginAttempt(String(now + 5_000), now)).toBe(true);
   });
 });

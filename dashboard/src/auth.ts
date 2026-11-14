@@ -37,6 +37,9 @@ const TOKEN_KEY = 'mpa.auth.token';
 const VERIFIER_KEY = 'mpa.auth.pkce_verifier';
 const STATE_KEY = 'mpa.auth.state';
 const RETURN_KEY = 'mpa.auth.return';
+const LOGIN_ATTEMPT_KEY = 'mpa.auth.login_attempt';
+const LOGGED_OUT_KEY = 'mpa.auth.logged_out';
+const LOGIN_ATTEMPT_WINDOW_MS = 30_000;
 const SKEW_MS = 30_000;
 const REFRESH_LEAD_MS = 60_000;
 
@@ -150,6 +153,27 @@ export function refreshDueIn(token: StoredToken, now: number): number {
 export function sanitizeReturnHash(hash: string | null): string {
   if (!hash || !/^#\/[A-Za-z0-9/_.~-]*$/.test(hash) || hash.includes('//')) return '#/';
   return hash;
+}
+
+export interface AutoLoginState {
+  signedIn: boolean;
+  onCallback: boolean;
+  /** The previous round-trip failed (IdP `?error=`, state mismatch, exchange failure). */
+  error: boolean;
+  recentAttempt: boolean;
+  justLoggedOut: boolean;
+}
+
+/** A fresh signed-out visit goes straight to the IdP; every state that could turn that into a loop, or override an explicit logout, shows the sign-in screen instead. */
+export function shouldAutoLogin(state: AutoLoginState): boolean {
+  return !state.signedIn && !state.onCallback && !state.error && !state.recentAttempt && !state.justLoggedOut;
+}
+
+/** True when a login redirect was stamped within the window. A stamp from the near future (clock change) counts too. */
+export function isRecentLoginAttempt(stamp: string | null, now: number, windowMs = LOGIN_ATTEMPT_WINDOW_MS): boolean {
+  if (stamp === null) return false;
+  const at = Number(stamp);
+  return Number.isFinite(at) && Math.abs(now - at) < windowMs;
 }
 
 /** Concurrent callers share one in-flight run; the slot frees once it settles. */
@@ -326,7 +350,44 @@ export function login(): Promise<void> {
   return loginInFlight;
 }
 
+function guardStorage(fn: (storage: Storage) => void): void {
+  try {
+    fn(sessionStorage);
+  } catch {
+    /* no storage: the guards degrade to memory (authFailure) only */
+  }
+}
+
+let authFailure = false;
+
+/** The OAuth round-trip failed in this page load (callback error, state mismatch, exchange failure). */
+export function hasAuthFailure(): boolean {
+  return authFailure;
+}
+
+/** Whether a login redirect started in this tab within the last ~30 s. */
+export function loginAttemptedRecently(): boolean {
+  let stamp: string | null = null;
+  guardStorage((s) => {
+    stamp = s.getItem(LOGIN_ATTEMPT_KEY);
+  });
+  return isRecentLoginAttempt(stamp, Date.now());
+}
+
+/** Whether this tab ended its session on purpose (set by logout, cleared by the next login). */
+export function justLoggedOut(): boolean {
+  let flag = false;
+  guardStorage((s) => {
+    flag = s.getItem(LOGGED_OUT_KEY) !== null;
+  });
+  return flag;
+}
+
 async function beginLogin(): Promise<void> {
+  guardStorage((s) => {
+    s.setItem(LOGIN_ATTEMPT_KEY, String(Date.now()));
+    s.removeItem(LOGGED_OUT_KEY);
+  });
   const verifier = randomToken();
   const state = randomToken(16);
   sessionStorage.setItem(VERIFIER_KEY, verifier);
@@ -363,7 +424,10 @@ async function beginLogin(): Promise<void> {
 export function completeLoginIfCallback(): Promise<boolean> {
   if (exchangeInFlight) return exchangeInFlight;
   if (window.location.pathname !== CALLBACK_PATH) return Promise.resolve(false);
-  exchangeInFlight = exchangeCallback();
+  exchangeInFlight = exchangeCallback().catch((e: unknown) => {
+    authFailure = true;
+    throw e;
+  });
   return exchangeInFlight;
 }
 
@@ -411,6 +475,7 @@ export function logout(): void {
   } catch {
     /* memory already cleared */
   }
+  guardStorage((s) => s.setItem(LOGGED_OUT_KEY, '1'));
   window.location.assign(endSessionUrl(END_SESSION_ENDPOINT, held?.idToken ?? null, `${window.location.origin}/`));
 }
 

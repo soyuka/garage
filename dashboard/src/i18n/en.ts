@@ -1000,4 +1000,12 @@ export const en: Messages = {
       offline: 'Preview without a server: nothing is saved.',
     },
   },
+
+  auth: {
+    redirecting: 'Redirecting to sign-in…',
+    title: 'mon-parc-auto · the Workshop',
+    prompt: 'Sign in to open your garage.',
+    signIn: 'Sign in',
+    failed: 'Sign-in failed. Please try again.',
+  },
 };

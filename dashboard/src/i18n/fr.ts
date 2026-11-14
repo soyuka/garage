@@ -1044,4 +1044,12 @@ export const fr = {
       offline: "Aperçu sans serveur : rien n'est enregistré.",
     },
   },
+
+  auth: {
+    redirecting: 'Redirection vers la connexion…',
+    title: 'mon-parc-auto · l’Atelier',
+    prompt: 'Connectez-vous pour ouvrir votre garage.',
+    signIn: 'Se connecter',
+    failed: 'La connexion a échoué. Réessayez.',
+  },
 };

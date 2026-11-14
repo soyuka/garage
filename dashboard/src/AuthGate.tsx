@@ -1,6 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import './auth.css';
-import { completeLoginIfCallback, isAuthenticated, login, resumeSession } from './auth';
+import {
+  CALLBACK_PATH,
+  completeLoginIfCallback,
+  hasAuthFailure,
+  isAuthenticated,
+  justLoggedOut,
+  login,
+  loginAttemptedRecently,
+  resumeSession,
+  shouldAutoLogin,
+} from './auth';
+import { useT } from './i18n/LocaleProvider';
 
 // The React glue over the pure auth core. AuthBoot resolves the OAuth callback before the app paints
 // (so a held token is ready for the first read); RequireAuth bounces a signed-out visitor to Casdoor.
@@ -31,19 +42,47 @@ export function AuthBoot({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }
 
-/** Gate the live app: signed out → a Casdoor sign-in bounce; signed in → the children. */
+/**
+ * Gate the live app: signed in → the children; a fresh signed-out visit → straight to Casdoor. The
+ * sign-in screen (with the error, if any) stays for the cases an automatic redirect would loop or
+ * override intent: a failed round-trip, a redirect already attempted in the last ~30 s, an explicit
+ * logout. The decision is taken once, on first render — the redirect stamps its own attempt.
+ */
 export function RequireAuth({ children }: { children: ReactNode }) {
-  if (isAuthenticated()) return <>{children}</>;
+  const t = useT();
+  const signedIn = isAuthenticated();
+  const [failed] = useState(hasAuthFailure);
+  const [autoLogin] = useState(() =>
+    shouldAutoLogin({
+      signedIn,
+      onCallback: window.location.pathname === CALLBACK_PATH,
+      error: failed,
+      recentAttempt: loginAttemptedRecently(),
+      justLoggedOut: justLoggedOut(),
+    }),
+  );
+  useEffect(() => {
+    if (autoLogin) login().catch(() => undefined);
+  }, [autoLogin]);
+
+  if (signedIn) return <>{children}</>;
+  if (autoLogin)
+    return (
+      <div className="at-auth-splash" role="status" aria-live="polite">
+        {t.auth.redirecting}
+      </div>
+    );
   return (
     <div className="at-auth-screen">
       <div className="at-auth-card">
         <div className="at-auth-mark" aria-hidden="true">
           ◉
         </div>
-        <h1>mon-parc-auto · l’Atelier</h1>
-        <p>Connectez-vous pour ouvrir votre garage.</p>
+        <h1>{t.auth.title}</h1>
+        {failed && <p role="alert">{t.auth.failed}</p>}
+        <p>{t.auth.prompt}</p>
         <button type="button" className="at-auth-button" onClick={() => void login()}>
-          Se connecter
+          {t.auth.signIn}
         </button>
       </div>
     </div>
