@@ -11,6 +11,7 @@ Public showcase of mon-parc-auto (mpa): the MCP server, the Atelier and a demo a
 | Mercure hub | inside `bonneref-garage` (image Caddyfile `http://php:80` site; `MERCURE_HUB_UPSTREAM=127.0.0.1:80`), reached publicly as `https://garage.bonneref.fr/.well-known/mercure`. Anonymous subscribers, the pilot topic digest is the access control. |
 | Atelier (`dashboard/`) | static build in `~/sites/garage.bonneref.fr`, served by the host Caddy |
 | in-app agent turn | `AGENT_TURN_DISPATCH=terminate` (no worker, no Postgres; in-memory messenger DSNs) |
+| scheduled tasks | container `bonneref-garage-scheduler`, same image and env, `messenger:consume scheduler_default` (Symfony Scheduler `default` schedule: hourly `app:turn-attachments:prune`). One consumer only, a second would run every task twice. |
 | auth | Casdoor `casdoor` container behind `auth.bonneref.fr`, org `bonneref`. Atelier app "Mon Parc Auto" (client `671b8c86d75444f3f4c4`), redirect URI `https://garage.bonneref.fr/callback`. MCP clients self-register (anonymous DCR). |
 
 `~/bonneref.compose.yml` is compose project `soyuka`, shared with unrelated containers: never `--remove-orphans`.
@@ -53,7 +54,7 @@ the Vite preamble hash. A new external origin in the Atelier build needs adding 
 cd ~/apps/mon-parc-auto.fr && git fetch && git status   # deploy from origin/main
 # api
 docker compose -p soyuka -f ~/bonneref.compose.yml build bonneref-garage
-docker compose -p soyuka -f ~/bonneref.compose.yml up -d --no-deps bonneref-garage
+docker compose -p soyuka -f ~/bonneref.compose.yml up -d --no-deps bonneref-garage bonneref-garage-scheduler
 # Atelier: VITE_API_BASE must be the public origin, it is also the Mercure topic prefix
 D=~/bonneref/dashboard-build-$(date +%Y%m%d); mkdir -p $D && git archive HEAD dashboard | tar -x -C $D
 docker run --rm -u $(id -u):$(id -g) -e HOME=/tmp -v $D/dashboard:/app -w /app \
@@ -127,3 +128,10 @@ tables (`derived_mc`) and English texts (`derived_en`), 24,055,025,664 B. The pr
 is the 2026-10-21 one. Its `PRAGMA quick_check` was still running at deploy time (`enqc.log`). Swapping the file
 needs the container recreated (`up -d`), the bind mount pins the inode. `bonneref.fr/mcp` is not routed by the host
 Caddy (405); the container answers it on `127.0.0.1:5382`.
+
+## 2026-11-14 deploy: uploads, prompt attachments, scheduler
+
+Deployed `02e2816` (bonneref-garage, Atelier): signed-out visitors go straight to sign-in, document and bill uploads
+back in the Atelier, files attached to an in-app turn (`turn_attachments` on the S3 bucket, 24 h unless filed).
+Added the `bonneref-garage-scheduler` service to `~/bonneref.compose.yml` (backup
+`~/bonneref.compose.yml.pre-scheduler-20261114`). `debug:scheduler` in that container lists the hourly prune.
