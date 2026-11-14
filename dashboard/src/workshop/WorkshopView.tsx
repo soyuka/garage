@@ -55,7 +55,8 @@ export interface WorkshopViewProps {
   /** The noyau phase the dock orb follows. */
   phase: NoyauPhase;
   onListening?: (active: boolean) => void;
-  onSubmit: (text: string) => void;
+  /** Resolves on 202, rejects on a refusal (the dock keeps its files then). */
+  onSubmit: (text: string, files?: File[]) => Promise<void> | void;
   onCancel: () => void;
   onSelectVehicle: (iri: Iri) => void;
   onAction: (action: CtaAction) => void;
@@ -278,7 +279,7 @@ export function WorkshopView(props: WorkshopViewProps) {
 
   const scope = dockScope(bundle ? view.section : null);
   const { onSubmit } = props;
-  const submit = useCallback((text: string) => onSubmit(scopeInstruction(scope, text, t.workshop.command.searchDocuments)), [onSubmit, scope, t]);
+  const submit = useCallback((text: string, files: File[]) => onSubmit(scopeInstruction(scope, text, t.workshop.command.searchDocuments), files), [onSubmit, scope, t]);
   const dockArea = useRef<HTMLDivElement>(null);
   const [dockSpace, setDockSpace] = useState(68);
   useLayoutEffect(() => {

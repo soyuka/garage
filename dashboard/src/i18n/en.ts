@@ -667,6 +667,18 @@ export const en: Messages = {
       agent: 'The agent',
       dismiss: 'Dismiss the proposal',
       proposal: 'Agent proposal',
+      attach: 'Attach a file (PDF, JPEG, PNG)',
+      attachments: 'Attached files',
+      removeAttachment: (name: string) => `Remove ${name}`,
+      attachType: (name: string) => `${name}: PDF, JPEG or PNG only.`,
+      attachSize: (name: string, max: string) => `${name} is over ${max}.`,
+      attachCount: (max: number) => `At most ${max} files per request.`,
+      refused: {
+        tooLarge: (max: string) => `A file is over ${max}; nothing was sent.`,
+        unsupported: 'Only PDF, JPEG or PNG files are accepted; nothing was sent.',
+        invalid: 'The files could not be read; nothing was sent.',
+        rateLimited: (wait: string | null) => (wait ? `Too many requests; try again in ${wait}.` : 'Too many requests; try again shortly.'),
+      },
     },
     mod: {
       projection: 'Projection',

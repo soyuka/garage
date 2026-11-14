@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { useT } from '../i18n/LocaleProvider';
 import { getIdentity } from '../auth';
 import type { OwnerTopics } from '../agent';
-import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId } from '../agent';
+import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId, TurnRefusedError } from '../agent';
 import { createTask, getVehicleBundle, getVehicles, mergeTaskParts } from '../garage';
 
 const PREFETCH_CONCURRENCY = 3;
@@ -314,8 +314,8 @@ export function Workshop() {
   // ── The command bar ──
   const lastAck = useRef(-1);
   const send = useCallback(
-    (instruction: string) => {
-      if (busy(state)) return;
+    (instruction: string, files: File[] = []): Promise<void> => {
+      if (busy(state)) return Promise.reject(new Error('a turn is already running'));
       const p = view.proposal;
       const pendingContext = p ? [p.headline, p.finding, p.actions.length ? t.atelier.ctaOptions(p.actions.map((a) => a.label).join(', ')) : ''].filter(Boolean).join(' — ') : undefined;
       dispatchView({ type: 'clearProposal' });
@@ -327,11 +327,13 @@ export function Workshop() {
       armWatchdog();
       const v = selectedIri ? bundles[selectedIri]?.vehicle : undefined;
       const summary = v ? `${v.make} ${v.model}${v.plate ? ` · ${v.plate}` : ''}${v.health ? ` · ${v.health.status}` : ''}` : undefined;
-      postTurn(instruction, { sessionId, selectedId: selectedIri ?? undefined, summary, pendingContext }).catch((e) => {
+      return postTurn(instruction, { sessionId, selectedId: selectedIri ?? undefined, summary, pendingContext }, files).catch((e: unknown) => {
         clearTimer(watchdog);
-        dispatch({ type: 'toast', tone: 'alarm', message: t.atelier.requestFailed((e as Error).message) });
+        // A refusal is told in the dock, next to the files it concerns; a transport failure is a toast.
+        if (!(e instanceof TurnRefusedError)) dispatch({ type: 'toast', tone: 'alarm', message: t.atelier.requestFailed((e as Error).message) });
         dispatch({ type: 'turn', phase: 'end', failed: true });
         cues.play('blocked');
+        throw e;
       });
     },
     [armWatchdog, bundles, cues.play, dispatch, selectedIri, sessionId, state, t, view.proposal],
@@ -357,7 +359,7 @@ export function Workshop() {
           });
         return;
       }
-      if (action.instruction) send(action.instruction);
+      if (action.instruction) send(action.instruction).catch(() => undefined);
     },
     [cues.play, dispatch, loadBundle, send, t],
   );

@@ -26,6 +26,7 @@ use Symfony\Component\RateLimiter\RateLimiterFactory;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
 use Symfony\Component\Security\Core\User\UserInterface;
+use Symfony\Component\Validator\Validation;
 
 /**
  * The endpoint must only ENQUEUE the turn and ack — never run the agent in the request thread.
@@ -105,7 +106,7 @@ final class AgentTurnControllerTest extends TestCase
             }
         };
 
-        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $this->limiter(1000), new DashboardChannel(new OwnerContext($this->securityFor($owner)), $baseUri, 'test-secret'), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'), new TurnAttachments($this->createStub(DocumentManager::class), new TurnAttachmentStorage($this->createStub(FilesystemOperator::class)), new MockClock()), new OwnerRateLimit(new OwnerContext($this->securityFor($owner))), $this->limiter(1000));
+        return new AgentTurnController($turns, $this->securityFor($owner), $limiter ?? $this->limiter(100), $this->limiter(1000), new DashboardChannel(new OwnerContext($this->securityFor($owner)), $baseUri, 'test-secret'), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'), new TurnAttachments($this->createStub(DocumentManager::class), new TurnAttachmentStorage($this->createStub(FilesystemOperator::class)), new MockClock()), new OwnerRateLimit(new OwnerContext($this->securityFor($owner))), $this->limiter(1000), Validation::createValidatorBuilder()->enableAttributeMapping()->getValidator());
     }
 
     private function dispatched(RunAgentTurn $turn): void

@@ -710,6 +710,18 @@ export const fr = {
       agent: "L'agent",
       dismiss: 'Écarter la proposition',
       proposal: "Proposition de l'agent",
+      attach: 'Joindre un fichier (PDF, JPEG, PNG)',
+      attachments: 'Fichiers joints',
+      removeAttachment: (name: string) => `Retirer ${name}`,
+      attachType: (name: string) => `${name} : PDF, JPEG ou PNG uniquement.`,
+      attachSize: (name: string, max: string) => `${name} dépasse ${max}.`,
+      attachCount: (max: number) => `${max} fichiers au plus par demande.`,
+      refused: {
+        tooLarge: (max: string) => `Un fichier dépasse ${max} ; rien n'a été envoyé.`,
+        unsupported: "Seuls les PDF, JPEG et PNG sont acceptés ; rien n'a été envoyé.",
+        invalid: "Les fichiers n'ont pas pu être lus ; rien n'a été envoyé.",
+        rateLimited: (wait: string | null) => (wait ? `Trop de demandes ; réessayez dans ${wait}.` : 'Trop de demandes ; réessayez dans un instant.'),
+      },
     },
     mod: {
       projection: 'Projection',

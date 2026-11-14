@@ -42,7 +42,10 @@ final readonly class TurnContextBuilder
     public function build(RunAgentTurn $turn): string
     {
         $context = self::outputLanguage(Locale::resolve($turn->locale))
-            ."Instruction de l'utilisateur : ".$turn->instruction;
+            .('' === $turn->instruction && [] !== $turn->attachments
+                ? "L'utilisateur n'a envoyé que des pièces jointes, sans texte : examine-les, puis agis si leur"
+                    ." intention est claire (une facture, un document du véhicule…) ou demande-lui ce qu'il en attend."
+                : "Instruction de l'utilisateur : ".$turn->instruction);
 
         if ('' !== $turn->selectedId) {
             $context .= "\n\nVéhicule actuellement sélectionné dans le tableau de bord : ".$turn->selectedId;

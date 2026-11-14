@@ -72,6 +72,45 @@ final class AgentTurnAttachmentTest extends AppTestCase
         $this->assertStringContainsString('facture.png', $prompt);
     }
 
+    public function testFilesAloneNeedNoInstructionAndTheModelIsToldSo(): void
+    {
+        $client = static::createClient();
+        $seen = $this->recordModelInput();
+
+        $browser = $client->getKernelBrowser();
+        $browser->request(
+            'POST',
+            '/agent/turn',
+            ['instruction' => '  ', 'sessionId' => 'sess-att-only'],
+            ['files' => [$this->upload(self::PNG, 'photo.png')]],
+            ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for('test-user', self::TEST_OWNER)],
+        );
+
+        $this->assertSame(202, $browser->getResponse()->getStatusCode());
+        $parts = $seen->getArrayCopy()[0];
+        $this->assertCount(1, array_filter($parts, static fn ($p): bool => $p instanceof Image));
+        $prompt = implode("\n", array_map(static fn ($p): string => $p instanceof Text ? $p->getText() : '', $parts));
+        $this->assertStringContainsString("L'utilisateur n'a envoyé que des pièces jointes, sans texte", $prompt);
+    }
+
+    public function testABlankMultipartInstructionWithoutFilesIsRefused(): void
+    {
+        $client = static::createClient();
+        $seen = $this->recordModelInput();
+
+        $browser = $client->getKernelBrowser();
+        $browser->request(
+            'POST',
+            '/agent/turn',
+            ['instruction' => '  ', 'sessionId' => 'sess-att-none'],
+            [],
+            ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for('test-user', self::TEST_OWNER)],
+        );
+
+        $this->assertSame(400, $browser->getResponse()->getStatusCode());
+        $this->assertCount(0, $seen);
+    }
+
     public function testTheJournalKeepsAttachmentMetadataButNoBinary(): void
     {
         $client = static::createClient();

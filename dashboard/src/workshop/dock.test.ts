@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dockScope, scopeInstruction } from './dock';
+import { dockScope, scopeInstruction, waitLabel } from './dock';
 
 describe('dockScope', () => {
   it('is the parc on home and the open section on a car page', () => {
@@ -20,5 +20,17 @@ describe('scopeInstruction', () => {
     for (const scope of ['parc', 'entretien', 'pieces', 'caracteristiques'] as const) {
       expect(scopeInstruction(scope, 'vidange', phrase)).toBe('vidange');
     }
+  });
+
+  it('sends no search phrase when only files go out on Documents', () => {
+    expect(scopeInstruction('documents', '  ', phrase)).toBe('');
+  });
+});
+
+describe('waitLabel', () => {
+  it('says seconds under a minute and whole minutes past it', () => {
+    expect(waitLabel(45)).toBe('45\u00a0s');
+    expect(waitLabel(61)).toBe('2\u00a0min');
+    expect(waitLabel(null)).toBeNull();
   });
 });

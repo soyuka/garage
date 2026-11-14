@@ -99,6 +99,14 @@ export function FileDoc() {
   );
 }
 
+export function Paperclip() {
+  return (
+    <Icon>
+      <path d="M10.75 5v6.25a2.75 2.75 0 01-5.5 0V4a1.75 1.75 0 013.5 0v6.75a.75.75 0 01-1.5 0V5" />
+    </Icon>
+  );
+}
+
 export function Open() {
   return (
     <Icon>

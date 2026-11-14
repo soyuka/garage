@@ -409,6 +409,25 @@ export interface DocScanHit {
 /** What the document viewer opens — a `showDocument` frame's payload, or one built from a row/bill. */
 export type DocumentSpec = Omit<Extract<UIAction, { type: 'showDocument' }>, 'type'>;
 
+// ── Agent turn (POST /agent/turn, CONTRACT.md § Agent turn) ───────────────────
+
+export const TURN_MAX_FILES = 5;
+export const TURN_MAX_FILE_BYTES = 10 * 1024 * 1024;
+export const TURN_ACCEPTED_TYPES = ['application/pdf', 'image/jpeg', 'image/png'] as const;
+
+/** JSON without files; multipart (`files[]`) with them, where `instruction` may then be blank. */
+export interface AgentTurnRequest {
+  instruction: string;
+  sessionId: string;
+  selectedId?: string;
+  summary?: string;
+  pendingContext?: string;
+  files?: File[];
+}
+
+/** 413 / 415 / 422 / 429: refused before anything was enqueued or any turn budget spent. */
+export type TurnRefusalKind = 'tooLarge' | 'unsupported' | 'invalid' | 'rateLimited';
+
 // ── Mercure frames ────────────────────────────────────────────────────────────
 
 /**

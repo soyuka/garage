@@ -25,6 +25,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Validator\Exception\ValidationFailedException;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 /**
  * Hands one agent turn to the {@see TurnDispatcher} and acks. The turn itself runs in a
@@ -62,6 +64,7 @@ final readonly class AgentTurnController
         private TurnAttachments $attachments,
         private OwnerRateLimit $uploadRateLimit,
         private RateLimiterFactoryInterface $uploadLimiter,
+        private ValidatorInterface $validator,
     ) {
     }
 
@@ -73,6 +76,8 @@ final readonly class AgentTurnController
         #[MapRequestPayload(validationFailedStatusCode: Response::HTTP_BAD_REQUEST)]
         AgentTurnInput $input,
     ): Response {
+        $this->requireInstructionWithoutFiles($request, $input);
+
         // No Anthropic key: nothing would run the turn. Refused before the rate limiter spends a slot.
         if (!$this->capabilities->has(Capability::Agent)) {
             return new JsonResponse(['error' => 'agent not configured'], Response::HTTP_SERVICE_UNAVAILABLE);
@@ -120,6 +125,22 @@ final readonly class AgentTurnController
         ));
 
         return new Response(status: Response::HTTP_ACCEPTED);
+    }
+
+    /**
+     * Mirrors the payload resolver's own refusal (400 carrying a {@see ValidationFailedException}), so a
+     * blank text-only turn reads exactly as before files existed.
+     */
+    private function requireInstructionWithoutFiles(Request $request, AgentTurnInput $input): void
+    {
+        if ([] !== $request->files->all('files')) {
+            return;
+        }
+
+        $violations = $this->validator->validate($input, groups: [AgentTurnInput::WITHOUT_FILES]);
+        if (\count($violations) > 0) {
+            throw HttpException::fromStatusCode(Response::HTTP_BAD_REQUEST, implode("\n", array_map(static fn ($violation): string => (string) $violation->getMessage(), iterator_to_array($violations))), new ValidationFailedException($input, $violations));
+        }
     }
 
     /**

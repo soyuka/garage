@@ -1,6 +1,6 @@
 import { API, authFetch } from './auth';
 import type { Subscription } from './useMercure';
-import type { Capabilities } from './types';
+import type { AgentTurnRequest, Capabilities, TurnRefusalKind } from './types';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Atelier — the agent turn (Tier-1 transport re-authored fresh from
@@ -21,13 +21,7 @@ export interface TurnContext {
   pendingContext?: string;
 }
 
-export interface TurnBody {
-  instruction: string;
-  sessionId: string;
-  selectedId?: string;
-  summary?: string;
-  pendingContext?: string;
-}
+export type TurnBody = Omit<AgentTurnRequest, 'files'>;
 
 /** Assemble the POST body, omitting any absent optional (so an unset field never serializes as null). */
 export function buildTurnBody(instruction: string, ctx: TurnContext): TurnBody {
@@ -60,17 +54,49 @@ export function tabSessionId(storage: Pick<Storage, 'getItem' | 'setItem'> | nul
   }
 }
 
+/** The server turned the turn down before enqueueing anything; `retryAfter` in seconds, on a 429. */
+export class TurnRefusedError extends Error {
+  constructor(
+    readonly kind: TurnRefusalKind,
+    readonly status: number,
+    readonly retryAfter: number | null,
+  ) {
+    super(`agent turn refused: ${status}`);
+    this.name = 'TurnRefusedError';
+  }
+}
+
+const REFUSALS: Record<number, TurnRefusalKind> = { 413: 'tooLarge', 415: 'unsupported', 422: 'invalid', 429: 'rateLimited' };
+
+/** Retry-After is delta-seconds or an HTTP date (RFC 9110 §10.2.3). */
+export function retryAfterSeconds(header: string | null, now: number = Date.now()): number | null {
+  if (!header) return null;
+  const trimmed = header.trim();
+  if (/^\d+$/.test(trimmed)) return Number(trimmed);
+  const at = Date.parse(trimmed);
+  return Number.isNaN(at) ? null : Math.max(0, Math.ceil((at - now) / 1000));
+}
+
+/** JSON without files; multipart with them, with no Content-Type so the browser writes the boundary. */
+export function turnRequestInit({ files = [], ...body }: AgentTurnRequest): RequestInit {
+  if (files.length === 0) return { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
+  const form = new FormData();
+  for (const [key, value] of Object.entries(body)) if (value !== undefined) form.append(key, value);
+  for (const file of files) form.append('files[]', file);
+  return { method: 'POST', body: form };
+}
+
 /**
  * Post one agent turn. The endpoint acks 202 (the turn runs on the worker); the reply streams over the
- * session topic. We only surface a transport failure (the caller clears the optimistic busy state).
+ * session topic. A refusal (413/415/422/429) rejects with a {@link TurnRefusedError}; anything else is a
+ * plain transport failure (the caller clears the optimistic busy state either way).
  */
-export async function postTurn(instruction: string, ctx: TurnContext): Promise<void> {
-  const res = await authFetch(`${API}/agent/turn`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(buildTurnBody(instruction, ctx)),
-  });
-  if (!res.ok) throw new Error(`agent turn failed: ${res.status}`);
+export async function postTurn(instruction: string, ctx: TurnContext, files: File[] = []): Promise<void> {
+  const res = await authFetch(`${API}/agent/turn`, turnRequestInit({ ...buildTurnBody(instruction, ctx), files }));
+  if (res.ok) return;
+  const kind = REFUSALS[res.status];
+  if (kind) throw new TurnRefusedError(kind, res.status, kind === 'rateLimited' ? retryAfterSeconds(res.headers.get('Retry-After')) : null);
+  throw new Error(`agent turn failed: ${res.status}`);
 }
 
 /**

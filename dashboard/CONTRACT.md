@@ -85,8 +85,9 @@ major-unit euros the client converts.
   a non-Claude model gets a text note instead) and the agent may FILE one (`file_attachment`) as a vehicle
   document or the bill of a visit — otherwise it is deleted (unfiled temp files expire after 24 h). A
   filed file reaches the UI through the usual fleet-topic vehicle frame, no new frame. Still **202**, no
-  body. `instruction` stays required (non-blank) with files. Refusals, nothing enqueued and no turn budget
-  spent: **422** (more than 5 files, or an unreadable upload), **413** (a file over 10 MiB), **415** (not
+  body. `instruction` may be blank (or absent) when at least one file is attached — the model is then
+  told the user sent only attachments; without files it stays required (non-blank, 400 otherwise).
+  Refusals, nothing enqueued and no turn budget spent: **422** (more than 5 files, or an unreadable upload), **413** (a file over 10 MiB), **415** (not
   PDF/JPEG/PNG), **429** + `Retry-After` (per-owner upload budget, one slot per file; or the turn budget as
   before). Error bodies are the framework's problem+json, `detail` is human-readable.
 - `POST /agent/turn/cancel` `{sessionId}` — cooperative; busy clears on the streamed `turn` end, not

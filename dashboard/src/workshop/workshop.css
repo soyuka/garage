@@ -2053,6 +2053,7 @@ body {
   background: transparent;
   color: var(--w-ink);
   font: 400 16px/1 var(--w-font-ui);
+  text-overflow: ellipsis;
   outline: none;
 }
 .w-dock-input::placeholder {
@@ -2070,6 +2071,55 @@ body {
 }
 .w-dock-send:not(:disabled) {
   color: var(--w-blue);
+}
+
+/* Files riding with the next turn: hairline chips aligned past the orb, like the tray. */
+.w-dock-files {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 8px 16px 8px 72px;
+  border-top: 1px solid var(--w-rule);
+  background: var(--w-module);
+}
+.w-dock-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.w-dock-chip {
+  max-width: 280px;
+  padding: 0 0 0 4px;
+  cursor: default;
+}
+.w-dock-thumb {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  object-fit: cover;
+}
+.w-dock-chip-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--w-ink);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-dock-chip-remove {
+  width: 24px;
+  height: 24px;
+}
+.w-dock-attach {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--w-rule);
+}
+.w-dock-stack.is-dropping .w-dock-field {
+  border-color: var(--w-blue);
 }
 
 /* The orb: a sphere of edge strokes. Motion is transform/opacity only. */
@@ -2244,6 +2294,12 @@ body {
   }
   .w-dock-field .w-kbd {
     display: none;
+  }
+  .w-dock-field {
+    flex-basis: 0;
+  }
+  .w-dock-files {
+    padding: 8px 12px;
   }
   .w-tray {
     width: auto;
