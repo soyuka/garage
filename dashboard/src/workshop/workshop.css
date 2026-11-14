@@ -2298,6 +2298,22 @@ body {
   .w-dock-field {
     flex-basis: 0;
   }
+  .w-dock-input {
+    padding-inline-end: 20px;
+  }
+  /* Inside the field on phones: 32px drawn, the ::before keeps the 44px tap target. */
+  .w-dock-attach {
+    position: relative;
+    z-index: 1;
+    width: 32px;
+    border: 0;
+    margin-inline-start: -41px;
+  }
+  .w-dock-attach::before {
+    content: '';
+    position: absolute;
+    inset: 0 -6px;
+  }
   .w-dock-files {
     padding: 8px 12px;
   }
