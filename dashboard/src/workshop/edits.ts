@@ -17,12 +17,14 @@ import {
   updateTask,
   updateTaskPart,
   uploadMaintenanceAttachment,
+  uploadVehicleDocument,
   type MaintenanceRecordInput,
   type ServiceRuleInput,
   type TaskEdit,
+  type VehicleDocumentUpload,
   type VehiclePatch,
 } from '../garage';
-import type { Iri, ServiceAction, ServiceRule, VehicleSummary } from '../types';
+import type { Iri, MaintenanceAttachment, ServiceAction, ServiceRule, VehicleSummary } from '../types';
 import { ruleIdentityChanged, type TaskPartOps } from './editForms';
 
 export interface BillChanges {
@@ -43,6 +45,9 @@ export class PartialSave extends Error {
 export interface WorkshopEdits {
   saveVisit(vehicleIri: Iri, recordIri: Iri | null, input: MaintenanceRecordInput, bills: BillChanges): Promise<void>;
   deleteVisit(vehicleIri: Iri, recordIri: Iri): Promise<void>;
+  /** One bill onto a visit that already exists, at once: it does not wait for the visit form's save. */
+  attachBill(vehicleIri: Iri, recordIri: Iri, file: File): Promise<MaintenanceAttachment>;
+  uploadDocument(vehicleIri: Iri, input: VehicleDocumentUpload): Promise<void>;
   loadRules(vehicleIri: Iri): Promise<ServiceRule[]>;
   saveRule(vehicleIri: Iri, input: ServiceRuleInput, replaces: ServiceRule | null): Promise<void>;
   deleteRule(vehicleIri: Iri, ruleId: string): Promise<void>;
@@ -88,6 +93,12 @@ export function liveEdits(hooks: LiveHooks): WorkshopEdits {
         })(),
       ),
     deleteVisit: (vehicleIri, recordIri) => after(vehicleIri, deleteMaintenanceRecord(recordIri)),
+    attachBill: (vehicleIri, recordIri, file) => after(vehicleIri, uploadMaintenanceAttachment(recordIri, file)),
+    uploadDocument: (vehicleIri, input) =>
+      after(
+        vehicleIri,
+        uploadVehicleDocument(vehicleIri, input).then(() => undefined),
+      ),
     loadRules: (vehicleIri) => getServiceSchedule(vehicleIri),
     saveRule: (vehicleIri, input, replaces) =>
       after(
@@ -145,6 +156,8 @@ export function offlineEdits(message: string): WorkshopEdits {
   return {
     saveVisit: no,
     deleteVisit: no,
+    attachBill: no,
+    uploadDocument: no,
     loadRules: no,
     saveRule: no,
     deleteRule: no,

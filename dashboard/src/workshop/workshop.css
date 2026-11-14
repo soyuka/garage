@@ -2919,6 +2919,22 @@ body {
 .w-docs-empty {
   padding: 24px 0;
 }
+.w-docs-empty p {
+  margin: 0;
+}
+.w-docs-addform {
+  flex: none;
+  width: min(1100px, 100%);
+  outline: 1px solid var(--w-rule);
+}
+.w-docs-file {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  line-height: 26px;
+  text-align: left;
+  text-overflow: ellipsis;
+}
 .w-docstage {
   display: flex;
   flex-direction: column;
@@ -3426,6 +3442,16 @@ body {
   width: min(1100px, 100%);
   padding: 8px 0;
 }
+.w-strip-side {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 4px;
+}
+.w-strip-side > .w-docs-add {
+  align-self: flex-start;
+  margin-top: 2px;
+}
 .w-strip-kinds {
   display: flex;
   flex: none;
@@ -3883,6 +3909,10 @@ body {
 .w-edit-parts > .w-more {
   align-self: flex-start;
   margin-top: 2px;
+}
+.w-edit-bill-error {
+  color: var(--w-over);
+  font-size: 11.5px;
 }
 .w-edit-errors {
   display: flex;

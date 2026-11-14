@@ -1,12 +1,15 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
 import { useLocale, useT } from '../i18n/LocaleProvider';
 import { formatDate } from '../format';
 import { Failure, ImagePane, PdfPane, type DocSkin } from '../scene/documentPanes';
 import { viewerKind } from '../scene/documentViewer';
 import { loadPdfJs } from '../scene/pdfjs';
-import type { DocScanHit, DocumentSpec, VehicleBundle } from '../types';
+import type { DocScanHit, DocumentSpec, Iri, VehicleBundle, VehicleDocumentKind } from '../types';
 import { docBlob, docPreview } from './docBlob';
 import { docKinds, openRowId, previewTitle, stripRows, type DocKind } from './docs';
+import { acceptsBill, BILL_TYPES } from './editForms';
+import { EditorFrame, ErrorLines, Field } from './Editors';
+import { useEditHost, type WorkshopEdits } from './edits';
 import { Close, FileDoc } from './Icons';
 import { documentRows, type DocRow, type Modules } from './modules';
 import { SearchLog } from './SearchLog';
@@ -16,6 +19,8 @@ const SKIN: DocSkin = { prefix: 'w-doc', button: 'w-button' };
 const PREVIEW_W = 112;
 /** Past this a preview would mean downloading a whole workshop manual just to draw its cover. */
 const PREVIEW_MAX_BYTES = 25_000_000;
+/** `App\Documentation\VehicleDocumentKind`, manual first: what an owner files most. */
+const UPLOAD_KINDS: readonly VehicleDocumentKind[] = ['manual', 'technical_note', 'quote', 'other'];
 
 type Load = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; blob: Blob };
 
@@ -86,6 +91,14 @@ export function DocumentsPlane({
   const openId = openRowId(rows, open);
   const kinds = docKinds(rows);
   const strip = useRef<HTMLDivElement>(null);
+  const edits = useEditHost()?.edits ?? null;
+  const [adding, setAdding] = useState(false);
+  const addLink = edits && !adding && (
+    <button type="button" className="w-more w-docs-add" onClick={() => setAdding(true)}>
+      {t.workshop.documents.upload.open}
+    </button>
+  );
+  const addForm = edits && adding && <AddDocumentForm edits={edits} vehicleIri={bundle.vehicle['@id']} onClose={() => setAdding(false)} />;
 
   const onStripKey = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
@@ -101,7 +114,11 @@ export function DocumentsPlane({
     return (
       <div className="w-docs-page">
         {log}
-        <p className="w-muted w-docs-empty">{modules.documentsUnavailable ? t.workshop.empty.documentsUnavailable : t.workshop.empty.documents}</p>
+        <div className="w-docs-empty">
+          <p className="w-muted">{modules.documentsUnavailable ? t.workshop.empty.documentsUnavailable : t.workshop.empty.documents}</p>
+          {addLink}
+        </div>
+        {addForm}
       </div>
     );
   }
@@ -109,25 +126,117 @@ export function DocumentsPlane({
   return (
     <div className="w-docs-page">
       {log ?? (open && active && <DocStage key={stageKey} doc={open} kind={rows.find((r) => r.id === openId)?.kind ?? null} />)}
+      {addForm}
       <section className="w-strip" aria-label={t.workshop.documents.strip}>
-        {kinds.length > 1 && (
-          <div className="w-strip-kinds" role="group" aria-label={t.workshop.documents.kinds}>
-            <button type="button" className={`w-chip${kind === null ? ' is-on' : ''}`} aria-pressed={kind === null} onClick={() => setKind(null)}>
-              {t.workshop.documents.all} <span className="w-data">{rows.length}</span>
-            </button>
-            {kinds.map((k) => (
-              <button key={k.kind} type="button" className={`w-chip${kind === k.kind ? ' is-on' : ''}`} aria-pressed={kind === k.kind} onClick={() => setKind(k.kind)}>
-                {t.workshop.docKind[k.kind]} <span className="w-data">{k.count}</span>
+        <div className="w-strip-side">
+          {kinds.length > 1 && (
+            <div className="w-strip-kinds" role="group" aria-label={t.workshop.documents.kinds}>
+              <button type="button" className={`w-chip${kind === null ? ' is-on' : ''}`} aria-pressed={kind === null} onClick={() => setKind(null)}>
+                {t.workshop.documents.all} <span className="w-data">{rows.length}</span>
               </button>
-            ))}
-          </div>
-        )}
+              {kinds.map((k) => (
+                <button key={k.kind} type="button" className={`w-chip${kind === k.kind ? ' is-on' : ''}`} aria-pressed={kind === k.kind} onClick={() => setKind(k.kind)}>
+                  {t.workshop.docKind[k.kind]} <span className="w-data">{k.count}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {addLink}
+        </div>
         <div className="w-strip-row" ref={strip} onKeyDown={onStripKey}>
           {shown.map((row) => (
             <PreviewCard key={row.id} row={row} open={row.id === openId} live={active} onOpen={() => onOpenRow(row)} />
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function AddDocumentForm({ edits, vehicleIri, onClose }: { edits: WorkshopEdits; vehicleIri: Iri; onClose: () => void }) {
+  const t = useT();
+  const u = t.workshop.documents.upload;
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [kind, setKind] = useState<VehicleDocumentKind>('manual');
+  const [title, setTitle] = useState('');
+  const [sourceRef, setSourceRef] = useState('');
+  const [errors, setErrors] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+
+  const pick = (picked: File | null) => {
+    if (picked && !acceptsBill(picked.type)) {
+      setErrors([u.rejected(picked.name)]);
+      return;
+    }
+    setErrors([]);
+    setFile(picked);
+  };
+  const submit = (ev: FormEvent) => {
+    ev.preventDefault();
+    if (busy) return;
+    if (!file) {
+      setErrors([u.noFile]);
+      return;
+    }
+    setErrors([]);
+    setBusy(true);
+    edits
+      .uploadDocument(vehicleIri, { file, kind, title, sourceRef })
+      .then(onClose)
+      .catch((err: unknown) => {
+        setErrors([u.failed(err instanceof Error ? err.message : String(err))]);
+        setBusy(false);
+      });
+  };
+
+  return (
+    <div className="w-docs-addform">
+      <EditorFrame title={u.heading} onClose={onClose}>
+        <form className="w-edit-form" onSubmit={submit} noValidate>
+          <div className="w-edit-grid">
+            <Field label={u.file} className="w-field--wide">
+              <button type="button" className="w-button w-docs-file" onClick={() => fileInput.current?.click()} title={file?.name} autoFocus>
+                {file?.name ?? u.choose}
+              </button>
+              <input
+                ref={fileInput}
+                type="file"
+                accept={BILL_TYPES.join(',')}
+                hidden
+                onChange={(ev) => {
+                  pick(ev.target.files?.[0] ?? null);
+                  ev.target.value = '';
+                }}
+              />
+            </Field>
+            <Field label={u.kind}>
+              <select className="w-input" value={kind} onChange={(ev) => setKind(ev.target.value as VehicleDocumentKind)}>
+                {UPLOAD_KINDS.map((k) => (
+                  <option key={k} value={k}>
+                    {t.workshop.docKind[k]}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label={u.title} className="w-field--wide">
+              <input className="w-input" value={title} onChange={(ev) => setTitle(ev.target.value)} />
+            </Field>
+            <Field label={u.sourceRef}>
+              <input className="w-input w-input--data" placeholder={u.sourceRefHint} value={sourceRef} onChange={(ev) => setSourceRef(ev.target.value)} />
+            </Field>
+          </div>
+          <ErrorLines errors={errors} />
+          <div className="w-actions w-edit-actions">
+            <button type="submit" className="w-button is-primary" disabled={busy}>
+              {busy ? u.busy : u.submit}
+            </button>
+            <button type="button" className="w-button" onClick={onClose}>
+              {t.workshop.edit.cancel}
+            </button>
+          </div>
+        </form>
+      </EditorFrame>
     </div>
   );
 }

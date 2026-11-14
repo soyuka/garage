@@ -4,7 +4,7 @@ import { formatDate } from '../format';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import { actionVerb, formatCadence, ruleTitle } from '../schedule';
 import { taskTitle } from '../tasks';
-import type { DocumentSpec, Iri, MaintenanceRecord, PlannedTask, ServiceAction, ServiceRule, VehicleBundle, VehicleSummary } from '../types';
+import type { DocumentSpec, Iri, MaintenanceAttachment, MaintenanceRecord, PlannedTask, ServiceAction, ServiceRule, VehicleBundle, VehicleSummary } from '../types';
 import { cadenceUnit, maintUnitFor } from '../units';
 import { defaultUsageUnit } from '../edit';
 import { isArchived } from './archive';
@@ -70,7 +70,7 @@ function ServiceSelect({ value, onChange, label, autoFocus }: { value: string; o
   );
 }
 
-function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
+export function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
   return (
     <label className={`w-field ${className}`}>
       <span className="w-field-label">{label}</span>
@@ -79,7 +79,7 @@ function Field({ label, children, className = '' }: { label: string; children: R
   );
 }
 
-function ErrorLines({ errors }: { errors: string[] }) {
+export function ErrorLines({ errors }: { errors: string[] }) {
   if (errors.length === 0) return null;
   return (
     <div className="w-edit-errors" role="alert">
@@ -154,7 +154,7 @@ export function ConfirmButton({
   );
 }
 
-function EditorFrame({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
+export function EditorFrame({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   const t = useT();
   const id = useId();
   const onKeyDown = (e: KeyboardEvent<HTMLElement>) => {
@@ -229,6 +229,12 @@ function PartRowsEditor<P extends PartDraft>({ parts, onChange, make }: { parts:
 
 // ── Visit ───────────────────────────────────────────────────────────────────────
 
+interface BillUpload {
+  key: string;
+  file: File;
+  error: string | null;
+}
+
 export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: EditHost; bundle: VehicleBundle; recordId: Iri | null; onOpenBill: (doc: DocumentSpec) => void }) {
   const t = useT();
   const [locale] = useLocale();
@@ -239,13 +245,17 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
   const unit = visitUnit(record, bundle.vehicle.usageUnit, bundle.vehicle.vehicleType);
   const [draft, setDraft] = useState<VisitDraft>(() => visitDraft(record, todayIso()));
   const [pending, setPending] = useState<File[]>([]);
+  const [uploads, setUploads] = useState<BillUpload[]>([]);
+  const [attached, setAttached] = useState<MaintenanceAttachment[]>([]);
   const [removed, setRemoved] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
   const [busy, setBusy] = useState<'save' | 'delete' | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const uploadSeq = useRef(0);
   const set = (patch: Partial<VisitDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const setItem = (i: number, patch: Partial<ItemDraft>) => setDraft((d) => ({ ...d, items: d.items.map((it, k) => (k === i ? { ...it, ...patch } : it)) }));
-  const bills = (record?.attachments ?? []).filter((a) => !removed.includes(a.url));
+  const logged = record?.attachments ?? [];
+  const bills = [...logged, ...attached.filter((a) => !logged.some((l) => l.id === a.id))].filter((a) => !removed.includes(a.url));
 
   const submit = (ev: FormEvent) => {
     ev.preventDefault();
@@ -256,7 +266,7 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
     }
     setErrors([]);
     setBusy('save');
-    const remove = removed.filter((url) => (record?.attachments ?? []).some((a) => a.url === url));
+    const remove = removed.filter((url) => [...logged, ...attached].some((a) => a.url === url));
     host.edits
       .saveVisit(vehicleIri, iri, out.input, { add: pending, remove })
       .then(() => host.close())
@@ -279,7 +289,22 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
     const list = Array.from(files ?? []);
     const bad = list.filter((f) => !acceptsBill(f.type));
     setErrors(bad.map((f) => e.billRejected(f.name)));
-    setPending((p) => [...p, ...list.filter((f) => acceptsBill(f.type))]);
+    const good = list.filter((f) => acceptsBill(f.type));
+    if (!iri) {
+      setPending((p) => [...p, ...good]);
+      return;
+    }
+    for (const file of good) {
+      const key = `${file.name}-${++uploadSeq.current}`;
+      setUploads((u) => [...u, { key, file, error: null }]);
+      host.edits
+        .attachBill(vehicleIri, iri, file)
+        .then((attachment) => {
+          setUploads((u) => u.filter((x) => x.key !== key));
+          setAttached((a) => [...a, attachment]);
+        })
+        .catch((err) => setUploads((u) => u.map((x) => (x.key === key ? { ...x, error: messageOf(err) } : x))));
+    }
   };
 
   const title = record ? e.visitOf(formatDate(record.performedAt, locale)) : e.newVisit;
@@ -337,7 +362,7 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
 
         <fieldset className="w-edit-set">
           <legend className="w-group-title">{e.bills}</legend>
-          {(bills.length > 0 || pending.length > 0) && (
+          {(bills.length > 0 || uploads.length > 0 || pending.length > 0) && (
             <ul className="w-rows">
               {bills.map((a) => (
                 <li key={a.id} className="w-row">
@@ -352,6 +377,25 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
                   <button type="button" className="w-icon-button" aria-label={e.removeBill(a.filename)} title={e.removeBill(a.filename)} onClick={() => setRemoved((r) => [...r, a.url])}>
                     <Close />
                   </button>
+                </li>
+              ))}
+              {uploads.map((u) => (
+                <li key={u.key} className="w-row">
+                  <span className="w-row-main">{u.file.name}</span>
+                  {u.error === null ? (
+                    <span className="w-row-dim" role="status">
+                      {e.billUploading}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="w-edit-bill-error" role="alert">
+                        {e.billFailed(u.error)}
+                      </span>
+                      <button type="button" className="w-icon-button" aria-label={e.removeBill(u.file.name)} title={e.removeBill(u.file.name)} onClick={() => setUploads((x) => x.filter((y) => y.key !== u.key))}>
+                        <Close />
+                      </button>
+                    </>
+                  )}
                 </li>
               ))}
               {pending.map((f, i) => (
