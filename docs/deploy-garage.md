@@ -8,7 +8,7 @@ Public showcase of mon-parc-auto (mpa): the MCP server, the Atelier and a demo a
 | piece | where |
 | --- | --- |
 | mpa api (`api/`, `frankenphp_prod`) | container `bonneref-garage`, `127.0.0.1:5383`, env `~/bonneref/garage.env`, Mongo db `garage` on `bonneref-mongodb`, bills on `bonneref-minio` (`STORAGE_ADAPTER=s3`). The same container serves bonneref.fr `/garage/*` and garage.bonneref.fr. |
-| Mercure hub | inside `bonneref-garage` (image Caddyfile `http://php:80` site; `MERCURE_HUB_UPSTREAM=127.0.0.1:80`), reached publicly as `https://garage.bonneref.fr/.well-known/mercure`. Anonymous subscribers, the pilot topic digest is the access control. |
+| Mercure hub | inside `bonneref-garage` (image Caddyfile `http://php:80` site; `MERCURE_HUB_UPSTREAM=127.0.0.1:80`), reached publicly as `https://garage.bonneref.fr/.well-known/mercure`. Private updates only: the subscriber token is the cookie `GET /agent/link` sets, so the hub must stay same-origin with the Atelier. |
 | Atelier (`dashboard/`) | static build in `~/sites/garage.bonneref.fr`, served by the host Caddy |
 | in-app agent turn | `AGENT_TURN_DISPATCH=terminate` (no worker, no Postgres; in-memory messenger DSNs) |
 | scheduled tasks | container `bonneref-garage-scheduler`, same image and env, `messenger:consume scheduler_default` (Symfony Scheduler `default` schedule: hourly `app:turn-attachments:prune`). One consumer only, a second would run every task twice. |

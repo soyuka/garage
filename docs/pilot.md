@@ -17,8 +17,10 @@ topic** instead:
 
 `src/Agent/Ui/DashboardChannel.php` picks the target: bound turn session first, owner pilot topic
 otherwise. Everything downstream is unchanged — the frames, `RenderIntentTools`, the reducer, the
-choreography. The digest (not the raw `sub`) is what scopes the channel: the hub accepts anonymous
-subscribers, so the topic string is the access control.
+choreography. Every update is published private: a browser reads only the topics named by the subscriber token
+`GET /agent/link` sets as the hub's HttpOnly cookie (`__Secure-mercure_access_token`, path
+`/.well-known/mercure`; pilot + fleet topics and a URL pattern over the owner's session topics). The
+digest (not the raw `sub`) keeps a topic from naming its owner.
 
 The dashboard asks for its topic once on mount (`GET /agent/link`, authenticated) and subscribes to
 it next to its own session topic — `dashboardTopics()` in `dashboard/src/agent.ts`.

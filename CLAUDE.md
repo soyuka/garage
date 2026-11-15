@@ -104,9 +104,10 @@ advertised MCP schema.
 **One render pipeline, two drivers.** Render intents are declared once as `#[AsTool]` methods
 (`api/src/ApiResource/Dashboard.php`) and reach the browser as Mercure frames. `src/Agent/Ui/DashboardChannel.php`
 chooses the topic: the *turn session* topic when an in-app agent turn asked, otherwise the owner's
-**pilot topic** `…/agent/pilots/<hmac_sha256(owner_sub, APP_SECRET)>`. The digest is the access
-control — the hub accepts anonymous subscribers. The dashboard learns its pilot topic from
-`GET /agent/link` and subscribes to both (`dashboard/src/agent.ts`). Pilot tools sit on
+**pilot topic** `…/agent/pilots/<hmac_sha256(owner_sub, APP_SECRET)>`. Every update is private:
+`GET /agent/link` returns the topics and sets the hub's HttpOnly subscriber cookie (pilot + fleet topics,
+a URL pattern over the owner's session topics); the dashboard subscribes to both (`dashboard/src/agent.ts`)
+and refetches the link when the hub refuses a stream (`dashboard/src/mercureLink.ts`). Pilot tools sit on
 `McpToolbox::EXCLUDED` so the in-app agent never double-sees them.
 
 **Agent turns are async.** `/agent/turn` enqueues; the `worker` container consumes under CLI SAPI so

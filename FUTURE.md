@@ -838,7 +838,14 @@ removes the feature (tool not listed, endpoint 503 without a vendor call, dashbo
 - **`STT_BACKEND` is a selector with one case** (`elevenlabs`). Kept since the default makes it free, but it
   could go the way of `TTS_BACKEND` (removed with pocket-tts, `docs/archive/pocket-tts.md`).
 
-## Token passthrough mpa → bonneref — DEBT (2026-11-09)
+## Token passthrough mpa → bonneref — RESOLVED 2026-11-15
+
+Replaced by a service credential: mpa mints a client credentials token of the Casdoor application `mpa-service` and
+names the end user in `X-Bonneref-Owner`; bonneref's `catalogue` firewall accepts it through
+`App\Security\ServiceTokenHandler`, `CATALOGUE_PASSTHROUGH_AUDIENCES` is gone, `RunAgentTurn` no longer carries a
+token (`api/docs/AUTH.md` § mpa → bonneref). The 2026-11-09 analysis is kept below for the record.
+
+### Original debt (2026-11-09)
 
 Since 2026-11-09 both apps check the token audience (`api/docs/AUTH.md` § Audience). mpa still forwards its
 caller's bearer to bonneref (`App\Bonneref\BonnerefClient`, `BonnerefToken` in the worker), which the MCP
@@ -909,7 +916,7 @@ From the api/ hardening review (items 1-17 shipped 2026-11-10, see `git log`):
   `upload`) sits on `cache.rate_limiter` → `cache.app`, a filesystem pool local to each container. Several php
   replicas would each count their own window. A shared store (Redis, or a Mongo-backed PSR-6 pool) before
   scaling out.
-- Token passthrough mpa → bonneref: see "Token passthrough mpa → bonneref — DEBT" above.
+- Token passthrough mpa → bonneref: resolved 2026-11-15, see "Token passthrough mpa → bonneref — RESOLVED" above.
 
 ## bonneref `get_service_parts` without `service` is a -32603 (found 2026-11-13, not fixed)
 
@@ -930,3 +937,16 @@ French fixture tests pass with unchanged assertions.
 `vendor/mcp/sdk/src/Server/Protocol.php:110,1019`: an id is only removed when its late reply arrives (`:755`), and
 `Protocol` has no reset. If the in-process server is a worker-lifetime singleton, elicitation replies that never come
 keep their id forever. Likely negligible (we do not elicit), not measured. Upstream fix: bound or reset the set.
+
+## Security review 2026-11-14: accepted risks and leftovers (noted 2026-11-15)
+
+Review in `.claude/security-analysis-2026-11-14.md`; every Critical/Medium finding was fixed 2026-11-15. Left on purpose:
+
+- Plate → VIN on bonneref: any authenticated user resolves any plate to its VIN, and plates already in the store are
+  not metered (`bonneref/api/src/Siv/SivClient.php:70-74`). Kept because mpa's add-from-plate prefills the VIN.
+  Accepted risk; metering cached hits against `plate_lookup` is the cheap mitigation if abuse shows up.
+- Stage Postgres keeps the default password (`api/.env.stage`). Loopback-bound, not tunneled; rotating it means
+  re-initialising the volume.
+- No HSTS from the in-repo Caddy: stage relies on Cloudflare, prod on the host Caddy (outside the repo).
+- mpa's `mpa-service` token is cached in `cache.app` (per-container filesystem, tmpfs in stage): a secret at rest,
+  far smaller exposure than the user bearer it replaced.

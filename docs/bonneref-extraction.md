@@ -86,9 +86,8 @@ HEAD catalogue contract with JSON-LD fixtures captured from HEAD's own responses
 - `App\Bonneref\BonnerefClient` (scoped client `bonneref.client`, `BONNEREF_API_URL`, default `https://bonneref.fr`)
   is the only door to the catalogue and the plate lookup. Every consumer switched, MCP tool names, input schemas and
   mpa routes unchanged (`GET /vehicles/{plate}` proxies, still JSON-LD for the dashboard).
-- Bearer forwarding: `BonnerefToken` (set by `RunAgentTurnHandler` from `RunAgentTurn::$accessToken`, reset in
-  `finally`) wins; else the main request's `Authorization: Bearer`. Terminate mode needs the message token too, the
-  request stack is empty in `kernel.terminate`.
+- Credentials: bearer forwarding (`BonnerefToken`, `RunAgentTurn::$accessToken`) was replaced on 2026-11-15 by
+  mpa's own client credentials token plus `X-Bonneref-Owner` (`api/docs/AUTH.md` § mpa → bonneref).
 - Deleted: `Agent/Finder`, `Finder`, `Controller/Finder`, `PhotoIntake`, `RegistrationDocument` (+ controllers),
   `AgentTurnHistoryController`, `FinderSelection`, `TurnImageBatch`, `HideJournalNoiseCommand`,
   `ImportLegacyCacheCommand`, `BackfillJournalVehiclesCommand`, the `finder` agent + prompt, `PartsApi`, `Siv`,
