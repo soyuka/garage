@@ -85,7 +85,7 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
 | `src/Maintenance/` | forecast, health, recorder, schedule planner, facts projector |
 | `src/Agent/` | in-app agent: toolbox, turn context, journal, `Ui/DashboardChannel.php` |
 | `src/Mcp/` | MCP toolbox filtering, prompt loaders, MCP-Apps UI resources |
-| `src/Bonneref/` | `BonnerefClient`: the one door to the catalogue and plate lookup, forwarding the caller's Casdoor bearer (request header, or the token carried by `RunAgentTurn` in the worker / terminate mode via `BonnerefToken`) |
+| `src/Bonneref/` | `BonnerefClient`: the one door to the catalogue and plate lookup, calling as mpa (`BonnerefServiceToken`, Casdoor client credentials) with the end user in `X-Bonneref-Owner`; the caller's token is never forwarded |
 | `src/Motul/`, `src/Catalog/` | the Motul oil advisor; garage-side catalogue logic (`ServiceKind`, `OpenTaskPartsBackfiller`, `BrandTier`) |
 
 ## Things that have bitten before
@@ -110,9 +110,11 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
 - **`POST /agent/turn` is rate-limited per owner** (`limiter.agent_turn`, sliding window,
   `AGENT_TURN_RATE_LIMIT` per hour, default 30): in-app turns spend our Anthropic credits on a public
   demo. Over the limit: 429 + `Retry-After`, nothing enqueued. MCP calls are not limited (the caller's
-  model reasons). A global limiter (`limiter.agent_turn_global`, `AGENT_TURN_GLOBAL_RATE_LIMIT`) caps
+  model reasons), except `get_motul_oil` (`limiter.motul`, `MOTUL_RATE_LIMIT`: a motul.com scrape), whose
+  refusal reaches the model as a `rate_limited` tool error (`DomainErrorHandler`). A global limiter (`limiter.agent_turn_global`, `AGENT_TURN_GLOBAL_RATE_LIMIT`) caps
   all owners together. `/tts`, `/stt` and the document/bill uploads have per-owner limiters too
-  (`SPEECH_`/`TRANSCRIPTION_`/`UPLOAD_RATE_LIMIT`, via `App\Security\OwnerRateLimit`). All share the
+  (`SPEECH_`/`TRANSCRIPTION_`/`UPLOAD_RATE_LIMIT`, via `App\Security\OwnerRateLimit`), and `/tts` and
+  `/stt` a global one too (`SPEECH_`/`TRANSCRIPTION_GLOBAL_RATE_LIMIT`). All share the
   `cache.rate_limiter` pool, which the test env swaps to an array adapter, or every functional test
   posting as `TEST_OWNER` would share one budget across the run.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
@@ -124,6 +126,12 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   internal `http://php:80` site, which serves only `/.well-known/mercure*`; the public site proxies
   the hub path to it. FrankenPHP hot reload must stay off, as it wants a hub in its own server
   (`FRANKENPHP_SITE_CONFIG` is empty in `compose.override.yaml`).
+- **Mercure updates are all private** (`private: true` in every publisher). Browsers authenticate with
+  the cookie `GET /agent/link` sets (`App\Mercure\SubscriberToken`): Mercure 1.x does not take a 1.0
+  token in the query string (`?authorization=`, `?access_token=`; verified 2026-11-15). The `playground`
+  directive forces `anonymous`, the subscriptions API and `cors_origins *` back on and renames the
+  cookie, so it is off in every profile and `cookie_name` is pinned. Subscriber tokens are signed with
+  `MERCURE_SUBSCRIBER_JWT_SECRET` (`mercure.yaml` `subscriber:`), the hub's `MERCURE_SUBSCRIBER_JWT_KEY`.
 - **The owner is the email claim** (55bf873), so a seeded `setOwner()` takes an address. The test
   fallback in `config/services.yaml` and `AppTestCase::TEST_OWNER` must stay equal.
 

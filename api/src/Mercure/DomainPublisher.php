@@ -19,9 +19,9 @@ use Symfony\Component\Mercure\Update;
  * recomputed health in the same frame. The open checklist is its own subresource, refetched on select.
  *
  * One topic: the vehicle owner's fleet topic ({@see DashboardChannel::fleetTopic()}), a keyed digest
- * handed out by GET /agent/link. The hub accepts anonymous subscribers, so a topic derived from the
- * vehicle IRI would broadcast every owner's plates and VINs to anyone who guesses it. A vehicle with
- * no owner is not published.
+ * handed out by GET /agent/link with a subscriber token naming it. The update is private, so only that
+ * token reads it; the digest keeps the topic itself from naming the owner. A vehicle with no owner is
+ * not published.
  *
  * Best-effort, like the render intents: the write already committed, so a hub that is down or
  * untrusted must never turn a successful write into a failure — log and move on.
@@ -53,7 +53,7 @@ final readonly class DomainPublisher
         ], \JSON_THROW_ON_ERROR);
 
         try {
-            $this->hub->publish(new Update($topic, $payload));
+            $this->hub->publish(new Update($topic, $payload, private: true));
         } catch (\Throwable $e) {
             $this->logger->warning('Mercure publish failed for the fleet topic: {error}', ['error' => $e->getMessage()]);
         }

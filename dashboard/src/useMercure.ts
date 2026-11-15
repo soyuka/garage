@@ -62,8 +62,7 @@ function isKnownFrame(value: unknown): value is MercureFrame {
 
 /**
  * Parse a Mercure SSE data line. Null on a non-JSON keep-alive (the hub sends `:` heartbeats) and on
- * anything that is not a frame this client knows: the hub accepts anonymous subscribers and the pilot
- * topic carries model-authored payloads, so an unknown discriminant never reaches a reducer.
+ * anything that is not a frame this client knows: the pilot topic carries model-authored payloads, so an unknown discriminant never reaches a reducer.
  */
 export function parseFrame(data: string): MercureFrame | null {
   let parsed: unknown;
@@ -107,10 +106,52 @@ export function removeVehicle(list: VehicleSummary[], iri: string): VehicleSumma
 
 // ── Subscription hook (glue) ──────────────────────────────────────────────────
 
-/** One EventSource's worth of topics, and the driver whose frames arrive on it (see agent.ts). */
+/**
+ * One EventSource's worth of topics and the driver whose frames arrive on it (see agent.ts). Every
+ * update is private: the stream is authorized by the hub's HttpOnly cookie GET /agent/link sets (an
+ * EventSource cannot send a header, and Mercure 1.x refuses tokens in the query string). `generation`
+ * bumps when that cookie was renewed, which is what reopens a refused stream.
+ */
 export interface Subscription {
   driver: Driver;
   topics: string[];
+  generation: number;
+}
+
+export interface StreamLifecycle {
+  /** The hub refused the stream for good (an expired token's reconnect is a 401): fetch a fresh link. */
+  onRefused: () => void;
+  onOpen: () => void;
+}
+
+/**
+ * Open one EventSource per subscription. A transient drop is retried by EventSource itself
+ * (readyState CONNECTING); only a refused (re)connect leaves it CLOSED, which is the one case that needs
+ * a new token. Returns the closer.
+ */
+export function openStreams(
+  subscriptions: Subscription[],
+  hub: string,
+  origin: string,
+  onFrame: (frame: MercureFrame, driver: Driver) => void,
+  lifecycle: StreamLifecycle,
+  Source: typeof EventSource = EventSource,
+): () => void {
+  const sources = subscriptions
+    .filter((s) => s.topics.length > 0)
+    .map(({ driver, topics }) => {
+      const source = new Source(buildHubUrl(hub, origin, topics));
+      source.onmessage = (e: MessageEvent<string>) => {
+        const frame = parseFrame(e.data);
+        if (frame) onFrame(frame, driver);
+      };
+      source.onopen = () => lifecycle.onOpen();
+      source.onerror = () => {
+        if (source.readyState === Source.CLOSED) lifecycle.onRefused();
+      };
+      return source;
+    });
+  return () => sources.forEach((s) => s.close());
 }
 
 /**
@@ -118,26 +159,22 @@ export interface Subscription {
  * of the stream it came from — provenance without a wire change (Mercure never names the matched
  * topic, so one stream carrying both drivers could not tell them apart). The handler is held in a ref
  * so a changing callback identity does NOT tear the streams down — only a change to the subscription
- * set (keyed by its serialisation) re-subscribes. Closes every stream on unmount.
+ * set (keyed by its serialisation, generation included: a renewed cookie re-subscribes) does. Closes every
+ * stream on unmount.
  */
-export function useMercure(subscriptions: Subscription[], onFrame: (frame: MercureFrame, driver: Driver) => void): void {
+export function useMercure(subscriptions: Subscription[], onFrame: (frame: MercureFrame, driver: Driver) => void, lifecycle: StreamLifecycle): void {
   const handler = useRef(onFrame);
   handler.current = onFrame;
-  const key = subscriptions.map((s) => `${s.driver}:${s.topics.join('|')}`).join(';');
+  const life = useRef(lifecycle);
+  life.current = lifecycle;
+  const key = subscriptions.map((s) => `${s.driver}:${s.topics.join('|')}:${s.generation}`).join(';');
 
   useEffect(() => {
     if (!HUB) return;
-    const sources = subscriptions
-      .filter((s) => s.topics.length > 0)
-      .map(({ driver, topics }) => {
-        const source = new EventSource(buildHubUrl(HUB, window.location.origin, topics));
-        source.onmessage = (e: MessageEvent<string>) => {
-          const frame = parseFrame(e.data);
-          if (frame) handler.current(frame, driver);
-        };
-        return source;
-      });
-    return () => sources.forEach((s) => s.close());
+    return openStreams(subscriptions, HUB, window.location.origin, (frame, driver) => handler.current(frame, driver), {
+      onRefused: () => life.current.onRefused(),
+      onOpen: () => life.current.onOpen(),
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 }

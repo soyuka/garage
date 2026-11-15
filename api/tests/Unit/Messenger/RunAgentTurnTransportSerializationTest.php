@@ -30,6 +30,26 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
         $this->assertEquals($turn, $serializer->decode($serializer->encode(new Envelope($turn)))->getMessage());
     }
 
+    public function testNoCredentialIsQueued(): void
+    {
+        $body = $this->serializer()->encode(new Envelope($this->turn()))['body'];
+
+        $this->assertStringNotContainsStringIgnoringCase('token', $body);
+    }
+
+    public function testATurnQueuedWithTheRetiredAccessTokenStillDecodes(): void
+    {
+        $serializer = $this->serializer();
+        $encoded = $serializer->encode(new Envelope($this->turn()));
+        $legacy = json_decode($encoded['body'], true, flags: \JSON_THROW_ON_ERROR);
+        $this->assertIsArray($legacy);
+        // @mago-expect lint:no-literal-password test fixture
+        $legacy['accessToken'] = 'token.value';
+        $encoded['body'] = json_encode($legacy, \JSON_THROW_ON_ERROR);
+
+        $this->assertEquals($this->turn(), $serializer->decode($encoded)->getMessage());
+    }
+
     public function testFailedTurnKeepsItsStamps(): void
     {
         $serializer = $this->serializer();
@@ -65,8 +85,6 @@ final class RunAgentTurnTransportSerializationTest extends KernelTestCase
             summary: 'Espace IV 2.0 16V',
             pendingContext: 'Quelle motorisation ?',
             locale: 'en',
-            // @mago-expect lint:no-literal-password test fixture
-            accessToken: 'token.value',
         );
     }
 }

@@ -5,37 +5,50 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Bonneref;
 
 use App\Bonneref\BonnerefClient;
-use App\Bonneref\BonnerefToken;
+use App\Bonneref\BonnerefServiceToken;
 use App\Catalog\CarType;
 use App\Exception\UpstreamException;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
+use App\Security\OwnerContext;
 use App\Tests\Mock\BonnerefHttpClient;
 use App\Tests\Mock\RecordingLogger;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\Exception\TransportException;
+use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\JsonMockResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 final class BonnerefClientTest extends TestCase
 {
     private BonnerefHttpClient $http;
-    private BonnerefToken $token;
+    private BonnerefServiceToken $token;
     private RequestStack $requests;
     private LocaleContext $locale;
+    private OwnerContext $owner;
     private BonnerefClient $client;
+    private int $minted = 0;
 
     protected function setUp(): void
     {
         BonnerefHttpClient::reset();
         $this->http = new BonnerefHttpClient();
-        $this->token = new BonnerefToken();
+        $this->token = new BonnerefServiceToken(new MockHttpClient(fn (string $method, string $url): JsonMockResponse => str_ends_with($url, '/.well-known/openid-configuration')
+            ? new JsonMockResponse(['token_endpoint' => 'https://casdoor.test/token'])
+            : new JsonMockResponse(['access_token' => 'service-token-'.++$this->minted, 'expires_in' => 604800])), new ArrayAdapter(), 'https://casdoor.test', 'mpa-service-id', 'mpa-service-secret');
         $this->requests = new RequestStack();
         $this->locale = new LocaleContext($this->requests);
-        $this->client = new BonnerefClient($this->http, $this->token, $this->requests, locale: $this->locale);
+        $this->owner = new OwnerContext(new Security(new ServiceLocator(['security.token_storage' => static fn (): TokenStorage => new TokenStorage()])));
+        $this->owner->set('owner@example.com');
+        $this->client = new BonnerefClient($this->http, $this->token, $this->owner, locale: $this->locale);
     }
 
-    public function testMakesAreReadFromTheHydraMemberAndSentWithTheCurrentRequestsBearer(): void
+    public function testMakesAreReadFromTheHydraMemberAndSentWithTheServiceTokenAndTheOwner(): void
     {
         $this->http->fixture('/makes', 'makes');
         $this->requests->push(Request::create('/mcp', server: ['HTTP_AUTHORIZATION' => 'Bearer caller-token']));
@@ -48,7 +61,8 @@ final class BonnerefClientTest extends TestCase
         $sent = $this->http->lastRequest();
         $this->assertSame('/makes', $sent['path']);
         $this->assertSame(['carType' => 'CV', 'search' => 'iv'], $sent['query']);
-        $this->assertSame('Bearer caller-token', $sent['headers']['authorization']);
+        $this->assertSame('Bearer service-token-1', $sent['headers']['authorization'], 'the caller\'s bearer is never forwarded');
+        $this->assertSame('owner@example.com', $sent['headers']['x-bonneref-owner']);
         $this->assertSame('application/ld+json', $sent['headers']['accept']);
     }
 
@@ -88,45 +102,48 @@ final class BonnerefClientTest extends TestCase
         $this->assertSame(['en', 'en'], array_column(array_column(BonnerefHttpClient::$requests, 'headers'), 'accept-language'));
     }
 
-    public function testTheTurnsTokenWinsOverARequestBearer(): void
+    public function testEveryPageOfACollectionCarriesTheServiceTokenAndTheOwner(): void
     {
-        $this->http->fixture('/makes', 'makes');
-        $this->requests->push(Request::create('/', server: ['HTTP_AUTHORIZATION' => 'Bearer request-token']));
-        $this->token->set('turn-token');
+        $this->http->route('/makes', self::page([['id' => 1, 'name' => 'AUDI']], '/makes?carType=PC&page=2'), query: ['carType' => 'PC']);
+        $this->http->route('/makes', self::page([['id' => 2, 'name' => 'BMW']], null), query: ['carType' => 'PC', 'page' => '2']);
 
         $this->client->makes();
 
-        $this->assertSame('Bearer turn-token', $this->http->lastRequest()['headers']['authorization']);
+        $headers = array_column(BonnerefHttpClient::$requests, 'headers');
+        $this->assertSame(['Bearer service-token-1', 'Bearer service-token-1'], array_column($headers, 'authorization'));
+        $this->assertSame(['owner@example.com', 'owner@example.com'], array_column($headers, 'x-bonneref-owner'));
     }
 
-    public function testWithNeitherAHeaderNorATokenNothingIsForwarded(): void
+    public function testWithoutAnOwnerNothingIsSent(): void
     {
         $this->http->fixture('/makes', 'makes');
+        $this->owner->set(null);
 
-        $this->client->makes();
+        try {
+            $this->client->makes();
+            $this->fail('a catalogue call must not leave without an owner');
+        } catch (\LogicException $e) {
+            $this->assertStringContainsString('owner', $e->getMessage());
+        }
 
-        $this->assertArrayNotHasKey('authorization', $this->http->lastRequest()['headers']);
+        $this->assertSame([], BonnerefHttpClient::$requests);
     }
 
-    public function testAClearedTurnTokenStopsBeingForwarded(): void
+    public function testARefusedServiceTokenIsMintedAgainOnTheNextCall(): void
     {
-        $this->http->fixture('/makes', 'makes');
-        $this->token->set('turn-token');
-        $this->token->set(null);
+        $this->http->route('/makes', '{"title":"Unauthorized"}', 401);
 
+        try {
+            $this->client->makes();
+            $this->fail('a 401 must surface');
+        } catch (UpstreamException $e) {
+            $this->assertFalse($e->transient);
+        }
+
+        $this->http->fixture('/makes', 'makes');
         $this->client->makes();
 
-        $this->assertArrayNotHasKey('authorization', $this->http->lastRequest()['headers']);
-    }
-
-    public function testAnUnprefixedAuthorizationHeaderIsNotForwarded(): void
-    {
-        $this->http->fixture('/makes', 'makes');
-        $this->requests->push(Request::create('/', server: ['HTTP_AUTHORIZATION' => 'Basic Zm9vOmJhcg==']));
-
-        $this->client->makes();
-
-        $this->assertArrayNotHasKey('authorization', $this->http->lastRequest()['headers']);
+        $this->assertSame('Bearer service-token-2', $this->http->lastRequest()['headers']['authorization'] ?? null);
     }
 
     public function testACollectionFollowsHydraNextAcrossPages(): void
@@ -149,7 +166,7 @@ final class BonnerefClientTest extends TestCase
     public function testPagingIsBoundedAndSaysSo(): void
     {
         $logger = new RecordingLogger();
-        $client = new BonnerefClient($this->http, $this->token, $this->requests, $logger);
+        $client = new BonnerefClient($this->http, $this->token, $this->owner, $logger);
         $this->http->route('/makes', self::page([['id' => 1, 'name' => 'AUDI']], '/makes?carType=PC&page=2'));
 
         $this->assertCount(BonnerefClient::MAX_PAGES, $client->makes());

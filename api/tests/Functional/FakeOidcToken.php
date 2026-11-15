@@ -16,6 +16,8 @@ final class FakeOidcToken
     // Must match MCP_RESOURCE_ALIASES (phpunit.dist.xml) and OAUTH_CLIENT_AUDIENCES (.env.test).
     public const string MCP_RESOURCE = 'https://mcp.example.test/mcp';
     public const string ATELIER_CLIENT = 'test-atelier-client';
+    // CASDOOR_ORGANIZATION (.env.test).
+    public const string ORGANIZATION = 'test-org';
 
     /**
      * @param list<string>|null $audience defaults to both audiences, so one token works on /mcp and on REST
@@ -25,6 +27,7 @@ final class FakeOidcToken
         $claims = [
             'sub' => $sub,
             'email' => $email,
+            'owner' => self::ORGANIZATION,
             'aud' => $audience ?? [self::MCP_RESOURCE, self::ATELIER_CLIENT],
         ];
 

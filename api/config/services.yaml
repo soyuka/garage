@@ -217,8 +217,19 @@ services:
             $discoveryCache: '@cache.app'
             $oidcConfigurationCacheKey: 'casdoor_oidc_config'
             $issuers: ['%env(CASDOOR_ISSUER)%']
+            $organization: '%env(CASDOOR_ORGANIZATION)%'
             $claim: '%app.owner_claim%'
             $requireVerifiedEmail: '%env(bool:OWNER_REQUIRE_VERIFIED_EMAIL)%'
+
+    # mpa's own bonneref credential (client credentials of the Casdoor application `mpa-service`), cached in
+    # cache.app until shortly before it expires. Replaces forwarding the caller's bearer (docs/AUTH.md).
+    App\Bonneref\BonnerefServiceToken:
+        arguments:
+            $http: '@app.casdoor_http_client'
+            $cache: '@cache.app'
+            $issuer: '%env(CASDOOR_ISSUER)%'
+            $clientId: '%env(MPA_SERVICE_CLIENT_ID)%'
+            $clientSecret: '%env(MPA_SERVICE_CLIENT_SECRET)%'
 
     App\Security\McpResource:
         arguments:

@@ -23,6 +23,27 @@ final class McpSetMaintenanceScheduleTest extends AppTestCase
         $this->assertContains('set_maintenance_schedule', $tools);
     }
 
+    public function testANonWebSourceUrlIsInvalidInput(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'set_maintenance_schedule',
+            'arguments' => [
+                'make' => 'TORO',
+                'model' => '246-H',
+                'vehicleType' => 'groundscare',
+                'confirmNew' => true,
+                'items' => [
+                    ['type' => 'oil_change', 'action' => 'change', 'everyUsageValue' => 50, 'everyUsageUnit' => 'hours', 'url' => 'javascript://x%0Aalert(1)'],
+                ],
+            ],
+        ], 3));
+
+        $this->assertSame('invalid_input', $result['error'] ?? null);
+    }
+
     public function testPersistsEveryCadenceAsItsOwnRuleNeverCollapsed(): void
     {
         $client = static::createClient();

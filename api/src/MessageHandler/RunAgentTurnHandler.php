@@ -14,7 +14,6 @@ use App\Agent\TurnContextBuilder;
 use App\Agent\TurnSettlement;
 use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\TurnActivityTracker;
-use App\Bonneref\BonnerefToken;
 use App\Entity\AgentTurnStatus;
 use App\I18n\AgentMessages;
 use App\I18n\Locale;
@@ -57,8 +56,6 @@ final readonly class RunAgentTurnHandler
         private TurnContextBuilder $contextBuilder,
         private TurnJournal $journal,
         private OwnerContext $owner,
-        #[\SensitiveParameter]
-        private BonnerefToken $bonnerefToken,
         private LocaleContext $locale,
         private SelectedVehicleContext $selectedVehicle,
         private TurnCancellations $cancellations,
@@ -77,7 +74,6 @@ final readonly class RunAgentTurnHandler
             // Unbind now rather than on kernel.reset, however early the turn failed: nothing else this
             // thread runs after it (a second deferred turn, a terminate listener) may publish or write as
             // this owner.
-            $this->bonnerefToken->reset();
             $this->renderTools->bindSession(null);
             $this->owner->set(null);
             $this->locale->set(null);
@@ -92,9 +88,6 @@ final readonly class RunAgentTurnHandler
         // agent makes is owner-scoped via this, not via a client-supplied field. Re-bound each turn
         // because the handler is a long-lived singleton in the consume worker.
         $this->owner->set($message->owner);
-        // Same shape: the catalogue tools forward the user's own token to bonneref, and the worker has no
-        // request to take it from. Cleared in `finally`, so it never outlives the turn in a long-lived worker.
-        $this->bonnerefToken->set($message->accessToken);
         // Same shape, same reason: the worker has no request, so the interface language rides the turn
         // message. Everything the agent says this turn — the failure toasts and the
         // output-language directive in the context — reads off this.

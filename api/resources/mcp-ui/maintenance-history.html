@@ -91,7 +91,7 @@
       var title = r.label || TYPE_LABEL[r.type] || r.type;
       var meta = [];
       if (r.usage && r.usage.value != null) {
-        meta.push("<span><b>" + r.usage.value.toLocaleString() + "</b> " + esc(r.usage.unit || "") + "</span>");
+        meta.push("<span><b>" + esc(r.usage.value.toLocaleString()) + "</b> " + esc(r.usage.unit || "") + "</span>");
       }
       if (r.performedBy) meta.push("<span>by <b>" + esc(r.performedBy) + "</b></span>");
       if (r.cost && r.cost.amount != null) {
@@ -169,6 +169,8 @@
     };
 
     McpAppClient.prototype.onMessage = function (event) {
+      // Only the host frame speaks the bridge; any other window could post a forged tool result.
+      if (event.source !== window.parent) return;
       var data = event.data;
       if (!data || typeof data !== "object") return;
 

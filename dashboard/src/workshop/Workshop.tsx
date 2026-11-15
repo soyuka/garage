@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { useT } from '../i18n/LocaleProvider';
 import { getIdentity } from '../auth';
 import type { OwnerTopics } from '../agent';
-import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId, TurnRefusedError } from '../agent';
+import { ALL_CAPABILITIES, cancelTurn, dashboardSubscriptions, NO_OWNER_TOPICS, postTurn, tabSessionId, TurnRefusedError } from '../agent';
+import { useAgentLink } from '../mercureLink';
 import { createTask, getVehicleBundle, getVehicles, mergeTaskParts } from '../garage';
 
 const PREFETCH_CONCURRENCY = 3;
@@ -73,17 +74,10 @@ export function Workshop() {
     return () => window.clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    let live = true;
-    fetchAgentLink(sessionId).then((link) => {
-      if (!live) return;
-      setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic, sessionTopic: link.sessionTopic });
-      setCapabilities(link.capabilities);
-    });
-    return () => {
-      live = false;
-    };
-  }, [sessionId]);
+  const streamLifecycle = useAgentLink(sessionId, (link) => {
+    setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic, sessionTopic: link.sessionTopic, generation: link.generation });
+    setCapabilities(link.capabilities);
+  });
 
   useEffect(() => {
     let live = true;
@@ -309,7 +303,7 @@ export function Workshop() {
     },
     [closeRun, cues.play, dispatch, openRun, loadBundle, runStage],
   );
-  useMercure(dashboardSubscriptions(ownerTopics), onFrame);
+  useMercure(dashboardSubscriptions(ownerTopics), onFrame, streamLifecycle);
 
   // ── The command bar ──
   const lastAck = useRef(-1);

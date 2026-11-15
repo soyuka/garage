@@ -166,9 +166,10 @@ final class TurnJournal implements WebSearchTracer, ResetInterface
 
     private function sessionId(string $sessionTopic): string
     {
-        // The topic is an absolute Mercure URL whose `topic` query param is /agent/sessions/<id>.
-        if (preg_match('#/agent/sessions/([^/&?]+)#', $sessionTopic, $m)) {
-            return urldecode($m[1]);
+        // The last segment under /agent/sessions/ (…/<owner digest>/<session key>); legacy topics
+        // carried it url-encoded in a `topic` query param.
+        if (preg_match('#/agent/sessions/(?:[^/&?]+/)*([^/&?]+)#', urldecode($sessionTopic), $m)) {
+            return $m[1];
         }
 
         return $sessionTopic;

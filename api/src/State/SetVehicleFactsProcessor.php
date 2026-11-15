@@ -15,6 +15,7 @@ use App\Garage\ResourceIri;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Maintenance\VehicleFactWriter;
+use App\Validator\WebUrl;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -95,8 +96,8 @@ final readonly class SetVehicleFactsProcessor implements ProcessorInterface
             if (null !== $unit && (!\is_string($unit) || '' === trim($unit) || \strlen($unit) > 16)) {
                 return \sprintf('facts[%d].unit must be a short non-blank string when given.', $i);
             }
-            if (null !== $url && (!\is_string($url) || false === filter_var($url, \FILTER_VALIDATE_URL))) {
-                return \sprintf('facts[%d].url must be an absolute URL when given.', $i);
+            if (null !== $url && (!\is_string($url) || !WebUrl::isValid($url))) {
+                return \sprintf('facts[%d].url must be an absolute http(s) URL when given.', $i);
             }
 
             $facts[] = VehicleFact::fromSource(key: $key, value: trim($value), source: $source, unit: $unit, url: $url);

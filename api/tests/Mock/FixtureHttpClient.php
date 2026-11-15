@@ -11,11 +11,14 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 use Symfony\Contracts\HttpClient\ResponseStreamInterface;
 
 /**
- * Test double for the Motul upstream, so tests never hit the network. The catalogue and the plate
- * registry are bonneref's, see {@see BonnerefHttpClient}.
+ * Test double for the Motul upstream and the Casdoor token endpoint (CASDOOR_ISSUER in .env.test), so
+ * tests never hit the network. The catalogue and the plate registry are bonneref's, see {@see BonnerefHttpClient}.
  */
 final class FixtureHttpClient implements HttpClientInterface
 {
+    // @mago-expect lint:no-literal-password test fixture
+    public const string SERVICE_TOKEN = 'test-mpa-service-token';
+
     private readonly MockHttpClient $mock;
 
     public function __construct(private readonly string $fixturesDir)
@@ -49,6 +52,14 @@ final class FixtureHttpClient implements HttpClientInterface
         $parts = parse_url($url);
         parse_str($parts['query'] ?? '', $query);
         $host = $parts['host'] ?? '';
+
+        if ('casdoor.test' === $host) {
+            return match ($parts['path'] ?? '') {
+                '/.well-known/openid-configuration' => self::json('{"issuer":"https://casdoor.test","token_endpoint":"https://casdoor.test/api/login/oauth/access_token"}'),
+                '/api/login/oauth/access_token' => self::json('{"access_token":"'.self::SERVICE_TOKEN.'","token_type":"Bearer","expires_in":604800}'),
+                default => new MockResponse('unexpected Casdoor call: '.$url, ['http_code' => 404]),
+            };
+        }
 
         if (str_contains($host, 'motul.com')) {
             return $this->motulResponse($parts['path'] ?? '', $query);

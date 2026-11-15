@@ -24,6 +24,7 @@ final class CasdoorTokenHandlerTest extends TestCase
 {
     private const string ISSUER = 'http://localhost:8000';
     private const string JWKS_URI = 'http://localhost:8000/.well-known/jwks';
+    private const string ORGANIZATION = 'bonneref';
 
     private JWK $signingKey;
 
@@ -177,6 +178,46 @@ final class CasdoorTokenHandlerTest extends TestCase
         $this->handler()->getUserBadgeFrom($token);
     }
 
+    /**
+     * Casdoor emails are unique per organization, not per instance: a second org on the same issuer could
+     * hold a verified account with the victim's address, and the email is the tenancy key.
+     */
+    #[DataProvider('foreignOrganizations')]
+    public function testATokenFromAnotherOrganizationIsRejected(?string $organization): void
+    {
+        $claims = ['owner' => $organization, 'email_verified' => true];
+        if (null === $organization) {
+            $claims = ['email_verified' => true];
+        }
+        $token = $this->mintToken($claims + [
+            'sub' => 'other/alice',
+            'iss' => self::ISSUER,
+            'aud' => ['x'],
+            'iat' => 1000,
+            'exp' => 2000,
+            'email' => 'alice@example.com',
+        ], organization: false);
+
+        $this->expectException(BadCredentialsException::class);
+        $this->handler(claim: 'email')->getUserBadgeFrom($token);
+    }
+
+    /**
+     * @return iterable<string, array{?string}>
+     */
+    public static function foreignOrganizations(): iterable
+    {
+        yield 'another organization' => ['built-in'];
+        yield 'no organization' => [null];
+        yield 'empty organization' => [''];
+    }
+
+    public function testAnUnconfiguredOrganizationFailsClosed(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->handler(organization: '');
+    }
+
     public function testTokenSignedByUnknownKeyIsRejected(): void
     {
         $foreignKey = JWKFactory::createRSAKey(2048, ['alg' => 'RS256', 'use' => 'sig']);
@@ -265,10 +306,13 @@ final class CasdoorTokenHandlerTest extends TestCase
     /**
      * @param array<string, mixed> $claims
      */
-    private function mintToken(array $claims, ?JWK $key = null): string
+    private function mintToken(array $claims, ?JWK $key = null, bool $organization = true): string
     {
         $key ??= $this->signingKey;
         $claims += ['tokenType' => 'access-token'];
+        if ($organization) {
+            $claims += ['owner' => self::ORGANIZATION];
+        }
         $builder = new JWSBuilder(new AlgorithmManager([new RS256()]));
         $jws = $builder->create()
             ->withPayload(json_encode($claims, \JSON_THROW_ON_ERROR))
@@ -278,7 +322,7 @@ final class CasdoorTokenHandlerTest extends TestCase
         return (new CompactSerializer())->serialize($jws, 0);
     }
 
-    private function handler(int $now = 1500, string $claim = 'sub', bool $requireVerifiedEmail = true, ?RecordingLogger $logger = null): CasdoorTokenHandler
+    private function handler(int $now = 1500, string $claim = 'sub', bool $requireVerifiedEmail = true, ?RecordingLogger $logger = null, string $organization = self::ORGANIZATION): CasdoorTokenHandler
     {
         $client = new MockHttpClient(function (string $method, string $url): JsonMockResponse {
             if (str_contains($url, '.well-known/openid-configuration')) {
@@ -294,6 +338,7 @@ final class CasdoorTokenHandlerTest extends TestCase
             discoveryCache: $this->cache,
             oidcConfigurationCacheKey: 'casdoor_oidc_config',
             issuers: [self::ISSUER],
+            organization: $organization,
             claim: $claim,
             requireVerifiedEmail: $requireVerifiedEmail,
             logger: $logger,

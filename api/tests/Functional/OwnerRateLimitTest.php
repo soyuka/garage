@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use ApiPlatform\Metadata\Get;
+use App\Dto\MotulOilInput;
 use App\Entity\MaintenanceRecord;
 use App\Entity\Vehicle;
 use App\Garage\VehicleType;
+use App\State\MotulOilProcessor;
 use App\Tests\Mock\RecordingSpeechHttpClient;
 use App\Tests\Mock\RecordingTranscriptionHttpClient;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 final class OwnerRateLimitTest extends AppTestCase
@@ -96,6 +100,43 @@ final class OwnerRateLimitTest extends AppTestCase
 
         $this->assertRefused($response->getHeaders(false));
         $this->assertSame(0, $calls);
+    }
+
+    public function testTtsHasAGlobalBudget(): void
+    {
+        $client = static::createClient();
+        $this->exhaust('limiter.speech_global', 'global');
+
+        $response = $client->request('POST', '/tts', ['json' => ['text' => 'Vidange enregistrée.'], 'headers' => self::authHeaders()]);
+
+        $this->assertRefused($response->getHeaders(false));
+        $this->assertSame([], static::getContainer()->get(RecordingSpeechHttpClient::class)->requests);
+    }
+
+    public function testSttHasAGlobalBudget(): void
+    {
+        $client = static::createClient();
+        $this->exhaust('limiter.transcription_global', 'global');
+
+        $response = $client->request('POST', '/stt', ['body' => 'RIFF....WAVE', 'headers' => ['content-type' => 'audio/webm'] + self::authHeaders()]);
+
+        $this->assertRefused($response->getHeaders(false));
+        $this->assertSame([], static::getContainer()->get(RecordingTranscriptionHttpClient::class)->requests);
+    }
+
+    /**
+     * Driven through the processor: an MCP call needs a session first, and the second request resets the
+     * array-backed limiter the test exhausted. The MCP mapping of the refusal is DomainErrorHandlerTest's.
+     */
+    public function testMotulLookupsAreLimitedPerOwner(): void
+    {
+        static::createClient();
+        $this->exhaust('limiter.motul', self::TEST_OWNER);
+        $input = new MotulOilInput();
+        $input->search = 'Mazda 6';
+
+        $this->expectException(TooManyRequestsHttpException::class);
+        static::getContainer()->get(MotulOilProcessor::class)->process($input, new Get());
     }
 
     private function exhaust(string $limiter, string $key): void

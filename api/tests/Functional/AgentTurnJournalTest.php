@@ -6,6 +6,7 @@ namespace App\Tests\Functional;
 
 use App\Agent\Journal\TurnJournal;
 use App\Agent\TurnSettlement;
+use App\Agent\Ui\DashboardChannel;
 use App\Agent\Ui\RenderIntentTools;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
@@ -71,6 +72,24 @@ final class AgentTurnJournalTest extends AppTestCase
         $this->assertCount(1, $toolCalls, 'the toast tool call must be journalled');
         $this->assertSame('toast', $toolCalls[0]->getName());
         $this->assertSame('Viscosité 5W-30.', $toolCalls[0]->getArguments()['message']);
+    }
+
+    public function testTheJournalKeysATurnOnItsSessionNotOnItsOwnersSessionPrefix(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $container->set('ai.platform.anthropic', new ScriptedStreamPlatform(static fn (): string => 'Fait.'));
+        $channel = $container->get(DashboardChannel::class);
+
+        $container->get(RunAgentTurnHandler::class)(new RunAgentTurn(
+            instruction: 'Bonjour',
+            sessionTopic: $channel->sessionTopic(self::TEST_OWNER, 'tab-one'),
+            owner: self::TEST_OWNER,
+        ));
+
+        $turns = $container->get(AgentTurnRepository::class)->findForOwner(self::TEST_OWNER, 10);
+        $this->assertCount(1, $turns);
+        $this->assertSame($channel->sessionKey(self::TEST_OWNER, 'tab-one'), $turns[0]->getSessionId());
     }
 
     public function testAFailedToolCallJournalsItsPublicErrorTextNeverTheRawCause(): void

@@ -49,6 +49,7 @@ final readonly class TranscriptionController
         private Capabilities $capabilities,
         private OwnerRateLimit $rateLimit,
         private RateLimiterFactoryInterface $transcriptionLimiter,
+        private RateLimiterFactoryInterface $transcriptionGlobalLimiter,
     ) {
     }
 
@@ -77,7 +78,7 @@ final readonly class TranscriptionController
             throw new BadRequestHttpException('A recording must be posted as audio/*.');
         }
 
-        $this->rateLimit->consume($this->transcriptionLimiter, 'Transcription');
+        $this->rateLimit->consume($this->transcriptionLimiter, 'Transcription', $this->transcriptionGlobalLimiter);
 
         try {
             // The browser announces its language on every request (framework.yaml

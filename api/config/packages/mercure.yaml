@@ -5,11 +5,17 @@ mercure:
             public_url: '%env(default::MERCURE_PUBLIC_URL)%'
             # RFC 9068 tokens: typ at+jwt, authorization_details instead of the 0.x `mercure` claim.
             protocol_version: '1.0'
-            jwt:
+            # Each signed with the key the hub verifies that role with (frankenphp/Caddyfile issuer block:
+            # MERCURE_PUBLISHER_JWT_KEY / MERCURE_SUBSCRIBER_JWT_KEY), so the two can rotate apart.
+            # `aud` defaults to public_url (the hub's pinned resource_identifier), plus url on the publisher token.
+            publisher:
                 secret: '%env(MERCURE_JWT_SECRET)%'
-                publish: '*'
-                # `aud` defaults to public_url (the hub's pinned resource_identifier), plus url on the publisher token since bundle 0.6.1.
-                claims:
+                topics: ['*']
+                claims: &claims
                     iss: '%env(MERCURE_JWT_ISSUER)%'
                     sub: 'mon-parc-auto'
                     client_id: 'mon-parc-auto'
+            # Signs the browser's authorization cookie (App\Mercure\SubscriberToken).
+            subscriber:
+                secret: '%env(MERCURE_SUBSCRIBER_JWT_SECRET)%'
+                claims: *claims

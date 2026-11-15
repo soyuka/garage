@@ -52,7 +52,7 @@ final class DomainPublishTest extends AppTestCase
                 continue;
             }
             $this->assertSame([$fleetTopic], $update->getTopics(), 'a vehicle frame goes to the owner fleet topic only');
-            $this->assertFalse($update->isPrivate());
+            $this->assertTrue($update->isPrivate(), 'a fleet frame only reaches a subscriber holding a token for its topic');
         }
         foreach ($hub->updates as $update) {
             foreach ($update->getTopics() as $topic) {

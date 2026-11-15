@@ -14,7 +14,6 @@ use App\Agent\Ui\RenderIntentTools;
 use App\Agent\Ui\StepNarrator;
 use App\Agent\Ui\TurnActivityTracker;
 use App\Agent\WebSearchBudget;
-use App\Bonneref\BonnerefToken;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
 use App\Message\RunAgentTurn;
@@ -117,7 +116,6 @@ final class TurnStateResetTest extends AppTestCase
                 owner: self::FOREIGN_OWNER,
                 selectedId: '/garage/vehicles/01JFOREIGN',
                 locale: Locale::Fr->value,
-                accessToken: bin2hex(random_bytes(8)),
                 attachments: [new TurnAttachmentRef('01JATTACH', 'bill.pdf', 'application/pdf', 10)],
             ));
             $this->fail('the store failure must surface');
@@ -129,7 +127,6 @@ final class TurnStateResetTest extends AppTestCase
         $this->assertNull($container->get(DashboardChannel::class)->sessionId());
         $this->assertSame(Locale::DEFAULT, $container->get(LocaleContext::class)->current());
         $this->assertNull($container->get(SelectedVehicleContext::class)->current());
-        $this->assertNull($container->get(BonnerefToken::class)->get());
         $this->assertFalse($container->get(TurnAttachmentScope::class)->has('01JATTACH'));
     }
 

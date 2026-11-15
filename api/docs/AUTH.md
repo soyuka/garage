@@ -73,10 +73,36 @@ clients); stage adds `https://garage.soyuka.me/mcp` (`.env.stage`, promoted by `
 image (`composer dump-env prod`), and a localhost alias there would let prod accept tokens minted for anyone's
 local server.
 
-**bonneref** applies the same split (`bonneref/api`), plus one documented exception: mpa forwards its caller's
-bearer to the bonneref catalogue, so the GET routes mpa calls also accept `CATALOGUE_PASSTHROUGH_AUDIENCES` (mpa's
-Atelier client and MCP resource URIs). Never on bonneref's `/mcp`. This is token passthrough, which the MCP spec
-forbids: debt, with the options for removing it, in `FUTURE.md` § "Token passthrough mpa → bonneref".
+**bonneref** applies the same split (`bonneref/api`). mpa never forwards its caller's token to it (the MCP spec
+forbids token passthrough; it did until 2026-11-15): see § mpa → bonneref below.
+
+## mpa → bonneref: a service credential (2026-11-15)
+
+mpa calls the bonneref catalogue and plate lookup as itself, on behalf of the end user:
+
+- **Credential.** The Casdoor application `mpa-service` (on `auth.bonneref.fr`, grant type Client Credentials
+  only, client id `466fc97138f0f6348ec3`, public). `App\Bonneref\BonnerefServiceToken` posts
+  `grant_type=client_credentials` (client_secret_post) to the `token_endpoint` of `$CASDOOR_ISSUER`'s discovery
+  document and caches the token in `cache.app` until `expires_in` minus 5 min (Casdoor: 7 days). A 401 from
+  bonneref drops the cached token so the next call mints a fresh one. Env: `MPA_SERVICE_CLIENT_ID` (default in
+  `.env`), `MPA_SERVICE_CLIENT_SECRET` (`.env.local` / `.env.stage`, `:?` in the stage and prod overlays). Unset,
+  every catalogue call fails with a `not_configured` tool error naming both variables; no request leaves.
+- **Owner.** `App\Bonneref\BonnerefClient` sends `Authorization: Bearer <service token>` plus
+  `X-Bonneref-Owner: <OwnerContext email>` on every call, from an HTTP request, an MCP tool call or the Messenger
+  worker alike. No owner in context: refused before any request. Nothing about the caller's token is queued:
+  `RunAgentTurn` lost its `accessToken` (an already-queued message still carrying it decodes; the serializer drops
+  the unknown key, `RunAgentTurnTransportSerializationTest`).
+- **Verified claims** of a minted token: `sub: "admin/mpa-service"`, `owner: "admin"`, `name: "mpa-service"`,
+  `azp` and `aud: [466fc97138f0f6348ec3]`, `tokenType: "access-token"`, `email: ""`. `owner` is not the `bonneref`
+  organization, so the user-token path (organization pin, email claim) would refuse it, by design.
+- **bonneref side.** The `catalogue` firewall (`bonneref/api/config/packages/security.yaml`: GET on exactly the
+  routes mpa calls, never `/mcp`) uses `App\Security\ServiceTokenHandler`: it verifies signature, issuer,
+  iat/nbf/exp and `tokenType` (`AccessTokenVerifier`, implemented by `CasdoorTokenHandler`), then dispatches on
+  `azp`. `azp` = `MPA_SERVICE_CLIENT_ID`: `aud` must contain it and `sub` must equal `MPA_SERVICE_SUBJECT`
+  (default `admin/mpa-service`); the owner is `X-Bonneref-Owner` (one email, ≤ 254 chars), so the per-owner limits
+  (`plate_lookup`) keep counting per end user. Any other `azp`: the token goes to the REST handler
+  (`OAUTH_CLIENT_AUDIENCES`, organization pin, verified email) and the header is ignored. The service token is
+  refused everywhere else (no other firewall knows its audience).
 
 ## Bootstrap flow (what an MCP client does)
 

@@ -18,6 +18,7 @@ use Mcp\Server\Session\SessionInterface;
 use Symfony\Component\DependencyInjection\Attribute\AsDecorator;
 use Symfony\Component\DependencyInjection\Attribute\AutowireDecorated;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 
 /**
  * Turns a domain failure into a tool result the model can act on.
@@ -80,6 +81,10 @@ final readonly class DomainErrorHandler implements RequestHandlerInterface
             $e instanceof UpstreamException => $e->transient
                 ? new ToolError('upstream_unavailable', \sprintf('%s did not answer in time. This is temporary and says NOTHING about whether the thing you looked up exists — retry, and never report it to the user as "not found".', $e->source))
                 : new ToolError('upstream_rejected', \sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source)),
+            $e instanceof TooManyRequestsHttpException => new ToolError(
+                'rate_limited',
+                \sprintf('%s Retry later (Retry-After %s s); until then answer without this tool. Do not loop on it.', $e->getMessage(), self::retryAfter($e)),
+            ),
             $e instanceof NotConfiguredException => new ToolError(
                 'not_configured',
                 $e->getMessage().'. This capability is unavailable on this deployment. Tell the user so; do not retry and do not guess an answer.',
@@ -96,5 +101,12 @@ final readonly class DomainErrorHandler implements RequestHandlerInterface
             ),
             default => null,
         };
+    }
+
+    private static function retryAfter(TooManyRequestsHttpException $e): string
+    {
+        $retryAfter = $e->getHeaders()['Retry-After'] ?? null;
+
+        return \is_scalar($retryAfter) ? (string) $retryAfter : '60';
     }
 }

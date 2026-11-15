@@ -31,8 +31,10 @@ use Symfony\Contracts\Cache\ItemInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * Verifies a Casdoor-issued JWT: JWKS signature, iat/nbf/exp, issuer, and that it is an access token
- * (Casdoor signs refresh and ID tokens with the same key, `tokenType` tells them apart). The audience is
+ * Verifies a Casdoor-issued JWT: JWKS signature, iat/nbf/exp, issuer, organization, and that it is an
+ * access token (Casdoor signs refresh and ID tokens with the same key, `tokenType` tells them apart).
+ * The organization (Casdoor's `owner` claim) is pinned because the issuer is the whole Casdoor instance
+ * while emails, the tenancy key, are only unique within one organization. The audience is
  * NOT checked here but by {@see AudienceTokenHandler}, which wraps this verifier once per firewall with
  * that firewall's accepted audiences (docs/AUTH.md).
  */
@@ -54,11 +56,16 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
         private CacheInterface $discoveryCache,
         private string $oidcConfigurationCacheKey,
         private array $issuers,
+        private string $organization,
         private string $claim = 'sub',
         private bool $requireVerifiedEmail = true,
         private ?LoggerInterface $logger = null,
         private ClockInterface $clock = new Clock(),
     ) {
+        if ('' === $organization) {
+            throw new \InvalidArgumentException('The Casdoor organization is not configured (CASDOOR_ORGANIZATION): refusing to accept tokens from every organization of the issuer.');
+        }
+
         $this->signatureAlgorithm = new AlgorithmManager([
             new RS256(), new RS512(), new ES256(), new ES384(), new ES512(),
         ]);
@@ -194,6 +201,10 @@ final readonly class CasdoorTokenHandler implements AccessTokenHandlerInterface
 
         if ('access-token' !== ($claims['tokenType'] ?? null)) {
             throw new BadCredentialsException('Not an access token.');
+        }
+
+        if ($this->organization !== ($claims['owner'] ?? null)) {
+            throw new BadCredentialsException('The token belongs to another Casdoor organization.');
         }
     }
 }

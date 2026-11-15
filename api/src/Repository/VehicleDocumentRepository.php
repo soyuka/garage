@@ -148,7 +148,7 @@ final class VehicleDocumentRepository extends ServiceDocumentRepository
     private function forVehicle(Vehicle $vehicle): Builder
     {
         return $this->createQueryBuilder()
-            ->field('owner')->equals($this->owner->current())
+            ->field('owner')->equals($this->owner->require())
             ->field('vehicle')->references($vehicle);
     }
 }

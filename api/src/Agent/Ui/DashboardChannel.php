@@ -19,10 +19,10 @@ use Symfony\Contracts\Service\ResetInterface;
  *    tab and no session id. Those intents go to the owner's PILOT topic (`…/agent/pilots/<digest>`),
  *    which every dashboard of that owner subscribes to (see {@see \App\Controller\AgentLinkController}).
  *
- * The pilot topic is a keyed digest of the owner, not the raw `sub`: the Mercure hub accepts
- * anonymous subscribers (frankenphp/Caddyfile), so the topic string is the only thing keeping one
- * owner's render intents off somebody else's EventSource. Derived (not stored) so the worker, the
- * HTTP layer and the MCP endpoint all agree without a lookup.
+ * The pilot topic is a keyed digest of the owner, not the raw `sub`, so a topic never names its owner.
+ * Every update is private: the subscriber token GET /agent/link mints, naming exactly the caller's
+ * topics, is what keeps one owner's render intents off somebody else's EventSource. Derived (not
+ * stored) so the worker, the HTTP layer and the MCP endpoint all agree without a lookup.
  */
 final class DashboardChannel implements ResetInterface
 {
@@ -82,9 +82,24 @@ final class DashboardChannel implements ResetInterface
         return hash_hmac('sha256', 'session|'.$owner.'|'.$sessionId, $this->secret);
     }
 
+    /**
+     * Nested under a digest of the owner, so one subscriber token can cover every tab of that owner
+     * ({@see self::sessionTopicPattern()}): the hub cookie carrying it is shared by the whole browser.
+     */
     public function sessionTopic(string $owner, string $sessionId): string
     {
-        return rtrim($this->baseUri, '/').'/agent/sessions/'.$this->sessionKey($owner, $sessionId);
+        return $this->sessionsBase($owner).'/'.$this->sessionKey($owner, $sessionId);
+    }
+
+    /** A URLPattern matching every session topic of this owner and no other owner's. */
+    public function sessionTopicPattern(string $owner): string
+    {
+        return $this->sessionsBase($owner).'/*';
+    }
+
+    private function sessionsBase(string $owner): string
+    {
+        return rtrim($this->baseUri, '/').'/agent/sessions/'.hash_hmac('sha256', 'sessions|'.$owner, $this->secret);
     }
 
     /**

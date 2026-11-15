@@ -8,7 +8,7 @@ use ApiPlatform\Metadata\IriConverterInterface;
 use ApiPlatform\Metadata\Operation;
 use App\ApiResource\GarageVehicle;
 use App\Bonneref\BonnerefClient;
-use App\Bonneref\BonnerefToken;
+use App\Bonneref\BonnerefServiceToken;
 use App\Dto\MotulOilInput;
 use App\Entity\Vehicle;
 use App\Garage\GarageResolver;
@@ -18,13 +18,21 @@ use App\Motul\MotulClient;
 use App\Motul\MotulOilAdvisor;
 use App\Motul\MotulRecommendationParser;
 use App\Repository\VehicleRepository;
+use App\Security\OwnerContext;
+use App\Security\OwnerRateLimit;
 use App\State\MotulOilProcessor;
 use App\Tests\Mock\BonnerefHttpClient;
 use App\Tests\Support\InMemoryMotulResponseStore;
 use PHPUnit\Framework\TestCase;
+use Symfony\Bundle\SecurityBundle\Security;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\DependencyInjection\ServiceLocator;
 use Symfony\Component\HttpClient\MockHttpClient;
+use Symfony\Component\HttpClient\Response\JsonMockResponse;
 use Symfony\Component\HttpClient\Response\MockResponse;
-use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 
 /**
  * `get_motul_oil` addressed by a vehicle @id (option A): the variant must be pinned from data the
@@ -66,7 +74,7 @@ final class MotulOilProcessorTest extends TestCase
         $iriConverter = $this->createStub(IriConverterInterface::class);
         $iriConverter->method('getResourceFromIri')->willReturn(GarageVehicle::fromEntity($vehicle));
 
-        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref);
+        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref, ...self::unlimited());
 
         $input = new MotulOilInput();
         $input->vehicle = '/garage/vehicles/'.(string) $vehicle->getId();
@@ -101,6 +109,7 @@ final class MotulOilProcessorTest extends TestCase
             new VehicleIriResolver($this->createStub(IriConverterInterface::class), $this->createStub(VehicleRepository::class)),
             $this->createStub(GarageResolver::class),
             $bonneref,
+            ...self::unlimited(),
         );
 
         $input = new MotulOilInput();
@@ -138,7 +147,7 @@ final class MotulOilProcessorTest extends TestCase
         $iriConverter = $this->createStub(IriConverterInterface::class);
         $iriConverter->method('getResourceFromIri')->willReturn(GarageVehicle::fromEntity($vehicle));
 
-        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref);
+        $processor = new MotulOilProcessor($advisor, new VehicleIriResolver($iriConverter, $this->createStub(VehicleRepository::class)), $resolver, $bonneref, ...self::unlimited());
 
         $input = new MotulOilInput();
         $input->vehicle = '/garage/vehicles/'.(string) $vehicle->getId();
@@ -151,6 +160,22 @@ final class MotulOilProcessorTest extends TestCase
 
     private static function bonneref(BonnerefHttpClient $http): BonnerefClient
     {
-        return new BonnerefClient($http, new BonnerefToken(), new RequestStack());
+        $casdoor = new MockHttpClient(static fn (string $method, string $url): JsonMockResponse => str_ends_with($url, '/.well-known/openid-configuration')
+            ? new JsonMockResponse(['token_endpoint' => 'https://casdoor.test/token'])
+            // @mago-expect lint:no-literal-password test fixture
+            : new JsonMockResponse(['access_token' => 'service-token', 'expires_in' => 604800]));
+        $owner = new OwnerContext(new Security(new ServiceLocator(['security.token_storage' => static fn (): TokenStorage => new TokenStorage()])), 'owner@example.com');
+
+        return new BonnerefClient($http, new BonnerefServiceToken($casdoor, new ArrayAdapter(), 'https://casdoor.test', 'mpa-service-id', 'mpa-service-secret'), $owner);
+    }
+
+    /**
+     * @return array{OwnerRateLimit, RateLimiterFactory}
+     */
+    private static function unlimited(): array
+    {
+        $owner = new OwnerContext(new Security(new ServiceLocator(['security.token_storage' => static fn (): TokenStorage => new TokenStorage()])), 'owner@example.com');
+
+        return [new OwnerRateLimit($owner), new RateLimiterFactory(['id' => 'motul', 'policy' => 'no_limit'], new InMemoryStorage())];
     }
 }

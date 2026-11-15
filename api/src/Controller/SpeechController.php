@@ -53,6 +53,7 @@ final readonly class SpeechController
         private Capabilities $capabilities,
         private OwnerRateLimit $rateLimit,
         private RateLimiterFactoryInterface $speechLimiter,
+        private RateLimiterFactoryInterface $speechGlobalLimiter,
     ) {
     }
 
@@ -75,7 +76,7 @@ final readonly class SpeechController
             throw new BadRequestHttpException(\sprintf('A spoken line is capped at %d characters.', self::MAX_CHARS));
         }
 
-        $this->rateLimit->consume($this->speechLimiter, 'Speech');
+        $this->rateLimit->consume($this->speechLimiter, 'Speech', $this->speechGlobalLimiter);
 
         try {
             // The browser announces its language on every request (framework.yaml

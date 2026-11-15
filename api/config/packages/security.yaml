@@ -43,8 +43,7 @@ security:
         # token would simply fall through as anonymous and the tools would run unprotected.
         # (The challenge also carries the RFC 9728 resource_metadata, McpProtectedResourceChallengeListener.)
         - { path: ^/mcp, roles: IS_AUTHENTICATED_FULLY }
-        # Deny by default: every path not opened by a firewall above needs a token. The pilot topic
-        # (/agent/link) is the only thing keeping one owner's render intents off another's EventSource
-        # (the Mercure hub takes anonymous subscribers), /tts and /stt spend vendor credits or CPU, and
+        # Deny by default: every path not opened by a firewall above needs a token. /agent/link mints the
+        # Mercure subscriber token for the caller's topics, /tts and /stt spend vendor credits or CPU, and
         # the garage is owner-scoped: all of them rely on this rule rather than on a per-route entry.
         - { path: ^/, roles: IS_AUTHENTICATED_FULLY }

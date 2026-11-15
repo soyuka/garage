@@ -9,8 +9,12 @@ services:
       # request, so http://localhost/mcp self-configures. DEFAULT_URI follows from .env.
       SERVER_NAME: ${SERVER_NAME:-localhost}
       DEFAULT_URI: ${DEFAULT_URI:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}}
+      # Placeholder defaults only serve the loopback-bound dev stack; stage and prod overlays fail closed.
       MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+      # The subscriber key may differ from the publisher's (CADDY_MERCURE_SUBSCRIBER_JWT_SECRET); the hub and
+      # the app read the same variable, so they always agree.
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_SUBSCRIBER_JWT_SECRET:-${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}}
+      MERCURE_SUBSCRIBER_JWT_SECRET: ${CADDY_MERCURE_SUBSCRIBER_JWT_SECRET:-${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}}
       # Postgres backs the Messenger
       # queue — NOT the domain model, which now lives in MongoDB via Doctrine ODM (MONGODB_URL below).
       DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-16}&charset=${POSTGRES_CHARSET:-utf8}

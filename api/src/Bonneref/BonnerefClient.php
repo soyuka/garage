@@ -16,18 +16,19 @@ use App\Exception\NotConfiguredException;
 use App\Exception\UpstreamException;
 use App\I18n\Locale;
 use App\I18n\LocaleContext;
+use App\Security\OwnerContext;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 use Symfony\Component\DependencyInjection\Attribute\Autowire;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Symfony\Contracts\HttpClient\Exception\ExceptionInterface;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
- * The parts catalogue and the plate registry live in bonneref; this is the one door to them. The
- * caller's Casdoor bearer is forwarded as is: the one the running turn holds ({@see BonnerefToken}) or,
- * outside a turn, the one on the request being served (HTTP and MCP both carry it). The catalogue answers in the
- * caller's language, sent as `Accept-Language`: the request's, or the turn's interface language in the worker.
+ * The parts catalogue and the plate registry live in bonneref; this is the one door to them. mpa
+ * authenticates as itself ({@see BonnerefServiceToken}) and names the end user in `X-Bonneref-Owner`, which
+ * bonneref trusts only from that service token and keys its per-owner quotas on. The caller's own bearer is
+ * never forwarded. The catalogue answers in the caller's language, sent as `Accept-Language`: the
+ * request's, or the turn's interface language in the worker.
  */
 final readonly class BonnerefClient
 {
@@ -42,8 +43,8 @@ final readonly class BonnerefClient
         #[Autowire(service: 'bonneref.client')]
         private HttpClientInterface $http,
         #[\SensitiveParameter]
-        private BonnerefToken $token,
-        private RequestStack $requests,
+        private BonnerefServiceToken $token,
+        private OwnerContext $owner,
         private LoggerInterface $logger = new NullLogger(),
         private ?LocaleContext $locale = null,
     ) {
@@ -150,7 +151,7 @@ final readonly class BonnerefClient
 
     /**
      * The query of the next page, when the Hydra view links one on this same collection. A link to
-     * another host or path is not followed: the bearer rides every request.
+     * another host or path is not followed: the service token rides every request.
      *
      * @param array<array-key, mixed> $data
      *
@@ -194,10 +195,12 @@ final readonly class BonnerefClient
             false => 'false',
             default => (string) $v,
         }, array_filter($query, static fn (mixed $v): bool => null !== $v));
-        $headers = ['Accept' => 'application/ld+json', 'Accept-Language' => ($this->locale?->current() ?? Locale::DEFAULT)->value];
-        if (null !== $bearer = $this->token->get() ?? BonnerefToken::fromRequest($this->requests->getMainRequest())) {
-            $headers['Authorization'] = 'Bearer '.$bearer;
-        }
+        $headers = [
+            'Accept' => 'application/ld+json',
+            'Accept-Language' => ($this->locale?->current() ?? Locale::DEFAULT)->value,
+            'X-Bonneref-Owner' => $this->owner->require(),
+            'Authorization' => 'Bearer '.$this->token->get(),
+        ];
 
         try {
             $response = $this->http->request('GET', $path, ['query' => $query, 'headers' => $headers]);
@@ -205,6 +208,9 @@ final readonly class BonnerefClient
 
             if (404 === $status && $missingIsNull) {
                 return null;
+            }
+            if (401 === $status) {
+                $this->token->forget();
             }
             if (501 === $status) {
                 throw NotConfiguredException::onCatalogueServer($feature);

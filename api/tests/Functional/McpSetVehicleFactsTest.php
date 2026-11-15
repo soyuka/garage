@@ -193,6 +193,9 @@ final class McpSetVehicleFactsTest extends AppTestCase
         yield 'blank value' => [['key' => 'tyre_size', 'value' => '  ', 'source' => 'user']];
         yield 'forged authoritative source' => [['key' => 'tyre_size', 'value' => '205/55R16', 'source' => 'partsapi']];
         yield 'bad url' => [['key' => 'tyre_size', 'value' => '205/55R16', 'source' => 'web', 'url' => 'not a url']];
+        // FILTER_VALIDATE_URL accepts these; the fact link is rendered as an href.
+        yield 'javascript url' => [['key' => 'tyre_size', 'value' => '205/55R16', 'source' => 'web', 'url' => 'javascript://x%0Aalert(1)']];
+        yield 'non-web scheme' => [['key' => 'tyre_size', 'value' => '205/55R16', 'source' => 'web', 'url' => 'ftp://example.com/spec']];
     }
 
     public function testEmptyFactsIsInvalidInput(): void

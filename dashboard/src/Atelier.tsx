@@ -7,7 +7,8 @@ import './scene/parcpage.css';
 import './auth.css'; // the error screen reuses the at-auth-* classes — own the dependency explicitly
 import { getIdentity, logout } from './auth';
 import type { OwnerTopics } from './agent';
-import { cancelTurn, dashboardSubscriptions, fetchAgentLink, NO_OWNER_TOPICS, postTurn, tabSessionId } from './agent';
+import { cancelTurn, dashboardSubscriptions, NO_OWNER_TOPICS, postTurn, tabSessionId } from './agent';
+import { useAgentLink } from './mercureLink';
 import {
   addTaskPart,
   archiveTasks,
@@ -204,14 +205,11 @@ export function Atelier() {
   }, [dispatch]);
   useEffect(() => clearDet, [clearDet]);
 
-  // The owner topics — asked for once on mount (keyed digests server-side, not derivable here).
-  useEffect(() => {
-    let live = true;
-    fetchAgentLink(sessionId).then((link) => live && setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic, sessionTopic: link.sessionTopic }));
-    return () => {
-      live = false;
-    };
-  }, [sessionId]);
+  // The owner topics and the hub's subscriber cookie — asked for on mount, again whenever the hub refuses
+  // a stream (expired token). Keyed digests server-side, not derivable here.
+  const streamLifecycle = useAgentLink(sessionId, (link) =>
+    setOwnerTopics({ topic: link.topic, fleetTopic: link.fleetTopic, sessionTopic: link.sessionTopic, generation: link.generation }),
+  );
 
   // The parc collection — loaded once on mount; Mercure (slice 4) keeps it fresh thereafter.
   useEffect(() => {
@@ -590,7 +588,7 @@ export function Atelier() {
     },
     [closeRun, dispatch, openRun, runStage],
   );
-  useMercure(dashboardSubscriptions(ownerTopics), onFrame);
+  useMercure(dashboardSubscriptions(ownerTopics), onFrame, streamLifecycle);
 
   // The car the gate was waiting for is on screen → replay what it held, in order. Guarded on the
   // awaited IRI so the effect is inert on every other bundle change (the live cascade re-runs it).

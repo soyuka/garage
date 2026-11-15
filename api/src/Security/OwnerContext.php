@@ -50,9 +50,12 @@ final class OwnerContext implements ResetInterface
         return $this->security->getUser()?->getUserIdentifier() ?? $this->override ?? $this->fallback;
     }
 
-    /** The current owner for a write; throws if none — a write must never land unowned. */
+    /**
+     * The current owner for a garage read or write; throws if none. A write must never land unowned, and
+     * a read scoped to a null owner would match legacy unowned rows.
+     */
     public function require(): string
     {
-        return $this->current() ?? throw new \LogicException('No authenticated owner in context for a garage write.');
+        return $this->current() ?? throw new \LogicException('No authenticated owner in context for a garage read or write.');
     }
 }

@@ -32,11 +32,6 @@ final readonly class RunAgentTurn
         // same reason `owner` is: the worker has no request to read it from, and everything the agent
         // says this turn — the heartbeat, the failure toasts, the answers themselves — follows it.
         public string $locale = Locale::DEFAULT->value,
-        // The caller's Casdoor access token, forwarded to bonneref by the catalogue tools this turn calls.
-        // It sits in the queue (and in the failed transport) for as long as the message does: accepted,
-        // since the worker has no request to read the header from and bonneref authenticates the same token.
-        #[\SensitiveParameter]
-        public string $accessToken = '',
         // The files the user attached, already persisted by the controller (the worker cannot read the
         // request body). References only: the bytes are fetched from the turn-attachment store.
         /** @var list<TurnAttachmentRef> */

@@ -27,8 +27,8 @@ services:
       # "no Mercure hub configured" otherwise. Nothing is lost: with the watcher off above, the
       # refresh only ever reloaded the browser against a worker still serving the old code.
       FRANKENPHP_SITE_CONFIG: ""
-      # Mercure 1.0 renamed `demo` to `playground`; its echo endpoints moved to /playground/.
-      MERCURE_EXTRA_DIRECTIVES: playground
+      # No Mercure `playground` here either: it silently forces `anonymous`, the subscriptions API and
+      # `cors_origins *`, so dev would stop reproducing the private-updates-only hub stage and prod run.
       # Caddy reverse-proxies @frontend requests here (the Atelier dev server on the compose network).
       FRONTEND_UPSTREAM: dashboard:5173
       # See https://xdebug.org/docs/all_settings#mode

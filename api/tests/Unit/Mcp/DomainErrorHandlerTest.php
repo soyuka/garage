@@ -13,6 +13,7 @@ use Mcp\Schema\Request\CallToolRequest;
 use Mcp\Server\Session\SessionInterface;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpKernel\Exception\TooManyRequestsHttpException;
 use Webmozart\Assert\Assert;
 
 final class DomainErrorHandlerTest extends TestCase
@@ -41,6 +42,18 @@ final class DomainErrorHandlerTest extends TestCase
         $this->assertInstanceOf(ToolError::class, $response->result);
         $this->assertSame('invalid_input', $response->result->status);
         $this->assertSame($reason, $response->result->reason);
+    }
+
+    public function testARateLimitRefusalIsARateLimitedToolError(): void
+    {
+        $request = (new CallToolRequest('get_motul_oil', []))->withId(7);
+
+        $response = $this->handler(new TooManyRequestsHttpException(120, 'Motul lookup limit reached.'))->handle($request, $this->createStub(SessionInterface::class));
+
+        $this->assertInstanceOf(Response::class, $response);
+        $this->assertInstanceOf(ToolError::class, $response->result);
+        $this->assertSame('rate_limited', $response->result->status);
+        $this->assertStringContainsString('120', $response->result->reason);
     }
 
     public function testAnUnexpectedFailureStaysLoud(): void

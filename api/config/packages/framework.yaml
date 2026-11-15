@@ -16,8 +16,8 @@ framework:
 
     http_client:
         scoped_clients:
-            # The parts catalogue and the plate registry live in bonneref (BONNEREF_API_URL). The caller's bearer
-            # is added per call by App\Bonneref\BonnerefClient, never configured here.
+            # The parts catalogue and the plate registry live in bonneref (BONNEREF_API_URL). mpa's service token
+            # and the owner header are added per call by App\Bonneref\BonnerefClient, never configured here.
             bonneref.client:
                 base_uri: '%env(BONNEREF_API_URL)%'
                 headers:

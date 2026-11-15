@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
-use App\Bonneref\BonnerefToken;
 use App\Message\RunAgentTurn;
+use App\Tests\Mock\FixtureHttpClient;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Symfony\AI\Platform\Message\MessageBag;
 use Symfony\AI\Platform\Message\ToolCallMessage;
@@ -17,7 +17,9 @@ final class BonnerefForwardingTest extends AppTestCase
 {
     use McpClientTrait;
 
-    public function testAnMcpCatalogueToolForwardsTheBearerOfTheMcpRequest(): void
+    private const string SERVICE_BEARER = 'Bearer '.FixtureHttpClient::SERVICE_TOKEN;
+
+    public function testAnMcpCatalogueToolCallsAsTheServiceOnBehalfOfTheCaller(): void
     {
         $client = static::createClient();
         static::catalogue();
@@ -25,7 +27,9 @@ final class BonnerefForwardingTest extends AppTestCase
 
         $this->call($client, $sessionId, 'tools/call', ['name' => 'list_makes', 'arguments' => ['search' => 'maz']], 2);
 
-        $this->assertSame($this->mcpHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
+        $sent = static::bonneref()->lastRequest()['headers'] ?? [];
+        $this->assertSame(self::SERVICE_BEARER, $sent['authorization'] ?? null, 'the caller\'s MCP token must never reach bonneref');
+        $this->assertSame(self::TEST_OWNER, $sent['x-bonneref-owner'] ?? null);
     }
 
     public function testAnMcpCatalogueToolForwardsTheLanguageOfTheMcpRequest(): void
@@ -71,8 +75,6 @@ final class BonnerefForwardingTest extends AppTestCase
             instruction: 'Which part categories?',
             sessionTopic: 'https://localhost/agent/sessions/sess-worker-default-language',
             owner: self::TEST_OWNER,
-            // @mago-expect lint:no-literal-password test fixture
-            accessToken: 'queued-token',
         ));
 
         $this->assertSame('en', static::bonneref()->lastRequest()['headers']['accept-language']);
@@ -90,14 +92,12 @@ final class BonnerefForwardingTest extends AppTestCase
             sessionTopic: 'https://localhost/agent/sessions/sess-worker-language',
             owner: self::TEST_OWNER,
             locale: 'en',
-            // @mago-expect lint:no-literal-password test fixture
-            accessToken: 'queued-token',
         ));
 
         $this->assertSame('en', static::bonneref()->lastRequest()['headers']['accept-language']);
     }
 
-    public function testAQueuedTurnForwardsTheTokenItCarriesToTheCatalogueTools(): void
+    public function testAQueuedTurnCallsTheCatalogueAsTheServiceOnBehalfOfItsOwner(): void
     {
         static::createClient();
         $container = static::getContainer();
@@ -108,15 +108,14 @@ final class BonnerefForwardingTest extends AppTestCase
             instruction: 'Quelles catégories de pièces ?',
             sessionTopic: 'https://localhost/agent/sessions/sess-worker-token',
             owner: self::TEST_OWNER,
-            // @mago-expect lint:no-literal-password test fixture
-            accessToken: 'queued-token',
         ));
 
-        $this->assertSame('Bearer queued-token', static::bonneref()->lastRequest()['headers']['authorization']);
-        $this->assertNull($container->get(BonnerefToken::class)->get(), 'the token must not outlive the turn');
+        $sent = static::bonneref()->lastRequest()['headers'] ?? [];
+        $this->assertSame(self::SERVICE_BEARER, $sent['authorization'] ?? null);
+        $this->assertSame(self::TEST_OWNER, $sent['x-bonneref-owner'] ?? null);
     }
 
-    public function testAPostedTurnQueuesTheBearerOfItsRequest(): void
+    public function testAPostedTurnNeverForwardsTheBearerOfItsRequest(): void
     {
         $client = static::createClient();
         $container = static::getContainer();
@@ -129,7 +128,7 @@ final class BonnerefForwardingTest extends AppTestCase
         ]);
 
         $this->assertResponseStatusCodeSame(202);
-        $this->assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
+        $this->assertSame(self::SERVICE_BEARER, static::bonneref()->lastRequest()['headers']['authorization'] ?? null);
     }
 
     private function callingListPartCategories(): ScriptedStreamPlatform

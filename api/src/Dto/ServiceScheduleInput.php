@@ -6,6 +6,7 @@ namespace App\Dto;
 
 use ApiPlatform\Metadata\ApiProperty;
 use App\Maintenance\MaintenanceAction;
+use App\Validator\WebUrl;
 use Symfony\Component\Validator\Constraints as Assert;
 
 /**
@@ -44,5 +45,6 @@ final class ServiceScheduleInput
 
     #[ApiProperty(description: 'Source URL when the cadence came from a manual / web lookup.')]
     #[Assert\Length(max: 2000)]
+    #[Assert\Url(protocols: WebUrl::PROTOCOLS, requireTld: true)]
     public ?string $url = null;
 }

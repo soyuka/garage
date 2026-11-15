@@ -169,8 +169,12 @@ http://php:80 {
 			# Subscribers reach this hub through the public address, so the audience tokens carry is the
 			# public URL and cannot be derived from the request.
 			resource_identifier {$MERCURE_PUBLIC_URL:https://localhost/.well-known/mercure}
-			# Allow anonymous subscribers (double-check that it's what you want)
-			anonymous
+			# Browsers authenticate with this cookie, set by GET /agent/link (EventSource cannot send a
+			# header and Mercure 1.x refuses tokens in the query string). Pinned to the name the app sets
+			# (the bundle's protocol 1.0 default): `playground` would rename it.
+			cookie_name __Secure-mercure_access_token
+			# No `anonymous`: every update is private, and a subscriber reads only the topics its token
+			# names (minted per owner by GET /agent/link, passed as the `authorization` query parameter).
 			# No `subscriptions`: nothing reads the subscription API, and it would announce every
 			# subscriber's topic, pilot digests included.
 			# Extra directives

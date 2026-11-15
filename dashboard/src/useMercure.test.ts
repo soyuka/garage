@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { buildHubUrl, isDomainEvent, parseFrame, reconcileVehicleEvent, removeVehicle, upsertVehicle } from './useMercure';
+import { describe, expect, it, vi } from 'vitest';
+import { buildHubUrl, isDomainEvent, openStreams, parseFrame, reconcileVehicleEvent, removeVehicle, upsertVehicle } from './useMercure';
 import type { DomainEvent, UIAction, VehicleSummary } from './types';
 
 // Pure-core tests for the Mercure transport. The EventSource lifecycle is thin glue; these pin the
@@ -17,6 +17,55 @@ describe('buildHubUrl', () => {
     expect(u.origin + u.pathname).toBe('https://localhost/.well-known/mercure');
     expect(u.searchParams.getAll('match')).toEqual(['https://localhost/garage/owners/cafe/vehicles', 'https://localhost/agent/sessions/abc']);
     expect(u.searchParams.has('topic')).toBe(false);
+    // The subscriber token rides the hub's HttpOnly cookie (set by GET /agent/link), never the URL.
+    expect(u.searchParams.has('authorization')).toBe(false);
+  });
+});
+
+class FakeSource {
+  static CLOSED = 2;
+  static instances: FakeSource[] = [];
+  readyState = 0;
+  closed = false;
+  onopen: (() => void) | null = null;
+  onerror: (() => void) | null = null;
+  onmessage: ((e: MessageEvent<string>) => void) | null = null;
+  constructor(readonly url: string) {
+    FakeSource.instances.push(this);
+  }
+  close() {
+    this.closed = true;
+  }
+}
+
+describe('openStreams', () => {
+  const subs = [
+    { driver: 'app' as const, topics: ['https://localhost/garage/owners/cafe/vehicles'], generation: 1 },
+    { driver: 'pilot' as const, topics: ['https://localhost/agent/pilots/abc'], generation: 1 },
+  ];
+
+  it('opens one stream per subscription and reports when the hub refuses one', () => {
+    FakeSource.instances = [];
+    const refused = vi.fn();
+    const opened = vi.fn();
+    const close = openStreams(subs, '/.well-known/mercure', 'https://localhost', () => {}, { onRefused: refused, onOpen: opened }, FakeSource as unknown as typeof EventSource);
+
+    expect(FakeSource.instances.map((s) => new URL(s.url).searchParams.getAll('match'))).toEqual([['https://localhost/garage/owners/cafe/vehicles'], ['https://localhost/agent/pilots/abc']]);
+
+    // A network blip: EventSource reconnects on its own (CONNECTING), nothing to refresh.
+    FakeSource.instances[0].onerror?.();
+    expect(refused).not.toHaveBeenCalled();
+
+    // The reconnect is refused (expired token → 401): the browser gives up for good.
+    FakeSource.instances[0].readyState = FakeSource.CLOSED;
+    FakeSource.instances[0].onerror?.();
+    expect(refused).toHaveBeenCalledTimes(1);
+
+    FakeSource.instances[1].onopen?.();
+    expect(opened).toHaveBeenCalledTimes(1);
+
+    close();
+    expect(FakeSource.instances.every((s) => s.closed)).toBe(true);
   });
 });
 

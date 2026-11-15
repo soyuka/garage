@@ -70,6 +70,19 @@ final class ServiceScheduleCrudTest extends AppTestCase
         $this->assertFalse($created['verified'], 'A hand-keyed rule never reads as authoritative.');
     }
 
+    public function testPostRefusesANonWebSourceUrl(): void
+    {
+        $client = static::createClient();
+        $vehicle = $this->seedToro();
+
+        $client->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/service-schedule', [
+            'headers' => self::authHeaders() + ['Content-Type' => 'application/ld+json', 'Accept' => 'application/ld+json'],
+            'json' => ['type' => 'spark_plug', 'action' => 'replace', 'everyUsageValue' => 100, 'everyUsageUnit' => 'hours', 'url' => 'javascript://x%0Aalert(1)'],
+        ]);
+
+        $this->assertResponseStatusCodeSame(422);
+    }
+
     public function testPostUpsertsSameTypeActionComponentInPlace(): void
     {
         $client = static::createClient();

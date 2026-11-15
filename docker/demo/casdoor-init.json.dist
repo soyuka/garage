@@ -20,6 +20,21 @@
   "applications": [
     {
       "owner": "admin",
+      "name": "mpa-service",
+      "displayName": "mpa service",
+      "description": "mpa's own credential for the bonneref catalogue (client credentials only).",
+      "organization": "bonneref",
+      "enablePassword": false,
+      "enableSignUp": false,
+      "clientId": "466fc97138f0f6348ec3",
+      "clientSecret": "@MPA_SERVICE_CLIENT_SECRET@",
+      "redirectUris": [],
+      "grantTypes": ["client_credentials"],
+      "tokenFormat": "JWT",
+      "expireInHours": 168
+    },
+    {
+      "owner": "admin",
       "name": "mon-parc-auto",
       "displayName": "Mon Parc Auto",
       "homepageUrl": "http://localhost:@DEMO_PORT@",

@@ -230,7 +230,7 @@ class VehicleRepository extends ServiceDocumentRepository
     private function baseQuery(): Builder
     {
         return $this->createQueryBuilder()
-            ->field('owner')->equals($this->owner->current())
+            ->field('owner')->equals($this->owner->require())
             ->field('deletedAt')->equals(null);
     }
 }

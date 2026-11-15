@@ -9,6 +9,22 @@
 #
 # Almost everything else is already parameterised through .env interpolation, so this file only
 # carries what interpolation cannot reach.
+
+# The tunnel publishes this stack, so every secret fails closed instead of falling back to the public
+# placeholders compose.yaml defaults to for the loopback-only dev stack. php and worker share them: an
+# APP_SECRET that differs between the two derives different topics and half the frames vanish.
+x-stage-secrets: &stage_secrets
+  APP_SECRET: ${APP_SECRET:?APP_SECRET required}
+  CASDOOR_ISSUER: ${CASDOOR_ISSUER:?CASDOOR_ISSUER required}
+  CASDOOR_ORGANIZATION: ${CASDOOR_ORGANIZATION:?CASDOOR_ORGANIZATION required}
+  # mpa's own bonneref credential (Casdoor application `mpa-service`, docs/AUTH.md); the id is public.
+  MPA_SERVICE_CLIENT_ID: ${MPA_SERVICE_CLIENT_ID:-466fc97138f0f6348ec3}
+  MPA_SERVICE_CLIENT_SECRET: ${MPA_SERVICE_CLIENT_SECRET:?MPA_SERVICE_CLIENT_SECRET required}
+  MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+  MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_SUBSCRIBER_JWT_SECRET:-${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}}
+  MERCURE_SUBSCRIBER_JWT_SECRET: ${CADDY_MERCURE_SUBSCRIBER_JWT_SECRET:-${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}}
+  MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:?CADDY_MERCURE_JWT_SECRET required}
+
 services:
   php:
     environment:
@@ -22,9 +38,10 @@ services:
       XDEBUG_MODE: "off"
       # Symfony's Dotenv does not overwrite a variable that is already set in the environment, so a
       # value living only in .env.stage would lose to the `.env` bind-mounted at /app/.env. These
-      # three must therefore be injected as container environment to actually win.
-      CASDOOR_ISSUER: ${CASDOOR_ISSUER}
-      APP_SECRET: ${APP_SECRET}
+      # must therefore be injected as container environment to actually win.
+      <<: *stage_secrets
+      # No Mercure playground on a published hub (compose.override.yaml enables it for dev).
+      MERCURE_EXTRA_DIRECTIVES: ""
       # The published ports are loopback-only (compose.override.yaml), so the direct peer is always the
       # docker gateway relaying the host: cloudflared, or a local client. Trust that peer and only the two
       # headers cloudflared sets; it keeps Host, so X-Forwarded-Host/Port/Prefix are never honoured.
@@ -49,8 +66,4 @@ services:
     environment:
       APP_ENV: prod
       APP_DEBUG: "0"
-      # The worker derives the same pilot topic and verifies the same tokens — if APP_SECRET differs
-      # between php and worker, the two publish to DIFFERENT topics and half the frames vanish with
-      # no error anywhere. Keep these in lockstep with php above.
-      CASDOOR_ISSUER: ${CASDOOR_ISSUER}
-      APP_SECRET: ${APP_SECRET}
+      <<: *stage_secrets

@@ -24,6 +24,24 @@ framework:
             limit: '%env(int:TRANSCRIPTION_RATE_LIMIT)%'
             interval: '1 hour'
             cache_pool: cache.rate_limiter
+        # One key for everyone, consumed once the owner's slot is: the vendor ceiling however many
+        # accounts sign up (ElevenLabs bills a monthly character budget).
+        speech_global:
+            policy: sliding_window
+            limit: '%env(int:SPEECH_GLOBAL_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
+        transcription_global:
+            policy: sliding_window
+            limit: '%env(int:TRANSCRIPTION_GLOBAL_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
+        # get_motul_oil scrapes motul.com; MCP and in-app calls alike, keyed on the owner.
+        motul:
+            policy: sliding_window
+            limit: '%env(int:MOTUL_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
         # Vehicle documents and maintenance bills share one budget: both write to the object store.
         upload:
             policy: sliding_window

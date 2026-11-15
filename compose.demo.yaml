@@ -27,10 +27,15 @@ x-mpa-environment: &mpa_environment
   SERVER_NAME: ":80"
   DEFAULT_URI: http://localhost:${DEMO_PORT:-8480}
   CASDOOR_ISSUER: http://localhost:${AUTH_PORT:-8482}
+  # The seeded users live in this organization (docker/demo/casdoor-init.json.dist).
+  CASDOOR_ORGANIZATION: bonneref
   OAUTH_CLIENT_AUDIENCES: 671b8c86d75444f3f4c4
   MCP_ALLOWED_HOSTS: localhost,127.0.0.1,[::1]
   MCP_RESOURCE_ALIASES: ""
   BONNEREF_API_URL: http://bonneref
+  # mpa's own bonneref credential, seeded as the `mpa-service` application (docker/demo/casdoor-init.json.dist).
+  MPA_SERVICE_CLIENT_ID: 466fc97138f0f6348ec3
+  MPA_SERVICE_CLIENT_SECRET: ${MPA_SERVICE_CLIENT_SECRET:?run bin/demo, it generates MPA_SERVICE_CLIENT_SECRET into .demo/env}
   MONGODB_URL: mongodb://mongodb:27017
   MONGODB_DB: app
   DATABASE_URL: postgresql://app:${POSTGRES_PASSWORD:?run bin/demo}@database:5432/app?serverVersion=16&charset=utf8
@@ -39,6 +44,7 @@ x-mpa-environment: &mpa_environment
   MERCURE_JWT_SECRET: ${MERCURE_JWT_SECRET:?run bin/demo}
   MERCURE_PUBLISHER_JWT_KEY: ${MERCURE_JWT_SECRET:?run bin/demo}
   MERCURE_SUBSCRIBER_JWT_KEY: ${MERCURE_JWT_SECRET:?run bin/demo}
+  MERCURE_SUBSCRIBER_JWT_SECRET: ${MERCURE_JWT_SECRET:?run bin/demo}
   STORAGE_ADAPTER: local
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
   ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
@@ -171,8 +177,9 @@ services:
       DEFAULT_URI: http://localhost:${BONNEREF_PORT:-8481}
       CASDOOR_ISSUER: http://localhost:${AUTH_PORT:-8482}
       OAUTH_CLIENT_AUDIENCES: ""
-      # mpa forwards its caller's bearer: the Atelier's client id and mpa's MCP resource.
-      CATALOGUE_PASSTHROUGH_AUDIENCES: 671b8c86d75444f3f4c4,http://localhost:${DEMO_PORT:-8480}/mcp
+      # mpa calls the catalogue with its own client credentials token, naming the owner (api/docs/AUTH.md).
+      MPA_SERVICE_CLIENT_ID: 466fc97138f0f6348ec3
+      MPA_SERVICE_SUBJECT: admin/mpa-service
       MCP_ALLOWED_HOSTS: localhost,127.0.0.1,[::1]
       MCP_RESOURCE_ALIASES: ""
       MONGODB_URL: mongodb://bonneref-mongodb:27017

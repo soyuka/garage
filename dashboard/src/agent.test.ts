@@ -46,10 +46,11 @@ describe('dashboardSubscriptions', () => {
         topic: 'https://localhost/agent/pilots/deadbeef',
         fleetTopic: 'https://localhost/garage/owners/cafe/vehicles',
         sessionTopic: 'https://localhost/agent/sessions/f00d',
+        generation: 2,
       }),
     ).toEqual([
-      { driver: 'app', topics: ['https://localhost/garage/owners/cafe/vehicles', 'https://localhost/agent/sessions/f00d'] },
-      { driver: 'pilot', topics: ['https://localhost/agent/pilots/deadbeef'] },
+      { driver: 'app', topics: ['https://localhost/garage/owners/cafe/vehicles', 'https://localhost/agent/sessions/f00d'], generation: 2 },
+      { driver: 'pilot', topics: ['https://localhost/agent/pilots/deadbeef'], generation: 2 },
     ]);
   });
 });
@@ -121,12 +122,13 @@ describe('parseAgentLink', () => {
       topic: 'https://localhost/agent/pilots/abc',
       fleetTopic: 'https://localhost/garage/owners/def/vehicles',
       sessionTopic: 'https://localhost/agent/sessions/beef',
+      generation: 0,
       capabilities: { agent: true, voice: false, dictation: false, web_search: true },
     });
   });
 
   it('treats a server that predates capabilities as having everything on, so the 503 fallbacks stay in charge', () => {
-    expect(parseAgentLink({ topic: 't' })).toEqual({ topic: 't', fleetTopic: null, sessionTopic: null, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
+    expect(parseAgentLink({ topic: 't' })).toEqual({ topic: 't', fleetTopic: null, sessionTopic: null, generation: 0, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
   });
 
   it('only a literal false switches a capability off', () => {
@@ -134,6 +136,6 @@ describe('parseAgentLink', () => {
   });
 
   it('survives a body that is not an object', () => {
-    expect(parseAgentLink(null)).toEqual({ topic: null, fleetTopic: null, sessionTopic: null, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
+    expect(parseAgentLink(null)).toEqual({ topic: null, fleetTopic: null, sessionTopic: null, generation: 0, capabilities: { agent: true, voice: true, dictation: true, web_search: true } });
   });
 });

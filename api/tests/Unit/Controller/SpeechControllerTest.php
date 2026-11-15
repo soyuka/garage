@@ -146,6 +146,6 @@ final class SpeechControllerTest extends TestCase
         $owner = new OwnerContext(new Security(new ServiceLocator(['security.token_storage' => static fn (): TokenStorage => new TokenStorage()])), 'owner@example.com');
         $limiter = new RateLimiterFactory(['id' => 'speech', 'policy' => 'sliding_window', 'limit' => 100, 'interval' => '1 hour'], new InMemoryStorage());
 
-        return new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'), new OwnerRateLimit($owner), $limiter);
+        return new SpeechController($speech, new Verbalizer(), new Capabilities('test-anthropic-key', 'test-xi-key', 'test-gemini-key', WebSearchBackend::Gemini, 'test-agent-key'), new OwnerRateLimit($owner), $limiter, $limiter);
     }
 }

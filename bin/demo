@@ -44,8 +44,14 @@ init_env() {
 			MERCURE_JWT_SECRET=$(secret 48)
 			POSTGRES_PASSWORD=$(secret 24)
 			CASDOOR_CLIENT_SECRET=$(secret 40)
+			MPA_SERVICE_CLIENT_SECRET=$(secret 40)
 		EOF
 		echo "Generated $ENV_FILE"
+	fi
+	# Added 2026-11-15 (mpa calls bonneref with its own client credentials): an older .demo/env lacks it.
+	if ! grep -q '^MPA_SERVICE_CLIENT_SECRET=' "$ENV_FILE"; then
+		(umask 077 && printf 'MPA_SERVICE_CLIENT_SECRET=%s\n' "$(secret 40)" >>"$ENV_FILE")
+		echo "Added MPA_SERVICE_CLIENT_SECRET to $ENV_FILE"
 	fi
 	local catalog_override=${DEMO_CATALOG_PATH:-}
 	set -a
@@ -61,6 +67,7 @@ render_casdoor_seed() {
 		-e "s|@DEMO_EMAIL@|$DEMO_EMAIL|g" \
 		-e "s|@DEMO_PASSWORD@|$DEMO_PASSWORD|g" \
 		-e "s|@CASDOOR_CLIENT_SECRET@|$CASDOOR_CLIENT_SECRET|g" \
+		-e "s|@MPA_SERVICE_CLIENT_SECRET@|$MPA_SERVICE_CLIENT_SECRET|g" \
 		docker/demo/casdoor-init.json.dist >"$STATE/casdoor-init.json"
 	# Read by the Casdoor container's own user; the 700 directory keeps it from other host users.
 	chmod 644 "$STATE/casdoor-init.json"

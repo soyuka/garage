@@ -18,6 +18,7 @@ use App\Maintenance\ScheduleView;
 use App\Maintenance\ServiceSchedulePlanner;
 use App\Maintenance\UsageUnit;
 use App\Mercure\DomainPublisher;
+use App\Validator\WebUrl;
 use Mcp\Schema\Result\CallToolResult;
 
 /**
@@ -113,6 +114,9 @@ final readonly class SetMaintenanceScheduleProcessor implements ProcessorInterfa
         }
         if (!$hasUsage && null === ($item['everyMonths'] ?? null) && null === ($item['firstUsageValue'] ?? null)) {
             return \sprintf('items[%d]: a rule needs at least one cadence (everyUsageValue, everyMonths or firstUsageValue).', $index);
+        }
+        if (isset($item['url']) && (!\is_string($item['url']) || !WebUrl::isValid($item['url']))) {
+            return \sprintf('items[%d]: url must be an absolute http(s) URL when given.', $index);
         }
 
         return null;

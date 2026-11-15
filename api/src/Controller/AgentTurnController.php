@@ -7,7 +7,6 @@ namespace App\Controller;
 use App\Agent\Attachment\TurnAttachments;
 use App\Agent\Dispatch\TurnDispatcher;
 use App\Agent\Ui\DashboardChannel;
-use App\Bonneref\BonnerefToken;
 use App\Capability\Capabilities;
 use App\Capability\Capability;
 use App\Dto\AgentTurnInput;
@@ -120,7 +119,6 @@ final readonly class AgentTurnController
             // Not a payload field: the browser already announces its language on the request, so the
             // dashboard's choice arrives for free (framework.yaml `set_locale_from_accept_language`).
             locale: Locale::resolve($request->getLocale())->value,
-            accessToken: BonnerefToken::fromRequest($request) ?? '',
             attachments: $refs,
         ));
 

@@ -15,4 +15,9 @@ final class NotConfiguredException extends \RuntimeException
     {
         return new self(\sprintf('%s is not configured on the catalogue server', $feature));
     }
+
+    public static function bonnerefServiceCredential(): self
+    {
+        return new self('The bonneref service credential (MPA_SERVICE_CLIENT_ID and MPA_SERVICE_CLIENT_SECRET) is not configured, so the parts catalogue and plate lookup cannot be reached');
+    }
 }

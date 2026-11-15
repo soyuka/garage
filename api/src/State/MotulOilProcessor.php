@@ -13,7 +13,9 @@ use App\Garage\GarageResolver;
 use App\Garage\ToolResult;
 use App\Garage\VehicleIriResolver;
 use App\Motul\MotulOilAdvisor;
+use App\Security\OwnerRateLimit;
 use Mcp\Schema\Result\CallToolResult;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
 
 /**
  * MCP `get_motul_oil` tool. An upstream failure (Motul down / format shift) is returned as a
@@ -35,6 +37,8 @@ final readonly class MotulOilProcessor implements ProcessorInterface
         private VehicleIriResolver $iriResolver,
         private GarageResolver $resolver,
         private BonnerefClient $bonneref,
+        private OwnerRateLimit $rateLimit,
+        private RateLimiterFactoryInterface $motulLimiter,
     ) {
     }
 
@@ -48,6 +52,8 @@ final readonly class MotulOilProcessor implements ProcessorInterface
         // Pins the row directly — no search, no @id/SIV derivation — so a CTA click converges.
         $motulId = trim((string) $data->motulId);
         if ('' !== $motulId) {
+            $this->rateLimit->consume($this->motulLimiter, 'Motul lookup');
+
             return self::result($this->advisor->adviseVariant($motulId));
         }
 
@@ -69,6 +75,8 @@ final readonly class MotulOilProcessor implements ProcessorInterface
         if ('' === $search) {
             return ToolResult::error('invalid_input', 'Provide a vehicle @id, or a search like "Mazda 6".');
         }
+
+        $this->rateLimit->consume($this->motulLimiter, 'Motul lookup');
 
         // A Motul outage bubbles to DomainErrorHandler: upstream_unavailable/upstream_rejected, as for any upstream.
         return self::result($this->advisor->advise($search, $year, $engine));

@@ -57,6 +57,7 @@ final class RenderIntentToolsTest extends TestCase
         $this->assertNotNull($published);
         $this->assertSame(['https://localhost/agent/sessions/abc'], $published->getTopics());
         $this->assertSame(['type' => 'selectVehicle', 'id' => '/garage/vehicles/'.self::VEHICLE], json_decode($published->getData(), true));
+        $this->assertTrue($published->isPrivate(), 'a render intent only reaches a subscriber holding a token for its topic');
     }
 
     public function testBoundTurnPublishesOnlyItsLatestToastImmediatelyBeforeItEnds(): void
