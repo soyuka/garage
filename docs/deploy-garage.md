@@ -135,3 +135,18 @@ Deployed `02e2816` (bonneref-garage, Atelier): signed-out visitors go straight t
 back in the Atelier, files attached to an in-app turn (`turn_attachments` on the S3 bucket, 24 h unless filed).
 Added the `bonneref-garage-scheduler` service to `~/bonneref.compose.yml` (backup
 `~/bonneref.compose.yml.pre-scheduler-20261114`). `debug:scheduler` in that container lists the hourly prune.
+
+## 2026-11-15 deploy: security review fixes
+
+Deployed `be43d2e` (bonneref-api first, then bonneref front, bonneref-garage + scheduler, Atelier), review in
+`.claude/security-analysis-2026-11-14.md`. Env added: `CASDOOR_ORGANIZATION=bonneref` on both apps,
+`MPA_SERVICE_CLIENT_SECRET` and `MERCURE_SUBSCRIBER_JWT_SECRET` in `garage.env` (backups `*.pre-secfix-20261115`).
+Casdoor: new app `bonneref/mpa-service` (client id `466fc97138f0f6348ec3`), grant `client_credentials` only, signup
+off; its token carries `owner: admin`, `sub: admin/mpa-service`, `azp`/`aud` = client id, no email, no password field
+(token format left at `JWT`, checked 2026-11-15). This is a cutover: the new bonneref refuses forwarded user tokens.
+
+Verified on prod: anonymous subscribe is 401 on both hubs for `match=*`, `match_urlpattern` and an exact topic
+(Mercure 1.x takes `match`, a `topic` parameter is a 400 for an authorised client); signed in, the Atelier cookie
+opens its pilot, fleet and session topics, bonneref's `subscriberToken` opens its session topic via
+`Authorization: Bearer`; bonneref's front no longer keeps a token in localStorage; mpa → bonneref `/makes` with the
+service token + `X-Bonneref-Owner` is 200, without a token 401.
