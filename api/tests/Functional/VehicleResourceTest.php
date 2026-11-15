@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Tests\Mock\FixtureHttpClient;
+
 final class VehicleResourceTest extends AppTestCase
 {
     public function testPlateLookupReturnsVehicleWithTecdocIds(): void
@@ -49,13 +51,16 @@ final class VehicleResourceTest extends AppTestCase
         $this->assertResponseStatusCodeSame(404);
     }
 
-    public function testTheCallersTokenReachesBonneref(): void
+    public function testBonnerefIsCalledWithTheServiceTokenAndTheOwnerNotTheCallersToken(): void
     {
         $client = static::createClient();
         static::catalogue();
         $client->request('GET', '/vehicles/XC302ZC');
 
         $this->assertResponseIsSuccessful();
-        $this->assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
+        $sent = static::bonneref()->lastRequest()['headers'];
+        $this->assertSame('Bearer '.FixtureHttpClient::SERVICE_TOKEN, $sent['authorization']);
+        $this->assertNotSame(self::authHeaders()['Authorization'], $sent['authorization']);
+        $this->assertSame(self::TEST_OWNER, $sent['x-bonneref-owner']);
     }
 }

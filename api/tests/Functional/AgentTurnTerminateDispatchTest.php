@@ -10,6 +10,7 @@ use App\Agent\Ui\DashboardChannel;
 use App\Entity\AgentTurnStatus;
 use App\Message\RunAgentTurn;
 use App\Repository\AgentTurnRepository;
+use App\Tests\Mock\FixtureHttpClient;
 use App\Tests\Mock\RecordingHub;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Symfony\AI\Platform\Message\MessageBag;
@@ -74,7 +75,7 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
         $this->assertSame(AgentTurnStatus::Completed, $turns[0]->getStatus());
     }
 
-    public function testTheTurnForwardsTheTokenOfTheRequestThatQueuedItOnceTheRequestIsGone(): void
+    public function testTheTurnRunningAfterTheRequestIsGoneCallsBonnerefAsTheServiceForTheQueuingOwner(): void
     {
         static::createClient();
         $container = static::getContainer();
@@ -96,7 +97,10 @@ final class AgentTurnTerminateDispatchTest extends AppTestCase
 
         $kernel->terminate($request, $response);
 
-        $this->assertSame(self::authHeaders()['Authorization'], static::bonneref()->lastRequest()['headers']['authorization']);
+        $sent = static::bonneref()->lastRequest()['headers'];
+        $this->assertSame('Bearer '.FixtureHttpClient::SERVICE_TOKEN, $sent['authorization']);
+        $this->assertNotSame(self::authHeaders()['Authorization'], $sent['authorization']);
+        $this->assertSame(self::TEST_OWNER, $sent['x-bonneref-owner']);
     }
 
     public function testCrashedTurnIsJournalledFailedAndStillEndsTheTurn(): void

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Tests\Functional;
 
+use App\Tests\Mock\FixtureHttpClient;
+
 final class CatalogResourceTest extends AppTestCase
 {
     public function testListMakes(): void
@@ -24,7 +26,7 @@ final class CatalogResourceTest extends AppTestCase
         ]);
     }
 
-    public function testListMakesForwardsTheSearchAndTheCallersToken(): void
+    public function testListMakesForwardsTheSearchAndCallsAsTheServiceOnBehalfOfTheCaller(): void
     {
         $client = static::createClient();
         static::bonneref()->route('/makes', json_encode(['hydra:member' => [['id' => 55, 'name' => 'IVECO']]], \JSON_THROW_ON_ERROR));
@@ -35,7 +37,9 @@ final class CatalogResourceTest extends AppTestCase
 
         $sent = static::bonneref()->lastRequest();
         $this->assertSame(['carType' => 'CV', 'search' => 'ive'], $sent['query']);
-        $this->assertSame(self::authHeaders()['Authorization'], $sent['headers']['authorization']);
+        $this->assertSame('Bearer '.FixtureHttpClient::SERVICE_TOKEN, $sent['headers']['authorization']);
+        $this->assertNotSame(self::authHeaders()['Authorization'], $sent['headers']['authorization']);
+        $this->assertSame(self::TEST_OWNER, $sent['headers']['x-bonneref-owner']);
     }
 
     public function testListModelsReturnsTheMazdaLines(): void
