@@ -11,7 +11,8 @@ use Symfony\Component\Uid\Ulid;
 
 /**
  * A billed model call made outside an agent turn (a vision intake), counted in the owner's daily budget
- * next to the turns. Reaped by the TTL index once it has left the 24-hour window.
+ * next to the turns. An intake writes its estimate before the call (source {@see \App\Security\MongoSpendRecorder::RESERVED})
+ * and settles it to the actual usage after. Reaped by the TTL index once it has left the 24-hour window.
  */
 #[ODM\Document(collection: 'owner_spend', repositoryClass: OwnerSpendRepository::class)]
 #[ODM\Index(keys: ['owner' => 'asc', 'at' => 'asc'], name: 'owner_spend_window')]

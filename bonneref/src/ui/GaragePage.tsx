@@ -1,3 +1,4 @@
+import { safeHref } from '../safeHref';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { ApiError } from '../api';
 import { isAuthenticated, login } from '../auth';
@@ -222,8 +223,8 @@ export function GarageSheetView({ sheet, planned, plannedLoading, onSearch, onDe
                 <span className="gf-label">{f.label}</span>
                 <span className="gf-value m">{f.value}</span>
                 <span className="gf-source">
-                  {f.source && f.url ? (
-                    <a href={f.url} target="_blank" rel="noopener noreferrer">
+                  {f.source && safeHref(f.url) ? (
+                    <a href={safeHref(f.url)} target="_blank" rel="noopener noreferrer">
                       {f.source}
                     </a>
                   ) : (

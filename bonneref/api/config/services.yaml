@@ -7,6 +7,8 @@ parameters:
     app.owner_claim: 'email'
     # One source of truth: config/packages/mcp.yaml routes it, the in-process agent bridge replays against it.
     app.mcp_path: '/mcp'
+    # The vision intakes (photo, carte grise). Its max_tokens also bounds the cost IntakeUpload reserves.
+    app.intake.model: 'claude-sonnet-5-5?max_tokens=2048'
 
 services:
     _defaults:
@@ -42,7 +44,7 @@ services:
 
     app.quota.intake:
         class: App\Security\OwnerRateLimiter
-        arguments: { $limiter: '@limiter.intake' }
+        arguments: { $limiter: '@limiter.intake', $global: '@limiter.intake_global' }
 
     App\Controller\IntakeUpload:
         arguments:
@@ -141,7 +143,7 @@ services:
     App\RegistrationDocument\AnthropicRegistrationDocumentReader:
         arguments:
             $platform: '@App\Agent\ServerToolUseLogger.inner'
-            $model: 'claude-sonnet-5-5?max_tokens=2048'
+            $model: '%app.intake.model%'
 
     App\RegistrationDocument\RegistrationDocumentReader:
         alias: App\RegistrationDocument\AnthropicRegistrationDocumentReader
@@ -150,7 +152,7 @@ services:
     App\PhotoIntake\AnthropicPhotoIntakeReader:
         arguments:
             $platform: '@App\Agent\ServerToolUseLogger.inner'
-            $model: 'claude-sonnet-5-5?max_tokens=2048'
+            $model: '%app.intake.model%'
 
     App\PhotoIntake\PhotoIntakeReader:
         alias: App\PhotoIntake\AnthropicPhotoIntakeReader
@@ -180,6 +182,7 @@ services:
             $discoveryCache: '@cache.app'
             $oidcConfigurationCacheKey: 'casdoor_oidc_config'
             $issuers: ['%env(CASDOOR_ISSUER)%']
+            $organization: '%env(CASDOOR_ORGANIZATION)%'
             $claim: '%app.owner_claim%'
             $requireVerifiedEmail: '%env(bool:OWNER_REQUIRE_VERIFIED_EMAIL)%'
 
@@ -208,14 +211,15 @@ services:
             $audiences: ['%env(csv:OAUTH_CLIENT_AUDIENCES)%']
             $resource: ~
 
-    # The catalogue routes mpa calls with its caller's bearer: also mpa's audiences. Documented debt
-    # (api/docs/AUTH.md, FUTURE.md): token passthrough the MCP spec forbids, kept off /mcp.
-    app.access_token.catalogue_passthrough:
-        class: App\Security\AudienceTokenHandler
+    # The GET catalogue routes mpa calls: mpa's own client credentials token, acting for the owner it names in
+    # X-Bonneref-Owner, or a user token checked exactly as on the REST firewall (api/docs/AUTH.md).
+    app.access_token.catalogue:
+        class: App\Security\ServiceTokenHandler
         arguments:
             $verifier: '@app.access_token.verifier'
-            $audiences: ['%env(csv:OAUTH_CLIENT_AUDIENCES)%', '%env(csv:CATALOGUE_PASSTHROUGH_AUDIENCES)%']
-            $resource: ~
+            $users: '@app.access_token.api'
+            $clientId: '%env(MPA_SERVICE_CLIENT_ID)%'
+            $subject: '%env(MPA_SERVICE_SUBJECT)%'
 
 when@test:
     services:

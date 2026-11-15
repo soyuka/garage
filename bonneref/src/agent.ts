@@ -2,6 +2,9 @@ import { mapNarrowing } from './api';
 import { apiUrl } from './api-base';
 import { authFetch } from './auth';
 import { normalisePlate } from './format';
+import { CLOSED, type StreamSource } from './sse';
+
+export type { StreamSource } from './sse';
 import { asCarType, SELECTION_ID } from './route';
 import type { AgentPart, AgentSelection, BuildCode, FinderFrame, HeldVehicle, OnScreen, QuestionOption, TurnIntent, TurnState, TurnVehicle, Vehicle } from './types';
 
@@ -193,22 +196,94 @@ export function turnReducer(state: TurnState, action: TurnAction): TurnState {
 
 export const isBusy = (s: TurnState): boolean => s.phase === 'sending' || s.phase === 'running';
 
-// The topic is a server-side digest of (owner, sessionId): another owner reusing the id lands elsewhere.
-export async function fetchSessionTopic(sessionId: string): Promise<string | null> {
+export interface SessionLink {
+  topic: string;
+  token: string;
+  // Epoch milliseconds.
+  expiresAt: number;
+}
+
+// The topic is a server-side digest of (owner, sessionId): another owner reusing the id lands elsewhere. Frames are
+// private, so the hub only delivers them with the short-lived subscriber token minted for that one topic.
+export async function fetchSessionLink(sessionId: string): Promise<SessionLink | null> {
   try {
     const res = await authFetch(apiUrl(`/agent/link?session=${encodeURIComponent(sessionId)}`));
     if (!res.ok) return null;
     const link: unknown = await res.json().catch(() => null);
-    return isObject(link) && filled(link.sessionTopic) ? link.sessionTopic : null;
+    if (!isObject(link) || !filled(link.sessionTopic) || !filled(link.subscriberToken) || typeof link.expiresAt !== 'number') return null;
+    return { topic: link.sessionTopic, token: link.subscriberToken, expiresAt: link.expiresAt * 1000 };
   } catch {
     return null;
   }
 }
 
+// The token never rides in the URL: the hub takes it as a bearer header (sse.ts).
 export function hubUrl(hub: string, origin: string, topic: string): string {
   const url = new URL(hub, origin);
   url.searchParams.append('match', topic);
   return url.toString();
+}
+
+export interface SessionStreamOptions {
+  link: () => Promise<SessionLink | null>;
+  connect: (url: string, token: string) => StreamSource;
+  hub: string;
+  origin: string;
+  onFrame: (data: string) => void;
+}
+
+const REFRESH_BEFORE_MS = 60_000;
+const RETRY_MIN_MS = 2_000;
+const RETRY_MAX_MS = 30_000;
+
+// One subscription that outlives its token: renewed a minute before expiry, and re-linked when the hub ends the
+// stream (a refused token, a dropped connection: the source closes for good and reports an error).
+export function openSessionStream(o: SessionStreamOptions): { ready: Promise<boolean>; close: () => void } {
+  let source: StreamSource | null = null;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let closed = false;
+  let retry = RETRY_MIN_MS;
+
+  const schedule = (fn: () => void, ms: number): void => {
+    clearTimeout(timer);
+    timer = setTimeout(fn, Math.max(0, ms));
+  };
+
+  const retryLater = (): void => {
+    schedule(() => void renew(), retry);
+    retry = Math.min(retry * 2, RETRY_MAX_MS);
+  };
+
+  const connect = async (): Promise<boolean> => {
+    const link = await o.link();
+    if (closed) return false;
+    if (link === null) return false;
+    const next = o.connect(hubUrl(o.hub, o.origin, link.topic), link.token);
+    next.onmessage = (e) => o.onFrame(e.data);
+    next.onerror = () => {
+      if (closed || next !== source || next.readyState !== CLOSED) return;
+      retryLater();
+    };
+    source?.close();
+    source = next;
+    retry = RETRY_MIN_MS;
+    schedule(() => void renew(), link.expiresAt - REFRESH_BEFORE_MS - Date.now());
+    return true;
+  };
+
+  const renew = async (): Promise<void> => {
+    if (!(await connect()) && !closed) retryLater();
+  };
+
+  return {
+    ready: connect(),
+    close: () => {
+      closed = true;
+      clearTimeout(timer);
+      source?.close();
+      source = null;
+    },
+  };
 }
 
 export const turnVehicle = (v: Vehicle | null, buildCode: BuildCode | null = null): TurnVehicle | null =>

@@ -69,8 +69,9 @@ final readonly class AnthropicRegistrationDocumentReader implements Registration
                 ),
                 ['response_format' => $this->responseFormat()],
             );
-            $decoded = $result->asObject();
+            // Billed as soon as the response is back, whether or not it parses.
             $this->spend?->record('registration_document', $this->model, ModelUsage::fromAnthropic($result->getRawResult()->getData()));
+            $decoded = $result->asObject();
         } catch (ExceptionInterface $e) {
             throw new RegistrationDocumentUnreadable('The extraction model call failed: '.$e::class, 0, $e);
         }

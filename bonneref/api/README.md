@@ -15,7 +15,7 @@ data: vehicles, maintenance and documents stay in mpa.
 | finder agent | `POST /agent/turn`, `POST /agent/turn/cancel`, `GET /agent/turns`, `GET /agent/turns/{id}`, `POST /agent/turns/{id}/hide`, `GET /agent/selections/{id}` (public) |
 | intake | `POST /photo-intake`, `POST /registration-documents/extract` |
 | MCP | `/mcp`: `lookup_plate`, `decode_vin`, `list_makes`, `list_models`, `list_cars`, `list_part_categories`, `list_articles`, `narrow_parts`, `decode_build_code`, `compare_brands`, `get_service_parts` (read-only) |
-| Mercure | the hub is hosted by the same FrankenPHP (`/.well-known/mercure`); a finder turn publishes its frames to `…/agent/sessions/<id>` |
+| Mercure | the hub is hosted by the same FrankenPHP (`/.well-known/mercure`); a finder turn publishes its frames, private, to `…/agent/sessions/<id>`; `GET /agent/link?session=` returns that topic and a subscriber token for it alone, sent to the hub as a bearer header (no anonymous subscribers) |
 
 A finder turn takes no prompt text besides the instruction (500 characters at most, ≤ 4 images of ≤ 4 MB):
 the vehicle names, the result on screen, the pending question and the photo reading are rebuilt server-side
@@ -24,7 +24,7 @@ from `vehicle.carId`, `onScreen`, `previousTurnId` (the `turnId` the 202 returne
 vehicle in the query, and `show_web_part` only draws a reference a cited source of that turn carries.
 
 Everything except `/agent/selections/{id}` and the OAuth metadata needs a Casdoor bearer
-(`CASDOOR_ISSUER`, issuer + signature only, no audience check). The tenant is the token's `email` claim.
+(`CASDOOR_ISSUER`: issuer, signature and the `owner` organization `CASDOOR_ORGANIZATION`; the audience is checked per firewall). The tenant is the token's `email` claim.
 
 ## Running it
 
@@ -53,9 +53,11 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | variable | role |
 | --- | --- |
 | `CASDOOR_ISSUER` | OIDC issuer the bearer is checked against (`https://auth.bonneref.fr`) |
+| `CASDOOR_ORGANIZATION` | Casdoor organization a token's `owner` claim must name (emails are unique per organization only); empty refuses every token |
 | `MCP_RESOURCE_ALIASES` | MCP resource URIs accepted in `aud` on `/mcp` besides `DEFAULT_URI/mcp` (comma-separated) |
 | `OAUTH_CLIENT_AUDIENCES` | client_ids accepted in `aud` on the REST routes (the bonneref front) |
-| `CATALOGUE_PASSTHROUGH_AUDIENCES` | mpa's audiences, accepted only on the GET catalogue routes mpa calls (debt, see below) |
+| `MPA_SERVICE_CLIENT_ID` | client id of mpa's Casdoor service application (`466fc97138f0f6348ec3`): its client credentials token is accepted on the GET catalogue routes mpa calls (see below) |
+| `MPA_SERVICE_SUBJECT` | the `sub` that token must carry (`admin/mpa-service`) |
 | `MCP_ALLOWED_HOSTS` | hosts `/mcp` answers on (the SDK's DNS-rebinding guard 403s any other with "Invalid Host header") |
 | `CORS_ALLOW_ORIGIN` | regex of the front origins |
 | `API_PLAQUE_TOKEN` | apiplaqueimmatriculation.com, the paid SIV plate lookup |
@@ -63,14 +65,15 @@ Front, from `../`: `VITE_API_BASE=https://localhost:8444 npm run dev`.
 | `ANTHROPIC_API_KEY` | finder agent (Haiku 5.5), photo intake and carte grise reader (Sonnet 5.5), Anthropic web search |
 | `WEB_SEARCH_BACKEND`, `WEB_SEARCH_MODEL`, `GEMINI_API_KEY`, `GEMINI_WEB_SEARCH_MODEL` | the out-of-band `web_search` side call |
 | `WEB_SEARCH_ALLOWED_DOMAINS` | comma-separated `allowed_domains` for the Anthropic web search (empty: the whole web; Gemini ignores it) |
-| `AGENT_TURN_RATE_LIMIT`, `PLATE_LOOKUP_RATE_LIMIT`, `INTAKE_RATE_LIMIT` | per-owner quotas per sliding hour (defaults 30, 60 and 30): finder turns, SIV lookups that miss the store (a stored plate is free), and vision intakes (`/photo-intake`, `/registration-documents/extract`). Over the limit: 429 + `Retry-After`, or a `rate_limited` result from the MCP `lookup_plate` tool |
-| `AGENT_DAILY_BUDGET_USD`, `AGENT_PRICES` | per-owner finder spend cap over a sliding 24 hours (default 1.00), summed from the journal's per-turn cost estimate (`AGENT_PRICES`, USD per MTok per model). Over it: 429 + `Retry-After` |
-| `LOCK_DSN` | lock store serialising the rate-limiter state (`flock`, one container) |
+| `AGENT_TURN_RATE_LIMIT`, `PLATE_LOOKUP_RATE_LIMIT`, `INTAKE_RATE_LIMIT` (and the `*_GLOBAL_RATE_LIMIT` caps across owners) | per-owner quotas per sliding hour (defaults 30, 60 and 30): finder turns, SIV lookups that miss the store (a stored plate is free), and vision intakes (`/photo-intake`, `/registration-documents/extract`). Over the limit: 429 + `Retry-After`, or a `rate_limited` result from the MCP `lookup_plate` tool |
+| `AGENT_DAILY_BUDGET_USD`, `AGENT_PRICES` | per-owner finder spend cap over a sliding 24 hours (default 1.00), summed from the journal's per-turn cost estimate (`AGENT_PRICES`, USD per MTok per model). A vision intake reserves its estimated cost under a per-owner lock before the call and settles it after; a PDF over 2 pages is refused (422). Over it: 429 + `Retry-After` |
+| (none) | rate-limiter state and its lock live in MongoDB (`rate_limiter_states`, `locks`), shared by php, the worker and replicas |
 | `AGENT_TURN_DISPATCH` | `terminate` (default: the turn runs in `kernel.terminate`, capped by `AGENT_TURN_TIME_LIMIT`) or `messenger` (worker) |
 | `MESSENGER_TRANSPORT_DSN`, `MESSENGER_FAILED_TRANSPORT_DSN` | `in-memory://` by default |
 | `SKIP_DATABASE_WAIT` | `1` (compose default): the entrypoint does not wait for Postgres |
 | `MONGODB_URL`, `MONGODB_DB` | domain store: `finder_selections`, `turn_images`, `intake_readings`, `agent_turns`, `siv_lookups`, `catalog_vehicles` |
 | `MERCURE_*`, `CADDY_MERCURE_JWT_SECRET`, `MERCURE_JWT_ISSUER` | hub publish URL, public URL and JWT |
+| `MERCURE_SUBSCRIBER_JWT_KEY`, `MERCURE_SUBSCRIBER_TOKEN_TTL` | signs the per-session subscriber token `/agent/link` hands out (the hub's subscriber key), and its lifetime in seconds (3600) |
 | `DEFAULT_URI` | public origin; the finder session topic is `DEFAULT_URI/agent/sessions/<id>` and must equal the front's `VITE_API_BASE` |
 
 ## Tests and static analysis
@@ -93,12 +96,12 @@ After changing code, clear the cache **inside** the container (`/app/var` is an 
 
 ## How mpa consumes it
 
-mpa calls these routes through a `BonnerefClient` (Symfony HttpClient, base URI from env) and forwards the
-caller's Casdoor bearer. Since 2026-11-09 tokens are audience-checked (`/mcp`: this server's resource URIs;
-the rest: `OAUTH_CLIENT_AUDIENCES`, the bonneref front), so mpa's forwarded tokens are accepted only by the
-`catalogue_passthrough` firewall: GET on exactly the routes below, with `CATALOGUE_PASSTHROUGH_AUDIENCES` (mpa's
-Atelier client and MCP resource URIs). Token passthrough is debt: `../../api/docs/AUTH.md` § Audience,
-`../../FUTURE.md` § "Token passthrough mpa → bonneref". mpa's MCP tools (`list_makes`, `list_part_categories`,
+mpa calls these routes through a `BonnerefClient` (Symfony HttpClient, base URI from env) with its own
+client credentials token (Casdoor application `mpa-service`) and the end user's email in `X-Bonneref-Owner`; it
+never forwards its caller's token. The `catalogue` firewall (GET on exactly the routes below) accepts that token
+through `App\Security\ServiceTokenHandler` and takes the owner from the header, so per-owner quotas count per end
+user; any other token there gets the REST checks (`OAUTH_CLIENT_AUDIENCES`) and the header is ignored. Details:
+`../../api/docs/AUTH.md` § mpa → bonneref. mpa's MCP tools (`list_makes`, `list_part_categories`,
 `list_articles`, `narrow_parts`, `lookup_plate`, `decode_vin`, `get_service_parts`) map one-to-one onto the
 endpoints above; the table is in `../../docs/bonneref-extraction.md`.
 

@@ -2,33 +2,43 @@ framework:
     # Per-owner (Casdoor email claim) quotas on the calls that spend money on a public demo:
     # a finder turn (Anthropic credits), a vision intake (photo or carte grise, one Sonnet call each)
     # and a SIV lookup that misses the store (paid per call).
-    # State lives in cache.rate_limiter (cache.app, the container filesystem); locks serialise it.
+    # State and locks live in MongoDB, shared by php, the worker and replicas (MongoRateLimiterStorage, lock.yaml).
     rate_limiter:
         agent_turn:
             policy: sliding_window
             limit: '%env(int:AGENT_TURN_RATE_LIMIT)%'
             interval: '1 hour'
+            storage_service: App\RateLimiter\MongoRateLimiterStorage
         plate_lookup:
             policy: sliding_window
             limit: '%env(int:PLATE_LOOKUP_RATE_LIMIT)%'
             interval: '1 hour'
+            storage_service: App\RateLimiter\MongoRateLimiterStorage
         intake:
             policy: sliding_window
             limit: '%env(int:INTAKE_RATE_LIMIT)%'
             interval: '1 hour'
+            storage_service: App\RateLimiter\MongoRateLimiterStorage
         # Across all owners: a burst of fresh accounts each under its own quota still cannot run up the bill.
         agent_turn_global:
             policy: sliding_window
             limit: '%env(int:AGENT_TURN_GLOBAL_RATE_LIMIT)%'
             interval: '1 hour'
+            storage_service: App\RateLimiter\MongoRateLimiterStorage
         plate_lookup_global:
             policy: sliding_window
             limit: '%env(int:PLATE_LOOKUP_GLOBAL_RATE_LIMIT)%'
             interval: '1 hour'
+            storage_service: App\RateLimiter\MongoRateLimiterStorage
+        intake_global:
+            policy: sliding_window
+            limit: '%env(int:INTAKE_GLOBAL_RATE_LIMIT)%'
+            interval: '1 hour'
+            storage_service: App\RateLimiter\MongoRateLimiterStorage
 
-# The filesystem pool would let the suite's lookups add up across tests and 429 unrelated ones, and an
-# array pool is wiped by the kernel's services_resetter between two requests of one test. A plain
-# InMemoryStorage is neither: it lives exactly as long as the test's container.
+# The suite exhausts quotas 10,000 tokens at a time, three Mongo round-trips each; an array pool is wiped by
+# the kernel's services_resetter between two requests of one test. A plain InMemoryStorage is neither: it
+# lives exactly as long as the test's container. RateLimiterStorageTest covers the Mongo storage itself.
 when@test:
     framework:
         rate_limiter:
@@ -41,4 +51,6 @@ when@test:
             agent_turn_global:
                 storage_service: app.test.rate_limiter_storage
             plate_lookup_global:
+                storage_service: app.test.rate_limiter_storage
+            intake_global:
                 storage_service: app.test.rate_limiter_storage

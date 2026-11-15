@@ -134,6 +134,25 @@ final class PhotoIntakeTest extends AppTestCase
         $this->assertSame(0, $this->reader()->calls);
     }
 
+    public function testIsCappedAcrossAllOwners(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $factory = static::getContainer()->get('limiter.intake_global');
+        $this->assertInstanceOf(RateLimiterFactoryInterface::class, $factory);
+        $limiter = $factory->create('global');
+        for ($i = 0; $i < 10_000; ++$i) {
+            if (!$limiter->consume()->isAccepted()) {
+                break;
+            }
+        }
+
+        $this->post($client, self::PNG, 'image/png');
+
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertSame(0, $this->reader()->calls);
+    }
+
     private function post(Client $client, string $bytes, string $mime, bool $authed = true): void
     {
         $path = tempnam(sys_get_temp_dir(), 'ph');

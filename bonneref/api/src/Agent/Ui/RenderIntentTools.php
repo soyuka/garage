@@ -125,7 +125,7 @@ final class RenderIntentTools implements ResetInterface
         // a hub that is down (or untrusted TLS) must never turn the tool call into an error the
         // model then sees and tries to "recover" from. Log and move on — the tool still acks ok.
         try {
-            $this->hub->publish(new Update($topic, json_encode($action, \JSON_THROW_ON_ERROR)));
+            $this->hub->publish(new Update($topic, json_encode($action, \JSON_THROW_ON_ERROR), private: true));
         } catch (\Throwable $e) {
             $this->logger->warning('Mercure publish failed for render intent {type} on {topic}: {error}', [
                 'type' => $action['type'] ?? '',

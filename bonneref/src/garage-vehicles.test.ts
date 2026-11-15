@@ -123,6 +123,14 @@ describe('mapGarageVehicles', () => {
 });
 
 describe('mapGarageSheet', () => {
+  it('drops a fact source URL that is not http(s)', () => {
+    const facts = [
+      { key: 'build_plant', value: 'Mulhouse', source: 'web', url: 'javascript://x%0Aalert(1)' },
+      { key: 'build_dam', value: '982488', source: 'user', url: 'data:text/html,x' },
+    ];
+    expect(mapGarageSheet({ ...ITEM, facts }).facts.map((f) => f.url)).toEqual([null, null]);
+  });
+
   it('carries the identity and every fact with a French label, a printable value and its source', () => {
     const sheet = mapGarageSheet(ITEM);
     expect(sheet.vehicle.plate).toBe('XD-303-ZD');

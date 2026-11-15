@@ -1,3 +1,4 @@
+import { safeHref } from '../safeHref';
 import { isBusy } from '../agent';
 import { askChoices } from '../question';
 import type { AgentAsk, AgentPart, TurnState, Vehicle, WebPart } from '../types';
@@ -154,7 +155,7 @@ export function WebTitleBlock({ vehicle, part }: { vehicle: Vehicle | null; part
       )}
       <div className="c s3">
         <span className="l">Source : web</span>
-        <a className="tb-source" href={part.sourceUrl} target="_blank" rel="noopener noreferrer">
+        <a className="tb-source" href={safeHref(part.sourceUrl)} target="_blank" rel="noopener noreferrer">
           {part.sourceTitle || hostOf(part.sourceUrl)}
           <span className="m">{hostOf(part.sourceUrl)}</span>
         </a>

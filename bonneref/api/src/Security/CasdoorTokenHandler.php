@@ -31,11 +31,12 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 /**
  * Verifies a Casdoor-issued JWT: JWKS signature, iat/nbf/exp, issuer, and that it is an access token
- * (Casdoor signs refresh and ID tokens with the same key, `tokenType` tells them apart). The audience is
+ * (Casdoor signs refresh and ID tokens with the same key, `tokenType` tells them apart); a user token must
+ * also belong to the configured organization and carry the owner claim. The audience is
  * NOT checked here but by {@see AudienceTokenHandler}, which wraps this verifier once per firewall with
  * that firewall's accepted audiences (api/docs/AUTH.md at the repo root).
  */
-final class CasdoorTokenHandler implements AccessTokenHandlerInterface
+final class CasdoorTokenHandler implements AccessTokenHandlerInterface, AccessTokenVerifier
 {
     private readonly AlgorithmManager $signatureAlgorithm;
 
@@ -47,6 +48,8 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
         private readonly CacheInterface $discoveryCache,
         private readonly string $oidcConfigurationCacheKey,
         private readonly array $issuers,
+        // Casdoor's `owner` claim: one instance hosts several organizations, and an email is unique only within one.
+        private readonly string $organization,
         private readonly string $claim = 'sub',
         private readonly bool $requireVerifiedEmail = true,
         private readonly ?LoggerInterface $logger = null,
@@ -59,12 +62,12 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
 
     public function getUserBadgeFrom(#[\SensitiveParameter] string $accessToken): UserBadge
     {
-        try {
-            $keys = $this->discoveryCache->get($this->oidcConfigurationCacheKey, $this->computeDiscoveryKeys(...));
-            $jwkset = JWKSet::createFromKeyData(['keys' => $keys]);
+        $claims = $this->verify($accessToken);
 
-            $claims = $this->loadAndVerifyJws($accessToken, $jwkset);
-            $this->verifyClaims($claims);
+        try {
+            if ('' === $this->organization || $this->organization !== ($claims['owner'] ?? null)) {
+                throw new BadCredentialsException('The token belongs to another Casdoor organization.');
+            }
 
             $owner = $claims[$this->claim] ?? null;
             if (!\is_string($owner) || '' === $owner || '0' === $owner) {
@@ -78,13 +81,31 @@ final class CasdoorTokenHandler implements AccessTokenHandlerInterface
 
             return new UserBadge($owner, null, $claims);
         } catch (\Exception $e) {
-            $this->logger?->error('Failed to validate the Casdoor access token.', [
-                'error' => $e->getMessage(),
-                'exception' => $e::class,
-            ]);
-
-            throw new BadCredentialsException('Invalid credentials.', (int) $e->getCode(), $e);
+            throw $this->refused($e);
         }
+    }
+
+    public function verify(#[\SensitiveParameter] string $accessToken): array
+    {
+        try {
+            $keys = $this->discoveryCache->get($this->oidcConfigurationCacheKey, $this->computeDiscoveryKeys(...));
+            $claims = $this->loadAndVerifyJws($accessToken, JWKSet::createFromKeyData(['keys' => $keys]));
+            $this->verifyClaims($claims);
+
+            return $claims;
+        } catch (\Exception $e) {
+            throw $this->refused($e);
+        }
+    }
+
+    private function refused(\Exception $e): BadCredentialsException
+    {
+        $this->logger?->error('Failed to validate the Casdoor access token.', [
+            'error' => $e->getMessage(),
+            'exception' => $e::class,
+        ]);
+
+        return new BadCredentialsException('Invalid credentials.', (int) $e->getCode(), $e);
     }
 
     /**

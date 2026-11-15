@@ -59,11 +59,20 @@
 	# rewrite before reverse_proxy).
 	route {
 		# Symfony's debug surfaces (profiler, toolbar, error previews) expose phpinfo, every env secret and
-		# the bearer tokens stored in profiles. Only a loopback Host reaches them: a tunnel or LAN request
-		# carries its public hostname and gets a 404 even if APP_ENV=dev slips through.
+		# the bearer tokens stored in profiles: 404 even if APP_ENV=dev slips through, unless the request is
+		# local on every count. A Host header is the client's to write, so it is not enough on its own: the
+		# peer must also be loopback or the docker bridge (a host browser goes through the published port),
+		# and nothing may have proxied it (cloudflared and the host Caddy both add X-Forwarded-For). An
+		# internet client keeps its own address through docker's DNAT.
 		@debugSurface {
 			path /_profiler* /_wdt* /_error*
-			not host localhost 127.0.0.1
+			not {
+				host localhost 127.0.0.1
+				remote_ip private_ranges
+				header !X-Forwarded-For
+				header !Forwarded
+				header !Cf-Connecting-Ip
+			}
 		}
 		respond @debugSurface 404
 
@@ -118,8 +127,9 @@ http://php:80 {
 			# Subscribers reach this hub through the public address, so the audience tokens carry is the
 			# public URL and cannot be derived from the request.
 			resource_identifier {$MERCURE_PUBLIC_URL:https://localhost:8444/.well-known/mercure}
-			# Allow anonymous subscribers (double-check that it's what you want)
-			anonymous
+			# No `anonymous`: every frame is published private, and a subscriber needs the per-session
+			# token GET /agent/link mints (src/Controller/AgentLinkController.php). A topic selector such
+			# as `*` would otherwise stream every owner's frames to anyone.
 			# No `subscriptions`: nothing reads the subscription API, and it would announce every
 			# subscriber's topic, pilot digests included.
 			# Extra directives

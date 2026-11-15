@@ -153,7 +153,7 @@ export type Family =
 
 // ── Agent turn contract (POST /agent/turn with surface "finder") ─────────────────────────────────
 // Frames arrive on the turn's session topic, `${base}/agent/sessions/<hmac(owner, sessionId)>`, which the page
-// reads from GET /agent/link?session=<sessionId> (agent.ts fetchSessionTopic). The server side is
+// reads from GET /agent/link?session=<sessionId> (agent.ts fetchSessionLink, with the subscriber token the private frames need). The server side is
 // api/src/Agent/Finder/FinderRenderTools.php (showParts, showWebPart, askQuestion, setVehicle) and
 // api/src/Agent/Ui/RenderIntentTools.php (turn, status, toast). This file owns the contract.
 //

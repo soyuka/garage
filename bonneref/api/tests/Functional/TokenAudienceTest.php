@@ -9,7 +9,10 @@ use Symfony\Contracts\HttpClient\ResponseInterface;
 
 final class TokenAudienceTest extends AppTestCase
 {
-    private const string MPA = 'mpa-test-client';
+    // Must match MPA_SERVICE_CLIENT_ID (.env.test).
+    private const string MPA_SERVICE = 'test-mpa-service';
+    // The audience mpa's callers' own tokens carry (its Atelier client): accepted on the catalogue until 2026-11-15.
+    private const string MPA_CALLER = 'mpa-test-client';
 
     public function testMcpAcceptsATokenBoundToItsResource(): void
     {
@@ -40,27 +43,52 @@ final class TokenAudienceTest extends AppTestCase
         yield 'another server' => [['https://evil.example/mcp']];
         yield 'no audience' => [[]];
         yield 'the bonneref front' => [[FakeOidcToken::ATELIER_CLIENT]];
-        yield 'mpa, passthrough is not for /mcp' => [[self::MPA]];
+        yield 'a forwarded mpa caller' => [[self::MPA_CALLER]];
     }
 
-    /**
-     * @param list<string> $audience
-     */
-    #[DataProvider('acceptedOnTheCatalogue')]
-    public function testTheCatalogueRoutesMpaCallsAcceptMpaAndTheFront(array $audience): void
+    public function testMcpRefusesTheMpaService(): void
     {
-        $this->get('/makes', $audience);
+        $response = $this->initialize(FakeOidcToken::service(self::MPA_SERVICE));
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testTheCatalogueAcceptsTheFront(): void
+    {
+        $this->get('/makes', [FakeOidcToken::ATELIER_CLIENT]);
 
         $this->assertResponseIsSuccessful();
     }
 
-    /**
-     * @return iterable<string, array{list<string>}>
-     */
-    public static function acceptedOnTheCatalogue(): iterable
+    #[DataProvider('catalogueRoutesMpaCalls')]
+    public function testTheMpaServiceReadsTheCatalogueForTheOwnerItNames(string $path): void
     {
-        yield 'the bonneref front' => [[FakeOidcToken::ATELIER_CLIENT]];
-        yield 'mpa forwarding its caller' => [[self::MPA]];
+        $response = $this->asMpaService($path, 'driver@example.com');
+
+        $this->assertSame(200, $response->getStatusCode());
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function catalogueRoutesMpaCalls(): iterable
+    {
+        yield 'makes' => ['/makes?carType=PC'];
+        yield 'part categories' => ['/cars/34247/part-categories?carType=PC'];
+    }
+
+    public function testTheMpaServiceMustNameAnOwner(): void
+    {
+        $response = $this->asMpaService('/makes', null);
+
+        $this->assertSame(401, $response->getStatusCode());
+    }
+
+    public function testTheMpaServiceStaysOffTheRestOfTheApi(): void
+    {
+        $response = $this->asMpaService('/agent/turns', 'driver@example.com');
+
+        $this->assertSame(401, $response->getStatusCode());
     }
 
     /**
@@ -82,15 +110,14 @@ final class TokenAudienceTest extends AppTestCase
     {
         yield 'another client' => [['some-other-client']];
         yield 'no audience' => [[]];
+        yield 'a forwarded mpa caller, no passthrough any more' => [[self::MPA_CALLER]];
     }
 
-    public function testTheRestOfTheApiRefusesMpa(): void
+    public function testTheRestOfTheApiAcceptsTheFront(): void
     {
         $this->get('/agent/turns', [FakeOidcToken::ATELIER_CLIENT]);
-        $this->assertResponseIsSuccessful();
 
-        $response = $this->get('/agent/turns', [self::MPA]);
-        $this->assertSame(401, $response->getStatusCode());
+        $this->assertResponseIsSuccessful();
     }
 
     public function testMetadataAdvertisesTheConfiguredResourceForTheRequestedHost(): void
@@ -109,6 +136,16 @@ final class TokenAudienceTest extends AppTestCase
         return static::createAnonymousClient()->request('GET', $path, [
             'headers' => ['Accept' => 'application/ld+json', 'Authorization' => 'Bearer '.FakeOidcToken::for('u1', 'driver@example.com', $audience)],
         ]);
+    }
+
+    private function asMpaService(string $path, ?string $owner): ResponseInterface
+    {
+        $headers = ['Accept' => 'application/ld+json', 'Authorization' => 'Bearer '.FakeOidcToken::service(self::MPA_SERVICE)];
+        if (null !== $owner) {
+            $headers['X-Bonneref-Owner'] = $owner;
+        }
+
+        return static::createAnonymousClient()->request('GET', $path, ['headers' => $headers]);
     }
 
     private function initialize(#[\SensitiveParameter] string $token): ResponseInterface

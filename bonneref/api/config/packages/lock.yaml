@@ -1,2 +1,11 @@
 framework:
-    lock: '%env(LOCK_DSN)%'
+    # Serialises the rate limiters' read-modify-write (and IntakeUpload's budget reservation) across every
+    # container: MongoDB is the one store php, the worker and replicas share. flock was per container.
+    # A MongoDB\Collection service becomes a MongoDbStore (Lock's StoreFactory).
+    lock: app.lock.collection
+
+services:
+    app.lock.collection:
+        class: MongoDB\Collection
+        factory: ['@doctrine_mongodb.odm.default_connection', 'selectCollection']
+        arguments: ['%env(MONGODB_DB)%', 'locks']

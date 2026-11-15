@@ -18,6 +18,8 @@ final class FakeOidcToken
     // Must match MCP_RESOURCE_ALIASES (phpunit.dist.xml) and OAUTH_CLIENT_AUDIENCES (.env.test).
     public const string MCP_RESOURCE = 'https://mcp.example.test/mcp';
     public const string ATELIER_CLIENT = 'test-atelier-client';
+    // Must match CASDOOR_ORGANIZATION (.env.test).
+    public const string ORGANIZATION = 'test-org';
 
     /**
      * @param list<string>|null $audience     defaults to both audiences, so one token works on /mcp and on REST
@@ -28,6 +30,7 @@ final class FakeOidcToken
         $claims = [
             'sub' => $sub,
             'email' => $email,
+            'owner' => self::ORGANIZATION,
             'aud' => $audience ?? [self::MCP_RESOURCE, self::ATELIER_CLIENT],
         ];
 
@@ -36,5 +39,24 @@ final class FakeOidcToken
         }
 
         return base64_encode(json_encode($claims, \JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * The shape Casdoor gives a client credentials token of mpa's `mpa-service` application (verified
+     * 2026-11-15): the application's owner and name, no email.
+     *
+     * @param array<string, mixed> $override
+     */
+    public static function service(string $clientId, array $override = []): string
+    {
+        return base64_encode(json_encode($override + [
+            'sub' => 'admin/mpa-service',
+            'owner' => 'admin',
+            'name' => 'mpa-service',
+            'email' => '',
+            'azp' => $clientId,
+            'aud' => [$clientId],
+            'tokenType' => 'access-token',
+        ], \JSON_THROW_ON_ERROR));
     }
 }

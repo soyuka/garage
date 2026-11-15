@@ -31,17 +31,17 @@ security:
             pattern: ^/agent/selections/
             security: false
 
-        # mpa forwards its caller's bearer to the catalogue routes it calls (App\Bonneref\BonnerefClient
-        # over there), so these also accept mpa's audiences. Documented debt (api/docs/AUTH.md, FUTURE.md
-        # "Token passthrough mpa -> bonneref"): GET only, exactly the routes mpa reaches, never /mcp.
-        catalogue_passthrough:
+        # The routes mpa calls (App\Bonneref\BonnerefClient over there) also accept mpa's own service token,
+        # acting for the owner it names (App\Security\ServiceTokenHandler): GET only, exactly the routes
+        # mpa reaches, never /mcp. User tokens get the same checks as on `api` below.
+        catalogue:
             pattern: ^/(makes(/\d+/models(/\d+/cars)?)?|cars/\d+/part-categories(/\d+/(articles|narrowed))?|vehicles/[^/]+)$
             methods: [GET]
             stateless: true
             provider: casdoor
             entry_point: App\Security\BearerEntryPoint
             access_token:
-                token_handler: app.access_token.catalogue_passthrough
+                token_handler: app.access_token.catalogue
 
         # Everything else is deny-by-default: the agent, the upload endpoints, and every catalogue read
         # (plate/VIN lookup, /cars, narrowing, photos), which spend paid upstream quota (SIV, the model

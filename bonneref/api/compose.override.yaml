@@ -22,7 +22,10 @@ services:
       # No `hot_reload` either: it needs a Mercure hub declared in the same Caddy server, and the hub
       # sits on the internal `php:80` site (frankenphp/Caddyfile).
       FRANKENPHP_SITE_CONFIG: ""
-      MERCURE_EXTRA_DIRECTIVES: playground
+      # No `playground`: under Mercure 1.0 it also switches on `anonymous` and `cors_origins *`, which would
+      # hand every finder frame to any subscriber again (frankenphp/Caddyfile, AgentLinkController). The dev
+      # front subscribes cross-origin (VITE_MERCURE_URL), from Vite or through mpa's Caddy, hence the CORS list.
+      MERCURE_EXTRA_DIRECTIVES: "${MERCURE_EXTRA_DIRECTIVES:-cors_origins https://localhost http://localhost:5173}"
       XDEBUG_MODE: "${XDEBUG_MODE:-develop}"
       APP_ENV: "${APP_ENV:-dev}"
     # Loopback only: the dev/stage stack runs the dev image (and, without the stage overlay, the dev

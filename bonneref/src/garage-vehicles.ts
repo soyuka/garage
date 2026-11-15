@@ -1,3 +1,4 @@
+import { safeHref } from './safeHref';
 import { ApiError, classifyStatus } from './api';
 import { garageUrl } from './api-base';
 import { authFetch } from './auth';
@@ -123,7 +124,7 @@ function mapFact(raw: unknown): GarageFact | null {
     // Without a unit a number is an identifier (OPR 09824, DAM): printed verbatim, never regrouped.
     value: DAY.test(value) ? formatDate(value) : unit ? measure(value, unitLabel(unit)) : value,
     source: source ? sourceLabel(source) : null,
-    url: str(j.url),
+    url: safeHref(str(j.url)) ?? null,
   };
 }
 

@@ -8,8 +8,8 @@ const CLIENT_ID = import.meta.env.VITE_CASDOOR_CLIENT_ID ?? '89646c002d2272351ca
 const SCOPE = 'openid profile email';
 const BASE = import.meta.env.BASE_URL;
 const CALLBACK_PATH = `${BASE}callback`;
-// Shared with the Atelier only where both are served from the same origin (local dev); on
-// bonneref.fr's own origin the token is bonneref's alone.
+// Shared with the Atelier only where both are served from the same origin (local dev), and then only within
+// one tab; on bonneref.fr's own origin the token is bonneref's alone.
 const TOKEN_KEY = 'mpa.auth.token';
 const VERIFIER_KEY = 'bonneref.auth.pkce_verifier';
 const STATE_KEY = 'bonneref.auth.state';
@@ -45,17 +45,62 @@ function randomToken(byteLength = 48): string {
   return base64urlEncode(bytes);
 }
 
-function readStoredToken(): StoredToken | null {
+type TokenStorage = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
+
+function isStoredToken(value: unknown): value is StoredToken {
+  const t = value as StoredToken | null;
+  return typeof t === 'object' && t !== null && typeof t.accessToken === 'string' && typeof t.expiresAt === 'number';
+}
+
+// The tab's token, as in dashboard/src/auth.ts: memory first, mirrored to sessionStorage so a reload keeps the
+// session but another tab, or the browser after a restart, does not. A storage that throws degrades to memory.
+export function createTokenStore(storage: TokenStorage | null) {
+  let memory: StoredToken | null | undefined;
+  const attempt = (fn: () => void) => {
+    try {
+      fn();
+    } catch {
+      /* memory still holds it */
+    }
+  };
+  return {
+    get(): StoredToken | null {
+      if (memory !== undefined) return memory;
+      let parsed: unknown = null;
+      attempt(() => {
+        const raw = storage?.getItem(TOKEN_KEY);
+        parsed = raw ? JSON.parse(raw) : null;
+      });
+      memory = isStoredToken(parsed) ? parsed : null;
+      return memory;
+    },
+    set(token: StoredToken): void {
+      memory = token;
+      attempt(() => storage?.setItem(TOKEN_KEY, JSON.stringify(token)));
+    },
+  };
+}
+
+function tabStorage(): TokenStorage | null {
   try {
-    const raw = localStorage.getItem(TOKEN_KEY);
-    return raw ? (JSON.parse(raw) as StoredToken) : null;
+    return sessionStorage;
   } catch {
     return null;
   }
 }
 
+const tokens = createTokenStore(tabStorage());
+
+// Older builds kept the token in localStorage, readable by any script on the origin in every tab and surviving
+// a browser restart.
+try {
+  localStorage.removeItem(TOKEN_KEY);
+} catch {
+  /* nothing to wipe */
+}
+
 export function getToken(): string | null {
-  const token = readStoredToken();
+  const token = tokens.get();
   return token !== null && isTokenFresh(token, Date.now()) ? token.accessToken : null;
 }
 
@@ -118,7 +163,7 @@ async function exchangeCallback(): Promise<boolean> {
   const json = (await res.json()) as { access_token?: string; expires_in?: number };
   if (!json.access_token) throw new Error('token exchange returned no access_token');
   const lifetime = typeof json.expires_in === 'number' && json.expires_in > 0 ? json.expires_in : 3600;
-  localStorage.setItem(TOKEN_KEY, JSON.stringify({ accessToken: json.access_token, expiresAt: Date.now() + lifetime * 1000 } satisfies StoredToken));
+  tokens.set({ accessToken: json.access_token, expiresAt: Date.now() + lifetime * 1000 });
   return true;
 }
 

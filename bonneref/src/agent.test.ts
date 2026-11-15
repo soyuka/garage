@@ -1,4 +1,4 @@
-import { fetchSessionTopic, hubUrl, initialTurn, parseFrame, postTurn, SILENCE_MS, SILENT, silent, TURN_FAILED, turnBody, TurnRequestError, turnReducer, turnVehicle } from './agent';
+import { fetchSessionLink, hubUrl, openSessionStream, type StreamSource, initialTurn, parseFrame, postTurn, SILENCE_MS, SILENT, silent, TURN_FAILED, turnBody, TurnRequestError, turnReducer, turnVehicle } from './agent';
 import narrowed from '../test-fixtures/narrowed.json';
 import type { FinderFrame, TurnState } from './types';
 
@@ -222,10 +222,11 @@ describe('turn state', () => {
 });
 
 describe('transport helpers', () => {
-  it('builds the hub subscription URL', () => {
+  it('builds the hub subscription URL, which never carries the token', () => {
     expect(hubUrl('/.well-known/mercure', 'https://localhost', 'https://localhost/agent/sessions/abc')).toBe(
       'https://localhost/.well-known/mercure?match=https%3A%2F%2Flocalhost%2Fagent%2Fsessions%2Fabc',
     );
+    expect(new URL(hubUrl('https://localhost:8444/.well-known/mercure', 'http://localhost:5173', 'https://localhost:8444/agent/sessions/abc')).origin).toBe('https://localhost:8444');
   });
 
   it('sends the finder surface and the vehicle ids, never the catalogue names', () => {
@@ -261,24 +262,140 @@ describe('transport helpers', () => {
   });
 });
 
-describe('fetchSessionTopic', () => {
+describe('fetchSessionLink', () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it('takes the owner-bound topic from the server, never builds it from the session id', async () => {
-    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionTopic: 'https://localhost/agent/sessions/9f86d081' }), { status: 200 }));
+  it('takes the owner-bound topic and its subscriber token from the server, never builds them', async () => {
+    const fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionTopic: 'https://localhost/agent/sessions/9f86d081', subscriberToken: 'a.b.c', expiresAt: 1_800_000_000 }), { status: 200 }));
     vi.stubGlobal('fetch', fetch);
 
-    expect(await fetchSessionTopic('sess-1')).toBe('https://localhost/agent/sessions/9f86d081');
+    expect(await fetchSessionLink('sess-1')).toEqual({ topic: 'https://localhost/agent/sessions/9f86d081', token: 'a.b.c', expiresAt: 1_800_000_000_000 });
     expect(String(fetch.mock.calls[0]?.[0])).toContain('/agent/link?session=sess-1');
   });
 
-  it('has no topic when the server refuses or answers garbage', async () => {
+  it('has no link when the server refuses or answers garbage', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 401 })));
-    expect(await fetchSessionTopic('sess-1')).toBeNull();
+    expect(await fetchSessionLink('sess-1')).toBeNull();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionTopic: 3 }), { status: 200 })));
-    expect(await fetchSessionTopic('sess-1')).toBeNull();
+    expect(await fetchSessionLink('sess-1')).toBeNull();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ sessionTopic: 'https://x/agent/sessions/1', expiresAt: 1 }), { status: 200 })));
+    expect(await fetchSessionLink('sess-1')).toBeNull();
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('down')));
-    expect(await fetchSessionTopic('sess-1')).toBeNull();
+    expect(await fetchSessionLink('sess-1')).toBeNull();
+  });
+});
+
+describe('openSessionStream', () => {
+  class FakeSource implements StreamSource {
+    readyState = 0;
+    closed = false;
+    onmessage: ((e: MessageEvent<string>) => void) | null = null;
+    onerror: (() => void) | null = null;
+    constructor(
+      public readonly url: string,
+      public readonly token: string,
+    ) {}
+    close(): void {
+      this.closed = true;
+      this.readyState = 2;
+    }
+    fail(): void {
+      this.readyState = 2;
+      this.onerror?.();
+    }
+  }
+
+  const HOUR = 3_600_000;
+  let sources: FakeSource[];
+  let links: number;
+  const start = (link: () => Promise<{ topic: string; token: string; expiresAt: number } | null>) =>
+    openSessionStream({
+      link,
+      connect: (url, token) => {
+        const s = new FakeSource(url, token);
+        sources.push(s);
+        return s;
+      },
+      hub: 'https://localhost:8444/.well-known/mercure',
+      origin: 'http://localhost:5173',
+      onFrame: () => undefined,
+    });
+  const fresh = () => {
+    links += 1;
+    return Promise.resolve({ topic: 'https://localhost:8444/agent/sessions/t', token: `tok${links}`, expiresAt: Date.now() + HOUR });
+  };
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    sources = [];
+    links = 0;
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it('subscribes with the token the link handed out', async () => {
+    const stream = start(fresh);
+    expect(await stream.ready).toBe(true);
+    expect(sources[0]!.token).toBe('tok1');
+    stream.close();
+    expect(sources[0]!.closed).toBe(true);
+  });
+
+  it('fetches a new token and reconnects before the current one expires', async () => {
+    const stream = start(fresh);
+    await stream.ready;
+    await vi.advanceTimersByTimeAsync(HOUR - 30_000);
+
+    expect(sources).toHaveLength(2);
+    expect(sources[1]!.token).toBe('tok2');
+    expect(sources[0]!.closed).toBe(true);
+    expect(sources[1]!.closed).toBe(false);
+    stream.close();
+  });
+
+  it('refetches the link and reconnects when the hub drops the stream', async () => {
+    const stream = start(fresh);
+    await stream.ready;
+    sources[0]!.fail();
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(sources).toHaveLength(2);
+    expect(sources[1]!.token).toBe('tok2');
+    stream.close();
+  });
+
+  it('leaves a reconnecting stream to the browser while it is only retrying', async () => {
+    const stream = start(fresh);
+    await stream.ready;
+    sources[0]!.readyState = 0;
+    sources[0]!.onerror?.();
+    await vi.advanceTimersByTimeAsync(5_000);
+
+    expect(sources).toHaveLength(1);
+    stream.close();
+  });
+
+  it('keeps retrying the link after a failure, and stops once closed', async () => {
+    let answers = 0;
+    const stream = start(() => {
+      answers += 1;
+      return answers === 2 ? Promise.resolve(null) : fresh();
+    });
+    await stream.ready;
+    sources[0]!.fail();
+    await vi.advanceTimersByTimeAsync(60_000);
+    expect(sources).toHaveLength(2);
+
+    stream.close();
+    sources[1]!.readyState = 2;
+    await vi.advanceTimersByTimeAsync(10 * HOUR);
+    expect(sources).toHaveLength(2);
+  });
+
+  it('is not ready when the first link fails', async () => {
+    const stream = start(() => Promise.resolve(null));
+    expect(await stream.ready).toBe(false);
+    expect(sources).toHaveLength(0);
+    stream.close();
   });
 });
 

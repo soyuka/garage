@@ -70,4 +70,19 @@ final class AnthropicRegistrationDocumentReaderTest extends TestCase
 
         $this->assertSame([['model' => 'claude-sonnet-5-5?max_tokens=2048', 'promptTokens' => 1, 'completionTokens' => 1]], $spend->records);
     }
+
+    public function testABilledAnswerThatFailsToParseIsStillCharged(): void
+    {
+        $spend = new RecordingSpendRecorder();
+        $reader = new AnthropicRegistrationDocumentReader(AnthropicStructuredPlatform::answering('I cannot read this'), 'claude-sonnet-5-5?max_tokens=2048', $spend);
+
+        try {
+            $reader->read('x', 'image/png');
+            $this->fail('A non-JSON answer must be refused.');
+            // @mago-expect lint:no-empty-catch-clause the read is expected to refuse; the test inspects the recorded spend
+        } catch (RegistrationDocumentUnreadable) {
+        }
+
+        $this->assertSame([['model' => 'claude-sonnet-5-5?max_tokens=2048', 'promptTokens' => 1, 'completionTokens' => 1]], $spend->records);
+    }
 }

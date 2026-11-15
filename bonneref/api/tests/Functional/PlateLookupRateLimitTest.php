@@ -53,6 +53,23 @@ final class PlateLookupRateLimitTest extends AppTestCase
         $this->assertResponseIsSuccessful();
     }
 
+    public function testTheMpaServiceSpendsTheLimitOfTheOwnerItNames(): void
+    {
+        $client = static::createAnonymousClient();
+        $client->disableReboot();
+        self::exhaust(self::TEST_OWNER);
+        $asMpa = static fn (string $owner): array => ['headers' => [
+            'Authorization' => 'Bearer '.FakeOidcToken::service('test-mpa-service'),
+            'X-Bonneref-Owner' => $owner,
+        ]];
+
+        $client->request('GET', '/vehicles/XC302ZC', $asMpa(self::TEST_OWNER));
+        $this->assertResponseStatusCodeSame(429);
+
+        $client->request('GET', '/vehicles/XC302ZC', $asMpa('someone-else@example.com'));
+        $this->assertResponseIsSuccessful();
+    }
+
     public function testTheMcpLookupPlateToolSharesTheLimitAndAnswersAStructuredResult(): void
     {
         $client = static::createClient();

@@ -9,6 +9,9 @@ use App\Agent\Journal\ModelUsage;
 use App\Entity\AgentTurn;
 use App\Entity\AgentTurnStatus;
 use App\Entity\OwnerSpend;
+use App\Repository\OwnerSpendRepository;
+use App\Security\MongoSpendRecorder;
+use App\Tests\Mock\FakePhotoIntakeReader;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use MongoDB\BSON\UTCDateTime;
@@ -99,6 +102,49 @@ final class AgentTurnDailyBudgetTest extends AppTestCase
             'extra' => ['files' => ['file' => new UploadedFile($path, 'photo', 'image/png', null, true)]],
         ]);
         $this->assertResponseStatusCodeSame(429, 'an intake over the daily budget never reaches the vision model');
+    }
+
+    public function testAnIntakeReservesItsEstimateBeforeTheCallSoConcurrentOnesCannotAllPass(): void
+    {
+        $client = static::createClient();
+        $client->disableReboot();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        // 0.99 USD at the pinned Sonnet price: under the 1.00 budget, with room for less than one intake.
+        $dm->persist(new OwnerSpend(self::TEST_OWNER, 'photo_intake', 'claude-sonnet-5-5', new ModelUsage(promptTokens: 495_000), new \DateTimeImmutable('-1 hour')));
+        $dm->flush();
+        $reader = static::getContainer()->get(FakePhotoIntakeReader::class);
+
+        $this->postPhoto($client);
+        $this->assertResponseStatusCodeSame(200);
+
+        // The fake reader records no spend, as if the first call were still in flight.
+        $this->postPhoto($client);
+        $this->assertResponseStatusCodeSame(429);
+        $this->assertSame(1, $reader->calls);
+    }
+
+    public function testTheReservationIsSettledToTheActualUsage(): void
+    {
+        static::createClient();
+        $container = static::getContainer();
+        $spend = $container->get(MongoSpendRecorder::class);
+
+        $spend->reserve('claude-sonnet-5-5?max_tokens=2048', new ModelUsage(promptTokens: 5_000, completionTokens: 2_048));
+        $spend->record('photo_intake', 'claude-sonnet-5-5?max_tokens=2048', new ModelUsage(promptTokens: 1_200, completionTokens: 300));
+
+        $rows = $container->get(OwnerSpendRepository::class)->since(self::TEST_OWNER, new \DateTimeImmutable('-1 hour'));
+        $this->assertCount(1, $rows);
+        $this->assertSame(['photo_intake', 'claude-sonnet-5-5', 1_200, 300], [$rows[0]->source, $rows[0]->model, $rows[0]->promptTokens, $rows[0]->completionTokens]);
+    }
+
+    private function postPhoto(Client $client): void
+    {
+        $path = (string) tempnam(sys_get_temp_dir(), 'ph');
+        file_put_contents($path, (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', true));
+        $client->request('POST', '/photo-intake', [
+            'headers' => self::authHeaders() + ['content-type' => 'multipart/form-data'],
+            'extra' => ['files' => ['file' => new UploadedFile($path, 'photo', 'image/png', null, true)]],
+        ]);
     }
 
     private function postTurn(Client $client, string $session): void

@@ -40,6 +40,7 @@ final class AgentTurnSessionBindingTest extends AppTestCase
         $this->assertNotSame($topic, $sessions->topic(self::INTRUDER, self::SESSION));
         foreach ($hub->updates as $update) {
             $this->assertStringNotContainsString('/agent/sessions/'.self::SESSION, $update->getTopics()[0] ?? '');
+            $this->assertTrue($update->isPrivate(), 'an anonymous subscriber must never receive a finder frame');
         }
     }
 
@@ -52,6 +53,38 @@ final class AgentTurnSessionBindingTest extends AppTestCase
             static::getContainer()->get(TurnSessionTopic::class)->topic(self::TEST_OWNER, self::SESSION),
             $response->toArray()['sessionTopic'] ?? null,
         );
+    }
+
+    public function testTheLinkHandsOutASubscriberTokenForTheCallersTopicOnly(): void
+    {
+        $response = static::createClient()->request('GET', '/agent/link?session='.self::SESSION);
+
+        $this->assertResponseIsSuccessful();
+        $link = $response->toArray();
+        $sessions = static::getContainer()->get(TurnSessionTopic::class);
+        $claims = self::payload($link['subscriberToken'] ?? '');
+
+        $this->assertSame([[
+            'type' => 'https://mercure.rocks/authorization-detail',
+            'actions' => ['subscribe'],
+            'topics' => [['match' => $sessions->topic(self::TEST_OWNER, self::SESSION)]],
+        ]], $claims['authorization_details'] ?? null);
+        $this->assertStringNotContainsString($sessions->key(self::INTRUDER, self::SESSION), (string) json_encode($claims));
+        $this->assertSame($claims['exp'] ?? null, $link['expiresAt'] ?? null);
+        $this->assertEqualsWithDelta(time() + 3600, $claims['exp'] ?? 0, 60);
+        $this->assertSame('https://bonneref.fr', $claims['iss'] ?? null);
+    }
+
+    public function testAnotherOwnersLinkNeverCoversThisOwnersTopic(): void
+    {
+        $response = static::createClient()->request('GET', '/agent/link?session='.self::SESSION, [
+            'headers' => self::authHeaders('intruder-sub', self::INTRUDER),
+        ]);
+
+        $mine = static::getContainer()->get(TurnSessionTopic::class)->topic(self::TEST_OWNER, self::SESSION);
+        $topics = array_column(self::payload($response->toArray()['subscriberToken'] ?? '')['authorization_details'][0]['topics'] ?? [], 'match');
+        $this->assertNotContains($mine, $topics);
+        $this->assertCount(1, $topics);
     }
 
     public function testTheLinkRefusesAMalformedSession(): void
@@ -100,5 +133,15 @@ final class AgentTurnSessionBindingTest extends AppTestCase
         }
 
         $this->assertSame([], array_filter(static::getContainer()->get(RecordingHub::class)->updates, static fn (Update $u): bool => str_contains($u->getTopics()[0] ?? '', '/agent/sessions/')));
+    }
+
+    /**
+     * @return array<array-key, mixed>
+     */
+    private static function payload(string $jwt): array
+    {
+        $claims = json_decode((string) base64_decode(strtr(explode('.', $jwt)[1] ?? '', '-_', '+/'), true), true);
+
+        return \is_array($claims) ? $claims : [];
     }
 }

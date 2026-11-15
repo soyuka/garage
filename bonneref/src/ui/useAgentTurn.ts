@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { fetchSessionTopic, hubUrl, initialTurn, isBusy, parseFrame, postCancel, postTurn, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
+import { fetchSessionLink, initialTurn, openSessionStream, isBusy, parseFrame, postCancel, postTurn, silent, SILENT, turnBody, TurnRequestError, turnReducer, turnVehicle } from '../agent';
 import { hubDefault } from '../api-base';
+import { fetchEventSource } from '../sse';
 import { isAuthenticated, login } from '../auth';
 import type { BuildCode, HeldVehicle, OnScreen, TurnIntent, TurnState, Vehicle } from '../types';
 
@@ -60,25 +61,35 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
   const lastFrame = useRef(0);
   // Resolves once the session topic is subscribed (or known to be unavailable), so a turn never starts streaming unheard.
   const subscribed = useRef<Promise<void> | null>(null);
-  const sourceRef = useRef<EventSource | null>(null);
+  const streamRef = useRef<{ close: () => void } | null>(null);
   const generation = useRef(0);
 
   const subscribe = useCallback((): Promise<void> => {
     const mine = generation.current;
-    subscribed.current ??= fetchSessionTopic(sessionId).then((topic) => {
-      if (mine !== generation.current) return;
-      if (topic === null) {
-        subscribed.current = null;
-        return;
-      }
-      const source = new EventSource(hubUrl(hubDefault(), window.location.origin, topic));
-      source.onmessage = (e: MessageEvent<string>) => {
-        const frame = parseFrame(e.data);
+    if (subscribed.current) return subscribed.current;
+    const stream = openSessionStream({
+      link: () => fetchSessionLink(sessionId),
+      connect: (url, token) => fetchEventSource(url, token),
+      hub: hubDefault(),
+      origin: window.location.origin,
+      onFrame: (data) => {
+        const frame = parseFrame(data);
         if (!frame) return;
         lastFrame.current = Date.now();
         dispatch({ type: 'frame', frame });
-      };
-      sourceRef.current = source;
+      },
+    });
+    streamRef.current = stream;
+    subscribed.current = stream.ready.then((ok) => {
+      if (mine !== generation.current) {
+        stream.close();
+        return;
+      }
+      if (!ok) {
+        stream.close();
+        streamRef.current = null;
+        subscribed.current = null;
+      }
     });
     return subscribed.current;
   }, [sessionId]);
@@ -87,8 +98,8 @@ export function useAgentTurn(vehicle: Vehicle | null, ref: string, buildCode: Bu
     if (isAuthenticated()) void subscribe();
     return () => {
       generation.current += 1;
-      sourceRef.current?.close();
-      sourceRef.current = null;
+      streamRef.current?.close();
+      streamRef.current = null;
       subscribed.current = null;
     };
   }, [subscribe]);

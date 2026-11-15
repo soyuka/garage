@@ -77,8 +77,9 @@ final readonly class AnthropicPhotoIntakeReader implements PhotoIntakeReader
                 ),
                 ['response_format' => $this->responseFormat()],
             );
-            $decoded = $result->asObject();
+            // Billed as soon as the response is back, whether or not it parses.
             $this->spend?->record('photo_intake', $this->model, ModelUsage::fromAnthropic($result->getRawResult()->getData()));
+            $decoded = $result->asObject();
         } catch (ExceptionInterface $e) {
             throw new RegistrationDocumentUnreadable('The photo intake model call failed: '.$e::class, 0, $e);
         }

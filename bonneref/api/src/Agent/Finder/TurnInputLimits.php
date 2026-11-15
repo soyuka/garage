@@ -19,6 +19,9 @@ final class TurnInputLimits
 
     public const int MAX_DOCUMENT_BYTES = 10 * 1024 * 1024;
 
+    // A carte grise is one page (two sides at most); every PDF page is billed as text plus an image.
+    public const int MAX_DOCUMENT_PAGES = 2;
+
     public const array IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
     public const string SESSION_ID_PATTERN = '/^[A-Za-z0-9_-]{1,64}$/D';

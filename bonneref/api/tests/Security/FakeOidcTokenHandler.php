@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Tests\Security;
 
+use App\Security\AccessTokenVerifier;
 use Symfony\Component\Security\Core\Exception\BadCredentialsException;
 use Symfony\Component\Security\Http\AccessToken\AccessTokenHandlerInterface;
 use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
@@ -17,7 +18,7 @@ use Symfony\Component\Security\Http\Authenticator\Passport\Badge\UserBadge;
  * $claim comes from the same `app.owner_claim` parameter the production handler reads, so the
  * suite exercises the real tenancy key instead of a hardcoded one.
  */
-final class FakeOidcTokenHandler implements AccessTokenHandlerInterface
+final class FakeOidcTokenHandler implements AccessTokenHandlerInterface, AccessTokenVerifier
 {
     public function __construct(private readonly string $claim = 'sub')
     {
@@ -25,16 +26,22 @@ final class FakeOidcTokenHandler implements AccessTokenHandlerInterface
 
     public function getUserBadgeFrom(#[\SensitiveParameter] string $accessToken): UserBadge
     {
-        $decoded = base64_decode($accessToken, true);
-        if (false === $decoded) {
-            throw new BadCredentialsException('Invalid test token.');
-        }
-
-        $claims = json_decode($decoded, true);
-        if (!\is_array($claims) || !isset($claims[$this->claim]) || !\is_string($claims[$this->claim])) {
+        $claims = $this->verify($accessToken);
+        if (!isset($claims[$this->claim]) || !\is_string($claims[$this->claim])) {
             throw new BadCredentialsException(\sprintf('Test token is missing the "%s" claim.', $this->claim));
         }
 
         return new UserBadge($claims[$this->claim], null, $claims);
+    }
+
+    public function verify(#[\SensitiveParameter] string $accessToken): array
+    {
+        $decoded = base64_decode($accessToken, true);
+        $claims = false === $decoded ? null : json_decode($decoded, true);
+        if (!\is_array($claims)) {
+            throw new BadCredentialsException('Invalid test token.');
+        }
+
+        return $claims;
     }
 }
