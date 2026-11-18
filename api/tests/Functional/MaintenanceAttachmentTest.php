@@ -97,6 +97,24 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $this->assertSame(self::PDF, $browser->getInternalResponse()->getContent());
     }
 
+    public function testABillNamedWithAPercentSignStillDownloads(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $recordIri = $this->seedRecordIri();
+        $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
+
+        $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture 100% réglée.pdf', 'application/pdf')], $auth);
+        $url = json_decode($browser->getResponse()->getContent(), true, flags: \JSON_THROW_ON_ERROR)['url'];
+
+        $browser->request('GET', $url, [], [], $auth);
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
+        $this->assertSame(
+            'inline; filename="facture 100_ r__gl__e.pdf"; filename*=utf-8\'\'facture%20100%25%20r%C3%A9gl%C3%A9e.pdf',
+            $browser->getResponse()->headers->get('Content-Disposition'),
+        );
+    }
+
     public function testMultipleBillsOnOneVisit(): void
     {
         $client = static::createClient();

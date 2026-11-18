@@ -5,9 +5,8 @@ declare(strict_types=1);
 namespace App\Controller\Maintenance;
 
 use App\Maintenance\OwnedRecordLocator;
+use App\Storage\InlineDisposition;
 use App\Storage\MaintenanceAttachmentStorage;
-use Symfony\Component\HttpFoundation\HeaderUtils;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -49,12 +48,7 @@ final readonly class DownloadMaintenanceAttachmentController
         // script or reach our cookies even if a PDF or image turns out to be HTML.
         $response->headers->set('Content-Security-Policy', 'sandbox');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Content-Disposition', HeaderUtils::makeDisposition(
-            ResponseHeaderBag::DISPOSITION_INLINE,
-            $attachment->getFilename(),
-            // ASCII fallback for the rare client that ignores the UTF-8 filename* parameter.
-            preg_replace('/[^\x20-\x7e]/', '_', $attachment->getFilename()) ?? 'bill',
-        ));
+        $response->headers->set('Content-Disposition', InlineDisposition::for($attachment->getFilename()));
 
         return $response;
     }

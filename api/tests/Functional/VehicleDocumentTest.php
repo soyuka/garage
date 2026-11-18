@@ -132,6 +132,22 @@ final class VehicleDocumentTest extends AppTestCase
         $this->assertSame($pdf, $browser->getInternalResponse()->getContent());
     }
 
+    public function testADocumentNamedWithAPercentSignStillDownloads(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $vehicle = $this->seedVehicle();
+
+        $doc = $this->upload($browser, $vehicle, $this->tmpUpload(self::PNG, 'devis "100%".png', 'image/png'), ['kind' => 'quote']);
+
+        $browser->request('GET', $doc['url'], [], [], $this->bearer());
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
+        $this->assertSame(
+            'inline; filename="devis _100__.png"; filename*=utf-8\'\'devis%20%22100%25%22.png',
+            $browser->getResponse()->headers->get('Content-Disposition'),
+        );
+    }
+
     public function testPagesEndpointListsNumbersAndLabelsWithoutText(): void
     {
         $client = static::createClient();

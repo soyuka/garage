@@ -6,9 +6,8 @@ namespace App\Controller\Documentation;
 
 use App\Documentation\OwnedVehicleLocator;
 use App\Repository\VehicleDocumentRepository;
+use App\Storage\InlineDisposition;
 use App\Storage\VehicleDocumentStorage;
-use Symfony\Component\HttpFoundation\HeaderUtils;
-use Symfony\Component\HttpFoundation\ResponseHeaderBag;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\Routing\Attribute\Route;
@@ -40,11 +39,7 @@ final readonly class DownloadVehicleDocumentController
         // script or reach our cookies even if a PDF or image turns out to be HTML.
         $response->headers->set('Content-Security-Policy', 'sandbox');
         $response->headers->set('X-Content-Type-Options', 'nosniff');
-        $response->headers->set('Content-Disposition', HeaderUtils::makeDisposition(
-            ResponseHeaderBag::DISPOSITION_INLINE,
-            $document->getFilename(),
-            preg_replace('/[^\x20-\x7e]/', '_', $document->getFilename()) ?? 'document',
-        ));
+        $response->headers->set('Content-Disposition', InlineDisposition::for($document->getFilename()));
 
         return $response;
     }
