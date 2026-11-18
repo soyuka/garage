@@ -13,6 +13,8 @@ use App\Garage\VehicleType;
 use App\Repository\AgentTurnRepository;
 use App\Tests\Mock\ScriptedStreamPlatform;
 use Doctrine\ODM\MongoDB\DocumentManager;
+use Doctrine\ODM\MongoDB\Events;
+use League\Flysystem\FilesystemOperator;
 use Symfony\AI\Platform\Message\Content\Document;
 use Symfony\AI\Platform\Message\Content\Image;
 use Symfony\AI\Platform\Message\Content\Text;
@@ -276,6 +278,33 @@ final class AgentTurnAttachmentTest extends AppTestCase
         $this->assertNull($attachments->find('alice@example.com', $ref->id), 'an expired file is gone even before the prune runs');
         $this->assertSame(1, $attachments->pruneExpired());
         $this->assertSame([], $dm->getRepository(TurnAttachment::class)->findAll());
+    }
+
+    public function testAFailedStashLeavesNoBlob(): void
+    {
+        static::createClient();
+        $storage = static::getContainer()->get('turn_attachments.storage');
+        $this->assertInstanceOf(FilesystemOperator::class, $storage);
+        $before = $storage->listContents('')->toArray();
+        $events = static::getContainer()->get(DocumentManager::class)->getEventManager();
+        $failing = new class {
+            public function onFlush(): void
+            {
+                throw new \RuntimeException('the database went away');
+            }
+        };
+        $events->addEventListener(Events::onFlush, $failing);
+
+        try {
+            static::getContainer()->get(TurnAttachments::class)->stash(self::TEST_OWNER, $this->upload(self::PNG, 'a.png'), 'image/png');
+            $this->fail('the failed flush must surface');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('the database went away', $e->getMessage());
+        } finally {
+            $events->removeEventListener(Events::onFlush, $failing);
+        }
+
+        $this->assertEquals($before, $storage->listContents('')->toArray());
     }
 
     /**

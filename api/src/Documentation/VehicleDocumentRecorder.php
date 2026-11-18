@@ -93,7 +93,16 @@ final readonly class VehicleDocumentRecorder
             $this->em->persist($document);
         }
 
-        $this->em->flush();
+        try {
+            $this->em->flush();
+        } catch (\Throwable $e) {
+            // A replaced document keeps its key: its metadata still lists it, so its bytes stay.
+            if (null === $existing) {
+                $this->storage->delete($key);
+            }
+
+            throw $e;
+        }
         $this->publisher->publishVehicle($vehicle);
 
         return $document;

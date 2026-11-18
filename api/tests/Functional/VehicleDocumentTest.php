@@ -10,6 +10,7 @@ use App\Entity\VehicleDocument;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Events;
+use League\Flysystem\FilesystemOperator;
 use Symfony\Bundle\FrameworkBundle\Console\Application;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\Console\Tester\CommandTester;
@@ -200,6 +201,31 @@ final class VehicleDocumentTest extends AppTestCase
 
         $browser->request('GET', $doc['url'], [], [], $this->bearer());
         $this->assertSame(200, $browser->getResponse()->getStatusCode());
+    }
+
+    public function testAFailedUploadLeavesNoBlob(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $browser->disableReboot();
+        $vehicle = $this->seedVehicle();
+        $browser->request('GET', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', [], [], $this->bearer());
+        $this->assertSame(200, $browser->getResponse()->getStatusCode());
+        $events = static::getContainer()->get(DocumentManager::class)->getEventManager();
+        $failing = new class {
+            public function onFlush(): void
+            {
+                throw new \RuntimeException('the database went away');
+            }
+        };
+        $events->addEventListener(Events::onFlush, $failing);
+
+        $this->upload($browser, $vehicle, $this->tmpUpload(self::PNG, 'devis.png', 'image/png'), ['kind' => 'quote'], expect: 500);
+        $events->removeEventListener(Events::onFlush, $failing);
+
+        $storage = static::getContainer()->get('vehicle_documents.storage');
+        $this->assertInstanceOf(FilesystemOperator::class, $storage);
+        $this->assertSame([], $storage->listContents((string) $vehicle->getId())->toArray());
     }
 
     public function testDeleteRemovesTheDocument(): void

@@ -43,7 +43,13 @@ final readonly class TurnAttachments
         $name = self::displayName($file->getClientOriginalName());
         $attachment = new TurnAttachment($owner, $name, $mime, \strlen($contents), $key, $this->clock->now()->modify(self::TTL), $id);
         $this->dm->persist($attachment);
-        $this->dm->flush();
+        try {
+            $this->dm->flush();
+        } catch (\Throwable $e) {
+            $this->storage->delete($key);
+
+            throw $e;
+        }
 
         return new TurnAttachmentRef($id, $name, $mime, \strlen($contents));
     }

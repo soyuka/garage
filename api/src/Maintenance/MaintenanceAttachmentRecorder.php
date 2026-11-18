@@ -31,7 +31,13 @@ final readonly class MaintenanceAttachmentRecorder
 
         $attachment = new MaintenanceAttachment($attachmentId, $filename, $mime, \strlen($contents), $key);
         $record->addAttachment($attachment);
-        $this->em->flush();
+        try {
+            $this->em->flush();
+        } catch (\Throwable $e) {
+            $this->storage->delete($key);
+
+            throw $e;
+        }
         $this->publisher->publishVehicle($record->getVehicle());
 
         return $attachment;

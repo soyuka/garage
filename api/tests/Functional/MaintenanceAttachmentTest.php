@@ -8,6 +8,7 @@ use App\Entity\Vehicle;
 use App\Garage\VehicleType;
 use Doctrine\ODM\MongoDB\DocumentManager;
 use Doctrine\ODM\MongoDB\Events;
+use League\Flysystem\FilesystemOperator;
 use Symfony\Bundle\FrameworkBundle\KernelBrowser;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 
@@ -156,6 +157,55 @@ final class MaintenanceAttachmentTest extends AppTestCase
 
         $browser->request('GET', $url, [], [], $auth);
         $this->assertSame(200, $browser->getResponse()->getStatusCode(), 'the record still lists the bill, so its bytes must still be there');
+    }
+
+    public function testDeletingTheVisitDeletesItsBills(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $recordIri = $this->seedRecordIri();
+        $auth = ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')];
+        $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], $auth);
+        $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PNG, 'ticket.png', 'image/png')], $auth);
+        $recordId = basename($recordIri);
+        $this->assertCount(2, $this->storedBills($recordId));
+
+        $browser->request('DELETE', $recordIri, [], [], $auth);
+
+        $this->assertSame(204, $browser->getResponse()->getStatusCode());
+        $this->assertSame([], $this->storedBills($recordId));
+    }
+
+    public function testAFailedUploadLeavesNoBlob(): void
+    {
+        $recordIri = $this->seedRecordIri();
+        $browser = static::getClient();
+        $this->assertInstanceOf(KernelBrowser::class, $browser);
+        $browser->disableReboot();
+        $browser->catchExceptions(true);
+        $events = static::getContainer()->get(DocumentManager::class)->getEventManager();
+        $failing = new class {
+            public function onFlush(): void
+            {
+                throw new \RuntimeException('the database went away');
+            }
+        };
+        $events->addEventListener(Events::onFlush, $failing);
+
+        $browser->request('POST', $recordIri.'/attachments', [], ['file' => $this->tmpUpload(self::PDF, 'facture.pdf', 'application/pdf')], ['HTTP_AUTHORIZATION' => 'Bearer '.FakeOidcToken::for(self::TEST_OWNER, 'dashboard@example.com')]);
+        $events->removeEventListener(Events::onFlush, $failing);
+
+        $this->assertSame(500, $browser->getResponse()->getStatusCode());
+        $this->assertSame([], $this->storedBills(basename($recordIri)));
+    }
+
+    /** @return list<string> */
+    private function storedBills(string $recordId): array
+    {
+        $storage = static::getContainer()->get('maintenance.storage');
+        $this->assertInstanceOf(FilesystemOperator::class, $storage);
+
+        return $storage->listContents($recordId)->map(static fn ($item): string => $item->path())->toArray();
     }
 
     public function testDeleteRemovesOneBill(): void
