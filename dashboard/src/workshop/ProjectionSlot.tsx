@@ -202,6 +202,7 @@ function UrgentJob({ job, bundle, onPlan, disabled, onView }: { job: JobItem; bu
         {!job.immediate && <span className="w-data w-figure-sm">{jobWhen(job, locale)}</span>}
         {job.dueReading !== null && job.remaining && <span className="w-data w-row-dim">{t.workshop.atReading(reading(job.dueReading, job.remaining.unit, locale))}</span>}
         {job.dueDate && <span className="w-data w-row-dim">{formatDate(job.dueDate, locale)}</span>}
+        <JobEditActions job={job} bundle={bundle} />
       </p>
       {job.parts.length > 0 ? (
         <>
@@ -216,15 +217,14 @@ function UrgentJob({ job, bundle, onPlan, disabled, onView }: { job: JobItem; bu
       ) : (
         <p className="w-row-dim">{t.workshop.urgent.noParts}</p>
       )}
-      <div className="w-actions">
-        {onPlan && !job.taskId && (
+      {onPlan && !job.taskId && (
+        <div className="w-actions">
           <button type="button" className="w-button is-primary" onClick={() => onPlan(job)} disabled={disabled}>
             {t.workshop.urgent.plan}
           </button>
-        )}
-        {disabled && onPlan && !job.taskId && <span className="w-wait">{t.workshop.waitingAgent}</span>}
-        <JobEditActions job={job} bundle={bundle} variant="button" />
-      </div>
+          {disabled && <span className="w-wait">{t.workshop.waitingAgent}</span>}
+        </div>
+      )}
     </div>
   );
 }

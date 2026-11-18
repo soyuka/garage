@@ -826,17 +826,16 @@ export function NewVehicleForm({ onCancel }: { onCancel: () => void }) {
 // ── Entry points ────────────────────────────────────────────────────────────────
 
 /** "Modifier" (a planned task) and "Règle" (its cadence) beside a job, wherever a job is listed. */
-export function JobEditActions({ job, bundle, variant = 'row' }: { job: { type: string; taskId: Iri | null; label: string | null; parts?: PlannedPart[] }; bundle: VehicleBundle; variant?: 'row' | 'button' }) {
+export function JobEditActions({ job, bundle }: { job: { type: string; taskId: Iri | null; label: string | null; parts?: PlannedPart[] }; bundle: VehicleBundle }) {
   const t = useT();
   const [locale] = useLocale();
   const host = useEditHost();
   if (!host) return null;
   const e = t.workshop.edit;
   const name = sentenceCase(job.label ?? serviceLabel(job.type, locale));
-  const cls = variant === 'row' ? 'w-act' : 'w-button';
   const taskId = job.taskId;
   return (
-    <span className={variant === 'row' ? 'w-row-acts' : 'w-edit-acts'}>
+    <span className="w-row-acts">
       {/* Done logs the visit, which closes the matching task server-side; the reading stays the operator's to confirm. */}
       <button
         type="button"
@@ -847,11 +846,11 @@ export function JobEditActions({ job, bundle, variant = 'row' }: { job: { type: 
         {e.done}
       </button>
       {taskId && (
-        <button type="button" className={cls} aria-label={e.editTask(name)} onClick={() => host.open({ kind: 'task', taskId })}>
+        <button type="button" className="w-act" aria-label={e.editTask(name)} onClick={() => host.open({ kind: 'task', taskId })}>
           {e.edit}
         </button>
       )}
-      <button type="button" className={cls} aria-label={e.editRule(name)} onClick={() => host.open({ kind: 'rule', ...ruleSeedFor(bundle.forecast.due, job.type) })}>
+      <button type="button" className="w-act" aria-label={e.editRule(name)} onClick={() => host.open({ kind: 'rule', ...ruleSeedFor(bundle.forecast.due, job.type) })}>
         {e.rule}
       </button>
     </span>

@@ -914,6 +914,9 @@ body {
   align-items: baseline;
   gap: 4px 12px;
 }
+.w-urgent-when .w-row-acts {
+  margin-left: auto;
+}
 .w-urgent .w-actions {
   align-items: center;
   margin-top: 6px;
@@ -3890,9 +3893,6 @@ body {
   display: inline-flex;
   flex: none;
   gap: 10px;
-}
-.w-edit-acts {
-  display: contents;
 }
 .w-add-bar {
   display: flex;
