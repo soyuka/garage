@@ -1,7 +1,7 @@
-import { useId, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import { formatCount } from '../format';
 import type { Narrowing } from '../types';
-import { hiddenVariantIds, othersLabel, variantMark, variantRows, type Selection, type VariantRow } from '../variants';
+import { hiddenVariantIds, orderedRows, othersLabel, variantMark, variantRows, type Selection, type VariantRow } from '../variants';
 import { CopyRef } from './CopyRef';
 
 interface Props {
@@ -25,14 +25,33 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
   const uid = useId();
   const group = useRef<HTMLDivElement>(null);
   const differs = rows[0]?.differs ?? [];
-  const withApplicability = rows.some((r) => r.breakpoints.length > 0 || r.variantNotes.length > 0);
   const status = STATUS[selection.status];
-  const cols = ['vt-row', differs.length === 0 && 'vt-row--nodiff', !withApplicability && 'vt-row--noapp'].filter(Boolean).join(' ');
+  const cols = ['vt-row', differs.length === 0 && 'vt-row--nodiff'].filter(Boolean).join(' ');
 
   const hidden = hiddenVariantIds(rows, selection);
   const [open, setOpen] = useState(false);
-  const shown = rows.filter((r) => !hidden.includes(r.id));
-  const folded = rows.filter((r) => hidden.includes(r.id));
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+  const toggleApplicability = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+
+  const root = useRef<HTMLDivElement>(null);
+  const checkedId = selection.cluster?.id;
+  const mounted = useRef(false);
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+    const reduce = typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    root.current?.scrollIntoView?.({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+  }, [checkedId]);
+  const ordered = orderedRows(rows, selection);
+  const shown = ordered.filter((r) => !hidden.includes(r.id));
+  const folded = ordered.filter((r) => hidden.includes(r.id));
   const reachable = open ? [...shown, ...folded] : shown;
 
   const move = (e: KeyboardEvent, id: string) => {
@@ -49,6 +68,9 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
     const checked = r.id === selection.cluster?.id;
     const ref = r.oe ?? r.representative;
     const mark = variantMark(selection, r.id);
+    const count = r.breakpoints.length + r.variantNotes.length;
+    const panelId = `${uid}-app-${r.id}`;
+    const isOpen = expanded.has(r.id);
     return (
       <div key={r.id} className={`vt-item ${cols}`} data-checked={checked || undefined} data-mark={mark ?? undefined}>
         <span className="vt-ref">
@@ -61,6 +83,11 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
           <small id={`${uid}-${r.id}`}>
             {r.representative.brand} <span className="m">{r.representative.number}</span> · {formatCount(r.articleCount)} réf.
           </small>
+          {count > 0 && (
+            <button type="button" className="vt-app-toggle" aria-expanded={isOpen} aria-controls={panelId} onClick={() => toggleApplicability(r.id)}>
+              Applicabilité · {count}
+            </button>
+          )}
         </span>
         {differs.length > 0 && (
           <span className="vt-diff m">
@@ -72,21 +99,20 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
             ))}
           </span>
         )}
-        {withApplicability && (
-          <span className="vt-app">
-            {r.breakpoints.length === 0 && r.variantNotes.length === 0
-              ? '—'
-              : r.breakpoints.map((b) => (
-                  <span key={b.label}>
-                    {b.label} <span className="m">{b.values.join(' · ')}</span>
-                  </span>
-                ))}
+        {count > 0 && (
+          <div className="vt-app" id={panelId} hidden={!isOpen}>
+            <span className="vt-app-scope">{narrowing.applicabilityScope === 'vehicle' ? 'Ce véhicule' : 'Par article'}</span>
+            {r.breakpoints.map((b) => (
+              <span key={b.label}>
+                {b.label} <span className="m">{b.values.join(' · ')}</span>
+              </span>
+            ))}
             {r.variantNotes.map((note) => (
               <span key={note.ref}>
                 <span className="m">{note.ref}</span> : {note.text}
               </span>
             ))}
-          </span>
+          </div>
         )}
         {mark === 'retained' && (
           <span className="vt-verdict">
@@ -100,7 +126,7 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
   };
 
   return (
-    <div className="c s3 vt">
+    <div ref={root} className="c s3 vt">
       <div className="vt-top">
         <span className="l" id="vt-title">
           Variantes · {formatCount(rows.length)} pièces distinctes
@@ -110,7 +136,6 @@ export function VariantTable({ narrowing, make, selection, onPick }: Props) {
       <div className={`${cols} vt-head`} aria-hidden="true">
         <span>Réf. OE</span>
         {differs.length > 0 && <span>{differs.map((d) => d.label).join(' · ')}</span>}
-        {withApplicability && <span>{narrowing.applicabilityScope === 'vehicle' ? 'Applicabilité (ce véhicule)' : 'Applicabilité (par article)'}</span>}
       </div>
       <div ref={group} role="radiogroup" aria-labelledby="vt-title" className="vt-rows">
         {shown.map(renderRow)}

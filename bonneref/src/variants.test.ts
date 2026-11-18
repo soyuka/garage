@@ -4,7 +4,7 @@ import { mapNarrowing } from './api';
 import { NNBSP } from './format';
 import axial from '../test-fixtures/narrowed-307-axial.json';
 import mazda from '../test-fixtures/narrowed.json';
-import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, othersLabel, otherDimensions, pickChoice, questionOpen, refineHint, selectVariant, storedVerdict, variantMark, variantNotes, variantRows } from './variants';
+import { applicabilityLines, choiceSelectionId, hiddenVariantIds, makerOe, orderedRows, othersLabel, otherDimensions, pickChoice, questionOpen, refineHint, selectVariant, storedVerdict, variantMark, variantNotes, variantRows, type Selection } from './variants';
 import type { Cluster, Narrowing, Variant } from './types';
 import { VariantTable } from './ui/VariantTable';
 
@@ -178,10 +178,11 @@ describe('vehicle scope', () => {
   it('renders the vehicle header and the notes in the table', () => {
     const n = espace();
     const html = renderToStaticMarkup(createElement(VariantTable, { narrowing: n, make: null, selection: selectVariant(n, null), onPick: () => {} }));
-    expect(html).toContain('Applicabilité (ce véhicule)');
+    expect(html).not.toContain('Applicabilité (ce véhicule)');
+    expect(html).toContain('Ce véhicule');
     expect(html).toContain('avec 623 3150 ##');
     const article = renderToStaticMarkup(createElement(VariantTable, { narrowing: { ...n, applicabilityScope: 'article' }, make: null, selection: selectVariant(n, null), onPick: () => {} }));
-    expect(article).toContain('Applicabilité (par article)');
+    expect(article).toContain('Par article');
   });
 });
 
@@ -302,7 +303,7 @@ describe('VariantTable', () => {
   it('shows every row when nothing is settled, with no link', () => {
     const html = render(null, null);
     expect(html).not.toContain('vt-more');
-    expect(html).not.toContain('aria-expanded');
+    expect(html).not.toContain('-more"');
   });
 });
 
@@ -351,5 +352,21 @@ describe('refineHint', () => {
     expect(refineHint(n, null, selectVariant(n, { id: 'c2', by: 'answer' }))).toBeNull();
     expect(refineHint(n, null, selectVariant(n, { id: 'c2', by: 'user' }))).toBeNull();
     expect(refineHint(null, null, selectVariant(null, null))).toBeNull();
+  });
+});
+
+describe('orderedRows', () => {
+  const rows = ['a', 'b', 'c'].map((id) => ({ id }));
+  const sel = (id: string, status: Selection['status']) => ({ cluster: { id } as Cluster, index: 0, status }) as Selection;
+
+  it('puts the part picked from outside the table first, the rest in order', () => {
+    expect(orderedRows(rows, sel('c', 'answer')).map((r) => r.id)).toEqual(['c', 'a', 'b']);
+    expect(orderedRows(rows, sel('b', 'agent')).map((r) => r.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('keeps the order when the user picked in the table or nothing is settled', () => {
+    expect(orderedRows(rows, sel('c', 'user')).map((r) => r.id)).toEqual(['a', 'b', 'c']);
+    expect(orderedRows(rows, sel('c', 'open')).map((r) => r.id)).toEqual(['a', 'b', 'c']);
+    expect(orderedRows(rows, { cluster: null, index: -1, status: 'open' })).toBe(rows);
   });
 });

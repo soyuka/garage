@@ -66,6 +66,14 @@ export function hiddenVariantIds(rows: readonly { id: string }[], selection: Sel
   return rows.filter((r) => r.id !== v.clusterId).map((r) => r.id);
 }
 
+// A part picked outside the table (cote chip, agent) leads the list; a pick in the table keeps the order so arrow keys do not jump.
+export function orderedRows<T extends { id: string }>(rows: readonly T[], selection: Selection): readonly T[] {
+  const id = selection.cluster?.id;
+  if ((selection.status !== 'answer' && selection.status !== 'agent') || id === undefined) return rows;
+  const lead = rows.find((r) => r.id === id);
+  return lead ? [lead, ...rows.filter((r) => r !== lead)] : rows;
+}
+
 export function othersLabel(count: number, open: boolean): string {
   if (open) return count === 1 ? 'Masquer l’autre référence' : `Masquer les ${count} autres références`;
   return count === 1 ? 'Voir l’autre référence (ne correspond pas)' : `Voir les ${count} autres références (ne correspondent pas)`;
