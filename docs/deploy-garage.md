@@ -150,3 +150,10 @@ Verified on prod: anonymous subscribe is 401 on both hubs for `match=*`, `match_
 opens its pilot, fleet and session topics, bonneref's `subscriberToken` opens its session topic via
 `Authorization: Bearer`; bonneref's front no longer keeps a token in localStorage; mpa → bonneref `/makes` with the
 service token + `X-Bonneref-Owner` is 200, without a token 401.
+
+## 2026-11-18 deploy: SIV HTTP 404 = unknown plate
+
+Deployed `d5c23df` (bonneref-api only, also ships `40949d0` pdfinfo). The SIV vendor answers an unknown plate with
+HTTP 404 + the usual envelope (`code_erreur: 404`, "Plaque immatriculation inconnue !"); motorbike plates land there,
+the vendor has no motos. bonneref used to turn it into a 502; now `/vehicles/DF162TC` is 404, negatively cached
+(second call 32 ms, no vendor hit), verified with the mpa-service token.
