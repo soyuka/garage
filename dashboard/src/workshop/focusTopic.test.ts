@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { topicForService, topicForText } from './focusTopic';
+import { topicForService, topicForText, regionOnBody } from './focusTopic';
 
 describe('topicForText', () => {
   it('reads the clutch off French and English text, onto the front axle', () => {
@@ -29,5 +29,19 @@ describe('topicForService', () => {
     expect(topicForService('clutch')).toEqual({ topic: 'clutch', region: 'frontAxle' });
     expect(topicForService('timing_belt')).toEqual({ topic: 'timing_belt', region: 'hood' });
     expect(topicForService('brake_pads')).toEqual({ topic: 'brake_pads', region: 'frontAxle' });
+  });
+});
+
+describe('regionOnBody', () => {
+  it('reads the clutch and gearbox off the engine case on a motorcycle', () => {
+    for (const topic of ['clutch', 'gearbox_oil', 'flywheel']) {
+      expect(regionOnBody('frontAxle', topic, 'moto')).toBe('hood');
+    }
+  });
+
+  it('keeps the front axle for a car, and every other topic as derived', () => {
+    expect(regionOnBody('frontAxle', 'clutch', 'car')).toBe('frontAxle');
+    expect(regionOnBody('frontAxle', 'brake_pads', 'moto')).toBe('frontAxle');
+    expect(regionOnBody('rearAxle', null, 'moto')).toBe('rearAxle');
   });
 });

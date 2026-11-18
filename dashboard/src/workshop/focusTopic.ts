@@ -1,5 +1,6 @@
 import { regionForType, type BodyRegion } from '../scene/anchors';
 import { canonicalService } from '../labels';
+import { isMotorcycle } from './regionPoint';
 
 export interface FocusTopic {
   /** The service type the text or frame is about — what the ring's label names. */
@@ -43,4 +44,12 @@ export function topicForText(text: string): FocusTopic | null {
 export function topicForService(type: string): FocusTopic {
   const topic = canonicalService(type);
   return { topic, region: SERVICE_REGION[topic] ?? regionForType(topic) };
+}
+
+// A bike's clutch and gearbox live in the engine case, not by the front wheel. The reducer derives the
+// region without knowing the vehicle, so this applies where the vehicle is in hand.
+const ENGINE_CASE = new Set(['clutch', 'gearbox_oil', 'flywheel']);
+
+export function regionOnBody(region: BodyRegion, topic: string | null, vehicleType: string): BodyRegion {
+  return topic !== null && ENGINE_CASE.has(topic) && isMotorcycle(vehicleType) ? 'hood' : region;
 }

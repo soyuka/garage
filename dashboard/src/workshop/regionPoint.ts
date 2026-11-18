@@ -31,7 +31,11 @@ const MOTO: Fractions = {
   rearAxle: { x: 0.33, y: 0.22, z: 0 },
 };
 
+export function isMotorcycle(vehicleType: string): boolean {
+  return /moto|motorcycle/i.test(vehicleType);
+}
+
 export function regionPoint(region: BodyRegion, box: BodyBox, vehicleType = ''): Point {
-  const f = (/moto|motorcycle/i.test(vehicleType) ? MOTO : CAR)[region];
+  const f = (isMotorcycle(vehicleType) ? MOTO : CAR)[region];
   return [f.x * box.length, f.y * box.height, f.z * box.width];
 }

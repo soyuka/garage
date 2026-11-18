@@ -6,6 +6,7 @@ import { visitTitle } from '../records';
 import type { BodyRegion } from '../scene/anchors';
 import type { VehicleBundle, VehicleFact } from '../types';
 import { CarStage } from './CarStage';
+import { regionOnBody } from './focusTopic';
 import { useFlag } from './hooks';
 import { Pause, Play } from './Icons';
 import { TURNTABLE_KEY } from './prefs';
@@ -55,8 +56,9 @@ function CarPlate({
   const t = useT();
   const [locale] = useLocale();
   const [turntable, setTurntable] = useFlag(TURNTABLE_KEY, false);
-  const region = hoverRegion ?? view.focusRegion;
-  const ringLabel = !hoverRegion && view.focusRegion && view.focusTopic ? `${serviceLabel(view.focusTopic, locale)} · ${t.region[view.focusRegion]}` : null;
+  const focusRegion = view.focusRegion && regionOnBody(view.focusRegion, view.focusTopic, bundle.vehicle.vehicleType ?? '');
+  const region = hoverRegion ?? focusRegion;
+  const ringLabel = !hoverRegion && focusRegion && view.focusTopic ? `${serviceLabel(view.focusTopic, locale)} · ${t.region[focusRegion]}` : null;
   return (
     <section className="w-plate" aria-label={t.workshop.mod.car}>
       {active && (

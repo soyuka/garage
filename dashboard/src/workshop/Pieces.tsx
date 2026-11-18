@@ -14,7 +14,7 @@ import { CarStage } from './CarStage';
 import { barCents, costByYear, costSeries, costSummary, labelledBars, visitSlots, type CostBar } from './costs';
 import { jobTitle, reading, sentenceCase } from './describe';
 import { EdgeModel, useTokenColor, type EdgeFit } from './EdgeModel';
-import { topicForService, topicForText } from './focusTopic';
+import { regionOnBody, topicForService, topicForText } from './focusTopic';
 import { normalizeUnit } from './kmTrack';
 import { piecesLists, type JobItem, type Modules } from './modules';
 import { meshForPart, partUrl, type PartFile } from './partMeshes';
@@ -34,9 +34,10 @@ const KEY_MOVES: Record<string, ShelfMove> = {
   ArrowDown: 'down',
 };
 
-function regionOf(part: PlannedPart, shelf: Shelf): BodyRegion | null {
+function regionOf(part: PlannedPart, shelf: Shelf, vehicleType: string): BodyRegion | null {
   const fallback = shelf.kind === 'toOrder' ? shelf.job.type : (shelf.record.items[0]?.type ?? null);
-  return topicForText([part.label, part.brand].filter(Boolean).join(' '))?.region ?? (fallback ? topicForService(fallback).region : null);
+  const found = topicForText([part.label, part.brand].filter(Boolean).join(' ')) ?? (fallback ? topicForService(fallback) : null);
+  return found ? regionOnBody(found.region, found.topic, vehicleType) : null;
 }
 
 function wholeEuros(cents: number, locale: Locale): string {
@@ -263,7 +264,7 @@ function PartInspector({
   const p = item.part;
   const { name, note } = partDisplay(p, item.type, locale);
   const file = meshForPart(p, item.type ?? undefined);
-  const region = regionOf(p, shelf);
+  const region = regionOf(p, shelf, bundle.vehicle.vehicleType ?? '');
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     if (sheet) closeRef.current?.focus({ preventScroll: true });
