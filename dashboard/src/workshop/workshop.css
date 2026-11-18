@@ -1888,6 +1888,36 @@ body {
   white-space: nowrap;
   font-weight: 500;
 }
+.w-vrow-item {
+  position: relative;
+}
+.w-vrow-actions {
+  position: absolute;
+  right: 16px;
+  bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.w-vrow-actions .w-button {
+  height: 24px;
+  padding: 0 8px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--w-ink-2);
+}
+.w-vrow-actions .w-button:hover,
+.w-vrow-actions .w-button:focus-visible {
+  color: var(--w-ink);
+}
+.w-vrow-actions .w-edit-danger {
+  margin-left: 0;
+}
+.w-vrow-error {
+  margin: 0;
+  font-size: 12px;
+  color: var(--w-ink-2);
+}
 .w-vrow-reading {
   font-size: 13px;
   white-space: nowrap;

@@ -7,7 +7,7 @@ import { MeshErrorBoundary } from '../scene/VehicleBody';
 import { useReducedMotion } from '../scene/useReducedMotion';
 import type { Iri, VehicleBundle, VehicleSummary } from '../types';
 import { carEdgeAngle, FitCamera, LENGTH, vehicleLines } from './CarStage';
-import { NewVehicleForm } from './Editors';
+import { ConfirmButton, NewVehicleForm } from './Editors';
 import { useEditHost } from './edits';
 import { jobTitle, jobWhen, reading, sentenceCase } from './describe';
 import { staggerDelay } from './edgeDraw';
@@ -58,6 +58,32 @@ function Thumb({ vehicle, index, aspect }: { vehicle: VehicleSummary; index: num
   );
 }
 
+function DeleteVehicle({ vehicle, name }: { vehicle: VehicleSummary; name: string }) {
+  const t = useT();
+  const host = useEditHost();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!host) return null;
+  const remove = () => {
+    setError(null);
+    setBusy(true);
+    host.edits.deleteVehicle(vehicle['@id']).catch((err) => {
+      setError(t.workshop.edit.deleteFailed(err instanceof Error ? err.message : String(err)));
+      setBusy(false);
+    });
+  };
+  return (
+    <div className="w-vrow-actions" role="group" aria-label={name}>
+      {error && (
+        <p className="w-vrow-error" role="alert">
+          {error}
+        </p>
+      )}
+      <ConfirmButton label={t.workshop.edit.deleteVehicle} confirmLabel={t.workshop.edit.confirmDelete} busyLabel={t.workshop.edit.deleting} busy={busy} onConfirm={remove} />
+    </div>
+  );
+}
+
 function VehicleRow({ vehicle, bundle, now, href, index }: { vehicle: VehicleSummary; bundle: VehicleBundle | undefined; now: Date; href: string; index: number }) {
   const archived = isArchived(vehicle);
   const t = useT();
@@ -75,35 +101,38 @@ function VehicleRow({ vehicle, bundle, now, href, index }: { vehicle: VehicleSum
     return () => ro.disconnect();
   }, []);
   return (
-    <a className={`w-vrow${archived ? ' is-archived' : ''}`} href={href} aria-label={t.workshop.home.open(name)} data-parc-card>
-      <span className="w-vrow-thumb" ref={thumb}>
-        <Thumb vehicle={vehicle} index={index} aspect={aspect} />
-      </span>
-      <span className="w-vrow-name">
-        <span className="w-vrow-title">{name}</span>
-        {vehicle.plate && <span className="w-data w-muted">{vehicle.plate}</span>}
-        {isGenericBody(vehicle) && <span className="w-generic">{t.workshop.genericBody}</span>}
-      </span>
-      <span className="w-vrow-job">
-        {archived ? (
-          <span className="w-muted">{t.workshop.home.archivedMark}</span>
-        ) : job && label ? (
-          <>
-            <StateMark state={job.state} immediate={job.immediate} />
-            <span className="w-vrow-job-title" title={label}>
-              {label}
-            </span>
-            {!job.immediate && <span className="w-data">{jobWhen({ state: job.state, immediate: false, remaining: job.remaining, days: job.days }, locale)}</span>}
-          </>
-        ) : (
-          <>
-            <StateMark state="unknown" />
-            <span className="w-muted">{t.workshop.home.noJob}</span>
-          </>
-        )}
-      </span>
-      <span className="w-data w-vrow-reading">{vehicle.usageValue != null ? reading(vehicle.usageValue, normalizeUnit(vehicle.usageUnit), locale) : '—'}</span>
-    </a>
+    <div className="w-vrow-item">
+      <a className={`w-vrow${archived ? ' is-archived' : ''}`} href={href} aria-label={t.workshop.home.open(name)} data-parc-card>
+        <span className="w-vrow-thumb" ref={thumb}>
+          <Thumb vehicle={vehicle} index={index} aspect={aspect} />
+        </span>
+        <span className="w-vrow-name">
+          <span className="w-vrow-title">{name}</span>
+          {vehicle.plate && <span className="w-data w-muted">{vehicle.plate}</span>}
+          {isGenericBody(vehicle) && <span className="w-generic">{t.workshop.genericBody}</span>}
+        </span>
+        <span className="w-vrow-job">
+          {archived ? (
+            <span className="w-muted">{t.workshop.home.archivedMark}</span>
+          ) : job && label ? (
+            <>
+              <StateMark state={job.state} immediate={job.immediate} />
+              <span className="w-vrow-job-title" title={label}>
+                {label}
+              </span>
+              {!job.immediate && <span className="w-data">{jobWhen({ state: job.state, immediate: false, remaining: job.remaining, days: job.days }, locale)}</span>}
+            </>
+          ) : (
+            <>
+              <StateMark state="unknown" />
+              <span className="w-muted">{t.workshop.home.noJob}</span>
+            </>
+          )}
+        </span>
+        <span className="w-data w-vrow-reading">{vehicle.usageValue != null ? reading(vehicle.usageValue, normalizeUnit(vehicle.usageUnit), locale) : '—'}</span>
+      </a>
+      <DeleteVehicle vehicle={vehicle} name={name} />
+    </div>
   );
 }
 
