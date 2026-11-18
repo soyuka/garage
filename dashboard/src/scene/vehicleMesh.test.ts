@@ -35,6 +35,10 @@ describe('resolveMesh — make/model specifics win', () => {
       expect(m.rotationY).toBeUndefined();
     }
   });
+  it('the catalogue make "BMW MOTORCYCLES" is still BMW', () => {
+    expect(resolveMesh(v('moto', 'BMW MOTORCYCLES', 'F 800 GS Adventure')).url).toBe('/bmw-f800gs-adventure-web.glb');
+    expect(resolveMesh(v('moto', 'BMW Motorrad', 'F800GSA')).url).toBe('/bmw-f800gs-adventure-web.glb');
+  });
   it('another BMW moto is NOT the F800GS — it falls back to the moto default', () => {
     expect(resolveMesh(v('moto', 'BMW', 'F 800 R')).url).toBe('/moto-default-web.glb');
     expect(resolveMesh(v('moto', 'BMW', 'R 1250 GS')).url).toBe('/moto-default-web.glb');

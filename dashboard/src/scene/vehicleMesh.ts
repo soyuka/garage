@@ -67,8 +67,9 @@ function specificUrl(make: string, model: string): string | null {
     return '/peugeot-206-web.glb';
   if (make.trim().toLowerCase() === 'mazda' && /\b(mazda\s*)?6\b/.test(model.trim().toLowerCase()))
     return '/mazda6-gh-web.glb';
-  // GS / GSA only: an F 800 R/ST/GT is a road bike and would misread as this enduro.
-  if (make.trim().toLowerCase() === 'bmw' && /\bf\s*800\s*gs/.test(model.trim().toLowerCase()))
+  // GS / GSA only: an F 800 R/ST/GT is a road bike and would misread as this enduro. The catalogue spells
+  // the make "BMW MOTORCYCLES", the owner "BMW" or "BMW Motorrad".
+  if (/^bmw\b/.test(make.trim().toLowerCase()) && /\bf\s*800\s*gs/.test(model.trim().toLowerCase()))
     return '/bmw-f800gs-adventure-web.glb';
   return null;
 }
