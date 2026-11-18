@@ -205,7 +205,7 @@ final class MaintenanceAttachmentTest extends AppTestCase
         $storage = static::getContainer()->get('maintenance.storage');
         $this->assertInstanceOf(FilesystemOperator::class, $storage);
 
-        return $storage->listContents($recordId)->map(static fn ($item): string => $item->path())->toArray();
+        return array_values($storage->listContents($recordId)->map(static fn ($item): string => $item->path())->toArray());
     }
 
     public function testDeleteRemovesOneBill(): void
