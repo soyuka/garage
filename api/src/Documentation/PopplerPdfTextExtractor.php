@@ -4,11 +4,16 @@ declare(strict_types=1);
 
 namespace App\Documentation;
 
+use Psr\Log\LoggerInterface;
 use Symfony\Component\Process\Process;
 
 final class PopplerPdfTextExtractor implements PdfTextExtractor
 {
     private const string RENAULT_PAGE_LABEL = '/\b(\d{2}[A-Z])-(\d{1,3})\b/';
+
+    public function __construct(private readonly LoggerInterface $logger)
+    {
+    }
 
     public function extract(string $path): array
     {
@@ -17,7 +22,9 @@ final class PopplerPdfTextExtractor implements PdfTextExtractor
         $process->run();
 
         if (!$process->isSuccessful()) {
-            throw new InvalidVehicleDocumentException(\sprintf('The PDF could not be read: %s', trim($process->getErrorOutput())));
+            $this->logger->warning('pdftotext failed', ['exitCode' => $process->getExitCode(), 'stderr' => trim($process->getErrorOutput())]);
+
+            throw new InvalidVehicleDocumentException('The PDF could not be read.');
         }
 
         $chunks = explode("\f", $process->getOutput());
