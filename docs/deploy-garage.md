@@ -163,3 +163,7 @@ prompt cache, `UPLOAD_GLOBAL_RATE_LIMIT=600`, `/agent/turn` body cap 52 MiB, pdf
 Then `e7956f4` (bonneref-garage + scheduler): a plate miss tells the model the SIV registry has no motorbikes and to
 resolve make/model via list_makes → list_models → list_cars (carType MC); a transient upstream error names the real
 failure (status or transport error) instead of "did not answer in time".
+Then `230fc36` alone (bonneref-garage + scheduler, prod checkout fast-forwarded to it, later commits on main left
+out): the in-app agent sees list_makes / list_models again. list_cars needs their makeId/modelId, so after a plate
+miss the agent had no route to a carId and web-searched the F800 GSA oil filter; TecDoc carries it under
+`BMW MOTORCYCLES` (manufacturer 4081, model 12108, F 800 GS Adventure K75 types 101222/101223).
