@@ -27,7 +27,7 @@ final class VehicleLookupProcessor implements ProcessorInterface
         $vehicle = $this->bonneref->vehicleByPlate($data->plate);
 
         if (null === $vehicle) {
-            throw new NotFoundHttpException(\sprintf('No vehicle found for plate "%s".', $data->plate));
+            throw new NotFoundHttpException(\sprintf('No vehicle found for plate "%s" in the SIV registry, which has no motorbikes (a mistyped plate also lands here). Ask the user for the make, model and year or engine, then resolve the vehicle with list_makes → list_models → list_cars, with carType MC for a motorbike.', $data->plate));
         }
 
         return $vehicle;
