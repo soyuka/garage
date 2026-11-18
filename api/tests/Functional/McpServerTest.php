@@ -123,6 +123,39 @@ final class McpServerTest extends AppTestCase
         $this->assertStringContainsString('definitive miss', $result['message']);
     }
 
+    public function testAMotorbikePlateMissTellsTheModelHowToResolveTheVehicleInstead(): void
+    {
+        $client = static::createClient();
+        static::catalogue()->route('/vehicles/AB123CD', '{"title":"Not Found"}', 404);
+        $sessionId = $this->initialize($client);
+
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'lookup_plate',
+            'arguments' => ['plate' => 'AB-123-CD'],
+        ], 8));
+
+        $this->assertSame('not_found', $result['error']);
+        $this->assertStringContainsString('motorbikes', $result['message']);
+        $this->assertStringContainsString('list_makes', $result['message']);
+        $this->assertStringContainsString('MC', $result['message']);
+    }
+
+    public function testLookupPlateAdvertisesThatTheRegistryHasNoMotorbikes(): void
+    {
+        $client = static::createClient();
+        $sessionId = $this->initialize($client);
+
+        $description = '';
+        foreach ($this->listTools($client, $sessionId) as $tool) {
+            if ('lookup_plate' === $tool['name']) {
+                $description = $tool['description'];
+            }
+        }
+
+        $this->assertStringContainsString('motorbike', $description);
+        $this->assertStringContainsString('list_makes', $description);
+    }
+
     /**
      * The 2026-09-14 regression: the registry stalled, the model was handed an opaque error, and it
      * told the user the plate did not exist. The model must now be able to tell the two apart.
@@ -140,6 +173,25 @@ final class McpServerTest extends AppTestCase
 
         $this->assertSame('upstream_unavailable', $result['error']);
         $this->assertStringContainsString('retry', $result['message'], 'the whole point: a stall is retryable, an unknown plate is not');
+        $this->assertStringContainsString('never report it to the user as "not found"', $result['message']);
+        $this->assertStringContainsString('Idle timeout reached', $result['message']);
+    }
+
+    public function testARegistryServerErrorNamesTheStatusInsteadOfClaimingATimeout(): void
+    {
+        $client = static::createClient();
+        static::bonneref()->route('/vehicles/SE000SE', '{"title":"An error occurred","status":502}', 502);
+        $sessionId = $this->initialize($client);
+
+        $result = $this->outcome($this->call($client, $sessionId, 'tools/call', [
+            'name' => 'lookup_plate',
+            'arguments' => ['plate' => 'SE-000-SE'],
+        ], 9));
+
+        $this->assertSame('upstream_unavailable', $result['error']);
+        $this->assertStringContainsString('502', $result['message']);
+        $this->assertStringNotContainsString('did not answer in time', $result['message']);
+        $this->assertStringContainsString('retry', $result['message']);
         $this->assertStringContainsString('never report it to the user as "not found"', $result['message']);
     }
 

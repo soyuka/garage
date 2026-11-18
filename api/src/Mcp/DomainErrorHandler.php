@@ -79,7 +79,7 @@ final readonly class DomainErrorHandler implements RequestHandlerInterface
     {
         return match (true) {
             $e instanceof UpstreamException => $e->transient
-                ? new ToolError('upstream_unavailable', \sprintf('%s did not answer in time. This is temporary and says NOTHING about whether the thing you looked up exists — retry, and never report it to the user as "not found".', $e->source))
+                ? new ToolError('upstream_unavailable', \sprintf('%s failed (%s). This is temporary and says NOTHING about whether the thing you looked up exists: retry once, and never report it to the user as "not found". If it fails again, tell the user the service is unavailable right now.', $e->source, rtrim($e->getMessage(), '.')))
                 : new ToolError('upstream_rejected', \sprintf('%s rejected the request. Retrying will not help; check the arguments.', $e->source)),
             $e instanceof TooManyRequestsHttpException => new ToolError(
                 'rate_limited',
