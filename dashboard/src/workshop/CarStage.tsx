@@ -72,8 +72,8 @@ function boxCorners(b: BodyBox): Float32Array {
   return new Float32Array(out);
 }
 
-function RegionRing({ region, box, label, onClosed }: { region: BodyRegion; box: BodyBox; label: string; onClosed?: () => void }) {
-  const point = regionPoint(region, box);
+function RegionRing({ region, box, vehicleType, label, onClosed }: { region: BodyRegion; box: BodyBox; vehicleType: string; label: string; onClosed?: () => void }) {
+  const point = regionPoint(region, box, vehicleType);
   return (
     <Html position={point} center zIndexRange={[20, 0]} className="w-ring-anchor">
       <div className="w-ring" aria-hidden="true">
@@ -245,7 +245,7 @@ function CarStageImpl({ vehicle, focusRegion, ringLabel, reduced, pointSeq, onPo
   const ink = useTokenColor('--w-ink');
   const blue = useTokenColor('--w-blue');
   const regionLabel = focusRegion ? (ringLabel ?? t.region[focusRegion]) : null;
-  const focusPoint = focusRegion && box ? regionPoint(focusRegion, box) : null;
+  const focusPoint = focusRegion && box ? regionPoint(focusRegion, box, vehicle.vehicleType ?? '') : null;
 
   // ── Pointing: swing the region to the viewer, then close the ring and redraw its strokes in blue. ──
   const [pointing, setPointing] = useState<{ seq: number; stage: 'turning' | 'ring' } | null>(null);
@@ -317,7 +317,7 @@ function CarStageImpl({ vehicle, focusRegion, ringLabel, reduced, pointSeq, onPo
               {...vehicleLines(vehicle.vehicleType)}
             />
             {focusRegion && regionLabel && box && !turning && (
-              <RegionRing key={`${focusRegion}|${drawSeq ?? ''}`} region={focusRegion} box={box} label={regionLabel} onClosed={pointing?.stage === 'ring' ? onRingClosed : undefined} />
+              <RegionRing key={`${focusRegion}|${drawSeq ?? ''}`} region={focusRegion} box={box} vehicleType={vehicle.vehicleType ?? ''} label={regionLabel} onClosed={pointing?.stage === 'ring' ? onRingClosed : undefined} />
             )}
           </MeshErrorBoundary>
         </Suspense>

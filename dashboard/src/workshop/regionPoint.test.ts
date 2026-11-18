@@ -26,3 +26,27 @@ describe('regionPoint', () => {
     }
   });
 });
+
+describe('regionPoint on a motorcycle', () => {
+  const bike = { length: 2.3, height: 1.5, width: 0.95 };
+
+  it('reads the engine off the block between the wheels, not the headlight fairing', () => {
+    const [x, y] = regionPoint('hood', bike, 'moto');
+    expect(Math.abs(x)).toBeLessThan(bike.length * 0.1);
+    expect(y).toBeLessThan(bike.height * 0.45);
+  });
+
+  it('puts the axles on the wheel hubs, on the centre plane', () => {
+    const [fx, fy, fz] = regionPoint('frontAxle', bike, 'moto');
+    const [rx, , rz] = regionPoint('rearAxle', bike, 'moto');
+    expect(fx).toBeLessThan(-bike.length * 0.3);
+    expect(rx).toBeGreaterThan(bike.length * 0.3);
+    expect(fy).toBeLessThan(bike.height * 0.3);
+    expect(fz).toBe(0);
+    expect(rz).toBe(0);
+  });
+
+  it('keeps the car table for any other body', () => {
+    expect(regionPoint('hood', box, 'car')).toEqual(regionPoint('hood', box));
+  });
+});
