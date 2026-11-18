@@ -68,12 +68,36 @@ final class SpeechTest extends AppTestCase
         );
     }
 
+    /**
+     * One default voice per locale: an English interface that picked no voice must not be read by the
+     * French default voice.
+     */
+    #[DataProvider('defaultVoicePerLocale')]
+    public function testTheDefaultVoiceFollowsTheRequestLocale(string $acceptLanguage, string $voiceId): void
+    {
+        $client = static::createClient();
+        $client->request('POST', '/tts', [
+            'json' => ['text' => 'Vidange enregistrée.'],
+            'headers' => static::authHeaders() + ['Accept-Language' => $acceptLanguage],
+        ]);
+
+        $this->assertResponseStatusCodeSame(200);
+        $this->assertStringContainsString('/v1/text-to-speech/'.$voiceId.'/stream', (string) $this->transport()->lastRequest()['url']);
+    }
+
+    /** @return iterable<string, array{string, string}> */
+    public static function defaultVoicePerLocale(): iterable
+    {
+        yield 'english' => ['en-GB,en;q=0.9', 'test-voice-id-en'];
+        yield 'french' => ['fr-FR,fr;q=0.9', 'test-voice-id'];
+    }
+
     public function testOutgoingRequestCarriesTheKeyVoiceAndModel(): void
     {
         $client = static::createClient();
         $client->request('POST', '/tts', [
             'json' => ['text' => 'Vidange enregistrée.'],
-            'headers' => static::authHeaders(),
+            'headers' => static::authHeaders() + ['Accept-Language' => 'fr-FR,fr;q=0.9'],
         ]);
 
         $transport = $this->transport();

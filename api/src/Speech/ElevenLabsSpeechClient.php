@@ -38,7 +38,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
         private HttpClientInterface $http,
         #[\SensitiveParameter]
         private string $apiKey,
-        private string $voiceId,
+        private DefaultVoices $defaultVoices,
         private string $model,
         private float $speed = 1.0,
     ) {
@@ -49,7 +49,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
 
     public function stream(string $text, Locale $locale, ?string $voice = null): SpeechStream
     {
-        $voiceId = $voice ?? $this->voiceId;
+        $voiceId = $voice ?? $this->defaultVoices->for($locale);
 
         if ('' === $this->apiKey || '' === $voiceId) {
             throw new SpeechUnavailable('ElevenLabs is selected but ELEVENLABS_API_KEY / ELEVENLABS_VOICE_ID are unset.');
@@ -93,7 +93,8 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
      */
     public function voices(Locale $locale): array
     {
-        $fallback = [new SpeechVoice($this->voiceId, 'ElevenLabs')];
+        $defaultVoice = $this->defaultVoices->for($locale);
+        $fallback = [new SpeechVoice($defaultVoice, 'ElevenLabs')];
 
         try {
             $response = $this->http->request('GET', self::VOICES_ENDPOINT, [
@@ -135,7 +136,7 @@ final readonly class ElevenLabsSpeechClient implements SpeechClient
         $default = null;
         $others = [];
         foreach ($matched as $entry) {
-            if (null === $default && $entry->id === $this->voiceId) {
+            if (null === $default && $entry->id === $defaultVoice) {
                 $default = $entry;
                 continue;
             }

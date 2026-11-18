@@ -45,7 +45,7 @@ final readonly class CachingSpeechClient implements SpeechClient
         private SpeechClient $inner,
         private string $backend,
         private string $model,
-        private string $voice,
+        private DefaultVoices $defaultVoices,
         private string $cacheDir,
         private LoggerInterface $logger,
         private float $speed = 1.0,
@@ -57,7 +57,7 @@ final readonly class CachingSpeechClient implements SpeechClient
         // The REQUESTED voice, not just the configured default: a line spoken with voice A and the
         // same line with voice B must be two different cache entries, or picking a voice on the
         // dashboard would keep hearing whichever voice happened to be cached first.
-        $resolvedVoice = $voice ?? $this->voice;
+        $resolvedVoice = $voice ?? $this->defaultVoices->for($locale);
         $key = hash('sha256', implode('|', [$this->backend, $this->model, $resolvedVoice, $this->settingsKey(), $locale->value, $text]));
         $bytesPath = $this->path($key, 'bin');
         $typePath = $this->path($key, 'type');
@@ -153,7 +153,7 @@ final readonly class CachingSpeechClient implements SpeechClient
      */
     private function voicesPath(Locale $locale): string
     {
-        $key = hash('sha256', implode('|', [$this->backend, $this->model, $this->voice, $locale->value]));
+        $key = hash('sha256', implode('|', [$this->backend, $this->model, $this->defaultVoices->for($locale), $locale->value]));
 
         return rtrim($this->cacheDir, '/').'/.voices.'.$key.'.json';
     }

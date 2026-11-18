@@ -6,6 +6,7 @@ namespace App\Tests\Unit\Speech;
 
 use App\I18n\Locale;
 use App\Speech\CachingSpeechClient;
+use App\Speech\DefaultVoices;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
@@ -94,8 +95,8 @@ final class CachingSpeechClientTest extends TestCase
     public function testADifferentVoiceForTheSameTextAndLocaleIsAMiss(): void
     {
         $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
-        $a = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'voice-a', $this->cacheDir, new NullLogger());
-        $b = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'voice-b', $this->cacheDir, new NullLogger());
+        $a = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('voice-a'), $this->cacheDir, new NullLogger());
+        $b = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('voice-b'), $this->cacheDir, new NullLogger());
 
         self::body($a->stream('Vidange enregistrée.', Locale::Fr));
         self::body($b->stream('Vidange enregistrée.', Locale::Fr));
@@ -106,8 +107,8 @@ final class CachingSpeechClientTest extends TestCase
     public function testADifferentSpeedForTheSameTextAndVoiceIsAMiss(): void
     {
         $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
-        $natural = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', 'voice-a', $this->cacheDir, new NullLogger(), speed: 1.0);
-        $faster = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', 'voice-a', $this->cacheDir, new NullLogger(), speed: 1.05);
+        $natural = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', new DefaultVoices('voice-a'), $this->cacheDir, new NullLogger(), speed: 1.0);
+        $faster = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_v3', new DefaultVoices('voice-a'), $this->cacheDir, new NullLogger(), speed: 1.05);
 
         self::body($natural->stream('Vidange enregistrée.', Locale::Fr));
         self::body($faster->stream('Vidange enregistrée.', Locale::Fr));
@@ -210,8 +211,8 @@ final class CachingSpeechClientTest extends TestCase
     public function testVoicesAreCachedPerBackend(): void
     {
         $inner = new VoicesCountingSpeechClient([new SpeechVoice('v1', 'Claire')]);
-        $elevenlabs = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'test-voice-id', $this->cacheDir, new NullLogger());
-        $other = new CachingSpeechClient($inner, 'other-backend', 'other-model', '', $this->cacheDir, new NullLogger());
+        $elevenlabs = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('test-voice-id'), $this->cacheDir, new NullLogger());
+        $other = new CachingSpeechClient($inner, 'other-backend', 'other-model', new DefaultVoices(''), $this->cacheDir, new NullLogger());
 
         $elevenlabs->voices(Locale::Fr);
         $other->voices(Locale::Fr);
@@ -219,9 +220,44 @@ final class CachingSpeechClientTest extends TestCase
         $this->assertSame(2, $inner->voicesCalls, 'Switching backends must not serve the other backend\'s cached voice list.');
     }
 
+    public function testChangingTheEnglishDefaultVoiceIsAMissForEnglishOnly(): void
+    {
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $before = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('fr-voice', 'en-voice-old'), $this->cacheDir, new NullLogger());
+        $after = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('fr-voice', 'en-voice-new'), $this->cacheDir, new NullLogger());
+
+        self::body($before->stream('Oil change logged.', Locale::En));
+        self::body($after->stream('Oil change logged.', Locale::En));
+        $this->assertSame(2, $inner->calls, 'A new English default voice must not replay audio cached under the old one.');
+    }
+
+    public function testChangingTheEnglishDefaultVoiceKeepsTheFrenchEntries(): void
+    {
+        $inner = new CountingSpeechClient(new SpokenAudio('wav-bytes', 'audio/wav'));
+        $before = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('fr-voice', 'en-voice-old'), $this->cacheDir, new NullLogger());
+        $after = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('fr-voice', 'en-voice-new'), $this->cacheDir, new NullLogger());
+
+        self::body($before->stream('Vidange enregistrée.', Locale::Fr));
+        self::body($after->stream('Vidange enregistrée.', Locale::Fr));
+
+        $this->assertSame(1, $inner->calls);
+    }
+
+    public function testChangingTheEnglishDefaultVoiceInvalidatesTheEnglishVoiceList(): void
+    {
+        $inner = new VoicesCountingSpeechClient([new SpeechVoice('v1', 'Claire')]);
+        $before = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('fr-voice', 'en-voice-old'), $this->cacheDir, new NullLogger());
+        $after = new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('fr-voice', 'en-voice-new'), $this->cacheDir, new NullLogger());
+
+        $before->voices(Locale::En);
+        $after->voices(Locale::En);
+
+        $this->assertSame(2, $inner->voicesCalls);
+    }
+
     private function client(SpeechClient $inner): CachingSpeechClient
     {
-        return new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', 'test-voice-id', $this->cacheDir, new NullLogger());
+        return new CachingSpeechClient($inner, 'elevenlabs', 'eleven_flash_v2_5', new DefaultVoices('test-voice-id'), $this->cacheDir, new NullLogger());
     }
 
     private static function body(SpeechStream $stream): string

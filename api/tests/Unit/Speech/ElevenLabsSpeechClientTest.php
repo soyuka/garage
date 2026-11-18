@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Tests\Unit\Speech;
 
 use App\I18n\Locale;
+use App\Speech\DefaultVoices;
 use App\Speech\ElevenLabsSpeechClient;
 use App\Speech\SpeechUnavailable;
 use App\Speech\SpeechVoice;
@@ -127,14 +128,45 @@ final class ElevenLabsSpeechClientTest extends TestCase
 
         $this->expectException(SpeechUnavailable::class);
 
-        (new ElevenLabsSpeechClient($http, '', 'voice-id', 'eleven_flash_v2_5'))->stream('x', Locale::Fr);
+        (new ElevenLabsSpeechClient($http, '', new DefaultVoices('voice-id'), 'eleven_flash_v2_5'))->stream('x', Locale::Fr);
     }
 
     public function testSpeedOutsideElevenLabsSupportedRangeIsRejected(): void
     {
         $this->expectException(\InvalidArgumentException::class);
 
-        new ElevenLabsSpeechClient(new MockHttpClient(), 'api-key', 'voice-id', 'eleven_v3', 1.21);
+        new ElevenLabsSpeechClient(new MockHttpClient(), 'api-key', new DefaultVoices('voice-id'), 'eleven_v3', 1.21);
+    }
+
+    public function testStreamFallsBackToTheLocaleDefaultVoice(): void
+    {
+        $sent = [];
+        $http = new MockHttpClient(static function (string $method, string $url) use (&$sent): MockResponse {
+            $sent[] = $url;
+
+            return new MockResponse(['one']);
+        });
+        $client = $this->client($http, voiceId: 'v-fr', englishVoiceId: 'v-en');
+
+        $client->stream('x', Locale::En);
+        $client->stream('x', Locale::Fr);
+
+        $this->assertStringContainsString('/text-to-speech/v-en/', $sent[0]);
+        $this->assertStringContainsString('/text-to-speech/v-fr/', $sent[1]);
+    }
+
+    public function testVoicesFallbackAndDefaultOrderFollowTheLocale(): void
+    {
+        $http = new MockHttpClient(new MockResponse('', ['http_code' => 500]));
+        $this->assertEquals([new SpeechVoice('v-en', 'ElevenLabs')], $this->client($http, voiceId: 'v-fr', englishVoiceId: 'v-en')->voices(Locale::En));
+
+        $http = new MockHttpClient(new MockResponse((string) json_encode(['voices' => [
+            ['voice_id' => 'v1', 'name' => 'Alice', 'labels' => ['language' => 'en']],
+            ['voice_id' => 'v-en', 'name' => 'Bea', 'labels' => ['language' => 'en']],
+        ]])));
+        $voices = $this->client($http, voiceId: 'v-fr', englishVoiceId: 'v-en')->voices(Locale::En);
+
+        $this->assertSame('v-en', $voices[0]->id);
     }
 
     public function testStreamUsesTheRequestedVoiceOverTheConfiguredOne(): void
@@ -218,8 +250,8 @@ final class ElevenLabsSpeechClientTest extends TestCase
         $this->assertEquals([new SpeechVoice('v-default', 'ElevenLabs')], $voices);
     }
 
-    private function client(MockHttpClient $http, string $voiceId = 'voice-id'): ElevenLabsSpeechClient
+    private function client(MockHttpClient $http, string $voiceId = 'voice-id', string $englishVoiceId = ''): ElevenLabsSpeechClient
     {
-        return new ElevenLabsSpeechClient($http, 'api-key', $voiceId, 'eleven_v3', 1.05);
+        return new ElevenLabsSpeechClient($http, 'api-key', new DefaultVoices($voiceId, $englishVoiceId), 'eleven_v3', 1.05);
     }
 }

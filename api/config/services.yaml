@@ -123,10 +123,15 @@ services:
 
     # The voice (docs/voice-plan.md): ElevenLabs only since pocket-tts was removed (2026-11-09,
     # docs/archive/pocket-tts.md). No key = Capability::Voice off, checked by SpeechController.
+    App\Speech\DefaultVoices:
+        arguments:
+            $default: '%env(ELEVENLABS_VOICE_ID)%'
+            $english: '%env(ELEVENLABS_VOICE_ID_EN)%'
+
     App\Speech\ElevenLabsSpeechClient:
         arguments:
             $apiKey: '%env(ELEVENLABS_API_KEY)%'
-            $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
+            $defaultVoices: '@App\Speech\DefaultVoices'
             $model: '%env(ELEVENLABS_MODEL)%'
             $speed: '%env(float:ELEVENLABS_SPEED)%'
 
@@ -137,7 +142,7 @@ services:
             $inner: '@App\Speech\ElevenLabsSpeechClient'
             $backend: 'elevenlabs'
             $model: '%env(ELEVENLABS_MODEL)%'
-            $voice: '%env(ELEVENLABS_VOICE_ID)%'
+            $defaultVoices: '@App\Speech\DefaultVoices'
             $speed: '%env(float:ELEVENLABS_SPEED)%'
             # Namespaced per environment — a shared path let the test suite's fake voice list
             # (docs/voice-plan.md § Phase 2 note, defect 2026-09-06) leak into the live cache.
@@ -301,7 +306,7 @@ when@test:
             arguments:
                 $http: '@App\Tests\Mock\RecordingSpeechHttpClient'
                 $apiKey: '%env(ELEVENLABS_API_KEY)%'
-                $voiceId: '%env(ELEVENLABS_VOICE_ID)%'
+                $defaultVoices: '@App\Speech\DefaultVoices'
                 $model: '%env(ELEVENLABS_MODEL)%'
                 $speed: '%env(float:ELEVENLABS_SPEED)%'
 

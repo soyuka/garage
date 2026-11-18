@@ -8,6 +8,7 @@ use App\Capability\Capabilities;
 use App\Capability\Capability;
 use App\I18n\Locale;
 use App\Security\OwnerRateLimit;
+use App\Speech\DefaultVoices;
 use App\Speech\SpeechClient;
 use App\Speech\SpeechStream;
 use App\Speech\SpeechUnavailable;
@@ -54,6 +55,7 @@ final readonly class SpeechController
         private OwnerRateLimit $rateLimit,
         private RateLimiterFactoryInterface $speechLimiter,
         private RateLimiterFactoryInterface $speechGlobalLimiter,
+        private DefaultVoices $defaultVoices,
     ) {
     }
 
@@ -134,13 +136,13 @@ final readonly class SpeechController
 
     /**
      * A stale or foreign voice id (a picker rendered before a vendor voice was retired, or one
-     * pasted by hand) must never 400 the endpoint — it just falls back to the backend default,
+     * pasted by hand) must never 400 the endpoint — it just falls back to the locale's default voice,
      * exactly like requesting no voice at all.
      */
-    private function resolveVoice(?string $requested, Locale $locale): ?string
+    private function resolveVoice(?string $requested, Locale $locale): string
     {
         if (null === $requested || '' === $requested) {
-            return null;
+            return $this->defaultVoices->for($locale);
         }
 
         foreach ($this->speech->voices($locale) as $voice) {
@@ -149,7 +151,7 @@ final readonly class SpeechController
             }
         }
 
-        return null;
+        return $this->defaultVoices->for($locale);
     }
 
     private static function send(SpeechStream $stream): void
