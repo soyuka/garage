@@ -407,7 +407,7 @@ A 56px blue circle drawn closed as a 2px stroke (stroke-dashoffset, 300ms), a 1p
 A full-width 64px sticky strip at the bottom of Entretien.
 - **Axis:** a 1px hairline, with mono end readings. The done run is a 3px Ink Muted bar at 55%.
 - **Today:** a 1px Ink marker labelled "aujourd'hui" and the reading at 10.5px.
-- **Ticks:** 15×19px buttons carrying a state shape. Labels alternate above and below at 10.5px muted; due and overdue labels take their state colour. Estimated ticks drop to 70%. An overdue tick stacks above its neighbours.
+- **Ticks:** 15×19px buttons carrying a state shape. Labels alternate above and below at 10.5px muted; due and overdue labels take their state colour. Estimated ticks drop to 70%. An overdue tick stacks above its neighbours. Jobs at the same reading and state are one tick: the edge of a second square peeks out behind its mark, the label names one job and counts the rest in mono (`90 000 km Filtre à huile +6`), and each click walks to the next job of the stack. A label that cannot fit in either lane is dropped to its tick, never overprinted.
 - **Selected tick:** a blue border; its label turns Ink 700 with a blue outline.
 - **Keys:** J and K hints at the right.
 

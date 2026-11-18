@@ -1062,6 +1062,28 @@ body {
 .w-tick--over .w-tick-label {
   color: var(--w-over);
 }
+/* Several jobs at one reading: the edge of a second square peeks out behind the mark, like a stacked deck. */
+.w-tick.is-stack::before {
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 7px;
+  width: 12px;
+  height: 12px;
+  border-right: 1px solid var(--w-ink-2);
+  border-bottom: 1px solid var(--w-ink-2);
+  pointer-events: none;
+}
+.w-tick--over.is-stack::before {
+  border-color: var(--w-over);
+}
+.w-tick--due.is-stack::before {
+  border-color: var(--w-due);
+}
+.w-tick-more {
+  margin-left: 2px;
+  color: var(--w-ink-2);
+}
 .w-track-note {
   position: absolute;
   right: 14px;

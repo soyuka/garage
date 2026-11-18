@@ -10,8 +10,6 @@ export interface LabelBox {
   right: boolean;
   /** Placed before lower priorities; ties keep their order. */
   priority?: number;
-  /** Placed in its preferred lane even when both lanes are taken. */
-  keep?: boolean;
 }
 
 export interface Reserved {
@@ -37,7 +35,7 @@ export function placeLabels(labels: LabelBox[], reserved: Reserved[]): Record<st
   for (const { l } of ordered) {
     const { from, to } = span(l);
     const other: Lane = l.prefer === 'up' ? 'down' : 'up';
-    const lane = free(l.prefer, from, to) ? l.prefer : free(other, from, to) ? other : l.keep ? l.prefer : null;
+    const lane = free(l.prefer, from, to) ? l.prefer : free(other, from, to) ? other : null;
     out[l.id] = lane;
     if (lane) taken.push({ lane, from, to });
   }

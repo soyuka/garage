@@ -6,6 +6,7 @@ import { reading, sentenceCase } from './describe';
 import type { KmTrack as Track, Tick } from './kmTrack';
 import { StateShape } from './StateMark';
 import { spreadTicks } from './spreadTicks';
+import { groupTicks, nextInGroup, type TickGroup } from './tickGroups';
 import { placeLabels, type LabelBox, type Lane, type Reserved } from './trackLabels';
 
 let measurer: CanvasRenderingContext2D | null = null;
@@ -33,8 +34,11 @@ function pct(value: number, track: Track): number {
 export function TrackStrip({ track, selectedId, onSelect }: { track: Track; selectedId: string | null; onSelect: (tick: Tick) => void }) {
   const t = useT();
   const [locale] = useLocale();
-  const ticks = useMemo(() => trackTicks(track), [track]);
+  const groups = useMemo(() => groupTicks(trackTicks(track)), [track]);
   const title = (tick: Tick) => sentenceCase(tick.label ?? (tick.types.length > 0 ? tick.types.map((ty) => serviceLabel(ty, locale)).join(' · ') : '—'));
+  // A group names its selected job, else its first, and counts the rest.
+  const shown = (g: TickGroup) => g.ticks.find((tk) => tk.id === selectedId) ?? g.ticks[0];
+  const more = (g: TickGroup) => (g.ticks.length > 1 ? ` +${g.ticks.length - 1}` : '');
 
   const rail = useRef<HTMLDivElement>(null);
   const [railWidth, setRailWidth] = useState(0);
@@ -50,29 +54,28 @@ export function TrackStrip({ track, selectedId, onSelect }: { track: Track; sele
   const drawn = useMemo(() => {
     const out = new Map<string, number>();
     if (railWidth <= 0) return out;
-    const xs = spreadTicks(ticks.map((tk) => (pct(tk.value, track) / 100) * railWidth), TICK_GAP, 0, railWidth);
-    ticks.forEach((tk, i) => out.set(tk.id, xs[i]));
+    const xs = spreadTicks(groups.map((g) => (pct(g.value, track) / 100) * railWidth), TICK_GAP, 0, railWidth);
+    groups.forEach((g, i) => out.set(g.id, xs[i]));
     return out;
-  }, [ticks, track, railWidth]);
+  }, [groups, track, railWidth]);
 
   const lanes = useMemo(() => {
     if (railWidth <= 0) return {} as Record<string, Lane | null>;
-    const boxes: LabelBox[] = ticks.map((tick) => {
-      const width = textWidth(`${reading(tick.value, track.unit, locale)} ${title(tick)}`);
-      // State labels outrank history, and an overdue label is never dropped.
-      const priority = tick.id === selectedId ? 4 : STATE_PRIORITY[tick.state];
-      const tx = drawn.get(tick.id) ?? 0;
-      return { id: tick.id, x: tx, width, prefer: tick.state === 'done' ? 'up' : 'down', right: tx + width > railWidth, priority, keep: tick.state === 'over' };
+    const boxes: LabelBox[] = groups.map((g) => {
+      const width = textWidth(`${reading(g.value, track.unit, locale)} ${title(shown(g))}${more(g)}`);
+      // State labels outrank history; a label that cannot fit stays a tick, never an overprint.
+      const priority = g.ticks.some((tk) => tk.id === selectedId) ? 4 : STATE_PRIORITY[g.state];
+      const tx = drawn.get(g.id) ?? 0;
+      return { id: g.id, x: tx, width, prefer: g.state === 'done' ? 'up' : 'down', right: tx + width > railWidth, priority };
     });
-    const ordered = boxes;
     const reserved: Reserved[] = [];
     if (track.today !== null) {
       const at = (pct(track.today, track) / 100) * railWidth;
       reserved.push({ lane: 'up', from: at - 2, to: at + 6 + textWidth(`${t.workshop.track.today} ${reading(track.today, track.unit, locale)}`) });
     }
-    return placeLabels(ordered, reserved);
+    return placeLabels(boxes, reserved);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticks, track, railWidth, selectedId, locale, drawn]);
+  }, [groups, track, railWidth, selectedId, locale, drawn]);
 
   if (track.empty) {
     return (
@@ -98,30 +101,34 @@ export function TrackStrip({ track, selectedId, onSelect }: { track: Track; sele
           </div>
         )}
         <div className="w-track-ticks" role="group" aria-label={`${unitLabel} · ${t.workshop.track.hint}`}>
-          {ticks.map((tick) => {
-            const selected = tick.id === selectedId;
-            const lane = lanes[tick.id] ?? null;
-            const px = drawn.get(tick.id);
-            const at = px !== undefined && railWidth > 0 ? (px / railWidth) * 100 : pct(tick.value, track);
+          {groups.map((g, gi) => {
+            const tick = shown(g);
+            const selected = g.ticks.some((tk) => tk.id === selectedId);
+            const lane = lanes[g.id] ?? null;
+            const px = drawn.get(g.id);
+            const at = px !== undefined && railWidth > 0 ? (px / railWidth) * 100 : pct(g.value, track);
             const name = title(tick);
-            const value = reading(tick.value, track.unit, locale);
-            const stateWord = t.workshop.state[tick.state];
+            const names = g.ticks.map(title).join(', ');
+            const value = reading(g.value, track.unit, locale);
+            const stateWord = t.workshop.state[g.state];
+            const count = more(g);
             return (
               <button
-                key={tick.id}
+                key={g.id}
                 type="button"
-                className={`w-tick w-tick--${tick.state}${lane === 'up' ? ' is-up' : ' is-down'}${selected ? ' is-selected' : ''}${tick.estimated ? ' is-estimated' : ''}${railWidth > 0 && (at / 100) * railWidth + textWidth(`${value} ${name}`) > railWidth ? ' is-right' : ''}`}
+                className={`w-tick w-tick--${g.state}${lane === 'up' ? ' is-up' : ' is-down'}${selected ? ' is-selected' : ''}${tick.estimated ? ' is-estimated' : ''}${g.ticks.length > 1 ? ' is-stack' : ''}${railWidth > 0 && (at / 100) * railWidth + textWidth(`${value} ${name}${count}`) > railWidth ? ' is-right' : ''}`}
                 style={{ left: `${at}%` }}
-                tabIndex={selected || (selectedId === null && tick === ticks[0]) ? 0 : -1}
+                tabIndex={selected || (selectedId === null && gi === 0) ? 0 : -1}
                 aria-pressed={selected}
-                aria-label={t.workshop.track.tick(name, value, tick.estimated ? `${stateWord}, ${t.workshop.track.estimated}` : stateWord)}
-                title={[`${value} ${name}`, tick.date ? formatDate(tick.date, locale) : null].filter(Boolean).join(' · ')}
-                onClick={() => onSelect(tick)}
+                aria-label={t.workshop.track.tick(names, value, tick.estimated ? `${stateWord}, ${t.workshop.track.estimated}` : stateWord)}
+                title={[`${value} ${names}`, tick.date ? formatDate(tick.date, locale) : null].filter(Boolean).join(' · ')}
+                onClick={() => onSelect(nextInGroup(g, selectedId))}
               >
-                <StateShape state={tick.state} size={tick.state === 'over' ? 12 : 9} />
+                <StateShape state={g.state} size={g.state === 'over' ? 12 : 9} />
                 {lane && (
                   <span className="w-tick-label" aria-hidden="true">
                     <span className="w-data">{value}</span> {name}
+                    {count && <span className="w-data w-tick-more">{count}</span>}
                   </span>
                 )}
               </button>

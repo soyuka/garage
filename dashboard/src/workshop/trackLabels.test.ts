@@ -37,8 +37,9 @@ describe('placeLabels — priority', () => {
     expect(placeLabels([done, due, planned], [])).toEqual({ due: 'down', planned: 'up', done: null });
   });
 
-  it('never drops a must-keep label, even when both lanes are taken', () => {
-    const over = { id: 'over', x: 100, width: 80, prefer: 'down' as const, right: false, priority: 3, keep: true };
-    expect(placeLabels([over], [{ lane: 'up', from: 90, to: 200 }, { lane: 'down', from: 90, to: 200 }])).toEqual({ over: 'down' });
+  it('never overprints: two overdue labels on one spot keep one, the other stays a tick', () => {
+    const a = { id: 'a', x: 100, width: 80, prefer: 'down' as const, right: false, priority: 3 };
+    const b = { id: 'b', x: 104, width: 80, prefer: 'down' as const, right: false, priority: 3 };
+    expect(placeLabels([a, b], [{ lane: 'up', from: 90, to: 200 }])).toEqual({ a: 'down', b: null });
   });
 });
