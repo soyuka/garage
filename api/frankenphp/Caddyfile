@@ -40,7 +40,8 @@
 	# Request bodies are capped at the edge, 1 MiB by default. Only the routes that take a file get
 	# more, each sized to the app's own cap plus the envelope, so an oversized body is cut before PHP
 	# buffers it: vehicle documents (VehicleDocumentRecorder::MAX_BYTES 50 MiB, multipart), bills
-	# (UploadMaintenanceAttachmentController::MAX_BYTES 10 MiB, multipart), dictation
+	# (UploadMaintenanceAttachmentController::MAX_BYTES 10 MiB, multipart), agent turns
+	# (AgentTurnController::MAX_FILES 5 x AcceptedUpload::MAX_BYTES 10 MiB, multipart), dictation
 	# (TranscriptionController::MAX_BYTES 1 MiB, raw body). conf.d/10-app.ini mirrors the largest.
 	@vehicleDocumentUpload path /garage/vehicles/*/documents
 	request_body @vehicleDocumentUpload {
@@ -50,11 +51,15 @@
 	request_body @billUpload {
 		max_size 11MiB
 	}
+	@turnUpload path /agent/turn
+	request_body @turnUpload {
+		max_size 52MiB
+	}
 	@dictation path /stt
 	request_body @dictation {
 		max_size 2MiB
 	}
-	@ordinaryBody not path /garage/vehicles/*/documents /garage/maintenance-records/*/attachments /stt
+	@ordinaryBody not path /garage/vehicles/*/documents /garage/maintenance-records/*/attachments /agent/turn /stt
 	request_body @ordinaryBody {
 		max_size 1MiB
 	}
