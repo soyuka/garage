@@ -33,6 +33,7 @@
         "symfony/mercure-bundle": "^0.7",
         "symfony/messenger": "8.1.*",
         "symfony/mime": "8.1.*",
+        "symfony/process": "8.1.*",
         "symfony/psr-http-message-bridge": "8.1.*",
         "symfony/rate-limiter": "8.1.*",
         "symfony/runtime": "8.1.*",

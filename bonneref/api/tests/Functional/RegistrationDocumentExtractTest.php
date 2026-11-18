@@ -105,7 +105,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
     {
         $this->raiseMemoryLimit('512M');
         $client = static::createClient();
-        $this->post($client, "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R>>endobj\n".str_repeat(' ', 5 * 1024 * 1024)."trailer<</Root 1 0 R>>\n%%EOF", 'application/pdf');
+        $this->post($client, "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 1/Kids[3 0 R]>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R>>endobj\n".str_repeat(' ', 5 * 1024 * 1024)."\ntrailer<</Root 1 0 R>>\n%%EOF", 'application/pdf');
 
         $this->assertResponseStatusCodeSame(200);
     }
@@ -113,7 +113,7 @@ final class RegistrationDocumentExtractTest extends AppTestCase
     public function testRefusesAPdfOverTwoPages(): void
     {
         $client = static::createClient();
-        $this->post($client, "%PDF-1.4\n2 0 obj<</Type/Pages/Count 3>>endobj\n".str_repeat("<</Type/Page/Parent 2 0 R>>\n", 3).'%%EOF', 'application/pdf');
+        $this->post($client, "%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 3/Kids[3 0 R 4 0 R 5 0 R]>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R>>endobj\n4 0 obj<</Type/Page/Parent 2 0 R>>endobj\n5 0 obj<</Type/Page/Parent 2 0 R>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF", 'application/pdf');
 
         $this->assertResponseStatusCodeSame(422);
         $this->assertSame(0, $this->reader()->calls);
