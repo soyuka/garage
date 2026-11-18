@@ -164,6 +164,17 @@ services:
                 elevenlabs: '@App\Transcription\ElevenLabsTranscriptionClient'
             $backend: '%env(enum:App\Transcription\TranscriptionBackend:STT_BACKEND)%'
 
+    # The bundle's Anthropic contract plus the attachment prompt-cache breakpoint. Not autoconfigured:
+    # it belongs to this contract's serializer, not to the app's.
+    App\Agent\Attachment\AttachmentCacheBreakpointNormalizer:
+        autoconfigure: false
+
+    ai.platform.contract.anthropic:
+        class: Symfony\AI\Platform\Contract
+        factory: [Symfony\AI\Platform\Bridge\Anthropic\Contract\AnthropicContract, create]
+        arguments:
+            - ['@App\Agent\Attachment\AttachmentCacheBreakpointNormalizer']
+
     # Qwen counterpart: record the live model on the debug journal off each call.
     # Same lazy+proxy contract as above — the generic platform is wired lazy+proxy by AiBundle.
     App\Agent\QwenModelLogger:
