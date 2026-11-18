@@ -26,6 +26,19 @@ describe('resolveMesh — make/model specifics win', () => {
     expect(resolveMesh(v('car', 'PEUGEOT', '406')).url).toBe('/mazda6-gh-web.glb');
     expect(resolveMesh(v('car', 'PEUGEOT', '2008')).url).toBe('/mazda6-gh-web.glb');
   });
+  it('a BMW F 800 GS / GSA in its spellings → the F800GSA mesh, moto edges, no yaw', () => {
+    for (const model of ['F800GSA', 'F 800 GS Adventure', 'f800 gs', 'F800GS']) {
+      const m = resolveMesh(v('moto', 'BMW', model));
+      expect(m.url).toBe('/bmw-f800gs-adventure-web.glb');
+      expect(m.thumbUrl).toBe('/bmw-f800gs-adventure-thumb.glb');
+      expect(m.edgeAngle).toBe(45);
+      expect(m.rotationY).toBeUndefined();
+    }
+  });
+  it('another BMW moto is NOT the F800GS — it falls back to the moto default', () => {
+    expect(resolveMesh(v('moto', 'BMW', 'F 800 R')).url).toBe('/moto-default-web.glb');
+    expect(resolveMesh(v('moto', 'BMW', 'R 1250 GS')).url).toBe('/moto-default-web.glb');
+  });
   it('a make/model match wins even when the vehicleType would route elsewhere', () => {
     expect(resolveMesh(v('cv', 'Renault', 'Espace V')).url).toBe('/renault-espace-iv-web.glb');
   });
