@@ -150,6 +150,11 @@ final readonly class SivClient
             }
 
             $envelope = json_decode($body, true);
+            if (404 === $status) {
+                // The vendor sends an unknown plate as HTTP 404 (body: the usual envelope, code_erreur 404), not as a 200.
+                return [...(\is_array($envelope) ? $envelope : []), 'code_erreur' => 404];
+            }
+
             if (\is_array($envelope) && 200 === $status) {
                 return $envelope;
             }

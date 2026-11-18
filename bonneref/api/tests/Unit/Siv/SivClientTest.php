@@ -67,6 +67,33 @@ final class SivClientTest extends TestCase
         $this->assertSame(1, $calls, 'an unknown plate must not re-hit the paid SIV API on repeat lookups');
     }
 
+    #[DataProvider('http404Bodies')]
+    public function testHttp404IsAnUnknownPlateNegativelyCachedAndNotRefetched(string $body): void
+    {
+        $calls = 0;
+        $http = new MockHttpClient(function () use (&$calls, $body): MockResponse {
+            ++$calls;
+
+            return new MockResponse($body, ['http_code' => 404]);
+        });
+        $client = new SivClient($http, 'token', new InMemorySivLookupStore(), UnlimitedQuota::create());
+
+        $this->assertNull($client->lookup('DF162TC'));
+        $this->assertNull($client->lookup('DF162TC'));
+
+        $this->assertSame(1, $calls, 'an HTTP 404 must not re-hit the paid SIV API on repeat lookups');
+    }
+
+    /**
+     * @return iterable<string, array{string}>
+     */
+    public static function http404Bodies(): iterable
+    {
+        yield 'json envelope' => [json_encode(['code_erreur' => 404, 'message' => 'plaque inconnue'], JSON_THROW_ON_ERROR)];
+        yield 'empty body' => [''];
+        yield 'html body' => ['<html><body>Not Found</body></html>'];
+    }
+
     public function testTransientErrorIsNotCached(): void
     {
         $calls = 0;
