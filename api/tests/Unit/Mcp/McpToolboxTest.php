@@ -46,15 +46,15 @@ final class McpToolboxTest extends TestCase
         $this->assertSame(1, $toolbox->driveCount);
     }
 
-    public function testExcludedBrowseRootsAreFilteredOut(): void
+    public function testTheMakeAndModelBrowseIsVisibleSoAPlateMissCanStillReachTheCatalog(): void
     {
         $toolbox = new ScriptedMcpToolbox($this->server(), [
-            ['result' => ['tools' => [['name' => 'list_vehicles'], ['name' => 'list_makes']]]],
+            ['result' => ['tools' => [['name' => 'list_vehicles'], ['name' => 'list_makes'], ['name' => 'list_models'], ['name' => 'list_cars']]]],
         ]);
 
         $names = array_map(static fn ($t) => $t->getName(), $toolbox->getTools());
 
-        $this->assertSame(['list_vehicles'], $names);
+        $this->assertSame(['list_vehicles', 'list_makes', 'list_models', 'list_cars'], $names);
     }
 
     /**

@@ -37,17 +37,9 @@ class McpToolbox implements ToolboxInterface
      * update_vehicle/plan_maintenance when 586b223 added them without updating this list — the prompt
      * then commanded tools the agent could not see, so the usage write and the checklist no-op'd.).
      *
-     * Excluded from the garage agent: the make/model browse roots (lookup_plate / list_cars resolve the
-     * carId directly). list_part_categories / list_articles stay
-     * visible: the service flow uses the single get_service_parts call, but brand and reference
-     * questions the open tasks cannot answer are routed to the catalog walk by the system prompt, so
-     * the agent must be able to call it.
+     * list_makes / list_models stay visible: list_cars needs their makeId and modelId, and they are the
+     * only route to a carId when the plate registry has no record (every motorbike).
      */
-    private const BROWSE_ROOTS = [
-        'list_makes',
-        'list_models',
-    ];
-
     private const EXCLUDED = [
         // The pilot channel ({@see \App\ApiResource\Dashboard}) — the dashboard render intents exposed
         // to EXTERNAL MCP hosts. The agent already has each of them as an `#[AsTool]` bound to the
@@ -87,9 +79,6 @@ class McpToolbox implements ToolboxInterface
                 continue;
             }
             if (\in_array($definition['name'], self::EXCLUDED, true)) {
-                continue;
-            }
-            if (\in_array($definition['name'], self::BROWSE_ROOTS, true)) {
                 continue;
             }
             $description = $definition['description'] ?? '';

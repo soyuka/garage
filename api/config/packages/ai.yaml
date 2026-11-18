@@ -240,7 +240,11 @@ ai:
 
                     CATALOG (TecDoc): get_service_parts(carId, service) returns, in one call, the part
                     categories with their articles (brand + number) for service ∈ oil_change |
-                    filters | brakes | spark_plugs. lookup_plate / list_cars yield the carId. The oil-filter
+                    filters | brakes | spark_plugs. lookup_plate yields the carId; when it misses (a
+                    motorbike, a vehicle without a plate) walk list_makes → list_models → list_cars with the
+                    vehicle's carType (MC for a motorbike: the maker is often a separate entry, e.g.
+                    "BMW MOTORCYCLES"), then store the carId with update_vehicle and pass the same carType to
+                    every catalog call. Never web-search a part before trying that walk. The oil-filter
                     reference comes inside the oil_change result, so attach it from there rather than
                     web-searching a reference the catalog already gives. For a category OUTSIDE those four
                     services, or to enumerate every brand making a part, use list_part_categories then
