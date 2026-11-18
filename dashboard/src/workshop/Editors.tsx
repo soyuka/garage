@@ -4,7 +4,7 @@ import { formatDate } from '../format';
 import { serviceLabel, SERVICE_TYPES } from '../labels';
 import { actionVerb, formatCadence, ruleTitle } from '../schedule';
 import { taskTitle } from '../tasks';
-import type { DocumentSpec, Iri, MaintenanceAttachment, MaintenanceRecord, PlannedTask, ServiceAction, ServiceRule, VehicleBundle, VehicleSummary } from '../types';
+import type { DocumentSpec, Iri, MaintenanceAttachment, MaintenanceRecord, PlannedPart, PlannedTask, ServiceAction, ServiceRule, VehicleBundle, VehicleSummary } from '../types';
 import { cadenceUnit, maintUnitFor } from '../units';
 import { defaultUsageUnit } from '../edit';
 import { isArchived } from './archive';
@@ -37,6 +37,7 @@ import {
   type TaskPartDraft,
   type VehicleDraft,
   type VisitDraft,
+  type VisitSeed,
 } from './editForms';
 import { PartialSave, useEditHost, type EditHost, type EditorTarget } from './edits';
 import { Close } from './Icons';
@@ -235,7 +236,7 @@ interface BillUpload {
   error: string | null;
 }
 
-export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: EditHost; bundle: VehicleBundle; recordId: Iri | null; onOpenBill: (doc: DocumentSpec) => void }) {
+export function VisitEditor({ host, bundle, recordId, seed = null, onOpenBill }: { host: EditHost; bundle: VehicleBundle; recordId: Iri | null; seed?: VisitSeed | null; onOpenBill: (doc: DocumentSpec) => void }) {
   const t = useT();
   const [locale] = useLocale();
   const e = t.workshop.edit;
@@ -243,7 +244,7 @@ export function VisitEditor({ host, bundle, recordId, onOpenBill }: { host: Edit
   const [iri, setIri] = useState<Iri | null>(recordId);
   const record: MaintenanceRecord | null = iri ? (bundle.records.find((r) => r.id === iri) ?? null) : null;
   const unit = visitUnit(record, bundle.vehicle.usageUnit, bundle.vehicle.vehicleType);
-  const [draft, setDraft] = useState<VisitDraft>(() => visitDraft(record, todayIso()));
+  const [draft, setDraft] = useState<VisitDraft>(() => visitDraft(record, todayIso(), seed));
   const [pending, setPending] = useState<File[]>([]);
   const [uploads, setUploads] = useState<BillUpload[]>([]);
   const [attached, setAttached] = useState<MaintenanceAttachment[]>([]);
@@ -642,7 +643,7 @@ export function TaskEditor({ host, bundle, taskId }: { host: EditHost; bundle: V
 export function OpenEditor({ target, bundle, onOpenBill }: { target: EditorTarget; bundle: VehicleBundle; onOpenBill: (doc: DocumentSpec) => void }) {
   const host = useEditHost();
   if (!host) return null;
-  if (target.kind === 'visit') return <VisitEditor host={host} bundle={bundle} recordId={target.recordId} onOpenBill={onOpenBill} />;
+  if (target.kind === 'visit') return <VisitEditor host={host} bundle={bundle} recordId={target.recordId} seed={target.seed ?? null} onOpenBill={onOpenBill} />;
   if (target.kind === 'task') return <TaskEditor host={host} bundle={bundle} taskId={target.taskId} />;
   return <RuleEditor host={host} bundle={bundle} seed={target.type ? { type: target.type, action: target.action, component: target.component } : null} />;
 }
@@ -825,7 +826,7 @@ export function NewVehicleForm({ onCancel }: { onCancel: () => void }) {
 // ── Entry points ────────────────────────────────────────────────────────────────
 
 /** "Modifier" (a planned task) and "Règle" (its cadence) beside a job, wherever a job is listed. */
-export function JobEditActions({ job, bundle, variant = 'row' }: { job: { type: string; taskId: Iri | null; label: string | null }; bundle: VehicleBundle; variant?: 'row' | 'button' }) {
+export function JobEditActions({ job, bundle, variant = 'row' }: { job: { type: string; taskId: Iri | null; label: string | null; parts?: PlannedPart[] }; bundle: VehicleBundle; variant?: 'row' | 'button' }) {
   const t = useT();
   const [locale] = useLocale();
   const host = useEditHost();
@@ -836,6 +837,15 @@ export function JobEditActions({ job, bundle, variant = 'row' }: { job: { type: 
   const taskId = job.taskId;
   return (
     <span className={variant === 'row' ? 'w-row-acts' : 'w-edit-acts'}>
+      {/* Done logs the visit, which closes the matching task server-side; the reading stays the operator's to confirm. */}
+      <button
+        type="button"
+        className="w-act"
+        aria-label={e.doneJob(name)}
+        onClick={() => host.open({ kind: 'visit', recordId: null, seed: { reading: bundle.vehicle.usageValue ?? null, type: job.type, label: job.label, parts: job.parts ?? [] } })}
+      >
+        {e.done}
+      </button>
       {taskId && (
         <button type="button" className={cls} aria-label={e.editTask(name)} onClick={() => host.open({ kind: 'task', taskId })}>
           {e.edit}

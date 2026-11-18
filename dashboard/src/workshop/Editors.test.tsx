@@ -5,8 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setCurrentLocale } from '../i18n/locale';
 import { messages } from '../i18n/messages';
 import type { MaintenanceAttachment, MaintenanceRecord, VehicleBundle } from '../types';
-import { VisitEditor } from './Editors';
-import { offlineEdits, type EditHost, type WorkshopEdits } from './edits';
+import { JobEditActions, VisitEditor } from './Editors';
+import { EditContext, offlineEdits, type EditHost, type WorkshopEdits } from './edits';
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -116,5 +116,24 @@ describe('VisitEditor bills', () => {
 
     expect(saveVisit).not.toHaveBeenCalled();
     expect(host.querySelector('[role="alert"]')?.textContent).toContain(e.errors.items);
+  });
+});
+
+describe('JobEditActions done', () => {
+  it('opens a new visit seeded with the job, its planned parts and the current reading', () => {
+    const open = vi.fn();
+    const editHost: EditHost = { edits: offlineEdits('offline'), open, close: vi.fn() };
+    const b = { ...bundle(), vehicle: { ...bundle().vehicle, usageValue: 90000 } } as VehicleBundle;
+    const parts = [{ id: 'p1', ref: 'HF160', qty: 1 }];
+    act(() => {
+      root.render(
+        <EditContext.Provider value={editHost}>
+          <JobEditActions job={{ type: 'oil_filter', taskId: null, label: null, parts }} bundle={b} />
+        </EditContext.Provider>,
+      );
+    });
+    const done = [...host.querySelectorAll('button')].find((el) => el.textContent === e.done);
+    act(() => done?.click());
+    expect(open).toHaveBeenCalledWith({ kind: 'visit', recordId: null, seed: { reading: 90000, type: 'oil_filter', label: null, parts } });
   });
 });

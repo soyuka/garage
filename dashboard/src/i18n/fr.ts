@@ -964,6 +964,8 @@ export const fr = {
       edit: 'Modifier',
       editVisit: (title: string) => `Modifier la visite : ${title}`,
       editTask: (title: string) => `Modifier la tâche : ${title}`,
+      done: 'Fait',
+      doneJob: (title: string) => `Enregistrer ${title} comme fait`,
       editRule: (title: string) => `Règle d'entretien : ${title}`,
       editVehicle: "Modifier l'identité du véhicule",
       rule: 'Règle',

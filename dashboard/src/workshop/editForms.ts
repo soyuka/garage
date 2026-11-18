@@ -38,7 +38,27 @@ export interface VisitDraft {
 export const blankPart = (): PartDraft => ({ ref: '', brand: '', label: '', qty: '', price: '' });
 export const blankItem = (): ItemDraft => ({ type: '', label: '', parts: [] });
 
-export function visitDraft(record: MaintenanceRecord | null, today: string): VisitDraft {
+/** A job marked done: the visit it becomes, before the operator corrects the reading or adds a cost. */
+export interface VisitSeed {
+  reading: number | null;
+  type: string;
+  label: string | null;
+  parts: PlannedPart[];
+}
+
+const partDraft = (p: { ref?: string | null; brand?: string | null; label?: string | null; qty?: number | null; priceCents?: number | null }): PartDraft => ({
+  ref: p.ref ?? '',
+  brand: p.brand ?? '',
+  label: p.label ?? '',
+  qty: p.qty != null ? String(p.qty) : '',
+  price: centsToEurosInput(p.priceCents),
+});
+
+export function visitDraft(record: MaintenanceRecord | null, today: string, seed: VisitSeed | null = null): VisitDraft {
+  if (!record && seed) {
+    const reading = seed.reading != null ? String(seed.reading) : '';
+    return { performedAt: today, reading, label: '', diy: false, performer: '', cost: '', notes: '', items: [{ type: seed.type, label: seed.label ?? '', parts: seed.parts.map(partDraft) }] };
+  }
   if (!record) return { performedAt: today, reading: '', label: '', diy: false, performer: '', cost: '', notes: '', items: [blankItem()] };
   const by = performer(record.performedBy);
   return {
@@ -53,7 +73,7 @@ export function visitDraft(record: MaintenanceRecord | null, today: string): Vis
       ? record.items.map((it) => ({
           type: it.type,
           label: it.label ?? '',
-          parts: it.parts.map((p) => ({ ref: p.ref ?? '', brand: p.brand ?? '', label: p.label ?? '', qty: p.qty != null ? String(p.qty) : '', price: centsToEurosInput(p.priceCents) })),
+          parts: it.parts.map(partDraft),
         }))
       : [blankItem()],
   };

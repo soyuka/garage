@@ -25,7 +25,7 @@ import {
   type VehiclePatch,
 } from '../garage';
 import type { Iri, MaintenanceAttachment, ServiceAction, ServiceRule, VehicleSummary } from '../types';
-import { ruleIdentityChanged, type TaskPartOps } from './editForms';
+import { ruleIdentityChanged, type TaskPartOps, type VisitSeed } from './editForms';
 
 export interface BillChanges {
   add: File[];
@@ -171,7 +171,7 @@ export function offlineEdits(message: string): WorkshopEdits {
 }
 
 export type EditorTarget =
-  | { kind: 'visit'; recordId: Iri | null }
+  | { kind: 'visit'; recordId: Iri | null; seed?: VisitSeed }
   | { kind: 'task'; taskId: Iri | null }
   | { kind: 'rule'; type: string | null; action?: ServiceAction | null; component?: string | null };
 

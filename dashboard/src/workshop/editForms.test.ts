@@ -40,6 +40,22 @@ describe('visitDraft', () => {
     expect(d.diy).toBe(false);
   });
 
+  it('seeds a "done" visit from a job: today, the current reading, that one service with its planned parts', () => {
+    const d = visitDraft(null, '2026-11-18', {
+      reading: 90000,
+      type: 'oil_filter',
+      label: 'Filtre à huile',
+      parts: [{ id: 'p1', ref: 'HF160', brand: 'Hiflofiltro', qty: 1, priceCents: 1290 }],
+    });
+    expect(d.performedAt).toBe('2026-11-18');
+    expect(d.reading).toBe('90000');
+    expect(d.items).toEqual([{ type: 'oil_filter', label: 'Filtre à huile', parts: [{ ref: 'HF160', brand: 'Hiflofiltro', label: '', qty: '1', price: '12,90' }] }]);
+  });
+
+  it('leaves the reading blank when the vehicle has none', () => {
+    expect(visitDraft(null, '2026-11-18', { reading: null, type: 'chain', label: null, parts: [] }).reading).toBe('');
+  });
+
   it('prefills an existing visit, cents shown as comma euros', () => {
     const d = visitDraft(record, '2026-11-09');
     expect(d.reading).toBe('139800');

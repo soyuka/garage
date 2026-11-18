@@ -920,6 +920,8 @@ export const en: Messages = {
       edit: 'Edit',
       editVisit: (title: string) => `Edit visit: ${title}`,
       editTask: (title: string) => `Edit task: ${title}`,
+      done: 'Done',
+      doneJob: (title: string) => `Log ${title} as done`,
       editRule: (title: string) => `Maintenance rule: ${title}`,
       editVehicle: "Edit the vehicle's identity",
       rule: 'Rule',
