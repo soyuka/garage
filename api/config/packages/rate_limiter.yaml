@@ -48,6 +48,12 @@ framework:
             limit: '%env(int:UPLOAD_RATE_LIMIT)%'
             interval: '1 hour'
             cache_pool: cache.rate_limiter
+        # Bills, documents and turn attachments across ALL owners: the object-store write ceiling.
+        upload_global:
+            policy: sliding_window
+            limit: '%env(int:UPLOAD_GLOBAL_RATE_LIMIT)%'
+            interval: '1 hour'
+            cache_pool: cache.rate_limiter
 
     cache:
         pools:

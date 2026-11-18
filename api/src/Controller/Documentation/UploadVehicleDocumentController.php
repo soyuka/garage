@@ -30,6 +30,7 @@ final readonly class UploadVehicleDocumentController
         private VehicleDocumentView $view,
         private OwnerRateLimit $rateLimit,
         private RateLimiterFactoryInterface $uploadLimiter,
+        private RateLimiterFactoryInterface $uploadGlobalLimiter,
     ) {
     }
 
@@ -49,7 +50,7 @@ final readonly class UploadVehicleDocumentController
         $kind = VehicleDocumentKind::tryFrom((string) $request->request->get('kind'))
             ?? throw new UnprocessableEntityHttpException(\sprintf('"kind" must be one of: %s.', implode(', ', array_map(static fn (VehicleDocumentKind $kind): string => $kind->value, VehicleDocumentKind::cases()))));
 
-        $this->rateLimit->consume($this->uploadLimiter, 'Upload');
+        $this->rateLimit->consume($this->uploadLimiter, 'Upload', $this->uploadGlobalLimiter);
 
         try {
             $document = $this->recorder->record(

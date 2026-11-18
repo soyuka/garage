@@ -63,6 +63,7 @@ final readonly class AgentTurnController
         private TurnAttachments $attachments,
         private OwnerRateLimit $uploadRateLimit,
         private RateLimiterFactoryInterface $uploadLimiter,
+        private RateLimiterFactoryInterface $uploadGlobalLimiter,
         private ValidatorInterface $validator,
     ) {
     }
@@ -104,7 +105,7 @@ final readonly class AgentTurnController
         if ([] !== $files) {
             $this->attachments->pruneExpired();
             foreach ($files as $file) {
-                $this->uploadRateLimit->consume($this->uploadLimiter, 'Upload');
+                $this->uploadRateLimit->consume($this->uploadLimiter, 'Upload', $this->uploadGlobalLimiter);
                 $refs[] = $this->attachments->stash($owner, $file, (string) AcceptedUpload::sniff($file->getPathname()));
             }
         }

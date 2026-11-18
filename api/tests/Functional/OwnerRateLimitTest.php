@@ -82,6 +82,55 @@ final class OwnerRateLimitTest extends AppTestCase
         $this->assertGreaterThan(0, (int) $browser->getResponse()->headers->get('Retry-After'));
     }
 
+    public function testDocumentUploadsHaveAGlobalBudget(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $vehicle = $this->seedVehicle();
+        $this->exhaust('limiter.upload_global', 'global');
+
+        $browser->request('POST', '/garage/vehicles/'.(string) $vehicle->getId().'/documents', ['kind' => 'manual'], ['file' => $this->pdf()], $this->bearer());
+
+        $this->assertSame(429, $browser->getResponse()->getStatusCode());
+        $this->assertGreaterThan(0, (int) $browser->getResponse()->headers->get('Retry-After'));
+    }
+
+    public function testBillUploadsHaveAGlobalBudget(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $vehicle = $this->seedVehicle();
+        $dm = static::getContainer()->get(DocumentManager::class);
+        $record = new MaintenanceRecord($dm->find(Vehicle::class, (string) $vehicle->getId()), [['type' => 'oil_change', 'parts' => []]], new \DateTimeImmutable('2026-01-01'), 'user');
+        $dm->persist($record);
+        $dm->flush();
+        $this->exhaust('limiter.upload_global', 'global');
+
+        $browser->request('POST', '/garage/maintenance-records/'.(string) $record->getId().'/attachments', [], ['file' => $this->pdf()], $this->bearer());
+
+        $this->assertSame(429, $browser->getResponse()->getStatusCode());
+        $this->assertGreaterThan(0, (int) $browser->getResponse()->headers->get('Retry-After'));
+    }
+
+    public function testTurnAttachmentsHaveAGlobalUploadBudget(): void
+    {
+        $client = static::createClient();
+        $browser = $client->getKernelBrowser();
+        $calls = 0;
+        static::getContainer()->set('ai.platform.anthropic', new ScriptedStreamPlatform(static function () use (&$calls): string {
+            ++$calls;
+
+            return 'Fait.';
+        }));
+        $this->exhaust('limiter.upload_global', 'global');
+
+        $browser->request('POST', '/agent/turn', ['instruction' => 'Regarde', 'sessionId' => 'sess-upload-global'], ['files' => [$this->pdf()]], $this->bearer());
+
+        $this->assertSame(429, $browser->getResponse()->getStatusCode());
+        $this->assertGreaterThan(0, (int) $browser->getResponse()->headers->get('Retry-After'));
+        $this->assertSame(0, $calls);
+    }
+
     public function testAgentTurnsHaveAGlobalBudget(): void
     {
         $client = static::createClient();

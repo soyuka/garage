@@ -32,6 +32,7 @@ final readonly class UploadMaintenanceAttachmentController
         private MaintenanceAttachmentRecorder $recorder,
         private OwnerRateLimit $rateLimit,
         private RateLimiterFactoryInterface $uploadLimiter,
+        private RateLimiterFactoryInterface $uploadGlobalLimiter,
     ) {
     }
 
@@ -58,7 +59,7 @@ final readonly class UploadMaintenanceAttachmentController
             throw new UnprocessableEntityHttpException(\sprintf('Unsupported file type "%s"; allowed: PDF, JPEG, PNG.', (string) $file->getMimeType()));
         }
 
-        $this->rateLimit->consume($this->uploadLimiter, 'Upload');
+        $this->rateLimit->consume($this->uploadLimiter, 'Upload', $this->uploadGlobalLimiter);
 
         $attachment = $this->recorder->attach($record, $file->getClientOriginalName(), $mime, (string) file_get_contents($file->getPathname()));
 

@@ -113,8 +113,9 @@ so a new tool parameter never reaches the advertised MCP schema even though the 
   model reasons), except `get_motul_oil` (`limiter.motul`, `MOTUL_RATE_LIMIT`: a motul.com scrape), whose
   refusal reaches the model as a `rate_limited` tool error (`DomainErrorHandler`). A global limiter (`limiter.agent_turn_global`, `AGENT_TURN_GLOBAL_RATE_LIMIT`) caps
   all owners together. `/tts`, `/stt` and the document/bill uploads have per-owner limiters too
-  (`SPEECH_`/`TRANSCRIPTION_`/`UPLOAD_RATE_LIMIT`, via `App\Security\OwnerRateLimit`), and `/tts` and
-  `/stt` a global one too (`SPEECH_`/`TRANSCRIPTION_GLOBAL_RATE_LIMIT`). All share the
+  (`SPEECH_`/`TRANSCRIPTION_`/`UPLOAD_RATE_LIMIT`, via `App\Security\OwnerRateLimit`), and `/tts`,
+  `/stt` and the uploads (bills, documents, turn attachments) a global one too
+  (`SPEECH_`/`TRANSCRIPTION_`/`UPLOAD_GLOBAL_RATE_LIMIT`). All share the
   `cache.rate_limiter` pool, which the test env swaps to an array adapter, or every functional test
   posting as `TEST_OWNER` would share one budget across the run.
 - Tool/LLM JSON schemas are generated via API Platform's `SchemaFactory`, never Symfony AI's lossy
