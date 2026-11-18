@@ -13,35 +13,7 @@ own MCP server.
 Symfony 7, API Platform 5 (`api-platform/mcp`), `symfony/mcp-bundle` and the PHP MCP SDK, Symfony AI, Mercure,
 React / react-three-fiber. Entry for the Symfony AI & MCP hackathon.
 
-## Try it hosted (2 minutes)
-
-MCP endpoint **`https://garage.bonneref.fr/mcp`** (Streamable HTTP, OAuth). Atelier **https://garage.bonneref.fr**.
-Login on `auth.bonneref.fr`: `demo` / `demo-MpiFkZmAPfu2`. The demo garage is shared between jurors and reset
-nightly.
-
-- **Claude Code**: `claude mcp add --transport http garage https://garage.bonneref.fr/mcp`, then `/mcp` to log in.
-- **claude.ai / Claude Desktop**: Settings → Connectors → Add custom connector → `https://garage.bonneref.fr/mcp`.
-
-No client id to copy: the client registers itself (dynamic client registration) and opens the login page. Open the
-Atelier in a browser logged in as the same `demo` user, then paste these in order (tools in brackets are what the
-client is expected to call):
-
-1. `What's due on the Mazda?`
-   (`open_vehicle` drives the car in and returns its forecast and open tasks; `focus_view` raises the task list)
-2. `Which oil filter should I order for the Mazda? Narrow it down to the physically different parts and compare brands.`
-   (`get_service_parts`, `narrow_parts`, `compare_brands`, served by bonneref)
-3. `When did I last change the oil on the Mazda? Show me the logbook.`
-   (`get_maintenance_history`, `focus_view` on the `carnet` panel filtered to `oil_change`, a `toast`)
-4. `Show me where the fuel filter sits on the Mazda.`
-   (`reveal_assembly` on the `bay` region: the body turns to wireframe, the fuel circuit is drawn under it)
-5. `I've just replaced the fuel filter on the Mazda, at 252 524 km. Log it.`
-   (`log_maintenance`: the visit closes the open fuel filter task and the forecast moves)
-
-Prompt 5 writes to the shared garage: if someone already logged it today, the task is gone until the nightly reset.
-Catalogue names are English by default. MCP answers follow the request's `Accept-Language` (for French:
-`claude mcp add … --header "Accept-Language: fr"`); the Atelier has its own EN/FR switch.
-
-## Run it offline
+## Run it
 
 Requirements: Docker with Compose, ports 8480–8482 free on loopback (or set `DEMO_PORT`, `BONNEREF_PORT`,
 `AUTH_PORT` before the first run).
@@ -66,8 +38,25 @@ first run `bin/demo` generates the secrets and the demo password into `.demo/env
   claude mcp add --transport http bonneref http://localhost:8481/mcp
 ```
 
-Run `/mcp` in Claude Code to log in. The same five prompts work; the offline garage also holds a BMW
-F 800 GS Adventure whose parts are in the catalogue slice (`Which oil filter fits the BMW?`).
+Run `/mcp` in Claude Code to log in: the client registers itself (dynamic client registration) and opens the login
+page, no client id to copy. Open the Atelier in a browser logged in as the same `demo` user, then paste these in
+order (tools in brackets are what the client is expected to call):
+
+1. `What's due on the Mazda?`
+   (`open_vehicle` drives the car in and returns its forecast and open tasks; `focus_view` raises the task list)
+2. `Which oil filter should I order for the Mazda? Narrow it down to the physically different parts and compare brands.`
+   (`get_service_parts`, `narrow_parts`, `compare_brands`, served by bonneref)
+3. `When did I last change the oil on the Mazda? Show me the logbook.`
+   (`get_maintenance_history`, `focus_view` on the `carnet` panel filtered to `oil_change`, a `toast`)
+4. `Show me where the fuel filter sits on the Mazda.`
+   (`reveal_assembly` on the `bay` region: the body turns to wireframe, the fuel circuit is drawn under it)
+5. `I've just replaced the fuel filter on the Mazda, at 252 524 km. Log it.`
+   (`log_maintenance`: the visit closes the open fuel filter task and the forecast moves)
+
+The garage also holds a BMW F 800 GS Adventure whose parts are in the catalogue slice
+(`Which oil filter fits the BMW?`). `bin/demo reset` puts everything back to replay the run.
+Catalogue names are English by default. MCP answers follow the request's `Accept-Language` (for French:
+`claude mcp add … --header "Accept-Language: fr"`); the Atelier has its own EN/FR switch.
 
 - **Images.** `bin/demo` pulls `ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main` (published by CI after a
   green `main`) and builds from the checkout when a pull fails, printing which path it took per image. Measured:
