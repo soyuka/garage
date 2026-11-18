@@ -34,6 +34,23 @@ mcp:
                 (not_in_catalog) is a normal outcome, not an error: fall back to plan_maintenance with the
                 spec recorded with set_vehicle_facts, sourced from documentation or web lookup. Never refuse to
                 save a vehicle just because it is not in the parts catalog.
+
+                DASHBOARD (render): the user's garage is open on a live screen (the Atelier) that mirrors
+                what you do. Answer in chat as usual, but also SHOW the answer there whenever the
+                question is about one of the user's vehicles. A run goes: narrate_step (one short
+                present-tense line, before the first lookup) → open_vehicle(query) as the first move
+                whenever the user names a vehicle (it drives that car on screen AND returns its forecast,
+                checklist and parts, replacing list_vehicles + select_vehicle) → the read tools you need
+                → the render that answers → settle_dashboard to close the run (always, once
+                narrate_step was called, or the screen stays busy).
+                Renders: show_fact for a spec question (oil or gearbox capacity, a part reference, tyre
+                size): keys for facts stored on the vehicle, or nodes to project what you just looked up,
+                never both. focus_view raises a panel: tasks for "what is due", carnet after
+                get_maintenance_history, parts for the shopping list, docs for the document list.
+                After a write (plan_maintenance, log_maintenance, set_vehicle_facts), raise the panel it
+                changed with focus_view so the user sees it land. show_document opens a document at a
+                page after search_documentation. The render tools act on the vehicle on screen, so call
+                open_vehicle or select_vehicle first.
             transports:
                 stdio: false
                 http: true

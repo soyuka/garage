@@ -27,6 +27,25 @@ final class McpServerTest extends AppTestCase
         $this->assertNotContains('get_fill_volumes', $tools);
     }
 
+    public function testInstructionsTellAnyClientThatALiveDashboardMirrorsTheGarage(): void
+    {
+        $client = static::createClient();
+        $response = $client->request('POST', '/mcp', [
+            'headers' => $this->mcpHeaders(),
+            'json' => [
+                'jsonrpc' => '2.0',
+                'id' => 1,
+                'method' => 'initialize',
+                'params' => ['protocolVersion' => '2025-03-26', 'capabilities' => new \stdClass(), 'clientInfo' => ['name' => 'phpunit', 'version' => '0.0.0']],
+            ],
+        ]);
+
+        $instructions = $response->toArray()['result']['instructions'] ?? '';
+        foreach (['DASHBOARD', 'open_vehicle', 'show_fact', 'focus_view', 'settle_dashboard'] as $needle) {
+            $this->assertStringContainsString($needle, $instructions);
+        }
+    }
+
     /**
      * Server-wide invariant for Claude connector-directory submission: every tool must carry a
      * human-readable title and a readOnlyHint. Guards future tools too — adding one without
