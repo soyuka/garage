@@ -157,3 +157,9 @@ Deployed `d5c23df` (bonneref-api only, also ships `40949d0` pdfinfo). The SIV ve
 HTTP 404 + the usual envelope (`code_erreur: 404`, "Plaque immatriculation inconnue !"); motorbike plates land there,
 the vendor has no motos. bonneref used to turn it into a 502; now `/vehicles/DF162TC` is 404, negatively cached
 (second call 32 ms, no vendor hit), verified with the mpa-service token.
+
+Then `0475910` (bonneref-garage + scheduler; bonneref-api already had `40949d0`): upload security fixes, attachment
+prompt cache, `UPLOAD_GLOBAL_RATE_LIMIT=600`, `/agent/turn` body cap 52 MiB, pdfinfo page count in bonneref.
+Then `e7956f4` (bonneref-garage + scheduler): a plate miss tells the model the SIV registry has no motorbikes and to
+resolve make/model via list_makes → list_models → list_cars (carType MC); a transient upstream error names the real
+failure (status or transport error) instead of "did not answer in time".
