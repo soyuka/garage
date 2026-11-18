@@ -38,11 +38,11 @@ final readonly class AttachmentUserMessage
         foreach ($refs as $ref) {
             $attachment = $this->attachments->find($owner, $ref->id);
             if (null === $attachment) {
-                $lines[] = \sprintf('- "%s" (%s): no longer available.', $ref->name, $ref->mime);
+                $lines[] = \sprintf('- %s (%s): no longer available.', self::quote($ref->name), $ref->mime);
 
                 continue;
             }
-            $lines[] = \sprintf('- id %s: "%s" (%s, %d bytes)', $ref->id, $ref->name, $ref->mime, $ref->size);
+            $lines[] = \sprintf('- id %s: %s (%s, %d bytes)', $ref->id, self::quote($ref->name), $ref->mime, $ref->size);
             $bytes = $this->attachments->bytes($attachment);
             // The original name rides in the `path` slot: the bridges only read the bytes and the format,
             // and the capability processor needs a name to write its note.
@@ -53,5 +53,10 @@ final readonly class AttachmentUserMessage
         $content = [new Text($context."\n\nFichiers joints à ce message (visibles ci-dessous pour ce tour seulement ; rien n'est conservé sauf si tu le classes avec file_attachment) :\n".implode("\n", $lines)), ...$parts];
 
         return Message::ofUser(...$content);
+    }
+
+    private static function quote(string $name): string
+    {
+        return json_encode(TurnAttachments::displayName($name), \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES | \JSON_THROW_ON_ERROR);
     }
 }

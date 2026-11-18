@@ -23,6 +23,8 @@ final readonly class TurnAttachments
 {
     public const string TTL = '+24 hours';
 
+    public const int MAX_NAME_LENGTH = 120;
+
     private const int OPPORTUNISTIC_PRUNE = 50;
 
     public function __construct(
@@ -38,12 +40,20 @@ final readonly class TurnAttachments
         $contents = (string) file_get_contents($file->getPathname());
         $key = $this->storage->store($id, $contents);
 
-        $name = $file->getClientOriginalName();
+        $name = self::displayName($file->getClientOriginalName());
         $attachment = new TurnAttachment($owner, $name, $mime, \strlen($contents), $key, $this->clock->now()->modify(self::TTL), $id);
         $this->dm->persist($attachment);
         $this->dm->flush();
 
         return new TurnAttachmentRef($id, $name, $mime, \strlen($contents));
+    }
+
+    /** The client name reaches the agent's prompt: no control or format characters, bounded length. */
+    public static function displayName(string $name): string
+    {
+        $name = trim((string) preg_replace(['/\p{C}+/u', '/\s+/u'], ' ', mb_scrub($name, 'UTF-8')));
+
+        return '' === $name ? 'file' : mb_substr($name, 0, self::MAX_NAME_LENGTH);
     }
 
     public function find(string $owner, string $id): ?TurnAttachment
