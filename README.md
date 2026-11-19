@@ -1,6 +1,6 @@
 # Soyuka's garage
 
-[![CI](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml/badge.svg)](https://github.com/soyuka/mon-parc-auto.fr/actions/workflows/ci.yml)
+[![CI](https://github.com/soyuka/garage/actions/workflows/ci.yml/badge.svg)](https://github.com/soyuka/garage/actions/workflows/ci.yml)
 
 A maintenance tracker for my own vehicles, exposed as an MCP server, with a 3D workshop in the browser that any
 MCP client can drive. Entry for the Symfony AI & MCP hackathon.
@@ -37,8 +37,8 @@ Mercure, React and react-three-fiber.
 You need Docker with Compose and the ports 8480 to 8482 free on loopback.
 
 ```bash
-git clone https://github.com/soyuka/mon-parc-auto.fr.git
-cd mon-parc-auto.fr
+git clone https://github.com/soyuka/garage.git
+cd garage
 bin/demo
 ```
 
@@ -111,6 +111,10 @@ Things I worked around in the app that belong in the libraries:
 - mcp/sdk: a domain error thrown by a tool comes back as a generic `-32603`, the model can't fix its call
   ([`DomainErrorHandler.php`](api/src/Mcp/DomainErrorHandler.php)), and `Protocol` keeps dropped request ids forever
   in a long-lived worker.
+- symfony/mcp-bundle: RFC 9728 protected resource metadata and the `WWW-Authenticate` challenge, on top of Symfony
+  Security. The SDK has a PSR-15 middleware for it but the bundle doesn't wire it
+  ([`ProtectedResourceMetadataController.php`](api/src/Controller/Mcp/ProtectedResourceMetadataController.php),
+  [`McpProtectedResourceChallengeListener.php`](api/src/EventListener/McpProtectedResourceChallengeListener.php)).
 
 ## Status
 
