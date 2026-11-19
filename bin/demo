@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Offline demo (compose.demo.yaml): bin/demo [up|down|reset|info]
 #   up     get the images, start, seed the demo garage on first boot, print URLs and login (default)
-#          images: pulled from ghcr.io, built from this checkout when the pull fails; `up --build` (or
-#          DEMO_BUILD=1) builds all three locally
+#          images: pulled from ghcr.io at DEMO_IMAGE_TAG (v1.0.0, `main` follows the branch), built from this
+#          checkout when the pull fails; `up --build` (or DEMO_BUILD=1) builds all three locally
 #   down   stop the stack, data kept (bin/demo down -v also deletes it)
 #   reset  reload the demo garage from api/fixtures/demo, discarding changes
 #   info   print URLs and login
@@ -13,6 +13,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
+export DEMO_IMAGE_TAG=${DEMO_IMAGE_TAG:-v1.0.0}
 STATE=.demo
 ENV_FILE=$STATE/env
 
@@ -79,9 +80,9 @@ PUBLISHED_AUTH_PORT=8482
 
 image_of() {
 	case "$1" in
-	php) echo ghcr.io/soyuka/mon-parc-auto-api:main ;;
-	bonneref) echo ghcr.io/soyuka/mon-parc-auto-bonneref:main ;;
-	atelier) echo ghcr.io/soyuka/mon-parc-auto-atelier:main ;;
+	php) echo ghcr.io/soyuka/mon-parc-auto-api:$DEMO_IMAGE_TAG ;;
+	bonneref) echo ghcr.io/soyuka/mon-parc-auto-bonneref:$DEMO_IMAGE_TAG ;;
+	atelier) echo ghcr.io/soyuka/mon-parc-auto-atelier:$DEMO_IMAGE_TAG ;;
 	esac
 }
 

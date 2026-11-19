@@ -68,7 +68,7 @@ x-mpa-environment: &mpa_environment
 
 services:
   php:
-    image: ghcr.io/soyuka/mon-parc-auto-api:main
+    image: ghcr.io/soyuka/mon-parc-auto-api:${DEMO_IMAGE_TAG:-v1.0.0}
     build:
       context: ./api
       target: frankenphp_prod
@@ -91,7 +91,7 @@ services:
         condition: service_started
 
   worker:
-    image: ghcr.io/soyuka/mon-parc-auto-api:main
+    image: ghcr.io/soyuka/mon-parc-auto-api:${DEMO_IMAGE_TAG:-v1.0.0}
     restart: unless-stopped
     environment: *mpa_environment
     command: ["php", "bin/console", "messenger:consume", "async", "failed", "scheduler_default", "--time-limit=3600"]
@@ -108,7 +108,7 @@ services:
         condition: service_healthy
 
   atelier:
-    image: ghcr.io/soyuka/mon-parc-auto-atelier:main
+    image: ghcr.io/soyuka/mon-parc-auto-atelier:${DEMO_IMAGE_TAG:-v1.0.0}
     build:
       context: ./dashboard
       args:
@@ -164,7 +164,7 @@ services:
       - ./.demo/casdoor-init.json:/init_data.json:ro
 
   bonneref:
-    image: ghcr.io/soyuka/mon-parc-auto-bonneref:main
+    image: ghcr.io/soyuka/mon-parc-auto-bonneref:${DEMO_IMAGE_TAG:-v1.0.0}
     build:
       context: ./bonneref/api
       target: frankenphp_prod

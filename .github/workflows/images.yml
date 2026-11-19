@@ -2,7 +2,10 @@ name: Images
 
 # Publishes the offline-demo images (compose.demo.yaml) to GHCR once CI is green on main. workflow_run, not a
 # bare push trigger, so a red main never ships an image; workflow_dispatch republishes the current main by hand.
+# A v* tag publishes that commit as :<tag>, the version bin/demo pins.
 on:
+  push:
+    tags: ['v*']
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -19,7 +22,7 @@ concurrency:
 jobs:
   publish:
     if: >-
-      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'workflow_dispatch' || github.event_name == 'push' ||
       (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-24.04
     permissions:
@@ -69,7 +72,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:main
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ github.ref_type == 'tag' && github.ref_name || 'main' }}
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:sha-${{ steps.sha.outputs.short }}
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}

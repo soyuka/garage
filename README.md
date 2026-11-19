@@ -70,7 +70,8 @@ the Atelier's own agent and the bonneref finder. `bin/demo reset` puts the garag
 <details>
 <summary>More about the demo stack</summary>
 
-- `bin/demo` pulls `ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main` 
+- `bin/demo` pulls `ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:v1.0.0`, `DEMO_IMAGE_TAG=main` follows
+  the branch.
 - `bin/demo --build` forces the build. Ports can be moved with `DEMO_PORT`, `BONNEREF_PORT` and
   `AUTH_PORT` before the first run.
 - The garage is [`api/fixtures/demo/`](api/fixtures/demo/), exported from mine with the plates and VINs replaced.
