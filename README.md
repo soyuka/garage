@@ -2,8 +2,8 @@
 
 [![CI](https://github.com/soyuka/garage/actions/workflows/ci.yml/badge.svg)](https://github.com/soyuka/garage/actions/workflows/ci.yml)
 
-A maintenance tracker for my own vehicles, exposed as an MCP server, with a 3D workshop in the browser that any
-MCP client can drive. Entry for the Symfony AI & MCP hackathon.
+A maintenance tracker for my own vehicles, exposed as an MCP server, with a browser UI that any
+MCP client can drive. 
 
 [![Watch the 70 s demo on YouTube](docs/media/atelier-bmw.jpg)](https://www.youtube.com/watch?v=UFa4OIt4OM0)
 
@@ -14,7 +14,7 @@ MCP client can drive. Entry for the Symfony AI & MCP hackathon.
 I use this app for my personal garage: a Mazda6, a Renault Espace IV, a BMW F 800 GS and a ride-on mower. It's
 also the project where I test the new MCP features and experiment with what's possible.
 
-You talk to it, it answers in the **Atelier**. Ask what's due on the bike and the bike drives in, the overdue
+You talk to it (or use the input prompt), it answers in the **Atelier**. Ask what's due on a vehicle, the overdue
 items are pinned on the 3D model and the task list opens. Ask for an oil filter and you get the references that
 actually fit, narrowed down to the parts that are physically different. Ask how to remove the passenger airbag and
 the workshop manual opens at the right page. Log a visit and the planned task closes, the forecast moves.
@@ -26,7 +26,7 @@ There are two ways in:
 - or connect any MCP client (Claude Code, Claude Desktop, claude.ai): it gets the same tools, and the Atelier
   still reacts to its calls. With MCP Apps, the service history renders right inside the conversation.
 
-Parts come from **bonneref**, a second Symfony app in this repository that serves a TecDoc catalogue as its own MCP
+Parts come from a second Symfony app in this repository (`bonneref/`) that serves a car/bike parts catalogue as its own MCP
 server.
 
 Built with Symfony 7, API Platform 5 (`api-platform/mcp`), `symfony/mcp-bundle` and the PHP MCP SDK, Symfony AI,
@@ -34,7 +34,7 @@ Mercure, React and react-three-fiber.
 
 ## Run it
 
-You need Docker with Compose and the ports 8480 to 8482 free on loopback.
+You need Docker with Compose (it listens on 8480 to 8482).
 
 ```bash
 git clone https://github.com/soyuka/garage.git
@@ -70,14 +70,12 @@ the Atelier's own agent and the bonneref finder. `bin/demo reset` puts the garag
 <details>
 <summary>More about the demo stack</summary>
 
-- `bin/demo` pulls `ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main` (published by CI after a green
-  `main`) and builds from the checkout when a pull fails. About 30 s to a running stack with the images, 3 min on a
-  cold build. `bin/demo --build` forces the build. Ports can be moved with `DEMO_PORT`, `BONNEREF_PORT` and
+- `bin/demo` pulls `ghcr.io/soyuka/mon-parc-auto-{api,atelier,bonneref}:main` 
+- `bin/demo --build` forces the build. Ports can be moved with `DEMO_PORT`, `BONNEREF_PORT` and
   `AUTH_PORT` before the first run.
 - The garage is [`api/fixtures/demo/`](api/fixtures/demo/), exported from mine with the plates and VINs replaced.
-  The catalogue is [`data/catalog-demo.sqlite`](data/catalog-demo.sqlite), a 46 MB slice of a TecDoc 2020
-  extract that only answers for the Mazda6, the Espace IV and the F 800 GS
-  ([what it keeps](docs/tecdoc-sqlite.md#demo-slice-datacatalog-demosqlite-2026-11-13)).
+  The catalogue is [`data/catalog-demo.sqlite`](data/catalog-demo.sqlite), a 46 MB extract of a parts database
+  that only answers for the Mazda6, the Espace IV and the F 800 GS.
 - MCP answers follow the request's `Accept-Language` (`claude mcp add … --header "Accept-Language: fr"`), the
   Atelier has its own EN/FR switch.
 - The development stack is described in [`CLAUDE.md`](CLAUDE.md) and [`api/docs/AUTH.md`](api/docs/AUTH.md).
@@ -124,6 +122,6 @@ vitest and a production build on both fronts.
 
 ## License
 
-[MIT](LICENSE) for the code. The TecDoc catalogue slice, the vehicle documents in the demo garage and some
+[MIT](LICENSE) for the code. The catalogue slice, the vehicle documents in the demo garage and some
 third-party 3D assets are there for the demo only and keep their own terms
 ([`docs/public-audit.md`](docs/public-audit.md)).

@@ -55,7 +55,6 @@ mpa keeps the rest.
 
 - In-app garage agent turns run in the Messenger worker, where there is no request to forward a bearer from.
   Decided: `RunAgentTurn` carries the user's access token (sitting in the queue is accepted).
-- TecDoc licence: out of scope, it stays inside bonneref.
 - Prod `~/bonneref.compose.yml` and `~/bonneref/.env` live only on the server, they become the new repo's compose.
 
 ## Order

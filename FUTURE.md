@@ -212,10 +212,6 @@ generation is the path. The *design* target found in the same session still hold
 output: **no strike transient, physically-credible machine resonance** (coil, tuning fork) — a bell,
 a chime or a kitchen timer reads domestic, and a sci-fi UI blip is forbidden outright.
 
-**Licensing gate, unresolved:** free-tier ElevenLabs output may be attribution-bound or
-non-commercial. The icon would be *committed into the product*, so this must be checked against the
-live terms — not from memory — before any generated asset lands in git.
-
 **Re-read 2026-09-11, and the re-read failed.** The noise that disqualifies generation for the *icon*
 looked like the specification for a *room bed*, and one was built on that reading — then removed the
 same day as annoying (`docs/voice.md` § The room bed). Everything above still stands for the échéance icon, which remains unbuilt. The generated
