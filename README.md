@@ -123,5 +123,4 @@ vitest and a production build on both fronts.
 ## License
 
 [MIT](LICENSE) for the code. The catalogue slice, the vehicle documents in the demo garage and some
-third-party 3D assets are there for the demo only and keep their own terms
-([`docs/public-audit.md`](docs/public-audit.md)).
+third-party 3D assets are there for the demo only and keep their own terms.
