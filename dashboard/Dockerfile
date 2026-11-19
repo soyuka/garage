@@ -13,7 +13,10 @@ COPY . .
 ARG VITE_CASDOOR_ISSUER=https://auth.bonneref.fr
 ARG VITE_CASDOOR_CLIENT_ID=671b8c86d75444f3f4c4
 ARG VITE_MERCURE_URL=/.well-known/mercure
-ENV VITE_CASDOOR_ISSUER=${VITE_CASDOOR_ISSUER} \
+# Empty = same-origin. It must be set: .env's dev https://localhost would otherwise be baked in.
+ARG VITE_API_BASE=
+ENV VITE_API_BASE=${VITE_API_BASE} \
+	VITE_CASDOOR_ISSUER=${VITE_CASDOOR_ISSUER} \
 	VITE_CASDOOR_CLIENT_ID=${VITE_CASDOOR_CLIENT_ID} \
 	VITE_MERCURE_URL=${VITE_MERCURE_URL}
 RUN npm run build

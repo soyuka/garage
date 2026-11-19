@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Offline demo (compose.demo.yaml): bin/demo [up|down|reset|info]
 #   up     get the images, start, seed the demo garage on first boot, print URLs and login (default)
-#          images: pulled from ghcr.io at DEMO_IMAGE_TAG (v1.0.0, `main` follows the branch), built from this
+#          images: pulled from ghcr.io at DEMO_IMAGE_TAG (v1.0.1, `main` follows the branch), built from this
 #          checkout when the pull fails; `up --build` (or DEMO_BUILD=1) builds all three locally
 #   down   stop the stack, data kept (bin/demo down -v also deletes it)
 #   reset  reload the demo garage from api/fixtures/demo, discarding changes
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
-export DEMO_IMAGE_TAG=${DEMO_IMAGE_TAG:-v1.0.0}
+export DEMO_IMAGE_TAG=${DEMO_IMAGE_TAG:-v1.0.1}
 STATE=.demo
 ENV_FILE=$STATE/env
 
