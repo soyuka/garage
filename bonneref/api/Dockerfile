@@ -1,7 +1,7 @@
 #syntax=docker/dockerfile:1
 
 # Versions
-ARG FRANKENPHP_VERSION=1.13.4
+ARG FRANKENPHP_VERSION=1.13.6
 
 FROM dunglas/frankenphp:${FRANKENPHP_VERSION}-php8.5 AS frankenphp_upstream
 
