@@ -121,6 +121,10 @@ A hackathon entry and a prototype, that I use on my own vehicles. CI
 ([`ci.yml`](.github/workflows/ci.yml)) runs php-cs-fixer, Mago (no baseline) and PHPUnit on both Symfony apps,
 vitest and a production build on both fronts.
 
+## Sponsor
+
+Sponsored by [tilia.coop](https://tilia.coop).
+
 ## License
 
 [MIT](LICENSE) for the code. The catalogue slice, the vehicle documents in the demo garage and some
